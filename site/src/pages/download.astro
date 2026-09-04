@@ -2,6 +2,7 @@
 import mark from "../assets/freehand-mark.svg";
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
+import ParticleBackground from "../components/ParticleBackground.astro";
 import "../styles/home.css";
 import "../styles/download.css";
 
@@ -21,6 +22,7 @@ const releasesUrl = "https://github.com/tnware/freehand-stt/releases";
     <title>Download Freehand for Windows</title>
   </head>
   <body>
+    <ParticleBackground />
     <a class="skip-link" href="#main">Skip to content</a>
     <SiteHeader current="download" />
 

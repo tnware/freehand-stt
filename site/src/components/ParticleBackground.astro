@@ -1,0 +1,228 @@
+<freehand-particles aria-hidden="true">
+  <canvas></canvas>
+</freehand-particles>
+
+<style>
+  /* Keep the effect below every surface without intercepting page input. */
+  :global(body:has(freehand-particles)) { isolation: isolate; }
+  freehand-particles {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    display: block;
+    overflow: hidden;
+    pointer-events: none;
+    contain: strict;
+    mask-image: linear-gradient(transparent, #000 14%, #000 88%, transparent);
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  @media (forced-colors: active), print {
+    freehand-particles { display: none; }
+  }
+</style>
+
+<script>
+  type Particle = {
+    phase: number;
+    lane: number;
+    depth: number;
+    spread: number;
+    size: number;
+  };
+
+  class FreehandParticles extends HTMLElement {
+    private canvas?: HTMLCanvasElement;
+    private ctx: CanvasRenderingContext2D | null = null;
+    private glow = document.createElement("canvas");
+    private particles: Particle[] = [];
+    private dust: { x: number; y: number; size: number; phase: number }[] = [];
+    private width = 0;
+    private height = 0;
+    private time = 0;
+    private lastFrame = 0;
+    private frame = 0;
+    private pointer = { x: -1000, y: -1000, targetX: -1000, targetY: -1000 };
+    private reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+    private forcedColors = matchMedia("(forced-colors: active)");
+    private finePointer = matchMedia("(pointer: fine)");
+    private listeners?: AbortController;
+    private resizeObserver?: ResizeObserver;
+
+    connectedCallback() {
+      this.canvas = this.querySelector("canvas") ?? undefined;
+      this.ctx = this.canvas?.getContext("2d", { alpha: true }) ?? null;
+      if (!this.ctx) return;
+
+      // A cached light sprite avoids a blur or shadow calculation per particle.
+      this.glow.width = this.glow.height = 64;
+      const glow = this.glow.getContext("2d");
+      if (!glow) return;
+      const gradient = glow.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gradient.addColorStop(0, "rgba(220,236,255,1)");
+      gradient.addColorStop(0.06, "rgba(185,211,255,.9)");
+      gradient.addColorStop(0.2, "rgba(118,169,255,.3)");
+      gradient.addColorStop(1, "rgba(77,141,255,0)");
+      glow.fillStyle = gradient;
+      glow.fillRect(0, 0, 64, 64);
+
+      this.listeners = new AbortController();
+      const options = { signal: this.listeners.signal };
+      window.addEventListener("pointermove", this.movePointer, { ...options, passive: true });
+      document.addEventListener("pointerleave", this.leavePointer, options);
+      window.addEventListener("blur", this.leavePointer, options);
+      document.addEventListener("visibilitychange", this.updateMotion, options);
+      this.reducedMotion.addEventListener("change", this.updateMotion, options);
+      this.forcedColors.addEventListener("change", this.updateMotion, options);
+      this.resizeObserver = new ResizeObserver(this.resize);
+      this.resizeObserver.observe(this);
+      this.resize();
+    }
+
+    disconnectedCallback() {
+      cancelAnimationFrame(this.frame);
+      this.resizeObserver?.disconnect();
+      this.listeners?.abort();
+    }
+
+    private movePointer = (event: PointerEvent) => {
+      if (!this.finePointer.matches || this.reducedMotion.matches || event.pointerType === "touch") return;
+      this.pointer.targetX = event.clientX;
+      this.pointer.targetY = event.clientY;
+    };
+
+    private leavePointer = () => {
+      this.pointer.targetX = -1000;
+      this.pointer.targetY = -1000;
+    };
+
+    private resize = () => {
+      if (!this.canvas || !this.ctx) return;
+      const { width, height } = this.getBoundingClientRect();
+      this.width = width;
+      this.height = height;
+      const ratio = Math.min(devicePixelRatio || 1, 1.5, Math.sqrt(3_000_000 / Math.max(1, width * height)));
+      this.canvas.width = Math.round(width * ratio);
+      this.canvas.height = Math.round(height * ratio);
+      this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+      // Stable distribution across resizing; density and pixel count are bounded.
+      let seed = 179;
+      const random = () => {
+        seed = (seed * 16807) % 2147483647;
+        return (seed - 1) / 2147483646;
+      };
+      const count = Math.min(180, Math.max(55, Math.round(width * height / 8500)));
+      this.particles = Array.from({ length: count }, () => ({
+        phase: random() * 1.2,
+        lane: Math.floor(random() * 6) - 2.5,
+        depth: random(),
+        spread: (random() - 0.5) * 0.11,
+        size: 7 + random() * 15,
+      }));
+      this.dust = Array.from({ length: Math.round(count * 0.6) }, () => ({
+        x: random(), y: random(), size: 0.4 + random() * 0.8, phase: random() * Math.PI * 2,
+      }));
+      this.updateMotion();
+    };
+
+    private updateMotion = () => {
+      cancelAnimationFrame(this.frame);
+      this.lastFrame = 0;
+      if (document.hidden || this.forcedColors.matches || !this.width || !this.height) return;
+      if (this.reducedMotion.matches) {
+        this.pointer.x = this.pointer.y = -1000;
+        this.render();
+        return;
+      }
+      this.frame = requestAnimationFrame(this.tick);
+    };
+
+    private tick = (now: number) => {
+      this.frame = requestAnimationFrame(this.tick);
+      if (!this.lastFrame) this.lastFrame = now;
+      const elapsed = now - this.lastFrame;
+      if (elapsed < 1000 / 30) return;
+      this.time += Math.min(elapsed, 64) / 1000;
+      this.lastFrame = now;
+      this.pointer.x += (this.pointer.targetX - this.pointer.x) * 0.07;
+      this.pointer.y += (this.pointer.targetY - this.pointer.y) * 0.07;
+      this.render();
+    };
+
+    private position(u: number, lane: number, spread = 0) {
+      const bend = Math.sin(u * 5.4 + this.time * 0.075);
+      return {
+        x: this.width * u,
+        y: this.height * (0.88 - u * 0.62 + bend * 0.12 + lane * 0.038 + spread),
+      };
+    }
+
+    private render() {
+      const ctx = this.ctx;
+      if (!ctx) return;
+      const { width, height, time } = this;
+      ctx.clearRect(0, 0, width, height);
+      ctx.globalCompositeOperation = "lighter";
+
+      // Distant, slow-breathing points give the brighter stream some depth.
+      ctx.fillStyle = "#b9d3ff";
+      for (const point of this.dust) {
+        ctx.globalAlpha = 0.08 + 0.13 * (0.5 + 0.5 * Math.sin(time * 0.25 + point.phase));
+        ctx.beginPath();
+        ctx.arc(point.x * width, point.y * height, point.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Fine, continuous filaments suggest a flowing signal, with no hard grid.
+      ctx.strokeStyle = "#4d8dff";
+      ctx.lineWidth = 0.8;
+      for (let lane = -2.5; lane <= 2.5; lane++) {
+        ctx.globalAlpha = 0.065;
+        ctx.beginPath();
+        for (let step = 0; step <= 60; step++) {
+          const point = this.position(step / 60, lane);
+          if (step === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        }
+        ctx.stroke();
+      }
+
+      for (const particle of this.particles) {
+        const speed = 0.007 + particle.depth * 0.012;
+        const u = ((particle.phase + time * speed) % 1.2) - 0.1;
+        const point = this.position(u, particle.lane, particle.spread);
+        const previous = this.position(u - 0.007 * particle.depth, particle.lane, particle.spread);
+        const dx = point.x - this.pointer.x;
+        const dy = point.y - this.pointer.y;
+        const distance = Math.hypot(dx, dy);
+        const influence = Math.max(0, 1 - distance / 220);
+        if (distance > 0 && influence > 0) {
+          const displacement = influence * influence * 22;
+          const offsetX = dx / distance * displacement;
+          const offsetY = dy / distance * displacement;
+          point.x += offsetX;
+          point.y += offsetY;
+          previous.x += offsetX;
+          previous.y += offsetY;
+        }
+        const fade = Math.max(0, Math.min(1, u * 8, (1 - u) * 8));
+        const shimmer = 0.75 + 0.25 * Math.sin(time * 0.45 + particle.phase * 20);
+        const opacity = fade * shimmer * (0.25 + particle.depth * 0.55);
+        ctx.globalAlpha = opacity * 0.25;
+        ctx.beginPath();
+        ctx.moveTo(previous.x, previous.y);
+        ctx.lineTo(point.x, point.y);
+        ctx.stroke();
+        ctx.globalAlpha = Math.min(0.95, opacity + influence * 0.22);
+        const size = particle.size * (1 + influence * 0.4);
+        ctx.drawImage(this.glow, point.x - size / 2, point.y - size / 2, size, size);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+  }
+
+  if (!customElements.get("freehand-particles")) {
+    customElements.define("freehand-particles", FreehandParticles);
+  }
+</script>
