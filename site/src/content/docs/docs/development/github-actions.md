@@ -6,12 +6,15 @@ description: Public continuous integration, Windows packaging, and Pages deploym
 Freehand uses small, explicit GitHub Actions workflows rather than a custom CI
 container:
 
-- **CI** runs for pull requests, pushes to `main`, and manual dispatches. Linux
-  jobs validate Go, generated branding, Wails bindings, the Svelte frontend, and
-  this site. A Windows job builds the native executable and per-user NSIS
-  installer with the real CGo audio dependency.
-- **Pages** publishes `site/dist` when site or shared branding changes on
-  `main`. The production Astro base path is `/freehand-stt/`.
+- **CI** runs application checks for pull requests, pushes to `main`, and manual
+  dispatches. Linux jobs validate Go, generated branding, Wails bindings, and
+  the Svelte frontend. A Windows job builds the native executable and per-user
+  NSIS installer with the real CGo audio dependency. Site-only changes skip
+  these application jobs.
+- **Pages** builds and validates the site for pull requests that change site or
+  shared branding files, then publishes `site/dist` after matching changes land
+  on `main` or a maintainer dispatches the workflow. The production Astro base
+  path is `/freehand-stt/`.
 - **Release** lets Release Please maintain the release pull request, changelog,
   SemVer tag, and draft GitHub release. Once that release exists, the Windows
   job builds the tagged source, publishes the bare updater executable and
