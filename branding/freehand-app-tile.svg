@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Freehand application tile</title>
+  <desc id="desc">The rounded tile behind the Freehand application mark.</desc>
+  <rect data-role="tile" x="72" y="72" width="880" height="880" rx="190" fill="#FAFAFC" stroke="#D6DCE8" stroke-width="16"/>
+</svg>

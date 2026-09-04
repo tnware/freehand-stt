@@ -1,0 +1,393 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+@import "shadcn-svelte/tailwind.css";
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Freehand is a quiet desktop utility, not a control console. Neutral surfaces,
+ * comfortable type and one clear blue accent keep the interface approachable
+ * while the semantic roles remain stable across solid and Mica appearances.
+ */
+:root {
+	/* Surfaces, recessed to raised. */
+	--well: #f0f0f0;
+	--background: #f3f3f3;
+	--layer-fill: #f7f7f7;
+	--secondary: #fafafa;
+	--card: #ffffff;
+	--popover: #ffffff;
+	--popover-foreground: #1c1d21;
+	--dialog-surface: #ffffff;
+	--dialog-stroke: #dedede;
+	--dialog-smoke: rgb(28 29 33 / 24%);
+
+	/* Ink, strongest to quietest. */
+	--foreground: #1c1d21;
+	--card-foreground: #2b2b2b;
+	--secondary-foreground: #525252;
+	--muted-foreground: #6f6f6f;
+	--ink-quiet: #929292;
+	--ink-disabled: #c2c2c2;
+
+	/* Accent. One hue, four weights: fill, hover, text-on-surface, rest. */
+	--primary: #326fe5;
+	--primary-foreground: #ffffff;
+	--primary-hover: #245fcf;
+	--accent-text: #245fcf;
+	--accent-wash: rgb(50 111 229 / 9%);
+	--accent-wash-strong: rgb(50 111 229 / 14%);
+	--accent-edge: rgb(50 111 229 / 22%);
+	--meter: #326fe5;
+	--meter-rest: #c9d9f7;
+
+	/* Controls. A control is a subtle raise; an input is a recessed well. */
+	--control-fill: #ffffff;
+	--control-fill-hover: #f3f5f8;
+	--control-fill-pressed: #e9edf2;
+	--control-fill-active: #ffffff;
+	--subtle-fill-hover: rgb(15 17 21 / 4%);
+	--subtle-fill-pressed: rgb(15 17 21 / 7%);
+
+	/* Registry aliases. Accent is the wash that menus and hovers reach for. */
+	--muted: #eff1f4;
+	--accent: #eff1f4;
+	--accent-foreground: #2d3036;
+
+	/* Status. Green and amber darken on light so they stay legible as text. */
+	--success: #16a34a;
+	--warning: #b45309;
+	--destructive: #dc2626;
+	/* The record control is the one saturated constant in both themes. */
+	--record: #d13438;
+
+	--border: #dedede;
+	--input: #d6d6d6;
+	--ring: #326fe5;
+	--card-stroke: #e1e1e1;
+	--hairline: rgb(28 29 33 / 8%);
+	/* The 1px highlight that separates a panel from its ground. */
+	--highlight: #ffffff;
+
+	--scrollbar-track: transparent;
+	--scrollbar-thumb: rgb(15 17 21 / 26%);
+	--scrollbar-thumb-hover: rgb(15 17 21 / 42%);
+
+	/*
+	 * Panels are lifted by an inset top highlight, not a drop shadow. On light
+	 * a white inset alone is invisible, so it is paired with the faintest
+	 * possible cast, giving the same one-step separation the dark inset gets.
+	 */
+	--lift: 0 1px 2px rgb(28 29 33 / 5%), 0 4px 14px rgb(28 29 33 / 3%);
+
+	--chart-1: #2563eb;
+	--chart-2: #475569;
+	--chart-3: #64748b;
+	--chart-4: #94a3b8;
+	--chart-5: #c0c7d2;
+
+	--radius: 0.625rem;
+
+	--sidebar: #fafbfc;
+	--sidebar-foreground: #1c1d21;
+	--sidebar-primary: #326fe5;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #eff1f4;
+	--sidebar-accent-foreground: #2d3036;
+	--sidebar-border: #dfe2e7;
+	--sidebar-ring: #326fe5;
+}
+
+.dark {
+	--well: #191919;
+	--background: #202020;
+	--layer-fill: #242424;
+	--secondary: #2b2b2b;
+	--card: #2b2b2b;
+	--popover: #303030;
+	--popover-foreground: #f4f5f7;
+	--dialog-surface: #2b2b2b;
+	--dialog-stroke: #404040;
+	--dialog-smoke: rgb(0 0 0 / 55%);
+
+	--foreground: #f4f5f7;
+	--card-foreground: #e5e5e5;
+	--secondary-foreground: #bdbdbd;
+	--muted-foreground: #9a9a9a;
+	--ink-quiet: #777777;
+	--ink-disabled: #565656;
+
+	--primary: #6d9df4;
+	--primary-foreground: #101b2d;
+	--primary-hover: #82adf7;
+	--accent-text: #91b6f8;
+	--accent-wash: rgb(109 157 244 / 12%);
+	--accent-wash-strong: rgb(109 157 244 / 18%);
+	--accent-edge: rgb(109 157 244 / 25%);
+	--meter: #6d9df4;
+	--meter-rest: #3b4c68;
+
+	--control-fill: rgb(255 255 255 / 7%);
+	--control-fill-hover: rgb(255 255 255 / 11%);
+	--control-fill-pressed: rgb(255 255 255 / 4%);
+	--control-fill-active: rgb(255 255 255 / 8%);
+	--subtle-fill-hover: rgb(255 255 255 / 6%);
+	--subtle-fill-pressed: rgb(255 255 255 / 3%);
+
+	--muted: rgb(255 255 255 / 6%);
+	--accent: rgb(255 255 255 / 6%);
+	--accent-foreground: #f2f5f9;
+
+	/* Green and amber lighten on dark for the same reason they darken on light. */
+	--success: #22c55e;
+	--warning: #fbbf24;
+	--destructive: #f87171;
+	--record: #d13438;
+
+	--border: #404040;
+	--input: #454545;
+	--ring: #91b6f8;
+	--card-stroke: rgb(255 255 255 / 9%);
+	--hairline: rgb(255 255 255 / 8%);
+	--highlight: rgb(255 255 255 / 7%);
+
+	--scrollbar-thumb: rgb(255 255 255 / 24%);
+	--scrollbar-thumb-hover: rgb(255 255 255 / 40%);
+
+	--lift: 0 1px 2px rgb(0 0 0 / 22%), 0 6px 18px rgb(0 0 0 / 10%);
+
+	--chart-1: #3b82f6;
+	--chart-2: #a8b2c1;
+	--chart-3: #7b8697;
+	--chart-4: #5c6675;
+	--chart-5: #3b4451;
+
+	--sidebar: #242424;
+	--sidebar-foreground: #f4f5f7;
+	--sidebar-primary: #6d9df4;
+	--sidebar-primary-foreground: #101b2d;
+	--sidebar-accent: rgb(255 255 255 / 6%);
+	--sidebar-accent-foreground: #f4f5f7;
+	--sidebar-border: #404040;
+	--sidebar-ring: #91b6f8;
+}
+
+/*
+ * Mica keeps the same ladder, expressed as translucency instead of value. These
+ * roles apply only when the persisted native option was active at process
+ * launch, so translucent CSS is never painted over a still-solid native window.
+ */
+:root[data-material="mica"] {
+	--well: rgb(15 17 21 / 5%);
+	--layer-fill: rgb(255 255 255 / 40%);
+	--secondary: rgb(255 255 255 / 55%);
+	--card: rgb(255 255 255 / 72%);
+	--popover: #f9f9f9;
+	--dialog-surface: #f9f9f9;
+	--dialog-stroke: rgb(0 0 0 / 14%);
+	--dialog-smoke: rgb(0 0 0 / 16%);
+	--control-fill: rgb(255 255 255 / 70%);
+	--control-fill-hover: rgb(255 255 255 / 85%);
+	--control-fill-pressed: rgb(249 249 249 / 45%);
+	--control-fill-active: rgb(255 255 255 / 85%);
+	--muted: rgb(15 17 21 / 4%);
+	--accent: rgb(15 17 21 / 4%);
+	--border: rgb(0 0 0 / 10%);
+	--input: rgb(0 0 0 / 10%);
+	--card-stroke: rgb(0 0 0 / 8%);
+	--hairline: rgb(0 0 0 / 7%);
+	--highlight: rgb(255 255 255 / 65%);
+	--lift: inset 0 1px 0 rgb(255 255 255 / 65%), 0 0 0 1px var(--card-stroke);
+}
+
+.dark[data-material="mica"] {
+	--well: rgb(0 0 0 / 32%);
+	--layer-fill: rgb(255 255 255 / 3%);
+	--secondary: rgb(255 255 255 / 5%);
+	--card: rgb(255 255 255 / 6%);
+	--popover: #242424;
+	--dialog-surface: #242424;
+	--dialog-stroke: rgb(255 255 255 / 8%);
+	--dialog-smoke: rgb(0 0 0 / 16%);
+	--control-fill: rgb(255 255 255 / 7%);
+	--control-fill-hover: rgb(255 255 255 / 11%);
+	--control-fill-pressed: rgb(255 255 255 / 4%);
+	--control-fill-active: rgb(255 255 255 / 9%);
+	--muted: rgb(255 255 255 / 6%);
+	--accent: rgb(255 255 255 / 6%);
+	--border: rgb(255 255 255 / 9%);
+	--input: rgb(255 255 255 / 9%);
+	--card-stroke: rgb(255 255 255 / 8%);
+	--hairline: rgb(255 255 255 / 8%);
+	--highlight: rgb(255 255 255 / 6%);
+	--lift: inset 0 1px 0 rgb(255 255 255 / 6%), 0 0 0 1px var(--card-stroke);
+}
+
+@theme inline {
+	--font-sans: 'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'Cascadia Mono', 'SFMono-Regular', Consolas, ui-monospace, monospace;
+	--color-hairline: var(--hairline);
+	--color-highlight: var(--highlight);
+	--color-scrollbar-thumb-hover: var(--scrollbar-thumb-hover);
+	--color-scrollbar-thumb: var(--scrollbar-thumb);
+	--color-scrollbar-track: var(--scrollbar-track);
+	--color-success: var(--success);
+	--color-warning: var(--warning);
+	--color-record: var(--record);
+	--shadow-lift: var(--lift);
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-accent-text: var(--accent-text);
+	--color-accent-wash: var(--accent-wash);
+	--color-accent-wash-strong: var(--accent-wash-strong);
+	--color-accent-edge: var(--accent-edge);
+	--color-meter: var(--meter);
+	--color-meter-rest: var(--meter-rest);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-ink-quiet: var(--ink-quiet);
+	--color-ink-disabled: var(--ink-disabled);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-primary-hover: var(--primary-hover);
+	--color-control-fill: var(--control-fill);
+	--color-control-fill-hover: var(--control-fill-hover);
+	--color-control-fill-pressed: var(--control-fill-pressed);
+	--color-control-fill-active: var(--control-fill-active);
+	--color-layer-fill: var(--layer-fill);
+	--color-well: var(--well);
+	--color-subtle-fill-hover: var(--subtle-fill-hover);
+	--color-subtle-fill-pressed: var(--subtle-fill-pressed);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-dialog-surface: var(--dialog-surface);
+	--color-dialog-stroke: var(--dialog-stroke);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+	--radius-sm: 0.375rem;
+	--radius-md: 0.5rem;
+	--radius-lg: 0.625rem;
+	--radius-xl: 0.75rem;
+	--radius-2xl: 1rem;
+	--radius-3xl: 1.25rem;
+	--radius-4xl: 1.5rem;
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+		scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+		scrollbar-width: thin;
+	}
+	body {
+		@apply min-h-screen bg-background text-foreground antialiased;
+		margin: 0;
+		--wails-resize: all;
+	}
+	html {
+		@apply font-sans;
+		min-width: 320px;
+		background: var(--background);
+	}
+	#app {
+		background: var(--background);
+	}
+	button,
+	input {
+		font: inherit;
+	}
+	::selection {
+		background: color-mix(in oklab, var(--primary) 28%, transparent);
+	}
+	::-webkit-scrollbar {
+		width: 0.625rem;
+		height: 0.625rem;
+	}
+	::-webkit-scrollbar-track,
+	::-webkit-scrollbar-corner {
+		background: var(--scrollbar-track);
+	}
+	::-webkit-scrollbar-thumb {
+		min-height: 1.5rem;
+		border: 0.1875rem solid transparent;
+		border-radius: 999px;
+		background-color: var(--scrollbar-thumb);
+		background-clip: content-box;
+	}
+	::-webkit-scrollbar-thumb:hover {
+		border-width: 0.125rem;
+		background-color: var(--scrollbar-thumb-hover);
+	}
+}
+
+/*
+ * Figures remain stable as they update, but inherit the interface typeface.
+ * Monospace is reserved for literal endpoints, model IDs, shortcuts and code.
+ */
+@utility figure {
+	font-variant-numeric: tabular-nums;
+}
+
+@utility caption {
+	font-family: var(--font-sans);
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	line-height: 1.35;
+	color: var(--secondary-foreground);
+}
+
+html[data-material="mica"],
+html[data-material="mica"] body,
+html[data-material="mica"] #app {
+	background: transparent;
+}
+
+/* Keep the registry Dialog source untouched while making its window-level
+ * material calmer: Fluent smoke dims the owner without blurring its content. */
+[data-slot="dialog-overlay"] {
+	background-color: var(--dialog-smoke);
+	backdrop-filter: none;
+}
+
+/* Motion is presentation, never state. Keep every registry and app animation
+ * readable for people who ask Windows to reduce motion, including portals
+ * that live outside the component that opened them. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		transition-delay: 0ms !important;
+	}
+}
+
+@media (forced-colors: active) {
+	:focus-visible {
+		outline: 2px solid Highlight !important;
+		outline-offset: 2px;
+	}
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "go",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "include-v-in-release-name": true,
+  "draft": true,
+  "force-tag-creation": true,
+  "prerelease": true,
+  "prerelease-type": "alpha",
+  "versioning": "prerelease",
+  "initial-version": "0.1.0-alpha.1",
+  "packages": {
+    ".": {
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "build/config.yml"
+        }
+      ]
+    }
+  }
+}

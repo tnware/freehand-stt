@@ -1,0 +1,16 @@
+{
+	"fixed": {
+		"file_version": "0.1.0.1"
+	},
+	"info": {
+		"0000": {
+			"Comments": "Focus-safe Windows speech to text for local or remote endpoints.",
+			"CompanyName": "tnware",
+			"FileDescription": "Speech to text, anywhere you type.",
+			"FileVersion": "0.1.0-alpha.1",
+			"LegalCopyright": "Copyright 2026 Tyler Woods",
+			"ProductName": "Freehand",
+			"ProductVersion": "0.1.0-alpha.1"
+		}
+	}
+}

@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Install Wails Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Prepare embedded frontend placeholder
+        run: mkdir -p frontend/dist && printf '<!doctype html><title>CI compile placeholder</title>' > frontend/dist/index.html
+      - name: Verify branding and prepare release metadata
+        run: |
+          go run ./build/scripts/brandassets -check
+          go run ./build/scripts/releaseinfo -root . sync
+      - run: go test ./...
+      - run: go vet ./...
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install Wails Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Install pinned Wails CLI
+        shell: bash
+        run: |
+          version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
+      - run: npm ci --prefix frontend
+      - run: wails3 generate bindings -clean=true -ts -i
+      - run: npm --prefix frontend test
+      - run: npm --prefix frontend run check
+      - run: npm --prefix frontend run build
+
+  site:
+    name: Documentation site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci --prefix site
+      - name: Verify shared branding
+        run: |
+          cmp branding/freehand-mark.svg site/src/assets/freehand-mark.svg
+          cmp branding/freehand-mark.svg site/public/favicon.svg
+      - run: npm --prefix site run build
+
+  windows:
+    name: Windows package
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: mingw-w64-x86_64-gcc
+          path-type: inherit
+      - name: Install pinned Wails CLI
+        shell: pwsh
+        run: |
+          $version = (go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3).Trim()
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@$version"
+          $goBin = if ($env:GOBIN) { $env:GOBIN } else { Join-Path (go env GOPATH) "bin" }
+          $goBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install NSIS 3.12 when unavailable
+        shell: pwsh
+        run: ./.github/workflows/scripts/install-nsis.ps1
+      - name: Build executable and per-user installer
+        shell: pwsh
+        run: wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=user
+      - name: Verify native artifacts
+        shell: pwsh
+        run: |
+          $artifacts = @("bin/freehand.exe", "bin/freehand-amd64-installer.exe")
+          foreach ($artifact in $artifacts) {
+            $file = Get-Item $artifact
+            if ($file.Length -le 0) { throw "Empty artifact: $artifact" }
+            $hash = (Get-FileHash -Algorithm SHA256 $artifact).Hash.ToLowerInvariant()
+            Set-Content -Path "$artifact.sha256" -Value "$hash  $($file.Name)" -NoNewline
+          }
+          git diff --exit-code -- go.mod go.sum
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: freehand-windows-amd64
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            bin/freehand.exe
+            bin/freehand.exe.sha256
+            bin/freehand-amd64-installer.exe
+            bin/freehand-amd64-installer.exe.sha256

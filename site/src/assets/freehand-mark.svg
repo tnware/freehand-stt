@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="144 192 676 640" role="img" aria-labelledby="title desc">
+  <title id="title">Freehand mark</title>
+  <desc id="desc">A speech waveform resolving into a text caret.</desc>
+  <g data-role="glyph" fill="#2563EB">
+    <rect x="184" y="424" width="38" height="176" rx="19"/>
+    <rect x="242" y="332" width="38" height="360" rx="19"/>
+    <rect x="300" y="384" width="38" height="256" rx="19"/>
+    <rect x="358" y="250" width="38" height="524" rx="19"/>
+    <rect x="416" y="348" width="38" height="328" rx="19"/>
+    <rect x="474" y="294" width="38" height="436" rx="19"/>
+    <rect x="532" y="404" width="38" height="216" rx="19"/>
+    <circle cx="610" cy="512" r="22"/>
+    <rect x="701" y="250" width="38" height="524" rx="19"/>
+    <rect x="660" y="250" width="120" height="38" rx="19"/>
+    <rect x="660" y="736" width="120" height="38" rx="19"/>
+  </g>
+</svg>

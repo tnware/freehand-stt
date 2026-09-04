@@ -1,0 +1,191 @@
+---
+import mark from "../assets/freehand-mark.svg";
+import SiteFooter from "../components/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import "../styles/home.css";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const href = (path: string) => `${base}${path}`;
+
+const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86, 44, 68, 32, 52, 22, 40, 30, 18];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="Freehand is a native desktop client for self-hosted and OpenAI-compatible speech infrastructure." />
+    <meta name="theme-color" content="#070a12" />
+    <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
+    <title>Freehand — Speech to text, anywhere you type</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <SiteHeader current="home" />
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="kicker"><span></span> Your speech stack, on your desktop</p>
+          <h1 id="hero-title">Think it.<br />Say it.<br /><em>It’s there.</em></h1>
+          <p class="hero-lede">Freehand is a lightweight Windows client that turns your voice into text in the application you’re already using—while the models run on infrastructure you choose.</p>
+          <div class="hero-actions">
+            <a class="button button-dark" href={href("/download/")}>Download for Windows <span aria-hidden="true">→</span></a>
+            <a class="text-action" href="#workflow">See the 12-second tour <span aria-hidden="true">↓</span></a>
+          </div>
+        </div>
+
+        <div class="hero-stage" aria-label="A Freehand dictation becoming text">
+          <div class="dictation-state">
+            <div class="state-topline">
+              <span class="live-dot"></span>
+              <strong>Listening</strong>
+              <time>00:08</time>
+            </div>
+            <div class="waveform" aria-hidden="true">
+              {waveform.map((height, index) => <i style={`--height:${height}%;--delay:${index * -55}ms`}></i>)}
+            </div>
+          </div>
+
+          <div class="transcript-state">
+            <div class="field-chrome">
+              <span>Transcription output</span>
+              <span class="field-actions" aria-hidden="true">— □ ×</span>
+            </div>
+            <p>The release notes are ready for review<span class="caret" aria-hidden="true"></span></p>
+          </div>
+        </div>
+
+        <div class="hero-foot">
+          <span>Windows 11 alpha</span><span>About an 8 MB installer</span><span>Local, LAN, or remote endpoints</span><span>No bundled models</span>
+        </div>
+      </section>
+
+      <section class="statement" aria-labelledby="statement-title">
+        <p class="section-index">01 / Purpose</p>
+        <div>
+          <h2 id="statement-title">Bring your speech services<br /><em>to Windows.</em></h2>
+          <p>Freehand keeps the desktop side compact: capture, shortcuts, and safe text delivery live in the app, while inference stays on a service running on your PC, across your LAN, or through a compatible hosted provider.</p>
+        </div>
+      </section>
+
+      <section id="workflow" class="workflow" aria-labelledby="workflow-title">
+        <div class="section-intro">
+          <p class="section-index">02 / The path</p>
+          <h2 id="workflow-title">Speak where<br />you work.</h2>
+          <p>Use a shortcut to dictate directly into the application already in focus. Freehand handles capture, transcription, and safe text delivery.</p>
+        </div>
+
+        <ol class="workflow-track">
+          <li>
+            <span class="track-number">01</span>
+            <div class="track-copy"><small>Begin anywhere</small><h3>Press your shortcut</h3><p>Toggle recording or hold to talk. Freehand captures the exact Windows target before the microphone starts.</p></div>
+            <div class="track-art hotkey-art" aria-hidden="true"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd></div>
+          </li>
+          <li>
+            <span class="track-number">02</span>
+            <div class="track-copy"><small>Route deliberately</small><h3>Use your speech stack</h3><p>Send audio to a local or remote OpenAI-compatible endpoint. Optional cleanup remains a separate, recoverable step.</p></div>
+            <div class="track-art route-art" aria-hidden="true"><span>voice</span><i></i><span>text</span></div>
+          </li>
+          <li>
+            <span class="track-number">03</span>
+            <div class="track-copy"><small>Finish safely</small><h3>Receive the words</h3><p>If the original target still owns focus, Freehand inserts the text. If anything changed, it stops and leaves the result ready to copy.</p></div>
+            <div class="track-art result-art" aria-hidden="true"><span>Original target</span><b>Verified</b></div>
+          </li>
+        </ol>
+      </section>
+
+      <section class="feature-story" aria-labelledby="feature-title">
+        <div class="story-heading">
+          <p class="section-index">03 / In practice</p>
+          <h2 id="feature-title">A quiet utility with the right depth.</h2>
+        </div>
+
+        <article class="story story-primary">
+          <div class="story-copy">
+            <span class="story-label">Natural capture</span>
+            <h3>Speak at your<br />own pace.</h3>
+            <p>Optional local voice activity detection can trim silence, stop a toggle recording, and split longer dictation at natural pauses instead of mid-thought.</p>
+            <a href={href("/docs/guides/using-freehand/")}>Explore voice workflows <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="silence-study" aria-hidden="true">
+            <div class="study-head"><span>Silence detected</span><b>1.8s</b></div>
+            <div class="study-wave">
+              {[62, 34, 74, 48, 88, 54, 26, 20, 16, 12, 10, 8, 8, 8].map((height) => <i style={`--height:${height}%`}></i>)}
+            </div>
+            <div class="study-rule"><i></i><span>finishing at the pause</span></div>
+          </div>
+        </article>
+
+        <div class="story-pair">
+          <article class="story story-copyedit">
+            <span class="story-label">Optional cleanup</span>
+            <h3>Clean up the result.<br />Keep the original.</h3>
+            <div class="edit-example" aria-label="An example transcript before and after optional cleanup">
+              <p><del>um can you send that to tyler tomorrow</del></p>
+              <p><ins>Can you send that to Tyler tomorrow?</ins></p>
+            </div>
+            <p>A separate compatible chat model can clean the result. If it fails, your successful raw transcription stays intact.</p>
+          </article>
+
+          <article class="story story-file">
+            <span class="story-label">Stored audio</span>
+            <h3>Already recorded?<br />Bring the file.</h3>
+            <div class="file-progress" aria-hidden="true">
+              <div><span class="file-glyph">♪</span><p><strong>field-note.wav</strong><small>Streaming transcript</small></p><b>68%</b></div>
+              <i><span></span></i>
+            </div>
+            <p>Select common audio formats with the native picker, transcribe them, then copy the result explicitly.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="principles" class="principles" aria-labelledby="principles-title">
+        <div class="principles-heading">
+          <p class="section-index">04 / Trust</p>
+          <h2 id="principles-title">Know what happens<br />to your data.</h2>
+          <p>Freehand makes its handling of audio, credentials, connection checks, and text insertion explicit.</p>
+          <a href={href("/docs/guides/privacy-and-safety/")}>Read the privacy and safety guide <span aria-hidden="true">↗</span></a>
+        </div>
+
+        <ol class="principle-list">
+          <li><span>01</span><div><h3>No retained audio</h3><p>Capture is released after completion, failure, or cancellation.</p></div></li>
+          <li><span>02</span><div><h3>No wrong-window insertion</h3><p>The original destination is revalidated before delivery.</p></div></li>
+          <li><span>03</span><div><h3>No plaintext credentials</h3><p>Stored keys stay inside Windows Credential Manager.</p></div></li>
+          <li><span>04</span><div><h3>No Freehand account</h3><p>Connect the speech services you already use without another sign-in.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="compatibility" aria-labelledby="compatibility-title">
+        <div class="compatibility-copy">
+          <p class="section-index">05 / Compatibility</p>
+          <h2 id="compatibility-title">Your endpoint.<br />Your choice.</h2>
+          <p>Freehand does not bundle a model or manage an inference runtime. Speech, cleanup, and playback can each use infrastructure you operate or deliberately select.</p>
+          <a class="button button-light" href={href("/docs/reference/protocol/")}>View protocol profile <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="endpoint-list" aria-label="Supported OpenAI-compatible API routes">
+          <div><span class="method post">POST</span><code>/v1/audio/transcriptions</code><small>required</small></div>
+          <div><span class="method get">GET</span><code>/v1/models</code><small>discovery</small></div>
+          <div><span class="method post">POST</span><code>/v1/chat/completions</code><small>optional</small></div>
+          <div><span class="method post">POST</span><code>/v1/audio/speech</code><small>optional</small></div>
+        </div>
+      </section>
+
+      <section class="closing" aria-labelledby="closing-title">
+        <img src={mark.src} alt="" />
+        <p class="kicker"><span></span> Freehand for Windows</p>
+        <h2 id="closing-title">Give your hands<br />a little less to do.</h2>
+        <p>Speech to text, anywhere you type.</p>
+        <div class="closing-actions">
+          <a class="button button-dark" href={href("/download/")}>Download Freehand <span aria-hidden="true">→</span></a>
+          <a class="text-action" href={href("/docs/getting-started/")}>Browse documentation <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <SiteFooter />
+
+  </body>
+</html>

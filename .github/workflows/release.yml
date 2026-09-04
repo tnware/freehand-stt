@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  attestations: write
+  artifact-metadata: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release-created: ${{ steps.release.outputs.release_created }}
+      tag-name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  windows:
+    needs: release-please
+    if: needs.release-please.outputs.release-created == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag-name }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: mingw-w64-x86_64-gcc
+          path-type: inherit
+      - name: Install pinned Wails CLI
+        shell: pwsh
+        run: |
+          $version = (go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3).Trim()
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@$version"
+          $goBin = if ($env:GOBIN) { $env:GOBIN } else { Join-Path (go env GOPATH) "bin" }
+          $goBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install NSIS 3.12 when unavailable
+        shell: pwsh
+        run: ./.github/workflows/scripts/install-nsis.ps1
+      - name: Verify release version
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          $configured = (Select-String -Path build/config.yml -Pattern '^\s*version:\s*"([^\"]+)"' | Select-Object -First 1).Matches.Groups[1].Value
+          if ($configured -ne $env:RELEASE_VERSION) {
+            throw "build/config.yml version $configured does not match release $env:RELEASE_VERSION"
+          }
+          go run ./build/scripts/releaseinfo -root . sync
+          go run ./build/scripts/releaseinfo -root . check
+      - name: Build release
+        shell: pwsh
+        run: wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=user
+      - name: Assemble release assets
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Copy-Item bin/freehand.exe dist/freehand-windows-amd64.exe
+          Copy-Item bin/freehand-amd64-installer.exe dist/freehand-windows-amd64-installer.exe
+          $lines = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
+            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          Set-Content -Path dist/SHA256SUMS -Value $lines -Encoding ascii
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: freehand-${{ needs.release-please.outputs.version }}-windows-amd64
+          if-no-files-found: error
+          retention-days: 30
+          path: dist/*
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        # Private-repository attestations require GitHub Enterprise Cloud.
+        # Public releases receive attestations automatically after publication.
+        if: github.event.repository.visibility == 'public'
+        with:
+          subject-path: |
+            dist/freehand-windows-amd64.exe
+            dist/freehand-windows-amd64-installer.exe
+            dist/SHA256SUMS
+      - name: Publish complete release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag-name }}
+        run: |
+          gh release upload $env:RELEASE_TAG dist/* --clobber
+          gh release edit $env:RELEASE_TAG --draft=false --prerelease=true --latest=false

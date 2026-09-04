@@ -1,0 +1,17 @@
+---
+import mark from "../assets/freehand-mark.svg";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const href = (path: string) => `${base}${path}`;
+---
+
+<footer>
+  <a class="wordmark" href={href("/")}><img src={mark.src} alt="" /><span>Freehand</span></a>
+  <p>Speech to text, anywhere you type.</p>
+  <nav aria-label="Footer navigation">
+    <a href={href("/download/")}>Download</a>
+    <a href={href("/docs/getting-started/")}>Docs</a>
+    <a href={href("/docs/guides/connect-a-server/")}>Connect a server</a>
+    <a href="https://github.com/tnware/freehand-stt">GitHub</a>
+  </nav>
+</footer>

@@ -1,0 +1,167 @@
+---
+import mark from "../assets/freehand-mark.svg";
+import SiteFooter from "../components/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import "../styles/home.css";
+import "../styles/download.css";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const href = (path: string) => `${base}${path}`;
+const releasesUrl = "https://github.com/tnware/freehand-stt/releases";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="Download the latest Freehand alpha for Windows." />
+    <meta name="theme-color" content="#070a12" />
+    <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
+    <title>Download Freehand for Windows</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <SiteHeader current="download" />
+
+    <main id="main" class="download-page">
+      <section class="download-hero" aria-labelledby="download-title">
+        <div class="download-copy">
+          <p class="kicker"><span></span> Windows 11 · Public alpha</p>
+          <h1 id="download-title">Your voice.<br /><em>Your stack.</em><br />Freehand.</h1>
+          <p class="download-lede">A compact Windows client for speech services you run locally, across your network, or through a compatible provider—with no bundled inference runtime.</p>
+
+          <div class="download-actions">
+            <a class="button button-dark download-primary" href={releasesUrl} data-release-link data-asset="installer">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg>
+              Download installer
+            </a>
+            <a class="text-action" href={href("/docs/guides/windows-installer/")}>Installation guide <span aria-hidden="true">→</span></a>
+          </div>
+
+          <div class="release-facts" aria-label="Download details">
+            <span>Windows 11</span>
+            <span>x64</span>
+            <span>Per-user install</span>
+            <span>About 8 MB</span>
+          </div>
+        </div>
+
+        <aside class="release-card" aria-label="Latest Freehand release">
+          <div class="release-card-glow" aria-hidden="true"></div>
+          <div class="release-card-head">
+            <div class="release-app-icon"><img src={mark.src} alt="" /></div>
+            <div>
+              <span>Freehand for Windows</span>
+              <strong data-release-version>Latest alpha</strong>
+            </div>
+            <span class="alpha-badge">Alpha</span>
+          </div>
+
+          <div class="release-preview" aria-hidden="true">
+            <div class="preview-top"><i></i><span>Ready to dictate</span><small>Freehand</small></div>
+            <div class="preview-wave">
+              {[24, 42, 67, 35, 78, 52, 88, 44, 63, 31, 72, 48, 26, 57, 39, 69, 32, 50].map((height) => <i style={`--height:${height}%`}></i>)}
+            </div>
+            <div class="preview-status"><span></span>Connected to your speech service</div>
+          </div>
+
+          <a class="release-row release-row-primary" href={releasesUrl} data-release-link data-asset="installer">
+            <span class="platform-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 4.4 10.6 3v8.2H3V4.4Zm8.5-1.55L21 1.3v9.9h-9.5V2.85ZM3 12.1h7.6v8.3L3 19v-6.9Zm8.5 0H21V22l-9.5-1.55V12.1Z"/></svg>
+            </span>
+            <span><strong>Windows installer</strong><small>Recommended · x64</small></span>
+            <svg class="row-action" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+          </a>
+
+          <a class="release-row" href={releasesUrl} data-release-link data-asset="portable">
+            <span class="platform-icon secondary" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3h4Zm7 0v5h5M8 13h8m-8 4h5"/></svg>
+            </span>
+            <span><strong>Portable executable</strong><small>No installation · x64</small></span>
+            <svg class="row-action" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h9v9M18 6 7 17"/></svg>
+          </a>
+
+          <a class="all-releases" href={releasesUrl}>Release notes, checksums, and older builds <span aria-hidden="true">↗</span></a>
+        </aside>
+      </section>
+
+      <section class="download-options" aria-labelledby="choose-title">
+        <div class="download-section-heading">
+          <p class="section-index">Choose your path</p>
+          <h2 id="choose-title">Install it.<br /><em>Then make it yours.</em></h2>
+        </div>
+
+        <div class="option-grid">
+          <article>
+            <span class="option-number">01</span>
+            <div class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg></div>
+            <h3>Use the installer</h3>
+            <p>The normal path for most people. Freehand installs for your Windows account, adds a Start Menu shortcut, and does not require administrator access.</p>
+            <a href={releasesUrl} data-release-link data-asset="installer">Get the installer <span aria-hidden="true">→</span></a>
+          </article>
+
+          <article>
+            <span class="option-number">02</span>
+            <div class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3h4Zm7 0v5h5M8 13h8m-8 4h5"/></svg></div>
+            <h3>Run it portable</h3>
+            <p>Keep the standalone executable in a stable, user-writable folder. It runs without installation, but does not add shortcuts or an uninstaller.</p>
+            <a href={releasesUrl} data-release-link data-asset="portable">Get the portable build <span aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </section>
+
+      <section class="before-install" aria-labelledby="before-title">
+        <div class="before-copy">
+          <p class="section-index">Before you begin</p>
+          <h2 id="before-title">Freehand is the client.<br />You choose the service.</h2>
+          <p>Freehand does not bundle a speech model. Have the URL and model name for an OpenAI-compatible transcription endpoint ready, then connect it during first launch.</p>
+          <a class="button button-light" href={href("/docs/guides/connect-a-server/")}>Connect a speech server <span aria-hidden="true">→</span></a>
+        </div>
+
+        <ol class="setup-steps">
+          <li><span>1</span><div><strong>Download</strong><p>Choose the installer or portable executable from the latest GitHub release.</p></div></li>
+          <li><span>2</span><div><strong>Verify and open</strong><p>The alpha is currently unsigned. Verify its SHA-256 checksum before accepting the Windows publisher warning.</p></div></li>
+          <li><span>3</span><div><strong>Connect</strong><p>Enter your endpoint, model, and optional API key in Freehand’s guided setup.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="download-note" aria-label="Alpha release note">
+        <span class="note-mark"><img src={mark.src} alt="" /></span>
+        <div><strong>Built in the open, still in alpha.</strong><p>Expect active development. Releases include checksums, and automatic update checks are enabled by default.</p></div>
+        <a href="https://github.com/tnware/freehand-stt">View the source <span aria-hidden="true">↗</span></a>
+      </section>
+    </main>
+
+    <SiteFooter />
+
+    <script>
+      const releaseLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-release-link]"));
+      const version = document.querySelector<HTMLElement>("[data-release-version]");
+
+      fetch("https://api.github.com/repos/tnware/freehand-stt/releases?per_page=10", {
+        headers: { Accept: "application/vnd.github+json" },
+      })
+        .then((response) => response.ok ? response.json() : Promise.reject())
+        .then((releases: Array<{ draft: boolean; tag_name: string; html_url: string; assets: Array<{ name: string; browser_download_url: string }> }>) => {
+          const release = releases.find((candidate) => !candidate.draft);
+          if (!release) return;
+
+          if (version) version.textContent = release.tag_name;
+
+          const assets = {
+            installer: release.assets.find((asset) => asset.name === "freehand-windows-amd64-installer.exe"),
+            portable: release.assets.find((asset) => asset.name === "freehand-windows-amd64.exe"),
+          };
+
+          for (const link of releaseLinks) {
+            const kind = link.dataset.asset as keyof typeof assets | undefined;
+            link.href = kind && assets[kind] ? assets[kind].browser_download_url : release.html_url;
+          }
+        })
+        .catch(() => {
+          // Every action already points to GitHub Releases as a resilient fallback.
+        });
+    </script>
+  </body>
+</html>

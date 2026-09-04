@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=Freehand
+Comment=Speech to text, anywhere you type.
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/freehand %u
+Terminal=false
+Type=Application
+Icon=freehand
+Categories=Utility;
+StartupWMClass=freehand
