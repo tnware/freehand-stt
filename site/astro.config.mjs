@@ -6,13 +6,14 @@ const productionUrl = new URL(
 	process.env.SITE_URL ?? 'https://tnware.github.io/freehand-stt/',
 );
 const basePath = process.env.CI ? productionUrl.pathname : '/';
+const base = basePath.replace(/\/$/, '');
 
 // https://astro.build/config
 export default defineConfig({
 	site: productionUrl.origin,
 	base: basePath,
 	redirects: {
-		'/docs': '/docs/getting-started',
+		'/docs': `${base}/docs/getting-started`,
 	},
 	integrations: [
 		starlight({
