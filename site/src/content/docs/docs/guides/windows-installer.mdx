@@ -1,0 +1,136 @@
+---
+title: Install and update Freehand
+description: Install, verify, update, or remove the Freehand Windows alpha.
+---
+
+import { Steps, Tabs, TabItem, LinkCard } from '@astrojs/starlight/components';
+
+Download Freehand from the official
+[GitHub Releases](https://github.com/tnware/freehand-stt/releases) page. Choose
+the installer for a normal installation, or the portable executable to run
+without installing. Download `SHA256SUMS` from the **same release** to verify
+either file.
+
+:::caution[Unsigned alpha]
+The current downloads are not Authenticode-signed, so Windows may identify the
+publisher as unknown. Confirm that your download came from the official
+release and compare its SHA-256 hash with the matching entry in `SHA256SUMS`
+before opening it. If the hashes differ, do not run the file; download it again.
+:::
+
+## Install
+
+Freehand requires Windows 11 x64, WebView2, and a compatible speech endpoint.
+Initial setup also requires a usable microphone, even if you plan to work
+with stored audio files.
+
+<Tabs>
+  <TabItem label="Installer">
+
+The installer installs for your Windows account beneath
+`%LOCALAPPDATA%\Programs`. It creates a Start Menu shortcut and does not
+require administrator access.
+
+<Steps>
+
+1. **Download the installer and checksums.** Save
+   `freehand-windows-amd64-installer.exe` and `SHA256SUMS` from the same release.
+
+2. **Verify the download.** Open PowerShell in the download folder and run:
+
+   ```powershell title="Verify the Windows installer"
+   Get-FileHash -Algorithm SHA256 .\freehand-windows-amd64-installer.exe
+   ```
+
+   Compare the displayed hash with the line for
+   `freehand-windows-amd64-installer.exe` in `SHA256SUMS`. They must match.
+
+3. **Run the verified installer.** It checks the Windows version, processor
+   architecture, and WebView2 Runtime. If WebView2 is missing, it runs
+   Microsoft's bootstrapper to install it.
+
+4. **Launch Freehand from the Start Menu.** Installation does not launch the
+   app automatically or add a Desktop shortcut. Continue with the first-run
+   setup guide below.
+
+</Steps>
+
+  </TabItem>
+  <TabItem label="Portable">
+
+The portable executable requires an existing WebView2 Runtime. It does not add
+Start Menu shortcuts or an uninstaller.
+
+<Steps>
+
+1. **Download the executable and checksums.** Save `freehand-windows-amd64.exe`
+   and `SHA256SUMS` from the same release.
+
+2. **Verify the download.** Open PowerShell in the download folder and run:
+
+   ```powershell title="Verify the portable executable"
+   Get-FileHash -Algorithm SHA256 .\freehand-windows-amd64.exe
+   ```
+
+   Compare the displayed hash with the line for `freehand-windows-amd64.exe`
+   in `SHA256SUMS`. They must match.
+
+3. **Open the verified executable.** Keep it in a stable, user-writable folder
+   if you want the in-app updater to replace it. Continue with the first-run
+   setup guide below.
+
+</Steps>
+
+  </TabItem>
+</Tabs>
+
+<LinkCard
+  title="Connect your speech service"
+  description="Choose your endpoint, configure a microphone, and finish your first dictation."
+  href="../../getting-started/#first-launch"
+/>
+
+## Upgrade
+
+Installing a newer package in place is the normal alpha upgrade path:
+
+<Steps>
+
+1. **Quit Freehand from its tray menu.** Closing the main window only hides
+   it. The installer will not silently terminate a running instance.
+2. **Download and verify the newer installer** using the steps above, then run it.
+3. **Launch Freehand again** from the Start Menu.
+
+</Steps>
+
+Automatic update checks are enabled by default and can be disabled under
+**Settings → General**. When a newer release is available, the update window
+downloads and verifies the standalone executable and waits for you to restart.
+The in-app updater replaces the executable; it does not run the installer.
+
+Installing an older alpha is not blocked. Check the release notes before
+deliberately downgrading.
+
+## Portable executable
+
+Use the **Portable** tab under [Install](#install) for the download and
+verification steps. The executable runs without installation and has no Start
+Menu registration or uninstaller. Keep its folder writable if you use in-app
+updates.
+
+## Uninstall
+
+<Steps>
+
+1. **Quit Freehand from its tray menu.**
+2. **Remove Freehand through Installed apps** or its Start Menu uninstaller.
+
+</Steps>
+
+Uninstall removes the installed executable, third-party notice, uninstaller,
+registration, and Start Menu shortcut.
+
+:::note[Settings and keys remain]
+Uninstall retains settings, interface preferences, and Windows Credential
+Manager entries. Freehand does not currently offer a remove-all-data option.
+:::

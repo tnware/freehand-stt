@@ -7,6 +7,21 @@ description: Keep speech recognition and optional transcript normalization as se
 - Date: 2026-08-29
 - Authority: [superwhisper/s1-mini v1 model card](https://huggingface.co/superwhisper/s1-mini/tree/v1)
 
+## Alpha implementation clarification — 2026-09-04
+
+The separate processing stage, trained S1-mini by Superwhisper profile, and raw
+failure fallback are implemented. The accepted generation requirements below
+remain the design intent, but **input-relative output limits and sentence
+chunking near 1,000 tokens are not implemented in v0.1.0-alpha.1**. The client
+sends one cleanup request per input and accepts nonempty output even when the
+provider reports a length-limited completion. This note qualifies the
+implementation status without replacing the decision or its requirements.
+
+Raw failure fallback is independent of history. Retaining both versions after
+successful cleanup, or retaining a raw result after cancellation, requires
+history to be enabled and the text to fit its memory limits. History is
+session-only and disabled by default.
+
 ## Decision
 
 Keep speech recognition and transcript normalization as separate capabilities:

@@ -120,6 +120,16 @@ kbd { min-width: 35px; padding: 7px 8px; border: 1px solid rgba(163,185,218,.22)
 .result-art { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; color: #bec7d4; font-size: 12px; }
 .result-art b { padding: 7px 10px; border-radius: 999px; color: #73e2b7; background: rgba(35,197,137,.09); font-family: var(--mono); font-size: 8px; letter-spacing: .08em; text-transform: uppercase; }
 
+.workflow-options { margin-top: 56px; }
+.workflow-options > h3 { margin: 0; font-family: var(--display); font-size: clamp(28px,3vw,40px); font-weight: 500; letter-spacing: -.04em; }
+.workflow-options > p { max-width: 48em; margin: 16px 0 28px; color: #95a1b3; font-size: 18px; }
+.cleanup-choices { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 28px; margin: 0; padding: 0; list-style: none; }
+.cleanup-choices > li { display: flex; flex-direction: column; min-width: 0; padding-top: 24px; border-top: 1px solid var(--line); }
+.cleanup-choices h4 { margin: 0; font-size: 20px; font-weight: 500; }
+.cleanup-choices p { margin: 14px 0 22px; color: #95a1b3; font-size: 16px; }
+.cleanup-choices a { align-self: flex-start; margin-top: auto; color: var(--blue-bright); font-size: 16px; text-underline-offset: 5px; }
+.cleanup-choices a:hover { text-decoration: underline; }
+
 .feature-story { width: min(1280px, calc(100% - 40px)); margin: 0 auto; padding: 100px 0; }
 .story-heading { margin-bottom: 48px; }
 .story-heading .section-index { margin-bottom: 32px; }

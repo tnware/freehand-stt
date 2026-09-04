@@ -8,18 +8,38 @@ transcript text leave the PC only when required by a capability you configured.
 The destination may be localhost, a private server, or a hosted provider, so
 that server's own privacy and retention policy still applies.
 
+## What goes where?
+
+| Data | Destination | What Freehand keeps |
+| --- | --- | --- |
+| Microphone or selected-file audio | Your configured speech-to-text endpoint | Audio for the active request; released afterward. Existing source files are unchanged. |
+| Transcript sent for cleanup | Your separate cleanup endpoint, when enabled | Keeping both versions after successful cleanup requires enabled session history. Raw failure fallback does not require history. |
+| API keys | The configured capability endpoint when authentication is enabled | Saved keys in Windows Credential Manager. |
+| Transcript history | Memory on your PC | Off by default; at most 20 entries and 2 MiB, cleared on exit. |
+| Speech playback text and audio | Your playback endpoint receives text and returns audio | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit. |
+| Update checks | GitHub release service | Update metadata and any downloaded update; no recordings or transcripts are sent. |
+
+The details below describe the lifetime of each kind of data. Your chosen
+server's retention policy applies to anything sent to it.
+
 ## Audio
 
 Microphone and selected-file audio is kept only for the active transcription
 request. Freehand does not retain audio in history or write predictable audio
 files to disk. Active audio is released after completion, failure,
-cancellation, replacement, or shutdown.
+cancellation, replacement, or shutdown. Selecting an existing audio file does
+not delete or modify the original file.
+
+Optional text-to-speech is separate: generated playback audio remains in
+memory until cleared or replaced, a recording begins, or Freehand exits. You
+can explicitly save generated audio. Your chosen inference server may retain
+audio or text according to its own policy.
 
 ## Transcripts and history
 
 Transcript history is disabled by default. When enabled, it is memory-only,
 bounded to 20 entries and 2 MiB, and cleared when Freehand exits. It stores
-final transcript text and limited non-secret run details—not audio,
+raw and cleaned transcript text and limited non-secret run details—not audio,
 credentials, request headers, full file paths, or destination-window identity.
 
 Stored-audio results require an explicit Copy action. Voice dictation can use
@@ -47,10 +67,20 @@ without transport encryption. Do not enable it across an untrusted network.
 
 ## Connection checks
 
-Automatic and manual connection checks request a health route or
+First launch requires an explicit connection test. After setup, Freehand
+checks the saved speech connection automatically on launch and after relevant
+connection settings change. Automatic and manual checks request a health route or
 `GET /v1/models`. They do not submit audio, prompts, or synthetic inference
 jobs, and they do not cycle through discovered models. Model selection itself
 does not invoke the model.
+
+## Update checks
+
+Automatic update checks are on by default. Freehand checks GitHub release
+metadata shortly after startup and once per day. If an update is available,
+the updater can download and verify it, then waits for you to restart. You can
+disable automatic checks under **Settings → General**. These checks do not
+send recordings or transcripts to GitHub.
 
 ## Diagnostics
 
