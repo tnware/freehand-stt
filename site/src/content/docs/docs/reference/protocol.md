@@ -28,7 +28,7 @@ configuration, and failure guidance.
 
 ## STT request
 
-```http
+```http title="Speech-to-text request"
 POST {base_url}/audio/transcriptions
 Authorization: Bearer <credential>
 Content-Type: multipart/form-data
@@ -40,7 +40,7 @@ language=<optional>
 
 Expected response:
 
-```json
+```json title="Completed transcription response"
 {
   "text": "transcribed text"
 }
@@ -62,13 +62,13 @@ HTTPS is required by default. Plain HTTP is accepted only when **Allow insecure 
 
 ## Example deployment
 
-```text
+```text title="Example speech endpoint settings"
 Base URL: https://speech.example.com/v1
 STT model: speech/stt
 Language: auto/unset
 ```
 
-The LiteLLM key must be entered by the user and stored in Windows Credential Manager.
+If the endpoint requires authentication, select **API key** and enter its credential in Freehand. The key is stored in Windows Credential Manager; no particular gateway is required.
 
 ## Headers
 
@@ -91,9 +91,38 @@ This check does not submit audio or inference requests and stops after 15 second
 
 ## Request budgets and safety ceilings
 
-The shared HTTP transport does not impose a response-header deadline. The owning capability applies the validated budget captured at operation start: microphone and each silence checkpoint default to 120 seconds, a stored-file request defaults to 360 minutes, post-processing defaults to 120 seconds, and speech generation defaults to 180 seconds. These values are user-configurable in Settings. A streamed-file fallback request receives a fresh stored-file budget, but Freehand never retries an ordinary failed request automatically.
+### Configurable request budgets
 
-Fixed safety ceilings are not user-configurable: 8 MiB per microphone WAV, 2 GiB per stored audio file, 1 MiB per completed transcription/metadata/chat response, 8 MiB per stored-file transcript response, 2 MiB per chat request, 4,096 characters per speech input, and 32 MiB per generated WAV.
+Each operation uses the budget captured when it starts. Change these values
+in Settings for subsequent requests; the shared HTTP transport adds no
+separate response-header deadline.
+
+| Operation | Default request budget |
+| --- | --- |
+| Microphone transcription | 120 seconds |
+| Each pause-aware checkpoint | 120 seconds |
+| Stored-audio transcription | 360 minutes (6 hours) |
+| Transcript cleanup | 120 seconds |
+| Speech generation | 180 seconds |
+
+An explicit retry receives a new request budget. If a server has rejected
+streaming, a subsequent file attempt can use completed output. Freehand does
+not automatically retry an ordinary failed inference request.
+
+### Fixed safety ceilings
+
+These client limits cannot be changed in Settings. A server or reverse proxy
+may impose a lower limit.
+
+| Input or response | Maximum |
+| --- | --- |
+| Microphone WAV | 8 MiB |
+| Stored audio file | 2 GiB |
+| Completed microphone transcription, metadata, or chat response | 1 MiB |
+| Stored-file transcript response | 8 MiB |
+| Chat request | 2 MiB |
+| Speech playback text | 4,096 characters |
+| Generated WAV | 32 MiB |
 
 ## Text to speech
 
@@ -101,44 +130,36 @@ On-demand speech uses an independent `POST /audio/speech` capability profile and
 
 Example self-hosted values:
 
-```text
-LLM model: one user-selected ollama/<model> route
-TTS model: speech/tts
-TTS voice: bf_alice
+```text title="Speech playback model and voice"
+TTS model: <model ID served by your speech endpoint>
+TTS voice: <voice ID supported by that model>
 ```
 
 The client must never iterate across the LLM catalog.
 
 ## Optional transcript post-processing
 
-The client can pass the raw STT result to `POST /chat/completions` through an independently configured endpoint, model, and credential. This capability can be disabled for verbatim transcription. Processing failure and empty processor output fall back to the raw transcript without failing delivery.
+The client can pass the raw STT result to `POST /chat/completions` through an independently configured endpoint, model, and credential. This capability can be disabled for verbatim transcription. Processing failure and empty processor output fall back to the raw transcript, subject to cancellation and the normal delivery checks. Retaining both versions after successful cleanup requires enabled session history.
 
 S1-mini v1 requires its exact documented system prompt and control line. Valid values are:
 
-```text
+```text title="Supported S1-mini control values"
 Styling: casual | semi-casual | semi-formal | formal
 Structure: prose | lists
 Context: general | email
 ```
 
+The alpha sends one cleanup request per input, with no sentence chunking or input-relative output limit. Nonempty length-limited completions are accepted. See the [input-length limits](../../guides/post-processing/#input-length-and-alpha-limits) before processing long text.
+
 The default is `semi-casual/prose/general`; `balanced` is not a trained S1-mini v1 value. Thinking must be disabled by the backend route. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) and the [post-processing setup guide](../../guides/post-processing/).
 
 ## Shelved realtime microphone STT research
 
-Realtime microphone STT is not an active product milestone. The existing
-pause-aware checkpoint flow continues to use the ordinary transcription route,
-supports optional cleanup, and produces one stable delivery result. The
-following contract is retained only as research for a future live-caption or
-provisional-editing use case:
+:::note[Research only]
+Realtime microphone transcription is not an active product milestone. The
+current pause-aware checkpoint workflow uses the ordinary transcription route,
+supports optional cleanup, and produces one final delivery result.
 
-Realtime STT has an independent endpoint and credential because LiteLLM is not a required transport:
-
-```yaml
-realtime_stt:
-  transport: websocket
-  url: ws://speaches.internal:8000/v1/realtime
-  transcription_model: Systran/faster-distil-whisper-small.en
-  credential_ref: optional-separate-reference
-```
-
-Speaches v0.8.2 accepts 24 kHz mono PCM16 through `input_audio_buffer.append`, supports server VAD, and emits finalized `conversation.item.input_audio_transcription.completed` events. The application also models the OpenAI `delta` event for providers that support true incremental transcription. It never inserts provisional text. See [ADR 0002](../../decisions/0002-realtime-transcription/).
+The proposed realtime transport and event contracts remain in
+[ADR 0002: Realtime transcription](../../decisions/0002-realtime-transcription/).
+:::

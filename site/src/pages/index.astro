@@ -16,7 +16,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="description" content="Freehand is a native desktop client for self-hosted and OpenAI-compatible speech infrastructure." />
+    <meta name="description" content="Dictate into Windows apps with speech models you choose, optional custom or S1-mini by Superwhisper cleanup, and built-in local voice detection." />
     <meta name="theme-color" content="#070a12" />
     <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
     <title>Freehand — Speech to text, anywhere you type</title>
@@ -30,12 +30,12 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="kicker"><span></span> Your speech stack, on your desktop</p>
+          <p class="kicker"><span></span> Your voice. Your models. Your Windows apps.</p>
           <h1 id="hero-title">Think it.<br />Say it.<br /><em>It’s there.</em></h1>
-          <p class="hero-lede">Freehand is a lightweight Windows client that turns your voice into text in the application you’re already using—while the models run on infrastructure you choose.</p>
+          <p class="hero-lede">Dictate into the Windows apps you already use, with a speech model and service you choose. Leave the transcript unchanged or add cleanup with a separately chosen model.</p>
           <div class="hero-actions">
             <a class="button button-dark" href={href("/download/")}>Download for Windows <span aria-hidden="true">→</span></a>
-            <a class="text-action" href="#workflow">See the 12-second tour <span aria-hidden="true">↓</span></a>
+            <a class="text-action" href="#workflow">See how it works <span aria-hidden="true">↓</span></a>
           </div>
         </div>
 
@@ -68,8 +68,8 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
       <section class="statement" aria-labelledby="statement-title">
         <p class="section-index">01 / Purpose</p>
         <div>
-          <h2 id="statement-title">Bring your speech services<br /><em>to Windows.</em></h2>
-          <p>Freehand keeps the desktop side compact: capture, shortcuts, and safe text delivery live in the app, while inference stays on a service running on your PC, across your LAN, or through a compatible hosted provider.</p>
+          <h2 id="statement-title">Your speech model.<br /><em>Your cleanup choice.</em></h2>
+          <p>Choose compatible speech and cleanup services independently. Run them on your PC, across your LAN, or through a hosted provider. Freehand keeps capture, shortcuts, and text delivery on your desktop, without bundling speech models or an inference runtime.</p>
         </div>
       </section>
 
@@ -88,7 +88,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
           </li>
           <li>
             <span class="track-number">02</span>
-            <div class="track-copy"><small>Route deliberately</small><h3>Use your speech stack</h3><p>Send audio to a local or remote OpenAI-compatible endpoint. Optional cleanup remains a separate, recoverable step.</p></div>
+            <div class="track-copy"><small>Route deliberately</small><h3>Use your speech stack</h3><p>Your selected speech model transcribes the audio. Keep that result or send it to a separate chat model for optional cleanup.</p></div>
             <div class="track-art route-art" aria-hidden="true"><span>voice</span><i></i><span>text</span></div>
           </li>
           <li>
@@ -97,6 +97,28 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
             <div class="track-art result-art" aria-hidden="true"><span>Original target</span><b>Verified</b></div>
           </li>
         </ol>
+
+        <section class="workflow-options" aria-labelledby="cleanup-choice-title">
+          <h3 id="cleanup-choice-title">One speech model. Three ways to finish.</h3>
+          <p>Start with a compatible speech endpoint and model. Then choose what happens to its transcript.</p>
+          <ul class="cleanup-choices">
+            <li>
+              <h4>Leave it as transcribed</h4>
+              <p>Keep cleanup off to deliver the speech model’s text unchanged. No chat endpoint is needed.</p>
+              <a href={href("/docs/getting-started/")}>Start dictating <span aria-hidden="true">→</span></a>
+            </li>
+            <li>
+              <h4>Use your own cleanup model</h4>
+              <p>Choose a separate compatible chat endpoint, model, and custom instructions for the result you want.</p>
+              <a href={href("/docs/guides/post-processing/#custom-instruction-processor")}>Configure custom cleanup <span aria-hidden="true">→</span></a>
+            </li>
+            <li>
+              <h4>S1-mini by Superwhisper</h4>
+              <p>Use built-in style, structure, and context controls for this optional English cleanup model, served on infrastructure you choose.</p>
+              <a href={href("/docs/guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp")}>Set up S1-mini <span aria-hidden="true">→</span></a>
+            </li>
+          </ul>
+        </section>
       </section>
 
       <section class="feature-story" aria-labelledby="feature-title">
@@ -109,7 +131,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
           <div class="story-copy">
             <span class="story-label">Natural capture</span>
             <h3>Speak at your<br />own pace.</h3>
-            <p>Optional local voice activity detection can trim silence, stop a toggle recording, and split longer dictation at natural pauses instead of mid-thought.</p>
+            <p>Built-in local voice detection shows when you’re speaking. Enable silence trimming, automatic stop for toggle recordings, or pause-aware checkpoints for longer dictation. Hold-to-talk stays active until you release the shortcut.</p>
             <a href={href("/docs/guides/using-freehand/")}>Explore voice workflows <span aria-hidden="true">→</span></a>
           </div>
           <div class="silence-study" aria-hidden="true">
@@ -124,12 +146,12 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
         <div class="story-pair">
           <article class="story story-copyedit">
             <span class="story-label">Optional cleanup</span>
-            <h3>Clean up the result.<br />Keep the original.</h3>
+            <h3>Clean up the result.<br />On your terms.</h3>
             <div class="edit-example" aria-label="An example transcript before and after optional cleanup">
               <p><del>um can you send that to tyler tomorrow</del></p>
               <p><ins>Can you send that to Tyler tomorrow?</ins></p>
             </div>
-            <p>A separate compatible chat model can clean the result. If it fails, your successful raw transcription stays intact.</p>
+            <p>If cleanup fails or returns empty text, Freehand falls back to the raw transcript. Enable session history to retain raw and cleaned versions within its memory limits, until you exit.</p>
           </article>
 
           <article class="story story-file">
@@ -153,9 +175,9 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
         </div>
 
         <ol class="principle-list">
-          <li><span>01</span><div><h3>No retained audio</h3><p>Capture is released after completion, failure, or cancellation.</p></div></li>
-          <li><span>02</span><div><h3>No wrong-window insertion</h3><p>The original destination is revalidated before delivery.</p></div></li>
-          <li><span>03</span><div><h3>No plaintext credentials</h3><p>Stored keys stay inside Windows Credential Manager.</p></div></li>
+          <li><span>01</span><div><h3>Recordings released after use</h3><p>Freehand releases captured audio after transcription completes, fails, or is cancelled. Your chosen server’s retention policy still applies.</p></div></li>
+          <li><span>02</span><div><h3>Original target checked</h3><p>Freehand revalidates the destination before insertion. If the check fails, the result stays available to copy.</p></div></li>
+          <li><span>03</span><div><h3>Keys stored by Windows</h3><p>Saved API keys use Windows Credential Manager. HTTPS is required unless you explicitly allow an HTTP endpoint.</p></div></li>
           <li><span>04</span><div><h3>No Freehand account</h3><p>Connect the speech services you already use without another sign-in.</p></div></li>
         </ol>
       </section>

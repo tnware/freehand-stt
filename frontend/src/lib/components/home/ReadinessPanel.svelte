@@ -48,7 +48,7 @@
       </h2>
       <p class="max-w-[60ch] text-[13.5px] leading-relaxed text-secondary-foreground">
         {readiness.initialSetup
-          ? "Freehand talks to endpoints you run. Nothing leaves this machine until you press Test connection, and that check reads model metadata only — no audio, no model invocation."
+          ? "Choose a speech service you run or trust. Test connection reads metadata without sending audio or running a model. After setup, Freehand checks the saved speech connection automatically. Update checks can be disabled in Settings → General."
           : "Your settings and transcripts are unchanged. Fix the step below, or continue and Freehand will keep working with what is still available."}
       </p>
     </div>
@@ -113,11 +113,7 @@
         <span class="mr-auto flex items-center gap-2.5" aria-live="polite">
           <span class="flex items-center gap-1" aria-hidden="true">
             {#each readiness.steps as step (step.id)}
-              <span
-                class={cn(
-                  "h-[3px] w-[18px] rounded-full",
-                  step.status === "complete" ? "bg-success" : "bg-border",
-                )}
+              <span class={cn("h-[3px] w-[18px] rounded-full", step.status === "complete" ? "bg-success" : "bg-border")}
               ></span>
             {/each}
           </span>
@@ -141,11 +137,7 @@
         {:else}
           <Button variant="ghost" size="sm" onclick={onDismiss}>Continue anyway</Button>
         {/if}
-        <Button
-          size="sm"
-          disabled={!readiness.canTestConnection || testing || completing}
-          onclick={onTestConnection}
-        >
+        <Button size="sm" disabled={!readiness.canTestConnection || testing || completing} onclick={onTestConnection}>
           {#if testing}
             <LoaderCircleIcon data-icon="inline-start" class="animate-spin motion-reduce:animate-none" />
           {:else}

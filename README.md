@@ -13,11 +13,30 @@ hosted service.
 
 The current alpha is about an 8 MB installer or a 15 MB portable executable.
 Freehand stays compact by leaving model inference and model storage on the
-speech infrastructure you choose.
+speech infrastructure you choose. These download sizes exclude WebView2 and
+your inference services; transcription time depends on the model, hardware,
+network, and optional cleanup stage.
 
 [Download the latest alpha](https://github.com/tnware/freehand-stt/releases) ·
 [Get started](https://tnware.github.io/freehand-stt/docs/getting-started/) ·
 [Read the documentation](https://tnware.github.io/freehand-stt/docs/)
+
+## Choose your workflow
+
+Start with a compatible speech endpoint and model, then choose how to finish:
+
+- **Dictation without cleanup** — deliver the speech model's transcript unchanged.
+- **Custom cleanup** — use a separate chat endpoint, model, and your own instructions.
+- **S1-mini by Superwhisper** — use the built-in profile with style, structure,
+  and context controls for this optional English cleanup model. You provide
+  its inference server; Freehand does not download or host the model.
+
+Speech and cleanup can run on your PC, across your LAN, or through separately
+chosen hosted services. If cleanup fails or returns empty text, Freehand falls
+back to the raw transcript. Enable bounded session history to retain both
+versions after successful cleanup.
+
+[Configure transcript cleanup](https://tnware.github.io/freehand-stt/docs/guides/post-processing/)
 
 ## Highlights
 
@@ -29,7 +48,7 @@ speech infrastructure you choose.
   pause-aware checkpoints.
 - Insert voice transcripts only when the original target remains safe, or copy
   them explicitly.
-- Opt into bounded, memory-only history and a configurable native overlay.
+- Opt into bounded, memory-only history; configure or disable the native status overlay.
 
 Freehand does not bundle a model, inference server, or heavyweight local
 runtime.

@@ -3,6 +3,8 @@ title: Contributor documentation
 description: Build, test, understand, and release Freehand.
 ---
 
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
 This section is for contributors and maintainers. If you want to install,
 configure, or use Freehand, start with the [user guide](../getting-started/).
 
@@ -14,18 +16,35 @@ before beginning substantial work. It covers prerequisites, local setup,
 required checks, pull-request expectations, and the native Windows acceptance
 boundary.
 
-Then use these references as needed:
+Choose the reference for the work you are doing:
 
-- [Architecture](architecture/) explains runtime ownership, package
-  boundaries, Wails services, and data flow.
-- [Testing contract](testing/) separates deterministic checks from native
-  Windows acceptance.
-- [GitHub Actions](github-actions/) documents CI, Pages, and release
-  automation.
-- [Release lifecycle](releases/) covers versions, packaging, checksums,
-  attestations, and updates.
-- [Brand asset pipeline](brand-assets/) explains canonical artwork and
-  deterministic platform assets.
+<CardGrid>
+  <LinkCard
+    title="Understand the architecture"
+    description="Runtime ownership, package boundaries, and data flow."
+    href="architecture/"
+  />
+  <LinkCard
+    title="Test a change"
+    description="Deterministic checks and the separate native Windows acceptance requirements."
+    href="testing/"
+  />
+  <LinkCard
+    title="Work with GitHub Actions"
+    description="CI checks, documentation deployment, and release automation."
+    href="github-actions/"
+  />
+  <LinkCard
+    title="Prepare a release"
+    description="Versioning, Windows packages, checksums, attestations, and updates."
+    href="releases/"
+  />
+  <LinkCard
+    title="Update brand assets"
+    description="Canonical artwork and reproducible platform assets."
+    href="brand-assets/"
+  />
+</CardGrid>
 
 ## Maintainer references
 

@@ -1,0 +1,160 @@
+---
+title: Use Freehand
+description: Voice dictation, stored audio, transcript history, cleanup, and speech playback.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Choose **Voice** to dictate into another application, **Audio file** to transcribe a recording, or optional **Text to speech** to listen to text. Voice and audio files use the same configured speech endpoint.
+
+## Voice dictation
+
+Choose a recording style:
+
+| | Toggle recording | Hold to talk |
+| --- | --- | --- |
+| Start | Press the shortcut once | Press and hold the shortcut |
+| Stop | Press it again | Release it |
+| Default shortcut | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd> | Unassigned; configure under **Settings → Shortcuts** |
+| Optional silence stop | Available when voice detection and automatic stop are enabled | Waits for shortcut release |
+
+<Steps>
+
+1. **Focus the text field** where the transcript should appear.
+2. **Start recording** with your toggle or hold-to-talk shortcut. Wait for
+   Freehand to show that recording has started, then speak.
+3. **Stop recording** with the same shortcut or by releasing the held chord.
+4. **Wait for transcription and any enabled cleanup.** Keep the original text
+   field focused for direct insertion.
+
+</Steps>
+
+:::note[When to copy the result]
+If the original application or focused control changes, Freehand leaves the
+transcript available to copy. Manual-copy delivery also requires an explicit
+copy action, even if the original field remains focused.
+:::
+
+### Toggle recording
+
+Press the toggle shortcut once to begin and again to stop. When local voice detection and automatic stop are both enabled, a toggle recording can also finish after speech has been detected and the configured silence countdown expires.
+
+The destination is captured when recording begins. If that destination is no
+longer safe when transcription finishes, Freehand leaves the result available
+to copy instead of inserting it elsewhere.
+
+### Hold to talk
+
+Press and hold the configured chord, speak, then release it to stop. Automatic
+silence ending does not stop a hold-to-talk recording before you release the
+shortcut.
+
+A hold-to-talk chord may use the normal modifier-plus-key forms or a supported modifier-only combination. See [Shortcut policy](../../reference/shortcuts/) for the exact accepted key grammar and default bindings.
+
+### Long dictation and VAD
+
+Voice activity detection (VAD) identifies speech and silence locally using WebRTC. It is built in and enabled by default. Silence trimming, automatic stop, and checkpoints are separate options that start disabled. Together they can provide:
+
+- stable live speech/silence feedback;
+- leading and trailing silence trimming with retained context;
+- speech-armed automatic stop for toggle recordings;
+- pause-aware checkpoints for longer dictation.
+
+Checkpoints prefer natural pauses but still enforce a hard segment limit; they do not guarantee a boundary only between thoughts. Checkpoint requests are sequential and assembled in order. Freehand still performs one final focus-safe insertion rather than pasting partial segments while you speak.
+
+## Audio files
+
+<Steps>
+
+1. **Open Audio file** and choose **Choose audio** to select a recording.
+2. **Choose the response mode.** Use completed output, or streaming when your
+   server supports it.
+3. **Select Transcribe** and wait for the result. Use **Cancel** to stop active work.
+4. **Copy the completed transcript** explicitly into the application you want.
+
+</Steps>
+
+Selecting a file does not upload it until you start transcription. File
+results never insert automatically because no destination was captured.
+
+- Supported formats: FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, and WebM.
+- Jobs can be cancelled.
+- File work and microphone capture are mutually exclusive.
+- Completed JSON and compatible server-sent-event responses are supported.
+
+The interface shows the file name, size, progress, status, and transcript. It
+does not expose the full path to page content.
+
+## The rack
+
+The column on the left of the main window applies frequently changed values immediately, without a save step. Its first card keeps the most frequently changed behavior controls together:
+
+- **Capture** — microphone, voice detection, checkpoints, and the recording overlay.
+- **Delivery** — whether transcripts are typed straight in or wait to be copied, and whether history is kept.
+
+The infrastructure controls follow beneath it:
+
+- **Speech to text** — endpoint, model, and a connection test.
+- **Cleanup** — on or off, endpoint, model, processing profile, and the S1-mini styling, structure, and context controls.
+
+Each group links to its matching Settings section. Speech to text and Cleanup can be collapsed independently; their choices persist across launches and their headers continue to show connection health and the selected model.
+
+Credentials, authentication mode, plaintext-HTTP policy, custom instructions, and other advanced values remain in the full Settings window.
+
+Settings edits apply to the next operation and do not change a request already
+in progress.
+
+## Transcript cleanup
+
+Freehand can send the raw transcript to an independently configured OpenAI-compatible chat endpoint after speech recognition.
+
+- **Raw mode** leaves transcription untouched.
+- **Custom instructions** use a bounded user-authored system instruction.
+- **S1-mini** uses the model's exact trained v1 prompt and control vocabulary.
+
+Freehand delivers raw text when cleanup is disabled or falls back to it when cleanup fails, times out, or returns empty output. Retaining both versions after successful cleanup requires history to be enabled before the run and the text to fit its memory limits. Read [Transcript post-processing](../post-processing/) before configuring S1-mini or a local llama.cpp route.
+
+## History
+
+:::tip[Keep both transcript versions for this session]
+Enable history before a run if you want to compare raw and cleaned text.
+History is off by default, stays in memory, holds at most 20 entries and 2 MiB,
+and is cleared when Freehand exits. Copy anything you want to keep before quitting.
+:::
+
+Retained entries contain transcript text and limited run details.
+
+History never retains audio, credentials, full file paths, or destination
+details. Each copy action is explicit.
+
+## Text to speech
+
+Optional speech playback uses its own endpoint, model, voice ID, credential, transport policy, and request budget.
+
+<Steps>
+
+1. **Enable speech playback** under **Settings → Speech playback**. Set its
+   endpoint, model, voice ID, and authentication as required, then save.
+2. **Open Text to speech** and enter the text you want to hear.
+3. **Choose Speak** to generate and play the audio.
+4. **Use the playback controls** to pause, resume, replay, stop, or explicitly
+   save the generated audio.
+
+</Steps>
+
+You can also listen to retained completed transcripts. Generated audio remains
+in memory until you clear or replace it, start a recording, or exit Freehand.
+
+Playback starts on demand. Freehand does not automatically read every transcript aloud or provide a voice conversation mode.
+
+## Status overlay and tray
+
+The native overlay is enabled by default and can be disabled under **Settings → Overlay**. It mirrors bounded operational state such as recording, speech/silence, checkpoints, processing, and copy-required outcomes. It never renders transcript text or changes focus.
+
+The tray can show or hide Freehand, open Settings or About, cancel active work,
+copy an available recovery transcript, and quit.
+
+:::note[Quit from the tray]
+Choose **Quit** from the tray menu to exit Freehand. Closing the main or
+Settings window only hides it; Freehand continues running.
+:::

@@ -1,0 +1,154 @@
+---
+title: Get started
+description: Install Freehand, connect a transcription endpoint, and complete your first dictation.
+---
+
+import { CardGrid, LinkCard, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+This guide takes you from installation to a working voice dictation. Freehand
+connects to a speech-to-text service you provide; it does not install or run a
+model for you.
+
+## What you need
+
+- Windows 11 with WebView2.
+- A usable microphone to complete initial setup. This alpha requires microphone readiness even if you plan to transcribe stored audio files.
+- A reachable OpenAI-compatible transcription endpoint.
+- The endpoint's base URL, transcription model ID, and API key when authentication is required.
+
+:::caution[Alpha distribution]
+Freehand's GitHub Releases provide an unsigned executable and per-user Windows installer. Download only from the official project, verify the corresponding entry in `SHA256SUMS`, and expect Windows to identify the publisher as unknown until Authenticode signing is introduced.
+:::
+
+Download the latest Windows alpha from the
+[Releases page](https://github.com/tnware/freehand-stt/releases). The installer
+is the normal first-install path. The bare executable exists for portable use
+and for Freehand's in-app updater.
+
+## First launch
+
+Freehand opens a readiness screen the first time it starts. Work through each required item:
+
+<Steps>
+
+1. **Speech-to-text server** — enter the base URL and model ID under **Settings → Transcription**.
+2. **Authentication** — under **Settings → Transcription**, select **Authentication → API key** if the endpoint requires one, then enter the key. Saved keys use Windows Credential Manager. Leave authentication at **None** for an endpoint without authentication.
+3. **Microphone** — select **System default** or a specific device under **Settings → Audio**.
+4. **Recording shortcut** — keep the default toggle shortcut (**Ctrl+Shift+Space**), or configure another toggle shortcut and an optional hold-to-talk chord under **Settings → Shortcuts**.
+5. **Save** — choose **Save changes** and return to the readiness screen.
+6. **Connection check** — choose **Test connection** on the readiness screen. If it fails, correct the settings, save, and retry. First launch requires this explicit check; after setup, Freehand checks the saved speech connection automatically.
+7. **Finish** — when all requirements are ready, choose **Finish setup** to open the workspace.
+
+</Steps>
+
+:::note[Connection checks read metadata]
+The connection check never submits audio and never invokes a discovered model.
+A successful check does not test transcription quality.
+:::
+
+## Configure the speech endpoint
+
+Freehand expects a base URL whose OpenAI API prefix is already present, typically:
+
+```text title="Speech endpoint base URL"
+https://speech.example.com/v1
+```
+
+It joins the transcription route as:
+
+```http title="Request route built by Freehand"
+POST https://speech.example.com/v1/audio/transcriptions
+```
+
+Set the exact model ID expected by your gateway. Model discovery is bounded metadata; selecting a discovered ID does not run it.
+
+HTTPS is required by default. **Allow insecure HTTP** is an explicit opt-in for a trusted local or LAN service. It sends credentials and audio without transport encryption, so do not enable it for an untrusted network.
+
+See [Connect a speech server](../guides/connect-a-server/) for shared-gateway
+and separate-service layouts, a [CPU speech-server example](../guides/connect-a-server/#example-speaches-on-your-pc), the evidence-labeled compatibility list, and a
+failure guide.
+
+## Choose your transcript workflow
+
+Leave **Cleanup** off for your first dictation. This delivers the speech model's
+transcript unchanged and requires only the speech endpoint.
+
+<Tabs>
+  <TabItem label="No cleanup">
+
+Leave **Cleanup** off. Freehand delivers the speech model's transcript without
+an additional rewrite. No chat service is needed.
+
+  </TabItem>
+  <TabItem label="Custom instruction">
+
+Choose a compatible chat endpoint and model, then write your own cleanup
+instruction under **Settings → Post-processing**. Speech and cleanup have separate
+credentials and can run on different servers.
+
+[Configure custom cleanup](../guides/post-processing/#custom-instruction-processor)
+
+  </TabItem>
+  <TabItem label="S1-mini">
+
+Select **S1-mini by Superwhisper** for built-in style, structure, and context
+controls. This optional English cleanup model needs its own inference server.
+
+[Set up the S1-mini profile](../guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp)
+
+  </TabItem>
+</Tabs>
+
+## Run your first dictation
+
+<Steps>
+
+1. Focus the text field where the result should go.
+2. Start the configured toggle shortcut, or hold the configured hold-to-talk chord.
+3. Speak.
+4. Stop the toggle recording, or release the hold-to-talk chord.
+5. Wait while Freehand transcribes the audio.
+
+</Steps>
+
+If the same safe target still owns focus, Freehand inserts the text with Unicode input. If focus or process identity changed, it fails closed and leaves the transcript available for explicit copying.
+
+## Transcribe a stored audio file
+
+Choose **Audio file** in the main workspace and select FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, or WebM audio through the native picker.
+
+Stored-audio transcription never inserts automatically because no destination was captured at recording start. Copy the completed result explicitly.
+
+## Optional features
+
+Local voice activity detection and the native status overlay are **on by
+default**. You can configure or disable either. Voice detection alone does not
+enable automatic stop, silence trimming, or checkpoints.
+
+| Feature | Initial setting |
+| --- | --- |
+| Local voice detection and status overlay | On |
+| Silence trimming, automatic stop, and pause-aware checkpoints | Off |
+| Transcript cleanup and memory-only history | Off |
+| Stored-audio response | Completed JSON; compatible streaming is selectable |
+| Text-to-speech playback and Windows Mica material | Off |
+| Direct insertion into the checked original target | On |
+| Automatic update checks | On; configurable under **Settings → General** |
+
+## Where to go next
+
+<CardGrid>
+  <LinkCard
+    title="Explore voice and file workflows"
+    description="Configure capture, delivery, history, and optional playback."
+    href="../guides/using-freehand/"
+  />
+  <LinkCard
+    title="Resolve a setup problem"
+    description="Check connection, microphone, and text-delivery failures."
+    href="../guides/troubleshooting/"
+  />
+</CardGrid>
+
+For exact request and response contracts, see
+[Protocol compatibility](../reference/protocol/).
