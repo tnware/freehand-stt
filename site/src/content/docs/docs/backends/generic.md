@@ -23,7 +23,7 @@ to Generic when no compatibility profile was previously stored.
 
 | Operation | Freehand's contract |
 | --- | --- |
-| Microphone and audio-file transcription | Multipart `file`, `model`, `response_format=json`, and optional `language`; completed JSON with string `text`. |
+| Microphone and audio-file transcription | Multipart `file`, `model`, `response_format=json`, and optional `language`, `prompt`, and `temperature`; completed JSON with string `text`. |
 | Optional file streaming | `stream=true`; typed transcript delta/done events or legacy per-segment text events. A server may return completed JSON instead. |
 | Transcript cleanup | Non-streaming text chat completions with system/user string messages and temperature zero. |
 | Speech playback | `model`, `input`, string `voice`, `speed`, and `response_format=wav`; fully buffered PCM16 WAV audio. |
@@ -52,3 +52,14 @@ The dedicated **OpenAI hosted** profile is planned. Hosted and self-hosted
 endpoints can use Generic when the selected model accepts this exact contract.
 See the [full protocol reference](../../reference/protocol/) for bounds and
 failure handling.
+
+## Optional transcription controls
+
+In **Settings → Transcription → Transcription controls**, context is sent as
+`prompt`; temperature is sent only when its override is enabled. These are
+optional common request fields, not a guarantee that every compatible model
+honors them. Leave them unset to keep the original request shape. Generic does
+not send `hotwords`; that field requires the Speaches profile.
+
+See [Transcription controls](../../guides/connect-a-server/#transcription-controls)
+for limits, persistence, and the difference between recognition hints and cleanup.

@@ -16,8 +16,10 @@ import (
 	"time"
 
 	"github.com/tnware/freehand-stt/internal/audio"
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/inference"
+	"github.com/tnware/freehand-stt/internal/settings"
 )
 
 type streamingCapture struct {
@@ -356,6 +358,14 @@ func TestSegmentedDictationUsesCredentialCapturedBeforeFirstCheckpoint(t *testin
 		if authorization := r.Header.Get("Authorization"); authorization != "Bearer credential-at-start" {
 			t.Errorf("authorization = %q", authorization)
 		}
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Error(err)
+		} else {
+			defer r.MultipartForm.RemoveAll()
+			if r.FormValue("prompt") != "captured context" || r.FormValue("hotwords") != "captured terms" || r.FormValue("temperature") != "0" {
+				t.Error("checkpoint lost captured controls")
+			}
+		}
 		_, _ = w.Write([]byte(`{"text":"captured profile"}`))
 	}))
 	defer server.Close()
@@ -364,9 +374,15 @@ func TestSegmentedDictationUsesCredentialCapturedBeforeFirstCheckpoint(t *testin
 	platform := &platFake{}
 	cfg := segmentedSettings(server.URL)
 	cfg.AuthenticationMode = config.AuthenticationModeAPIKey
+	cfg.CompatibilityProfile = compatibility.Speaches
+	cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "captured context", Hotwords: "captured terms", TemperatureOverride: true}
 	credentials := &mutableCredential{value: "credential-at-start"}
 	recorder := New(capture, platform, nil, credentials, staticSettings{value: cfg}, nil)
 	recorder.client = newTestClient(server.Client())
+	recorder.profiles = settings.ProfileSource(func() (settings.RequestProfile, error) {
+		key, err := credentials.Get()
+		return settings.RequestProfile{Settings: cfg, STTCredential: key}, err
+	})
 	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) {
 		return &sampleDetector{observed: capture.observed}, nil
 	}
@@ -374,6 +390,7 @@ func TestSegmentedDictationUsesCredentialCapturedBeforeFirstCheckpoint(t *testin
 	if err := recorder.Start(); err != nil {
 		t.Fatal(err)
 	}
+	cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "edited context", Temperature: 1}
 	if err := credentials.Set("credential-edited-before-checkpoint"); err != nil {
 		t.Fatal(err)
 	}

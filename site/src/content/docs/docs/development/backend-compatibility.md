@@ -65,3 +65,14 @@ Verify desktop and mobile navigation, active-page indication, keyboard focus,
 small-screen matrix scrolling, base-path-aware links, provider guide anchors,
 and canonical metadata. The directory tracks main-branch behavior; keep that
 notice visible so it is not mistaken for a promise about an older release.
+
+## Current optional STT fields
+
+`transcriptionPrompt`, `transcriptionTemperature`, and `transcriptionHotwords`
+are explicit capability flags exported to both Settings and the website matrix.
+Generic supports the optional common prompt/temperature shape; Speaches also
+supports hotwords. New provider contracts must qualify their own field mapping
+instead of inheriting hotwords because they advertise an OpenAI-compatible API.
+Source evidence for Speaches is v0.8.3 and v0.9.0-rc.3 Whisper paths. Actual model
+response to hints still requires a scoped live report. No version-sensitive VAD
+or unexposed faster-whisper tuning field is implied by these flags.

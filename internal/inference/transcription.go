@@ -19,6 +19,9 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 	if err != nil {
 		return TranscriptionResult{}, err
 	}
+	if err := c.validateTranscriptionOptions(); err != nil {
+		return TranscriptionResult{}, err
+	}
 	if language != "" && !contract.Capabilities.LanguageHint {
 		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "language hints are unavailable for this profile"}
 	}
@@ -38,6 +41,9 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 	_ = mw.WriteField("response_format", "json")
 	if language != "" {
 		_ = mw.WriteField("language", language)
+	}
+	if err = writeTranscriptionOptions(mw, c.transcriptionOptions); err != nil {
+		return TranscriptionResult{}, err
 	}
 	if err = mw.Close(); err != nil {
 		return TranscriptionResult{}, err

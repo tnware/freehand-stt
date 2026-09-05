@@ -38,6 +38,9 @@ type Capabilities struct {
 	LegacyTranscriptionSegments bool `json:"legacyTranscriptionSegments"`
 	LanguageHint                bool `json:"languageHint"`
 	SpeechSpeed                 bool `json:"speechSpeed"`
+	TranscriptionPrompt         bool `json:"transcriptionPrompt"`
+	TranscriptionHotwords       bool `json:"transcriptionHotwords"`
+	TranscriptionTemperature    bool `json:"transcriptionTemperature"`
 }
 
 type Profile struct {
@@ -77,7 +80,7 @@ func options(role Role) []Profile {
 	genericDescription := ""
 	switch role {
 	case Transcription:
-		caps = Capabilities{FileStreaming: true, TypedTranscriptionEvents: true, LegacyTranscriptionSegments: true, LanguageHint: true}
+		caps = Capabilities{FileStreaming: true, TypedTranscriptionEvents: true, LegacyTranscriptionSegments: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}
 		genericDescription = "Completed transcription and optional file streaming. Preserves support for typed events and legacy text segments; streaming and language hints depend on the selected model."
 	case PostProcessing:
 		genericDescription = "Text chat completions with system/user messages. Choose the cleanup prompt preset separately."
@@ -89,6 +92,7 @@ func options(role Role) []Profile {
 	}
 	result := []Profile{{ID: Generic, Label: "Generic OpenAI-compatible", Available: true, Description: genericDescription, Capabilities: caps}}
 	if role == Transcription {
+		caps.TranscriptionHotwords = true
 		result = append(result, Profile{ID: Speaches, Label: "Speaches", Available: true, Description: "Completed transcription, typed file events, and older Speaches text segments that finish at end of stream. Language and streaming support depend on the model and server version.", Capabilities: caps})
 	} else if role == Speech {
 		result = append(result, Profile{ID: Speaches, Label: "Speaches", Available: true, Description: "Buffered PCM16 WAV speech using the installed model and voice IDs. Speed support depends on the model.", Capabilities: caps})

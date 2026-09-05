@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/history"
 	"github.com/tnware/freehand-stt/internal/inference"
@@ -31,6 +32,8 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				cfg := config.Default()
 				cfg.BaseURL = "https://stt.example/v1"
 				cfg.Model = "speech"
+				cfg.CompatibilityProfile = compatibility.Speaches
+				cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "workflow context", Hotwords: "workflow terms", TemperatureOverride: true}
 				cfg.AuthenticationMode = config.AuthenticationModeNone
 				cfg.HistoryEnabled = retain
 				cfg.AutoInsert = true
@@ -47,6 +50,14 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 					body, status := `{"text":"raw transcript"}`, http.StatusOK
 					switch r.URL.Path {
 					case "/v1/audio/transcriptions":
+						if err := r.ParseMultipartForm(1 << 20); err != nil {
+							t.Error(err)
+						} else {
+							defer r.MultipartForm.RemoveAll()
+							if r.FormValue("prompt") != "workflow context" || r.FormValue("hotwords") != "workflow terms" || r.FormValue("temperature") != "0" {
+								t.Error("workflow lost transcription controls")
+							}
+						}
 					case "/v1/chat/completions":
 						calls++
 						if r.Header.Get("Authorization") != "Bearer [REDACTED]" {

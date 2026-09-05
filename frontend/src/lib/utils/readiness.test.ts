@@ -25,6 +25,7 @@ const devices: Device[] = [
 ];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
+  transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
   compatibilityProfile: ID.Generic,
   compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
   baseURL: "https://example.test/v1",
