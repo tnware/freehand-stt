@@ -15,6 +15,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/tnware/freehand-stt/internal/activity"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/history"
@@ -113,12 +114,11 @@ type Service struct {
 	client                   *inference.Client
 	processor                transcriptProcessor
 	history                  *history.Store
-	voiceActive              func() bool
 	input                    insertion.Platform
 	pickAudioFile            func() (string, error)
 	fileChanged              func(FileTranscriptionStatus)
 	fileDelta                func(FileTranscriptionDelta)
-	activity                 *sync.Mutex
+	activity                 *activity.Coordinator
 	logger                   *slog.Logger
 	fileMu                   sync.Mutex
 	fileStatus               FileTranscriptionStatus
@@ -139,14 +139,14 @@ type Service struct {
 	closed                   atomic.Bool
 }
 
-func NewService(source settings.Source, profiles settings.ProfileSource, client *inference.Client, processor transcriptProcessor, transcripts *history.Store, voiceActive func() bool, input insertion.Platform, pickAudioFile func() (string, error), changed func(FileTranscriptionStatus), delta func(FileTranscriptionDelta), activity *sync.Mutex, logger *slog.Logger) *Service {
-	if activity == nil {
-		activity = &sync.Mutex{}
+func NewService(source settings.Source, profiles settings.ProfileSource, client *inference.Client, processor transcriptProcessor, transcripts *history.Store, input insertion.Platform, pickAudioFile func() (string, error), changed func(FileTranscriptionStatus), delta func(FileTranscriptionDelta), admission *activity.Coordinator, logger *slog.Logger) *Service {
+	if admission == nil {
+		admission = activity.New(activity.Sources{})
 	}
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
-	return &Service{settings: source, profiles: profiles, client: client, processor: processor, history: transcripts, voiceActive: voiceActive, input: input, pickAudioFile: pickAudioFile, fileChanged: changed, fileDelta: delta, activity: activity, logger: logger.With("component", "file-transcription")}
+	return &Service{settings: source, profiles: profiles, client: client, processor: processor, history: transcripts, input: input, pickAudioFile: pickAudioFile, fileChanged: changed, fileDelta: delta, activity: admission, logger: logger.With("component", "file-transcription")}
 }
 
 // snapshotFileStatusLocked materializes the accumulated transcript only at a
@@ -226,6 +226,7 @@ func (s *Service) ServiceShutdown() error {
 	if !s.closed.CompareAndSwap(false, true) {
 		return nil
 	}
+	s.activity.Close()
 	s.lifecycleMu.Lock()
 	cancelRoot := s.rootCancel
 	s.rootCancel = nil
@@ -600,12 +601,11 @@ func (s *Service) StartFileTranscription(stream bool) error {
 	if s.closed.Load() {
 		return errors.New("application is shutting down")
 	}
-	s.activity.Lock()
-	defer s.activity.Unlock()
-
-	if s.voiceActive != nil && s.voiceActive() {
-		return errors.New("finish or cancel voice dictation before transcribing a file")
+	release, err := s.activity.BeginFileTranscription()
+	if err != nil {
+		return err
 	}
+	defer release()
 	s.fileMu.Lock()
 	if s.closed.Load() {
 		s.fileMu.Unlock()
@@ -662,6 +662,7 @@ func (s *Service) StartFileTranscription(stream bool) error {
 	s.fileCancel = cancel
 	s.fileDone = done
 	s.fileLastPublish = time.Time{}
+	s.workers.Add(1)
 	s.fileStatus = FileTranscriptionStatus{
 		Generation: generation,
 		Phase:      FileTranscriptionUploading,
@@ -679,7 +680,6 @@ func (s *Service) StartFileTranscription(stream bool) error {
 	s.publishFileStatus(changed, status)
 	s.log().Info("audio file transcription started", "generation", generation, "server", connectionServer(cfg.BaseURL), "bytes", info.Size(), "streaming_requested", stream, "streaming_effective", effectiveStream, "timeout_seconds", cfg.FileTranscriptionTimeoutSeconds, "post_processing_timeout_seconds", cfg.PostProcessing.TimeoutSeconds)
 
-	s.workers.Add(1)
 	go func() {
 		defer s.workers.Done()
 		s.runFileTranscription(ctx, generation, file, info.Size(), key, processingKey, cfg, effectiveStream, done)

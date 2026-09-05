@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/tnware/freehand-stt/internal/activity"
 	"github.com/tnware/freehand-stt/internal/audio"
 	"github.com/tnware/freehand-stt/internal/history"
 	"github.com/tnware/freehand-stt/internal/inference"
@@ -21,29 +22,26 @@ import (
 // unexported implementation detail in this same package, not a shared runtime
 // or a second service layer.
 type Service struct {
-	recorder    *recorder
-	settings    settings.Source
-	fileActive  func() bool
-	activity    *sync.Mutex
-	closed      atomic.Bool
-	workerMu    sync.Mutex
-	completion  chan func()
-	workerDone  chan struct{}
-	beforeStart func()
+	recorder   *recorder
+	settings   settings.Source
+	activity   *activity.Coordinator
+	closed     atomic.Bool
+	workerMu   sync.Mutex
+	completion chan func()
+	workerDone chan struct{}
 }
 
-func NewService(capture audio.Capture, input insertion.Platform, client *inference.Client, processor *postprocess.Processor, source settings.Source, profiles settings.ProfileSource, transcripts *history.Store, fileActive func() bool, activity *sync.Mutex, changed func(Status), logger *slog.Logger) *Service {
-	if activity == nil {
-		activity = &sync.Mutex{}
+func NewService(capture audio.Capture, input insertion.Platform, client *inference.Client, processor *postprocess.Processor, source settings.Source, profiles settings.ProfileSource, transcripts *history.Store, admission *activity.Coordinator, changed func(Status), logger *slog.Logger) *Service {
+	if admission == nil {
+		admission = activity.New(activity.Sources{})
 	}
 	if transcripts == nil {
 		transcripts = history.NewStore(source.Current().HistoryEnabled, input)
 	}
 	service := &Service{
-		recorder:   newRecorder(capture, input, client, processor, source, profiles, transcripts, changed, logger),
-		settings:   source,
-		fileActive: fileActive,
-		activity:   activity,
+		recorder: newRecorder(capture, input, client, processor, source, profiles, transcripts, changed, logger),
+		settings: source,
+		activity: admission,
 	}
 	service.recorder.scheduleCompletion = service.scheduleCompletion
 	return service
@@ -78,6 +76,7 @@ func (s *Service) ServiceShutdown() error {
 	if !s.closed.CompareAndSwap(false, true) {
 		return nil
 	}
+	s.activity.Close()
 	closeErr := s.recorder.close()
 	s.workerMu.Lock()
 	if s.completion != nil {
@@ -119,16 +118,16 @@ func (s *Service) StartRecording(mode RecordingMode) error {
 	if s.closed.Load() {
 		return errors.New("application is shutting down")
 	}
-	s.activity.Lock()
-	defer s.activity.Unlock()
 	if s.settings == nil || !s.settings.Current().SetupCompleted {
 		return errors.New("complete setup before starting a recording")
 	}
-	if s.fileActive != nil && s.fileActive() {
-		return errors.New("an audio file is being transcribed")
+	release, err := s.activity.BeginRecording()
+	if err != nil {
+		return err
 	}
-	if s.beforeStart != nil {
-		s.beforeStart()
+	defer release()
+	if s.closed.Load() {
+		return activity.ErrClosed
 	}
 	return s.recorder.start(mode)
 }
@@ -155,10 +154,9 @@ func Snapshot(service *Service) Status {
 	return service.recorder.currentStatus()
 }
 
-// SetBeforeRecording installs a backend-only pre-capture hook without adding
-// another renderer-visible method to the Wails service.
-func SetBeforeRecording(service *Service, hook func()) {
-	if service != nil {
-		service.beforeStart = hook
-	}
+// Active exposes only the recording owner's admission predicate, not a second
+// state machine in the composition root.
+func Active(service *Service) bool {
+	state := Snapshot(service).State
+	return state != Idle && state != Failed
 }

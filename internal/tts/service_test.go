@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tnware/freehand-stt/internal/activity"
 	"github.com/tnware/freehand-stt/internal/audio"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/history"
@@ -186,7 +187,7 @@ func TestActiveCaptureRejectsPlaybackBeforeProfileOrInference(t *testing.T) {
 	service := NewService(func() (settings.TextToSpeechProfile, error) {
 		profileCalls++
 		return settings.TextToSpeechProfile{}, nil
-	}, client, &playerFake{}, nil, nil, nil, func() bool { return true }, nil, nil)
+	}, client, &playerFake{}, nil, nil, nil, activity.New(activity.Sources{DictationActive: func() bool { return true }}), nil, nil)
 	if err := service.PreviewVoice(); err == nil {
 		t.Fatal("expected active capture to reject playback")
 	}

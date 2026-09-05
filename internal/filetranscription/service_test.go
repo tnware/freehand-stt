@@ -192,7 +192,6 @@ func TestCancellationOwnsLatePostProcessingSuccess(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		nil,
 	)
 	if _, err := service.selectAudioFile(path); err != nil {
 		t.Fatal(err)

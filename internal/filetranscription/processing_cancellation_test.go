@@ -55,7 +55,7 @@ func TestCancellationDuringFailedProcessingFinalization(t *testing.T) {
 		}
 		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(`{"text":"raw transcript"}`)), Request: r}, nil
 	})
-	service := NewService(settings.Source(func() config.Settings { return cfg }), settings.ProfileSource(func() (settings.RequestProfile, error) { return settings.RequestProfile{Settings: cfg}, nil }), client, failure, transcripts, nil, nil, nil, nil, nil, nil, nil)
+	service := NewService(settings.Source(func() config.Settings { return cfg }), settings.ProfileSource(func() (settings.RequestProfile, error) { return settings.RequestProfile{Settings: cfg}, nil }), client, failure, transcripts, nil, nil, nil, nil, nil, nil)
 	t.Cleanup(func() { unblock(); _ = service.ServiceShutdown() })
 	path := filepath.Join(t.TempDir(), "recording.wav")
 	if err := os.WriteFile(path, []byte("RIFF audio"), 0o600); err != nil {

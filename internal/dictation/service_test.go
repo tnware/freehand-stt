@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tnware/freehand-stt/internal/activity"
 	"github.com/tnware/freehand-stt/internal/audio"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/inference"
@@ -84,7 +85,6 @@ func newCompletionService(serverURL string, clients ...*inference.Client) (*Serv
 		settingsSource,
 		profiles,
 		nil,
-		func() bool { return false },
 		nil,
 		nil,
 		nil,
@@ -168,13 +168,13 @@ func TestStopRecordingReturnsAfterCaptureWhileCompletionContinues(t *testing.T) 
 	}
 }
 
-func TestBeforeRecordingHookCompletesBeforeCaptureStarts(t *testing.T) {
+func TestAdmissionPreemptsPlaybackBeforeCaptureStarts(t *testing.T) {
 	service, _ := newCompletionService("http://127.0.0.1")
 	cancelRoot := startCompletionService(t, service)
 	defer cancelRoot()
 	defer func() { _ = service.ServiceShutdown() }()
 	preempted := false
-	SetBeforeRecording(service, func() { preempted = true })
+	service.activity = activity.New(activity.Sources{StopPlayback: func() error { preempted = true; return nil }})
 
 	if err := service.StartRecording(RecordingToggle); err != nil {
 		t.Fatal(err)
