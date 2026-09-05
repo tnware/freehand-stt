@@ -12,7 +12,7 @@ description: Runtime ownership, platform boundaries, and application data flow.
 | Audio capture and normalization | Go audio service |
 | Endpoint requests and cancellation | Go provider-neutral inference client |
 | Native stored-file grant and transcription job | `internal/filetranscription` + inference client |
-| Optional transcript post-processing | Dictation/file-transcription owners + inference chat capability |
+| Optional transcript post-processing | `internal/postprocess` request/outcome policy; feature-owned execution |
 | API credentials | Windows Credential Manager adapter |
 | Original target and insertion | Windows focus/input adapter |
 | Optional transcript history | `internal/history` memory store |
@@ -68,7 +68,7 @@ internal/config            non-secret profiles and validation
 internal/credential        credential interface
 internal/insertion         focus-safe insertion policy
 internal/platform          Windows implementations plus non-Windows stubs
-internal/postprocess       optional transcript-cleanup request policy
+internal/postprocess       transcript-cleanup request and outcome policy
 internal/tray              native status, last-activity, recovery, and window actions
 internal/updates           persisted polling policy and Wails updater lifecycle
 frontend/src/lib           testable settings/status state
@@ -159,6 +159,31 @@ speech generation therefore receive independent budgets. The connection
 service keeps its fixed 15-second metadata-only probe deadline. Deadline and
 user cancellation are separate bounded error kinds; no timeout causes an
 automatic inference retry.
+
+## Shared post-processing outcome policy
+
+Dictation and stored-file transcription remain separate state machines. Each
+owner decides whether to run cleanup, retains raw text before the attempt when
+history permits, and invokes `ProcessWithCredential` using its captured profile.
+`Processor` owns request validation, prompts, the cleanup deadline, and empty
+response rejection.
+
+After the attempt, `postprocess.Resolve` makes one operation-local decision:
+use processed text on success, preserve raw text on failure, and let an already
+cancelled owning context override even a successful late response. A cleanup
+timeout permits raw fallback; user cancellation does not authorize delivery.
+Owners recheck cancellation after finalizing a failed attempt before admitting
+raw fallback, because finalization may block after the outcome was resolved.
+The resolver owns neither credentials nor history, locks, events, or retries.
+
+`history.Store.FinalizeProcessing` projects that outcome into processing status,
+timing, character counts, response metadata, and retained raw/processed versions.
+It returns updated run details even with history disabled or absent, or after an
+entry was deleted. History budget fallback affects only retained text, never the
+workflow's delivery decision. Dictation still owns generation checks, focus-safe
+insertion and copy recovery; stored-file transcription still owns terminal file
+state and explicit copy. Each owner records its own final run outcome and
+publishes its own status and diagnostics.
 
 ## Renderer state ownership
 

@@ -705,50 +705,28 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	if cfg.PostProcessing.Enabled {
 		c.publish(s)
 		processingStarted := time.Now()
-		details.Processing.StartedAt = processingStarted.UTC()
-		details.Processing.Status = history.HistoryProcessingPending
-		processed := ""
+		var processingResult postprocess.Result
+		var processingErr error
 		if processor == nil {
-			e = errors.New("post-processing is unavailable")
+			processingErr = errors.New("post-processing is unavailable")
 		} else {
-			processingResult, processingErr := processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, profile.PostProcessingCredential)
-			processed = processingResult.Text
-			e = processingErr
-			details.Processing.Response = history.NewResponseDetails(processingResult.Metadata)
+			processingResult, processingErr = processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, profile.PostProcessingCredential)
 		}
-		// Cancellation owns the result even when the HTTP response and context
-		// cancellation become observable at nearly the same time. Some transports
-		// can finish decoding a response before returning the cancelled context,
-		// so do not let that late success finalize history as completed.
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			processed = ""
-			e = ctxErr
+		processing := postprocess.Resolve(ctx, text, processingResult, processingErr, processingStarted)
+		details = c.history.FinalizeProcessing(historyID, text, processing, details)
+		// History finalization may block. Recheck workflow cancellation before
+		// admitting raw fallback; the resolved attempt is only a snapshot.
+		if processing.Err != nil && errors.Is(ctx.Err(), context.Canceled) {
+			c.history.Finalize(historyID, history.HistoryCancelled, details, time.Now().UTC(), false)
+			return nil
 		}
-		if e != nil {
-			processingStatus := history.HistoryProcessingFailed
-			if errors.Is(ctx.Err(), context.Canceled) {
-				processingStatus = history.HistoryProcessingCancelled
-			}
-			details.Processing.CompletedAt = time.Now().UTC()
-			details.Processing.ElapsedMilliseconds = time.Since(processingStarted).Milliseconds()
-			details.Processing.Status = processingStatus
-			details.Processing.ErrorKind = history.ErrorKind(e)
-			c.history.FinalizeProcessing(historyID, text, "", processingStatus, e.Error(), details)
-			if errors.Is(ctx.Err(), context.Canceled) {
-				c.history.Finalize(historyID, history.HistoryCancelled, details, time.Now().UTC(), false)
-				return nil
-			}
-			c.logger.Warn("dictation post-processing fell back to raw transcript", "generation", gen, "error_kind", diagnostics.ErrorKind(e))
-			processingFallback = true
-			processingFallbackKind = diagnostics.ErrorKind(e)
-			e = nil
-		} else {
-			details.Processing.CompletedAt = time.Now().UTC()
-			details.Processing.ElapsedMilliseconds = time.Since(processingStarted).Milliseconds()
-			details.Processing.Status = history.HistoryProcessingCompleted
-			details.Processing.ProcessedCharacters = utf8.RuneCountInString(processed)
-			c.history.FinalizeProcessing(historyID, text, processed, history.HistoryProcessingCompleted, "", details)
-			text = processed
+		processingFallback = processing.Fallback()
+		if processingFallback {
+			processingFallbackKind = diagnostics.ErrorKind(processing.Err)
+			c.logger.Warn("dictation post-processing fell back to raw transcript", "generation", gen, "error_kind", processingFallbackKind)
+		}
+		text = processing.Text
+		if !processingFallback {
 			if text == "" {
 				c.mu.Lock()
 				if c.status.Generation == gen && c.status.State == PostProcessing {
