@@ -18,10 +18,10 @@ Each operation still needs a model and route that implement that contract.
 
 ## Configure a connection
 
-1. Choose **Generic OpenAI-compatible** in the appropriate Settings section.
-2. Enter the API base URL, normally ending in `/v1`, and the exact model ID.
-3. Choose authentication and save any required key through Freehand's credential field.
-4. Use **Test** for model-list or health metadata, then save settings.
+1. Open **Settings → Connections → New connection**, choose its purpose and **Generic OpenAI-compatible** profile.
+2. Name it and enter the API base URL, normally ending in `/v1`.
+3. Configure authentication and HTTP permission, then choose **Save connection**.
+4. Select the connection on its feature page. List models or enter the exact model ID, then save feature settings. Tests read metadata only.
 5. Explicitly try one operation with the model you chose and review the result.
 
 See [Connect a speech server](../../guides/connect-a-server/) for trusted HTTP,

@@ -238,16 +238,20 @@ absent. Live model runs remain manual and scoped; do not probe inventories.
 
 ## Saved connection acceptance
 
-Fixtures cover migration from singleton settings, independent capability
-selections, save-as-new without implicit credential reuse, duplication with
-independent replacements, deletion with an explicit replacement, stale-editor
-rejection, SQL rollback, durable reopen, and credential retention for inactive
-entries. Backend snapshots and catalogs must never contain secret values.
-Frontend tests cover draft handling and stale metadata responses after switches.
+Fixtures cover forward migration, empty initialization, inactive create/duplicate,
+independent selections, model reset on switching, runtime/connection save boundaries,
+inactive-key isolation, stale editors, SQL rollback, durable reopen, and credential
+retention until the last referencing entry is deleted. Metadata tests must use
+only the requested saved connection's key and must never invoke inference.
+Frontend tests cover connection draft lifetime and stale metadata results.
 
-On Windows, rename the automatically imported entries, save a second endpoint,
-switch between them, and verify the correct model and key are selected. Repeat
-for cleanup and playback independently. Duplicate and edit one connection, then
-delete it using the confirmation dialog. Test keyboard navigation, dirty-draft
-protection, restart persistence, and active-request isolation. Use only
-operator-selected inference models for deliberate live acceptance.
+On Windows, begin with an empty catalog and create a connection. Confirm it stays
+inactive until selected on its feature page. Choose a model, save feature options,
+then edit the connection in Connections. Duplicate it, independently replace its
+key, switch to it, select None, and delete the inactive entries. Repeat for cleanup
+and playback. Check keyboard navigation, dirty-draft guards, restart persistence,
+and active-request isolation. Verify clean defaults: capsule/envelope/minimal,
+bottom-center, 85% opacity, 70% glow, and an unassigned Show Freehand shortcut.
+Assign then clear that shortcut and confirm tray access remains available.
+Browser fixtures and native builds do not replace interactive Windows acceptance.
+Use only operator-selected models for deliberate live inference acceptance.

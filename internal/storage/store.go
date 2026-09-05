@@ -30,20 +30,21 @@ const applicationID = 1179796804 // FRHD: database identity, not a schema versio
 const operationTimeout = 10 * time.Second
 
 type Store struct {
-	connections        connectionState
-	pendingConnections *connectionState
-	mu                 sync.Mutex
-	path, legacy       string
-	db                 *sql.DB
-	lock               *os.File
-	closed             bool
-	uncertain          bool
-	ctx                context.Context
-	cancel             context.CancelFunc
-	migrations         fs.FS
-	refs               map[string]string
-	pending            map[string]string
-	vault              Vault
+	connections             connectionState
+	pendingConnections      *connectionState
+	pendingConnectionTarget string
+	mu                      sync.Mutex
+	path, legacy            string
+	db                      *sql.DB
+	lock                    *os.File
+	closed                  bool
+	uncertain               bool
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	migrations              fs.FS
+	refs                    map[string]string
+	pending                 map[string]string
+	vault                   Vault
 }
 
 // NewStore does not open or modify any files. Load owns initialization/recovery.

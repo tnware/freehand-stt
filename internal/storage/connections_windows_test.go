@@ -18,35 +18,41 @@ func connectionService(t *testing.T) (*Store, *settings.Service) {
 	t.Helper()
 	s := testStore(t)
 	v := loadStore(t, s)
-	v.BaseURL = "https://first.example.test/v1"
+	svc := settings.NewService(s, v, s.STTCredentials(), s.CleanupCredentials(), &fixtureStartup{}, func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil, config.LoadReport{}))
+	t.Cleanup(func() { svc.ServiceShutdown() })
+	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech} {
+		d := savedconnection.Details{CompatibilityProfile: compatibility.Generic, BaseURL: "https://" + string(p) + ".example.test/v1", AuthenticationMode: config.AuthenticationModeAPIKey, Headers: map[string]string{}}
+		if p == savedconnection.Cleanup {
+			d.AuthenticationMode = config.AuthenticationModeNone
+		}
+		out, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Create, Purpose: p, Name: "Original " + string(p), Details: &d}, ConnectionCredentialDraft: string(p) + "-canary"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := connectionID(t, out, "Original "+string(p))
+		changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: p, ID: id})
+	}
+	v = svc.GetSettings().Settings
 	v.Model = "original-stt"
-	v.AuthenticationMode = config.AuthenticationModeAPIKey
-	v.PostProcessing.BaseURL = "https://cleanup.example.test/v1"
 	v.PostProcessing.Model = "original-cleanup"
 	v.PostProcessing.Enabled = true
-	v.TextToSpeech.BaseURL = "https://speech.example.test/v1"
 	v.TextToSpeech.Model = "original-speech"
 	v.TextToSpeech.Voice = "voice"
 	v.TextToSpeech.Enabled = true
-	v.TextToSpeech.AuthenticationMode = config.AuthenticationModeAPIKey
-	if err := s.BeginCredentialChanges(); err != nil {
+	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: v}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.STTCredentials().Set("first-stt-canary"); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.CleanupCredentials().Set("cleanup-canary"); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.SpeechCredentials().Set("speech-canary"); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Save(v); err != nil {
-		t.Fatal(err)
-	}
-	svc := settings.NewService(s, v, s.STTCredentials(), s.CleanupCredentials(), &fixtureStartup{}, func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil, config.LoadReport{}))
-	t.Cleanup(func() { svc.ServiceShutdown() })
 	return s, svc
+}
+func connectionID(t *testing.T, v settings.SettingsDTO, name string) string {
+	t.Helper()
+	for _, c := range v.SavedConnections.Entries {
+		if c.Name == name {
+			return c.ID
+		}
+	}
+	t.Fatal("missing connection", name)
+	return ""
 }
 func changeConnection(t *testing.T, svc *settings.Service, change savedconnection.Change) settings.SettingsDTO {
 	t.Helper()
@@ -56,93 +62,92 @@ func changeConnection(t *testing.T, svc *settings.Service, change savedconnectio
 	}
 	return v
 }
-func TestConnectionsSelectPreserveInactiveKeysAndSnapshots(t *testing.T) {
+func TestNewConnectionIsInactiveAndRuntimeSettingsDoNotEditIt(t *testing.T) {
 	s, svc := connectionService(t)
-	first := svc.GetSettings()
+	original := svc.GetSettings()
 	captured, err := settings.RequestProfiles(svc).Capture()
 	if err != nil {
 		t.Fatal(err)
 	}
-	firstID := first.SavedConnections.Selected[savedconnection.Transcription]
-	next := first.Settings
-	next.BaseURL = "https://second.example.test/v1"
-	next.Model = "second-stt"
-	next.Language = "ja"
-	added, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: next, ConnectionChange: &savedconnection.Change{Action: savedconnection.Create, Purpose: savedconnection.Transcription, Name: "Second"}})
+	d := savedconnection.Extract(original.Settings, savedconnection.Transcription)
+	d.BaseURL = "https://second.example.test/v1"
+	added, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Create, Purpose: savedconnection.Transcription, Name: "Second", Details: &d}, ConnectionCredentialDraft: "second-canary"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	secondID := added.SavedConnections.Selected[savedconnection.Transcription]
-	if added.CredentialConfigured {
-		t.Fatal("new connection inherited an existing key")
+	if !reflect.DeepEqual(added.Settings, original.Settings) || !reflect.DeepEqual(added.SavedConnections.Selected, original.SavedConnections.Selected) {
+		t.Fatal("creating a connection activated it")
 	}
-	if _, err := settings.RequestProfiles(svc).Capture(); err == nil {
-		t.Fatal("unauthenticated new connection borrowed old key")
+	id := connectionID(t, added, "Second")
+	selected := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: id})
+	if selected.Model != "" || selected.SetupCompleted {
+		t.Fatal("switch did not require a new model choice")
 	}
-	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: next, STTCredentialDraft: "second-stt-canary"}); err != nil {
-		t.Fatal(err)
-	}
-	selected := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: firstID})
-	profile, err := settings.RequestProfiles(svc).Capture()
+	v := selected.Settings
+	v.Model = "second-model"
+	v.Language = "ja"
+	v.BaseURL = "https://runtime-cannot-edit.example.test/v1"
+	saved, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: v})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if profile.STTCredential != "first-stt-canary" || profile.Settings.Model != "original-stt" || profile.Settings.Language != "ja" {
-		t.Fatal("selection lost credential/model or changed operation language")
+	if saved.BaseURL != d.BaseURL || saved.Model != "second-model" || saved.Language != "ja" {
+		t.Fatal("connection and runtime fields were not separated")
 	}
-	if !reflect.DeepEqual(captured.Settings, first.Settings) || captured.STTCredential != "first-stt-canary" {
+	key, _ := s.STTCredentials().Get()
+	if key != "second-canary" {
+		t.Fatal("wrong selected credential")
+	}
+	if captured.STTCredential != "stt-canary" || captured.Settings.Model != "original-stt" {
 		t.Fatal("in-flight snapshot changed")
 	}
-	if !reflect.DeepEqual(selected.PostProcessing, first.PostProcessing) || selected.SavedConnections.Selected[savedconnection.Speech] != first.SavedConnections.Selected[savedconnection.Speech] {
-		t.Fatal("selection changed another capability")
+	if !reflect.DeepEqual(saved.PostProcessing, original.PostProcessing) {
+		t.Fatal("STT selection changed cleanup settings")
 	}
-	if len(s.vault.(*memoryVault).values) != 4 {
-		t.Fatal("inactive credential reclaimed prematurely")
-	}
-	body, _ := json.Marshal(selected)
-	for _, secret := range []string{"first-stt-canary", "second-stt-canary", "cleanup-canary", "speech-canary"} {
-		if strings.Contains(string(body), secret) {
-			t.Fatal("credential leaked to renderer")
-		}
-	}
-	changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Delete, Purpose: savedconnection.Transcription, ID: secondID})
-	if len(s.vault.(*memoryVault).values) != 3 {
-		t.Fatal("deleted connection credential not reclaimed")
+	body, _ := json.Marshal(saved)
+	if strings.Contains(string(body), "canary") {
+		t.Fatal("credential leaked to renderer")
 	}
 	s.Close()
 	again := newStore(s.path, s.legacy, s.vault)
 	defer again.Close()
-	if got := loadStore(t, again); got.BaseURL != first.BaseURL {
-		t.Fatal("selection not durable")
+	if got := loadStore(t, again); got.Model != "second-model" {
+		t.Fatal("runtime model not durable")
 	}
 }
-func TestDuplicateCredentialsRemainIndependentAndDeleteRequiresReplacement(t *testing.T) {
+func TestInactiveConnectionEditAndDuplicateKeysAreIndependent(t *testing.T) {
 	s, svc := connectionService(t)
 	original := svc.GetSettings()
 	id := original.SavedConnections.Selected[savedconnection.Transcription]
 	duplicate := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Duplicate, Purpose: savedconnection.Transcription, ID: id, Name: "Copy"})
-	copyID := duplicate.SavedConnections.Selected[savedconnection.Transcription]
-	if len(s.vault.(*memoryVault).values) != 3 {
-		t.Fatal("duplicate rewrote credential")
+	copyID := connectionID(t, duplicate, "Copy")
+	if duplicate.SavedConnections.Selected[savedconnection.Transcription] != id {
+		t.Fatal("duplicate activated itself")
 	}
-	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: duplicate.Settings, STTCredentialDraft: "independent-copy-canary"}); err != nil {
+	d := savedconnection.Extract(original.Settings, savedconnection.Transcription)
+	d.BaseURL = "https://copy.example.test/v1"
+	updated, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Update, Purpose: savedconnection.Transcription, ID: copyID, Name: "Copy edited", Details: &d}, ConnectionCredentialDraft: "copy-canary"})
+	if err != nil {
 		t.Fatal(err)
 	}
-	changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: id})
+	if !reflect.DeepEqual(updated.Settings, original.Settings) {
+		t.Fatal("inactive edit changed runtime")
+	}
 	key, _ := s.STTCredentials().Get()
-	if key != "first-stt-canary" {
-		t.Fatal("editing duplicate changed original credential")
+	if key != "stt-canary" {
+		t.Fatal("editing duplicate changed original key")
 	}
 	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Delete, Purpose: savedconnection.Transcription, ID: id}}); err == nil {
-		t.Fatal("deleted selected connection without replacement")
+		t.Fatal("deleted active connection")
 	}
-	changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Delete, Purpose: savedconnection.Transcription, ID: id, ReplacementID: copyID})
-	key, _ = s.STTCredentials().Get()
-	if key != "independent-copy-canary" {
-		t.Fatal("replacement not selected")
-	}
+	changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: copyID})
+	changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Delete, Purpose: savedconnection.Transcription, ID: id})
 	if len(s.vault.(*memoryVault).values) != 3 {
-		t.Fatal("obsolete original credential retained")
+		t.Fatal("unused original key retained")
+	}
+	key, _ = s.STTCredentials().Get()
+	if key != "copy-canary" {
+		t.Fatal("copy key not active")
 	}
 }
 func TestConnectionChangesRejectStaleSelectionsAndRollBackSQLFailure(t *testing.T) {
@@ -150,60 +155,71 @@ func TestConnectionChangesRejectStaleSelectionsAndRollBackSQLFailure(t *testing.
 	original := svc.GetSettings()
 	id := original.SavedConnections.Selected[savedconnection.Transcription]
 	duplicate := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Duplicate, Purpose: savedconnection.Transcription, ID: id, Name: "Copy"})
+	copyID := connectionID(t, duplicate, "Copy")
+	active := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: copyID})
 	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: original.Settings, ExpectedConnections: original.SavedConnections.Selected}); err == nil {
-		t.Fatal("stale editor overwrote selected connection")
+		t.Fatal("stale editor accepted")
 	}
 	if _, err := s.db.Exec(`CREATE TRIGGER reject_connection BEFORE UPDATE ON saved_connections BEGIN SELECT RAISE(ABORT,'fixture'); END;`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: id}}); err == nil {
-		t.Fatal("failed catalog transaction accepted")
+	d := savedconnection.Extract(active.Settings, savedconnection.Transcription)
+	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Update, Purpose: savedconnection.Transcription, ID: copyID, Name: "Failed edit", Details: &d}, ConnectionCredentialDraft: "failed-canary"}); err == nil {
+		t.Fatal("failed save accepted")
 	}
-	if got := svc.GetSettings(); !reflect.DeepEqual(got.SavedConnections, duplicate.SavedConnections) {
-		t.Fatal("failed save published connection change")
+	if got := svc.GetSettings(); !reflect.DeepEqual(got.SavedConnections, active.SavedConnections) {
+		t.Fatal("failed save published catalog")
 	}
-	if got := loadStore(t, s); !reflect.DeepEqual(got, duplicate.Settings) {
-		t.Fatal("failed connection save changed database")
+	if len(s.vault.(*memoryVault).values) != 3 {
+		t.Fatal("failed edit leaked staged key")
+	}
+	if got := loadStore(t, s); !reflect.DeepEqual(got, active.Settings) {
+		t.Fatal("failed save changed runtime")
 	}
 }
-func TestConnectionValidationAndIndependentSelections(t *testing.T) {
+func TestConnectionValidationAndEmptyCatalog(t *testing.T) {
+	fresh := testStore(t)
+	loadStore(t, fresh)
+	if len(fresh.ConnectionCatalog().Entries) != 0 {
+		t.Fatal("fresh install contains invented connections")
+	}
 	_, svc := connectionService(t)
 	v := svc.GetSettings()
 	id := v.SavedConnections.Selected[savedconnection.Cleanup]
-	for _, change := range []savedconnection.Change{
-		{Action: savedconnection.Select, Purpose: savedconnection.Speech, ID: id},
-		{Action: savedconnection.Rename, Purpose: savedconnection.Cleanup, ID: id, Name: "invalid\nname"},
-		{Action: savedconnection.Select, Purpose: savedconnection.Cleanup, ID: "missing"},
-	} {
-		if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &change}); err == nil {
+	for _, c := range []savedconnection.Change{{Action: savedconnection.Select, Purpose: savedconnection.Speech, ID: id}, {Action: savedconnection.Rename, Purpose: savedconnection.Cleanup, ID: id, Name: "bad\nname"}, {Action: savedconnection.Select, Purpose: savedconnection.Cleanup, ID: "missing"}} {
+		if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &c}); err == nil {
 			t.Fatal("invalid change accepted")
 		}
 	}
-	updated := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Duplicate, Purpose: savedconnection.Cleanup, ID: id, Name: "Cleanup copy"})
-	if updated.SavedConnections.Selected[savedconnection.Transcription] != v.SavedConnections.Selected[savedconnection.Transcription] {
-		t.Fatal("cleanup selection changed STT")
-	}
-	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Rename, Purpose: savedconnection.Cleanup, ID: id, Name: "cleanup COPY"}}); err == nil {
-		t.Fatal("duplicate name accepted")
+	changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Cleanup, ID: ""})
+	out := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Delete, Purpose: savedconnection.Cleanup, ID: id})
+	if out.PostProcessing.Enabled || out.PostProcessing.BaseURL != "" || out.SavedConnections.Selected[savedconnection.Cleanup] != "" {
+		t.Fatal("last connection not cleared")
 	}
 }
-
 func TestConnectionSwitchPreservesIncompatibleSharedOptions(t *testing.T) {
 	_, svc := connectionService(t)
 	original := svc.GetSettings()
 	id := original.SavedConnections.Selected[savedconnection.Transcription]
-	next := original.Settings
-	next.CompatibilityProfile = compatibility.Speaches
+	d := savedconnection.Extract(original.Settings, savedconnection.Transcription)
+	d.CompatibilityProfile = compatibility.Speaches
+	added, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Create, Purpose: savedconnection.Transcription, Name: "Speaches", Details: &d}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	selected := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: connectionID(t, added, "Speaches")})
+	next := selected.Settings
+	next.Model = "whisper"
 	next.TranscriptionOptions.Hotwords = "Freehand"
-	added, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: next, ConnectionChange: &savedconnection.Change{Action: savedconnection.Create, Purpose: savedconnection.Transcription, Name: "Speaches"}})
+	saved, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: next})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: id}}); err == nil {
-		t.Fatal("switch accepted shared options unsupported by the target provider")
+		t.Fatal("unsupported hotwords accepted")
 	}
 	got := svc.GetSettings()
-	if got.TranscriptionOptions.Hotwords != "Freehand" || !reflect.DeepEqual(got.SavedConnections, added.SavedConnections) {
-		t.Fatal("failed switch discarded options or changed selection")
+	if got.TranscriptionOptions.Hotwords != "Freehand" || !reflect.DeepEqual(got.SavedConnections, saved.SavedConnections) {
+		t.Fatal("failed switch lost values")
 	}
 }

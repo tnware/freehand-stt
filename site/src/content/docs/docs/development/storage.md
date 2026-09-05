@@ -142,23 +142,29 @@ and compilation; follow the [native checklist](../../safety/native-test-checklis
 
 ## Saved connections
 
-Migration 00003 seeds one named entry per capability from the existing settings
-and credential references. Fresh initialization seeds after the initial settings
-transaction has populated its rows. `saved_connections`, `selected_connections`,
-and `saved_connection_headers` retain stable IDs, typed endpoint fields,
-credential references, case-insensitive unique names, and explicit foreign keys.
-The generated seed queries match the migration's import semantics.
+Migration 00003 imports singleton connections. Forward migration 00004 removes
+connection-level model/preset columns and unused empty bootstrap entries;
+current model and preset values remain in runtime tables. Earlier migrations
+remain unchanged. Fresh initialization starts with no saved connections;
+legacy import seeds only configured endpoints.
 
-`internal/savedconnection` owns domain values and applying endpoint selections;
-`internal/settings` remains the sole save coordinator. Catalog changes travel
-through `SaveSettings` with a bounded typed action. Current settings, selected
-IDs, saved entry updates, and active credential references commit in the same
-SQL transaction. Runtime catalogs publish after commit. Stale editor selections
-are rejected using the expected selected IDs rather than overwriting another
-connection accidentally. General settings saves update the active entries.
+`saved_connections`, `selected_connections`, and `saved_connection_headers`
+retain stable IDs, typed endpoint fields, opaque credential references,
+case-insensitive unique names, and explicit foreign keys. Each capability has
+zero or one active selection. `internal/savedconnection` owns domain validation
+and selection application; `internal/settings` remains the sole save coordinator.
 
-Inactive entries retain their keys. Duplication can share a credential reference;
+Explicit create/update actions take bounded connection details and a transient
+credential draft. Creating or duplicating does not select. Runtime saves restore
+the committed connection fields before validation and save only feature options.
+Selection clears the role's model; optional features disable until configured.
+Settings, selected IDs, entry mutations, and active credential references commit
+in one transaction, then publish. Expected selected IDs reject stale editors.
+An active entry must be deselected before deletion; empty catalogs are valid.
+
+Inactive entries retain their keys. Duplication can share a reference, while
 replacement creates a new reference for the edited entry. Cleanup excludes every
-reference still used by any saved entry, and deletion queues obsolete references
-for ordinary cleanup. Connection changes use no inference calls. Restored
-databases must pass catalog/active-settings/reference consistency checks.
+reference still used by any saved entry. SQL rollback leaves the old catalog and
+keys intact. `TestSavedConnection` resolves the specified entry's details and key
+under the store lock, never borrowing an active connection's credential. It reads
+metadata only. Restored databases must pass catalog/runtime/reference checks.

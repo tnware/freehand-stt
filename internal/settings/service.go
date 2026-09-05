@@ -51,6 +51,8 @@ type ConfigurationStatus struct {
 // SaveSettingsRequest groups the persisted settings and transient credential
 // changes into one binding argument. Credential drafts are never returned.
 type SaveSettingsRequest struct {
+	ConnectionCredentialDraft     string                             `json:"connectionCredentialDraft,omitempty"`
+	ClearConnectionCredential     bool                               `json:"clearConnectionCredential"`
 	ExpectedConnections           map[savedconnection.Purpose]string `json:"expectedConnections,omitempty"`
 	ConnectionChange              *savedconnection.Change            `json:"connectionChange,omitempty"`
 	Settings                      config.Settings                    `json:"settings"`
@@ -404,31 +406,49 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 		if change := request.ConnectionChange; change != nil {
 			store, ok := s.store.(interface {
 				BeginConnectionChange(savedconnection.Change, config.Settings) (config.Settings, error)
+				StageConnectionCredential(string, bool) error
 				DiscardCredentialChanges()
 			})
 			if !ok {
 				return SettingsDTO{}, errors.New("saved connections are unavailable")
 			}
-			if change.Action != savedconnection.Create {
-				if newAPIKey != "" || newProcessingAPIKey != "" || newTTSAPIKey != "" || clearKey || clearProcessingKey || clearTTSKey {
-					return SettingsDTO{}, errors.New("save or discard credential drafts before changing connections")
-				}
-				v = s.current()
+			if newAPIKey != "" || newProcessingAPIKey != "" || newTTSAPIKey != "" || clearKey || clearProcessingKey || clearTTSKey {
+				return SettingsDTO{}, errors.New("connection edits use their own credential draft")
+			}
+			if len(request.ConnectionCredentialDraft) > MaxAPIKeyBytes || (request.ClearConnectionCredential && strings.TrimSpace(request.ConnectionCredentialDraft) != "") {
+				return SettingsDTO{}, errors.New("invalid connection credential draft")
 			}
 			var prepareErr error
-			v, prepareErr = store.BeginConnectionChange(*change, v)
+			v, prepareErr = store.BeginConnectionChange(*change, s.current())
 			if prepareErr != nil {
 				return SettingsDTO{}, prepareErr
 			}
 			defer store.DiscardCredentialChanges()
-		} else if staged, ok := s.store.(interface {
-			BeginCredentialChanges() error
-			DiscardCredentialChanges()
-		}); ok {
-			if err := staged.BeginCredentialChanges(); err != nil {
-				return SettingsDTO{}, err
+			if change.Action == savedconnection.Create || change.Action == savedconnection.Update {
+				if err := store.StageConnectionCredential(request.ConnectionCredentialDraft, request.ClearConnectionCredential); err != nil {
+					return SettingsDTO{}, err
+				}
+			} else if request.ConnectionCredentialDraft != "" || request.ClearConnectionCredential {
+				return SettingsDTO{}, errors.New("credentials require an explicit connection edit")
 			}
-			defer staged.DiscardCredentialChanges()
+		} else {
+			if request.ConnectionCredentialDraft != "" || request.ClearConnectionCredential {
+				return SettingsDTO{}, errors.New("credentials require an explicit connection edit")
+			}
+			if store, ok := s.store.(interface {
+				ApplySelectedConnections(config.Settings) config.Settings
+			}); ok {
+				v = store.ApplySelectedConnections(v)
+			}
+			if staged, ok := s.store.(interface {
+				BeginCredentialChanges() error
+				DiscardCredentialChanges()
+			}); ok {
+				if err := staged.BeginCredentialChanges(); err != nil {
+					return SettingsDTO{}, err
+				}
+				defer staged.DiscardCredentialChanges()
+			}
 		}
 		if validateErr := config.Validate(v); validateErr != nil {
 			return SettingsDTO{}, validateErr

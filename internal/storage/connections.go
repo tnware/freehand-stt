@@ -11,6 +11,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
+	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/storage/dbgen"
 )
@@ -85,7 +86,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 			return state, errors.New("invalid connection credential reference")
 		}
 		state.entries[row.ID] = storedConnection{Connection: savedconnection.Connection{ID: row.ID, Name: row.Name, Purpose: p, Details: savedconnection.Details{
-			CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), Model: row.Model, HealthPath: row.HealthPath, CleanupPreset: config.PostProcessingPreset(row.CleanupPreset), Headers: map[string]string{},
+			CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), HealthPath: row.HealthPath, Headers: map[string]string{},
 		}}, account: row.CredentialAccount}
 	}
 	headers, err := q.ListConnectionHeaders(ctx)
@@ -110,7 +111,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	if err != nil {
 		return state, err
 	}
-	if len(selected) != 3 {
+	if len(selected) > 3 {
 		return state, errors.New("missing connection selections")
 	}
 	for _, row := range selected {
@@ -138,20 +139,22 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	state := s.connections.clone()
 	p := change.Purpose
 	current, ok := state.entries[change.ID]
-	if change.Action != savedconnection.Create && (!ok || current.Purpose != p) {
+	if change.Action != savedconnection.Create && !(change.Action == savedconnection.Select && change.ID == "") && (!ok || current.Purpose != p) {
 		return v, errors.New("saved connection is unavailable; reload settings")
 	}
 	name := strings.TrimSpace(change.Name)
-	if change.Action == savedconnection.Create || change.Action == savedconnection.Duplicate || change.Action == savedconnection.Rename {
+	if change.Action == savedconnection.Create || change.Action == savedconnection.Duplicate || change.Action == savedconnection.Rename || change.Action == savedconnection.Update {
 		if err := savedconnection.ValidateName(name); err != nil {
 			return v, err
 		}
 		for id, c := range state.entries {
-			if c.Purpose == p && strings.EqualFold(c.Name, name) && (change.Action != savedconnection.Rename || id != change.ID) {
+			if c.Purpose == p && strings.EqualFold(c.Name, name) && ((change.Action != savedconnection.Rename && change.Action != savedconnection.Update) || id != change.ID) {
 				return v, errors.New("a connection with that name already exists")
 			}
 		}
 	}
+
+	target := ""
 	switch change.Action {
 	case savedconnection.Create, savedconnection.Duplicate:
 		count := 0
@@ -167,28 +170,52 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 		if _, err := rand.Read(id[:]); err != nil {
 			return v, failure("unavailable", err)
 		}
-		c := storedConnection{Connection: savedconnection.Connection{ID: "connection-" + hex.EncodeToString(id[:]), Purpose: p, Name: name, Details: savedconnection.Extract(v, p)}}
+		c := storedConnection{Connection: savedconnection.Connection{ID: "connection-" + hex.EncodeToString(id[:]), Purpose: p, Name: name}}
 		if change.Action == savedconnection.Duplicate {
 			c.Details = savedconnection.CloneDetails(current.Details)
 			c.account = current.account
+		} else {
+			if change.Details == nil {
+				return v, errors.New("connection details are required")
+			}
+			c.Details = savedconnection.CloneDetails(*change.Details)
+			if err := savedconnection.Validate(p, c.Details); err != nil {
+				return v, err
+			}
+			target = c.ID
 		}
 		state.entries[c.ID] = c
-		state.selected[p] = c.ID
-		v = savedconnection.Apply(v, p, c.Details)
+	case savedconnection.Update:
+		if change.Details == nil {
+			return v, errors.New("connection details are required")
+		}
+		if err := savedconnection.Validate(p, *change.Details); err != nil {
+			return v, err
+		}
+		current.Name = name
+		current.Details = savedconnection.CloneDetails(*change.Details)
+		state.entries[current.ID] = current
+		target = current.ID
+		if state.selected[p] == current.ID {
+			v = savedconnection.Apply(v, p, current.Details)
+		}
 	case savedconnection.Select:
-		state.selected[p] = current.ID
-		v = savedconnection.Apply(v, p, current.Details)
+		if state.selected[p] != change.ID {
+			v = savedconnection.ClearModel(v, p)
+		}
+		if change.ID == "" {
+			delete(state.selected, p)
+			v = savedconnection.Apply(v, p, savedconnection.Extract(config.Default(), p))
+		} else {
+			state.selected[p] = current.ID
+			v = savedconnection.Apply(v, p, current.Details)
+		}
 	case savedconnection.Rename:
 		current.Name = name
 		state.entries[current.ID] = current
 	case savedconnection.Delete:
 		if state.selected[p] == current.ID {
-			replacement, ok := state.entries[change.ReplacementID]
-			if !ok || replacement.Purpose != p || replacement.ID == current.ID {
-				return v, errors.New("select another connection before deleting this one")
-			}
-			state.selected[p] = replacement.ID
-			v = savedconnection.Apply(v, p, replacement.Details)
+			return v, errors.New("choose another connection or None in the feature settings before deleting this connection")
 		}
 		delete(state.entries, current.ID)
 	default:
@@ -200,6 +227,7 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	}
 	s.pending = pending
 	s.pendingConnections = &state
+	s.pendingConnectionTarget = target
 	return v, nil
 }
 func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config.Settings) (connectionState, error) {
@@ -212,7 +240,7 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 		id := state.selected[p]
 		c, ok := state.entries[id]
 		if !ok {
-			return state, errors.New("missing selected connection")
+			continue
 		}
 		c.Details = savedconnection.Extract(v, p)
 		c.account = s.refs[purpose]
@@ -229,7 +257,7 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 	for _, id := range ids {
 		c := state.entries[id]
 		d := c.Details
-		if err := q.PutSavedConnection(ctx, dbgen.PutSavedConnectionParams{ID: c.ID, Purpose: string(c.Purpose), Name: c.Name, CompatibilityProfile: string(d.CompatibilityProfile), BaseUrl: d.BaseURL, AllowInsecureHttp: boolean(d.AllowInsecureHTTP), AuthenticationMode: string(d.AuthenticationMode), Model: d.Model, HealthPath: d.HealthPath, CleanupPreset: string(d.CleanupPreset), CredentialAccount: c.account}); err != nil {
+		if err := q.PutSavedConnection(ctx, dbgen.PutSavedConnectionParams{ID: c.ID, Purpose: string(c.Purpose), Name: c.Name, CompatibilityProfile: string(d.CompatibilityProfile), BaseUrl: d.BaseURL, AllowInsecureHttp: boolean(d.AllowInsecureHTTP), AuthenticationMode: string(d.AuthenticationMode), HealthPath: d.HealthPath, CredentialAccount: c.account}); err != nil {
 			return state, err
 		}
 		if err := q.ClearConnectionHeaders(ctx, id); err != nil {
@@ -246,8 +274,14 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 			}
 		}
 	}
+	if err := q.ClearSelectedConnections(ctx); err != nil {
+		return state, err
+	}
 	for _, purpose := range purposes {
 		p := savedconnection.Purpose(purpose)
+		if state.selected[p] == "" {
+			continue
+		}
 		if err := q.SelectSavedConnection(ctx, dbgen.SelectSavedConnectionParams{Purpose: purpose, ConnectionID: state.selected[p]}); err != nil {
 			return state, err
 		}
@@ -266,4 +300,69 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 		}
 	}
 	return state, nil
+}
+
+// ApplySelectedConnections keeps connection-owned fields out of ordinary runtime saves.
+func (s *Store) ApplySelectedConnections(v config.Settings) config.Settings {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech} {
+		if c, ok := s.connections.entries[s.connections.selected[p]]; ok {
+			v = savedconnection.Apply(v, p, c.Details)
+		} else {
+			v = savedconnection.Apply(v, p, savedconnection.Extract(config.Default(), p))
+			v = savedconnection.ClearModel(v, p)
+		}
+	}
+	return v
+}
+
+// StageConnectionCredential changes only the explicit connection edit's native reference.
+func (s *Store) StageConnectionCredential(value string, clear bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.pendingConnections == nil || s.pendingConnectionTarget == "" {
+		return errors.New("credentials require an explicit connection edit")
+	}
+	c := s.pendingConnections.entries[s.pendingConnectionTarget]
+	if clear {
+		c.account = ""
+	} else if strings.TrimSpace(value) != "" {
+		account, err := s.stageCredential(string(c.Purpose), value)
+		if err != nil {
+			return err
+		}
+		c.account = account
+	}
+	if c.Purpose != savedconnection.Cleanup && c.Details.AuthenticationMode == config.AuthenticationModeNone {
+		c.account = ""
+	}
+	s.pendingConnections.entries[c.ID] = c
+	if s.pendingConnections.selected[c.Purpose] == c.ID {
+		s.pending[string(c.Purpose)] = c.account
+	}
+	return nil
+}
+
+// ResolveSavedConnection captures metadata-test details and credentials for an internal caller.
+// Store is not registered with Wails; stored keys never become binding results.
+func (s *Store) ResolveSavedConnection(id string) (savedconnection.Connection, string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	c, ok := s.connections.entries[id]
+	if !ok || s.closed || s.uncertain {
+		return savedconnection.Connection{}, "", errors.New("saved connection is unavailable")
+	}
+	c.Details = savedconnection.CloneDetails(c.Details)
+	key := ""
+	if c.account != "" && (c.Purpose == savedconnection.Cleanup || c.Details.AuthenticationMode == config.AuthenticationModeAPIKey) {
+		var err error
+		key, err = s.vault.Get(c.account)
+		if err != nil {
+			return savedconnection.Connection{}, "", err
+		}
+	} else if c.Purpose != savedconnection.Cleanup && c.Details.AuthenticationMode == config.AuthenticationModeAPIKey {
+		return savedconnection.Connection{}, "", credential.ErrNotFound
+	}
+	return c.Connection, key, nil
 }

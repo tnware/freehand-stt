@@ -69,7 +69,7 @@ English-only cleanup behavior. Language selection does not request translation.
 
 ## Choose a compatibility profile
 
-Each connection has its own **Compatibility profile** in Settings:
+Each connection has its own **Compatibility profile** under **Settings → Connections**:
 
 | Connection | Available profiles |
 | --- | --- |
@@ -97,10 +97,10 @@ means its dedicated profile is not implemented. The list is scoped to the
 connection's operation. OpenAI hosted is a planned dedicated profile, separate
 from the generic protocol baseline.
 
-Save settings to apply a selection. A running job keeps the settings and
-credentials it captured when it started. Older configuration files default to
-Generic. These settings describe the current connections; named, selectable
-saved connections are not available yet.
+Choose **Save connection** to store the profile and endpoint. Select that entry
+on the relevant feature page, then choose its model and save feature settings.
+A running job keeps the settings and credentials it captured when it started.
+Older configuration files default to Generic.
 
 ## Information Freehand needs
 
@@ -140,7 +140,7 @@ The [backend guide index](../../backends/#run-a-backend) compares those recipes.
 
 `http://127.0.0.1:8000/v1` and a private address such as
 `http://192.168.1.50:8000/v1` are plaintext connections. Freehand rejects them
-until **Allow insecure HTTP** is explicitly enabled for that capability.
+until **Allow insecure HTTP** is explicitly enabled in that saved connection.
 
 Only enable plaintext HTTP on a network you trust. Audio, transcript text, and
 credentials sent over HTTP are not encrypted in transit. Prefer HTTPS for a

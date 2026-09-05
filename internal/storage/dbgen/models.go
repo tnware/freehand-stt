@@ -89,9 +89,7 @@ type SavedConnection struct {
 	BaseUrl              string
 	AllowInsecureHttp    int64
 	AuthenticationMode   string
-	Model                string
 	HealthPath           string
-	CleanupPreset        string
 	CredentialAccount    string
 }
 

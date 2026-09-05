@@ -23,6 +23,7 @@ type Action string
 
 const (
 	Create    Action = "create"
+	Update    Action = "update"
 	Select    Action = "select"
 	Duplicate Action = "duplicate"
 	Rename    Action = "rename"
@@ -31,23 +32,22 @@ const (
 const MaxPerPurpose = 32
 
 type Change struct {
-	Action        Action  `json:"action"`
-	Purpose       Purpose `json:"purpose"`
-	ID            string  `json:"id"`
-	Name          string  `json:"name"`
-	ReplacementID string  `json:"replacementID"`
+	Action        Action   `json:"action"`
+	Details       *Details `json:"details,omitempty"`
+	Purpose       Purpose  `json:"purpose"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	ReplacementID string   `json:"replacementID"`
 }
 
 // Details are connection-scoped. Language and general workflow preferences remain operation-scoped.
 type Details struct {
-	CompatibilityProfile compatibility.ID            `json:"compatibilityProfile"`
-	BaseURL              string                      `json:"baseURL"`
-	AllowInsecureHTTP    bool                        `json:"allowInsecureHTTP"`
-	AuthenticationMode   config.AuthenticationMode   `json:"authenticationMode"`
-	Model                string                      `json:"model"`
-	HealthPath           string                      `json:"healthPath"`
-	Headers              map[string]string           `json:"headers"`
-	CleanupPreset        config.PostProcessingPreset `json:"cleanupPreset"`
+	CompatibilityProfile compatibility.ID          `json:"compatibilityProfile"`
+	BaseURL              string                    `json:"baseURL"`
+	AllowInsecureHTTP    bool                      `json:"allowInsecureHTTP"`
+	AuthenticationMode   config.AuthenticationMode `json:"authenticationMode"`
+	HealthPath           string                    `json:"healthPath"`
+	Headers              map[string]string         `json:"headers"`
 }
 type Connection struct {
 	ID            string  `json:"id"`
@@ -89,7 +89,6 @@ func Extract(v config.Settings, p Purpose) Details {
 		d.BaseURL = v.BaseURL
 		d.AllowInsecureHTTP = v.AllowInsecureHTTP
 		d.AuthenticationMode = v.AuthenticationMode
-		d.Model = v.Model
 		d.HealthPath = v.HealthPath
 		for k, x := range v.Headers {
 			d.Headers[k] = x
@@ -98,14 +97,11 @@ func Extract(v config.Settings, p Purpose) Details {
 		d.CompatibilityProfile = v.PostProcessing.CompatibilityProfile
 		d.BaseURL = v.PostProcessing.BaseURL
 		d.AllowInsecureHTTP = v.PostProcessing.AllowInsecureHTTP
-		d.Model = v.PostProcessing.Model
-		d.CleanupPreset = v.PostProcessing.Preset
 	case Speech:
 		d.CompatibilityProfile = v.TextToSpeech.CompatibilityProfile
 		d.BaseURL = v.TextToSpeech.BaseURL
 		d.AllowInsecureHTTP = v.TextToSpeech.AllowInsecureHTTP
 		d.AuthenticationMode = v.TextToSpeech.AuthenticationMode
-		d.Model = v.TextToSpeech.Model
 	}
 	return d
 }
@@ -118,32 +114,65 @@ func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 		v.BaseURL = d.BaseURL
 		v.AllowInsecureHTTP = d.AllowInsecureHTTP
 		v.AuthenticationMode = d.AuthenticationMode
-		v.Model = d.Model
 		v.HealthPath = d.HealthPath
 		v.Headers = CloneDetails(d).Headers
-		if c, err := compatibility.Resolve(d.CompatibilityProfile, compatibility.Transcription); err == nil {
-			if d.BaseURL == "" || (!c.Capabilities.ServerLoadedModel && d.Model == "") {
-				v.SetupCompleted = false
-			}
-		}
 	case Cleanup:
 		v.PostProcessing.CompatibilityProfile = d.CompatibilityProfile
 		v.PostProcessing.BaseURL = d.BaseURL
 		v.PostProcessing.AllowInsecureHTTP = d.AllowInsecureHTTP
-		v.PostProcessing.Model = d.Model
-		v.PostProcessing.Preset = d.CleanupPreset
-		if d.BaseURL == "" || d.Model == "" {
-			v.PostProcessing.Enabled = false
-		}
 	case Speech:
 		v.TextToSpeech.CompatibilityProfile = d.CompatibilityProfile
 		v.TextToSpeech.BaseURL = d.BaseURL
 		v.TextToSpeech.AllowInsecureHTTP = d.AllowInsecureHTTP
 		v.TextToSpeech.AuthenticationMode = d.AuthenticationMode
-		v.TextToSpeech.Model = d.Model
-		if d.BaseURL == "" || d.Model == "" {
-			v.TextToSpeech.Enabled = false
+	}
+	return v
+}
+
+// Validate checks the reusable connection contract independently from model and runtime options.
+func Validate(p Purpose, d Details) error {
+	var operation compatibility.Role
+	switch p {
+	case Transcription:
+		operation = compatibility.Transcription
+	case Cleanup:
+		operation = compatibility.PostProcessing
+	case Speech:
+		operation = compatibility.Speech
+	default:
+		return errors.New("invalid connection purpose")
+	}
+	if _, err := compatibility.Resolve(d.CompatibilityProfile, operation); err != nil {
+		return err
+	}
+	if p != Transcription && (d.HealthPath != "" || len(d.Headers) != 0) {
+		return errors.New("custom headers and health paths belong to transcription connections")
+	}
+	switch p {
+	case Transcription:
+		return config.ValidateSTTConnection(d.BaseURL, d.AllowInsecureHTTP, d.AuthenticationMode, "", d.HealthPath, d.Headers)
+	case Cleanup:
+		if d.AuthenticationMode != config.AuthenticationModeNone {
+			return errors.New("cleanup authentication uses an optional API key")
 		}
+		return config.ValidatePostProcessingConnection(d.BaseURL, d.AllowInsecureHTTP, "")
+	default:
+		return config.ValidateTextToSpeechConnection(d.BaseURL, d.AllowInsecureHTTP, d.AuthenticationMode, "")
+	}
+}
+
+// ClearModel requires an explicit model choice after switching servers.
+func ClearModel(v config.Settings, p Purpose) config.Settings {
+	switch p {
+	case Transcription:
+		v.Model = ""
+		v.SetupCompleted = false
+	case Cleanup:
+		v.PostProcessing.Model = ""
+		v.PostProcessing.Enabled = false
+	case Speech:
+		v.TextToSpeech.Model = ""
+		v.TextToSpeech.Enabled = false
 	}
 	return v
 }

@@ -56,7 +56,7 @@ type ShortcutAssignments struct {
 func Policies() []ShortcutPolicy {
 	return []ShortcutPolicy{
 		policy(ToggleRecording, true, 0, "Ctrl+Shift+Space", "CmdOrCtrl+Shift+Space"),
-		policy(ShowFreehand, true, 0, "Ctrl+Shift+D", "CmdOrCtrl+Shift+D"),
+		policy(ShowFreehand, false, 0, ""),
 		policy(HoldToTalk, false, minModifierOnly, ""),
 	}
 }

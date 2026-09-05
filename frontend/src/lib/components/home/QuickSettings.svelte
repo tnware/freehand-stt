@@ -71,26 +71,18 @@
     disabled?: boolean;
   } = $props();
 
-  let endpointDraft = $state("");
   let modelDraft = $state("");
-  let processingEndpointDraft = $state("");
   let processingModelDraft = $state("");
-  let endpointTouched = $state(false);
   let modelTouched = $state(false);
-  let processingEndpointTouched = $state(false);
   let processingModelTouched = $state(false);
   let sttOpen = $state(readDisclosurePreference("quick-stt", true));
   let cleanupOpen = $state(readDisclosurePreference("quick-cleanup", true));
 
-  let endpointSave: Promise<boolean> | undefined;
   let modelSave: Promise<boolean> | undefined;
-  let processingEndpointSave: Promise<boolean> | undefined;
   let processingModelSave: Promise<boolean> | undefined;
 
   $effect(() => {
-    if (!endpointTouched) endpointDraft = settings.baseURL;
     if (!modelTouched) modelDraft = settings.model;
-    if (!processingEndpointTouched) processingEndpointDraft = settings.postProcessing.baseURL;
     if (!processingModelTouched) processingModelDraft = settings.postProcessing.model;
   });
 
@@ -99,13 +91,9 @@
   // snapshot when the rack becomes interactive again.
   $effect(() => {
     if (!disabled) return;
-    endpointDraft = settings.baseURL;
     modelDraft = settings.model;
-    processingEndpointDraft = settings.postProcessing.baseURL;
     processingModelDraft = settings.postProcessing.model;
-    endpointTouched = false;
     modelTouched = false;
-    processingEndpointTouched = false;
     processingModelTouched = false;
   });
 
@@ -180,45 +168,17 @@
   }
 
   const isPending = (field: QuickSettingsField): boolean => pending.includes(field);
-  const sttHealthStale = $derived(
-    sttStale ||
-      endpointTouched ||
-      modelTouched ||
-      isPending("stt-endpoint") ||
-      isPending("stt-model"),
-  );
+  const sttHealthStale = $derived(sttStale || modelTouched || isPending("stt-model"));
   const processingHealthStale = $derived(
-    processingStale ||
-      processingEndpointTouched ||
-      processingModelTouched ||
-      isPending("processing-endpoint") ||
-      isPending("processing-model"),
+    processingStale || processingModelTouched || isPending("processing-model"),
   );
   const panelFields: QuickSettingsField[] = [
-    "stt-endpoint",
     "stt-model",
     "processing-enabled",
-    "processing-endpoint",
     "processing-model",
     "processing-profile",
     "processing-controls",
   ];
-
-  function commitEndpoint(): Promise<boolean> {
-    const value = endpointDraft.trim();
-    if (value === settings.baseURL) {
-      endpointTouched = false;
-      return Promise.resolve(true);
-    }
-    if (endpointSave) return endpointSave;
-    endpointSave = onUpdate({ baseURL: value }, "stt-endpoint")
-      .then((saved) => {
-        if (saved) endpointTouched = false;
-        return saved;
-      })
-      .finally(() => (endpointSave = undefined));
-    return endpointSave;
-  }
 
   function commitModel(): Promise<boolean> {
     const value = modelDraft.trim();
@@ -238,22 +198,6 @@
 
   function chooseModel(value: string) {
     if (value && value !== settings.model) void onUpdate({ model: value }, "stt-model");
-  }
-
-  function commitProcessingEndpoint(): Promise<boolean> {
-    const value = processingEndpointDraft.trim();
-    if (value === settings.postProcessing.baseURL) {
-      processingEndpointTouched = false;
-      return Promise.resolve(true);
-    }
-    if (processingEndpointSave) return processingEndpointSave;
-    processingEndpointSave = onUpdate({ postProcessing: { baseURL: value } }, "processing-endpoint")
-      .then((saved) => {
-        if (saved) processingEndpointTouched = false;
-        return saved;
-      })
-      .finally(() => (processingEndpointSave = undefined));
-    return processingEndpointSave;
   }
 
   function commitProcessingModel(): Promise<boolean> {
@@ -291,11 +235,11 @@
   }
 
   async function testSTTConnection() {
-    if ((await commitEndpoint()) && (await commitModel())) await onTestConnection();
+    if (await commitModel()) await onTestConnection();
   }
 
   async function testProcessingConnection() {
-    if ((await commitProcessingEndpoint()) && (await commitProcessingModel())) {
+    if (await commitProcessingModel()) {
       await onTestProcessingConnection();
     }
   }
@@ -305,9 +249,7 @@
     if (processingTesting) return "Testing post-processing connection.";
     if (pending.some((field) => panelFields.includes(field))) return "Saving quick settings.";
     if (!savedField || !panelFields.includes(savedField)) return "";
-    if (savedField === "stt-endpoint") return "Speech-to-text endpoint saved.";
     if (savedField === "stt-model") return "Speech-to-text model saved.";
-    if (savedField === "processing-endpoint") return "Post-processing endpoint saved.";
     if (savedField === "processing-model") return "Post-processing model saved.";
     if (savedField === "processing-profile") return "Post-processing behavior saved.";
     if (savedField === "processing-enabled") return "Post-processing preference saved.";
@@ -367,43 +309,31 @@
   >
     {#snippet icon()}<ProviderIcon profile={settings.compatibilityProfile} size={20} />{/snippet}
     <div class="contents">
-      {#snippet sttEndpointMeta()}
-        {#if isPending("stt-endpoint")}
-          saving
-        {:else if endpointTouched}
-          edited
-        {:else if savedField === "stt-endpoint"}
-          saved
-        {/if}
-      {/snippet}
+      {#snippet sttEndpointMeta()}{/snippet}
       {#snippet sttEndpointControl()}
-        <ValueInput
+        <Button
           id="quick-stt-endpoint"
-          type="url"
-          class="figure h-[30px] min-w-0 flex-1 bg-well text-[11px]"
-          bind:value={endpointDraft}
-          disabled={isPending("stt-endpoint")}
-          spellcheck={false}
-          oninput={() => (endpointTouched = true)}
-          onblur={() => void commitEndpoint()}
-          onkeydown={(event) =>
-            handleDraftKey(event, () => {
-              endpointDraft = settings.baseURL;
-              endpointTouched = false;
-            })}
-        />
+          variant="outline"
+          class="h-[30px] min-w-0 flex-1 justify-start"
+          onclick={onOpenServerSettings}
+          ><span class="truncate"
+            >{settings.savedConnections.entries?.find(
+              (c) => c.id === settings.savedConnections.selected?.stt,
+            )?.name ?? "Choose a connection"}</span
+          ></Button
+        >
         <Button
           variant="ghost"
           size="sm"
           class="h-[30px] shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
-          disabled={sttTesting || isPending("stt-endpoint") || isPending("stt-model")}
+          disabled={sttTesting || isPending("stt-model")}
           onclick={() => void testSTTConnection()}
         >
           {#if sttTesting}<LoaderCircleIcon class="animate-spin" />{/if}
           {sttTesting ? "Testing" : "Test"}
         </Button>
       {/snippet}
-      {@render field("Endpoint", "quick-stt-endpoint", sttEndpointMeta, sttEndpointControl)}
+      {@render field("Connection", "quick-stt-endpoint", sttEndpointMeta, sttEndpointControl)}
 
       {#snippet sttModelMeta()}
         {#if isPending("stt-model")}
@@ -504,39 +434,24 @@
     {/snippet}
 
     <div class={cn("flex min-w-0 flex-col gap-2.5", !processingEnabled && "opacity-60")}>
-      {#snippet cleanupEndpointMeta()}
-        {#if isPending("processing-endpoint")}
-          saving
-        {:else if processingEndpointTouched}
-          edited
-        {:else if savedField === "processing-endpoint"}
-          saved
-        {/if}
-      {/snippet}
+      {#snippet cleanupEndpointMeta()}{/snippet}
       {#snippet cleanupEndpointControl()}
-        <ValueInput
+        <Button
           id="quick-processing-endpoint"
-          type="url"
-          class="figure h-[30px] min-w-0 flex-1 bg-well text-[11px]"
-          bind:value={processingEndpointDraft}
-          disabled={isPending("processing-endpoint")}
-          spellcheck={false}
-          oninput={() => (processingEndpointTouched = true)}
-          onblur={() => void commitProcessingEndpoint()}
-          onkeydown={(event) =>
-            handleDraftKey(event, () => {
-              processingEndpointDraft = settings.postProcessing.baseURL;
-              processingEndpointTouched = false;
-            })}
-        />
+          variant="outline"
+          class="h-[30px] min-w-0 flex-1 justify-start"
+          onclick={onOpenProcessingSettings}
+          ><span class="truncate"
+            >{settings.savedConnections.entries?.find(
+              (c) => c.id === settings.savedConnections.selected?.cleanup,
+            )?.name ?? "Choose a connection"}</span
+          ></Button
+        >
         <Button
           variant="ghost"
           size="sm"
           class="h-[30px] shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
-          disabled={processingTesting ||
-            !processingEnabled ||
-            isPending("processing-endpoint") ||
-            isPending("processing-model")}
+          disabled={processingTesting || !processingEnabled || isPending("processing-model")}
           onclick={() => void testProcessingConnection()}
         >
           {#if processingTesting}<LoaderCircleIcon class="animate-spin" />{/if}
@@ -544,7 +459,7 @@
         </Button>
       {/snippet}
       {@render field(
-        "Endpoint",
+        "Connection",
         "quick-processing-endpoint",
         cleanupEndpointMeta,
         cleanupEndpointControl,

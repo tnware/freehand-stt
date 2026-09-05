@@ -16,6 +16,7 @@ describe("settings navigation", () => {
       "speech",
     ]);
     expect(sectionsInGroup("server").map((section) => section.label)).toEqual([
+      "Connections",
       "Transcription",
       "Post-processing",
     ]);

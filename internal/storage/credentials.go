@@ -73,27 +73,40 @@ func (v *credentialView) Set(value string) error {
 	if s.pending == nil || s.db == nil || s.closed {
 		return errors.New("credential change requires a settings transaction")
 	}
+	account, err := s.stageCredential(v.purpose, value)
+	if err == nil {
+		s.pending[v.purpose] = account
+	}
+	return err
+}
+
+// stageCredential is called with the store mutex held. It creates a fresh account,
+// with durable cleanup intent, so failed saves cannot overwrite a committed key.
+func (s *Store) stageCredential(purpose, value string) (string, error) {
+	if len(value) == 0 || len(value) > 16*1024 || s.db == nil || s.closed {
+		return "", errors.New("invalid credential transaction")
+	}
 	ctx, cancel := context.WithTimeout(s.ctx, operationTimeout)
 	defer cancel()
 	count, err := dbgen.New(s.db).CountCredentialGC(ctx)
 	if err != nil || count >= maxPendingCredentials {
-		return errors.New("pending credential cleanup must complete before replacing a key")
+		return "", errors.New("pending credential cleanup must complete before replacing a key")
 	}
 	var id [16]byte
 	if _, err := rand.Read(id[:]); err != nil {
-		return err
+		return "", err
 	}
-	account := "sqlite-" + v.purpose + "-" + hex.EncodeToString(id[:])
+	account := "sqlite-" + purpose + "-" + hex.EncodeToString(id[:])
 	// Persist cleanup intent first, so a crash after the keyring write leaves a reclaimable secret.
 	if err := dbgen.New(s.db).QueueCredentialGC(ctx, account); err != nil {
-		return failure("write_failed", err)
+		return "", failure("write_failed", err)
 	}
 	if err := s.vault.Set(account, value); err != nil {
-		return errors.New("credential could not be stored")
+		return "", errors.New("credential could not be stored")
 	}
-	s.pending[v.purpose] = account
-	return nil
+	return account, nil
 }
+
 func (v *credentialView) Delete() error {
 	s := v.s
 	s.mu.Lock()
@@ -121,6 +134,7 @@ func (s *Store) DiscardCredentialChanges() {
 	defer s.mu.Unlock()
 	s.pending = nil
 	s.pendingConnections = nil
+	s.pendingConnectionTarget = ""
 	if s.db != nil && !s.uncertain {
 		ctx, cancel := context.WithTimeout(s.ctx, operationTimeout)
 		defer cancel()

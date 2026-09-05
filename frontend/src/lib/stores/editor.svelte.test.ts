@@ -283,6 +283,7 @@ describe("SettingsEditor settings snapshots", () => {
 
     expect(await session.editor.completeSetup()).toBe(true);
     expect(SaveSettings).toHaveBeenCalledWith({
+      clearConnectionCredential:false,
       settings: expect.objectContaining({ setupCompleted: true }),
       sttCredentialDraft: "",
       clearSTTCredential: false,
@@ -379,6 +380,7 @@ describe("SettingsEditor settings snapshots", () => {
     expect(received?.settings.postProcessing.model).toBe("processor/faster");
     expect(received?.settings.postProcessing.styling).toBe("formal");
     expect(SaveSettings).toHaveBeenCalledWith({
+      clearConnectionCredential:false,
       settings: expect.any(Object),
       sttCredentialDraft: "",
       clearSTTCredential: false,
@@ -529,22 +531,22 @@ describe("SettingsEditor settings snapshots", () => {
     await session.editor.load();
     await session.editor.refreshDevices();
 
-    const endpoint = session.editor.updateQuickSettings(
-      { baseURL: "https://new.example/v1" },
-      "stt-endpoint",
+    const delivery = session.editor.updateQuickSettings(
+      { autoInsert: false },
+      "delivery",
     );
     const model = session.editor.updateQuickSettings(
       { model: "speech/new" },
       "stt-model",
     );
     await Promise.resolve();
-    first.resolve({ ...settings, baseURL: "https://new.example/v1" });
+    first.resolve({ ...settings, autoInsert: false });
 
-    expect(await endpoint).toBe(true);
+    expect(await delivery).toBe(true);
     expect(await model).toBe(true);
     expect(requests).toHaveLength(2);
     expect(requests[1]).toMatchObject({
-      baseURL: "https://new.example/v1",
+      autoInsert: false,
       model: "speech/new",
     });
   });

@@ -309,7 +309,7 @@ func withUpgrade(s *Store, sql string) {
 		data, _ := embeddedMigrations.ReadFile("migrations/" + entry.Name())
 		migrations[entry.Name()] = &fstest.MapFile{Data: data}
 	}
-	migrations["00004_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
+	migrations["00005_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
 	s.migrations = migrations
 }
 func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
@@ -341,7 +341,7 @@ func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
 			var current int
 			db.QueryRow("SELECT max(version_id) FROM goose_db_version").Scan(&current)
 			db.Close()
-			if fail && current != 3 {
+			if fail && current != 4 {
 				t.Fatal("failed migration advanced version")
 			}
 			restore := newStore(s.path, s.legacy, s.vault)
@@ -483,5 +483,44 @@ func TestVersionOneUpgradePreservesSettingsAndReferences(t *testing.T) {
 	backups, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "backups", "*.db"))
 	if len(backups) != 1 {
 		t.Fatal("v1 upgrade missing backup")
+	}
+}
+
+func TestVersionThreeUpgradeKeepsRuntimeModelsAndConnectionKeys(t *testing.T) {
+	s := testStore(t)
+	initial := config.Default()
+	initial.BaseURL = "https://stt.example.test/v1"
+	initial.Model = "current-stt"
+	initial.PostProcessing.BaseURL = "https://cleanup.example.test/v1"
+	initial.PostProcessing.Model = "current-cleanup"
+	writeLegacy(t, s, initial)
+	want := loadStore(t, s)
+	if err := s.BeginCredentialChanges(); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.STTCredentials().Set("migration-fixture"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Save(want); err != nil {
+		t.Fatal(err)
+	}
+	before := s.ConnectionCatalog()
+	// Reintroduce the two v3 columns with stale per-connection model values.
+	// The migration must preserve the current runtime values instead.
+	_, err := s.db.Exec(`ALTER TABLE saved_connections ADD COLUMN model TEXT NOT NULL DEFAULT 'stale-model';
+ ALTER TABLE saved_connections ADD COLUMN cleanup_preset TEXT NOT NULL DEFAULT 'generic';
+ DELETE FROM goose_db_version WHERE version_id >= 4;`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s = reopen(t, s)
+	if got := loadStore(t, s); !reflect.DeepEqual(got, want) {
+		t.Fatal("upgrade changed runtime choices")
+	}
+	if !reflect.DeepEqual(s.ConnectionCatalog(), before) {
+		t.Fatal("upgrade changed connection selections")
+	}
+	if key, err := s.STTCredentials().Get(); err != nil || key != "migration-fixture" {
+		t.Fatal("upgrade lost key reference")
 	}
 }

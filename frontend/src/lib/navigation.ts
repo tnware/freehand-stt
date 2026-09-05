@@ -13,6 +13,7 @@ export type SettingsSectionID =
   | "shortcuts"
   | "audio"
   | "overlay"
+  | "connections"
   | "server"
   | "processing"
   | "speech"
@@ -61,9 +62,16 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     group: "delivery",
   },
   {
+    id: "connections",
+    label: "Connections",
+    blurb: "Create and manage saved server connections.",
+    icon: ServerIcon,
+    group: "server",
+  },
+  {
     id: "server",
     label: "Transcription",
-    blurb: "The OpenAI-compatible endpoint that transcribes your speech.",
+    blurb: "Choose a connection, model, language, and transcription options.",
     icon: ServerIcon,
     group: "server",
   },

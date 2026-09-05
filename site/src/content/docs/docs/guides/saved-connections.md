@@ -1,63 +1,76 @@
 ---
 title: Saved connections
-description: Keep named server connections and switch them independently for transcription, cleanup, and speech playback.
+description: Create server connections in one place, then choose which connection each feature uses.
 ---
 
-Each capability has a **Saved connection** selector at the top of its Settings
-section. Transcription, Post-processing, and Speech playback have independent
-lists and selections. A saved connection is your named endpoint configuration;
-its **Compatibility profile** describes the server's request contract.
+Open **Settings → Connections** to create and manage the servers Freehand can
+use. New installations start with an empty list. Existing configured endpoints
+are retained when upgrading. Each connection belongs to Transcription,
+Post-processing, or Speech playback; those features have independent selections.
 
-Your existing setup becomes one saved connection per capability automatically,
-including its credential reference. You can rename these entries immediately.
-No server or model is started when a connection is created or selected.
+## Create a connection
 
-## Save and switch
+1. Choose **New connection**, enter a name, and choose **Used for**.
+2. Choose the server's **Compatibility profile** and enter its base URL.
+3. Configure authentication and explicitly allow HTTP if your trusted server
+   uses it. Transcription also offers a custom health path and non-secret headers.
+4. Choose **Save connection**. This saves the entry without activating it.
+5. Open the corresponding feature page and choose its **Active connection**.
+6. List models or enter the exact model ID, configure the feature's options,
+   and choose **Save feature settings**. whisper.cpp uses its server-loaded model.
 
-- **Edit a connection:** change the fields below the selector and choose
-  **Save changes**. This updates the selected connection.
-- **Save as new:** edit the connection values, choose **Save as new**, and enter
-  a name. The new entry becomes selected. Only a newly entered API key is attached;
-  an existing stored key is not copied to a different endpoint automatically.
-- **Duplicate:** copy the selected saved connection, give it a new name, and
-  select **Duplicate and use**. The copy initially uses the same credential
-  reference. Later key replacements or other edits affect only the edited entry.
-- **Switch:** choose a saved entry. Selection applies immediately to new requests;
-  requests already running keep their captured endpoint, model, and credentials.
-- **Rename:** change the display name without changing connection behavior.
-- **Delete:** choose another saved connection in the confirmation dialog, then
-  select **Delete and switch**. At least one entry must remain for that capability.
+For first-time transcription setup, return to the readiness screen, explicitly
+**Test connection**, and finish setup. See [Get started](../../getting-started/).
 
-Save or discard ordinary edits before switching, duplicating, renaming, or
-deleting. **Save as new** intentionally accepts your current draft. Names must be
-unique within a capability; each capability supports up to 32 saved connections.
+## What goes where?
 
-## What belongs to a connection?
+| Settings → Connections | Feature settings pages |
+| --- | --- |
+| Connection name and purpose | Active connection selection |
+| Compatibility profile and base URL | Model and language |
+| Authentication and stored API key | Cleanup preset and instructions |
+| Allow insecure HTTP | Voice, speed, and feature enable switches |
+| Transcription health path and headers | Timeouts and provider-specific options |
 
-Connections remember endpoint URL, HTTP permission, compatibility profile, last
-selected model, and their credential reference. Transcription connections also
-remember authentication mode, custom headers, and health path. Speech playback
-connections remember authentication mode. Cleanup connections remember the
-selected cleanup preset, so an explicitly chosen S1-mini preset stays associated
-with that connection's model selection.
+**Save connection** updates only that connection. Editing an active connection
+applies its endpoint settings to new requests; its model and feature options
+remain on the feature page. **Save feature settings** does not edit the saved
+connection. The home-screen connection labels link to feature settings; model
+and other quick controls still save their own runtime settings.
 
-Language, timeouts, provider overrides, custom cleanup instructions, voice,
-speed, and feature enable switches remain settings of their respective operation.
-If a connection cannot accept a currently enabled provider option, Freehand
-rejects the switch and keeps the existing setup. Adjust that option and save
-before switching; Freehand does not silently erase it. Selecting an incomplete
-connection can require setup again or disable an unconfigured optional capability.
-Remembering a separate set of options for every model is future work.
+## Switch, edit, duplicate, or delete
 
-## Credentials and privacy
+- Choose an **Active connection** on a feature page to switch immediately.
+  A different connection clears that feature's model choice; cleanup and speech
+  playback turn off until configured and enabled again. Transcription needs its
+  setup completed again. Running jobs keep their captured settings and keys.
+- Choose **Edit connection** to open the selected entry in Connections. Save or
+  discard feature edits first. Save or cancel a connection form before navigating.
+- **Duplicate** creates an inactive copy. Later edits and key replacements affect
+  only that copy. Rename it through **Edit** if needed.
+- **Delete** removes an inactive entry after confirmation. To delete an active
+  entry, select another connection or **None** on its feature page first.
+  Deleting the last inactive entry is allowed.
 
-Keys stay in Windows Credential Manager. Saved connections and SQLite backups
-contain only opaque references, and the interface never receives stored keys.
-Deleting a connection reclaims its key only when no other saved connection uses
-that reference. A failed save preserves the previously committed selection and
-credentials. Reset and backup behavior is described in
-[settings recovery](../troubleshooting/#saved-settings-need-attention).
+Names are unique within each feature, with up to 32 connections per feature.
+Switching preserves language, voice, instructions, and provider options. If the
+new connection cannot accept an enabled provider option, the switch fails and
+keeps your current setup; adjust and save that option before switching.
+Separate saved preferences for each model are future work.
 
-Connection tests remain metadata-only. They can read health or model listings,
-but do not invoke models or establish inference compatibility. See
-[connect a server](../connect-a-server/) and the [backend guides](../../backends/).
+## Test and protect credentials
+
+**Test connection** in Connections checks that saved entry, including its own
+credential, without selecting it. It reads health or model-list metadata only.
+A successful check establishes reachability, not inference compatibility.
+
+Keys stay in Windows Credential Manager. The app never displays a stored key;
+leave its password field blank to keep it, enter a replacement, or explicitly
+remove it. Canceling or leaving settings clears the transient key draft.
+SQLite and backups contain opaque credential references only. A duplicate
+initially shares that reference; replacing its key creates an independent one.
+Deletion reclaims a key only when no saved connection uses it. Failed saves
+preserve the previously committed settings and credentials.
+
+See [connect a server](../connect-a-server/), [backend guides](../../backends/),
+and [settings recovery](../troubleshooting/#saved-settings-need-attention).

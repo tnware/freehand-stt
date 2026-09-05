@@ -259,6 +259,7 @@ const serviceWithStatus = (
     ...overrides.input,
   },
   connection: {
+    TestSavedConnection: () => CancellablePromise.resolve(connectionResult),
     TestConnection: () => CancellablePromise.resolve(connectionResult),
     TestPostProcessingConnection: () =>
       CancellablePromise.resolve(connectionResult),

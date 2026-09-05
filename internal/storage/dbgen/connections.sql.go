@@ -18,6 +18,15 @@ func (q *Queries) ClearConnectionHeaders(ctx context.Context, connectionID strin
 	return err
 }
 
+const clearSelectedConnections = `-- name: ClearSelectedConnections :exec
+DELETE FROM selected_connections
+`
+
+func (q *Queries) ClearSelectedConnections(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, clearSelectedConnections)
+	return err
+}
+
 const deleteSavedConnection = `-- name: DeleteSavedConnection :exec
 DELETE FROM saved_connections WHERE id=?
 `
@@ -55,7 +64,7 @@ func (q *Queries) ListConnectionHeaders(ctx context.Context) ([]SavedConnectionH
 }
 
 const listSavedConnections = `-- name: ListSavedConnections :many
-SELECT id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,model,health_path,cleanup_preset,credential_account FROM saved_connections ORDER BY purpose,name,id LIMIT 97
+SELECT id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account FROM saved_connections ORDER BY purpose,name,id LIMIT 97
 `
 
 func (q *Queries) ListSavedConnections(ctx context.Context) ([]SavedConnection, error) {
@@ -75,9 +84,7 @@ func (q *Queries) ListSavedConnections(ctx context.Context) ([]SavedConnection, 
 			&i.BaseUrl,
 			&i.AllowInsecureHttp,
 			&i.AuthenticationMode,
-			&i.Model,
 			&i.HealthPath,
-			&i.CleanupPreset,
 			&i.CredentialAccount,
 		); err != nil {
 			return nil, err
@@ -136,8 +143,8 @@ func (q *Queries) PutConnectionHeader(ctx context.Context, arg PutConnectionHead
 }
 
 const putSavedConnection = `-- name: PutSavedConnection :exec
-INSERT INTO saved_connections(id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,model,health_path,cleanup_preset,credential_account) VALUES(?,?,?,?,?,?,?,?,?,?,?)
-ON CONFLICT(id) DO UPDATE SET name=excluded.name,compatibility_profile=excluded.compatibility_profile,base_url=excluded.base_url,allow_insecure_http=excluded.allow_insecure_http,authentication_mode=excluded.authentication_mode,model=excluded.model,health_path=excluded.health_path,cleanup_preset=excluded.cleanup_preset,credential_account=excluded.credential_account
+INSERT INTO saved_connections(id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) VALUES(?,?,?,?,?,?,?,?,?)
+ON CONFLICT(id) DO UPDATE SET name=excluded.name,compatibility_profile=excluded.compatibility_profile,base_url=excluded.base_url,allow_insecure_http=excluded.allow_insecure_http,authentication_mode=excluded.authentication_mode,health_path=excluded.health_path,credential_account=excluded.credential_account
 `
 
 type PutSavedConnectionParams struct {
@@ -148,9 +155,7 @@ type PutSavedConnectionParams struct {
 	BaseUrl              string
 	AllowInsecureHttp    int64
 	AuthenticationMode   string
-	Model                string
 	HealthPath           string
-	CleanupPreset        string
 	CredentialAccount    string
 }
 
@@ -163,16 +168,14 @@ func (q *Queries) PutSavedConnection(ctx context.Context, arg PutSavedConnection
 		arg.BaseUrl,
 		arg.AllowInsecureHttp,
 		arg.AuthenticationMode,
-		arg.Model,
 		arg.HealthPath,
-		arg.CleanupPreset,
 		arg.CredentialAccount,
 	)
 	return err
 }
 
 const seedCleanupConnection = `-- name: SeedCleanupConnection :exec
-INSERT INTO saved_connections(id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,model,health_path,cleanup_preset,credential_account) SELECT 'initial-cleanup','cleanup','Post-processing',s.compatibility_profile,s.base_url,s.allow_insecure_http,'none',s.model,'',s.preset,c.account FROM cleanup_settings s JOIN credential_refs c ON c.purpose='cleanup' WHERE NOT EXISTS(SELECT 1 FROM saved_connections WHERE purpose='cleanup')
+INSERT INTO saved_connections(id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) SELECT 'initial-cleanup','cleanup','Post-processing',s.compatibility_profile,s.base_url,s.allow_insecure_http,'none','',c.account FROM cleanup_settings s JOIN credential_refs c ON c.purpose='cleanup' WHERE s.base_url <> '' AND NOT EXISTS(SELECT 1 FROM saved_connections WHERE purpose='cleanup')
 `
 
 func (q *Queries) SeedCleanupConnection(ctx context.Context) error {
@@ -199,7 +202,7 @@ func (q *Queries) SeedSelectedConnections(ctx context.Context) error {
 }
 
 const seedSpeechConnection = `-- name: SeedSpeechConnection :exec
-INSERT INTO saved_connections(id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,model,health_path,cleanup_preset,credential_account) SELECT 'initial-speech','speech','Speech playback',s.compatibility_profile,s.base_url,s.allow_insecure_http,s.authentication_mode,s.model,'','',c.account FROM speech_settings s JOIN credential_refs c ON c.purpose='speech' WHERE NOT EXISTS(SELECT 1 FROM saved_connections WHERE purpose='speech')
+INSERT INTO saved_connections(id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) SELECT 'initial-speech','speech','Speech playback',s.compatibility_profile,s.base_url,s.allow_insecure_http,s.authentication_mode,'',c.account FROM speech_settings s JOIN credential_refs c ON c.purpose='speech' WHERE s.base_url <> '' AND NOT EXISTS(SELECT 1 FROM saved_connections WHERE purpose='speech')
 `
 
 func (q *Queries) SeedSpeechConnection(ctx context.Context) error {
@@ -208,7 +211,7 @@ func (q *Queries) SeedSpeechConnection(ctx context.Context) error {
 }
 
 const seedTranscriptionConnection = `-- name: SeedTranscriptionConnection :exec
-INSERT INTO saved_connections(id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,model,health_path,cleanup_preset,credential_account) SELECT 'initial-stt','stt','Transcription',s.compatibility_profile,s.base_url,s.allow_insecure_http,s.authentication_mode,s.model,s.health_path,'',c.account FROM transcription_settings s JOIN credential_refs c ON c.purpose='stt' WHERE NOT EXISTS(SELECT 1 FROM saved_connections WHERE purpose='stt')
+INSERT INTO saved_connections(id,purpose,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) SELECT 'initial-stt','stt','Transcription',s.compatibility_profile,s.base_url,s.allow_insecure_http,s.authentication_mode,s.health_path,c.account FROM transcription_settings s JOIN credential_refs c ON c.purpose='stt' WHERE s.base_url <> '' AND NOT EXISTS(SELECT 1 FROM saved_connections WHERE purpose='stt')
 `
 
 func (q *Queries) SeedTranscriptionConnection(ctx context.Context) error {

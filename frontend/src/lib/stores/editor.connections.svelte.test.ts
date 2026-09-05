@@ -31,10 +31,8 @@ function configured(): Settings {
             baseURL: settings.baseURL,
             allowInsecureHTTP: false,
             authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
-            model: settings.model,
             healthPath: "",
             headers: {},
-            cleanupPreset: PostProcessingPreset.$zero,
           },
         },
       ],
@@ -62,9 +60,8 @@ describe("saved connection editor", () => {
     expect(await editor.changeConnection(select)).toBe(false);
     expect(SaveSettings).not.toHaveBeenCalled();
   });
-  it("saves a new connection from the draft with expected selections and clears its key draft", async () => {
+  it("saves an explicit connection draft without activating it or altering the runtime draft", async () => {
     const next = configured();
-    next.savedConnections.selected!.stt = "second";
     const SaveSettings = vi.fn(() => CancellablePromise.resolve(next));
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
@@ -72,31 +69,40 @@ describe("saved connection editor", () => {
       }),
     );
     editor.applySettingsSnapshot(configured());
-    editor.draft!.baseURL = "https://second.example.test/v1";
-    editor.apiKey = "draft-canary";
-    expect(
-      await editor.changeConnection({
-        ...select,
-        action: Action.Create,
-        name: "Second",
-      }),
-    ).toBe(true);
+    editor.beginConnection();
+    editor.connectionDraft!.name = "Second";
+    editor.connectionDraft!.details.baseURL = "https://second.example.test/v1";
+    editor.connectionDraft!.credentialDraft = "draft-canary";
+    expect(editor.dirty).toBe(true);
+    expect(editor.runtimeDirty).toBe(false);
+    expect(await editor.saveConnection()).toBe(true);
     expect(SaveSettings).toHaveBeenCalledWith(
       expect.objectContaining({
-        expectedConnections: {
-          stt: "first",
-          cleanup: "cleanup",
-          speech: "speech",
-        },
-        sttCredentialDraft: "draft-canary",
-        settings: expect.objectContaining({
-          baseURL: "https://second.example.test/v1",
+        connectionChange: expect.objectContaining({
+          action: Action.Create,
+          name: "Second",
+          details: expect.objectContaining({
+            baseURL: "https://second.example.test/v1",
+          }),
         }),
+        connectionCredentialDraft: "draft-canary",
       }),
     );
-    expect(editor.apiKey).toBe("");
-    expect(editor.applied?.savedConnections.selected?.stt).toBe("second");
+    expect(editor.connectionDraft).toBeNull();
+    expect(editor.applied?.savedConnections.selected?.stt).toBe("first");
   });
+  it("clears a connection credential draft when Settings is hidden", () => {
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
+    editor.applySettingsSnapshot(configured());
+    editor.beginConnection();
+    editor.connectionDraft!.credentialDraft = "draft-canary";
+    editor.clearCredentialDraft();
+    expect(editor.connectionDraft).toBeNull();
+    expect(editor.dirty).toBe(false);
+  });
+
   it("keeps the applied connection when a switch fails", async () => {
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {

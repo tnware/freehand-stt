@@ -13,7 +13,12 @@ retains coherent saves and immutable request profiles. See the
 Transcript history remains optional and memory-only.
 
 Named connections are capability-scoped records, with independent active IDs for
-transcription, cleanup, and playback. The domain contract lives in
+transcription, cleanup, and playback. A dedicated Connections page owns creation,
+editing, duplication, deletion, endpoint/authentication/profile fields, and saved
+metadata tests. Creation is inactive; feature pages own active selection, model,
+language, presets, voice, and other runtime options. Fresh catalogs are empty.
+Selection clears the model and disables unconfigured optional features.
+The domain contract lives in
 `internal/savedconnection`; SQLite adapters remain in storage. The existing
 settings owner commits catalog mutations, active configuration, and credential
 references together. UI connection actions reuse that transaction and reject
@@ -346,7 +351,7 @@ The Win32 renderer queues all changes onto its locked message-loop thread, uses 
 
 Settings can request a presentation-only native preview through a narrow Wails binding. Draft presentation changes update the same renderer, real dictation preempts preview, Settings close stops it, and the applied saved configuration is restored. Preview can temporarily create a surface while the applied feature is disabled, but stopping it destroys that surface. Overlay creation remains a degraded optional capability: native failure is logged without failing dictation or rolling back the saved preference.
 
-The home-screen rack is a narrow immediate-save surface for STT and post-processing endpoints/models, explicit processing-profile selection, trained S1-mini output controls, and the capture/delivery switches. It is composed of `RackModule` panels grouped as Speech to text, Cleanup, Capture and Delivery, so the main window and the Settings navigation name the same concerns identically. Each update starts from the backend-confirmed settings snapshot and changes only the named quick fields before calling the same transactional settings owner with no credential mutation. It must never save the full editable Settings-window draft, and it is disabled while that modeless window is visible. Endpoint credentials, authentication mode, insecure-HTTP policy, custom instructions, and other advanced settings remain in the full Settings window.
+The home-screen rack is a narrow immediate-save surface for STT and post-processing models, explicit processing-profile selection, trained S1-mini output controls, and the capture/delivery switches. It is composed of `RackModule` panels grouped as Speech to text, Cleanup, Capture and Delivery, so the main window and the Settings navigation name the same concerns identically. Each update starts from the backend-confirmed settings snapshot and changes only the named quick fields before calling the same transactional settings owner with no credential mutation. It must never save the full editable Settings-window draft, and it is disabled while that modeless window is visible. Endpoint labels link to feature settings. Connections exclusively owns endpoint credentials, authentication, HTTP policy, and provider profiles; custom instructions and runtime options remain on feature pages.
 
 The main renderer treats transcript-list disclosure as a presentation-only WebView preference. It is written to versioned local storage and falls back safely to open when storage is missing, malformed, or unavailable. The preference never enters the Go settings transaction and does not affect configuration, history retention, or runtime authority. The rack does not collapse: its modules are compact enough to stay open, and the rack column scrolls on its own at the minimum window height.
 

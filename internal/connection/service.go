@@ -16,6 +16,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/inference"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/settings"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -91,23 +92,32 @@ type ConnectionResult struct {
 	ModelIDs            []string            `json:"modelIDs"`
 }
 
-type Service struct {
-	keys        credential.Store
-	processKeys credential.Store
-	ttsKeys     credential.Store
-	client      *inference.Client
-	logger      *slog.Logger
-	lifecycleMu sync.RWMutex
-	rootContext context.Context
-	rootCancel  context.CancelFunc
-	closed      atomic.Bool
+type SavedConnectionSource interface {
+	ResolveSavedConnection(string) (savedconnection.Connection, string, error)
 }
 
-func NewService(keys, processKeys, ttsKeys credential.Store, client *inference.Client, logger *slog.Logger) *Service {
+type Service struct {
+	savedConnections SavedConnectionSource
+	keys             credential.Store
+	processKeys      credential.Store
+	ttsKeys          credential.Store
+	client           *inference.Client
+	logger           *slog.Logger
+	lifecycleMu      sync.RWMutex
+	rootContext      context.Context
+	rootCancel       context.CancelFunc
+	closed           atomic.Bool
+}
+
+func NewService(keys, processKeys, ttsKeys credential.Store, client *inference.Client, logger *slog.Logger, sources ...SavedConnectionSource) *Service {
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
-	return &Service{keys: keys, processKeys: processKeys, ttsKeys: ttsKeys, client: client, logger: logger.With("component", "connection")}
+	s := &Service{keys: keys, processKeys: processKeys, ttsKeys: ttsKeys, client: client, logger: logger.With("component", "connection")}
+	if len(sources) > 0 {
+		s.savedConnections = sources[0]
+	}
+	return s
 }
 
 func (s *Service) operationContext(timeout time.Duration) (context.Context, context.CancelFunc) {
@@ -418,4 +428,50 @@ func connectionServer(requestedURL string) string {
 		return ""
 	}
 	return parsed.Host
+}
+
+// TestSavedConnection checks an explicitly saved connection without selecting it or invoking a model.
+func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
+	result.CheckedAt = time.Now().UTC()
+	result.ModelPresence = ModelPresenceUnavailable
+	if s.savedConnections == nil {
+		result.ErrorKind = ConnectionErrorInvalidSettings
+		return
+	}
+	c, key, err := s.savedConnections.ResolveSavedConnection(id)
+	if err != nil {
+		result.ErrorKind = ConnectionErrorCredentialUnavailable
+		if errors.Is(err, credential.ErrNotFound) {
+			result.ErrorKind = ConnectionErrorCredentialMissing
+		}
+		return
+	}
+	defer func() { key = "" }()
+	if err = savedconnection.Validate(c.Purpose, c.Details); err != nil {
+		result.ErrorKind = ConnectionErrorInvalidSettings
+		return
+	}
+	if c.Purpose != savedconnection.Cleanup && c.Details.AuthenticationMode == config.AuthenticationModeNone {
+		key = ""
+	}
+	health := ""
+	if c.Purpose == savedconnection.Transcription {
+		health = compatibility.TranscriptionHealthPath(c.Details.CompatibilityProfile, c.Details.HealthPath)
+	}
+	s.log().Info("saved connection test started", "purpose", c.Purpose)
+	defer func() {
+		s.log().Info("saved connection test completed", "purpose", c.Purpose, "reachable", result.Reachable, "error_kind", result.ErrorKind, "latency_ms", result.LatencyMilliseconds)
+	}()
+	ctx, cancel := s.operationContext(15 * time.Second)
+	defer cancel()
+	metadata := s.client.TestMetadata(ctx, c.Details.BaseURL, health, key, "", c.Details.Headers)
+	result.Reachable = metadata.Reachable
+	result.Probe = ConnectionProbe(metadata.Probe)
+	result.RequestedURL = metadata.RequestedURL
+	result.HTTPStatus = metadata.HTTPStatus
+	result.LatencyMilliseconds = metadata.LatencyMilliseconds
+	result.ErrorKind = ConnectionErrorKind(metadata.ErrorKind)
+	result.ModelPresence = ModelPresence(metadata.ModelPresence)
+	result.ModelIDs = metadata.ModelIDs
+	return
 }

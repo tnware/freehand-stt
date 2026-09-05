@@ -78,9 +78,13 @@ func (c *Controller) Configure(next config.Settings) error {
 		}
 	}
 	if !c.hasState || next.ShowShortcut != old.ShowShortcut {
-		newBindings = append(newBindings, binding{hotkey.ShowFreehand, next.ShowShortcut, c.show})
+		if next.ShowShortcut != "" {
+			newBindings = append(newBindings, binding{hotkey.ShowFreehand, next.ShowShortcut, c.show})
+		}
 		if c.hasState {
-			oldBindings = append(oldBindings, binding{hotkey.ShowFreehand, old.ShowShortcut, c.show})
+			if old.ShowShortcut != "" {
+				oldBindings = append(oldBindings, binding{hotkey.ShowFreehand, old.ShowShortcut, c.show})
+			}
 		}
 	}
 	registered := []binding{}
@@ -134,6 +138,9 @@ func (c *Controller) Suspend() error {
 		value  string
 		cb     func()
 	}{{hotkey.ToggleRecording, c.active.ToggleShortcut, c.toggle}, {hotkey.ShowFreehand, c.active.ShowShortcut, c.show}}
+	if bindings[1].value == "" {
+		bindings = bindings[:1]
+	}
 	unregistered := 0
 	for index, binding := range bindings {
 		if err := c.global.Unregister(binding.value); err != nil {
@@ -171,6 +178,9 @@ func (c *Controller) Resume() error {
 		value  string
 		cb     func()
 	}{{hotkey.ToggleRecording, c.active.ToggleShortcut, c.toggle}, {hotkey.ShowFreehand, c.active.ShowShortcut, c.show}}
+	if bindings[1].value == "" {
+		bindings = bindings[:1]
+	}
 	if c.hold != nil {
 		if err := c.hold.Configure(c.active.HoldShortcut); err != nil {
 			return fmt.Errorf("hold-to-talk could not be restored after shortcut capture: %w", err)

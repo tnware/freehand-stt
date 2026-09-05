@@ -91,6 +91,7 @@ func TestCaptureSuspendAndResumeRestoreWorkingBindings(t *testing.T) {
 	c := New(f, h, func() {}, func() {})
 	cfg := config.Default()
 	cfg.HoldShortcut = "Ctrl+Space"
+	cfg.ShowShortcut = "Ctrl+Shift+D"
 	if err := c.Configure(cfg); err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +118,7 @@ func TestCaptureResumeDoesNotLeavePartialBindingsOnConflict(t *testing.T) {
 	c := New(f, h, func() {}, func() {})
 	cfg := config.Default()
 	cfg.HoldShortcut = "Ctrl+Space"
+	cfg.ShowShortcut = "Ctrl+Shift+D"
 	if err := c.Configure(cfg); err != nil {
 		t.Fatal(err)
 	}
@@ -129,5 +131,40 @@ func TestCaptureResumeDoesNotLeavePartialBindingsOnConflict(t *testing.T) {
 	}
 	if len(f.active) != 0 || h.value != "" {
 		t.Fatalf("partial binding survived failed resume: globals=%v hold=%q", f.active, h.value)
+	}
+}
+
+func TestShowShortcutCanBeUnassignedAndCleared(t *testing.T) {
+	f := &globalFake{active: map[string]bool{}}
+	c := New(f, &holdFake{}, func() {}, func() {})
+	cfg := config.Default()
+	if cfg.ShowShortcut != "" {
+		t.Fatal("Show Freehand default must be unassigned")
+	}
+	if err := c.Configure(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.active) != 1 || f.active[""] {
+		t.Fatal("registered an unassigned shortcut")
+	}
+	cfg.ShowShortcut = "Ctrl+Shift+D"
+	if err := c.Configure(cfg); err != nil {
+		t.Fatal(err)
+	}
+	cfg.ShowShortcut = ""
+	if err := c.Configure(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if f.active["Ctrl+Shift+D"] {
+		t.Fatal("cleared shortcut remained registered")
+	}
+	if err := c.Suspend(); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Resume(); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.active) != 1 || !f.active["Ctrl+Shift+Space"] {
+		t.Fatal("capture failed to preserve optional shortcut state")
 	}
 }

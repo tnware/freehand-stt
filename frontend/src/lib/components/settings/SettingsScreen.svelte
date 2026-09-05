@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ConnectionsSection from "$lib/components/settings/sections/ConnectionsSection.svelte";
   import SavedConnectionPicker from "$lib/components/settings/SavedConnectionPicker.svelte";
   import { Purpose } from "$bindings/savedconnection";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
@@ -44,6 +45,12 @@
   const dirty = $derived(session.editor.dirty);
 
   function selectSection(id: SettingsSectionID) {
+    if (session.editor.connectionDraft && id !== "connections") {
+      session.messages.reportInfo(
+        "Save or cancel your connection edit before leaving Connections.",
+      );
+      return;
+    }
     active = id;
     if (id === "audio") void session.editor.refreshDevices();
   }
@@ -123,7 +130,6 @@
         {#if session.editor.draft}
           {#if active === "server" || active === "processing" || active === "speech"}
             <SavedConnectionPicker
-              error={session.messages.error}
               catalog={session.editor.draft.savedConnections}
               purpose={active === "server"
                 ? Purpose.Transcription
@@ -133,9 +139,41 @@
               dirty={session.editor.dirty}
               busy={session.editor.saving || session.editor.quickSettingsPending.length > 0}
               onChange={(change) => session.editor.changeConnection(change)}
+              onManage={() => {
+                if (session.editor.runtimeDirty) {
+                  session.messages.reportInfo(
+                    "Save or discard feature settings before editing a connection.",
+                  );
+                  return;
+                }
+                const purpose =
+                  active === "server"
+                    ? Purpose.Transcription
+                    : active === "processing"
+                      ? Purpose.Cleanup
+                      : Purpose.Speech;
+                const c = session.editor.applied?.savedConnections.entries?.find(
+                  (c) => c.id === session.editor.applied?.savedConnections.selected?.[purpose],
+                );
+                active = "connections";
+                if (c) session.editor.beginConnection(c);
+              }}
             />
           {/if}
-          {#if active === "general"}
+          {#if active === "connections"}
+            <ConnectionsSection
+              editor={session.editor}
+              error={session.messages.error}
+              onOpenFeature={(p) =>
+                selectSection(
+                  p === Purpose.Transcription
+                    ? "server"
+                    : p === Purpose.Cleanup
+                      ? "processing"
+                      : "speech",
+                )}
+            />
+          {:else if active === "general"}
             <GeneralSection bind:settings={session.editor.draft} />
           {:else if active === "shortcuts"}
             <ShortcutsSection
@@ -163,41 +201,41 @@
               onStopPreview={onStopOverlayPreview}
             />
           {:else if active === "server"}
-            <ServerSection
-              bind:settings={session.editor.draft}
-              bind:apiKey={session.editor.apiKey}
-              bind:clearKey={session.editor.clearKey}
-              connection={session.editor.connection}
-              busy={session.editor.sttConnectionTesting}
-              onTestConnection={() => session.editor.testConnection()}
-            />
+            {#if session.editor.draft.savedConnections.selected?.stt}
+              <ServerSection
+                bind:settings={session.editor.draft}
+                connection={session.editor.connection}
+                busy={session.editor.sttConnectionTesting}
+                onTestConnection={() => session.editor.testConnection()}
+              />
+            {/if}
           {:else if active === "processing"}
-            <ProcessingSection
-              bind:settings={session.editor.draft}
-              bind:apiKey={session.editor.processingAPIKey}
-              bind:clearKey={session.editor.clearProcessingKey}
-              profiles={session.editor.processingProfiles}
-              connection={session.editor.processingConnection}
-              busy={session.editor.processingConnectionTesting}
-              onTestConnection={() => session.editor.testPostProcessingConnection()}
-            />
+            {#if session.editor.draft.savedConnections.selected?.cleanup}
+              <ProcessingSection
+                bind:settings={session.editor.draft}
+                profiles={session.editor.processingProfiles}
+                connection={session.editor.processingConnection}
+                busy={session.editor.processingConnectionTesting}
+                onTestConnection={() => session.editor.testPostProcessingConnection()}
+              />
+            {/if}
           {:else if active === "speech"}
-            <SpeechSection
-              bind:settings={session.editor.draft}
-              bind:apiKey={session.editor.ttsAPIKey}
-              bind:clearKey={session.editor.clearTTSKey}
-              status={session.speech.status}
-              busy={session.speech.previewing}
-              connection={session.editor.ttsConnection}
-              connectionBusy={session.editor.ttsConnectionTesting}
-              canPreview={session.dictation.status.state === State.Idle &&
-                !session.files.status.canCancel}
-              onPreview={() => session.speech.previewVoice()}
-              onStop={() => session.speech.stopTTS()}
-              onSave={() => session.speech.saveTTSAudio()}
-              onClear={() => session.speech.clearTTSAudio()}
-              onTestConnection={() => session.editor.testTextToSpeechConnection()}
-            />
+            {#if session.editor.draft.savedConnections.selected?.speech}
+              <SpeechSection
+                bind:settings={session.editor.draft}
+                status={session.speech.status}
+                busy={session.speech.previewing}
+                connection={session.editor.ttsConnection}
+                connectionBusy={session.editor.ttsConnectionTesting}
+                canPreview={session.dictation.status.state === State.Idle &&
+                  !session.files.status.canCancel}
+                onPreview={() => session.speech.previewVoice()}
+                onStop={() => session.speech.stopTTS()}
+                onSave={() => session.speech.saveTTSAudio()}
+                onClear={() => session.speech.clearTTSAudio()}
+                onTestConnection={() => session.editor.testTextToSpeechConnection()}
+              />
+            {/if}
           {:else if active === "history"}
             <HistorySection
               bind:settings={session.editor.draft}
@@ -240,15 +278,19 @@
               : "All changes saved"}
         </span>
         <Button variant="outline" disabled={session.editor.saving} onclick={onClose}>Close</Button>
-        <Button
-          disabled={session.busy || shortcutCapture.capturing || !dirty}
-          onclick={saveSettings}
-        >
-          {#if session.editor.saving}
-            <LoaderCircleIcon data-icon="inline-start" class="animate-spin" />
-          {/if}
-          {session.editor.saving ? "Saving…" : "Save changes"}
-        </Button>
+        {#if active !== "connections"}<Button
+            disabled={session.busy || shortcutCapture.capturing || !dirty}
+            onclick={saveSettings}
+          >
+            {#if session.editor.saving}
+              <LoaderCircleIcon data-icon="inline-start" class="animate-spin" />
+            {/if}
+            {session.editor.saving
+              ? "Saving…"
+              : ["server", "processing", "speech"].includes(active)
+                ? "Save feature settings"
+                : "Save settings"}
+          </Button>{/if}
       {:else}
         <Button variant="outline" disabled={session.editor.saving} onclick={onClose}>Close</Button>
       {/if}
