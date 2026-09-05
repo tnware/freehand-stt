@@ -94,6 +94,10 @@ Focused operations use generated request DTOs. A connection probe receives only 
 
 Shortcut settings follow the same boundary. `internal/hotkey` owns one bounded action matrix for toggle recording, Show Freehand, and hold to talk. `internal/input` exposes that matrix as generated policy metadata, accepts one action-specific capture request, and emits bounded normalized chord progress while the native hook is active. The renderer never selects native validation flags or maintains a second key grammar. Expected capture rejections return structured categories; a cross-process global conflict remains knowable only when the transactional settings save asks Windows to register the replacement.
 
+Custom health targets retain the base-relative path-joining contract, including
+the leading slash in saved values. Settings help and validation describe that
+contract; no configuration migration or fallback model probe is performed.
+
 Model probes require a valid JSON model-list shape; reachability remains distinct from inventory validation and inference compatibility. Health probes accept opaque successful bodies. Invalid model responses cannot satisfy first-run readiness.
 
 After loading the applied profile, the renderer runs one bounded metadata-only STT probe and repeats it only when that profile's connection identity changes. First-run readiness is an exclusive app-shell content state backed by a persisted completion flag; the Go recording command rejects both renderer and global-shortcut starts until it is complete. A later failed probe may take over the content area once, but the established user can continue without correction while the persistent status strip retains the warning. Dismissal is scoped to the exact failed endpoint/model/authentication/microphone condition rather than mutating durable settings.
@@ -320,6 +324,15 @@ The capture adapter may receive the Windows mix format, commonly 48 kHz float/st
 Each recording also owns a bounded, non-blocking interruption signal from the native stop callback. The callback never tears down audio or enters UI/state-machine code. Dictation fences that signal by recording generation, cancels the recording-only timer, discards partial PCM, and releases the device before publishing failure. System-default capture keeps miniaudio's shared-mode WASAPI rerouting; an explicit device is never silently replaced.
 
 No audio is persisted after request completion, error, or cancellation.
+
+Microphone requests (including local checkpoints) explicitly request completed
+JSON with multipart `response_format=json` and `Accept: application/json`.
+The generic chat decoder classifies a reported `finish_reason: "length"` as
+`incomplete_response` before optional metadata redaction. It returns bounded
+safe diagnostics and no partial cleaned text. The existing processing outcome
+policy selects raw text for both microphone and file workflows, preserves
+cancellation and focus checks, and shows an output-limit-specific notice.
+There is no provider-specific branch or automatic cleanup retry.
 
 The file service submits at most one transcription request per explicit start.
 An unsupported stream records endpoint/model capability evidence and stops;

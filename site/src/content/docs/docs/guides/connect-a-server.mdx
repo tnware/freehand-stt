@@ -176,6 +176,13 @@ An empty valid model list is accepted, with the configured model **Not listed**.
 Neither check verifies that a model can transcribe or synthesize audio, or that
 an endpoint actually enforces the supplied credential.
 
+The optional **Custom health path** is appended beneath the base URL path.
+For example, `https://speech.example.com/v1` with `/health` checks
+`https://speech.example.com/v1/health`, not the host-root `/health`.
+Include the leading slash in the field. Existing saved paths keep this behavior;
+a failed custom health check does not trigger a second request to the model list.
+Leave the custom path off to use the default model-list check.
+
 First launch requires an explicit **Test connection** before finishing setup.
 After setup is complete, Freehand automatically checks the saved STT connection
 on launch and after relevant saved connection fields change. A failed check

@@ -36,6 +36,7 @@ Content-Type: multipart/form-data
 file=<recording.wav>
 model=speech/stt
 language=<optional>
+response_format=json
 ```
 
 Expected response:
@@ -106,7 +107,7 @@ If the endpoint requires authentication, select **API key** and enter its creden
 
 Preferred order:
 
-1. If the user configured a health path, call it.
+1. If the user configured a health path, append it beneath the base URL path and call that target. The required leading slash does not replace the base path: `https://host/v1` plus `/health` requests `https://host/v1/health`. This preserves existing saved configurations. A failed health probe does not fall back to `/models`.
 2. Otherwise call `{base_url}/models` with the configured credential.
 3. Require a JSON object with a non-null `data` array for model probes, then report whether the configured model appears. An empty array is valid. Malformed or missing inventory is a response failure while HTTP reachability remains available. Health probes accept bounded successful bodies without imposing a model-list schema.
 
@@ -174,7 +175,7 @@ Structure: prose | lists
 Context: general | email
 ```
 
-The alpha sends one cleanup request per input, with no sentence chunking or input-relative output limit. Nonempty length-limited completions are accepted. See the [input-length limits](../../guides/post-processing/#input-length-and-alpha-limits) before processing long text.
+The alpha sends one cleanup request per input, with no sentence chunking or input-relative output limit. A completion explicitly reporting `finish_reason: "length"` fails with `incomplete_response`, even when its text is nonempty. The workflow uses the raw transcript, shows an output-limit notice, and retains safe response metadata when history is enabled. The partial cleaned text is discarded; no automatic cleanup retry occurs. Missing or other finish reasons retain the existing response rules, so unreported omissions cannot be detected. See the [input-length limits](../../guides/post-processing/#input-length-and-alpha-limits) before processing long text.
 
 The default is `semi-casual/prose/general`; `balanced` is not a trained S1-mini v1 value. Thinking must be disabled by the backend route. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) and the [post-processing setup guide](../../guides/post-processing/).
 

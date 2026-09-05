@@ -851,6 +851,8 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 			s.fileStatus.Message = "Transcription complete; post-processing failed, using raw text"
 			if processingFallbackKind == "timeout" {
 				s.fileStatus.Message = "Transcription complete; post-processing timed out, using raw text"
+			} else if processingFallbackKind == "incomplete_response" {
+				s.fileStatus.Message = "Transcription complete; post-processing reached the output limit, using raw text"
 			}
 		} else if text == "" {
 			s.fileStatus.Message = "No speech detected"

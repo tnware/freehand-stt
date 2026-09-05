@@ -108,5 +108,13 @@ func (c *Client) ChatCompletion(ctx context.Context, base, model, key, systemPro
 	metadata.RequestCount = 1
 	applyUsageMetadata(&metadata, out.Usage, key)
 	applyPerformanceMetadata(&metadata, out.Timings)
-	return ChatCompletionResult{Text: text, Metadata: sanitizeResponseMetadata(metadata, key)}, nil
+	result := ChatCompletionResult{Metadata: sanitizeResponseMetadata(metadata, key)}
+	// Interpret protocol control fields before metadata redaction: a credential
+	// can coincide with "length", but must not turn a truncated result into a
+	// successful cleanup. Keep safe diagnostics without exposing partial text.
+	if out.Choices[0].FinishReason == "length" {
+		return result, &Error{Kind: "incomplete_response", Message: "post-processing reached the server output limit"}
+	}
+	result.Text = text
+	return result, nil
 }

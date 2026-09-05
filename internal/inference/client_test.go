@@ -23,8 +23,11 @@ func TestTranscribeShape(t *testing.T) {
 		if e := r.ParseMultipartForm(1 << 20); e != nil {
 			t.Fatal(e)
 		}
-		if r.FormValue("model") != "speech/stt" || r.FormValue("language") != "en" {
+		if r.FormValue("model") != "speech/stt" || r.FormValue("language") != "en" || r.FormValue("response_format") != "json" {
 			t.Error("fields")
+		}
+		if r.Header.Get("Accept") != "application/json" {
+			t.Error("microphone transcription must explicitly request completed JSON")
 		}
 		f, _, _ := r.FormFile("file")
 		b, _ := io.ReadAll(f)

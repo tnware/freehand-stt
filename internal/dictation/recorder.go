@@ -780,6 +780,8 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		message := "Post-processing failed; raw transcript used"
 		if processingFallbackKind == "timeout" {
 			message = "Post-processing timed out; raw transcript used"
+		} else if processingFallbackKind == "incomplete_response" {
+			message = "Post-processing reached the output limit; raw transcript used"
 		}
 		c.status = Status{State: Idle, Generation: gen, Message: message}
 	} else if automatic {

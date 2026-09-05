@@ -26,6 +26,7 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 		return TranscriptionResult{}, err
 	}
 	_ = mw.WriteField("model", model)
+	_ = mw.WriteField("response_format", "json")
 	if language != "" {
 		_ = mw.WriteField("language", language)
 	}
@@ -43,6 +44,7 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 		return TranscriptionResult{}, err
 	}
 	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("Accept", "application/json")
 	if key != "" {
 		req.Header.Set("Authorization", "Bearer "+key)
 	}

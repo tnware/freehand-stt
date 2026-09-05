@@ -312,7 +312,7 @@
 
     <SettingRow
       title="Custom health path"
-      description="Probe a health endpoint instead of the model list."
+      description="Append a health path to the base URL instead of requesting the model list."
     >
       {#snippet control()}
         <Switch
@@ -325,7 +325,11 @@
     </SettingRow>
 
     {#if customHealthPath}
-      <ValueRow id="health-path" label="Health path">
+      <ValueRow
+        id="health-path"
+        label="Health path"
+        hint="Include the leading slash. A base URL ending in /v1 with /health requests /v1/health."
+      >
         {#snippet control()}
           <ValueInput
             id="health-path"

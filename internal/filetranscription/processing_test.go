@@ -40,7 +40,7 @@ func (p *processingInput) Copy(_ context.Context, text string) error {
 }
 
 func TestFileProcessingOutcomes(t *testing.T) {
-	for _, mode := range []string{"raw", "success", "unavailable", "http-error", "empty", "timeout"} {
+	for _, mode := range []string{"raw", "success", "unavailable", "http-error", "empty", "length", "timeout"} {
 		for _, retention := range []string{"enabled", "disabled", "absent"} {
 			t.Run(mode+"/history-"+retention, func(t *testing.T) {
 				cfg := config.Default()
@@ -80,6 +80,8 @@ func TestFileProcessingOutcomes(t *testing.T) {
 						switch mode {
 						case "http-error":
 							status, body = http.StatusBadGateway, `{}`
+						case "length":
+							body = `{"id":"limited-response","choices":[{"message":{"content":"Incomplete cleanup"},"finish_reason":"length"}],"usage":{"completion_tokens":8}}`
 						case "empty":
 							body = `{"choices":[{"message":{"content":" "}}]}`
 						case "timeout":
@@ -127,6 +129,9 @@ func TestFileProcessingOutcomes(t *testing.T) {
 				if status.Phase != FileTranscriptionCompleted || status.Transcript != wantText || !status.CanCopy || !status.CanStart || status.CanCancel {
 					t.Fatalf("status = %+v", status)
 				}
+				if mode == "length" && status.Message != "Transcription complete; post-processing reached the output limit, using raw text" {
+					t.Fatal("length-limit raw fallback notice lost")
+				}
 				if mode == "timeout" && status.Message != "Transcription complete; post-processing timed out, using raw text" {
 					t.Fatal("timeout fallback notice lost")
 				}
@@ -162,6 +167,12 @@ func TestFileProcessingOutcomes(t *testing.T) {
 				entry := entries[0]
 				if entry.Text != wantText || entry.RawText != "raw transcript" || entry.ProcessingStatus != wantStatus || entry.Details.Processing.Status != wantStatus || entry.Outcome != history.HistoryTranscribed {
 					t.Fatalf("history = %+v", entry)
+				}
+				if mode == "length" {
+					response := entry.Details.Processing.Response
+					if entry.Details.Processing.ErrorKind != "incomplete_response" || response == nil || response.FinishReason != "length" || response.ResponseID != "limited-response" {
+						t.Fatalf("length-limit diagnostic metadata lost: %+v", entry.Details.Processing)
+					}
 				}
 				if mode == "success" && (entry.ProcessedText != wantText || entry.Details.Processing.Response == nil || entry.Details.Processing.Response.ResponseID != "cleanup-response") {
 					t.Fatal("successful cleanup text/metadata lost")

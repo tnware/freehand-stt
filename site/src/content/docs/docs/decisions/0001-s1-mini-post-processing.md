@@ -7,6 +7,17 @@ description: Keep speech recognition and optional transcript normalization as se
 - Date: 2026-08-29
 - Authority: [superwhisper/s1-mini v1 model card](https://huggingface.co/superwhisper/s1-mini/tree/v1)
 
+## Protocol reliability clarification — 2026-09-05
+
+The client now rejects cleanup explicitly marked `finish_reason: "length"` and
+uses the raw transcript with an output-limit notice. This supersedes the
+length-limited-output acceptance described in the historical alpha.1 note
+below. The rule belongs to the generic chat contract and applies to both S1-mini
+and custom processing profiles. It does not change S1-mini's trained prompts or
+control values. Automatic sentence chunking and input-relative output limits
+remain unimplemented, and omissions without a reported length limit cannot be
+detected by this check.
+
 ## Alpha implementation clarification — 2026-09-04
 
 The separate processing stage, trained S1-mini by Superwhisper profile, and raw

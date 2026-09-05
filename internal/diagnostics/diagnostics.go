@@ -68,6 +68,7 @@ func knownErrorKind(kind string) string {
 	case "cancelled",
 		"credential_reflection",
 		"http",
+		"incomplete_response",
 		"invalid_file",
 		"malformed_response",
 		"network",

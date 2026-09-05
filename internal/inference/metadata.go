@@ -29,6 +29,9 @@ type MetadataResult struct {
 	ModelIDs            []string
 }
 
+// MetadataTarget preserves the saved health-path convention: the leading slash
+// is a required separator, not an instruction to replace the base URL path.
+// For example, a /v1 base with /health probes /v1/health.
 func MetadataTarget(base, health string) (probe, requestedURL string, err error) {
 	probe = "models"
 	suffix := "models"
