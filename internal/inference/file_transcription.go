@@ -40,8 +40,9 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 	if err := c.validateTranscriptionOptions(); err != nil {
 		return TranscriptionResult{}, err
 	}
-	if language != "" && !contract.Capabilities.LanguageHint {
-		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "language hints are unavailable for this profile"}
+	language, err = contract.TranscriptionLanguage(language)
+	if err != nil {
+		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "invalid transcription language selection"}
 	}
 	if stream && !contract.Capabilities.FileStreaming {
 		return TranscriptionResult{}, &FileStreamUnsupportedError{Reason: "profile_streaming_unavailable"}

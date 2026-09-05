@@ -205,3 +205,11 @@ server's `/health` probe succeeded. This exercises HTTP/inference behavior from
 Windows; interactive capture, focus-safe insertion, and every file format were
 not part of that fixed-sample run. The source pin above records inspected
 contract evidence independently of the tested image digest.
+
+## Language selection
+
+The [language guide](../../guides/languages/) explains Server default, Automatic
+detection, named language codes, and custom values. The chosen model determines
+which languages work; profile availability is not a multilingual guarantee.
+S1-mini cleanup is English only. It keeps raw text when a non-English input
+language is selected or reported, and assumes English when no language is known.

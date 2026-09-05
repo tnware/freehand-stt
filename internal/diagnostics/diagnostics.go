@@ -69,6 +69,7 @@ func knownErrorKind(kind string) string {
 		"credential_reflection",
 		"http",
 		"incomplete_response",
+		"unsupported_language",
 		"invalid_file",
 		"malformed_response",
 		"network",

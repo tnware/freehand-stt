@@ -64,6 +64,7 @@ export default defineConfig({
 					items: [
 						{ slug: 'docs/guides/using-freehand' },
 						{ slug: 'docs/guides/post-processing' },
+                        { slug: 'docs/guides/languages' },
 						{ slug: 'docs/guides/privacy-and-safety' },
 						{ slug: 'docs/guides/troubleshooting' },
 					],

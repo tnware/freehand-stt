@@ -17,7 +17,7 @@ func TestProfilesExposeCustomAndS1RequestContracts(t *testing.T) {
 		t.Fatalf("custom profile = %#v", custom)
 	}
 	s1 := profiles[1]
-	if s1.ID != config.PostProcessingPresetS1Mini || s1.InstructionEditable || s1.SystemInstruction != S1MiniSystemInstruction || s1.Controls == nil {
+	if s1.Language != "en" || custom.Language != "" || s1.ID != config.PostProcessingPresetS1Mini || s1.InstructionEditable || s1.SystemInstruction != S1MiniSystemInstruction || s1.Controls == nil {
 		t.Fatalf("S1-mini profile = %#v", s1)
 	}
 	if strings.Join(s1.Controls.Styling, ",") != "casual,semi-casual,semi-formal,formal" || strings.Join(s1.Controls.Structure, ",") != "prose,lists" || strings.Join(s1.Controls.Context, ",") != "general,email" {

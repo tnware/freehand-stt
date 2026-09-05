@@ -202,3 +202,21 @@ with inference or publish private inputs/configuration.
 
 A Windows compile and fixture tests are separate from interactive acceptance
 against a live deployment. Metadata success does not prove inference behavior.
+
+## Language selection acceptance
+
+Fixture tests cover default/automatic/named/custom multipart fields across all
+four available transcription profiles for both microphone and files, including
+validation before upload and exact file framing. S1-mini policy tests cover
+English codes/names/regions, unknown-language assumptions, non-English and mixed
+reports, and independence of custom cleanup. Recorder and file workflow tests
+assert no cleanup request on mismatches, raw delivery/copy, bounded notices,
+and enabled/disabled/absent history behavior.
+
+For native Windows acceptance, search names and codes, choose Server default,
+Automatic detection, and a supported named language, then save/reopen settings.
+Verify an existing custom value remains unchanged. Exercise keyboard selection,
+Escape, narrow layouts, light/dark themes, and the English-only S1-mini notice.
+With a chosen model and fixed sample, verify raw fallback for non-English input
+and S1-mini cleanup under the displayed English assumption when metadata is
+absent. Live model runs remain manual and scoped; do not probe inventories.

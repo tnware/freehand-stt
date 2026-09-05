@@ -86,3 +86,11 @@ S1-mini request enforcement. An explicit custom reasoning override must be
 turned off before switching from llama.cpp or vLLM to Generic.
 
 See [generation controls](../../guides/post-processing/#generation-controls).
+
+## Language selection
+
+The [language guide](../../guides/languages/) explains Server default, Automatic
+detection, named language codes, and custom values. The chosen model determines
+which languages work; profile availability is not a multilingual guarantee.
+S1-mini cleanup is English only. It keeps raw text when a non-English input
+language is selected or reported, and assumes English when no language is known.

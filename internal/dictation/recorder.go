@@ -707,10 +707,17 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		processingStarted := time.Now()
 		var processingResult postprocess.Result
 		var processingErr error
-		if processor == nil {
-			processingErr = errors.New("post-processing is unavailable")
-		} else {
-			processingResult, processingErr = processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, profile.PostProcessingCredential)
+		var detectedLanguages []string
+		if details.Transcription != nil {
+			detectedLanguages = details.Transcription.DetectedLanguages
+		}
+		processingErr = postprocess.ValidateLanguage(cfg.PostProcessing, cfg.Language, detectedLanguages)
+		if processingErr == nil {
+			if processor == nil {
+				processingErr = errors.New("post-processing is unavailable")
+			} else {
+				processingResult, processingErr = processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, profile.PostProcessingCredential)
+			}
 		}
 		processing := postprocess.Resolve(ctx, text, processingResult, processingErr, processingStarted)
 		details = c.history.FinalizeProcessing(historyID, text, processing, details)
@@ -778,7 +785,9 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		outcome = history.HistoryFailed
 	} else if processingFallback {
 		message := "Post-processing failed; raw transcript used"
-		if processingFallbackKind == "timeout" {
+		if processingFallbackKind == "unsupported_language" {
+			message = "S1-mini skipped: English only; raw transcript used"
+		} else if processingFallbackKind == "timeout" {
 			message = "Post-processing timed out; raw transcript used"
 		} else if processingFallbackKind == "incomplete_response" {
 			message = "Post-processing reached the output limit; raw transcript used"

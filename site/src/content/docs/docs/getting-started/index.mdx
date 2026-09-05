@@ -51,6 +51,13 @@ The connection check never submits audio and never invokes a discovered model.
 A successful check does not test transcription quality.
 :::
 
+## Choose the recording language
+
+Under **Settings → Transcription → Language**, search by name or code, or choose
+**Server default** or **Automatic detection**. Your model must support the
+language. If you use S1-mini cleanup, its only supported language is English.
+See [language selection](../guides/languages/) for detection and fallback behavior.
+
 ## Configure the speech endpoint
 
 Freehand expects a base URL whose OpenAI API prefix is already present, typically:

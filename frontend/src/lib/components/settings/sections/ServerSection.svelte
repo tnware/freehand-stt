@@ -1,4 +1,6 @@
 <script lang="ts">
+  import LanguagePicker from "$lib/components/settings/LanguagePicker.svelte";
+  import { PostProcessingPreset } from "$lib/state";
   import TranscriptionControls from "$lib/components/settings/TranscriptionControls.svelte";
   import { ID } from "$bindings/compatibility";
   import CompatibilityProfilePicker from "$lib/components/settings/CompatibilityProfilePicker.svelte";
@@ -246,18 +248,25 @@
     <ValueRow
       id="language"
       label="Language"
-      hint="Optional. Sent with each request; whether it changes anything depends on the backend."
+      hint="Used for microphone and file transcription. Server default leaves the language unset; Automatic detection uses the selected provider’s detection contract. This does not request translation."
     >
       {#snippet control()}
-        <ValueInput
+        <LanguagePicker
           id="language"
+          languages={settings.transcriptionLanguages ?? []}
           disabled={!compatibility?.capabilities.languageHint}
           bind:value={settings.language}
-          placeholder="Auto"
-          spellcheck={false}
         />
       {/snippet}
     </ValueRow>
+
+    {#if settings.postProcessing.enabled && settings.postProcessing.preset === PostProcessingPreset.PostProcessingPresetS1Mini}
+      <p class="px-5 pb-3 text-xs leading-relaxed text-muted-foreground">
+        S1-mini cleanup is English only. Non-English selections or detected results keep the raw
+        transcript. When no language is known, S1-mini runs assuming English. Choose custom cleanup
+        or turn cleanup off for other languages.
+      </p>
+    {/if}
 
     <ValueRow
       id="transcription-timeout"

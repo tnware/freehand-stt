@@ -55,6 +55,7 @@ const settings: Settings = {
   transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
   compatibilityProfile: ID.Generic,
   compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
+  transcriptionLanguages: [],
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
   authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,

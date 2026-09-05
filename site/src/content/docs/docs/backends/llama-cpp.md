@@ -136,3 +136,11 @@ This records source and client-fixture evidence, not a minimum supported release
 or a live test of every model/template. The reported S1-mini runtime's exact
 build is still unknown. Its launch log shows Jinja enabled and recognition of
 the newer reasoning option, which alone does not prove the HTTP override works.
+
+## Language selection
+
+The [language guide](../../guides/languages/) explains Server default, Automatic
+detection, named language codes, and custom values. The chosen model determines
+which languages work; profile availability is not a multilingual guarantee.
+S1-mini cleanup is English only. It keeps raw text when a non-English input
+language is selected or reported, and assumes English when no language is known.
