@@ -46,6 +46,8 @@ export default defineConfig({
                   { slug: 'docs/backends/generic' },
                   { slug: 'docs/backends/speaches' },
                   { slug: 'docs/backends/llama-cpp' },
+                  { slug: 'docs/backends/whisper-cpp' },
+                  { slug: 'docs/backends/vllm' },
                   { slug: 'docs/backends/planned' },
                 ] },
 				{

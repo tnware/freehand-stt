@@ -8,6 +8,108 @@ Choose a speech model for transcription and a text model for cleanup; each
 operation has its own endpoint, model ID, and credential settings. Your servers
 can run locally, on another machine, or behind a compatible hosted deployment.
 
+## Run vLLM with Docker
+
+Use PowerShell with Docker Desktop's WSL2 Linux backend and an NVIDIA GPU.
+This recipe reproduces the pinned v0.28.0 environment used for the scoped
+[acceptance evidence](#contract-and-evidence). It favors compatibility on the
+tested Windows/WSL setup; its scheduler and memory settings are not throughput
+tuning recommendations for every machine.
+
+Create a directory containing a file named `Dockerfile`:
+
+```dockerfile
+FROM vllm/vllm-openai@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14
+RUN python3 -m pip install --no-deps av==18.1.0 scipy==1.18.1 soundfile==0.14.0 soxr==1.1.0
+```
+
+These are the audio dependencies missing from that specific image; do not
+apply this list blindly to a different release. For other versions, follow
+[upstream installation](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/)
+and the release's audio extras instructions. In the directory containing the
+Dockerfile, build the image and prepare its persistent model cache:
+
+```powershell
+docker build --tag freehand-vllm-audio:0.28.0 .
+docker volume create freehand-vllm-models
+```
+
+### Start Qwen3-ASR transcription
+
+```powershell
+docker run --detach --name freehand-vllm-stt `
+  --gpus device=0 --shm-size 2g `
+  --publish 127.0.0.1:8052:8000 `
+  --volume freehand-vllm-models:/models/hf `
+  --env HF_HOME=/models/hf --env VLLM_USE_V2_MODEL_RUNNER=0 `
+  --entrypoint python3 freehand-vllm-audio:0.28.0 `
+  -m vllm.entrypoints.openai.api_server `
+  --model Qwen/Qwen3-ASR-0.6B --host 0.0.0.0 --port 8000 `
+  --max-model-len 4096 --max-num-batched-tokens 4096 `
+  --gpu-memory-utilization 0.35 --max-num-seqs 1 `
+  --enforce-eager --no-async-scheduling --no-enable-log-requests
+```
+
+The server downloads only the selected checkpoint on first startup. Qwen3-ASR
+also has a 1.7B checkpoint; changing model size requires available memory and a
+separate quality check. The 0.6B example has user-confirmed Freehand evidence.
+The [official vLLM recipe](https://docs.vllm.ai/projects/recipes/en/latest/Qwen/Qwen3-ASR.html)
+documents the same transcription API.
+
+```powershell
+docker logs --tail 30 freehand-vllm-stt
+Invoke-RestMethod http://127.0.0.1:8052/health
+Invoke-RestMethod http://127.0.0.1:8052/v1/models
+```
+
+In Freehand, choose **vLLM**, base URL **`http://127.0.0.1:8052/v1`**,
+model **`Qwen/Qwen3-ASR-0.6B`**, authentication **None**, and allow local HTTP.
+Save, then test a short recording. Automatic language behavior depends on the
+model; explicit English is also available for an English test.
+
+```powershell
+docker stop freehand-vllm-stt
+docker start freehand-vllm-stt
+```
+
+### Start S1-mini cleanup
+
+This is a separate text model and endpoint. Stop the STT container first if
+your GPU cannot hold both. To use STT and cleanup together, provide enough
+capacity for both or use another speech server; a stopped STT endpoint cannot
+transcribe a new recording.
+
+```powershell
+docker run --detach --name freehand-vllm-cleanup `
+  --gpus device=0 --shm-size 2g `
+  --publish 127.0.0.1:8053:8000 `
+  --volume freehand-vllm-models:/models/hf `
+  --env HF_HOME=/models/hf --env VLLM_USE_V2_MODEL_RUNNER=0 `
+  --entrypoint python3 freehand-vllm-audio:0.28.0 `
+  -m vllm.entrypoints.openai.api_server `
+  --model superwhisper/s1-mini --host 0.0.0.0 --port 8000 `
+  --max-model-len 2048 --max-num-batched-tokens 2048 `
+  --gpu-memory-utilization 0.35 --max-num-seqs 1 `
+  --enforce-eager --no-async-scheduling --no-enable-log-requests
+```
+
+Check `/health` and `/v1/models` at port **8053**. Enable Freehand
+post-processing with profile **vLLM**, base URL **`http://127.0.0.1:8053/v1`**,
+model **`superwhisper/s1-mini`**, authentication **None**, local HTTP allowed,
+and the **S1-mini** prompt preset. The preset forces reasoning off. The
+2,048-token context is a small test configuration; start with short transcripts.
+
+```powershell
+docker logs --tail 30 freehand-vllm-cleanup
+docker stop freehand-vllm-cleanup
+docker start freehand-vllm-cleanup
+```
+
+To change a container's launch options, stop and remove that named container,
+then repeat its `docker run` command with the new options. The named model
+volume remains. This workflow changes the server, not Freehand's saved
+credentials or connections.
+
 ## Connect
 
 Use a Base URL ending in `/v1`, such as `http://127.0.0.1:8000/v1`, and the

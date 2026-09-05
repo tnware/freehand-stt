@@ -7,6 +7,14 @@ description: Configure the default Freehand contract for a compatible server.
 **Evidence:** automated client contract fixtures. No universal server or model
 compatibility is implied.
 
+## Obtain an endpoint
+
+Generic is a protocol baseline, not a server program to install. Use the
+URL, model ID, and authentication supplied by your server operator or hosted
+provider. If you want to run a server yourself, start with the
+[backend launch guides](../#run-a-backend) and choose its qualified profile.
+Each operation still needs a model and route that implement that contract.
+
 ## Configure a connection
 
 1. Choose **Generic OpenAI-compatible** in the appropriate Settings section.

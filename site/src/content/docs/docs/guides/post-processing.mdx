@@ -51,45 +51,11 @@ Endpoint model IDs and request behavior are deliberately independent. A local or
 
 [S1-mini by Superwhisper](https://huggingface.co/superwhisper/s1-mini) is an English transcript normalizer rather than a general chat model. Its prompt format and non-thinking template are exact requirements. A normal transcript repeatedly producing an empty response usually means the inference runtime did not disable Qwen thinking mode.
 
-Install the current llama.cpp Windows package from PowerShell:
-
-```powershell title="Install llama.cpp"
-winget install --exact --id ggml.llamacpp
-```
-
-Open a new PowerShell window after installation, then start the server with reasoning disabled:
-
-```powershell title="Start S1-mini with reasoning disabled" {4}
-llama-server.exe `
-  -hf superwhisper/s1-mini-GGUF:Q4_K_M `
-  --jinja `
-  --reasoning off `
-  --temp 0 `
-  -ngl 99 `
-  --sleep-idle-seconds 60
-```
-
-This is a known-working Freehand setup. `-hf` downloads and caches the
-Q4_K_M model from Hugging Face on first use. The command requests GPU offload;
-use a host with available GPU capacity. For CPU-only inference, replace
-`-ngl 99` with `-ngl 0 --device none`. See the upstream
-[server options](https://github.com/ggml-org/llama.cpp/tree/master/tools/server#command-line-options).
-
-<details>
-<summary>Keep the model warm or release idle memory</summary>
-
-[`--sleep-idle-seconds 60`](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md#sleeping-on-idle)
-unloads the model and its associated memory after one idle minute, then reloads
-it for the next request. Omit this option when consistently warm response time
-is more important than releasing idle resources.
-
-</details>
-
-The default OpenAI-compatible base URL is:
-
-```text title="Cleanup endpoint base URL"
-http://127.0.0.1:8080/v1
-```
+Follow [Run llama.cpp on Windows](../../backends/llama-cpp/#run-llamacpp-on-windows)
+for installation, the S1-mini launch command with reasoning disabled, GPU/CPU
+options, metadata checks, and stop/restart instructions. That recipe explicitly
+uses port 8080, giving the base URL `http://127.0.0.1:8080/v1`.
+For vLLM, use its separate [S1-mini launch recipe](../../backends/vllm/#start-s1-mini-cleanup).
 
 Configure **Settings → Post-processing** as follows:
 
@@ -98,8 +64,9 @@ Enabled:             On
 Endpoint:            http://127.0.0.1:8080/v1
 Allow insecure HTTP: On
 Model:               select the model returned by Test
-Profile:             S1-mini
-API key:             empty
+Compatibility:       llama.cpp
+Prompt preset:       S1-mini
+Authentication:      None
 ```
 
 Choose **Save changes** after configuring the profile. Try a short English dictation with history enabled so you can compare both versions.
