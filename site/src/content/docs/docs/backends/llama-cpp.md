@@ -1,4 +1,5 @@
 ---
+provider: llama-cpp
 title: llama.cpp
 description: Configure llama.cpp for text cleanup, including the separate S1-mini prompt preset.
 ---

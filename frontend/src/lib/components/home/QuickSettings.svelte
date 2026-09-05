@@ -2,6 +2,7 @@
   import { usesServerLoadedModel } from "$lib/utils/compatibility";
   import CheckIcon from "@lucide/svelte/icons/check";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import RackModule from "$lib/components/home/RackModule.svelte";
   import QuickControls from "$lib/components/home/QuickControls.svelte";
   import S1MiniControls from "$lib/components/settings/S1MiniControls.svelte";
@@ -364,6 +365,7 @@
     controls="quick-stt-details"
     onToggle={toggleSTT}
   >
+    {#snippet icon()}<ProviderIcon profile={settings.compatibilityProfile} size={20} />{/snippet}
     <div class="contents">
       {#snippet sttEndpointMeta()}
         {#if isPending("stt-endpoint")}
@@ -478,6 +480,10 @@
     controls="quick-cleanup-details"
     onToggle={toggleCleanup}
   >
+    {#snippet icon()}<ProviderIcon
+        profile={settings.postProcessing.compatibilityProfile}
+        size={20}
+      />{/snippet}
     {#snippet actions()}
       <span class="flex shrink-0 items-center gap-1.5">
         {#if isPending("processing-enabled")}

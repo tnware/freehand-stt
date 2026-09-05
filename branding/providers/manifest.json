@@ -1,0 +1,88 @@
+{
+  "generic": {
+    "asset": "generic.svg",
+    "kind": "neutral",
+    "source": "Freehand original protocol symbol",
+    "revision": "1",
+    "license": "MIT",
+    "notice": "../../LICENSE"
+  },
+  "speaches": {
+    "asset": "speaches.svg",
+    "kind": "neutral",
+    "source": "Freehand original waveform symbol; no upstream brand asset vendored",
+    "revision": "1",
+    "license": "MIT",
+    "notice": "../../LICENSE"
+  },
+  "whisper-cpp": {
+    "asset": "whisper-cpp.svg",
+    "kind": "neutral",
+    "source": "Freehand original waveform symbol; no upstream brand asset vendored",
+    "revision": "1",
+    "license": "MIT",
+    "notice": "../../LICENSE"
+  },
+  "llama-cpp": {
+    "asset": "llama-cpp.svg",
+    "kind": "brand",
+    "source": "https://github.com/ggml-org/llama.cpp/blob/6a1a922d269908a29cbd4b49c27e6a8e7fd10fae/media/llama1-icon-transparent.svg",
+    "revision": "6a1a922d269908a29cbd4b49c27e6a8e7fd10fae",
+    "license": "MIT",
+    "notice": "licenses/llama-cpp.txt",
+    "modifications": "Removed authoring metadata and intrinsic dimensions; artwork and viewBox preserved."
+  },
+  "localai": {
+    "asset": "localai.svg",
+    "kind": "brand",
+    "source": "https://github.com/mudler/LocalAI/blob/b217148bbc229abe6dc079ce78d250e168e818e3/docs/assets/images/logos/logo.svg",
+    "revision": "b217148bbc229abe6dc079ce78d250e168e818e3",
+    "license": "MIT",
+    "notice": "licenses/localai.txt",
+    "modifications": "Removed authoring metadata and intrinsic dimensions; artwork and viewBox preserved."
+  },
+  "vllm": {
+    "asset": "vllm.svg",
+    "kind": "brand",
+    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/packages/static-svg/icons/vllm-color.svg",
+    "revision": "a94750e3f5f8fc33757b839d85030e742284e43a",
+    "license": "MIT",
+    "notice": "licenses/lobe.txt",
+    "modifications": "Removed authoring metadata and intrinsic dimensions; artwork and viewBox preserved."
+  },
+  "openai": {
+    "asset": "openai.svg",
+    "kind": "brand",
+    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/packages/static-svg/icons/openai.svg",
+    "revision": "a94750e3f5f8fc33757b839d85030e742284e43a",
+    "license": "MIT",
+    "notice": "licenses/lobe.txt",
+    "modifications": "Removed authoring metadata and intrinsic dimensions; artwork and viewBox preserved."
+  },
+  "vllm-omni": {
+    "asset": "vllm.svg",
+    "kind": "family",
+    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/packages/static-svg/icons/vllm-color.svg",
+    "revision": "a94750e3f5f8fc33757b839d85030e742284e43a",
+    "license": "MIT",
+    "notice": "licenses/lobe.txt",
+    "modifications": "Removed authoring metadata and intrinsic dimensions; artwork and viewBox preserved.",
+    "note": "Uses the vLLM project mark for this planned vLLM-family integration."
+  },
+  "kokoro-fastapi": {
+    "asset": "speech.svg",
+    "kind": "neutral",
+    "source": "Freehand original speech symbol; no upstream brand asset vendored",
+    "revision": "1",
+    "license": "MIT",
+    "notice": "../../LICENSE"
+  },
+  "openedai-speech": {
+    "asset": "speech.svg",
+    "kind": "neutral",
+    "source": "Freehand original speech symbol; no upstream brand asset vendored",
+    "revision": "1",
+    "license": "MIT",
+    "notice": "../../LICENSE"
+  }
+}

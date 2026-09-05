@@ -1,0 +1,10 @@
+---
+import { providerIdentity } from "../../../branding/providers";
+import "../../../branding/providers/provider-icon.css";
+interface Props { profile?: string; size?: number }
+const { profile = "generic", size = 24 } = Astro.props;
+const identity = providerIdentity(profile);
+---
+<span class="provider-icon" style={`--provider-icon-size: ${size}px`} aria-hidden="true" data-provider={profile}>
+  <img src={identity.src} alt="" width={size} height={size} />
+</span>

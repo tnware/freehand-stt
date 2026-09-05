@@ -16,6 +16,7 @@ forcing one large tile into every surface:
 
 | Classification | Path | Consumer |
 | --- | --- | --- |
+| Vendored provider identity | `branding/providers/` | Shared Svelte/Astro provider icons, provenance manifest, and license notices |
 | Authoritative source | `branding/freehand-mark.svg` | In-app `BrandMark`; Apple Icon Composer vector layer |
 | Authoritative source | `branding/freehand-app-tile.svg` | Rounded surface composed with the detailed mark for platform icons |
 | Authoritative source | `branding/freehand-system-mark.svg` | Windows tray light/dark families only |
@@ -87,3 +88,11 @@ centered, and recognizable; the tray has no white application tile; theme
 changes swap the tray treatment; and taskbar, Explorer, installer, uninstaller,
 Installed apps, and Start Menu surfaces use an appropriate application frame.
 Also confirm the in-app mark remains sharp in the main header and About window.
+
+## Provider marks
+
+Provider icons use the separate vendored SVG collection in `branding/providers/`.
+The app and site import those exact files through shared presentation helpers;
+they are not copies produced by the Freehand product-mark generator. See its
+README and the [backend maintenance guide](../backend-compatibility/#provider-identity-assets)
+for provenance, neutral fallbacks, licensing, and visual checks.

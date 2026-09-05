@@ -1,0 +1,5 @@
+---
+import { providerNotices } from "../../../branding/providers/notices";
+---
+{providerNotices.map((notice) => <details><summary>{notice.name}</summary><pre>{notice.text}</pre></details>)}
+<style>pre { white-space: pre-wrap; overflow-wrap: anywhere; font: .8rem/1.65 var(--sl-font-mono); }</style>
