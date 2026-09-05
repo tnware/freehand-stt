@@ -3,6 +3,46 @@ title: Protocol profile
 description: The OpenAI-compatible request and response contracts Freehand supports.
 ---
 
+## Compatibility profiles
+
+The persisted `compatibilityProfile` field is independent for STT (at the root),
+`postProcessing`, and `textToSpeech`. Missing fields load as `generic`; the
+legacy empty value also resolves to Generic. Neither URLs nor model IDs select
+a profile automatically. Unavailable, unknown, and wrong-operation selections
+are rejected by Go, including disabled feature settings and metadata probes.
+Invalid saved selections use the existing configuration recovery flow without
+overwriting the document.
+
+| Profile ID | Implemented operations | Contract |
+| --- | --- | --- |
+| `generic` | STT, post-processing, TTS | Existing bounded multipart JSON, text chat, and buffered PCM16 WAV contracts |
+| `speaches` | STT, TTS | Shared request shapes; typed transcription events and legacy per-segment text SSE; buffered WAV speech |
+| `llama-cpp` | Post-processing | Shared non-streaming text chat adapter; prompt preset remains independent |
+
+Generic intentionally retains legacy Speaches SSE support for existing
+configurations. Both transcription profiles require final text for typed
+streams and retain legacy EOF completion only for untyped segment streams.
+Selecting Speaches does not weaken typed completion checks or enable automatic
+retries. A remembered streaming failure is scoped to normalized endpoint,
+model, and effective compatibility profile.
+
+The Go catalog exposes only implemented capabilities. It does not certify
+all models on a provider, and adds no advanced parameters. The dedicated
+profiles share implementations where their wire contracts match. New dialects
+must be implemented and tested before their catalog entries become available.
+Metadata tests remain GET-only and never discover capabilities through inference.
+
+Disabled placeholders are operation-specific: `openai` and `localai` across
+all three roles; `whisper-cpp` for STT; `vllm` for STT and post-processing;
+`vllm-omni`, `kokoro-fastapi`, and `openedai-speech` for TTS. A disabled dedicated
+profile does not prevent use of a server through the generic contract.
+
+Qualification evidence for the Speaches stream formats comes from the audit's
+v0.8.3 and v0.9.0-rc.3 source comparison. Profile fixtures cover these response
+shapes and the shared llama.cpp text request; they do not establish live
+compatibility with every release or model. Existing user-tested integrations
+remain distinct from automated fixture coverage.
+
 ## Validated implementations
 
 Freehand targets capability-specific OpenAI-compatible routes rather than requiring one particular server. Compatibility claims use three evidence levels:
@@ -54,7 +94,7 @@ The user can choose either response contract:
 - Completed: `response_format=json`, followed by one bounded `{ "text": ... }` response.
 - Streamed: `response_format=json` and `stream=true`, followed by `text/event-stream` events.
 
-Streamed mode requests `Accept: text/event-stream` and accepts current typed `transcript.text.delta` and `transcript.text.done` events, plus the untyped `{ "text": ... }` segment events used by older Speaches releases. It also accepts a completed JSON response from peers that ignore `stream=true`, and cleans up an older Speaches SSE body when an intermediary buffers and wraps that body inside the JSON `text` field. The UI identifies that fallback as buffered because client-side parsing cannot recover progressive timing once an intermediary has collected the response. A rejected or incompatible streaming request is never retried automatically because that could duplicate inference or billing. Streaming unavailability is remembered for the endpoint and model; resubmission in completed mode requires the user to choose Retry. Provider and reverse-proxy upload limits still apply; client-side splitting of stored files is deferred.
+Streamed mode requests `Accept: text/event-stream` and accepts current typed `transcript.text.delta` and `transcript.text.done` events, plus the untyped `{ "text": ... }` segment events used by older Speaches releases. It also accepts a completed JSON response from peers that ignore `stream=true`, and cleans up an older Speaches SSE body when an intermediary buffers and wraps that body inside the JSON `text` field. The UI identifies that fallback as buffered because client-side parsing cannot recover progressive timing once an intermediary has collected the response. A rejected or incompatible streaming request is never retried automatically because that could duplicate inference or billing. Streaming unavailability is remembered for the endpoint, model, and compatibility profile; resubmission in completed mode requires the user to choose Retry. Provider and reverse-proxy upload limits still apply; client-side splitting of stored files is deferred.
 
 Typed streams require `transcript.text.done` with a string `text` field. Its
 text replaces accumulated deltas, including an empty final string. EOF or
@@ -111,7 +151,7 @@ Preferred order:
 2. Otherwise call `{base_url}/models` with the configured credential.
 3. Require a JSON object with a non-null `data` array for model probes, then report whether the configured model appears. An empty array is valid. Malformed or missing inventory is a response failure while HTTP reachability remains available. Health probes accept bounded successful bodies without imposing a model-list schema.
 
-The check uses the currently displayed endpoint/model values and an optional bounded credential draft without persisting the draft. It returns a structured, window-lifetime result containing the probe URL, reachability, HTTP status, latency, checked time, stable failure kind, bounded model IDs, and configured-model presence. Returned model IDs are metadata only; choosing one updates the settings draft and performs no request.
+The check uses the currently displayed compatibility profile and endpoint/model values and an optional bounded credential draft without persisting the draft. It returns a structured, window-lifetime result containing the probe URL, reachability, HTTP status, latency, checked time, stable failure kind, bounded model IDs, and configured-model presence. Returned model IDs are metadata only; choosing one updates the settings draft and performs no request.
 
 This check does not submit audio or inference requests and stops after 15 seconds. Model inventory is capped at 200 distinct IDs of at most 200 bytes each, and the full response remains subject to the 1 MiB metadata limit.
 

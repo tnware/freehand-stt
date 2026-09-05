@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
@@ -20,28 +21,31 @@ import (
 )
 
 type ConnectionTestRequest struct {
-	BaseURL            string                    `json:"baseURL"`
-	AllowInsecureHTTP  bool                      `json:"allowInsecureHTTP"`
-	AuthenticationMode config.AuthenticationMode `json:"authenticationMode"`
-	Model              string                    `json:"model"`
-	HealthPath         string                    `json:"healthPath,omitempty"`
-	Headers            map[string]string         `json:"headers,omitempty"`
-	CredentialDraft    string                    `json:"credentialDraft,omitempty"`
+	CompatibilityProfile compatibility.ID          `json:"compatibilityProfile"`
+	BaseURL              string                    `json:"baseURL"`
+	AllowInsecureHTTP    bool                      `json:"allowInsecureHTTP"`
+	AuthenticationMode   config.AuthenticationMode `json:"authenticationMode"`
+	Model                string                    `json:"model"`
+	HealthPath           string                    `json:"healthPath,omitempty"`
+	Headers              map[string]string         `json:"headers,omitempty"`
+	CredentialDraft      string                    `json:"credentialDraft,omitempty"`
 }
 
 type PostProcessingConnectionTestRequest struct {
-	BaseURL           string `json:"baseURL"`
-	AllowInsecureHTTP bool   `json:"allowInsecureHTTP"`
-	Model             string `json:"model"`
-	CredentialDraft   string `json:"credentialDraft,omitempty"`
+	CompatibilityProfile compatibility.ID `json:"compatibilityProfile"`
+	BaseURL              string           `json:"baseURL"`
+	AllowInsecureHTTP    bool             `json:"allowInsecureHTTP"`
+	Model                string           `json:"model"`
+	CredentialDraft      string           `json:"credentialDraft,omitempty"`
 }
 
 type TextToSpeechConnectionTestRequest struct {
-	BaseURL            string                    `json:"baseURL"`
-	AllowInsecureHTTP  bool                      `json:"allowInsecureHTTP"`
-	AuthenticationMode config.AuthenticationMode `json:"authenticationMode"`
-	Model              string                    `json:"model"`
-	CredentialDraft    string                    `json:"credentialDraft,omitempty"`
+	CompatibilityProfile compatibility.ID          `json:"compatibilityProfile"`
+	BaseURL              string                    `json:"baseURL"`
+	AllowInsecureHTTP    bool                      `json:"allowInsecureHTTP"`
+	AuthenticationMode   config.AuthenticationMode `json:"authenticationMode"`
+	Model                string                    `json:"model"`
+	CredentialDraft      string                    `json:"credentialDraft,omitempty"`
 }
 
 type ConnectionProbe string
@@ -160,6 +164,8 @@ func (s *Service) TestConnection(request ConnectionTestRequest) (result Connecti
 	validationError := ""
 	if len(request.CredentialDraft) > settings.MaxAPIKeyBytes {
 		validationError = fmt.Sprintf("API key must be at most %d bytes", settings.MaxAPIKeyBytes)
+	} else if _, err := compatibility.Resolve(request.CompatibilityProfile, compatibility.Transcription); err != nil {
+		validationError = "compatibility_profile"
 	} else if err := config.ValidateSTTConnection(request.BaseURL, request.AllowInsecureHTTP, request.AuthenticationMode, request.Model, request.HealthPath, request.Headers); err != nil {
 		validationError = safeConnectionValidationError(err)
 	}
@@ -243,6 +249,8 @@ func (s *Service) TestPostProcessingConnection(request PostProcessingConnectionT
 	validationError := ""
 	if len(request.CredentialDraft) > settings.MaxAPIKeyBytes {
 		validationError = fmt.Sprintf("post-processing API key must be at most %d bytes", settings.MaxAPIKeyBytes)
+	} else if _, err := compatibility.Resolve(request.CompatibilityProfile, compatibility.PostProcessing); err != nil {
+		validationError = "compatibility_profile"
 	} else if err := config.ValidatePostProcessingConnection(request.BaseURL, request.AllowInsecureHTTP, request.Model); err != nil {
 		validationError = safeConnectionValidationError(err)
 	}
@@ -309,6 +317,8 @@ func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestR
 	validationError := ""
 	if len(request.CredentialDraft) > settings.MaxAPIKeyBytes {
 		validationError = fmt.Sprintf("speech playback API key must be at most %d bytes", settings.MaxAPIKeyBytes)
+	} else if _, err := compatibility.Resolve(request.CompatibilityProfile, compatibility.Speech); err != nil {
+		validationError = "compatibility_profile"
 	} else if err := config.ValidateTextToSpeechConnection(request.BaseURL, request.AllowInsecureHTTP, request.AuthenticationMode, request.Model); err != nil {
 		validationError = safeConnectionValidationError(err)
 	}

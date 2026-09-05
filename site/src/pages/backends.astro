@@ -1,0 +1,84 @@
+---
+import mark from "../assets/freehand-mark.svg";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import CustomPageMetadata from "../components/CustomPageMetadata.astro";
+import ParticleBackground from "../components/ParticleBackground.astro";
+import { availableBackends, plannedBackends, features, supportLabel } from "../data/backends";
+import "../styles/home.css";
+import "../styles/backends.css";
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const href = (path: string) => `${base}${path}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <CustomPageMetadata title="Backends & compatibility — Freehand" description="Compare Freehand's server profiles for dictation, audio files, transcript cleanup, and speech playback. Find setup guides, known limits, and planned integrations." path="backends/" />
+    <meta name="theme-color" content="#070a12" />
+    <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
+  </head>
+  <body>
+    <ParticleBackground />
+    <a class="skip-link" href="#main">Skip to content</a>
+    <SiteHeader current="backends" />
+    <main id="main" class="backends-page">
+      <section class="backends-hero" aria-labelledby="backends-title">
+        <div>
+          <p class="kicker"><span></span> Backend directory</p>
+          <h1 id="backends-title">Your models.<br /><em>Connected.</em></h1>
+          <p class="backends-lede">Find the right connection for your speech stack. Compare what Freehand can send, receive, and play—then follow the guide for your server.</p>
+          <nav class="backend-jump-links" aria-label="On this page">
+            <a class="button button-dark" href="#compare">Compare capabilities <span aria-hidden="true">↓</span></a>
+            <a class="text-action" href="#planned">Planned profiles <span aria-hidden="true">↘</span></a>
+          </nav>
+        </div>
+        <aside class="connection-map" aria-label="Choose a separate backend for each operation">
+          <div class="map-label">One client. Your connections.</div>
+          <div class="map-origin"><span class="map-mark" aria-hidden="true"><img src={mark.src} alt="" width="26" height="26" /></span><strong>Freehand</strong><span>Windows client</span></div>
+          <ol>
+            <li><span class="map-step">01</span><div><strong>Speech → text</strong><small>Dictation & audio files</small></div><span class="map-pill">STT</span></li>
+            <li><span class="map-step">02</span><div><strong>Text → polished text</strong><small>Optional transcript cleanup</small></div><span class="map-pill">Chat</span></li>
+            <li><span class="map-step">03</span><div><strong>Text → speech</strong><small>On-demand playback</small></div><span class="map-pill">TTS</span></li>
+          </ol>
+          <p>Use one server or a different endpoint for each.</p>
+        </aside>
+      </section>
+      <div class="catalog-note"><span>Current development</span><p>This directory follows Freehand’s main branch. Your installed release may have fewer options. Model support and server versions still matter.</p></div>
+      <section id="available" class="backend-section" aria-labelledby="available-title">
+        <div class="backend-section-head"><div><p class="section-index">01 / Connect today</p><h2 id="available-title">Available profiles</h2></div><p>Start with Generic, or select a dedicated profile for a documented setup.</p></div>
+        <div class="backend-grid">
+          {availableBackends.map((backend) => <article class="backend-card">
+            <div class="backend-card-top"><span class="backend-monogram" aria-hidden="true">{backend.short}</span><span class="backend-status">Available profile</span></div>
+            <h3>{backend.name}</h3><p class="backend-summary">{backend.summary}</p>
+            <ul class="backend-roles" aria-label="Available operations">{backend.entries.filter((entry) => entry.available).map((entry) => <li>{entry.role}</li>)}</ul>
+            <div class="backend-evidence"><strong>{backend.evidence}</strong><p>{backend.detail}</p></div>
+            <a class="backend-guide-link" href={href(backend.guide)}>Setup & capabilities <span aria-hidden="true">↗</span></a>
+          </article>)}
+        </div>
+      </section>
+      <section id="compare" class="backend-section" aria-labelledby="compare-title">
+        <div class="backend-section-head"><div><p class="section-index">02 / Find your fit</p><h2 id="compare-title">What can you connect?</h2></div><p>Supported means Freehand implements the contract. The chosen model must support the operation too.</p></div>
+        <div class="matrix-scroll" role="region" aria-label="Backend capability comparison; scroll horizontally on small screens" tabindex="0">
+          <table class="backend-matrix">
+            <caption>Available profiles in the current development build</caption>
+            <thead><tr><th scope="col">Compatibility profile</th>{features.map((feature) => <th scope="col">{feature.label}</th>)}</tr></thead>
+            <tbody>{availableBackends.map((backend) => <tr><th scope="row"><a href={href(backend.guide)}>{backend.name}</a></th>{features.map((feature) => <td><span class:list={["support-cell", backend.features[feature.key]]}>{backend.features[feature.key] === "available" && <span aria-hidden="true">✓ </span>}{supportLabel[backend.features[feature.key]]}<span class="sr-only">{backend.features[feature.key] === "none" ? "Not part of this profile" : ""}</span></span></td>)}</tr>)}</tbody>
+          </table>
+        </div>
+        <div class="matrix-notes"><p><strong>File streaming</strong> delivers results from an uploaded file. It is separate from live microphone streaming.</p><p><strong>Speech playback</strong> currently buffers PCM16 WAV audio before playing. Advanced voice inputs and progressive playback are future work.</p><p><strong>—</strong> means the operation is outside this profile’s implemented scope. Vocabulary, diarization, and other advanced controls are not enabled by these profiles.</p></div>
+      </section>
+      <section class="backend-section evidence-section" aria-labelledby="evidence-title">
+        <div><p class="section-index">03 / Read the evidence</p><h2 id="evidence-title">Support has a scope.</h2><p>An available profile is a specific connection contract. It does not certify every model or every version of a server.</p><a class="text-action" href={href("/docs/backends/")}>How compatibility is tracked <span aria-hidden="true">→</span></a></div>
+        <dl class="evidence-list"><div><dt>Contract fixtures</dt><dd>Automated requests and responses exercise Freehand’s supported protocol behavior.</dd></div><div><dt>Reported working setup</dt><dd>A particular server and model combination has been used successfully. The guide records the limits of that evidence.</dd></div><div><dt>Planned profile</dt><dd>Dedicated handling is not ready to select. A compatible endpoint may already work through Generic.</dd></div></dl>
+      </section>
+      <section id="planned" class="backend-section" aria-labelledby="planned-title">
+        <div class="backend-section-head"><div><p class="section-index">04 / Room to grow</p><h2 id="planned-title">Planned profiles</h2></div><p>These entries match the disabled choices in Settings. Each links to the contract work still needed; no delivery date is promised.</p></div>
+        <div class="planned-grid">{plannedBackends.map((backend) => <article class="planned-card"><div class="planned-card-head"><h3>{backend.name}</h3><span>Planned</span></div><p>{backend.summary}</p><ul class="planned-roles" aria-label="Planned operation scope">{backend.entries.map((entry) => <li>{entry.role}</li>)}</ul><a href={href(backend.guide)}>Contract work remaining <span aria-hidden="true">→</span></a></article>)}</div>
+      </section>
+      <section class="backend-next" aria-label="Get connected"><div><h2>Have your endpoint ready?</h2><p>Choose your profile, enter your server URL, and connect the model you want to use.</p></div><a class="button button-light" href={href("/docs/guides/connect-a-server/")}>Connect a server <span aria-hidden="true">→</span></a></section>
+    </main>
+    <SiteFooter />
+  </body>
+</html>

@@ -7,9 +7,16 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/tnware/freehand-stt/internal/compatibility"
 )
 
 func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (TranscriptionResult, error) {
+	contract, _ := compatibility.Resolve(compatibility.Generic, compatibility.Transcription)
+	return readTranscriptionSSEContract(reader, key, onDelta, contract.Capabilities)
+}
+
+func readTranscriptionSSEContract(reader io.Reader, key string, onDelta func(string), caps compatibility.Capabilities) (TranscriptionResult, error) {
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 64<<10), 1<<20)
 	var accumulated strings.Builder
@@ -60,6 +67,9 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 		}
 		switch event.Type {
 		case "transcript.text.delta":
+			if !caps.TypedTranscriptionEvents {
+				continue
+			}
 			typedStream = true
 			if event.Delta == nil {
 				return TranscriptionResult{}, &FileStreamUnsupportedError{Reason: "invalid_sse_event", PartialText: accumulated.String()}
@@ -73,6 +83,9 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 				onDelta(*event.Delta)
 			}
 		case "transcript.text.done":
+			if !caps.TypedTranscriptionEvents {
+				continue
+			}
 			typedStream = true
 			if event.Text == nil {
 				return TranscriptionResult{}, &FileStreamUnsupportedError{Reason: "invalid_sse_event", PartialText: accumulated.String()}
@@ -98,7 +111,7 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 		case "":
 			// Speaches <=0.8 emits one untyped {"text": ...} event per
 			// segment and signals completion by closing the response.
-			if event.Text != nil {
+			if event.Text != nil && caps.LegacyTranscriptionSegments {
 				recognizedEvents++
 				delta := legacySegmentDelta(accumulated.String(), *event.Text)
 				if reflectsCredential(accumulated.String(), delta, key) {

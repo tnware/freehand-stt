@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/tnware/freehand-stt/internal/compatibility"
 )
 
 const maxChatRequest = 2 << 20
@@ -15,6 +17,10 @@ const maxChatRequest = 2 << 20
 // completion. Response bodies controlled by the peer are never reflected in
 // errors, matching the transcription boundary above.
 func (c *Client) ChatCompletion(ctx context.Context, base, model, key, systemPrompt, userPrompt string) (ChatCompletionResult, error) {
+	contract, err := c.contract(compatibility.PostProcessing)
+	if err != nil {
+		return ChatCompletionResult{}, err
+	}
 	type message struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
@@ -41,7 +47,7 @@ func (c *Client) ChatCompletion(ctx context.Context, base, model, key, systemPro
 		return ChatCompletionResult{}, &Error{Kind: "request_too_large", Message: "post-processing request exceeds 2 MiB"}
 	}
 	defer zeroBytes(body)
-	u, err := endpoint(base, "chat/completions")
+	u, err := endpoint(base, contract.Path)
 	if err != nil {
 		return ChatCompletionResult{}, err
 	}

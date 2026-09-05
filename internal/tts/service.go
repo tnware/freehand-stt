@@ -231,7 +231,7 @@ func (s *Service) generate(ctx context.Context, generation uint64, profile setti
 	defer s.workers.Done()
 	started := time.Now()
 	requestCtx, requestCancel := context.WithTimeout(ctx, time.Duration(profile.Settings.TimeoutSeconds)*time.Second)
-	audioBytes, err := s.client.SynthesizeSpeech(requestCtx, profile.Settings.BaseURL, profile.Credential, inference.SpeechRequest{Model: profile.Settings.Model, Voice: profile.Settings.Voice, Input: text, Speed: profile.Settings.Speed})
+	audioBytes, err := s.client.SynthesizeSpeech(requestCtx, profile.Settings.BaseURL, profile.Credential, inference.SpeechRequest{CompatibilityProfile: profile.Settings.CompatibilityProfile, Model: profile.Settings.Model, Voice: profile.Settings.Voice, Input: text, Speed: profile.Settings.Speed})
 	requestCancel()
 	profile.Credential = ""
 	text = ""

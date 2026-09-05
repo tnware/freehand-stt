@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
@@ -20,6 +21,7 @@ import (
 // SettingsDTO is the renderer-safe settings snapshot. It reports credential
 // presence and native capability state but never returns credential values.
 type SettingsDTO struct {
+	CompatibilityProfiles compatibility.Catalog `json:"compatibilityProfiles"`
 	config.Settings
 	Configuration                      ConfigurationStatus   `json:"configuration"`
 	CredentialConfigured               bool                  `json:"credentialConfigured"`
@@ -296,6 +298,7 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 	processingCredentialConfigured := s.processKeys != nil && s.processKeys.Configured()
 	ttsCredentialConfigured := s.ttsKeys != nil && s.ttsKeys.Configured()
 	return SettingsDTO{
+		CompatibilityProfiles:              compatibility.Profiles(),
 		Settings:                           v,
 		Configuration:                      cloneConfigurationStatus(s.configuration),
 		CredentialConfigured:               s.keys.Configured(),

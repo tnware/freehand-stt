@@ -8,11 +8,20 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+
+	"github.com/tnware/freehand-stt/internal/compatibility"
 )
 
 // Transcribe sends one bounded in-memory microphone recording and expects a
 // completed OpenAI-compatible transcription response.
 func (c *Client) Transcribe(ctx context.Context, base, model, language, key string, headers map[string]string, wav []byte) (TranscriptionResult, error) {
+	contract, err := c.contract(compatibility.Transcription)
+	if err != nil {
+		return TranscriptionResult{}, err
+	}
+	if language != "" && !contract.Capabilities.LanguageHint {
+		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "language hints are unavailable for this profile"}
+	}
 	if len(wav) > 8<<20 {
 		return TranscriptionResult{}, &Error{Kind: "request_too_large", Message: "recording exceeds 8 MiB"}
 	}
@@ -35,7 +44,7 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 	}
 	defer zeroBytes(body.Bytes())
 
-	u, err := endpoint(base, "audio/transcriptions")
+	u, err := endpoint(base, contract.Path)
 	if err != nil {
 		return TranscriptionResult{}, err
 	}

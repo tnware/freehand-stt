@@ -1,0 +1,57 @@
+---
+title: Backend compatibility
+description: Understand Freehand's profile contracts, validation evidence, and provider guides.
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+export const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+Freehand connects to infrastructure you choose. Start with the
+[visual backend directory](../../backends/) to compare operations, then use
+a guide below for configuration and limits.
+
+:::note[Development documentation]
+This directory follows the main branch. Your installed release may have fewer
+options. An available profile describes Freehand's implemented contract;
+support can still depend on the server version and selected model.
+:::
+
+<CardGrid>
+  <LinkCard title="Generic OpenAI-compatible" description="The default transcription, text cleanup, and speech contracts." href={`${base}/docs/backends/generic/`} />
+  <LinkCard title="Speaches" description="Transcription and speech playback with version and model qualifications." href={`${base}/docs/backends/speaches/`} />
+  <LinkCard title="llama.cpp" description="Text post-processing and the separate S1-mini prompt preset." href={`${base}/docs/backends/llama-cpp/`} />
+  <LinkCard title="Planned profiles" description="Dedicated contracts still being implemented and qualified." href={`${base}/docs/backends/planned/`} />
+</CardGrid>
+
+## What the labels mean
+
+| Label | Evidence and limits |
+| --- | --- |
+| Available profile | Freehand implements a bounded contract and permits selection for the documented operations. |
+| Automated contract fixtures | Local request/response fixtures cover the client behavior. They do not run a provider's models. |
+| Reported working setup | A particular server/model combination has been used successfully. This is not a claim about every listed model or server release. |
+| Planned profile | The dedicated option is disabled. A compatible server may already work through Generic. |
+
+There is no certification or blanket approval of a provider. In particular,
+**Test** reads health or model-list metadata only. It does not prove that a
+model transcribes audio, accepts cleanup parameters, or returns playable speech.
+
+## Choose profiles per operation
+
+The microphone and stored-file workflows share the transcription connection.
+Post-processing and speech playback each have their own connection and profile.
+All three may use the same server or different servers. Endpoint, credentials,
+model selection, and compatibility profile remain independent of the cleanup
+prompt preset. Named saved connections are not implemented yet.
+
+## Beyond the current contract
+
+Vocabulary hints, richer language shapes, timestamps, diarization, voice
+instructions, reference-audio inputs, and progressive speech playback need
+explicit client support and model qualifications. Selecting a provider profile
+does not enable those features automatically.
+
+Use the [protocol reference](../reference/protocol/) for exact request fields
+and safety limits. Contributors should follow the
+[catalog maintenance process](../development/backend-compatibility/) when adding
+a profile, capability, or new validation evidence.

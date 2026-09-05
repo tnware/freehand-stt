@@ -40,6 +40,14 @@ export default defineConfig({
 			sidebar: [
 				{ label: 'Freehand home', link: '/' },
 				{ label: 'Download Freehand', link: '/download/' },
+                { label: 'Compare backends', link: '/backends/' },
+                { label: 'Backend guides', items: [
+                  { slug: 'docs/backends' },
+                  { slug: 'docs/backends/generic' },
+                  { slug: 'docs/backends/speaches' },
+                  { slug: 'docs/backends/llama-cpp' },
+                  { slug: 'docs/backends/planned' },
+                ] },
 				{
 					label: 'Get started',
 					items: [
@@ -68,6 +76,7 @@ export default defineConfig({
 					label: 'Contribute',
 					items: [
 						{ slug: 'docs/development' },
+                        { slug: 'docs/development/backend-compatibility' },
 					],
 				},
 			],

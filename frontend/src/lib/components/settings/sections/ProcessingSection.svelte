@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CompatibilityProfilePicker from "$lib/components/settings/CompatibilityProfilePicker.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import * as Alert from "$lib/components/ui/alert";
@@ -83,9 +84,7 @@
   });
 
   function updateS1Mini(
-    patch: Partial<
-      Pick<Settings["postProcessing"], "styling" | "structure" | "context">
-    >,
+    patch: Partial<Pick<Settings["postProcessing"], "styling" | "structure" | "context">>,
   ) {
     Object.assign(settings.postProcessing, patch);
   }
@@ -93,6 +92,11 @@
 
 <div class="flex flex-col gap-4">
   <SettingsCard>
+    <CompatibilityProfilePicker
+      id="postProcessing-compatibility-profile"
+      bind:value={settings.postProcessing.compatibilityProfile}
+      profiles={settings.compatibilityProfiles.postProcessing ?? []}
+    />
     <SettingRow
       title="Post-process completed transcripts"
       description="Send successful raw transcripts to a separate OpenAI-compatible /v1/chat/completions endpoint. Any failure falls back to the raw transcript."
@@ -129,8 +133,8 @@
               ? "outline"
               : connectionSucceeded(connection)
                 ? "default"
-                : "destructive"}
-          >{connectionStatusLabel(connection)}</Badge>
+                : "destructive"}>{connectionStatusLabel(connection)}</Badge
+          >
           <Button variant="secondary" size="sm" disabled={busy} onclick={onTestConnection}>
             {#if busy}<LoaderCircleIcon data-icon="inline-start" class="animate-spin" />{/if}
             Test
@@ -157,8 +161,8 @@
         <TriangleAlertIcon />
         <Alert.Title>Transcript text may be readable on the network</Alert.Title>
         <Alert.Description>
-          Use <code class="font-mono">http://</code> only for a local or trusted private endpoint.
-          API credentials and transcript text are otherwise sent without TLS.
+          Use <code class="font-mono">http://</code> only for a local or trusted private endpoint. API
+          credentials and transcript text are otherwise sent without TLS.
         </Alert.Description>
       </Alert.Root>
     {/if}
@@ -217,8 +221,8 @@
         <Badge
           variant={settings.postProcessingCredentialConfigured || apiKey.trim()
             ? "secondary"
-            : "outline"}
-        >{credentialStatus}</Badge>
+            : "outline"}>{credentialStatus}</Badge
+        >
       {/snippet}
     </ValueRow>
 
@@ -252,15 +256,11 @@
         />
       {/snippet}
     </SettingRow>
-
   </SettingsCard>
 
   <SettingsCard>
     <div class="px-5 py-5">
-      <ProcessingProfilePicker
-        {profiles}
-        bind:value={settings.postProcessing.preset}
-      />
+      <ProcessingProfilePicker {profiles} bind:value={settings.postProcessing.preset} />
     </div>
 
     <div class="px-5 py-5">
@@ -281,11 +281,11 @@
   </SettingsCard>
 
   <p class="px-1 text-xs leading-relaxed text-muted-foreground">
-    Raw transcription always completes first. With history enabled, raw and processed text are
-    kept together for comparison. A processor error never turns the transcription into a failure.
-    The selected behavior determines the request format, not which endpoint or model you may use.
+    Raw transcription always completes first. With history enabled, raw and processed text are kept
+    together for comparison. A processor error never turns the transcription into a failure. The
+    selected behavior determines the request format, not which endpoint or model you may use.
     S1-mini remains an explicit specialized profile rather than the default for all models. The
-    connection check stops after 15 seconds; processing requests and responses have fixed 2 MiB
-    and 1 MiB safety ceilings.
+    connection check stops after 15 seconds; processing requests and responses have fixed 2 MiB and
+    1 MiB safety ceilings.
   </p>
 </div>

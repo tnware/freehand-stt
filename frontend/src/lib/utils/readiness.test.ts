@@ -1,3 +1,4 @@
+import { ID } from "$bindings/compatibility";
 import { describe, expect, it } from "vitest";
 import {
   AuthenticationMode,
@@ -24,6 +25,8 @@ const devices: Device[] = [
 ];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
+  compatibilityProfile: ID.Generic,
+  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
   authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
@@ -65,6 +68,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   segmentSeconds: 90,
   segmentSilenceMilliseconds: 700,
   postProcessing: {
+    compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "http://127.0.0.1:8080/v1",
     allowInsecureHTTP: true,
@@ -77,6 +81,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     timeoutSeconds: 120,
   },
   textToSpeech: {
+    compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "",
     allowInsecureHTTP: false,

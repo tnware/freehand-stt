@@ -1,3 +1,4 @@
+import { ID } from "$bindings/compatibility";
 import { CancellablePromise } from "@wailsio/runtime";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -612,6 +613,7 @@ describe("SettingsEditor connection metadata", () => {
     await session.editor.testConnection();
 
     expect(TestConnection).toHaveBeenCalledWith({
+      compatibilityProfile: ID.Generic,
       baseURL: "https://example.test/v1",
       allowInsecureHTTP: false,
       authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
@@ -677,6 +679,7 @@ describe("SettingsEditor connection metadata", () => {
     await session.editor.testPostProcessingConnection();
 
     expect(TestPostProcessingConnection).toHaveBeenCalledWith({
+      compatibilityProfile: ID.Generic,
       baseURL: "http://127.0.0.1:8080/v1",
       allowInsecureHTTP: false,
       model: "processor/s1-mini",
@@ -705,6 +708,7 @@ describe("SettingsEditor connection metadata", () => {
     await session.editor.testTextToSpeechConnection();
 
     expect(TestTextToSpeechConnection).toHaveBeenCalledWith({
+      compatibilityProfile: ID.Generic,
       baseURL: "http://127.0.0.1:8000/v1",
       allowInsecureHTTP: true,
       authenticationMode: AuthenticationMode.AuthenticationModeNone,
@@ -712,5 +716,31 @@ describe("SettingsEditor connection metadata", () => {
       credentialDraft: "",
     });
     expect(session.editor.ttsConnection).toEqual(connectionResult);
+  });
+});
+
+
+describe("compatibility profile snapshots", () => {
+  it("invalidates connection observations when only compatibility selections change", async () => {
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    await session.editor.load();
+    session.editor.connection = connectionResult;
+    session.editor.processingConnection = connectionResult;
+    session.editor.ttsConnection = connectionResult;
+    const changed: Settings = {
+      ...settings,
+      compatibilityProfile: ID.Speaches,
+      postProcessing: { ...settings.postProcessing, compatibilityProfile: ID.LlamaCPP },
+      textToSpeech: { ...settings.textToSpeech, compatibilityProfile: ID.Speaches },
+    };
+    expect(session.editor.applySettingsSnapshot(changed)).toBe(true);
+    expect(session.editor.applied?.compatibilityProfile).toBe(ID.Speaches);
+    expect(session.editor.draft?.postProcessing.compatibilityProfile).toBe(ID.LlamaCPP);
+    expect(session.editor.connection).toBeNull();
+    expect(session.editor.processingConnection).toBeNull();
+    expect(session.editor.ttsConnection).toBeNull();
+    expect(session.editor.sttConnectionStale).toBe(true);
+    expect(session.editor.processingConnectionStale).toBe(true);
+    expect(session.editor.ttsConnectionStale).toBe(true);
   });
 });
