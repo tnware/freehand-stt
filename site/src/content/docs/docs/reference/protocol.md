@@ -53,7 +53,16 @@ The user can choose either response contract:
 - Completed: `response_format=json`, followed by one bounded `{ "text": ... }` response.
 - Streamed: `response_format=json` and `stream=true`, followed by `text/event-stream` events.
 
-Streamed mode requests `Accept: text/event-stream` and accepts current typed `transcript.text.delta` and `transcript.text.done` events, plus the untyped `{ "text": ... }` segment events used by older Speaches releases. It also accepts a completed JSON response from peers that ignore `stream=true`, and cleans up an older Speaches SSE body when an intermediary buffers and wraps that body inside the JSON `text` field. The UI identifies that fallback as buffered because client-side parsing cannot recover progressive timing once an intermediary has collected the response. A rejected streaming request is never retried automatically because that could duplicate inference or billing. Provider and reverse-proxy upload limits still apply; client-side splitting of stored files is deferred.
+Streamed mode requests `Accept: text/event-stream` and accepts current typed `transcript.text.delta` and `transcript.text.done` events, plus the untyped `{ "text": ... }` segment events used by older Speaches releases. It also accepts a completed JSON response from peers that ignore `stream=true`, and cleans up an older Speaches SSE body when an intermediary buffers and wraps that body inside the JSON `text` field. The UI identifies that fallback as buffered because client-side parsing cannot recover progressive timing once an intermediary has collected the response. A rejected or incompatible streaming request is never retried automatically because that could duplicate inference or billing. Streaming unavailability is remembered for the endpoint and model; resubmission in completed mode requires the user to choose Retry. Provider and reverse-proxy upload limits still apply; client-side splitting of stored files is deferred.
+
+Typed streams require `transcript.text.done` with a string `text` field. Its
+text replaces accumulated deltas, including an empty final string. EOF or
+`[DONE]` without that final event is a failed response; accepted partial text
+is preserved without cleanup or automatic retry. Missing required delta/final
+text fields are malformed events. A read failure or server error also keeps
+accepted partial text as failed. Empty or keepalive-only SSE is not a successful
+transcript. Legacy untyped Speaches segments retain their EOF completion rule;
+that dialect cannot distinguish normal closure from a clean premature EOF.
 
 While a stored file is uploading or streaming, its backend-owned status is rendered as an ephemeral live row in the main History panel. Copy remains unavailable while work is active. Once Go finalizes the transcript, the live row is replaced in place by the terminal result. If the 8 MiB transcript-response ceiling is reached, already accepted text remains available under an explicit failed-partial state rather than being silently dropped. When history is enabled and that partial text fits its separate 2 MiB total budget, it may be retained as a failed run for recovery.
 
@@ -99,7 +108,7 @@ Preferred order:
 
 1. If the user configured a health path, call it.
 2. Otherwise call `{base_url}/models` with the configured credential.
-3. Confirm the configured STT model appears when the response has an OpenAI model-list shape.
+3. Require a JSON object with a non-null `data` array for model probes, then report whether the configured model appears. An empty array is valid. Malformed or missing inventory is a response failure while HTTP reachability remains available. Health probes accept bounded successful bodies without imposing a model-list schema.
 
 The check uses the currently displayed endpoint/model values and an optional bounded credential draft without persisting the draft. It returns a structured, window-lifetime result containing the probe URL, reachability, HTTP status, latency, checked time, stable failure kind, bounded model IDs, and configured-model presence. Returned model IDs are metadata only; choosing one updates the settings draft and performs no request.
 

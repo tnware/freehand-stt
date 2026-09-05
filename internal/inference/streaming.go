@@ -13,8 +13,14 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 64<<10), 1<<20)
 	var accumulated strings.Builder
-	var completed string
+	var completed *string
 	var metadata ResponseMetadata
+	typedStream := false
+	// Only already accepted, credential-checked text may survive an incomplete
+	// response. Keep this a response failure, not evidence to disable streaming.
+	incomplete := func(message string) (TranscriptionResult, error) {
+		return TranscriptionResult{Text: accumulated.String(), Metadata: ResponseMetadata{RequestCount: 1}}, &Error{Kind: "response", Message: message}
+	}
 	readBytes := 0
 	dataEvents := 0
 	recognizedEvents := 0
@@ -54,24 +60,28 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 		}
 		switch event.Type {
 		case "transcript.text.delta":
+			typedStream = true
+			if event.Delta == nil {
+				return TranscriptionResult{}, &FileStreamUnsupportedError{Reason: "invalid_sse_event", PartialText: accumulated.String()}
+			}
 			recognizedEvents++
-			if event.Delta != nil {
-				if reflectsCredential(accumulated.String(), *event.Delta, key) {
-					return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
-				}
-				accumulated.WriteString(*event.Delta)
-				if onDelta != nil {
-					onDelta(*event.Delta)
-				}
+			if reflectsCredential(accumulated.String(), *event.Delta, key) {
+				return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
+			}
+			accumulated.WriteString(*event.Delta)
+			if onDelta != nil {
+				onDelta(*event.Delta)
 			}
 		case "transcript.text.done":
-			recognizedEvents++
-			if event.Text != nil {
-				if key != "" && strings.Contains(*event.Text, key) {
-					return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
-				}
-				completed = *event.Text
+			typedStream = true
+			if event.Text == nil {
+				return TranscriptionResult{}, &FileStreamUnsupportedError{Reason: "invalid_sse_event", PartialText: accumulated.String()}
 			}
+			recognizedEvents++
+			if key != "" && strings.Contains(*event.Text, key) {
+				return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
+			}
+			completed = event.Text
 			metadata.ResponseID = safePeerString(event.ID, key)
 			metadata.RequestID = safePeerString(event.RequestID, key)
 			metadata.EffectiveModel = safePeerString(event.Model, key)
@@ -84,7 +94,7 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 			applyUsageMetadata(&metadata, event.Usage, key)
 			applyPerformanceMetadata(&metadata, event.Timings)
 		case "error":
-			return TranscriptionResult{}, &Error{Kind: "response", Message: "transcription stream failed"}
+			return incomplete("transcription stream failed")
 		case "":
 			// Speaches <=0.8 emits one untyped {"text": ...} event per
 			// segment and signals completion by closing the response.
@@ -102,14 +112,17 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return TranscriptionResult{}, &Error{Kind: "response", Message: "transcription stream could not be read"}
+		return incomplete("transcription stream could not be read")
 	}
 	if dataEvents > 0 && recognizedEvents == 0 {
 		return TranscriptionResult{}, &FileStreamUnsupportedError{Reason: "incompatible_sse_contract"}
 	}
+	if recognizedEvents == 0 || (typedStream && completed == nil) {
+		return incomplete("transcription stream ended before its final transcript")
+	}
 	metadata.RequestCount = 1
-	if completed != "" {
-		return TranscriptionResult{Text: completed, Metadata: metadata}, nil
+	if completed != nil {
+		return TranscriptionResult{Text: *completed, Metadata: metadata}, nil
 	}
 	return TranscriptionResult{Text: accumulated.String(), Metadata: metadata}, nil
 }

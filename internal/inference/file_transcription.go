@@ -133,9 +133,6 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 			}
 		}
 	}
-	if err != nil {
-		return TranscriptionResult{}, err
-	}
 	result.Text = strings.TrimSpace(result.Text)
 	if key != "" && strings.Contains(result.Text, key) {
 		return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
@@ -145,7 +142,9 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 	}
 	result.Metadata.RequestCount = 1
 	result.Metadata = sanitizeResponseMetadata(result.Metadata, key)
-	return result, nil
+	// A failed stream can carry accepted partial text for manual recovery.
+	// The caller must retain the error and must not process it as a success.
+	return result, err
 }
 
 func rejectsStreamingParameter(status int, body []byte) bool {

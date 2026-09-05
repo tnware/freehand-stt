@@ -115,6 +115,28 @@ const connection = (
 });
 
 describe("app readiness", () => {
+  it("blocks first-run completion for a reachable server with an invalid model response", () => {
+    const value = {
+      ...connection(ConnectionErrorKind.ConnectionErrorResponse),
+      reachable: true,
+      httpStatus: 200,
+      modelPresence: ModelPresence.ModelPresenceUnavailable,
+      modelIDs: [],
+    };
+    const readiness = appReadiness(settings(), value, devices, false);
+    expect(readiness.canComplete).toBe(false);
+    expect(
+      readiness.steps.find((step) => step.id === "connection")?.detail,
+    ).toContain("Invalid response");
+  });
+
+  it("states what the successful setup check verified", () => {
+    const readiness = appReadiness(settings(), connection(), devices, false);
+    expect(
+      readiness.steps.find((step) => step.id === "connection")?.detail,
+    ).toBe("Model list received in 18 ms. No model was invoked.");
+  });
+
   it("requires one successful metadata check before initial setup can finish", () => {
     const before = appReadiness(settings(), null, devices, false);
     expect(before.show).toBe(true);

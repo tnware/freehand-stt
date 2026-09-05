@@ -5,9 +5,16 @@ import {
   type Device,
   type Settings,
 } from "$lib/state";
-import { connectionStatusLabel, connectionSucceeded } from "$lib/utils/connection";
+import {
+  connectionStatusLabel,
+  connectionSucceeded,
+} from "$lib/utils/connection";
 import { endpointLabel } from "$lib/utils/endpoint";
-import { microphoneLabel, microphoneMissing, SYSTEM_DEFAULT_MICROPHONE } from "$lib/utils/microphone";
+import {
+  microphoneLabel,
+  microphoneMissing,
+  SYSTEM_DEFAULT_MICROPHONE,
+} from "$lib/utils/microphone";
 
 export type ReadinessStepStatus = "complete" | "pending" | "attention";
 
@@ -31,7 +38,8 @@ export type Readiness = {
   steps: ReadinessStep[];
 };
 
-const compactModel = (model: string): string => model.split("/").at(-1) ?? model;
+const compactModel = (model: string): string =>
+  model.split("/").at(-1) ?? model;
 
 export function appReadiness(
   settings: Settings,
@@ -40,15 +48,21 @@ export function appReadiness(
   devicesLoading: boolean,
 ): Readiness {
   const initialSetup = !settings.setupCompleted;
-  const serverConfigured = Boolean(settings.baseURL.trim() && settings.model.trim());
+  const serverConfigured = Boolean(
+    settings.baseURL.trim() && settings.model.trim(),
+  );
   const credentialConfigured =
     settings.authenticationMode === AuthenticationMode.AuthenticationModeNone ||
     settings.credentialConfigured;
   const microphoneChoice = settings.microphoneID || SYSTEM_DEFAULT_MICROPHONE;
-  const selectedMicrophoneMissing = microphoneMissing(microphoneChoice, devices);
+  const selectedMicrophoneMissing = microphoneMissing(
+    microphoneChoice,
+    devices,
+  );
   const microphoneConfigured = devices.length > 0 && !selectedMicrophoneMissing;
   const shortcutConfigured = Boolean(settings.toggleShortcut.trim());
-  const connectionVerified = connection !== null && connectionSucceeded(connection);
+  const connectionVerified =
+    connection !== null && connectionSucceeded(connection);
 
   const steps: ReadinessStep[] = [
     {
@@ -65,7 +79,8 @@ export function appReadiness(
       id: "credential",
       label: "Authentication",
       detail:
-        settings.authenticationMode === AuthenticationMode.AuthenticationModeNone
+        settings.authenticationMode ===
+        AuthenticationMode.AuthenticationModeNone
           ? "This endpoint does not require a credential."
           : settings.credentialConfigured
             ? "API key stored in Windows Credential Manager."
@@ -84,14 +99,22 @@ export function appReadiness(
           : selectedMicrophoneMissing
             ? "The selected microphone is not currently available."
             : microphoneLabel(microphoneChoice, devices),
-      status: devicesLoading ? "pending" : microphoneConfigured ? "complete" : "attention",
-      blocking: initialSetup ? !microphoneConfigured : !devicesLoading && !microphoneConfigured,
+      status: devicesLoading
+        ? "pending"
+        : microphoneConfigured
+          ? "complete"
+          : "attention",
+      blocking: initialSetup
+        ? !microphoneConfigured
+        : !devicesLoading && !microphoneConfigured,
       settingsSection: "audio",
     },
     {
       id: "shortcut",
       label: "Recording shortcut",
-      detail: shortcutConfigured ? settings.toggleShortcut : "Choose a global recording shortcut.",
+      detail: shortcutConfigured
+        ? settings.toggleShortcut
+        : "Choose a global recording shortcut.",
       status: shortcutConfigured ? "complete" : "attention",
       blocking: !shortcutConfigured,
       settingsSection: "shortcuts",
@@ -101,20 +124,26 @@ export function appReadiness(
       label: "Connection check",
       detail: connectionVerified
         ? connection!.latencyMilliseconds > 0
-          ? `Connected in ${connection!.latencyMilliseconds.toLocaleString()} ms. No model was invoked.`
-          : "Connected. No model was invoked."
+          ? `${connectionStatusLabel(connection!)} in ${connection!.latencyMilliseconds.toLocaleString()} ms. No model was invoked.`
+          : `${connectionStatusLabel(connection!)}. No model was invoked.`
         : connection
           ? `${connectionStatusLabel(connection)}. Review the server settings and try again.`
           : initialSetup
             ? "Run one metadata-only check before finishing setup."
             : "Not checked during this session.",
-      status: connectionVerified ? "complete" : connection ? "attention" : "pending",
+      status: connectionVerified
+        ? "complete"
+        : connection
+          ? "attention"
+          : "pending",
       blocking: connection ? !connectionVerified : initialSetup,
       settingsSection: "server",
     },
   ];
 
-  const blockers = steps.filter((step) => step.blocking && step.status !== "complete");
+  const blockers = steps.filter(
+    (step) => step.blocking && step.status !== "complete",
+  );
   const recoveryNeeded = steps.some(
     (step) => step.status === "attention" && step.blocking,
   );

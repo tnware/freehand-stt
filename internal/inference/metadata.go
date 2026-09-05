@@ -89,26 +89,28 @@ func (c *Client) TestMetadata(ctx context.Context, base, health, key, model stri
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	if json.Unmarshal(body, &list) == nil && list.Data != nil {
-		result.ModelPresence = "not-listed"
-		seen := make(map[string]struct{}, min(len(list.Data), MaxDiscoveredModels))
-		for _, value := range list.Data {
-			// Do not publish reflected credentials as selectable model IDs.
-			if safePeerString(value.ID, key) == "" {
-				continue
-			}
-			if value.ID == model {
-				result.ModelPresence = "listed"
-			}
-			if value.ID == "" || len(value.ID) > MaxDiscoveredModelIDBytes || len(result.ModelIDs) >= MaxDiscoveredModels {
-				continue
-			}
-			if _, exists := seen[value.ID]; exists {
-				continue
-			}
-			seen[value.ID] = struct{}{}
-			result.ModelIDs = append(result.ModelIDs, value.ID)
+	if json.Unmarshal(body, &list) != nil || list.Data == nil {
+		result.ErrorKind = "response"
+		return result
+	}
+	result.ModelPresence = "not-listed"
+	seen := make(map[string]struct{}, min(len(list.Data), MaxDiscoveredModels))
+	for _, value := range list.Data {
+		// Do not publish reflected credentials as selectable model IDs.
+		if safePeerString(value.ID, key) == "" {
+			continue
 		}
+		if value.ID == model {
+			result.ModelPresence = "listed"
+		}
+		if value.ID == "" || len(value.ID) > MaxDiscoveredModelIDBytes || len(result.ModelIDs) >= MaxDiscoveredModels {
+			continue
+		}
+		if _, exists := seen[value.ID]; exists {
+			continue
+		}
+		seen[value.ID] = struct{}{}
+		result.ModelIDs = append(result.ModelIDs, value.ID)
 	}
 	return result
 }

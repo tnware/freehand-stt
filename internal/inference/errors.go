@@ -47,7 +47,7 @@ type FileStreamUnsupportedError struct {
 }
 
 func (e *FileStreamUnsupportedError) Error() string {
-	return "stream_unsupported: endpoint does not support streamed file transcripts"
+	return "stream_unsupported: streamed file transcript unavailable; choose Retry to request a completed transcript"
 }
 
 // DiagnosticKind exposes only the bounded client classification to logs.

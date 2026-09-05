@@ -77,6 +77,19 @@ Checkpoints prefer natural pauses but still enforce a hard segment limit; they d
 Selecting a file does not upload it until you start transcription. File
 results never insert automatically because no destination was captured.
 
+If streaming is rejected or its response is incompatible, the request stops.
+Freehand remembers that streaming is unavailable for that endpoint and model;
+choose **Retry** to submit a new request in completed mode. This may repeat
+server work or incur another charge, so Freehand never resubmits automatically.
+A completed JSON response returned to the original streaming request is used
+immediately without another upload.
+
+If a typed transcript stream ends before its final transcript arrives, the job
+fails and any accepted partial text remains available to copy. Cleanup does not
+run on a failed partial transcript. Older Speaches streams signal completion
+by closing the response, so their completeness cannot be checked with a final
+event.
+
 - Supported formats: FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, and WebM.
 - Jobs can be cancelled.
 - File work and microphone capture are mutually exclusive.

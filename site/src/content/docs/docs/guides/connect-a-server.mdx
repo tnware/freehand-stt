@@ -168,9 +168,13 @@ Freehand checks a configured health path or `GET /v1/models`. It reports:
 - discovered model IDs when the response has a compatible model-list shape;
 - whether the currently configured model appears in that list.
 
-The check never sends audio or a prompt. A successful metadata check proves the
-route is reachable and credentials were accepted; it does not prove that a
-model can transcribe a particular recording.
+The check never sends audio or a prompt. **Model list received** means the
+server returned a valid model inventory; **Server reachable** means the
+configured health endpoint responded successfully. An HTML gateway page or a
+malformed model list is an **Invalid response**, even with HTTP status 200.
+An empty valid model list is accepted, with the configured model **Not listed**.
+Neither check verifies that a model can transcribe or synthesize audio, or that
+an endpoint actually enforces the supplied credential.
 
 First launch requires an explicit **Test connection** before finishing setup.
 After setup is complete, Freehand automatically checks the saved STT connection
