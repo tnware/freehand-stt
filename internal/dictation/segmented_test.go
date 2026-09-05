@@ -21,8 +21,13 @@ import (
 )
 
 type streamingCapture struct {
-	mu   sync.Mutex
-	sink audio.PCMStreamSink
+	mu       sync.Mutex
+	sink     audio.PCMStreamSink
+	observed chan struct{}
+}
+
+func newStreamingCapture() *streamingCapture {
+	return &streamingCapture{observed: make(chan struct{}, 1)}
 }
 
 func (*streamingCapture) List(context.Context) ([]audio.Device, error) { return nil, nil }
@@ -37,11 +42,11 @@ func (c *streamingCapture) StartStream(_ context.Context, _ string, _ int, sink 
 }
 func (c *streamingCapture) Stop(context.Context) (audio.Result, error) {
 	c.mu.Lock()
-	sink := c.sink
-	c.sink = nil
-	c.mu.Unlock()
-	if sink != nil {
-		sink.Close()
+	defer c.mu.Unlock()
+	// Model native capture stop: no admitted callback may outlive sink close.
+	if c.sink != nil {
+		c.sink.Close()
+		c.sink = nil
 	}
 	return audio.Result{}, nil
 }
@@ -53,14 +58,14 @@ func (c *streamingCapture) Close() error { return c.Cancel(context.Background())
 
 func (c *streamingCapture) write(frame []byte) bool {
 	c.mu.Lock()
-	sink := c.sink
-	c.mu.Unlock()
-	return sink != nil && sink.WritePCM(frame)
+	defer c.mu.Unlock()
+	return c.sink != nil && c.sink.WritePCM(frame)
 }
 
-type sampleDetector struct{}
+type sampleDetector struct{ observed chan<- struct{} }
 
-func (*sampleDetector) Speech(samples []int16) (bool, error) {
+func (d *sampleDetector) Speech(samples []int16) (bool, error) {
+	defer func() { d.observed <- struct{}{} }()
 	for _, sample := range samples {
 		if sample != 0 {
 			return true, nil
@@ -107,8 +112,14 @@ func feedFrames(t *testing.T, capture *streamingCapture, frame []byte, count int
 		if !capture.write(frame) {
 			t.Fatalf("stream rejected frame %d of %d", i+1, count)
 		}
-		if i%64 == 0 {
-			time.Sleep(time.Millisecond)
+		// Wait until the real segmenter reaches this frame's detector call.
+		// It may not have released the frame yet, but at most this frame and
+		// the next can occupy the pipe. This tests workflow ordering, not
+		// synthetic producer throughput; never retry a rejected write.
+		select {
+		case <-capture.observed:
+		case <-time.After(time.Second):
+			t.Fatalf("detector did not observe frame %d of %d", i+1, count)
 		}
 	}
 }
@@ -145,7 +156,7 @@ func TestSegmentedDictationTranscribesDuringCaptureAndDeliversInOrder(t *testing
 	}))
 	defer server.Close()
 
-	capture := &streamingCapture{}
+	capture := newStreamingCapture()
 	platform := &platFake{}
 	cfg := segmentedSettings(server.URL)
 	cfg.VADMode = config.VADModeVeryAggressive
@@ -160,7 +171,7 @@ func TestSegmentedDictationTranscribesDuringCaptureAndDeliversInOrder(t *testing
 	requestedVADMode := config.VADMode("")
 	recorder.newDetector = func(mode config.VADMode) (audio.VoiceDetector, error) {
 		requestedVADMode = mode
-		return &sampleDetector{}, nil
+		return &sampleDetector{observed: capture.observed}, nil
 	}
 	var logs bytes.Buffer
 	recorder.SetLogger(slog.New(slog.NewTextHandler(&logs, nil)))
@@ -287,12 +298,14 @@ func TestSegmentedDictationWithOnlySilenceSkipsNetworkAndInsertion(t *testing.T)
 	}))
 	defer server.Close()
 
-	capture := &streamingCapture{}
+	capture := newStreamingCapture()
 	platform := &platFake{}
 	cfg := segmentedSettings(server.URL)
 	recorder := New(capture, platform, nil, staticCredential{value: "secret"}, staticSettings{value: cfg}, nil)
 	recorder.client = newTestClient(server.Client())
-	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) { return &sampleDetector{}, nil }
+	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) {
+		return &sampleDetector{observed: capture.observed}, nil
+	}
 
 	if err := recorder.Start(); err != nil {
 		t.Fatal(err)
@@ -316,13 +329,15 @@ func TestSegmentedDictationNoAuthSkipsCredentialStore(t *testing.T) {
 	}))
 	defer server.Close()
 
-	capture := &streamingCapture{}
+	capture := newStreamingCapture()
 	platform := &platFake{}
 	cfg := segmentedSettings(server.URL)
 	cfg.AuthenticationMode = config.AuthenticationModeNone
 	recorder := New(capture, platform, nil, nil, staticSettings{value: cfg}, nil)
 	recorder.client = newTestClient(server.Client())
-	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) { return &sampleDetector{}, nil }
+	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) {
+		return &sampleDetector{observed: capture.observed}, nil
+	}
 
 	if err := recorder.Start(); err != nil {
 		t.Fatal(err)
@@ -345,14 +360,16 @@ func TestSegmentedDictationUsesCredentialCapturedBeforeFirstCheckpoint(t *testin
 	}))
 	defer server.Close()
 
-	capture := &streamingCapture{}
+	capture := newStreamingCapture()
 	platform := &platFake{}
 	cfg := segmentedSettings(server.URL)
 	cfg.AuthenticationMode = config.AuthenticationModeAPIKey
 	credentials := &mutableCredential{value: "credential-at-start"}
 	recorder := New(capture, platform, nil, credentials, staticSettings{value: cfg}, nil)
 	recorder.client = newTestClient(server.Client())
-	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) { return &sampleDetector{}, nil }
+	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) {
+		return &sampleDetector{observed: capture.observed}, nil
+	}
 
 	if err := recorder.Start(); err != nil {
 		t.Fatal(err)
@@ -375,7 +392,7 @@ func TestAutomaticStopTrimsSilenceAndCompletesDictation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	capture := &streamingCapture{}
+	capture := newStreamingCapture()
 	platform := &platFake{}
 	cfg := config.Default()
 	cfg.BaseURL = server.URL
@@ -394,7 +411,9 @@ func TestAutomaticStopTrimsSilenceAndCompletesDictation(t *testing.T) {
 		statusMu.Unlock()
 	})
 	recorder.client = newTestClient(server.Client())
-	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) { return &sampleDetector{}, nil }
+	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) {
+		return &sampleDetector{observed: capture.observed}, nil
+	}
 
 	if err := recorder.Start(); err != nil {
 		t.Fatal(err)
@@ -447,7 +466,7 @@ func TestHoldRecordingWaitsForReleaseWhenAutomaticStopIsConfigured(t *testing.T)
 	}))
 	defer server.Close()
 
-	capture := &streamingCapture{}
+	capture := newStreamingCapture()
 	platform := &platFake{}
 	cfg := config.Default()
 	cfg.BaseURL = server.URL
@@ -466,7 +485,9 @@ func TestHoldRecordingWaitsForReleaseWhenAutomaticStopIsConfigured(t *testing.T)
 		statusMu.Unlock()
 	})
 	recorder.client = newTestClient(server.Client())
-	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) { return &sampleDetector{}, nil }
+	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) {
+		return &sampleDetector{observed: capture.observed}, nil
+	}
 
 	if err := recorder.StartWithMode(RecordingHold); err != nil {
 		t.Fatal(err)
