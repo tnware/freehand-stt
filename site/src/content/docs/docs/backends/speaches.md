@@ -171,3 +171,11 @@ Server-side VAD is intentionally not exposed: v0.8.3 accepts `vad_filter`, while
 the inspected v0.9.0-rc.3 route runs VAD internally with fixed options. Local
 microphone VAD settings remain independent. Library settings such as beam size
 are not automatically fields on the Speaches HTTP request.
+
+## Language selection
+
+The [language guide](../../guides/languages/) explains Server default, Automatic
+detection, named language codes, and custom values. The chosen model determines
+which languages work; profile availability is not a multilingual guarantee.
+S1-mini cleanup is English only. It keeps raw text when a non-English input
+language is selected or reported, and assumes English when no language is known.

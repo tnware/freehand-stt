@@ -809,10 +809,17 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 		processingStarted := time.Now()
 		var processingResult postprocess.Result
 		var processingErr error
-		if s.processor == nil {
-			processingErr = errors.New("post-processing is unavailable")
-		} else {
-			processingResult, processingErr = s.processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, processingKey)
+		var detectedLanguages []string
+		if details.Transcription != nil {
+			detectedLanguages = details.Transcription.DetectedLanguages
+		}
+		processingErr = postprocess.ValidateLanguage(cfg.PostProcessing, cfg.Language, detectedLanguages)
+		if processingErr == nil {
+			if s.processor == nil {
+				processingErr = errors.New("post-processing is unavailable")
+			} else {
+				processingResult, processingErr = s.processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, processingKey)
+			}
 		}
 		processing := postprocess.Resolve(ctx, text, processingResult, processingErr, processingStarted)
 		details = s.history.FinalizeProcessing(historyID, text, processing, details)
@@ -864,7 +871,9 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 		s.replaceFileTranscriptLocked(text)
 		if processingFallback {
 			s.fileStatus.Message = "Transcription complete; post-processing failed, using raw text"
-			if processingFallbackKind == "timeout" {
+			if processingFallbackKind == "unsupported_language" {
+				s.fileStatus.Message = "Transcription complete; S1-mini skipped (English only), using raw text"
+			} else if processingFallbackKind == "timeout" {
 				s.fileStatus.Message = "Transcription complete; post-processing timed out, using raw text"
 			} else if processingFallbackKind == "incomplete_response" {
 				s.fileStatus.Message = "Transcription complete; post-processing reached the output limit, using raw text"

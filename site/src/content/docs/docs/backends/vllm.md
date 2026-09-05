@@ -233,3 +233,11 @@ incomplete-response error rather than accepting truncated cleanup text.
 
 vLLM-Omni speech playback is a separate, still-planned profile. These profiles
 do not add realtime microphone transcription or model management.
+
+## Language selection
+
+The [language guide](../../guides/languages/) explains Server default, Automatic
+detection, named language codes, and custom values. The chosen model determines
+which languages work; profile availability is not a multilingual guarantee.
+S1-mini cleanup is English only. It keeps raw text when a non-English input
+language is selected or reported, and assumes English when no language is known.

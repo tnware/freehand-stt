@@ -7,6 +7,15 @@ description: Keep speech recognition and optional transcript normalization as se
 - Date: 2026-08-29
 - Authority: [superwhisper/s1-mini v1 model card](https://huggingface.co/superwhisper/s1-mini/tree/v1)
 
+## Language-policy clarification — 2026-09-05
+
+S1-mini's supported language is fixed to English. Workflow admission now skips
+cleanup for explicitly selected or server-reported non-English input and uses
+the existing raw fallback. When no input language is known, the user-approved
+policy is to run S1-mini assuming English, with that assumption shown in the UI.
+This changes admission policy without changing the trained prompt/control line,
+reasoning-off requirement, or transcription language. See [language selection](../../guides/languages/).
+
 ## vLLM adapter clarification — 2026-09-05
 
 The vLLM v0.28.0 cleanup adapter also sends S1-mini's mandatory

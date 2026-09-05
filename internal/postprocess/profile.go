@@ -12,6 +12,7 @@ const S1MiniSystemInstruction = "You are a text normalizer for speech-to-text tr
 // both the model and the request behavior because compatible servers may use
 // arbitrary model names.
 type ProfileDescriptor struct {
+	Language                string                      `json:"language,omitempty"`
 	ID                      config.PostProcessingPreset `json:"id"`
 	Name                    string                      `json:"name"`
 	Description             string                      `json:"description"`
@@ -46,7 +47,8 @@ func Profiles() []ProfileDescriptor {
 		{
 			ID:                config.PostProcessingPresetS1Mini,
 			Name:              "S1-mini by Superwhisper",
-			Description:       "Use S1-mini's fixed normalization contract and its trained output controls.",
+			Language:          "en",
+			Description:       "English-only cleanup with S1-mini's fixed normalization contract and trained output controls. Unknown input language is assumed to be English.",
 			SystemInstruction: S1MiniSystemInstruction,
 			Controls: &ProfileControlOptions{
 				Styling:   config.S1MiniStylingValues(),

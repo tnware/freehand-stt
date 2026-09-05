@@ -130,3 +130,10 @@ v0.28.0 server. Configure its `/v1` endpoint and chosen text model separately fr
 transcription. The generation controls above also apply, including mandatory
 reasoning off for the S1-mini preset. See the [vLLM guide](../../backends/vllm/)
 for runtime/template requirements and evidence.
+
+## Language compatibility
+
+S1-mini cleanup supports English only. Non-English selections or reported
+languages use raw text instead. With no known language, S1-mini runs assuming
+English, as stated in its controls. Custom cleanup depends on the selected
+model and instruction. See [language selection](../languages/).

@@ -22,8 +22,9 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 	if err := c.validateTranscriptionOptions(); err != nil {
 		return TranscriptionResult{}, err
 	}
-	if language != "" && !contract.Capabilities.LanguageHint {
-		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "language hints are unavailable for this profile"}
+	language, err = contract.TranscriptionLanguage(language)
+	if err != nil {
+		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "invalid transcription language selection"}
 	}
 	if len(wav) > 8<<20 {
 		return TranscriptionResult{}, &Error{Kind: "request_too_large", Message: "recording exceeds 8 MiB"}

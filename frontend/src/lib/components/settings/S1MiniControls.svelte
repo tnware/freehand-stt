@@ -5,9 +5,7 @@
   import { cn } from "$lib/utils";
 
   type ProcessorSettings = Settings["postProcessing"];
-  type S1MiniPatch = Partial<
-    Pick<ProcessorSettings, "styling" | "structure" | "context">
-  >;
+  type S1MiniPatch = Partial<Pick<ProcessorSettings, "styling" | "structure" | "context">>;
 
   let {
     processor,
@@ -66,13 +64,20 @@
   }
 
   function optionLabel(value: string): string {
-    return value
-      .replaceAll("-", " ")
-      .replace(/\b\w/g, (character) => character.toUpperCase());
+    return value.replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase());
   }
 </script>
 
 <Field.Group class={cn("gap-4", compact && "gap-3")}>
+  {#if profile.language === "en"}
+    <div class="text-xs leading-relaxed">
+      <p class="font-medium">Cleanup language · English only</p>
+      <p class="mt-1 text-muted-foreground">
+        If the input language is unknown, S1-mini runs assuming English. Non-English selections or
+        detected results use raw text instead. This preset does not translate.
+      </p>
+    </div>
+  {/if}
   <Field.Set class="gap-2" {disabled}>
     <Field.Legend
       id={`${idPrefix}-styling-label`}
@@ -122,7 +127,8 @@
       <Field.Legend
         id={`${idPrefix}-structure-label`}
         class={cn("mb-0", compact && "caption")}
-        variant="label">Structure</Field.Legend>
+        variant="label">Structure</Field.Legend
+      >
       <ToggleGroup.Root
         class="mt-1 flex w-full flex-wrap justify-start"
         type="single"
@@ -154,7 +160,8 @@
       <Field.Legend
         id={`${idPrefix}-context-label`}
         class={cn("mb-0", compact && "caption")}
-        variant="label">Context</Field.Legend>
+        variant="label">Context</Field.Legend
+      >
       <ToggleGroup.Root
         class="mt-1 flex w-full flex-wrap justify-start"
         type="single"

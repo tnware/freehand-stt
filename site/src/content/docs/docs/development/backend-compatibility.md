@@ -128,7 +128,7 @@ bounded runtime settings above. Health and model metadata were checked before
 the user performed inference. This is user-reported interactive transcription
 evidence; Qwen-specific file-stream acceptance and latency tuning are not
 claimed. No client language or model-specific prompt override was introduced
-for the test. First-class language support remains separate follow-up work.
+for the test. Language selection has since gained explicit provider mapping and S1-mini admission policy; see the [language guide](../../guides/languages/). This does not extend that earlier live acceptance to other languages.
 
 ## Provider identity assets
 

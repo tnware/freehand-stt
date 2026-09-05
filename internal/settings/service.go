@@ -15,13 +15,15 @@ import (
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/postprocess"
+	"github.com/tnware/freehand-stt/internal/speechlanguage"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // SettingsDTO is the renderer-safe settings snapshot. It reports credential
 // presence and native capability state but never returns credential values.
 type SettingsDTO struct {
-	CompatibilityProfiles compatibility.Catalog `json:"compatibilityProfiles"`
+	TranscriptionLanguages []speechlanguage.Option `json:"transcriptionLanguages"`
+	CompatibilityProfiles  compatibility.Catalog   `json:"compatibilityProfiles"`
 	config.Settings
 	Configuration                      ConfigurationStatus   `json:"configuration"`
 	CredentialConfigured               bool                  `json:"credentialConfigured"`
@@ -299,6 +301,7 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 	ttsCredentialConfigured := s.ttsKeys != nil && s.ttsKeys.Configured()
 	return SettingsDTO{
 		CompatibilityProfiles:              compatibility.Profiles(),
+		TranscriptionLanguages:             speechlanguage.Options(),
 		Settings:                           v,
 		Configuration:                      cloneConfigurationStatus(s.configuration),
 		CredentialConfigured:               s.keys.Configured(),

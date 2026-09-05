@@ -23,7 +23,7 @@ func (f processingTransport) RoundTrip(r *http.Request) (*http.Response, error) 
 // Exercise the real recorder -> Processor -> HTTP client path. The transport
 // can return decoded success after cancellation without relying on socket timing.
 func TestRecorderProcessingOutcomes(t *testing.T) {
-	for _, mode := range []string{"raw", "success", "unavailable", "http-error", "empty", "length", "timeout", "cancel-late-success", "replacement-late-success"} {
+	for _, mode := range []string{"s1-assumed-english", "language-selected", "language-detected", "raw", "success", "unavailable", "http-error", "empty", "length", "timeout", "cancel-late-success", "replacement-late-success"} {
 		for _, retain := range []bool{true, false} {
 			name := mode + "/history-off"
 			if retain {
@@ -44,6 +44,15 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				cfg.PostProcessing.Enabled = mode != "raw"
 				cfg.PostProcessing.BaseURL = "https://cleanup.example/v1"
 				cfg.PostProcessing.Model = "cleanup"
+				if strings.HasPrefix(mode, "language-") || mode == "s1-assumed-english" {
+					cfg.PostProcessing.Preset = config.PostProcessingPresetS1Mini
+				}
+				if mode == "s1-assumed-english" {
+					cfg.Language = "auto"
+				}
+				if mode == "language-selected" {
+					cfg.Language = "es"
+				}
 				cfg.PostProcessing.CompatibilityProfile = compatibility.LlamaCPP
 				cfg.PostProcessing.GenerationOptions = compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 2048, DisableReasoning: true}
 				var recorder *testRecorder
@@ -51,6 +60,9 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				client := inference.New()
 				client.HTTP.Transport = processingTransport(func(r *http.Request) (*http.Response, error) {
 					body, status := `{"text":"raw transcript"}`, http.StatusOK
+					if mode == "language-detected" {
+						body = `{"text":"raw transcript","languages":["en","es"]}`
+					}
 					switch r.URL.Path {
 					case "/v1/audio/transcriptions":
 						if err := r.ParseMultipartForm(1 << 20); err != nil {
@@ -123,7 +135,7 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				cancelled := strings.Contains(mode, "late-success")
 				wantText, wantStatus := "raw transcript", history.HistoryProcessingFailed
 				switch mode {
-				case "success":
+				case "success", "s1-assumed-english":
 					wantText, wantStatus = "Cleaned 日本語", history.HistoryProcessingCompleted
 				case "raw":
 					wantStatus = history.HistoryProcessingNotRequested
@@ -139,6 +151,9 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				} else if platform.inserts != 1 || platform.lastInsert != wantText || platform.copies != 0 {
 					t.Fatalf("delivery = %+v", platform)
 				}
+				if strings.HasPrefix(mode, "language-") && !strings.Contains(recorder.Status().Message, "English only") {
+					t.Fatal("missing language fallback explanation")
+				}
 				if mode == "length" && recorder.Status().Message != "Post-processing reached the output limit; raw transcript used" {
 					t.Fatal("length-limit raw fallback notice lost")
 				}
@@ -146,7 +161,7 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 					t.Fatal("timeout fallback notice lost")
 				}
 				wantCalls := 1
-				if mode == "raw" || mode == "unavailable" {
+				if mode == "raw" || mode == "unavailable" || strings.HasPrefix(mode, "language-") {
 					wantCalls = 0
 				}
 				if calls != wantCalls {
@@ -172,13 +187,16 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				if !cancelled && entry.Outcome != history.HistoryInserted {
 					t.Fatal("delivery outcome lost")
 				}
+				if strings.HasPrefix(mode, "language-") && entry.Details.Processing.ErrorKind != "unsupported_language" {
+					t.Fatal("language fallback diagnostic lost")
+				}
 				if mode == "length" {
 					response := entry.Details.Processing.Response
 					if entry.Details.Processing.ErrorKind != "incomplete_response" || response == nil || response.FinishReason != "length" || response.ResponseID != "limited-response" {
 						t.Fatalf("length-limit diagnostic metadata lost: %+v", entry.Details.Processing)
 					}
 				}
-				if mode == "success" && (entry.ProcessedText != wantText || entry.Details.Processing.Response == nil || entry.Details.Processing.Response.ResponseID != "cleanup-response") {
+				if (mode == "success" || mode == "s1-assumed-english") && (entry.ProcessedText != wantText || entry.Details.Processing.Response == nil || entry.Details.Processing.Response.ResponseID != "cleanup-response") {
 					t.Fatal("successful cleanup text/metadata lost")
 				}
 				if wantStatus != history.HistoryProcessingCompleted && entry.ProcessedText != "" {

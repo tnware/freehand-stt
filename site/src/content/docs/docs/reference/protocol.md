@@ -292,3 +292,19 @@ text cleanup with optional output limits and reasoning-off requests. The
 S1-mini preset requires reasoning off through both qualified cleanup profiles.
 See the [whisper.cpp guide](../../backends/whisper-cpp/) and
 [vLLM guide](../../backends/vllm/) for setup, contract details, and limitations.
+
+## Language selection contract
+
+The existing saved `language` string remains the only transcription language
+setting. Empty omits the field for every profile. The reserved `auto` value
+omits the field for Generic, Speaches, and vLLM, and sends `language=auto` for
+whisper.cpp. Named choices send their code; other bounded custom values are
+preserved unchanged. No `detect_language` or translation request is added. Both
+microphone and file uploads share the mapping before multipart construction,
+including file content-length calculation.
+
+The existing S1-mini preset declares fixed `language: "en"` in its read-only
+profile descriptor. Selected or reported non-English input bypasses cleanup
+and preserves raw text with `unsupported_language`; unknown language assumes
+English as displayed in the controls. The fixed prompt and reasoning-off
+contract are unchanged. See [language selection](../../guides/languages/).

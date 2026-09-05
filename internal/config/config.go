@@ -18,6 +18,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/hotkey"
+	"github.com/tnware/freehand-stt/internal/speechlanguage"
 )
 
 const (
@@ -334,8 +335,8 @@ func Validate(s Settings) error {
 	if err := compatibility.ValidateTranscriptionOptions(s.CompatibilityProfile, s.TranscriptionOptions); err != nil {
 		return err
 	}
-	if len(s.Language) > 32 || strings.ContainsAny(s.Language, "\r\n") {
-		return errors.New("language must be at most 32 characters")
+	if err := speechlanguage.Validate(s.Language); err != nil {
+		return err
 	}
 	maximumDuration := 262
 	if s.SilenceSplitting {

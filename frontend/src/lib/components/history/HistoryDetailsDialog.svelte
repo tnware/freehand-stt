@@ -86,9 +86,7 @@
     return "Not requested";
   };
 
-  const badgeVariant = (
-    outcome: HistoryOutcome,
-  ): "default" | "secondary" | "destructive" => {
+  const badgeVariant = (outcome: HistoryOutcome): "default" | "secondary" | "destructive" => {
     if (outcome === HistoryOutcome.HistoryFailed) return "destructive";
     if (
       outcome === HistoryOutcome.HistoryCancelled ||
@@ -99,19 +97,13 @@
   };
 
   const outcomeBadgeClass = (outcome: HistoryOutcome): string => {
-    if (
-      outcome === HistoryOutcome.HistoryInserted ||
-      outcome === HistoryOutcome.HistoryTranscribed
-    )
+    if (outcome === HistoryOutcome.HistoryInserted || outcome === HistoryOutcome.HistoryTranscribed)
       return "bg-success/10 text-success";
-    if (outcome === HistoryOutcome.HistoryCopyRequired)
-      return "bg-primary/10 text-primary";
+    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-primary/10 text-primary";
     return "";
   };
 
-  const processingVariant = (
-    status: HistoryProcessingStatus,
-  ): "default" | "secondary" => {
+  const processingVariant = (status: HistoryProcessingStatus): "default" | "secondary" => {
     if (status === HistoryProcessingStatus.HistoryProcessingFailed) return "secondary";
     if (
       status === HistoryProcessingStatus.HistoryProcessingCancelled ||
@@ -216,16 +208,15 @@
               {sourceLabel(details.source)} · run #{entry.id.toLocaleString()}
             </Dialog.Description>
           </div>
-          <Badge
-            variant={badgeVariant(entry.outcome)}
-            class={outcomeBadgeClass(entry.outcome)}
-          >
+          <Badge variant={badgeVariant(entry.outcome)} class={outcomeBadgeClass(entry.outcome)}>
             {outcomeLabel(entry.outcome)}
           </Badge>
         </div>
       </Dialog.Header>
 
-      <div class="flex min-h-0 flex-col gap-4 overflow-y-auto p-5 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground/90 [&_dt]:my-0.5 [&_dt]:text-[12px]">
+      <div
+        class="flex min-h-0 flex-col gap-4 overflow-y-auto p-5 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground/90 [&_dt]:my-0.5 [&_dt]:text-[12px]"
+      >
         <section class="flex flex-col gap-3" aria-labelledby="run-details-heading">
           <div class="flex items-center gap-2">
             <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
@@ -258,7 +249,9 @@
         <section class="flex flex-col gap-3" aria-labelledby="request-details-heading">
           <div class="flex items-center gap-2">
             <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-            <h3 id="request-details-heading" class="text-[13px] font-semibold">Speech recognition</h3>
+            <h3 id="request-details-heading" class="text-[13px] font-semibold">
+              Speech recognition
+            </h3>
           </div>
           <dl class="grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]">
             <dt class="text-muted-foreground">Server</dt>
@@ -270,7 +263,11 @@
             <dt class="text-muted-foreground">Model</dt>
             <dd class="text-right">{@render modelValue(details.model)}</dd>
             <dt class="text-muted-foreground">Language</dt>
-            <dd class="text-right">{details.language || "Automatic"}</dd>
+            <dd class="text-right">
+              {details.language === "auto"
+                ? "Automatic detection"
+                : details.language || "Server default"}
+            </dd>
             <dt class="text-muted-foreground">Response</dt>
             <dd class="text-right">
               {#if details.responseMode === HistoryResponseMode.HistoryResponseStreamed}
@@ -290,7 +287,9 @@
             <dd class="text-right">{@render durationValue(details.transcriptionMilliseconds)}</dd>
             {#if details.requestTimeoutSeconds}
               <dt class="text-muted-foreground">Request timeout</dt>
-              <dd class="text-right">{@render durationValue(details.requestTimeoutSeconds * 1000)}</dd>
+              <dd class="text-right">
+                {@render durationValue(details.requestTimeoutSeconds * 1000)}
+              </dd>
             {/if}
             {#if details.errorKind}
               <dt class="text-muted-foreground">Terminal error</dt>
@@ -333,7 +332,9 @@
                 {details.recordingMode === RecordingMode.RecordingHold ? "Hold to talk" : "Toggle"}
               </dd>
               <dt class="text-muted-foreground">Recording length</dt>
-              <dd class="text-right">{@render durationValue(details.captureDurationMilliseconds)}</dd>
+              <dd class="text-right">
+                {@render durationValue(details.captureDurationMilliseconds)}
+              </dd>
               <dt class="text-muted-foreground">VAD</dt>
               <dd class="text-right">
                 {@render statusValue(
@@ -343,7 +344,9 @@
               </dd>
               {#if details.vadEnabled}
                 <dt class="text-muted-foreground">Indicator delay</dt>
-                <dd class="text-right">{@render durationValue(details.vadActivitySilenceMilliseconds)}</dd>
+                <dd class="text-right">
+                  {@render durationValue(details.vadActivitySilenceMilliseconds)}
+                </dd>
                 <dt class="text-muted-foreground">Silence trimming</dt>
                 {#if details.silenceTrimming}
                   <dd class="flex flex-wrap items-center justify-end gap-1.5 text-right">
@@ -355,7 +358,9 @@
                 {/if}
                 <dt class="text-muted-foreground">Automatic stop</dt>
                 {#if details.autoStopEnabled && !details.autoStopActive}
-                  <dd class="text-right">{@render statusValue("Inactive in hold mode", "informational")}</dd>
+                  <dd class="text-right">
+                    {@render statusValue("Inactive in hold mode", "informational")}
+                  </dd>
                 {:else if details.autoStopEnabled}
                   <dd class="flex flex-wrap items-center justify-end gap-1.5 text-right">
                     {@render statusValue("On", "positive")}
@@ -395,18 +400,24 @@
 
             {#if details.segments && details.segments.length > 0}
               <div class="overflow-hidden rounded-lg border border-hairline">
-                <div class="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 bg-layer-fill px-3 py-2 font-mono text-[10px] text-muted-foreground">
+                <div
+                  class="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 bg-layer-fill px-3 py-2 font-mono text-[10px] text-muted-foreground"
+                >
                   <span>#</span>
                   <span>Audio</span>
                   <span>Boundary</span>
                   <span class="text-right">Request</span>
                 </div>
                 {#each details.segments as segment (segment.number)}
-                  <div class="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 border-t border-hairline px-3 py-2 text-[11px]">
+                  <div
+                    class="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 border-t border-hairline px-3 py-2 text-[11px]"
+                  >
                     <span>{segment.number}</span>
                     <span>{@render durationValue(segment.audioMilliseconds)}</span>
                     <span>{segment.boundary.replaceAll("_", " ")}</span>
-                    <span class="text-right">{@render durationValue(segment.requestMilliseconds)}</span>
+                    <span class="text-right"
+                      >{@render durationValue(segment.requestMilliseconds)}</span
+                    >
                   </div>
                 {/each}
               </div>
@@ -426,7 +437,9 @@
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-2">
                 <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-                <h3 id="processing-details-heading" class="text-[13px] font-semibold">Post-processing</h3>
+                <h3 id="processing-details-heading" class="text-[13px] font-semibold">
+                  Post-processing
+                </h3>
               </div>
               <Badge
                 variant={processingVariant(processing.status)}
@@ -446,7 +459,9 @@
               <dd class="text-right">{@render durationValue(processing.elapsedMilliseconds)}</dd>
               {#if processing.timeoutSeconds}
                 <dt class="text-muted-foreground">Timeout</dt>
-                <dd class="text-right">{@render durationValue(processing.timeoutSeconds * 1000)}</dd>
+                <dd class="text-right">
+                  {@render durationValue(processing.timeoutSeconds * 1000)}
+                </dd>
               {/if}
               <dt class="text-muted-foreground">Characters</dt>
               <dd class="flex flex-wrap items-center justify-end gap-1.5 text-right">

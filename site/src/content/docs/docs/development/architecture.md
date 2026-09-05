@@ -490,3 +490,21 @@ requires `[DONE]` after a successful final chunk and fails closed on provider
 errors or incomplete streams. Accepted deltas retain manual recovery semantics.
 Postprocess derives mandatory S1-mini reasoning-off for either qualified
 cleanup adapter without changing the optional custom preference.
+
+## Language selection ownership
+
+`internal/speechlanguage` supplies a fresh language-name/code catalog to the
+renderer-safe settings snapshot and validates bounded custom values. The catalog
+is compiled reference data, not a list of verified model capabilities or a
+persisted settings collection. `compatibility.Contract.TranscriptionLanguage`
+owns provider mapping, consumed before both microphone and file multipart bodies
+are built. The existing `config.Settings.Language` string preserves selections;
+no new database or reusable model/connection records are introduced.
+
+The existing S1-mini profile descriptor declares English. Each workflow owner
+uses `postprocess.ValidateLanguage` after transcription and before cleanup, with
+the captured language choice and sanitized detected-language metadata (aggregated
+for dictation segments). Rejection makes no cleanup request and uses existing
+raw fallback, cancellation precedence, history projection, and focus-safe
+delivery. Unknown language assumes English by explicit product policy. Provider
+capability, model language support, and a selected input language remain distinct.
