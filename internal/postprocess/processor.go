@@ -10,15 +10,13 @@ import (
 	"unicode/utf8"
 
 	"github.com/tnware/freehand-stt/internal/config"
-	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/inference"
 )
 
 type Processor struct {
-	client      *inference.Client
-	credentials credential.Store
-	logger      *slog.Logger
+	client *inference.Client
+	logger *slog.Logger
 }
 
 type Result struct {
@@ -26,27 +24,13 @@ type Result struct {
 	Metadata inference.ResponseMetadata
 }
 
-func New(client *inference.Client, credentials credential.Store, logger *slog.Logger) *Processor {
-	return &Processor{client: client, credentials: credentials, logger: logger}
-}
-
-func (p *Processor) Process(ctx context.Context, cfg config.PostProcessingSettings, raw string) (Result, error) {
-	key := ""
-	if p != nil && p.credentials != nil {
-		stored, err := p.credentials.Get()
-		if err == nil {
-			key = stored
-		} else if !errors.Is(err, credential.ErrNotFound) {
-			return Result{}, errors.New("post-processing credential could not be read")
-		}
-	}
-	defer func() { key = "" }()
-	return p.ProcessWithCredential(ctx, cfg, raw, key)
+func New(client *inference.Client, logger *slog.Logger) *Processor {
+	return &Processor{client: client, logger: logger}
 }
 
 // ProcessWithCredential uses the operation-scoped credential captured with
-// cfg. Callers that manage a coherent settings transaction should prefer this
-// method so a later credential replacement cannot alter an active request.
+// cfg. Callers supply both from one coherent settings snapshot so a later
+// credential replacement cannot alter an active request.
 func (p *Processor) ProcessWithCredential(ctx context.Context, cfg config.PostProcessingSettings, raw, key string) (Result, error) {
 	if err := config.ValidatePostProcessing(cfg); err != nil {
 		return Result{}, err
