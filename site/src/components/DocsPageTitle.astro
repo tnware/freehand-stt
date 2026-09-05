@@ -1,0 +1,10 @@
+---
+import DefaultPageTitle from "@astrojs/starlight/components/PageTitle.astro";
+import ProviderIcon from "./ProviderIcon.astro";
+const provider = Astro.locals.starlightRoute.entry.data.provider;
+---
+{provider ? <div class="provider-page-title"><ProviderIcon profile={provider} size={44} /><DefaultPageTitle /></div> : <DefaultPageTitle />}
+<style>
+  .provider-page-title { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
+  .provider-page-title :global(h1) { margin-top: 0; min-width: 0; }
+</style>

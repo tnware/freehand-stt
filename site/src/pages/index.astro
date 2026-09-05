@@ -1,4 +1,6 @@
 ---
+import ProviderIcon from "../components/ProviderIcon.astro";
+import { availableBackends } from "../data/backends";
 import mark from "../assets/freehand-mark.svg";
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
@@ -37,6 +39,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
           <p class="kicker"><span></span> Your voice. Your models. Your Windows apps.</p>
           <h1 id="hero-title">Think it.<br />Say it.<br /><em>It’s there.</em></h1>
           <p class="hero-lede">Dictate into the Windows apps you already use, with a speech model and service you choose. Leave the transcript unchanged or add cleanup with a separately chosen model.</p>
+          <p class="freehand-promise"><strong>Free forever.</strong> Open source. No Freehand subscription.</p>
           <div class="hero-actions">
             <a class="button button-dark" href={href("/download/")}>Download for Windows <span aria-hidden="true">→</span></a>
             <a class="text-action" href="#workflow">See how it works <span aria-hidden="true">↓</span></a>
@@ -72,8 +75,8 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
       <section class="statement" aria-labelledby="statement-title">
         <p class="section-index">01 / Purpose</p>
         <div>
-          <h2 id="statement-title">Your speech model.<br /><em>Your cleanup choice.</em></h2>
-          <p>Choose compatible speech and cleanup services independently. Run them on your PC, across your LAN, or through a hosted provider. Freehand keeps capture, shortcuts, and text delivery on your desktop, without bundling speech models or an inference runtime.</p>
+          <h2 id="statement-title">Keep your computer<br /><em>free for your work.</em></h2>
+          <div class="statement-copy"><p>No room for a speech model? Or a powerful GPU you’d rather use for something else? Connect Freehand to another computer on your network or a compatible hosted service. Model memory and inference stay on that server.</p><p>Prefer to run everything on your own PC? That works too. Choose speech and optional cleanup services independently.</p><p class="service-cost-note">Freehand is free forever. Your chosen provider or hosting may have its own costs.</p></div>
         </div>
       </section>
 
@@ -191,21 +194,19 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
           <p class="section-index">05 / Compatibility</p>
           <h2 id="compatibility-title">Your endpoint.<br />Your choice.</h2>
           <p>Freehand does not bundle a model or manage an inference runtime. Speech, cleanup, and playback can each use infrastructure you operate or deliberately select.</p>
-          <a class="button button-light" href={href("/docs/reference/protocol/")}>View protocol profile <span aria-hidden="true">→</span></a>
+          <a class="button button-light" href={href("/backends/")}>Compare backends <span aria-hidden="true">→</span></a>
         </div>
-        <div class="endpoint-list" aria-label="Supported OpenAI-compatible API routes">
-          <div><span class="method post">POST</span><code>/v1/audio/transcriptions</code><small>required</small></div>
-          <div><span class="method get">GET</span><code>/v1/models</code><small>discovery</small></div>
-          <div><span class="method post">POST</span><code>/v1/chat/completions</code><small>optional</small></div>
-          <div><span class="method post">POST</span><code>/v1/audio/speech</code><small>optional</small></div>
-        </div>
+        <nav class="provider-list" aria-label="Available backend guides">
+          {availableBackends.map((backend) => <a href={href(backend.guide)}><ProviderIcon profile={backend.id} size={34} /><span>{backend.name}</span><span aria-hidden="true">↗</span></a>)}
+          <p>Capabilities vary by profile, server, and model.</p>
+        </nav>
       </section>
 
       <section class="closing" aria-labelledby="closing-title">
         <img src={mark.src} alt="" />
         <p class="kicker"><span></span> Freehand for Windows</p>
         <h2 id="closing-title">Give your hands<br />a little less to do.</h2>
-        <p>Speech to text, anywhere you type.</p>
+        <p>Free forever. Open source. Your speech services, wherever they run.</p>
         <div class="closing-actions">
           <a class="button button-dark" href={href("/download/")}>Download Freehand <span aria-hidden="true">→</span></a>
           <a class="text-action" href={href("/docs/getting-started/")}>Browse documentation <span aria-hidden="true">↗</span></a>

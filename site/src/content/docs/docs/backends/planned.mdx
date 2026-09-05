@@ -3,6 +3,7 @@ title: Planned backend profiles
 description: Dedicated provider contracts still awaiting implementation and qualification.
 ---
 
+import ProviderIcon from "../../../../components/ProviderIcon.astro";
 import { plannedBackends } from '../../../../data/backends';
 
 These profiles appear disabled in Freehand. A compatible endpoint may already
@@ -16,7 +17,7 @@ inspection and client-only tests.
 
 {plannedBackends.map((backend) => (
   <section aria-labelledby={backend.guide.split('#')[1]}>
-    <h2 id={backend.guide.split('#')[1]}>{backend.name}</h2>
+    <h2 id={backend.guide.split('#')[1]}><ProviderIcon profile={backend.id} size={28} /> {backend.name}</h2>
     <p>{backend.summary}</p>
     <ul>{backend.entries.map((entry) => <li><strong>{entry.role}:</strong> {entry.description}</li>)}</ul>
   </section>

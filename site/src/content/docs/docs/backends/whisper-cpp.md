@@ -1,4 +1,5 @@
 ---
+provider: whisper-cpp
 title: whisper.cpp
 description: Connect the native whisper.cpp HTTP server for microphone and file transcription.
 ---

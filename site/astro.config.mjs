@@ -36,6 +36,7 @@ export default defineConfig({
 				baseUrl: 'https://github.com/tnware/freehand-stt/edit/main/site/',
 			},
 			customCss: ['./src/styles/docs.css'],
+            components: { PageTitle: './src/components/DocsPageTitle.astro' },
 			lastUpdated: true,
 			sidebar: [
 				{ label: 'Freehand home', link: '/' },
@@ -72,6 +73,7 @@ export default defineConfig({
 					items: [
 						{ slug: 'docs/reference/protocol' },
 						{ slug: 'docs/reference/shortcuts' },
+                        { slug: 'docs/reference/provider-icons' },
 					],
 				},
 				{

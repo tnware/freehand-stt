@@ -29,7 +29,6 @@
 .backend-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .backend-card { display: flex; flex-direction: column; padding: 27px; border: 1px solid var(--line-strong); border-radius: 18px; background: linear-gradient(155deg, #111a2b, #0c1320); }
 .backend-card-top { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
-.backend-monogram { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; background: #193253; color: var(--blue-soft); font-family: var(--mono); font-size: 13px; }
 .backend-status { color: var(--green); font-size: 11px; }
 .backend-card h3 { margin: 22px 0 0; font-family: var(--display); font-size: 24px; font-weight: 500; letter-spacing: -.035em; line-height: 1.25; }
 .backend-summary { margin: 15px 0 20px; color: var(--muted-strong); font-size: 14px; line-height: 1.65; }
@@ -94,3 +93,5 @@
  .backend-next { flex-direction: column; align-items: start; padding: 28px; margin-top: 50px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+.backend-identity { display: inline-flex; align-items: center; gap: 10px; }

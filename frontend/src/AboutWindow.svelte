@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { providerNotices } from "../../branding/providers/notices";
   import { onMount } from "svelte";
   import { Events } from "@wailsio/runtime";
   import { RefreshCw } from "@lucide/svelte";
@@ -42,9 +43,7 @@
       case UpdateState.StateError:
         return "The last update check could not reach GitHub Releases.";
       default:
-        return status.enabled
-          ? "Automatic checks are on."
-          : "Automatic checks are off.";
+        return status.enabled ? "Automatic checks are on." : "Automatic checks are off.";
     }
   }
 
@@ -108,7 +107,10 @@
   <main class="min-h-0 flex-1 overflow-y-auto p-5" aria-label="About Freehand">
     <div class="mx-auto flex max-w-[560px] flex-col gap-4">
       {#if error}
-        <p class="rounded-lg border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p
+          class="rounded-lg border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
           {error}
         </p>
       {/if}
@@ -130,8 +132,17 @@
             {build?.version || "Loading…"}
           </span>
         </div>
+        <div class="border-t border-hairline px-5 py-3">
+          <p class="text-sm font-medium">Free forever. Open source.</p>
+          <p class="mt-1 text-xs leading-relaxed text-muted-foreground">
+            No Freehand subscription or account. Your chosen provider or hosting may have its own
+            costs.
+          </p>
+        </div>
         {#if build}
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 font-mono text-[10.5px] text-muted-foreground">
+          <div
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 font-mono text-[10.5px] text-muted-foreground"
+          >
             <span>Windows {build.windowsVersion}</span>
             <span aria-hidden="true">·</span>
             <span>Wails {build.wailsVersion}</span>
@@ -165,11 +176,24 @@
           nothing is typed and the text waits for an explicit copy.
         </p>
         <p>
-          Your API key is stored in Windows Credential Manager and is never returned to this
-          screen. Recorded audio is deleted after every request, including failures and
-          cancellation.
+          Your API key is stored in Windows Credential Manager and is never returned to this screen.
+          Recorded audio is deleted after every request, including failures and cancellation.
         </p>
       </div>
+      <details class="rounded-lg border border-hairline px-4 py-3 text-xs text-muted-foreground">
+        <summary class="cursor-pointer">Provider icon credits</summary>
+        <p class="my-3">
+          Brand marks identify providers; they do not imply endorsement. Some providers use neutral
+          symbols.
+        </p>
+        {#each providerNotices as notice (notice.name)}
+          <details class="my-2">
+            <summary class="cursor-pointer">{notice.name}</summary>
+            <pre
+              class="mt-2 whitespace-pre-wrap break-words text-[10px] leading-relaxed">{notice.text}</pre>
+          </details>
+        {/each}
+      </details>
     </div>
   </main>
 
