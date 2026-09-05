@@ -9,6 +9,80 @@ Whisper-family STT and Kokoro TTS setup. The runtime version for that reported
 setup was not recorded; it does not establish compatibility for every model
 in the server inventory.
 
+## Run Speaches with Docker
+
+Use PowerShell and Docker Desktop with Linux containers. This NVIDIA example
+follows [upstream installation](https://speaches.ai/installation/); its moving
+`latest-cuda` tag is not the same as a pinned compatibility test. Record the
+image digest when reporting results. For CPU-only setup, use the alternative
+below instead of starting a second server.
+
+```powershell
+docker run --detach --name freehand-speaches `
+  --gpus device=0 `
+  --publish 127.0.0.1:8000:8000 `
+  --volume freehand-speech-models:/home/ubuntu/.cache/huggingface/hub `
+  ghcr.io/speaches-ai/speaches:latest-cuda
+```
+
+Wait for startup, then explicitly download one model suitable for the GPU's
+available memory. This example selects full Whisper large-v3:
+
+```powershell
+docker logs --tail 30 freehand-speaches
+Invoke-RestMethod -Method Post `
+  -Uri 'http://127.0.0.1:8000/v1/models/Systran/faster-whisper-large-v3'
+Invoke-RestMethod http://127.0.0.1:8000/v1/models
+```
+
+Model installation is an administrator action in this recipe. Freehand's
+connection test never calls that POST or loads the model inventory. See the
+[upstream model download instructions](https://speaches.ai/usage/model-discovery/)
+for the models supported by your running release.
+
+Set Freehand's transcription profile to **Speaches**, base URL to
+**`http://127.0.0.1:8000/v1`**, model to **`Systran/faster-whisper-large-v3`**,
+authentication to **None**, and allow local HTTP. Save, then try a short recording.
+
+### CPU alternative
+
+Without an NVIDIA GPU, use this launch command instead:
+
+```powershell
+docker run --detach --name freehand-speaches `
+  --publish 127.0.0.1:8000:8000 `
+  --volume freehand-speech-models:/home/ubuntu/.cache/huggingface/hub `
+  ghcr.io/speaches-ai/speaches:latest-cpu
+```
+
+Wait for startup in `docker logs --tail 30 freehand-speaches`, then download
+the selected model:
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri 'http://127.0.0.1:8000/v1/models/Systran/faster-distil-whisper-small.en'
+```
+
+Set the Freehand model to
+`Systran/faster-distil-whisper-small.en` and Language to English; the remaining
+connection values stay the same. This smaller model is a CPU example, not a
+quality recommendation for a GPU workstation. These launch recipes follow
+upstream contracts; they have not each received independent Windows acceptance.
+
+### Stop, restart, and optional playback
+
+```powershell
+docker stop freehand-speaches
+docker start freehand-speaches
+```
+
+The named volume retains downloaded models. Stop and remove this named
+container before recreating it to change between CPU and CUDA images.
+For speech playback, complete the separate
+[upstream TTS installation](https://speaches.ai/usage/text-to-speech/), install a
+selected TTS model, then configure Freehand's speech playback connection below.
+Installing an STT model alone does not provision voices or a TTS model.
+
 ## Configure Freehand
 
 For transcription, choose **Speaches** in the speech-to-text connection,
@@ -20,8 +94,8 @@ and provide the speech base URL, installed TTS model, and an appropriate voice
 ID. Save settings before explicitly previewing a voice. The two operations may
 share a server but retain separate credentials and settings.
 
-The [Speaches setup example](../../guides/connect-a-server/#example-speaches-on-your-pc)
-explains one deployment path. Freehand neither installs models nor loads all
+The [connection guide](../../guides/connect-a-server/) explains deployment
+topologies and shared settings. Freehand neither installs models nor loads all
 models during a connection test.
 
 ## Implemented capabilities
@@ -36,7 +110,7 @@ models during a connection test.
 | Hotwords | Optional `hotwords`, at most 2,048 UTF-8 bytes; Speaches-specific field. |
 | Decoding temperature | Optional `temperature` from 0 to 1; explicit zero is supported. |
 | Speech playback | Voice ID, speed request, and buffered PCM16 WAV. |
-| Transcript cleanup | Configure a separate Generic or llama.cpp chat connection. |
+| Transcript cleanup | Configure a separate Generic, llama.cpp, or vLLM chat connection. |
 
 Generic retains these compatible response shapes for older Freehand settings.
 Selecting Speaches identifies the dedicated contract without changing the model,

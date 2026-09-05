@@ -3,8 +3,6 @@ title: Connect a speech server
 description: Configure local, LAN, private remote, or hosted OpenAI-compatible speech services.
 ---
 
-import { Steps } from '@astrojs/starlight/components';
-
 Freehand connects to speech services you provide. It does not install or run a
 model itself.
 
@@ -48,13 +46,14 @@ Each connection has its own **Compatibility profile** in Settings:
 
 | Connection | Available profiles |
 | --- | --- |
-| Speech to text (microphone and files) | Generic OpenAI-compatible, Speaches |
-| Post-processing | Generic OpenAI-compatible, llama.cpp |
+| Speech to text (microphone and files) | Generic OpenAI-compatible, Speaches, whisper.cpp, vLLM |
+| Post-processing | Generic OpenAI-compatible, llama.cpp, vLLM |
 | Speech playback | Generic OpenAI-compatible, Speaches |
 
 **Generic OpenAI-compatible** is the default and preserves existing behavior.
-Choose **Speaches** for your Speaches transcription or speech endpoint, or
-**llama.cpp** for its text post-processing endpoint. Selecting a profile does
+Choose the profile matching your server: **Speaches**, **whisper.cpp**, or
+**vLLM** for qualified transcription; **llama.cpp** or **vLLM** for qualified
+cleanup; **Speaches** for qualified speech playback. Selecting a profile does
 not change the URL, authentication, model, or prompt preset. S1-mini remains
 a separate post-processing prompt choice and also works with the Generic
 compatibility profile when the endpoint meets that contract.
@@ -81,7 +80,8 @@ saved connections are not available yet.
 For speech to text, collect:
 
 - the base URL including its API prefix, normally `/v1`;
-- the exact transcription model ID expected by the server;
+- the exact transcription model ID expected by the server, except whisper.cpp
+  which uses the server-loaded model;
 - the authentication mode and API key, if required;
 - any non-secret gateway headers;
 - whether the endpoint is intentionally using plaintext HTTP.
@@ -94,96 +94,20 @@ Model: speech/stt
 Authentication: API key (only if required)
 ```
 
-Freehand appends `/audio/transcriptions`. Do not enter the complete operation
-URL unless the server's base path is itself unusual.
+For Generic, Speaches, and vLLM, Freehand appends `/audio/transcriptions`.
+For whisper.cpp, enter the server root without `/v1`; Freehand appends
+`/inference`. Do not enter the complete operation URL.
 
 ## Example: Speaches on your PC
 
-This CPU example uses Docker Desktop with Linux containers on Windows 11. It
-needs disk space for the container and one English speech model, plus internet
-access for their initial downloads. Docker and model storage are separate
-from Freehand's installer.
+The [Speaches launch guide](../../backends/speaches/#run-speaches-with-docker)
+contains PowerShell commands for GPU and CPU Docker setups, installing one
+chosen model, configuring Freehand, and stopping or restarting the server.
 
-:::note[Recipe validation]
-Speaches is a validated Freehand backend. This specific CPU recipe follows
-upstream instructions and still needs end-to-end Windows validation with the alpha.
-:::
-
-<Steps>
-
-1. **Start the speech server.** In PowerShell, run:
-
-   ```powershell title="Start a CPU speech server"
-   docker run --detach --name freehand-speaches `
-     --publish 127.0.0.1:8000:8000 `
-     --volume freehand-speech-models:/home/ubuntu/.cache/huggingface/hub `
-     ghcr.io/speaches-ai/speaches:latest-cpu
-   ```
-
-   The server is reachable only from this PC. Wait for it to start.
-
-2. **Download one English speech model.**
-
-   ```powershell title="Download the selected speech model"
-   Invoke-WebRequest -Method Post `
-     -Uri "http://127.0.0.1:8000/v1/models/Systran/faster-distil-whisper-small.en"
-   ```
-
-   Wait for the download to finish. This is an explicit server-side download,
-   separate from Freehand's metadata-only connection check.
-
-3. **Connect Freehand.** Enter these values under **Settings → Transcription**:
-
-   ```text title="Settings → Transcription"
-   Base URL:            http://127.0.0.1:8000/v1
-   Model:               Systran/faster-distil-whisper-small.en
-   Authentication:      None
-   Allow insecure HTTP: On
-   ```
-
-   Choose **Save changes**, run **Test connection**, and finish the
-   [remaining setup steps](../../getting-started/#first-launch).
-
-4. **Try a short dictation.** Leave **Cleanup** off. Focus Notepad, press
-   <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd>, say “The release notes
-   are ready for review,” and press the shortcut again.
-
-   Expect the speech model's transcript in the same text field after
-   processing; punctuation can vary. The first request can take longer while
-   the server loads the model.
-
-</Steps>
-
-<details>
-<summary>Check, stop, or restart the example server</summary>
-
-If the model is missing from discovery, confirm that its download completed.
-If the endpoint is unreachable, inspect the server log:
-
-```powershell title="Inspect the server"
-docker logs freehand-speaches
-```
-
-Stop the server when you are finished. Restart the same container later to
-reuse its model cache:
-
-```powershell title="Stop the server"
-docker stop freehand-speaches
-```
-
-```powershell title="Restart it later"
-docker start freehand-speaches
-```
-
-</details>
-
-The `latest-cpu` image tag changes over time; record its digest when reporting
-compatibility. See upstream [installation](https://speaches.ai/installation/)
-and [model download API](https://github.com/speaches-ai/speaches/blob/v0.8.2/src/speaches/routers/models.py)
-for the source of this example.
-
-For a LAN or hosted deployment, obtain its URL, model ID, authentication, and
-transport settings from the operator instead of using the localhost values.
+For other runtimes, use the [whisper.cpp launch guide](../../backends/whisper-cpp/#run-natively-on-windows),
+[vLLM launch guide](../../backends/vllm/#run-vllm-with-docker), or
+[llama.cpp launch guide](../../backends/llama-cpp/#run-llamacpp-on-windows).
+The [backend guide index](../../backends/#run-a-backend) compares those recipes.
 
 ## Local and LAN servers
 

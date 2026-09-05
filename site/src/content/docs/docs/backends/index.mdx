@@ -25,6 +25,38 @@ support can still depend on the server version and selected model.
   <LinkCard title="Planned profiles" description="Dedicated contracts still being implemented and qualified." href={`${base}/docs/backends/planned/`} />
 </CardGrid>
 
+## Run a backend
+
+Each provider page below is also listed under **Backend guides** in the docs
+sidebar. The main site's **Backends** navigation opens the capability directory,
+whose cards link to these same guides.
+
+| Server | Launch instructions | Freehand operation |
+| --- | --- | --- |
+| whisper.cpp | [Native Windows](./whisper-cpp/#run-natively-on-windows) or [Docker](./whisper-cpp/#run-whispercpp-with-docker) | Transcription with a server-loaded model |
+| vLLM | [Windows + Docker, NVIDIA GPU](./vllm/#run-vllm-with-docker) | Qwen3-ASR transcription or S1-mini cleanup |
+| Speaches | [Docker GPU or CPU](./speaches/#run-speaches-with-docker) | Transcription; optional speech playback |
+| llama.cpp | [Native Windows server](./llama-cpp/#run-llamacpp-on-windows) | S1-mini or compatible custom cleanup |
+| Generic OpenAI-compatible | [Connect an existing endpoint](./generic/) | The operations implemented by your server |
+
+These local examples use PowerShell and loopback ports. Docker recipes require
+Docker Desktop with Linux containers; NVIDIA examples also require a working
+WSL2 GPU setup. Follow [Docker's GPU setup](https://docs.docker.com/desktop/features/gpu/)
+if `docker run --gpus ...` cannot access the card. First use downloads the image
+and the selected model. Model weights stay in the recipe's folder or named
+volume when a container stops.
+
+Choose a model that fits the GPU memory available after other applications.
+Smaller models can trade recognition quality for lower latency; being able to
+list a model does not establish its quality. Stop an unused inference server
+before starting another if both models do not fit. Each recipe includes its
+own stop/restart commands; Freehand does not manage these processes.
+
+For a remote or hosted server, use the same profile with the administrator's
+HTTPS base URL, model ID, and authentication instead. Loopback-bound examples
+are for a client on the same PC. See [connection topologies](../guides/connect-a-server/#choose-a-topology)
+for separate STT, cleanup, and speech endpoints.
+
 ## What the labels mean
 
 | Label | Evidence and limits |

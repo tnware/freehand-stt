@@ -8,6 +8,55 @@ description: Configure llama.cpp for text cleanup, including the separate S1-min
 S1-mini setup. The runtime version for that report was not recorded. Other
 models and server versions need their own qualification.
 
+## Run llama.cpp on Windows
+
+Install the Windows package, then open a new PowerShell window:
+
+```powershell
+winget install --exact --id ggml.llamacpp
+```
+
+Start the known S1-mini setup with explicit host and port, so a future change
+to the server's default port does not change the Freehand endpoint:
+
+```powershell
+llama-server.exe `
+  -hf superwhisper/s1-mini-GGUF:Q4_K_M `
+  --host 127.0.0.1 --port 8080 `
+  --jinja --reasoning off --temp 0 `
+  -ngl 99 --sleep-idle-seconds 60
+```
+
+`-hf` downloads the selected GGUF model on first use. The command requests GPU
+offload; check startup output for the backend and offloaded layers. For a
+CPU-only setup, replace `-ngl 99` with `-ngl 0 --device none`. Package builds and
+accelerators vary; use the [upstream server instructions](https://github.com/ggml-org/llama.cpp/tree/master/tools/server)
+for other hosts or backends. This command requires a build supporting
+`--reasoning off` and idle sleeping.
+
+Keep that terminal open. In a second PowerShell window, check metadata:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8080/health
+Invoke-RestMethod http://127.0.0.1:8080/v1/models
+```
+
+In Freehand's post-processing settings, choose compatibility profile
+**llama.cpp**, base URL **`http://127.0.0.1:8080/v1`**, authentication **None**,
+local HTTP allowed, and the model returned by **Test**. Choose **S1-mini** as the
+separate prompt preset. It requires reasoning off even though it is optional
+for other cleanup models. Save, then review cleanup of a short transcript.
+
+Press **Ctrl+C** in the server terminal to stop it. Rerun the launch command to
+restart; the downloaded model is cached. Idle sleeping releases model memory
+after 60 seconds and reloads on the next inference request, so waking can add
+latency. Omit that flag if you prefer to keep the model loaded.
+
+For a custom cleanup model, use its own GGUF and template requirements, then
+select **Custom instruction** in Freehand. S1-mini's fixed prompt is not a
+general chat prompt. The [post-processing guide](../../guides/post-processing/)
+explains raw fallback and the trained S1-mini controls.
+
 ## Configure Freehand
 
 1. Enable post-processing and choose **llama.cpp** as the compatibility profile.
