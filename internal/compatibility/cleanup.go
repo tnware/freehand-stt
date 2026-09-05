@@ -26,7 +26,7 @@ func ValidateCleanupOptions(id ID, options CleanupOptions) error {
 		return errors.New("cleanup output limits are unavailable for this profile")
 	}
 	if options.DisableReasoning && !contract.Capabilities.CleanupDisableReasoning {
-		return errors.New("disabling cleanup reasoning requires the llama.cpp profile; turn off the override before choosing another profile")
+		return errors.New("disabling cleanup reasoning requires a qualified llama.cpp or vLLM profile; turn off the override before choosing another profile")
 	}
 	return nil
 }

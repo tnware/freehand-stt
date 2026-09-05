@@ -37,7 +37,9 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 	if _, err = p.Write(wav); err != nil {
 		return TranscriptionResult{}, err
 	}
-	_ = mw.WriteField("model", model)
+	if !contract.Capabilities.ServerLoadedModel {
+		_ = mw.WriteField("model", model)
+	}
 	_ = mw.WriteField("response_format", "json")
 	if language != "" {
 		_ = mw.WriteField("language", language)

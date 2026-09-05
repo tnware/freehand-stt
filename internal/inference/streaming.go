@@ -17,6 +17,9 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 }
 
 func readTranscriptionSSEContract(reader io.Reader, key string, onDelta func(string), caps compatibility.Capabilities) (TranscriptionResult, error) {
+	if caps.VLLMTranscriptionEvents {
+		return readVLLMTranscriptionSSE(reader, key, onDelta)
+	}
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 64<<10), 1<<20)
 	var accumulated strings.Builder

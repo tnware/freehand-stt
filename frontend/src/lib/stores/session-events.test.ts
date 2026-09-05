@@ -48,6 +48,7 @@ const streaming: FileTranscriptionStatus = {
   phase: FileTranscriptionPhase.FileTranscriptionStreaming,
   streaming: true,
   buffered: false,
+  streamingProfileUnavailable: false,
   streamingUnavailable: false,
   transcriptRevision: 2,
   transcript: "first words",

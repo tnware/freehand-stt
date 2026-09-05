@@ -64,6 +64,7 @@ describe("Session transcript history", () => {
       transcript: historyEntry.text,
       streaming: true,
       buffered: false,
+      streamingProfileUnavailable: false,
       streamingUnavailable: false,
       transcriptRevision: 1,
       canStart: true,

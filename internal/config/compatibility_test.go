@@ -46,7 +46,7 @@ func TestCompatibilityProfilesMigrateAndRoundTrip(t *testing.T) {
 }
 
 func TestUnavailableCompatibilityProfilesFailEvenWhenFeatureDisabled(t *testing.T) {
-	for _, id := range []compatibility.ID{compatibility.VLLM, compatibility.ID("future-profile")} {
+	for _, id := range []compatibility.ID{compatibility.LocalAI, compatibility.ID("future-profile")} {
 		for _, role := range []string{"stt", "processing", "speech"} {
 			settings := Default()
 			switch role {
@@ -79,5 +79,22 @@ func TestUnavailableCompatibilityProfilesFailEvenWhenFeatureDisabled(t *testing.
 	after, err := os.ReadFile(store.Path)
 	if err != nil || string(after) != string(raw) {
 		t.Fatal("invalid document was overwritten")
+	}
+}
+
+func TestWhisperCPPDoesNotRequireAClientModel(t *testing.T) {
+	s := Default()
+	s.BaseURL = "http://127.0.0.1:8081"
+	s.AllowInsecureHTTP = true
+	s.AuthenticationMode = AuthenticationModeNone
+	s.SetupCompleted = true
+	s.CompatibilityProfile = compatibility.WhisperCPP
+	s.Model = ""
+	if err := Validate(s); err != nil {
+		t.Fatal(err)
+	}
+	s.CompatibilityProfile = compatibility.VLLM
+	if err := Validate(s); err == nil {
+		t.Fatal("vLLM accepted missing model")
 	}
 }

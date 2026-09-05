@@ -51,6 +51,7 @@
       (profile) => profile.id === (settings.compatibilityProfile || ID.Generic),
     ),
   );
+  const serverLoadedModel = $derived(Boolean(compatibility?.capabilities.serverLoadedModel));
   const discoveredModels = $derived(connection?.modelIDs ?? []);
   const canSelectModel = $derived(discoveredModels.length > 0);
   const modelPresence = $derived.by(() => {
@@ -115,7 +116,13 @@
       bind:value={settings.compatibilityProfile}
       profiles={settings.compatibilityProfiles.transcription ?? []}
     />
-    <ValueRow id="base-url" label="Base URL" hint="OpenAI-compatible /v1 audio endpoint.">
+    <ValueRow
+      id="base-url"
+      label="Base URL"
+      hint={serverLoadedModel
+        ? "Native server root, without /v1 or /inference. A reverse-proxy prefix is supported; Freehand appends /inference."
+        : "OpenAI-compatible /v1 audio endpoint."}
+    >
       {#snippet control()}
         <ValueInput id="base-url" type="url" bind:value={settings.baseURL} spellcheck={false} />
       {/snippet}
@@ -198,29 +205,40 @@
       </Alert.Root>
     {/if}
 
-    <ValueRow id="model" label="Model" hint="Discovered through /v1/models metadata only.">
-      {#snippet control()}
-        {#if canSelectModel}
-          <Select.Root type="single" bind:value={settings.model}>
-            <Select.Trigger id="model" class="w-full">{settings.model}</Select.Trigger>
-            <Select.Content class="max-h-72">
-              <Select.Group>
-                <Select.Label>Discovered models</Select.Label>
-                {#each discoveredModels as model (model)}
-                  <Select.Item value={model} label={model}>{model}</Select.Item>
-                {/each}
-              </Select.Group>
-            </Select.Content>
-          </Select.Root>
-        {:else}
-          <ValueInput id="model" bind:value={settings.model} spellcheck={false} />
-        {/if}
-      {/snippet}
-      {#snippet action()}
-        <Badge variant="outline">{modelPresence}</Badge>
-      {/snippet}
-    </ValueRow>
-
+    {#if serverLoadedModel}
+      <ValueRow
+        id="server-loaded-model"
+        label="Model"
+        hint="Chosen when whisper.cpp starts. Freehand does not load or switch models; any previous model ID is retained for other profiles."
+      >
+        {#snippet control()}<span id="server-loaded-model" class="text-sm text-muted-foreground"
+            >Server-loaded model</span
+          >{/snippet}
+      </ValueRow>
+    {:else}
+      <ValueRow id="model" label="Model" hint="Discovered through /v1/models metadata only.">
+        {#snippet control()}
+          {#if canSelectModel}
+            <Select.Root type="single" bind:value={settings.model}>
+              <Select.Trigger id="model" class="w-full">{settings.model}</Select.Trigger>
+              <Select.Content class="max-h-72">
+                <Select.Group>
+                  <Select.Label>Discovered models</Select.Label>
+                  {#each discoveredModels as model (model)}
+                    <Select.Item value={model} label={model}>{model}</Select.Item>
+                  {/each}
+                </Select.Group>
+              </Select.Content>
+            </Select.Root>
+          {:else}
+            <ValueInput id="model" bind:value={settings.model} spellcheck={false} />
+          {/if}
+        {/snippet}
+        {#snippet action()}
+          <Badge variant="outline">{modelPresence}</Badge>
+        {/snippet}
+      </ValueRow>
+    {/if}
     <ValueRow
       id="language"
       label="Language"
@@ -326,7 +344,9 @@
 
     <SettingRow
       title="Custom health path"
-      description="Append a health path to the base URL instead of requesting the model list."
+      description={serverLoadedModel
+        ? "Optional override for the default /health path, appended to the server root or proxy prefix."
+        : "Append a health path to the base URL instead of requesting the model list."}
     >
       {#snippet control()}
         <Switch

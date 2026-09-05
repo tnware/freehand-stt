@@ -33,6 +33,8 @@ const (
 // Capabilities are the implemented wire contract. Model-specific advanced
 // parameters must acquire their own qualified rules before being exposed.
 type Capabilities struct {
+	ServerLoadedModel           bool `json:"serverLoadedModel"`
+	VLLMTranscriptionEvents     bool `json:"vllmTranscriptionEvents"`
 	CleanupOutputLimit          bool `json:"cleanupOutputLimit"`
 	CleanupDisableReasoning     bool `json:"cleanupDisableReasoning"`
 	FileStreaming               bool `json:"fileStreaming"`
@@ -110,10 +112,12 @@ func options(role Role) []Profile {
 	planned(LocalAI, "LocalAI", "Backend-specific capabilities need qualification.")
 	switch role {
 	case Transcription:
-		planned(WhisperCPP, "whisper.cpp", "Native routing and server-loaded model behavior need an adapter.")
-		planned(VLLM, "vLLM", "Transcription streaming needs its own response decoder.")
+		result = append(result,
+			Profile{ID: WhisperCPP, Label: "whisper.cpp", Available: true, Description: "Completed transcription through the native /inference route. Uses the model already loaded by the server; connection checks use /health. File streaming is unavailable.", Capabilities: Capabilities{ServerLoadedModel: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}},
+			Profile{ID: VLLM, Label: "vLLM", Available: true, Description: "Completed transcription and vLLM file streams. Context, language, and temperature depend on the selected speech model; qualified against v0.28.0.", Capabilities: Capabilities{FileStreaming: true, VLLMTranscriptionEvents: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}},
+		)
 	case PostProcessing:
-		planned(VLLM, "vLLM", "The dedicated text processing contract needs qualification.")
+		result = append(result, Profile{ID: VLLM, Label: "vLLM", Available: true, Description: "Text cleanup with output-token and reasoning-off controls, qualified against v0.28.0. Reasoning control requires a compatible model template.", Capabilities: Capabilities{CleanupOutputLimit: true, CleanupDisableReasoning: true}})
 	case Speech:
 		planned(VLLMOmni, "vLLM-Omni", "Model-specific voice inputs and audio output need qualification.")
 		planned(KokoroFastAPI, "Kokoro-FastAPI", "Voice, speed, and WAV output need qualification.")
@@ -134,6 +138,9 @@ func Resolve(id ID, role Role) (Contract, error) {
 		route := "chat/completions"
 		if role == Transcription {
 			route = "audio/transcriptions"
+			if profile.ID == WhisperCPP {
+				route = "inference"
+			}
 		}
 		if role == Speech {
 			route = "audio/speech"
@@ -141,4 +148,13 @@ func Resolve(id ID, role Role) (Contract, error) {
 		return Contract{Profile: profile, Path: route}, nil
 	}
 	return Contract{}, errors.New("compatibility profile is invalid for this operation")
+}
+
+// TranscriptionHealthPath preserves explicit custom paths and supplies only
+// the native whisper.cpp metadata default. It never loads or switches a model.
+func TranscriptionHealthPath(id ID, custom string) string {
+	if Effective(id) == WhisperCPP && custom == "" {
+		return "/health"
+	}
+	return custom
 }

@@ -27,3 +27,19 @@ func TestStreamingObservationIsScopedToCompatibilityProfile(t *testing.T) {
 		t.Fatal("legacy generic selection lost its observation")
 	}
 }
+
+func TestWhisperCPPStreamingCapabilityCannotBeRetried(t *testing.T) {
+	cfg := config.Default()
+	cfg.CompatibilityProfile = compatibility.WhisperCPP
+	service := &Service{}
+	var status FileTranscriptionStatus
+	service.applyFileStreamingCapabilityLocked(&status, cfg)
+	if !status.StreamingUnavailable || !status.StreamingProfileUnavailable {
+		t.Fatal("native completed-only capability lost")
+	}
+	cfg.CompatibilityProfile = compatibility.VLLM
+	service.applyFileStreamingCapabilityLocked(&status, cfg)
+	if status.StreamingUnavailable || status.StreamingProfileUnavailable {
+		t.Fatal("native restriction leaked to vLLM")
+	}
+}

@@ -38,18 +38,14 @@
   });
 
   const hasFile = $derived(status.phase !== FileTranscriptionPhase.FileTranscriptionEmpty);
-  const uploading = $derived(
-    status.phase === FileTranscriptionPhase.FileTranscriptionUploading,
-  );
+  const uploading = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionUploading);
   const working = $derived(
     uploading ||
       status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
       status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
       status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
   );
-  const completed = $derived(
-    status.phase === FileTranscriptionPhase.FileTranscriptionCompleted,
-  );
+  const completed = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionCompleted);
   const failed = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionFailed);
   const uploaded = $derived(status.bytesUploaded ?? 0);
   const fileSize = $derived(status.fileSize ?? 0);
@@ -114,7 +110,8 @@
   const fileDescription = $derived.by(() => {
     if (!hasFile) return "FLAC, MP3, MP4, M4A, OGG, WAV, or WebM";
     if (working) return "Follow the live result in History";
-    if (completed) return status.transcript ? "Transcript retained in History" : "No speech detected";
+    if (completed)
+      return status.transcript ? "Transcript retained in History" : "No speech detected";
     if (failed) return "Ready to retry or choose another file";
     return stream && !status.streamingUnavailable
       ? "Transcript will appear progressively"
@@ -142,9 +139,7 @@
     }
   });
 
-  const rail = $derived(
-    failed ? "error" : completed ? "done" : working ? "working" : "hidden",
-  );
+  const rail = $derived(failed ? "error" : completed ? "done" : working ? "working" : "hidden");
   // Only the upload leg has a known length. Everything after it waits on the
   // endpoint, which reports no progress, so the rail stops claiming a share.
   const railPercent = $derived(uploading ? uploadPercent : undefined);
@@ -214,7 +209,10 @@
 
   {#snippet stage()}
     <div class="flex min-w-0 items-center gap-2.5">
-      <span class="min-w-0 truncate text-[13.5px] font-semibold" title={status.fileName || undefined}>
+      <span
+        class="min-w-0 truncate text-[13.5px] font-semibold"
+        title={status.fileName || undefined}
+      >
         {status.fileName || "Choose an audio recording"}
       </span>
       {#if hasFile && fileSize}
@@ -231,7 +229,9 @@
       {phaseLabel}
     </p>
 
-    <div class="mt-2 flex min-h-5 items-center justify-between gap-3 border-t border-hairline pt-1.5">
+    <div
+      class="mt-2 flex min-h-5 items-center justify-between gap-3 border-t border-hairline pt-1.5"
+    >
       {#if !hasFile}
         <span class="figure min-w-0 truncate text-[10.5px] text-muted-foreground">
           FLAC, MP3, MP4, M4A, OGG, WAV, or WebM
@@ -340,7 +340,7 @@
           <RotateCcwIcon class="size-3" />
           Retry
         </Button>
-        {#if status.streamingUnavailable}
+        {#if status.streamingUnavailable && !status.streamingProfileUnavailable}
           <Button
             variant="outline"
             size="sm"

@@ -178,3 +178,27 @@ limit must retain raw text when the server reports truncation. Record runtime
 build and template/model details for reasoning behavior; neither a model list nor
 a successful client fixture proves a runtime honored the override. CI performs
 no provider inference.
+
+
+## whisper.cpp and vLLM acceptance
+
+Use one explicitly chosen server/model at a time. Record the server revision,
+model, Freehand revision, operation, and outcome; do not probe model inventories
+with inference or publish private inputs/configuration.
+
+- whisper.cpp: save and complete setup with no client model ID; verify a health
+  test makes only one GET to `/health` (or the configured prefixed override).
+  Dictate and transcribe a WAV file. Check optional context/language/temperature,
+  completed-only file controls, cancellation, and switching back to Generic.
+- vLLM transcription: test a specific speech model with completed microphone
+  and file requests, then streamed files. Exercise Unicode and a multi-chunk
+  file; a chunk stop must not cut off later text. Disconnect, malformed-event,
+  length, error, and credential-reflection cases use deterministic fixtures.
+- vLLM cleanup: test a specific compatible text model, an optional token limit,
+  and reasoning-off behavior. For S1-mini, reasoning must remain off even with
+  the optional custom switch disabled. Preserve trained prompts and raw fallback.
+- Verify Settings, first-run readiness, home quick settings, profile switching,
+  and the public backend matrix. vLLM-Omni remains disabled.
+
+A Windows compile and fixture tests are separate from interactive acceptance
+against a live deployment. Metadata success does not prove inference behavior.

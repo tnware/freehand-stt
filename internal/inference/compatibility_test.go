@@ -145,7 +145,7 @@ func (p *profileNoNetwork) RoundTrip(*http.Request) (*http.Response, error) {
 func TestUnavailableProfilesFailBeforeNetworkOrUpload(t *testing.T) {
 	transport := &profileNoNetwork{}
 	client := &Client{HTTP: &http.Client{Transport: transport}}
-	for _, id := range []compatibility.ID{compatibility.VLLM, compatibility.ID("unknown")} {
+	for _, id := range []compatibility.ID{compatibility.LocalAI, compatibility.ID("unknown")} {
 		selected := client.WithCompatibility(id)
 		_, micErr := selected.Transcribe(context.Background(), "https://example.invalid", "m", "", "", nil, nil)
 		_, fileErr := selected.TranscribeFile(context.Background(), "https://example.invalid", "m", "", "", nil, "a.wav", 1, strings.NewReader("a"), true, FileTranscriptionCallbacks{})

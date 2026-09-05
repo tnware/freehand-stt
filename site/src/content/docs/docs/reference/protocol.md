@@ -18,9 +18,11 @@ overwriting the document.
 | `generic` | STT, post-processing, TTS | Existing bounded multipart JSON, text chat, and buffered PCM16 WAV contracts |
 | `speaches` | STT, TTS | Shared request shapes; typed transcription events and legacy per-segment text SSE; buffered WAV speech |
 | `llama-cpp` | Post-processing | Shared non-streaming text chat adapter; prompt preset remains independent |
+| `whisper-cpp` | STT | Native `/inference`, server-loaded model, `/health`, completed JSON |
+| `vllm` | STT, post-processing | Completed JSON, dedicated transcription-chunk stream decoder, qualified text cleanup |
 
 Generic intentionally retains legacy Speaches SSE support for existing
-configurations. Both transcription profiles require final text for typed
+configurations. Generic and Speaches require final text for typed
 streams and retain legacy EOF completion only for untyped segment streams.
 Selecting Speaches does not weaken typed completion checks or enable automatic
 retries. A remembered streaming failure is scoped to normalized endpoint,
@@ -34,7 +36,7 @@ must be implemented and tested before their catalog entries become available.
 Metadata tests remain GET-only and never discover capabilities through inference.
 
 Disabled placeholders are operation-specific: `openai` and `localai` across
-all three roles; `whisper-cpp` for STT; `vllm` for STT and post-processing;
+all three roles;
 `vllm-omni`, `kokoro-fastapi`, and `openedai-speech` for TTS. A disabled dedicated
 profile does not prevent use of a server through the generic contract.
 
@@ -221,7 +223,7 @@ Context: general | email
 
 The alpha sends one cleanup request per input, with no sentence chunking or input-relative output limit. A completion explicitly reporting `finish_reason: "length"` fails with `incomplete_response`, even when its text is nonempty. The workflow uses the raw transcript, shows an output-limit notice, and retains safe response metadata when history is enabled. The partial cleaned text is discarded; no automatic cleanup retry occurs. Missing or other finish reasons retain the existing response rules, so unreported omissions cannot be detected. See the [input-length limits](../../guides/post-processing/#input-length-and-alpha-limits) before processing long text.
 
-The default is `semi-casual/prose/general`; `balanced` is not a trained S1-mini v1 value. Thinking must be disabled: the llama.cpp profile automatically requests this for S1-mini; Generic requires the backend route to enforce it. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) and the [post-processing setup guide](../../guides/post-processing/).
+The default is `semi-casual/prose/general`; `balanced` is not a trained S1-mini v1 value. Thinking must be disabled: the llama.cpp and vLLM profiles automatically request this for S1-mini; Generic requires the backend route to enforce it. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) and the [post-processing setup guide](../../guides/post-processing/).
 
 ## Shelved realtime microphone STT research
 
@@ -264,9 +266,9 @@ custom processing. A disabled numeric limit may retain 0–65,536; an enabled
 limit requires an integer from 1–65,536. Go validates these options even when
 post-processing is disabled and again before request I/O.
 
-Both Generic and llama.cpp send `max_tokens` only when the limit is enabled.
+Generic, llama.cpp, and vLLM send `max_tokens` only when the limit is enabled.
 They never send an explicit zero, a second token-limit alias, or a guessed
-model-specific field. An enabled reasoning override requires llama.cpp and maps
+model-specific field. An enabled reasoning override requires llama.cpp or vLLM and maps
 to `reasoning_effort: "none"`. S1-mini through a qualified reasoning-capable
 profile derives that override automatically from its model requirement, even
 when the saved custom override is false. Generic cannot enforce reasoning via
@@ -278,3 +280,15 @@ No `reasoning_format`, arbitrary template kwargs, or sampling overrides are
 added. Options are copied with the job's connection/credential profile. Both
 microphone and stored-file cleanup retain length-limit rejection, durable raw
 fallback, cancellation, and one request per cleanup attempt.
+
+
+## Additional qualified provider profiles
+
+whisper.cpp now supports completed transcription using its native `/inference`
+route and server-loaded model. Its default connection probe is `/health` beneath
+the configured server root; it has no client model selection or file streaming.
+vLLM v0.28.0 supports completed transcription, its own file-stream dialect, and
+text cleanup with optional output limits and reasoning-off requests. The
+S1-mini preset requires reasoning off through both qualified cleanup profiles.
+See the [whisper.cpp guide](../../backends/whisper-cpp/) and
+[vLLM guide](../../backends/vllm/) for setup, contract details, and limitations.
