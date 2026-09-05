@@ -51,21 +51,22 @@ const (
 // FileTranscriptionStatus is the bounded renderer snapshot for a Go-owned
 // native file selection. It never contains the full path or audio bytes.
 type FileTranscriptionStatus struct {
-	Generation           uint64                 `json:"generation"`
-	Phase                FileTranscriptionPhase `json:"phase"`
-	FileName             string                 `json:"fileName,omitempty"`
-	FileSize             int64                  `json:"fileSize,omitempty"`
-	BytesUploaded        int64                  `json:"bytesUploaded,omitempty"`
-	Streaming            bool                   `json:"streaming"`
-	Buffered             bool                   `json:"buffered"`
-	StreamingUnavailable bool                   `json:"streamingUnavailable"`
-	StreamingNotice      string                 `json:"streamingNotice,omitempty"`
-	Transcript           string                 `json:"transcript,omitempty"`
-	TranscriptRevision   uint64                 `json:"transcriptRevision"`
-	Message              string                 `json:"message,omitempty"`
-	CanStart             bool                   `json:"canStart"`
-	CanCancel            bool                   `json:"canCancel"`
-	CanCopy              bool                   `json:"canCopy"`
+	Generation                  uint64                 `json:"generation"`
+	Phase                       FileTranscriptionPhase `json:"phase"`
+	FileName                    string                 `json:"fileName,omitempty"`
+	FileSize                    int64                  `json:"fileSize,omitempty"`
+	BytesUploaded               int64                  `json:"bytesUploaded,omitempty"`
+	Streaming                   bool                   `json:"streaming"`
+	Buffered                    bool                   `json:"buffered"`
+	StreamingProfileUnavailable bool                   `json:"streamingProfileUnavailable"`
+	StreamingUnavailable        bool                   `json:"streamingUnavailable"`
+	StreamingNotice             string                 `json:"streamingNotice,omitempty"`
+	Transcript                  string                 `json:"transcript,omitempty"`
+	TranscriptRevision          uint64                 `json:"transcriptRevision"`
+	Message                     string                 `json:"message,omitempty"`
+	CanStart                    bool                   `json:"canStart"`
+	CanCancel                   bool                   `json:"canCancel"`
+	CanCopy                     bool                   `json:"canCopy"`
 }
 
 // FileTranscriptionDelta is the incremental renderer contract for streamed
@@ -289,6 +290,13 @@ func (s *Service) applyFileStreamingCapabilityLocked(status *FileTranscriptionSt
 	if s.fileStreamingUnsupported != nil {
 		reason = s.fileStreamingUnsupported[fileStreamingKey(cfg)]
 	}
+	contract, err := compatibility.Resolve(cfg.CompatibilityProfile, compatibility.Transcription)
+	status.StreamingProfileUnavailable = err != nil || !contract.Capabilities.FileStreaming
+	if status.StreamingProfileUnavailable {
+		status.StreamingUnavailable = true
+		status.StreamingNotice = "This compatibility profile uses completed file transcripts; streaming is unavailable."
+		return
+	}
 	status.StreamingUnavailable = reason != ""
 	if reason != "" {
 		status.StreamingNotice = fileStreamingUnavailableNotice
@@ -342,6 +350,10 @@ func (s *Service) TryFileStreamingAgain() error {
 		return errors.New("application is shutting down")
 	}
 	cfg := s.current()
+	contract, err := compatibility.Resolve(cfg.CompatibilityProfile, compatibility.Transcription)
+	if err != nil || !contract.Capabilities.FileStreaming {
+		return errors.New("file streaming is unavailable for this compatibility profile")
+	}
 	s.fileMu.Lock()
 	if filePhaseActive(s.fileStatus.Phase) {
 		s.fileMu.Unlock()
@@ -641,7 +653,8 @@ func (s *Service) StartFileTranscription(stream bool) error {
 	if s.fileStreamingUnsupported != nil {
 		_, streamingUnavailable = s.fileStreamingUnsupported[fileStreamingKey(cfg)]
 	}
-	effectiveStream := stream && !streamingUnavailable
+	contract, contractErr := compatibility.Resolve(cfg.CompatibilityProfile, compatibility.Transcription)
+	effectiveStream := stream && !streamingUnavailable && contractErr == nil && contract.Capabilities.FileStreaming
 	s.fileCancel = cancel
 	s.fileDone = done
 	s.fileLastPublish = time.Time{}

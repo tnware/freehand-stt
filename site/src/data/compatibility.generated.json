@@ -6,6 +6,8 @@
       "available": true,
       "description": "Completed transcription and optional file streaming. Preserves support for typed events and legacy text segments; streaming and language hints depend on the selected model.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": true,
@@ -24,6 +26,8 @@
       "available": true,
       "description": "Completed transcription, typed file events, and older Speaches text segments that finish at end of stream. Language and streaming support depend on the model and server version.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": true,
@@ -42,6 +46,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -60,6 +66,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -75,37 +83,41 @@
     {
       "id": "whisper-cpp",
       "label": "whisper.cpp",
-      "available": false,
-      "description": "Dedicated profile not implemented. Native routing and server-loaded model behavior need an adapter.",
+      "available": true,
+      "description": "Completed transcription through the native /inference route. Uses the model already loaded by the server; connection checks use /health. File streaming is unavailable.",
       "capabilities": {
+        "serverLoadedModel": true,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
-        "languageHint": false,
+        "languageHint": true,
         "speechSpeed": false,
-        "transcriptionPrompt": false,
+        "transcriptionPrompt": true,
         "transcriptionHotwords": false,
-        "transcriptionTemperature": false
+        "transcriptionTemperature": true
       }
     },
     {
       "id": "vllm",
       "label": "vLLM",
-      "available": false,
-      "description": "Dedicated profile not implemented. Transcription streaming needs its own response decoder.",
+      "available": true,
+      "description": "Completed transcription and vLLM file streams. Context, language, and temperature depend on the selected speech model; qualified against v0.28.0.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": true,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
-        "fileStreaming": false,
+        "fileStreaming": true,
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
-        "languageHint": false,
+        "languageHint": true,
         "speechSpeed": false,
-        "transcriptionPrompt": false,
+        "transcriptionPrompt": true,
         "transcriptionHotwords": false,
-        "transcriptionTemperature": false
+        "transcriptionTemperature": true
       }
     }
   ],
@@ -116,6 +128,8 @@
       "available": true,
       "description": "Text chat completions with system/user messages. Choose the cleanup prompt preset separately.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": true,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -134,6 +148,8 @@
       "available": true,
       "description": "Text cleanup with an optional output-token limit and disable-reasoning override. Reasoning control requires a compatible llama.cpp build and model template; S1-mini remains a separate prompt preset.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": true,
         "cleanupDisableReasoning": true,
         "fileStreaming": false,
@@ -152,6 +168,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -170,6 +188,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -185,11 +205,13 @@
     {
       "id": "vllm",
       "label": "vLLM",
-      "available": false,
-      "description": "Dedicated profile not implemented. The dedicated text processing contract needs qualification.",
+      "available": true,
+      "description": "Text cleanup with output-token and reasoning-off controls, qualified against v0.28.0. Reasoning control requires a compatible model template.",
       "capabilities": {
-        "cleanupOutputLimit": false,
-        "cleanupDisableReasoning": false,
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
+        "cleanupOutputLimit": true,
+        "cleanupDisableReasoning": true,
         "fileStreaming": false,
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
@@ -208,6 +230,8 @@
       "available": true,
       "description": "Buffered WAV speech with a voice ID and speed. The server must return PCM16 audio; model support varies.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -226,6 +250,8 @@
       "available": true,
       "description": "Buffered PCM16 WAV speech using the installed model and voice IDs. Speed support depends on the model.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -244,6 +270,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -262,6 +290,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -280,6 +310,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Model-specific voice inputs and audio output need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -298,6 +330,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Voice, speed, and WAV output need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,
@@ -316,6 +350,8 @@
       "available": false,
       "description": "Dedicated profile not implemented. Server-configured voices and WAV output need qualification.",
       "capabilities": {
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
         "cleanupOutputLimit": false,
         "cleanupDisableReasoning": false,
         "fileStreaming": false,

@@ -1,3 +1,4 @@
+import { usesServerLoadedModel } from "$lib/utils/compatibility";
 import type { SettingsSectionID } from "$lib/navigation";
 import {
   AuthenticationMode,
@@ -48,8 +49,9 @@ export function appReadiness(
   devicesLoading: boolean,
 ): Readiness {
   const initialSetup = !settings.setupCompleted;
+  const serverLoadedModel = usesServerLoadedModel(settings);
   const serverConfigured = Boolean(
-    settings.baseURL.trim() && settings.model.trim(),
+    settings.baseURL.trim() && (serverLoadedModel || settings.model.trim()),
   );
   const credentialConfigured =
     settings.authenticationMode === AuthenticationMode.AuthenticationModeNone ||
@@ -69,8 +71,8 @@ export function appReadiness(
       id: "server",
       label: "Speech-to-text server",
       detail: serverConfigured
-        ? `${endpointLabel(settings.baseURL)} · ${compactModel(settings.model)}`
-        : "Add an endpoint and model.",
+        ? `${endpointLabel(settings.baseURL)} · ${serverLoadedModel ? "Server-loaded model" : compactModel(settings.model)}`
+        : serverLoadedModel ? "Add a server endpoint." : "Add an endpoint and model.",
       status: serverConfigured ? "complete" : "attention",
       blocking: !serverConfigured,
       settingsSection: "server",
@@ -152,7 +154,8 @@ export function appReadiness(
       .filter((step) => step.status === "attention" && step.blocking)
       .map((step) => step.id),
     server: settings.baseURL,
-    model: settings.model,
+    model: serverLoadedModel ? "" : settings.model,
+    profile: settings.compatibilityProfile,
     authentication: settings.authenticationMode,
     credentialConfigured: settings.credentialConfigured,
     microphone: microphoneChoice,

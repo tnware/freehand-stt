@@ -13,7 +13,7 @@ import (
 )
 
 func TestCleanupOptionsRequestContract(t *testing.T) {
-	for _, id := range []compatibility.ID{compatibility.Generic, compatibility.LlamaCPP} {
+	for _, id := range []compatibility.ID{compatibility.Generic, compatibility.LlamaCPP, compatibility.VLLM} {
 		for _, variant := range []string{"defaults", "retained-disabled", "limit", "reasoning", "both"} {
 			if id == compatibility.Generic && (variant == "reasoning" || variant == "both") {
 				continue

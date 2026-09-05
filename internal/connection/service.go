@@ -160,7 +160,8 @@ func (s *Service) ServiceShutdown() error {
 // TestConnection probes STT health or model discovery without invoking a model.
 func (s *Service) TestConnection(request ConnectionTestRequest) (result ConnectionResult) {
 	checkedAt := time.Now().UTC()
-	probe, requestedURL, targetErr := inference.MetadataTarget(request.BaseURL, request.HealthPath)
+	healthPath := compatibility.TranscriptionHealthPath(request.CompatibilityProfile, request.HealthPath)
+	probe, requestedURL, targetErr := inference.MetadataTarget(request.BaseURL, healthPath)
 	validationError := ""
 	if len(request.CredentialDraft) > settings.MaxAPIKeyBytes {
 		validationError = fmt.Sprintf("API key must be at most %d bytes", settings.MaxAPIKeyBytes)
@@ -229,7 +230,7 @@ func (s *Service) TestConnection(request ConnectionTestRequest) (result Connecti
 	defer func() { key = "" }()
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
-	metadata := s.client.TestMetadata(ctx, request.BaseURL, request.HealthPath, key, request.Model, request.Headers)
+	metadata := s.client.TestMetadata(ctx, request.BaseURL, healthPath, key, request.Model, request.Headers)
 	result.Reachable = metadata.Reachable
 	result.Probe = ConnectionProbe(metadata.Probe)
 	result.RequestedURL = metadata.RequestedURL

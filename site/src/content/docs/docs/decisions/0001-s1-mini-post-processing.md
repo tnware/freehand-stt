@@ -7,6 +7,14 @@ description: Keep speech recognition and optional transcript normalization as se
 - Date: 2026-08-29
 - Authority: [superwhisper/s1-mini v1 model card](https://huggingface.co/superwhisper/s1-mini/tree/v1)
 
+## vLLM adapter clarification — 2026-09-05
+
+The vLLM v0.28.0 cleanup adapter also sends S1-mini's mandatory
+`reasoning_effort: "none"` override. Runtime/template qualification remains
+necessary. This extends request enforcement to another explicit profile without
+changing the trained prompt or accepting reasoning-enabled S1-mini generation.
+See the [vLLM contract](../../backends/vllm/).
+
 ## Generation-control clarification — 2026-09-05
 
 Thinking disabled remains a mandatory S1-mini requirement. The qualified

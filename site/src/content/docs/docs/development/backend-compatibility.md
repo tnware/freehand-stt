@@ -80,11 +80,52 @@ or unexposed faster-whisper tuning field is implied by these flags.
 ## Cleanup capabilities
 
 `cleanupOutputLimit` and `cleanupDisableReasoning` are generated capability flags
-shared by Settings and the public matrix. Generic and llama.cpp support the
-optional `max_tokens` shape; llama.cpp additionally qualifies
+shared by Settings and the public matrix. Generic, llama.cpp, and vLLM support the
+optional `max_tokens` shape; llama.cpp and vLLM additionally qualify
 `reasoning_effort: "none"`. The S1-mini preset always requires thinking disabled,
 so a qualified adapter enforces it automatically while Generic relies on the
 server. Record runtime/template evidence separately from the model requirement.
 The [llama.cpp guide](../../backends/llama-cpp/#source-qualification) pins source
 inspection to an exact upstream commit without claiming a minimum version or
 universal live compatibility.
+
+
+## Additional qualified provider profiles
+
+whisper.cpp now supports completed transcription using its native `/inference`
+route and server-loaded model. Its default connection probe is `/health` beneath
+the configured server root; it has no client model selection or file streaming.
+vLLM v0.28.0 supports completed transcription, its own file-stream dialect, and
+text cleanup with optional output limits and reasoning-off requests. The
+S1-mini preset requires reasoning off through both qualified cleanup profiles.
+See the [whisper.cpp guide](../../backends/whisper-cpp/) and
+[vLLM guide](../../backends/vllm/) for setup, contract details, and limitations.
+
+
+## September 2026 provider acceptance environment
+
+Scoped Windows HTTP-adapter acceptance used the public 11-second JFK WAV from
+whisper.cpp and fixed invented cleanup text, one selected server/model at a time.
+No inventory inference or private audio was used. The provider guides separate
+passing request paths from the empty result on the repeated 33-second sample.
+
+- whisper.cpp image digest: `ghcr.io/ggml-org/whisper.cpp@sha256:2285844e0c38744d90eed59ce5b90fe68cd2dfc6ecb07bb0b68b8ff800528be4`, using `ggml-tiny.en.bin`.
+- vLLM base image digest: `vllm/vllm-openai@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14`, reporting version 0.28.0.
+- That vLLM image's audio path needed `av==18.1.0`, `scipy==1.18.1`, `soundfile==0.14.0`, and `soxr==1.1.0`; these missing extras were installed without changing its existing CUDA/PyTorch dependencies. This records one image's environment, not a universal dependency recipe.
+- On WSL2 with an RTX 5060 Ti, vLLM used `VLLM_USE_V2_MODEL_RUNNER=0`, `--no-async-scheduling`, `--enforce-eager`, `--gpu-memory-utilization 0.35`, `--max-num-seqs 1`, and `--max-num-batched-tokens 2048`.
+- STT used `openai/whisper-tiny.en` with `--max-model-len 448`; cleanup used `superwhisper/s1-mini` with `--max-model-len 2048`. These are test context limits, not Freehand defaults or model maximums.
+
+The default V2 runner failed with unavailable UVA on this WSL setup. With the
+older runner, asynchronous scheduling left the first transcription stalled;
+synchronous scheduling completed the selected short sample. Keep such runtime
+settings on the server. Freehand's adapter must not inject GPU or scheduler
+configuration into inference requests.
+
+The user subsequently confirmed live Freehand transcription with
+`Qwen/Qwen3-ASR-0.6B` on the same vLLM v0.28.0 base. That server used
+`--max-model-len 4096` and `--max-num-batched-tokens 4096`, retaining the other
+bounded runtime settings above. Health and model metadata were checked before
+the user performed inference. This is user-reported interactive transcription
+evidence; Qwen-specific file-stream acceptance and latency tuning are not
+claimed. No client language or model-specific prompt override was introduced
+for the test. First-class language support remains separate follow-up work.

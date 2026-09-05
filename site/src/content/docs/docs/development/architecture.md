@@ -472,3 +472,21 @@ inference adapter maps the effective options to `max_tokens` and
 `reasoning_effort: "none"`, without mutating persisted custom-model preferences.
 Generic still requires external reasoning configuration for S1-mini. No model-ID
 sniffing, arbitrary JSON extensions, automatic retries, or chunking are added.
+
+
+## Native transcription and vLLM adapters
+
+The compatibility catalog owns native server-loaded model semantics and the
+vLLM stream capability. Config validation permits a missing STT model only for
+a qualified server-loaded model profile. Settings and readiness consume the
+same exported catalog. Connection owns whisper.cpp's metadata-only default
+health probe; explicit custom paths retain base-relative behavior.
+
+Inference owns native multipart model omission and the vLLM decoder. File
+transcription applies the profile's completed-only restriction before upload
+and reports that restriction separately from observed stream incompatibility.
+vLLM per-audio-chunk stop markers cannot complete the whole file; the decoder
+requires `[DONE]` after a successful final chunk and fails closed on provider
+errors or incomplete streams. Accepted deltas retain manual recovery semantics.
+Postprocess derives mandatory S1-mini reasoning-off for either qualified
+cleanup adapter without changing the optional custom preference.

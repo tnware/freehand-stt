@@ -72,8 +72,8 @@ substitute `max_completion_tokens`, send both fields, or retry after rejection.
 The supported UI range is 1–65,536; the model can impose a smaller limit.
 
 Generic does not send reasoning controls. S1-mini still requires thinking to be
-disabled by the server. Choose the qualified llama.cpp profile for automatic
+disabled by the server. Choose a qualified llama.cpp or vLLM profile for automatic
 S1-mini request enforcement. An explicit custom reasoning override must be
-turned off before switching from llama.cpp to Generic.
+turned off before switching from llama.cpp or vLLM to Generic.
 
 See [generation controls](../../guides/post-processing/#generation-controls).

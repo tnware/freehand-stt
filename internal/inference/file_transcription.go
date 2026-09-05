@@ -57,7 +57,7 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 	pipeReader, pipeWriter := io.Pipe()
 	mw := multipart.NewWriter(pipeWriter)
 	boundary := mw.Boundary()
-	contentLength, err := multipartLength(boundary, filename, size, model, language, stream, c.transcriptionOptions)
+	contentLength, err := multipartLength(boundary, filename, size, model, language, stream, c.transcriptionOptions, contract)
 	if err != nil {
 		_ = pipeReader.Close()
 		_ = pipeWriter.Close()
@@ -65,7 +65,7 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 	}
 	writeDone := make(chan error, 1)
 	go func() {
-		writeErr := writeFileMultipart(mw, filename, model, language, stream, c.transcriptionOptions, &progressReader{
+		writeErr := writeFileMultipart(mw, filename, model, language, stream, c.transcriptionOptions, contract, &progressReader{
 			reader: r,
 			total:  size,
 			onRead: callbacks.UploadProgress,
@@ -196,11 +196,12 @@ func looksLikeBufferedTranscriptionSSE(text string) bool {
 	line, _, _ := strings.Cut(trimmed, "\n")
 	data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
 	var event struct {
-		Type  string  `json:"type"`
-		Delta *string `json:"delta"`
-		Text  *string `json:"text"`
+		Object string  `json:"object"`
+		Type   string  `json:"type"`
+		Delta  *string `json:"delta"`
+		Text   *string `json:"text"`
 	}
-	return json.Unmarshal([]byte(data), &event) == nil && (event.Type != "" || event.Delta != nil || event.Text != nil)
+	return json.Unmarshal([]byte(data), &event) == nil && (event.Type != "" || event.Delta != nil || event.Text != nil || event.Object == "transcription.chunk")
 }
 
 type progressReader struct {
@@ -221,9 +222,11 @@ func (r *progressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-func writeFileMultipart(mw *multipart.Writer, filename, model, language string, stream bool, options compatibility.TranscriptionOptions, file io.Reader) error {
-	if err := mw.WriteField("model", model); err != nil {
-		return err
+func writeFileMultipart(mw *multipart.Writer, filename, model, language string, stream bool, options compatibility.TranscriptionOptions, contract compatibility.Contract, file io.Reader) error {
+	if !contract.Capabilities.ServerLoadedModel {
+		if err := mw.WriteField("model", model); err != nil {
+			return err
+		}
 	}
 	if language != "" {
 		if err := mw.WriteField("language", language); err != nil {
@@ -249,13 +252,13 @@ func writeFileMultipart(mw *multipart.Writer, filename, model, language string, 
 	return err
 }
 
-func multipartLength(boundary, filename string, size int64, model, language string, stream bool, options compatibility.TranscriptionOptions) (int64, error) {
+func multipartLength(boundary, filename string, size int64, model, language string, stream bool, options compatibility.TranscriptionOptions, contract compatibility.Contract) (int64, error) {
 	var overhead bytes.Buffer
 	mw := multipart.NewWriter(&overhead)
 	if err := mw.SetBoundary(boundary); err != nil {
 		return 0, err
 	}
-	if err := writeFileMultipart(mw, filename, model, language, stream, options, strings.NewReader("")); err != nil {
+	if err := writeFileMultipart(mw, filename, model, language, stream, options, contract, strings.NewReader("")); err != nil {
 		return 0, err
 	}
 	if err := mw.Close(); err != nil {

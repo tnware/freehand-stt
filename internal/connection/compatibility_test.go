@@ -25,7 +25,7 @@ func TestProfileProbesRemainMetadataOnlyAndRejectPlannedSelections(t *testing.T)
 	for _, planned := range []bool{false, true} {
 		sttID, chatID, ttsID := compatibility.Speaches, compatibility.LlamaCPP, compatibility.Speaches
 		if planned {
-			sttID, chatID, ttsID = compatibility.VLLM, compatibility.LocalAI, compatibility.VLLMOmni
+			sttID, chatID, ttsID = compatibility.LocalAI, compatibility.LocalAI, compatibility.VLLMOmni
 		}
 		results := []ConnectionResult{
 			service.TestConnection(ConnectionTestRequest{CompatibilityProfile: sttID, BaseURL: server.URL + "/v1", AllowInsecureHTTP: true, AuthenticationMode: config.AuthenticationModeNone}),
@@ -43,5 +43,29 @@ func TestProfileProbesRemainMetadataOnlyAndRejectPlannedSelections(t *testing.T)
 	}
 	if calls != 3 {
 		t.Fatalf("metadata request count=%d", calls)
+	}
+}
+
+func TestWhisperCPPUsesOnlyHealthAndPreservesCustomPrefix(t *testing.T) {
+	for _, custom := range []string{"", "/ready"} {
+		calls := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls++
+			path := "/proxy/health"
+			if custom != "" {
+				path = "/proxy/ready"
+			}
+			if r.Method != "GET" || r.URL.Path != path {
+				t.Errorf("unexpected probe %s %s", r.Method, r.URL.Path)
+			}
+			w.Write([]byte(`{"status":"ok"}`))
+		}))
+		keys := &keyFake{}
+		service := NewService(keys, keys, keys, inference.New(), nil)
+		result := service.TestConnection(ConnectionTestRequest{CompatibilityProfile: compatibility.WhisperCPP, BaseURL: server.URL + "/proxy", HealthPath: custom, AllowInsecureHTTP: true, AuthenticationMode: config.AuthenticationModeNone})
+		server.Close()
+		if calls != 1 || result.ErrorKind != "" || result.Probe != ConnectionProbeHealth || result.ModelPresence != ModelPresenceUnavailable || len(result.ModelIDs) != 0 {
+			t.Fatalf("calls=%d result=%+v", calls, result)
+		}
 	}
 }

@@ -92,10 +92,10 @@
       description={s1Mini
         ? capabilities?.cleanupDisableReasoning
           ? "S1-mini requires reasoning to be off. Freehand sends the reasoning-off override on every cleanup request."
-          : "S1-mini requires reasoning to be off. Configure the server with thinking disabled. Choose llama.cpp for Freehand's qualified request override."
+          : "S1-mini requires reasoning to be off. Configure the server with thinking disabled. Choose a qualified llama.cpp or vLLM profile for Freehand's request override."
         : capabilities?.cleanupDisableReasoning
-          ? "Request thinking-disabled cleanup. Requires a compatible llama.cpp build and model template. Off preserves the server's behavior."
-          : "This override is available with the llama.cpp profile. Other profiles use their server's reasoning configuration."}
+          ? "Request thinking-disabled cleanup. Requires a compatible server build and model template. Off preserves the server's behavior."
+          : "This override is available with the llama.cpp and vLLM profiles. Other profiles use their server's reasoning configuration."}
     >
       {#snippet control()}
         <div class="flex items-center gap-2">
@@ -118,7 +118,8 @@
       {/snippet}
     </SettingRow>
     {#if unsupportedReasoning}<p role="alert" class="px-5 pb-4 text-xs text-destructive">
-        Turn off the reasoning override before saving this profile, or switch back to llama.cpp.
+        Turn off the reasoning override before saving this profile, or choose a qualified llama.cpp
+        or vLLM profile.
       </p>{/if}
   </div>
   <p class="border-t border-hairline px-5 py-4 text-xs leading-relaxed text-muted-foreground">

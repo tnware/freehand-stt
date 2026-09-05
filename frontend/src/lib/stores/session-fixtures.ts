@@ -270,6 +270,7 @@ const serviceWithStatus = (
         phase: FileTranscriptionPhase.FileTranscriptionEmpty,
         streaming: false,
         buffered: false,
+        streamingProfileUnavailable: false,
         streamingUnavailable: false,
         transcriptRevision: 0,
         canStart: false,

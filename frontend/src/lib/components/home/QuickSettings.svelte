@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { usesServerLoadedModel } from "$lib/utils/compatibility";
   import CheckIcon from "@lucide/svelte/icons/check";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import RackModule from "$lib/components/home/RackModule.svelte";
@@ -17,12 +18,13 @@
     type Settings,
   } from "$lib/state";
   import type { QuickSettingsField, QuickSettingsPatch } from "$lib/stores/editor.svelte";
-  import { connectionStatusLabel, connectionSucceeded, modelPresenceLabel } from "$lib/utils/connection";
-  import { processingProfileName } from "$lib/utils/processingProfiles";
   import {
-    readDisclosurePreference,
-    writeDisclosurePreference,
-  } from "$lib/utils/viewPreferences";
+    connectionStatusLabel,
+    connectionSucceeded,
+    modelPresenceLabel,
+  } from "$lib/utils/connection";
+  import { processingProfileName } from "$lib/utils/processingProfiles";
+  import { readDisclosurePreference, writeDisclosurePreference } from "$lib/utils/viewPreferences";
   import { cn } from "$lib/utils";
 
   let {
@@ -106,6 +108,7 @@
     processingModelTouched = false;
   });
 
+  const serverLoadedModel = $derived(usesServerLoadedModel(settings));
   const processingEnabled = $derived(settings.postProcessing.enabled);
   const discoveredModels = $derived(connection?.modelIDs ?? []);
   const processingDiscoveredModels = $derived(processingConnection?.modelIDs ?? []);
@@ -131,7 +134,9 @@
     if (stale) return "stale";
     if (!result) return "not checked";
     if (!connectionSucceeded(result)) return connectionStatusLabel(result);
-    return result.latencyMilliseconds > 0 ? `${result.latencyMilliseconds.toLocaleString()} ms` : "ok";
+    return result.latencyMilliseconds > 0
+      ? `${result.latencyMilliseconds.toLocaleString()} ms`
+      : "ok";
   }
 
   function latencyTone(
@@ -175,7 +180,11 @@
 
   const isPending = (field: QuickSettingsField): boolean => pending.includes(field);
   const sttHealthStale = $derived(
-    sttStale || endpointTouched || modelTouched || isPending("stt-endpoint") || isPending("stt-model"),
+    sttStale ||
+      endpointTouched ||
+      modelTouched ||
+      isPending("stt-endpoint") ||
+      isPending("stt-model"),
   );
   const processingHealthStale = $derived(
     processingStale ||
@@ -306,7 +315,12 @@
   });
 </script>
 
-{#snippet field(label: string, id: string, meta: import("svelte").Snippet, control: import("svelte").Snippet)}
+{#snippet field(
+  label: string,
+  id: string,
+  meta: import("svelte").Snippet,
+  control: import("svelte").Snippet,
+)}
   <div class="field">
     <div class="field-head">
       <label class="caption truncate" for={id}>{label}</label>
@@ -337,7 +351,12 @@
     dot={healthDot(connection, true, sttHealthStale)}
     meta={sttOpen
       ? latency(connection, true, sttHealthStale)
-      : collapsedConnectionSummary(settings.model, connection, true, sttHealthStale)}
+      : collapsedConnectionSummary(
+          serverLoadedModel ? "Server-loaded model" : settings.model,
+          connection,
+          true,
+          sttHealthStale,
+        )}
     metaTone={latencyTone(connection, true, sttHealthStale)}
     onSettings={onOpenServerSettings}
     settingsLabel="Open transcription settings"
@@ -392,11 +411,14 @@
         {:else if savedField === "stt-model"}
           <CheckIcon class="inline size-3 text-success" />
         {:else}
-          {modelMetadata(connection, settings.model)}
+          {serverLoadedModel ? "Server selected" : modelMetadata(connection, settings.model)}
         {/if}
       {/snippet}
       {#snippet sttModelControl()}
-        {#if discoveredModels.length > 0}
+        {#if serverLoadedModel}
+          <span id="quick-stt-model" class="text-xs text-muted-foreground">Server-loaded model</span
+          >
+        {:else if discoveredModels.length > 0}
           <Select.Root
             type="single"
             value={settings.model}
@@ -515,7 +537,12 @@
           {processingTesting ? "Testing" : "Test"}
         </Button>
       {/snippet}
-      {@render field("Endpoint", "quick-processing-endpoint", cleanupEndpointMeta, cleanupEndpointControl)}
+      {@render field(
+        "Endpoint",
+        "quick-processing-endpoint",
+        cleanupEndpointMeta,
+        cleanupEndpointControl,
+      )}
 
       {#snippet cleanupModelMeta()}
         {#if isPending("processing-model")}
@@ -636,7 +663,6 @@
       {/if}
     </div>
   </RackModule>
-
 </fieldset>
 
 <style>

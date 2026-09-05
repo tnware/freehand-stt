@@ -551,7 +551,11 @@ func validatePersistedSTTSettings(s Settings) error {
 		}
 		return validateHeaders(s.Headers)
 	}
-	return validateSTTConnection(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, s.Model, s.HealthPath, s.Headers, true)
+	contract, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Transcription)
+	if err != nil {
+		return err
+	}
+	return validateSTTConnection(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, s.Model, s.HealthPath, s.Headers, !contract.Capabilities.ServerLoadedModel)
 }
 
 // ValidateSTTConnection validates only renderer-controlled values needed for

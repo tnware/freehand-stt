@@ -20,6 +20,8 @@ support can still depend on the server version and selected model.
   <LinkCard title="Generic OpenAI-compatible" description="The default transcription, text cleanup, and speech contracts." href={`${base}/docs/backends/generic/`} />
   <LinkCard title="Speaches" description="Transcription and speech playback with version and model qualifications." href={`${base}/docs/backends/speaches/`} />
   <LinkCard title="llama.cpp" description="Text post-processing and the separate S1-mini prompt preset." href={`${base}/docs/backends/llama-cpp/`} />
+  <LinkCard title="whisper.cpp" description="Native transcription with a server-loaded model." href={`${base}/docs/backends/whisper-cpp/`} />
+  <LinkCard title="vLLM" description="Completed and streamed transcription plus qualified text cleanup." href={`${base}/docs/backends/vllm/`} />
   <LinkCard title="Planned profiles" description="Dedicated contracts still being implemented and qualified." href={`${base}/docs/backends/planned/`} />
 </CardGrid>
 
@@ -47,7 +49,7 @@ prompt preset. Named saved connections are not implemented yet.
 ## Beyond the current contract
 
 Optional transcription context and temperature are available through Generic
-and Speaches, with hotwords through Speaches. Richer language shapes, timestamps, diarization, voice
+and the qualified Speaches, whisper.cpp, and vLLM transcription profiles, with hotwords through Speaches. Richer language shapes, timestamps, diarization, voice
 instructions, reference-audio inputs, and progressive speech playback need
 explicit client support and model qualifications. Selecting a provider profile
 does not enable those features automatically.

@@ -190,3 +190,47 @@ func TestS1MiniGenerationControlsPreserveTrainedPrompt(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestVLLMS1MiniRequiresReasoningOff(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Messages []struct {
+				Role    string `json:"role"`
+				Content string `json:"content"`
+			} `json:"messages"`
+			Temperature     float64 `json:"temperature"`
+			MaxTokens       int     `json:"max_tokens"`
+			ReasoningEffort string  `json:"reasoning_effort"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Error(err)
+			return
+		}
+		if len(body.Messages) != 2 || body.Messages[0].Content != S1MiniSystemInstruction || body.Messages[1].Content != "[Styling: formal] [Structure: lists] [Context: email]\nraw words" {
+			t.Error("S1 trained prompt changed")
+		}
+		if body.Temperature != 0 || body.MaxTokens != 2048 || body.ReasoningEffort != "none" {
+			t.Error("generation controls not forwarded")
+		}
+		io.WriteString(w, `{"choices":[{"message":{"content":"cleaned"},"finish_reason":"stop"}]}`)
+	}))
+	defer server.Close()
+	cfg := config.Default().PostProcessing
+	cfg.BaseURL = server.URL
+	cfg.AllowInsecureHTTP = true
+	cfg.Model = "s1-mini"
+	cfg.CompatibilityProfile = compatibility.VLLM
+	cfg.Preset = config.PostProcessingPresetS1Mini
+	cfg.Styling = "formal"
+	cfg.Structure = "lists"
+	cfg.Context = "email"
+	cfg.GenerationOptions = compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 2048, DisableReasoning: false}
+	defer func() {
+		if cfg.GenerationOptions.DisableReasoning {
+			t.Error("preset mutated saved custom override")
+		}
+	}()
+	if _, err := New(inference.New(), nil).ProcessWithCredential(context.Background(), cfg, "raw words", ""); err != nil {
+		t.Fatal(err)
+	}
+}

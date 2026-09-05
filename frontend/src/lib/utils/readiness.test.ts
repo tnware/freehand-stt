@@ -247,3 +247,12 @@ describe("app readiness", () => {
     ).toBe("attention");
   });
 });
+
+it("accepts a catalog-declared server-loaded model without a client model ID", () => {
+  const cfg = settings({model: "", compatibilityProfile: ID.WhisperCPP});
+  cfg.compatibilityProfiles.transcription = [{id: ID.WhisperCPP, label: "whisper.cpp", description: "Native server", available: true, capabilities: {serverLoadedModel: true, vllmTranscriptionEvents: false, cleanupOutputLimit: false, cleanupDisableReasoning: false, fileStreaming: false, typedTranscriptionEvents: false, legacyTranscriptionSegments: false, languageHint: true, speechSpeed: false, transcriptionPrompt: true, transcriptionHotwords: false, transcriptionTemperature: true}}];
+  const native = appReadiness(cfg, null, devices, false);
+  expect(native.steps.find((step) => step.id === "server")?.status).toBe("complete");
+  cfg.compatibilityProfile = ID.Generic;
+  expect(appReadiness(cfg, null, devices, false).steps.find((step) => step.id === "server")?.status).toBe("attention");
+});
