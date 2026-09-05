@@ -22,7 +22,8 @@
   --sl-color-white: #111827;
   --sl-color-gray-1: #263348;
   --sl-color-gray-2: #526079;
-  --sl-color-gray-3: #758198;
+  /* Inactive tabs and supporting text must remain readable on light surfaces. */
+  --sl-color-gray-3: #5b687d;
   --sl-color-gray-4: #aab4c4;
   --sl-color-gray-5: #d9dfe9;
   --sl-color-gray-6: #f2f5f9;

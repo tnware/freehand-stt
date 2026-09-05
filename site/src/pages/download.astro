@@ -2,6 +2,7 @@
 import mark from "../assets/freehand-mark.svg";
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
+import CustomPageMetadata from "../components/CustomPageMetadata.astro";
 import ParticleBackground from "../components/ParticleBackground.astro";
 import "../styles/home.css";
 import "../styles/download.css";
@@ -16,10 +17,13 @@ const releasesUrl = "https://github.com/tnware/freehand-stt/releases";
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="description" content="Download the latest Freehand alpha for Windows." />
+    <CustomPageMetadata
+      title="Download Freehand for Windows"
+      description="Download the latest Freehand alpha for Windows."
+      path="download/"
+    />
     <meta name="theme-color" content="#070a12" />
     <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
-    <title>Download Freehand for Windows</title>
   </head>
   <body>
     <ParticleBackground />
