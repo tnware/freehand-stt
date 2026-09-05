@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -727,6 +726,10 @@ func (e *loadError) Error() string { return e.failure.Message }
 func (e *loadError) Unwrap() error { return e.cause }
 
 func LoadFailureFor(err error) LoadFailure {
+	var classified interface{ ConfigurationFailure() LoadFailure }
+	if errors.As(err, &classified) {
+		return classified.ConfigurationFailure()
+	}
 	var loadErr *loadError
 	if errors.As(err, &loadErr) {
 		return loadErr.failure
@@ -738,25 +741,17 @@ func newLoadError(kind, message string, cause error) error {
 	return &loadError{failure: LoadFailure{Kind: kind, Message: message}, cause: cause}
 }
 
-type Store struct {
+// LegacyReader is the bounded, read-only importer for pre-SQLite settings.
+type LegacyReader struct {
 	Path string
 
-	mu       sync.Mutex
-	document map[string]json.RawMessage
-	report   LoadReport
+	mu     sync.Mutex
+	report LoadReport
 }
 
-func NewStore() (*Store, error) {
-	d, e := os.UserConfigDir()
-	if e != nil {
-		return nil, e
-	}
-	return &Store{Path: filepath.Join(d, "Freehand", "settings.json")}, nil
-}
-func (s *Store) Load() (Settings, error) {
+func (s *LegacyReader) Load() (Settings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.document = nil
 	s.report = LoadReport{}
 	v := Default()
 	f, e := os.Open(s.Path)
@@ -792,66 +787,17 @@ func (s *Store) Load() (Settings, error) {
 	if e = json.Unmarshal(b, &document); e != nil || document == nil {
 		return Default(), newLoadError("invalid_json", "The settings file must contain one JSON object.", e)
 	}
-	s.document = document
 	s.report = loadReport(document, reflect.TypeOf(v))
 	return v, nil
 }
 
-func (s *Store) LoadReport() LoadReport {
+func (s *LegacyReader) LoadReport() LoadReport {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return LoadReport{
 		PreservedFieldCount: s.report.PreservedFieldCount,
 		PreservedFields:     append([]string(nil), s.report.PreservedFields...),
 	}
-}
-
-func (s *Store) Save(v Settings) error {
-	if e := Validate(v); e != nil {
-		return e
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if e := os.MkdirAll(filepath.Dir(s.Path), 0700); e != nil {
-		return e
-	}
-	currentBytes, e := json.Marshal(v)
-	if e != nil {
-		return e
-	}
-	var current map[string]json.RawMessage
-	if e = json.Unmarshal(currentBytes, &current); e != nil {
-		return e
-	}
-	merged := mergeSettingsDocument(cloneDocument(s.document), current, reflect.TypeOf(v))
-	b, e := json.MarshalIndent(merged, "", "  ")
-	if e != nil {
-		return e
-	}
-	tmp, e := os.CreateTemp(filepath.Dir(s.Path), "settings-*.tmp")
-	if e != nil {
-		return e
-	}
-	name := tmp.Name()
-	defer os.Remove(name)
-	if e = tmp.Chmod(0600); e == nil {
-		_, e = tmp.Write(b)
-	}
-	if e == nil {
-		e = tmp.Sync()
-	}
-	if ce := tmp.Close(); e == nil {
-		e = ce
-	}
-	if e != nil {
-		return e
-	}
-	if e = os.Rename(name, s.Path); e != nil {
-		return e
-	}
-	s.document = merged
-	s.report = loadReport(merged, reflect.TypeOf(v))
-	return nil
 }
 
 func jsonLoadFailureMessage(err error) string {
@@ -864,45 +810,6 @@ func jsonLoadFailureMessage(err error) string {
 		return fmt.Sprintf("The settings file contains invalid JSON near byte %d.", syntaxErr.Offset)
 	}
 	return "The settings file is not valid JSON."
-}
-
-func cloneDocument(document map[string]json.RawMessage) map[string]json.RawMessage {
-	clone := make(map[string]json.RawMessage, len(document))
-	for key, value := range document {
-		clone[key] = append(json.RawMessage(nil), value...)
-	}
-	return clone
-}
-
-func mergeSettingsDocument(original, current map[string]json.RawMessage, valueType reflect.Type) map[string]json.RawMessage {
-	if original == nil {
-		original = make(map[string]json.RawMessage)
-	}
-	for index := 0; index < valueType.NumField(); index++ {
-		field := valueType.Field(index)
-		name := jsonFieldName(field)
-		if name == "" {
-			continue
-		}
-		currentValue, present := current[name]
-		if !present {
-			delete(original, name)
-			continue
-		}
-		fieldType := field.Type
-		if fieldType.Kind() == reflect.Struct {
-			var originalChild, currentChild map[string]json.RawMessage
-			if json.Unmarshal(original[name], &originalChild) == nil && json.Unmarshal(currentValue, &currentChild) == nil {
-				child := mergeSettingsDocument(originalChild, currentChild, fieldType)
-				if encoded, err := json.Marshal(child); err == nil {
-					original[name] = encoded
-					continue
-				}
-			}
-		}
-		original[name] = append(json.RawMessage(nil), currentValue...)
-	}
-	return original
 }
 
 func unknownFieldPaths(document map[string]json.RawMessage, valueType reflect.Type, prefix string) []string {

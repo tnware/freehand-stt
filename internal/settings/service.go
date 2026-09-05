@@ -376,6 +376,18 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 			return SettingsDTO{}, validateErr
 		}
 
+		// Durable credential references stage secret replacements independently;
+		// the settings save commits their references with the endpoint configuration.
+		if staged, ok := s.store.(interface {
+			BeginCredentialChanges() error
+			DiscardCredentialChanges()
+		}); ok {
+			if err := staged.BeginCredentialChanges(); err != nil {
+				return SettingsDTO{}, err
+			}
+			defer staged.DiscardCredentialChanges()
+		}
+
 		old = s.current()
 		shortcutsChanged := old.ToggleShortcut != v.ToggleShortcut || old.ShowShortcut != v.ShowShortcut || old.HoldShortcut != v.HoldShortcut
 		rollbackShortcuts := rollbackStep{name: "shortcuts", run: func() error {
@@ -503,6 +515,9 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 		}
 
 		if persistErr := s.store.Save(v); persistErr != nil {
+			if failure := config.LoadFailureFor(persistErr); failure.Kind == "commit_uncertain" {
+				s.configuration = ConfigurationStatus{RecoveryRequired: true, ErrorKind: failure.Kind, Message: failure.Message}
+			}
 			return SettingsDTO{}, rollback(fmt.Errorf("settings were not persisted: %w", persistErr), rollbackTTSCredential, rollbackProcessingCredential, rollbackCredential, rollbackStartup, rollbackShortcuts)
 		}
 		oldKey = ""
@@ -514,6 +529,13 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 		return s.settingsSnapshotLocked(), nil
 	}()
 	if err != nil {
+		// An uncertain commit must reach every renderer even though Save rejected.
+		if s.settingsChanged != nil {
+			snapshot := s.GetSettings()
+			if snapshot.Configuration.RecoveryRequired {
+				s.settingsChanged(snapshot)
+			}
+		}
 		return SettingsDTO{}, err
 	}
 	if overlaySettingsDiffer(old, v) && s.overlaySettingsChanged != nil {
@@ -534,7 +556,7 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 	return result, nil
 }
 
-// RetryConfiguration re-reads the original settings document. An expected
+// RetryConfiguration reloads the authoritative saved configuration. An expected
 // validation failure is returned as renderer-safe status rather than a rejected
 // promise so the recovery dialog can update without losing its actions.
 func (s *Service) RetryConfiguration() (result SettingsDTO, err error) {
@@ -582,7 +604,7 @@ func (s *Service) RetryConfiguration() (result SettingsDTO, err error) {
 
 // ResetConfiguration is the only recovery operation that replaces the saved
 // document. Credentials remain in the native credential store and are never
-// copied into the replacement JSON file.
+// copied into the replacement configuration.
 func (s *Service) ResetConfiguration() (result SettingsDTO, err error) {
 	started := time.Now()
 	s.log().Info("settings recovery reset started")
@@ -613,32 +635,30 @@ func (s *Service) applyRecoveredSettingsLocked(next config.Settings, persist boo
 		return SettingsDTO{}, config.Settings{}, err
 	}
 	old := s.current()
-	shortcutsChanged := old.ToggleShortcut != next.ToggleShortcut || old.ShowShortcut != next.ShowShortcut || old.HoldShortcut != next.HoldShortcut
+	// Reconcile native state even when a failed rollback left the same runtime snapshot.
 	rollbackShortcuts := rollbackStep{name: "shortcuts", run: func() error {
-		if shortcutsChanged && s.shortcutChanged != nil {
+		if s.shortcutChanged != nil {
 			return s.shortcutChanged(old)
 		}
 		return nil
 	}}
-	if shortcutsChanged && s.shortcutChanged != nil {
+	if s.shortcutChanged != nil {
 		if err := s.shortcutChanged(next); err != nil {
 			return SettingsDTO{}, config.Settings{}, rollback(fmt.Errorf("shortcuts were not changed: %w", err), rollbackShortcuts)
 		}
 	}
-	startupChanged := old.StartWithWindows != next.StartWithWindows
 	rollbackStartup := rollbackStep{name: "startup", run: func() error {
-		if startupChanged {
-			return s.startup.Set(old.StartWithWindows)
-		}
-		return nil
+		return s.startup.Set(old.StartWithWindows)
 	}}
-	if startupChanged {
-		if err := s.startup.Set(next.StartWithWindows); err != nil {
-			return SettingsDTO{}, config.Settings{}, rollback(fmt.Errorf("startup setting was not changed: %w", err), rollbackStartup, rollbackShortcuts)
-		}
+	if err := s.startup.Set(next.StartWithWindows); err != nil {
+		return SettingsDTO{}, config.Settings{}, rollback(fmt.Errorf("startup setting was not changed: %w", err), rollbackStartup, rollbackShortcuts)
 	}
 	if persist {
-		if err := s.store.Save(next); err != nil {
+		save := s.store.Save
+		if resetter, ok := s.store.(interface{ Reset(config.Settings) error }); ok {
+			save = resetter.Reset
+		}
+		if err := save(next); err != nil {
 			return SettingsDTO{}, config.Settings{}, rollback(fmt.Errorf("settings were not reset: %w", err), rollbackStartup, rollbackShortcuts)
 		}
 	}
@@ -716,5 +736,8 @@ func (s *Service) ServiceStartup(context.Context, application.ServiceOptions) er
 
 func (s *Service) ServiceShutdown() error {
 	s.closed.Store(true)
+	if closer, ok := s.store.(interface{ Close() error }); ok {
+		return closer.Close()
+	}
 	return nil
 }

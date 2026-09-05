@@ -56,6 +56,17 @@ Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are 
 - Derive runtime diagnostics from the one Wails default logger created by `internal/app`; inject component children rather than creating package loggers or printing directly. Keep Wails at `Info`: debug bridge tracing can serialize credential drafts, transcripts, and history binding payloads.
 - Follow `site/src/content/docs/docs/safety/logging.md`: pair meaningful asynchronous starts with terminal outcomes, use `duration_ms` and bounded `error_kind` values, and never log raw errors, credentials, headers, transcript/audio content, model IDs, full paths, URL paths/query, or target-window identity.
 
+## SQLite persistence contract
+
+The accepted SQLite direction is defined in [ADR 0006](site/src/content/docs/docs/decisions/0006-sqlite-storage-contract.md). It governs the implemented SQLite store and every subsequent persistence change. The legacy JSON reader is import-only.
+
+- Use `modernc.org/sqlite` with `database/sql`, embedded goose SQL migrations, and sqlc-generated application queries. Do not introduce an ORM, a second migration runner, or handwritten application query/scanning paths. Keep infrastructure SQL confined to the documented storage boundary.
+- Pin driver and tool versions. Goose owns migration history; sqlc reads the same migration directory. Released migrations are immutable and normal startup upgrades forward only.
+- Keep generated rows and database handles inside storage. Existing domain owners retain validation, save transaction coordination, immutable request snapshots, and native/credential recovery.
+- Commit generated queries. The implementation must ship reproducible generation and CI checks for stale/untracked generated output, released migration immutability, and query/import boundaries. Test real SQLite migrations, transactions, recovery, and Windows behavior.
+- Credentials remain in Windows Credential Manager; SQLite may store opaque references only. Adding SQLite does not authorize persistent transcript history or audio retention.
+- Change this contract through a superseding ADR and corresponding instruction/check updates, rather than a feature-local bypass.
+
 ## Windows interaction requirements
 
 - Toggle shortcuts may use `RegisterHotKey`.

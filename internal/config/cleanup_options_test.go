@@ -17,7 +17,7 @@ func TestCleanupOptionsMigrateAndRoundTrip(t *testing.T) {
 	}
 	delete(document["postProcessing"].(map[string]any), "generationOptions")
 	raw, _ = json.Marshal(document)
-	store := &Store{Path: filepath.Join(t.TempDir(), "settings.json")}
+	store := &LegacyReader{Path: filepath.Join(t.TempDir(), "settings.json")}
 	if err := os.WriteFile(store.Path, raw, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestCleanupOptionsMigrateAndRoundTrip(t *testing.T) {
 	}
 	cfg.PostProcessing.CompatibilityProfile = compatibility.LlamaCPP
 	cfg.PostProcessing.GenerationOptions = compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 2048, DisableReasoning: true}
-	if err := store.Save(cfg); err != nil {
+	if err := writeLegacyFixture(store.Path, cfg); err != nil {
 		t.Fatal(err)
 	}
 	again, err := store.Load()
@@ -38,7 +38,7 @@ func TestCleanupOptionsMigrateAndRoundTrip(t *testing.T) {
 		t.Fatalf("round trip error=%v", err)
 	}
 	cfg.PostProcessing.GenerationOptions.LimitOutputTokens = false
-	if err := store.Save(cfg); err != nil {
+	if err := writeLegacyFixture(store.Path, cfg); err != nil {
 		t.Fatal(err)
 	}
 	again, err = store.Load()

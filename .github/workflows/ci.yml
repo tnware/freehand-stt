@@ -20,6 +20,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  storage:
+    name: Storage contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Check migration immutability and generated queries
+        env:
+          MIGRATION_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$MIGRATION_BASE" ] && [ "$MIGRATION_BASE" != "0000000000000000000000000000000000000000" ]; then
+            go run ./build/scripts/storage -check -base "$MIGRATION_BASE"
+          else
+            go run ./build/scripts/storage -check
+          fi
+          git diff --exit-code -- internal/storage/dbgen
+          test -z "$(git ls-files --others --exclude-standard -- internal/storage/dbgen)"
+      - name: Test storage and contract guards
+        run: go test -race ./internal/storage ./build/scripts/storage
+
   go:
     name: Go
     runs-on: ubuntu-latest
@@ -102,6 +127,8 @@ jobs:
       - name: Install NSIS 3.12 when unavailable
         shell: pwsh
         run: ./.github/workflows/scripts/install-nsis.ps1
+      - name: Test native SQLite storage
+        run: go test ./internal/storage ./internal/settings ./build/scripts/storage
       - name: Build executable and per-user installer
         shell: pwsh
         run: wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=user

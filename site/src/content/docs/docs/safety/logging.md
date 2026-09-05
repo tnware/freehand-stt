@@ -75,3 +75,9 @@ When adding a log:
 4. Pair starts with one observable terminal result.
 5. Add a focused captured-record test when the boundary handles credentials, transcript content, URLs, files, or provider errors.
 6. Re-run the prohibited-content search and keep Wails at `Info`.
+
+SQLite failures use bounded configuration categories such as `locked`,
+`newer_schema`, `migration_failed`, `backup_failed`, and `commit_uncertain`.
+Never log raw driver/goose errors, SQL statements or parameters, database paths,
+credential account references, or custom settings content. Settings-service
+start/outcome logs cover saves and explicit recovery without query tracing.

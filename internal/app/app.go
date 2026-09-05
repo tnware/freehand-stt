@@ -13,7 +13,6 @@ import (
 	"github.com/tnware/freehand-stt/internal/buildinfo"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/connection"
-	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/dictation"
 	"github.com/tnware/freehand-stt/internal/filetranscription"
@@ -26,6 +25,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/releaseinfo"
 	settingsservice "github.com/tnware/freehand-stt/internal/settings"
 	"github.com/tnware/freehand-stt/internal/shortcut"
+	"github.com/tnware/freehand-stt/internal/storage"
 	traycontroller "github.com/tnware/freehand-stt/internal/tray"
 	"github.com/tnware/freehand-stt/internal/tts"
 	"github.com/tnware/freehand-stt/internal/updates"
@@ -65,6 +65,7 @@ type Options struct {
 // App holds the assembled application. Construction is ordered so that nothing
 // observable exists before the thing that publishes to it.
 type App struct {
+	storage         *storage.Store
 	opts            Options
 	settings        config.Settings
 	settingsService *settingsservice.Service
@@ -100,7 +101,7 @@ type App struct {
 func New(opts Options) (*App, error) {
 	rootLogger := application.DefaultLogger(diagnostics.ApplicationLogLevel)
 	logger := rootLogger.With("component", "app")
-	store, err := config.NewStore()
+	store, err := storage.NewStore()
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +131,7 @@ func New(opts Options) (*App, error) {
 
 	a := &App{
 		opts:           opts,
+		storage:        store,
 		settings:       settings,
 		mainWindow:     &windowController{},
 		settingsWindow: &settingsWindowController{},
@@ -154,9 +156,9 @@ func New(opts Options) (*App, error) {
 		return a.audio.NewLevelTap()
 	}, rootLogger)
 	a.capture = &platform.ShortcutCapturer{}
-	keys := credential.Keyring{}
-	processingKeys := credential.Keyring{Account: credential.PostProcessingAccount}
-	ttsKeys := credential.Keyring{Account: credential.TextToSpeechAccount}
+	keys := store.STTCredentials()
+	processingKeys := store.CleanupCredentials()
+	ttsKeys := store.SpeechCredentials()
 	client := inference.New()
 	processor := postprocess.New(client, rootLogger.With("component", "postprocess"))
 	nativeInput := platform.NewInput(rootLogger.With("component", "insertion"))
@@ -237,6 +239,7 @@ func New(opts Options) (*App, error) {
 
 	a.newWailsApp()
 	if err := a.configureUpdater(); err != nil {
+		_ = store.Close()
 		return nil, err
 	}
 	a.wails.OnShutdown(func() {
@@ -322,6 +325,7 @@ const updaterWindowCSS = `
 // Run starts the application and blocks until it quits, then unwinds the
 // resources that outlive the Wails run loop.
 func (a *App) Run() error {
+	defer a.storage.Close()
 	started := time.Now()
 	a.logger.Info("application run started")
 	runErr := a.wails.Run()
@@ -373,6 +377,12 @@ func (a *App) newWailsApp() {
 // onStarted brings up the surfaces that must not touch the Windows message
 // loop before Wails owns it. Each failure is degraded, never fatal.
 func (a *App) onStarted(*application.ApplicationEvent) {
+	if !a.settingsService.GetSettings().Configuration.RecoveryRequired {
+		if err := (platform.Startup{}).Set(a.settings.StartWithWindows); err != nil {
+			a.logger.Warn("startup registration reconciliation failed", "error_kind", diagnostics.ErrorKind(err))
+		}
+	}
+
 	a.logger.Info("application started")
 	a.tray.Start()
 	// Wails populates the screen manager as part of Run, before this event.

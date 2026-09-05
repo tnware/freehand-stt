@@ -84,7 +84,10 @@ const copySettings = (settings: Settings): Settings => ({
   transcriptionOptions: { ...settings.transcriptionOptions },
   headers:
     settings.headers == null ? settings.headers : { ...settings.headers },
-  postProcessing: { ...settings.postProcessing, generationOptions: { ...settings.postProcessing.generationOptions } },
+  postProcessing: {
+    ...settings.postProcessing,
+    generationOptions: { ...settings.postProcessing.generationOptions },
+  },
   textToSpeech: { ...settings.textToSpeech },
   microphoneID: settings.microphoneID ?? "",
 });
@@ -189,6 +192,11 @@ export class SettingsEditor {
    * settings window owns that draft until the user saves or discards it.
    */
   applySettingsSnapshot(settings: Settings): boolean {
+    if (settings.configuration.recoveryRequired) {
+      this.#adopt(settings);
+      this.clearCredentialDraft();
+      return true;
+    }
     if (this.dirty && !this.saving) {
       this.#messages.reportInfo(
         "Settings changed in another window. Save or discard this draft, then reopen Settings to load the latest values.",
@@ -212,7 +220,8 @@ export class SettingsEditor {
     if (
       previous &&
       (previous.postProcessing.baseURL !== settings.postProcessing.baseURL ||
-        previous.postProcessing.compatibilityProfile !== settings.postProcessing.compatibilityProfile ||
+        previous.postProcessing.compatibilityProfile !==
+          settings.postProcessing.compatibilityProfile ||
         previous.postProcessing.model !== settings.postProcessing.model)
     ) {
       this.#invalidateProcessingConnection();
@@ -220,7 +229,8 @@ export class SettingsEditor {
     if (
       previous &&
       (previous.textToSpeech.baseURL !== settings.textToSpeech.baseURL ||
-        previous.textToSpeech.compatibilityProfile !== settings.textToSpeech.compatibilityProfile ||
+        previous.textToSpeech.compatibilityProfile !==
+          settings.textToSpeech.compatibilityProfile ||
         previous.textToSpeech.model !== settings.textToSpeech.model ||
         previous.textToSpeech.allowInsecureHTTP !==
           settings.textToSpeech.allowInsecureHTTP ||
@@ -418,7 +428,8 @@ export class SettingsEditor {
         processingCredentialChanged ||
         (previous &&
           (previous.postProcessing.baseURL !== saved.postProcessing.baseURL ||
-            previous.postProcessing.compatibilityProfile !== saved.postProcessing.compatibilityProfile ||
+            previous.postProcessing.compatibilityProfile !==
+              saved.postProcessing.compatibilityProfile ||
             previous.postProcessing.model !== saved.postProcessing.model))
       ) {
         this.#invalidateProcessingConnection();
@@ -427,7 +438,8 @@ export class SettingsEditor {
         ttsCredentialChanged ||
         (previous &&
           (previous.textToSpeech.baseURL !== saved.textToSpeech.baseURL ||
-            previous.textToSpeech.compatibilityProfile !== saved.textToSpeech.compatibilityProfile ||
+            previous.textToSpeech.compatibilityProfile !==
+              saved.textToSpeech.compatibilityProfile ||
             previous.textToSpeech.model !== saved.textToSpeech.model ||
             previous.textToSpeech.allowInsecureHTTP !==
               saved.textToSpeech.allowInsecureHTTP ||

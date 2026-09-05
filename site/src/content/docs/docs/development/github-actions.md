@@ -7,9 +7,9 @@ Freehand uses small, explicit GitHub Actions workflows rather than a custom CI
 container:
 
 - **CI** runs application checks for pull requests, pushes to `main`, and manual
-  dispatches. Linux jobs validate Go, generated branding, Wails bindings, and
+  dispatches. Linux jobs validate Go, the SQLite contract, generated branding, Wails bindings, and
   the Svelte frontend. A Windows job builds the native executable and per-user
-  NSIS installer with the real CGo audio dependency. Site-only changes skip
+  NSIS installer with the real CGo audio dependency, after native storage fixtures pass. Site-only changes skip
   these application jobs.
 - **Pages** builds and validates the site for pull requests that change site or
   shared branding files, then publishes `site/dist` after matching changes land
@@ -40,3 +40,11 @@ for the upstream dependency matrix and runner guidance.
 CI never invokes a configured speech, post-processing, or text-to-speech model.
 Those operations could consume private resources or unexpectedly load large
 models. Native runtime acceptance remains a deliberate local Windows step.
+
+## Storage enforcement
+
+The storage job runs the pinned sqlc command, rejects stale or untracked generated
+queries, compares existing migrations against the PR base (or previous main
+revision), and checks import/query ownership. Real SQLite tests cover migrations,
+recovery, constraints, and file locking; fixtures never use personal settings or
+credentials. See [SQLite storage](../storage/) for the matching local commands.

@@ -27,3 +27,15 @@ Cross-compilation is not acceptance. Run these checks on a non-elevated Windows 
 - Confirm the WebView is denied microphone, camera, geolocation, notification, and clipboard-read permissions. A renderer binding call must not be able to select an arbitrary audio path that was not granted through the native picker.
 
 The connection test may call only `/health` or `/models`. Do not invoke or iterate through models as part of acceptance.
+
+## SQLite settings acceptance
+
+Use a separate test user or isolated data directories, not personal settings.
+Confirm one-time JSON import, save/reopen persistence, new-key replacement and
+clear, and restart reconciliation of startup and shortcuts. Test a denied write
+and a deliberately newer/corrupt fixture: both windows must expose recovery,
+new jobs must stop, and existing captured profiles must remain coherent. Retry
+a repaired import, explicitly reset, and restore a backup with the app fully
+closed. Inspect only synthetic credential accounts and confirm no secret reaches
+the database, backups, renderer snapshots, or logs. Native temporary-database
+tests and a successful executable build do not replace these interactive checks.

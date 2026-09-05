@@ -3,6 +3,15 @@ title: Architecture
 description: Runtime ownership, platform boundaries, and application data flow.
 ---
 
+## Durable settings storage
+
+[ADR 0006](../../decisions/0006-sqlite-storage-contract/) governs the implemented
+SQLite store: modernc, embedded goose migrations, and sqlc-generated queries.
+`internal/storage` owns the database lifecycle and adapters; `internal/settings`
+retains coherent saves and immutable request profiles. See the
+[storage maintenance guide](../storage/) for schema changes and recovery.
+Transcript history remains optional and memory-only.
+
 ## Server compatibility ownership
 
 The [backend maintenance guide](../backend-compatibility/) describes the shared
@@ -49,7 +58,7 @@ credential storage changes are outside this implementation.
 | Native tray presentation/actions | `internal/tray` consuming bounded domain snapshots |
 | Tray ownership, startup, single instance | Go/Wails Windows lifecycle |
 | Settings and status rendering | Svelte through generated Wails bindings |
-| Durable non-secret configuration | `%APPDATA%` JSON |
+| Durable non-secret configuration | `%LOCALAPPDATA%\Freehand\settings.db` (SQLite) |
 | Structured runtime diagnostics | One Wails default logger hierarchy, injected by `internal/app` |
 | Release identity and version | `build/config.yml`, parsed by `internal/releaseinfo` |
 | Release discovery and staged executable updates | `internal/updates` + Wails updater GitHub provider |
@@ -131,15 +140,22 @@ After loading the applied profile, the renderer runs one bounded metadata-only S
 
 Ordinary Go collaborators remain ordinary types: `history.Store`, the inference client, post-processor, capture adapter, and insertion policy are injected by `internal/app` and are not registered with Wails. The settings/profile transaction remains one owner even though consumers receive narrow snapshot functions.
 
-The configuration store decodes known fields over safe defaults while retaining
-the original JSON object. Unknown top-level and nested fields are reported as
-newer-version compatibility metadata and merged back unchanged when known
-settings are saved. A malformed document or invalid known value creates an
-explicit recovery state instead of making defaults look applied: the settings
-service rejects ordinary saves and request-profile capture, while its narrow
-Retry and Reset bindings either re-read the untouched file or deliberately
-replace it. Credentials remain outside this document in Windows Credential
-Manager.
+The storage package opens one connection with a per-process file lock, validates
+Freehand database identity and goose history, and upgrades forward before
+settings-dependent services start. Four typed singleton tables hold preferences,
+transcription, cleanup, and playback; related tables hold bounded request headers,
+credential references, deferred credential deletion, and initialization state.
+The read-only legacy JSON importer runs only when no database exists. It rejects
+unknown fields or invalid input and leaves the original file untouched.
+
+A load failure or uncertain commit creates an explicit recovery state: ordinary
+saves and new request profiles are blocked. Retry validates and reloads committed
+settings; explicit Reset archives the database and sidecars before replacing it.
+An upgrade requires a successful SQLite backup first. No API key or transcript is
+stored in these tables. Credentials are staged under new native accounts; settings
+and account references commit together, then obsolete accounts are reclaimed.
+Native startup registration and shortcut configuration reconcile from committed
+settings on restart. No SQL transaction spans an inference call.
 
 The native tray controller is also an ordinary Go collaborator rather than a
 renderer service. It consumes the same bounded dictation and stored-file
@@ -302,7 +318,7 @@ Wails stays at `Info` because the pinned bridge's debug tracing serializes bindi
 
 ## Configuration boundaries
 
-Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS also have independent endpoint, model, HTTP-policy, and credential identities even when the user points them at the same server. Stored credentials remain outside the JSON settings file. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
+Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS also have independent endpoint, model, HTTP-policy, and credential identities even when the user points them at the same server. Stored credentials remain in Windows Credential Manager; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
 
 `internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation and closes native output deterministically.
 
@@ -322,7 +338,7 @@ The main renderer treats transcript-list disclosure as a presentation-only WebVi
 
 Every input mode and every dictation state shares one `TransportShell`: a fixed 116px control cell, an elastic stage, and a 236px readout cell spanning the window under the header. Because that geometry never changes, starting a recording, switching input modes, or failing a request never moves anything else on screen. `TransportBar`, `AudioFileTranscription`, and `TextToSpeech` supply the three cells; the shell owns the progress rail, which is indeterminate for endpoint work that reports no progress and determinate only for the file-upload leg, whose length is known.
 
-The post-processing package owns a small renderer-visible profile catalog so names, descriptions, editability, and fixed protocol instructions stay aligned with request construction. Model IDs are never used to infer behavior. The custom profile persists a bounded user system instruction in the ordinary JSON settings, while its API key remains in Credential Manager. The S1-mini profile keeps its exact system instruction in code and persists only its trained styling, structure, and context selections. Switching profiles preserves inactive profile values rather than destructively rewriting them.
+The post-processing package owns a small renderer-visible profile catalog so names, descriptions, editability, and fixed protocol instructions stay aligned with request construction. Model IDs are never used to infer behavior. The custom profile persists a bounded user system instruction in the ordinary settings database, while its API key remains in Credential Manager. The S1-mini profile keeps its exact system instruction in code and persists only its trained styling, structure, and context selections. Switching profiles preserves inactive profile values rather than destructively rewriting them.
 
 ## Release identity
 
@@ -340,7 +356,7 @@ Windows resource task runs its read-only check before compilation, preventing a
 package whose embedded About version disagrees with its executable or installer
 metadata.
 
-An active operation observes one coherent request profile. The transactional settings owner captures endpoint, model, headers, authentication mode, post-processing configuration, and both credentials under its save lock before microphone capture or stored-file upload begins. Renderer-safe settings reads use that same lock, so no window can combine an old JSON configuration with credential or native state already changed by an in-progress save. Every failed native or credential stage attempts its own restoration plus all earlier restorations in reverse order; rollback failures remain inspectable by Go while their renderer-visible messages omit provider and credential-store details. The profile remains private to Go and fixed for the operation; settings edits save normally but affect only later operations. Segmented dictation therefore does not read a credential at its first checkpoint, and stored-file post-processing does not reread one after upload.
+An active operation observes one coherent request profile. The transactional settings owner captures endpoint, model, headers, authentication mode, post-processing configuration, and both credentials under its save lock before microphone capture or stored-file upload begins. Renderer-safe settings reads use that same lock, so no window can combine an old saved configuration with credential or native state already changed by an in-progress save. Every failed native or credential stage attempts its own restoration plus all earlier restorations in reverse order; rollback failures remain inspectable by Go while their renderer-visible messages omit provider and credential-store details. The profile remains private to Go and fixed for the operation; settings edits save normally but affect only later operations. Segmented dictation therefore does not read a credential at its first checkpoint, and stored-file post-processing does not reread one after upload.
 
 `postprocess.Processor` accepts the captured configuration and credential explicitly through `ProcessWithCredential`; it has no credential-store dependency or alternate store-reading entry point. Credential acquisition remains with the transactional settings/profile owner.
 
