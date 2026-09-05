@@ -32,6 +32,7 @@ func TestErrorKindReturnsBoundedCategories(t *testing.T) {
 		{name: "nil", want: ""},
 		{name: "cancelled", err: context.Canceled, want: "cancelled"},
 		{name: "deadline", err: context.DeadlineExceeded, want: "timeout"},
+		{name: "incomplete response", err: classifiedTestError{kind: "incomplete_response", message: "private partial text"}, want: "incomplete_response"},
 		{name: "classified", err: classifiedTestError{kind: "response_too_large", message: "secret provider body"}, want: "response_too_large"},
 		{name: "unknown classification", err: classifiedTestError{kind: "secret provider body", message: "secret provider body"}, want: "operation"},
 		{name: "dns", err: &net.DNSError{Err: "secret resolver detail", Name: "private.example"}, want: "dns"},

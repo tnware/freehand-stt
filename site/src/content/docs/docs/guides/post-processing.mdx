@@ -112,8 +112,10 @@ The S1-mini profile sends the model's exact system prompt and control line and s
 The S1-mini v1 model card recommends inputs below roughly 1,000 tokens.
 Freehand currently sends each cleanup input in one request; it does not split
 long transcripts into sentence chunks or enforce an output length relative to
-the input. A nonempty response can be accepted even if the server reports that
-generation reached its length limit. Review cleaned output for omissions,
+the input. If the server reports that generation reached its length limit,
+Freehand discards the partial cleanup and uses the original raw transcript,
+with an output-limit notice. It does not automatically retry cleanup. A server
+can still omit content without reporting a limit. Review cleaned output for omissions,
 especially for long recordings and stored files, or leave cleanup off.
 :::
 

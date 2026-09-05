@@ -110,8 +110,10 @@ outcome is retained in history when history is enabled and within its limits.
 <summary>S1-mini returns empty text, or cleaned output is incomplete</summary>
 
 Confirm that the **S1-mini by Superwhisper** profile is selected and its server
-has reasoning disabled. The alpha does not automatically chunk long cleanup
-inputs or reject every truncated response. Follow the
+has reasoning disabled. If the server reports an output length limit, Freehand
+uses the raw transcript and shows an output-limit notice. The alpha does not
+automatically chunk long cleanup inputs and cannot detect omissions the server
+does not report. Follow the
 [S1-mini setup and input limits](../post-processing/#s1-mini-by-superwhisper-with-llamacpp)
 and review output against the raw version when history is enabled.
 

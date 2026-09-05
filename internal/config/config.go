@@ -518,7 +518,7 @@ func validatePersistedSTTSettings(s Settings) error {
 			return fmt.Errorf("health path must be at most %d bytes", MaxHealthPathBytes)
 		}
 		if s.HealthPath != "" && (!strings.HasPrefix(s.HealthPath, "/") || strings.ContainsAny(s.HealthPath, "?#\r\n")) {
-			return errors.New("health path must be an absolute path without query or fragment")
+			return errors.New("health path must start with / and contain no query or fragment; it is appended to the base URL path")
 		}
 		return validateHeaders(s.Headers)
 	}
@@ -548,7 +548,7 @@ func validateSTTConnection(baseURL string, allowInsecureHTTP bool, authenticatio
 		return fmt.Errorf("health path must be at most %d bytes", MaxHealthPathBytes)
 	}
 	if healthPath != "" && (!strings.HasPrefix(healthPath, "/") || strings.ContainsAny(healthPath, "?#\r\n")) {
-		return errors.New("health path must be an absolute path without query or fragment")
+		return errors.New("health path must start with / and contain no query or fragment; it is appended to the base URL path")
 	}
 	return validateHeaders(headers)
 }
