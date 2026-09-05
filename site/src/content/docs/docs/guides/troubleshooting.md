@@ -66,8 +66,11 @@ condition, then retry deliberately.
 - Check the shortcut shown under **Settings → Shortcuts**. A conflicting global
   shortcut is rejected when settings are saved, leaving the previous working
   shortcut in place.
-- Finish or cancel active audio-file transcription or speech playback before
-  starting another recording.
+- Finish or cancel active audio-file transcription before starting a recording.
+- Recording normally stops speech playback automatically before opening the
+  microphone. If playback cannot be stopped, capture does not start. Stop
+  playback explicitly and retry; if that fails, quit Freehand through the tray
+  and relaunch.
 
 <details>
 <summary>Recording starts slowly after the microphone has been idle</summary>

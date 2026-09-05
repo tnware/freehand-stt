@@ -97,7 +97,7 @@ func TestFileProcessingOutcomes(t *testing.T) {
 				input := &processingInput{}
 				service := NewService(settings.Source(func() config.Settings { return cfg }), settings.ProfileSource(func() (settings.RequestProfile, error) {
 					return settings.RequestProfile{Settings: cfg, PostProcessingCredential: "[REDACTED]"}, nil
-				}), client, processor, transcripts, nil, input, nil, nil, nil, nil, nil)
+				}), client, processor, transcripts, input, nil, nil, nil, nil, nil)
 				t.Cleanup(func() { _ = service.ServiceShutdown() })
 				path := filepath.Join(t.TempDir(), "recording.wav")
 				if err := os.WriteFile(path, []byte("RIFF audio"), 0o600); err != nil {

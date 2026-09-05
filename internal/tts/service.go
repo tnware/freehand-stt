@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/tnware/freehand-stt/internal/activity"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/history"
@@ -74,31 +75,34 @@ type SpeechClient interface {
 }
 
 type Service struct {
-	control       sync.Mutex
-	mu            sync.Mutex
-	profiles      settings.TextToSpeechProfileSource
-	client        SpeechClient
-	player        Player
-	history       *history.Store
-	fileText      func() (string, error)
-	saveFile      func() (string, error)
-	captureActive func() bool
-	changed       func(Status)
-	logger        *slog.Logger
-	rootContext   context.Context
-	rootCancel    context.CancelFunc
-	operation     context.CancelFunc
-	status        Status
-	generation    uint64
-	workers       sync.WaitGroup
-	closed        atomic.Bool
+	control     sync.Mutex
+	mu          sync.Mutex
+	profiles    settings.TextToSpeechProfileSource
+	client      SpeechClient
+	player      Player
+	history     *history.Store
+	fileText    func() (string, error)
+	saveFile    func() (string, error)
+	activity    *activity.Coordinator
+	changed     func(Status)
+	logger      *slog.Logger
+	rootContext context.Context
+	rootCancel  context.CancelFunc
+	operation   context.CancelFunc
+	status      Status
+	generation  uint64
+	workers     sync.WaitGroup
+	closed      atomic.Bool
 }
 
-func NewService(profiles settings.TextToSpeechProfileSource, client SpeechClient, player Player, transcripts *history.Store, fileText func() (string, error), saveFile func() (string, error), captureActive func() bool, changed func(Status), logger *slog.Logger) *Service {
+func NewService(profiles settings.TextToSpeechProfileSource, client SpeechClient, player Player, transcripts *history.Store, fileText func() (string, error), saveFile func() (string, error), admission *activity.Coordinator, changed func(Status), logger *slog.Logger) *Service {
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
-	return &Service{profiles: profiles, client: client, player: player, history: transcripts, fileText: fileText, saveFile: saveFile, captureActive: captureActive, changed: changed, logger: logger.With("component", "tts"), status: Status{Phase: Idle}}
+	if admission == nil {
+		admission = activity.New(activity.Sources{})
+	}
+	return &Service{profiles: profiles, client: client, player: player, history: transcripts, fileText: fileText, saveFile: saveFile, activity: admission, changed: changed, logger: logger.With("component", "tts"), status: Status{Phase: Idle}}
 }
 
 func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
@@ -113,6 +117,7 @@ func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptio
 }
 
 func (s *Service) ServiceShutdown() error {
+	s.activity.Close()
 	s.control.Lock()
 	if !s.closed.CompareAndSwap(false, true) {
 		s.control.Unlock()
@@ -174,13 +179,15 @@ func (s *Service) SpeakText(text string) error {
 }
 
 func (s *Service) start(text string, source Source, historyID uint64, version history.HistoryTextVersion) error {
+	release, err := s.activity.BeginPlayback()
+	if err != nil {
+		return err
+	}
+	defer release()
 	s.control.Lock()
 	defer s.control.Unlock()
 	if s.closed.Load() {
 		return errors.New("application is shutting down")
-	}
-	if s.captureActive != nil && s.captureActive() {
-		return errors.New("finish the active transcription before starting speech playback")
 	}
 	text = strings.TrimSpace(text)
 	if text == "" {
@@ -496,13 +503,6 @@ func (s *Service) ClearAudio() error {
 	s.publish(status)
 	s.logger.Info("speech audio cleared", "generation", generation, "outcome", "released")
 	return nil
-}
-
-// StopPlayback is the backend collaboration used before microphone capture.
-func StopPlayback(service *Service) {
-	if service != nil {
-		_ = service.Stop()
-	}
 }
 
 func (s *Service) source(generation uint64) Source {

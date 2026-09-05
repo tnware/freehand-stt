@@ -7,9 +7,9 @@ import (
 	"io/fs"
 	"log/slog"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/tnware/freehand-stt/internal/activity"
 	"github.com/tnware/freehand-stt/internal/buildinfo"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/connection"
@@ -160,15 +160,23 @@ func New(opts Options) (*App, error) {
 	client := inference.New()
 	processor := postprocess.New(client, processingKeys, rootLogger.With("component", "postprocess"))
 	nativeInput := platform.NewInput(rootLogger.With("component", "insertion"))
-	activity := &sync.Mutex{}
-	var files *filetranscription.Service
+	admission := activity.New(activity.Sources{
+		DictationActive: func() bool { return dictation.Active(a.dictation) },
+		FileActive:      func() bool { return filetranscription.Active(a.files) },
+		StopPlayback: func() error {
+			if a.tts == nil {
+				return nil
+			}
+			return a.tts.Stop()
+		},
+	})
 	a.updates = updates.NewService(opts.Release.Version, settings.CheckForUpdates, opts.Development, a.publishUpdateStatus, rootLogger)
 	transcripts := history.NewStore(settings.HistoryEnabled, nativeInput)
 	a.settingsService = settingsservice.NewService(
 		store, settings, keys, processingKeys, platform.Startup{}, holdAvailability,
 		a.applyShortcuts, a.applyOverlaySettings,
 		transcripts.SetEnabled,
-		func(next config.Settings) { filetranscription.ApplySettings(files, next) },
+		func(next config.Settings) { filetranscription.ApplySettings(a.files, next) },
 		a.publishSettings,
 		rootLogger,
 		settingsservice.WithConfigurationLoad(store, settingsFailure, store.LoadReport()),
@@ -177,29 +185,23 @@ func New(opts Options) (*App, error) {
 	)
 	settingsSource := settingsservice.CurrentSource(a.settingsService)
 	profileSource := settingsservice.RequestProfiles(a.settingsService)
-	a.dictation = dictation.NewService(a.audio, nativeInput, client, processor, settingsSource, profileSource, transcripts, func() bool { return filetranscription.Active(files) }, activity, a.publishStatus, rootLogger.With("component", "dictation"))
-	voiceActive := func() bool {
-		state := dictation.Snapshot(a.dictation).State
-		return state != dictation.Idle && state != dictation.Failed
-	}
-	files = filetranscription.NewService(settingsSource, profileSource, client, processor, transcripts, voiceActive, nativeInput, a.chooseAudioFile, a.publishFileStatus, a.publishFileDelta, activity, rootLogger)
-	a.files = files
+	a.dictation = dictation.NewService(a.audio, nativeInput, client, processor, settingsSource, profileSource, transcripts, admission, a.publishStatus, rootLogger.With("component", "dictation"))
+	a.files = filetranscription.NewService(settingsSource, profileSource, client, processor, transcripts, nativeInput, a.chooseAudioFile, a.publishFileStatus, a.publishFileDelta, admission, rootLogger)
 	a.playback = &platform.Playback{}
 	a.tts = tts.NewService(
 		settingsservice.TextToSpeechProfiles(a.settingsService),
 		client,
 		a.playback,
 		transcripts,
-		func() (string, error) { return filetranscription.PlaybackTranscript(files) },
+		func() (string, error) { return filetranscription.PlaybackTranscript(a.files) },
 		a.chooseSpeechSaveFile,
-		func() bool { return voiceActive() || filetranscription.Active(files) },
+		admission,
 		a.publishTTSStatus,
 		rootLogger,
 	)
-	dictation.SetBeforeRecording(a.dictation, func() { tts.StopPlayback(a.tts) })
 	a.history = history.NewService(transcripts)
 	a.connection = connection.NewService(keys, processingKeys, ttsKeys, client, rootLogger)
-	a.inputService = inputservice.NewService(a.audio, a.capture, a, voiceActive, func() bool { return filetranscription.Active(files) }, settingsSource, a.publishShortcutCapture, rootLogger)
+	a.inputService = inputservice.NewService(a.audio, a.capture, a, admission, settingsSource, a.publishShortcutCapture, rootLogger)
 	a.buildInfo = buildinfo.NewService(
 		opts.Release.ProductName,
 		opts.Release.Version,
@@ -238,6 +240,7 @@ func New(opts Options) (*App, error) {
 		return nil, err
 	}
 	a.wails.OnShutdown(func() {
+		admission.Close()
 		a.persistMainWindowPlacement(a.mainWindow.current())
 		a.tray.Close()
 	})

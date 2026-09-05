@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/tnware/freehand-stt/internal/activity"
 	"github.com/tnware/freehand-stt/internal/audio"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/hotkey"
@@ -64,8 +65,7 @@ type Service struct {
 	capture         audio.Capture
 	shortcutCapture ShortcutCapturer
 	shortcutGuard   ShortcutCaptureGuard
-	dictationActive func() bool
-	fileActive      func() bool
+	activity        *activity.Coordinator
 	settings        settings.Source
 	shortcutChanged func(ShortcutCaptureProgress)
 	logger          *slog.Logger
@@ -77,11 +77,11 @@ type Service struct {
 	closed          atomic.Bool
 }
 
-func NewService(capture audio.Capture, shortcutCapture ShortcutCapturer, shortcutGuard ShortcutCaptureGuard, dictationActive func() bool, fileActive func() bool, source settings.Source, shortcutChanged func(ShortcutCaptureProgress), logger *slog.Logger) *Service {
+func NewService(capture audio.Capture, shortcutCapture ShortcutCapturer, shortcutGuard ShortcutCaptureGuard, admission *activity.Coordinator, source settings.Source, shortcutChanged func(ShortcutCaptureProgress), logger *slog.Logger) *Service {
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
-	return &Service{capture: capture, shortcutCapture: shortcutCapture, shortcutGuard: shortcutGuard, dictationActive: dictationActive, fileActive: fileActive, settings: source, shortcutChanged: shortcutChanged, logger: logger.With("component", "input")}
+	return &Service{capture: capture, shortcutCapture: shortcutCapture, shortcutGuard: shortcutGuard, activity: admission, settings: source, shortcutChanged: shortcutChanged, logger: logger.With("component", "input")}
 }
 
 func (s *Service) log() *slog.Logger {
@@ -142,6 +142,7 @@ func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptio
 
 func (s *Service) ServiceShutdown() error {
 	s.closed.Store(true)
+	s.activity.Close()
 	s.lifecycleMu.Lock()
 	cancel := s.rootCancel
 	s.rootCancel = nil
@@ -244,11 +245,11 @@ func (s *Service) CaptureShortcut(request ShortcutCaptureRequest) (result Shortc
 		return unavailable("Another shortcut capture is already in progress."), nil
 	}
 	defer s.captureMu.Unlock()
-	if s.fileActive != nil && s.fileActive() {
-		return unavailable("Finish the active audio-file transcription before recording a shortcut."), nil
-	}
-	if s.dictationActive != nil && s.dictationActive() {
-		return unavailable("Finish the active dictation before recording a shortcut."), nil
+	if err := s.activity.CheckShortcutCapture(); err != nil {
+		if errors.Is(err, activity.ErrClosed) {
+			return ShortcutCaptureResult{}, err
+		}
+		return unavailable(err.Error()), nil
 	}
 	if s.shortcutCapture == nil {
 		return unavailable("Shortcut capture is unavailable in this build."), nil

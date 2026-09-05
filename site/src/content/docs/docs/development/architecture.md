@@ -8,6 +8,7 @@ description: Runtime ownership, platform boundaries, and application data flow.
 | Concern | Owner |
 |---|---|
 | Live dictation state machine | `internal/dictation` |
+| Cross-feature start admission and recording preemption | `internal/activity` |
 | Global shortcuts | Windows platform adapter |
 | Audio capture and normalization | Go audio service |
 | Endpoint requests and cancellation | Go provider-neutral inference client |
@@ -55,6 +56,7 @@ Only the dictation package performs live-recording state transitions. Platform a
 
 ```text
 cmd/ or root main.go       composition and Wails lifecycle
+internal/activity         cross-feature admission, without duplicated feature state
 internal/dictation        live recording state machine and renderer commands
 internal/history          bounded transcript store and renderer queries/actions
 internal/filetranscription native file grant and stored-audio job
@@ -159,6 +161,44 @@ speech generation therefore receive independent budgets. The connection
 service keeps its fixed 15-second metadata-only probe deadline. Deadline and
 user cancellation are separate bounded error kinds; no timeout causes an
 automatic inference retry.
+
+## Cross-feature activity admission
+
+`internal/app` constructs one ordinary `activity.Coordinator` and supplies live
+activity predicates from dictation and file transcription plus the speech
+owner's Stop operation. The coordinator is not a Wails service, scheduler, or
+aggregate state machine. Construction installs sources without calling them;
+all participating services are composed before admission is used.
+
+- Recording excludes active file transcription and synchronously stops and
+  releases speech before microphone capture. A failed playback stop rejects
+  recording instead of allowing capture over potentially audible output.
+- File transcription excludes active dictation. It deliberately does not stop
+  speech that was already running; the policy is not symmetric three-way
+  exclusion.
+- New speech requests exclude active dictation and file transcription.
+- Shortcut capture uses the same activity predicates for its initial check.
+  Input and native shortcut owners still own capture serialization and
+  suspend/restore. This check is not a reservation for the whole user prompt.
+
+Admission spans the owner's start checks, any playback preemption, and the
+publication of its active state. Every start defers release, including failed
+profile, file-selection, and device preparation paths. There is no activity
+reservation retained for a running operation: subsequent checks read the
+feature owner's current state, including cancellation and completion.
+
+The lock order is admission **before** feature control locks. Speech start
+must acquire admission before its player-control lock, because recording may
+hold admission while calling speech Stop. Sources and synchronous start-status
+callbacks must not reenter admission. Stop, cancel, and shutdown do not acquire
+admission, so they can terminate work while another start is waiting.
+
+Closing admission is terminal and wakes waiting callers without joining a
+start or clearing feature state. Participating service shutdown closes the
+shared coordinator before resource teardown, regardless of shutdown order.
+Owners still fence late preparation, cancel their contexts, and join their
+workers; file worker registration occurs inside its closed-state admission
+fence. Recording rechecks closure after potentially blocking speech preemption.
 
 ## Shared post-processing outcome policy
 
