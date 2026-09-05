@@ -88,7 +88,7 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 					return settings.RequestProfile{Settings: cfg, PostProcessingCredential: "[REDACTED]"}, nil
 				})
 				if mode != "unavailable" {
-					recorder.SetPostProcessor(postprocess.New(client, nil, nil))
+					recorder.SetPostProcessor(postprocess.New(client, nil))
 				}
 				if err := recorder.Start(); err != nil {
 					t.Fatal(err)

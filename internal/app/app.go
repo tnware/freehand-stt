@@ -158,7 +158,7 @@ func New(opts Options) (*App, error) {
 	processingKeys := credential.Keyring{Account: credential.PostProcessingAccount}
 	ttsKeys := credential.Keyring{Account: credential.TextToSpeechAccount}
 	client := inference.New()
-	processor := postprocess.New(client, processingKeys, rootLogger.With("component", "postprocess"))
+	processor := postprocess.New(client, rootLogger.With("component", "postprocess"))
 	nativeInput := platform.NewInput(rootLogger.With("component", "insertion"))
 	admission := activity.New(activity.Sources{
 		DictationActive: func() bool { return dictation.Active(a.dictation) },

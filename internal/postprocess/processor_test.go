@@ -49,8 +49,8 @@ func TestS1MiniUsesDocumentedControlLineWithoutProviderSpecificOptions(t *testin
 	cfg.Styling = "formal"
 	cfg.Structure = "lists"
 	cfg.Context = "email"
-	processor := New(inference.New(), nil, nil)
-	got, err := processor.Process(context.Background(), cfg, "raw words")
+	processor := New(inference.New(), nil)
+	got, err := processor.ProcessWithCredential(context.Background(), cfg, "raw words", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,8 +88,8 @@ func TestCustomProfileUsesStoredInstructionWithoutS1Controls(t *testing.T) {
 	cfg.Model = "ordinary-chat-model"
 	cfg.Preset = config.PostProcessingPresetGeneric
 	cfg.SystemPrompt = "  My cleanup instruction.  "
-	processor := New(inference.New(), nil, nil)
-	got, err := processor.Process(context.Background(), cfg, "raw words")
+	processor := New(inference.New(), nil)
+	got, err := processor.ProcessWithCredential(context.Background(), cfg, "raw words", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,8 +109,8 @@ func TestEmptyOutputFailsForRawFallback(t *testing.T) {
 	cfg.AllowInsecureHTTP = true
 	cfg.Model = "s1-mini"
 	cfg.Preset = config.PostProcessingPresetS1Mini
-	processor := New(inference.New(), nil, nil)
-	if _, err := processor.Process(context.Background(), cfg, "raw words"); err == nil {
+	processor := New(inference.New(), nil)
+	if _, err := processor.ProcessWithCredential(context.Background(), cfg, "raw words", ""); err == nil {
 		t.Fatal("empty output was accepted")
 	}
 }
@@ -127,7 +127,7 @@ func TestProcessingLogsLifecycleWithoutRequestContent(t *testing.T) {
 	cfg.AllowInsecureHTTP = true
 	cfg.Model = "private-model-id"
 	cfg.Preset = config.PostProcessingPresetS1Mini
-	processor := New(inference.New(), nil, slog.New(slog.NewTextHandler(&logs, nil)))
+	processor := New(inference.New(), slog.New(slog.NewTextHandler(&logs, nil)))
 	if _, err := processor.ProcessWithCredential(context.Background(), cfg, "private raw transcript", "private-api-key"); err != nil {
 		t.Fatal(err)
 	}

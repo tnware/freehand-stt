@@ -92,7 +92,7 @@ func TestFileProcessingOutcomes(t *testing.T) {
 				})
 				var processor transcriptProcessor
 				if mode != "unavailable" {
-					processor = postprocess.New(client, nil, nil)
+					processor = postprocess.New(client, nil)
 				}
 				input := &processingInput{}
 				service := NewService(settings.Source(func() config.Settings { return cfg }), settings.ProfileSource(func() (settings.RequestProfile, error) {
