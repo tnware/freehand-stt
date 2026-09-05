@@ -52,7 +52,12 @@ vi.mock("$bindings/tts/service", () => ({
 }));
 
 const settings: Settings = {
-  transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
+  transcriptionOptions: {
+    prompt: "",
+    hotwords: "",
+    temperatureOverride: false,
+    temperature: 0,
+  },
   compatibilityProfile: ID.Generic,
   compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
   transcriptionLanguages: [],
@@ -97,7 +102,11 @@ const settings: Settings = {
   segmentSeconds: 90,
   segmentSilenceMilliseconds: 700,
   postProcessing: {
-    generationOptions: { limitOutputTokens: false, maxOutputTokens: 0, disableReasoning: false },
+    generationOptions: {
+      limitOutputTokens: false,
+      maxOutputTokens: 0,
+      disableReasoning: false,
+    },
     compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "http://127.0.0.1:8080/v1",
@@ -121,6 +130,7 @@ const settings: Settings = {
     speed: 1,
     timeoutSeconds: 180,
   },
+  savedConnections: { entries: [], selected: {} },
   configuration: {
     recoveryRequired: false,
     preservedFields: [],

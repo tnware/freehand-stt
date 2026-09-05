@@ -56,6 +56,10 @@ available for you to copy.
 Clipboard-paste insertion is not enabled. Freehand does not silently replace
 the clipboard as part of automatic delivery.
 
+Named connections also store their non-secret endpoint details locally. Inactive
+connections retain credential references; deleting an entry removes its key only
+when no saved connection uses that reference. See [saved connections](../saved-connections/).
+
 ## Saved settings and backups
 
 Non-secret settings are stored on this PC in

@@ -120,6 +120,7 @@ func (s *Store) DiscardCredentialChanges() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.pending = nil
+	s.pendingConnections = nil
 	if s.db != nil && !s.uncertain {
 		ctx, cancel := context.WithTimeout(s.ctx, operationTimeout)
 		defer cancel()

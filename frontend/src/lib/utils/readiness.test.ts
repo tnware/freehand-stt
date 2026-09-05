@@ -25,7 +25,13 @@ const devices: Device[] = [
 ];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
-  transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
+  savedConnections: { entries: [], selected: {} },
+  transcriptionOptions: {
+    prompt: "",
+    hotwords: "",
+    temperatureOverride: false,
+    temperature: 0,
+  },
   compatibilityProfile: ID.Generic,
   compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
   transcriptionLanguages: [],
@@ -70,7 +76,11 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   segmentSeconds: 90,
   segmentSilenceMilliseconds: 700,
   postProcessing: {
-    generationOptions: { limitOutputTokens: false, maxOutputTokens: 0, disableReasoning: false },
+    generationOptions: {
+      limitOutputTokens: false,
+      maxOutputTokens: 0,
+      disableReasoning: false,
+    },
     compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "http://127.0.0.1:8080/v1",
@@ -250,10 +260,37 @@ describe("app readiness", () => {
 });
 
 it("accepts a catalog-declared server-loaded model without a client model ID", () => {
-  const cfg = settings({model: "", compatibilityProfile: ID.WhisperCPP});
-  cfg.compatibilityProfiles.transcription = [{id: ID.WhisperCPP, label: "whisper.cpp", description: "Native server", available: true, capabilities: {serverLoadedModel: true, vllmTranscriptionEvents: false, cleanupOutputLimit: false, cleanupDisableReasoning: false, fileStreaming: false, typedTranscriptionEvents: false, legacyTranscriptionSegments: false, languageHint: true, speechSpeed: false, transcriptionPrompt: true, transcriptionHotwords: false, transcriptionTemperature: true}}];
+  const cfg = settings({ model: "", compatibilityProfile: ID.WhisperCPP });
+  cfg.compatibilityProfiles.transcription = [
+    {
+      id: ID.WhisperCPP,
+      label: "whisper.cpp",
+      description: "Native server",
+      available: true,
+      capabilities: {
+        serverLoadedModel: true,
+        vllmTranscriptionEvents: false,
+        cleanupOutputLimit: false,
+        cleanupDisableReasoning: false,
+        fileStreaming: false,
+        typedTranscriptionEvents: false,
+        legacyTranscriptionSegments: false,
+        languageHint: true,
+        speechSpeed: false,
+        transcriptionPrompt: true,
+        transcriptionHotwords: false,
+        transcriptionTemperature: true,
+      },
+    },
+  ];
   const native = appReadiness(cfg, null, devices, false);
-  expect(native.steps.find((step) => step.id === "server")?.status).toBe("complete");
+  expect(native.steps.find((step) => step.id === "server")?.status).toBe(
+    "complete",
+  );
   cfg.compatibilityProfile = ID.Generic;
-  expect(appReadiness(cfg, null, devices, false).steps.find((step) => step.id === "server")?.status).toBe("attention");
+  expect(
+    appReadiness(cfg, null, devices, false).steps.find(
+      (step) => step.id === "server",
+    )?.status,
+  ).toBe("attention");
 });

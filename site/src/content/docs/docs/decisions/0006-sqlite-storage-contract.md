@@ -119,8 +119,8 @@ separately from code generation and cross-compilation.
 Implementation note: the database, importer, versioned credential references,
 recovery operations, pinned generation command, and CI enforcement now follow
 this contract. See [the storage maintenance guide](../../development/storage/)
-for the concrete layout and validation commands. Saved connections and reusable
-model preferences remain separate feature work.
+for the concrete layout and validation commands. Saved connections subsequently use this foundation; reusable model preferences
+remain separate feature work.
 
 ## References
 

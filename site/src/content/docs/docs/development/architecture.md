@@ -12,6 +12,14 @@ retains coherent saves and immutable request profiles. See the
 [storage maintenance guide](../storage/) for schema changes and recovery.
 Transcript history remains optional and memory-only.
 
+Named connections are capability-scoped records, with independent active IDs for
+transcription, cleanup, and playback. The domain contract lives in
+`internal/savedconnection`; SQLite adapters remain in storage. The existing
+settings owner commits catalog mutations, active configuration, and credential
+references together. UI connection actions reuse that transaction and reject
+stale selected IDs. Captured requests retain their settings and key strings
+across connection switches and deletion. See [saved connections](../../guides/saved-connections/).
+
 ## Server compatibility ownership
 
 The [backend maintenance guide](../backend-compatibility/) describes the shared
@@ -36,8 +44,8 @@ the effective profile in their cache key.
 Profiles identify implemented server contracts. The S1-mini preset continues
 to own prompt construction independently. Future model-specific options must
 add qualified capabilities and bounded request/response handling here; catalog
-availability alone cannot prove model support. Named saved connections and
-credential storage changes are outside this implementation.
+availability alone cannot prove model support. Named saved connections retain
+these provider contracts with their endpoint and opaque credential reference.
 
 ## Authority map
 

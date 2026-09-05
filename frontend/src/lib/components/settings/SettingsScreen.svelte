@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SavedConnectionPicker from "$lib/components/settings/SavedConnectionPicker.svelte";
+  import { Purpose } from "$bindings/savedconnection";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { Button } from "$lib/components/ui/button";
   import { Skeleton } from "$lib/components/ui/skeleton";
@@ -59,8 +61,7 @@
     if (preservedFields.length > 0) {
       const remaining = Math.max(
         0,
-        (configuration?.preservedFieldCount ?? preservedFields.length) -
-          preservedFields.length,
+        (configuration?.preservedFieldCount ?? preservedFields.length) - preservedFields.length,
       );
       out.push({
         id: "configuration-compatibility",
@@ -105,10 +106,7 @@
 
   <div class="flex min-w-0 flex-1 flex-col">
     <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-      <section
-        aria-labelledby="settings-section-title"
-        class="flex max-w-[620px] flex-col gap-3.5"
-      >
+      <section aria-labelledby="settings-section-title" class="flex max-w-[620px] flex-col gap-3.5">
         <div class="flex items-baseline gap-2.5">
           <h3 class="text-base font-semibold tracking-[-0.01em]">
             {section.label}
@@ -117,17 +115,26 @@
             {section.blurb}
           </p>
         </div>
-        <h2
-          id="settings-section-title"
-          class="sr-only"
-          aria-live="polite"
-          aria-atomic="true"
-        >
+        <h2 id="settings-section-title" class="sr-only" aria-live="polite" aria-atomic="true">
           {section.label} settings
         </h2>
         <Notifications {messages} />
 
         {#if session.editor.draft}
+          {#if active === "server" || active === "processing" || active === "speech"}
+            <SavedConnectionPicker
+              error={session.messages.error}
+              catalog={session.editor.draft.savedConnections}
+              purpose={active === "server"
+                ? Purpose.Transcription
+                : active === "processing"
+                  ? Purpose.Cleanup
+                  : Purpose.Speech}
+              dirty={session.editor.dirty}
+              busy={session.editor.saving || session.editor.quickSettingsPending.length > 0}
+              onChange={(change) => session.editor.changeConnection(change)}
+            />
+          {/if}
           {#if active === "general"}
             <GeneralSection bind:settings={session.editor.draft} />
           {:else if active === "shortcuts"}
@@ -143,8 +150,7 @@
               devices={session.editor.devices}
               microphoneChoice={session.editor.microphoneChoice}
               busy={session.editor.devicesBusy}
-              onChooseMicrophone={(choice) =>
-                session.editor.chooseMicrophone(choice)}
+              onChooseMicrophone={(choice) => session.editor.chooseMicrophone(choice)}
               onRefreshDevices={() => session.editor.refreshDevices()}
             />
           {:else if active === "overlay"}
@@ -173,8 +179,7 @@
               profiles={session.editor.processingProfiles}
               connection={session.editor.processingConnection}
               busy={session.editor.processingConnectionTesting}
-              onTestConnection={() =>
-                session.editor.testPostProcessingConnection()}
+              onTestConnection={() => session.editor.testPostProcessingConnection()}
             />
           {:else if active === "speech"}
             <SpeechSection
@@ -191,8 +196,7 @@
               onStop={() => session.speech.stopTTS()}
               onSave={() => session.speech.saveTTSAudio()}
               onClear={() => session.speech.clearTTSAudio()}
-              onTestConnection={() =>
-                session.editor.testTextToSpeechConnection()}
+              onTestConnection={() => session.editor.testTextToSpeechConnection()}
             />
           {:else if active === "history"}
             <HistorySection
@@ -200,8 +204,7 @@
               enabled={session.editor.applied?.historyEnabled ?? false}
               entries={session.history.entries}
               onCopy={(id) => session.history.copyHistoryEntry(id)}
-              onCopyVersion={(id, version) =>
-                session.history.copyHistoryEntryVersion(id, version)}
+              onCopyVersion={(id, version) => session.history.copyHistoryEntryVersion(id, version)}
               onDelete={(id) => session.history.deleteHistoryEntry(id)}
               onClear={() => session.history.clearHistory()}
             />
@@ -236,11 +239,7 @@
               ? "Unsaved changes"
               : "All changes saved"}
         </span>
-        <Button
-          variant="outline"
-          disabled={session.editor.saving}
-          onclick={onClose}>Close</Button
-        >
+        <Button variant="outline" disabled={session.editor.saving} onclick={onClose}>Close</Button>
         <Button
           disabled={session.busy || shortcutCapture.capturing || !dirty}
           onclick={saveSettings}
@@ -251,11 +250,7 @@
           {session.editor.saving ? "Saving…" : "Save changes"}
         </Button>
       {:else}
-        <Button
-          variant="outline"
-          disabled={session.editor.saving}
-          onclick={onClose}>Close</Button
-        >
+        <Button variant="outline" disabled={session.editor.saving} onclick={onClose}>Close</Button>
       {/if}
     </div>
   </div>

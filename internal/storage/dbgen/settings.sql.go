@@ -28,7 +28,7 @@ func (q *Queries) CompleteCredentialGC(ctx context.Context, account string) erro
 }
 
 const countCredentialGC = `-- name: CountCredentialGC :one
-SELECT count(*) FROM credential_gc
+SELECT count(*) FROM credential_gc WHERE account NOT IN (SELECT account FROM credential_refs) AND account NOT IN (SELECT credential_account FROM saved_connections)
 `
 
 func (q *Queries) CountCredentialGC(ctx context.Context) (int64, error) {
@@ -320,7 +320,7 @@ func (q *Queries) Initialize(ctx context.Context, source string) error {
 }
 
 const pendingCredentialGC = `-- name: PendingCredentialGC :many
-SELECT account FROM credential_gc WHERE account NOT IN (SELECT account FROM credential_refs) ORDER BY account LIMIT 128
+SELECT account FROM credential_gc WHERE account NOT IN (SELECT account FROM credential_refs) AND account NOT IN (SELECT credential_account FROM saved_connections) ORDER BY account LIMIT 128
 `
 
 func (q *Queries) PendingCredentialGC(ctx context.Context) ([]string, error) {

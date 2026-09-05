@@ -231,3 +231,19 @@ Escape, narrow layouts, light/dark themes, and the English-only S1-mini notice.
 With a chosen model and fixed sample, verify raw fallback for non-English input
 and S1-mini cleanup under the displayed English assumption when metadata is
 absent. Live model runs remain manual and scoped; do not probe inventories.
+
+## Saved connection acceptance
+
+Fixtures cover migration from singleton settings, independent capability
+selections, save-as-new without implicit credential reuse, duplication with
+independent replacements, deletion with an explicit replacement, stale-editor
+rejection, SQL rollback, durable reopen, and credential retention for inactive
+entries. Backend snapshots and catalogs must never contain secret values.
+Frontend tests cover draft handling and stale metadata responses after switches.
+
+On Windows, rename the automatically imported entries, save a second endpoint,
+switch between them, and verify the correct model and key are selected. Repeat
+for cleanup and playback independently. Duplicate and edit one connection, then
+delete it using the confirmation dialog. Test keyboard navigation, dirty-draft
+protection, restart persistence, and active-request isolation. Use only
+operator-selected inference models for deliberate live acceptance.

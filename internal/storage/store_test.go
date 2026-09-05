@@ -309,7 +309,7 @@ func withUpgrade(s *Store, sql string) {
 		data, _ := embeddedMigrations.ReadFile("migrations/" + entry.Name())
 		migrations[entry.Name()] = &fstest.MapFile{Data: data}
 	}
-	migrations["00003_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
+	migrations["00004_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
 	s.migrations = migrations
 }
 func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
@@ -341,7 +341,7 @@ func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
 			var current int
 			db.QueryRow("SELECT max(version_id) FROM goose_db_version").Scan(&current)
 			db.Close()
-			if fail && current != 2 {
+			if fail && current != 3 {
 				t.Fatal("failed migration advanced version")
 			}
 			restore := newStore(s.path, s.legacy, s.vault)
@@ -469,7 +469,7 @@ func TestVersionOneUpgradePreservesSettingsAndReferences(t *testing.T) {
  ALTER TABLE speech_settings RENAME TO speech_fixture;` + sql[start:start+end] + `
  INSERT INTO speech_settings(id,compatibility_profile,enabled,base_url,allow_insecure_http,authentication_mode,model,voice,speed,timeout_seconds)
  SELECT id,compatibility_profile,enabled,base_url,allow_insecure_http,authentication_mode,model,voice,speed,timeout_seconds FROM speech_fixture;
- DROP TABLE speech_fixture; DELETE FROM goose_db_version WHERE version_id=2;`)
+ DROP TABLE speech_fixture; DROP TABLE saved_connection_headers; DROP TABLE selected_connections; DROP TABLE saved_connections; DELETE FROM goose_db_version WHERE version_id>=2;`)
 	if err != nil {
 		t.Fatal(err)
 	}

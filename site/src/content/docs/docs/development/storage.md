@@ -5,8 +5,8 @@ description: Maintain the schema, generated queries, credential references, and 
 
 Freehand persists non-secret settings in SQLite. Follow
 [ADR 0006](../../decisions/0006-sqlite-storage-contract/) and the repository's
-`AGENTS.md` for every storage change. Saved connections, reusable model
-preferences, and persistent history are separate features. Disposable window
+`AGENTS.md` for every storage change. Saved connections use stable, capability-scoped records. Reusable model
+preferences and persistent history are separate features. Disposable window
 placement remains in `window-state.json`, independent of settings recovery.
 
 ## Ownership and tools
@@ -35,7 +35,7 @@ Generated rows and database handles never cross into Wails or domain services.
 
 ## Change the schema or a query
 
-1. Add the next five-digit goose SQL migration, such as `00003_example.sql`.
+1. Add the next five-digit goose SQL migration, such as `00004_example.sql`.
    Never edit or delete a migration already on the target branch. Runtime startup
    runs forward only; migrations must remain transactional.
 2. Add explicit, parameterized application queries under `queries/`. `sqlc.yaml`
@@ -139,3 +139,26 @@ The Windows service integration uses an isolated fake vault and startup adapter;
 it does not change personal credentials or startup registration. Interactive
 app acceptance and real Credential Manager behavior remain distinct from fixtures
 and compilation; follow the [native checklist](../../safety/native-test-checklist/).
+
+## Saved connections
+
+Migration 00003 seeds one named entry per capability from the existing settings
+and credential references. Fresh initialization seeds after the initial settings
+transaction has populated its rows. `saved_connections`, `selected_connections`,
+and `saved_connection_headers` retain stable IDs, typed endpoint fields,
+credential references, case-insensitive unique names, and explicit foreign keys.
+The generated seed queries match the migration's import semantics.
+
+`internal/savedconnection` owns domain values and applying endpoint selections;
+`internal/settings` remains the sole save coordinator. Catalog changes travel
+through `SaveSettings` with a bounded typed action. Current settings, selected
+IDs, saved entry updates, and active credential references commit in the same
+SQL transaction. Runtime catalogs publish after commit. Stale editor selections
+are rejected using the expected selected IDs rather than overwriting another
+connection accidentally. General settings saves update the active entries.
+
+Inactive entries retain their keys. Duplication can share a credential reference;
+replacement creates a new reference for the edited entry. Cleanup excludes every
+reference still used by any saved entry, and deletion queues obsolete references
+for ordinary cleanup. Connection changes use no inference calls. Restored
+databases must pass catalog/active-settings/reference consistency checks.

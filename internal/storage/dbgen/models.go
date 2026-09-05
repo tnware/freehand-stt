@@ -81,6 +81,31 @@ type RequestHeader struct {
 	Value      string
 }
 
+type SavedConnection struct {
+	ID                   string
+	Purpose              string
+	Name                 string
+	CompatibilityProfile string
+	BaseUrl              string
+	AllowInsecureHttp    int64
+	AuthenticationMode   string
+	Model                string
+	HealthPath           string
+	CleanupPreset        string
+	CredentialAccount    string
+}
+
+type SavedConnectionHeader struct {
+	ConnectionID string
+	Name         string
+	Value        string
+}
+
+type SelectedConnection struct {
+	Purpose      string
+	ConnectionID string
+}
+
 type SpeechSetting struct {
 	ID                   int64
 	CompatibilityProfile string
