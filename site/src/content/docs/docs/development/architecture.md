@@ -318,6 +318,12 @@ drafts without stopping Go-owned recording, transcription, or playback. Hiding
 the reusable Settings window continues to discard its draft through the existing
 settings lifecycle.
 
+Settings clusters use the shared `SettingsCard` component with the same
+`layer-fill` background and single `hairline` border as saved-connection cards.
+Internal row dividers remain; card outlines do not stack with elevation shadows.
+The shared switch uses a pill track and an inset circular thumb, retaining
+Bits UI state, keyboard semantics, and visible focus indicators.
+
 ## Diagnostics boundary
 
 `internal/app` creates one hierarchy from Wails' default structured logger and assigns bounded component attributes before injecting it into feature services, the post-processor, and native overlay. Runtime code records lifecycle metadata and fixed error categories rather than formatting underlying errors. It never logs transcript/audio content, credential or header material, model IDs, full paths, URL paths/query, or insertion-target identity. High-frequency audio, VAD, progress, delta, and renderer-event traffic remains off the logging path.

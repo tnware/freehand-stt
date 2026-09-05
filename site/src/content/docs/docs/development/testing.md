@@ -20,7 +20,11 @@ semantics, legacy segment EOF, and rejection of vLLM-shaped SSE. Unavailable
 profiles fail before network work. Snapshot tests retain captured compatibility
 selections, and file tests isolate streaming observations by profile.
 
-For interactive Windows review, check each Settings selector, keyboard access,
+For interactive Windows review, check that settings cards and saved-connection
+cards share a single hairline border and subtle fill in light/dark themes with
+solid and Mica materials, preserving internal row dividers. Check switch thumb
+spacing in both sizes and states, disabled appearance, keyboard focus/Space,
+and right-to-left placement. Check each Settings selector, keyboard access,
 planned entry descriptions and disabled state, save/reopen persistence, and
 independent STT/processing/TTS choices. Confirm that S1-mini controls remain a
 separate preset. Using only a model explicitly chosen by the operator, compare
