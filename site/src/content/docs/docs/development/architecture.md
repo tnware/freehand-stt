@@ -129,6 +129,18 @@ transcription SSE normalization, post-processing chat completion, and bounded
 metadata probes. Consumers use that package name directly rather than aliasing
 a provider name.
 
+The shared inference client constructor owns redirect denial for every route;
+no redirect may replay credentials, audio, or text, even to the same origin.
+Tests that replace network I/O must retain this production policy by using
+`inference.New()` and replacing only its `HTTP.Transport`. Response metadata
+uses one shared literal-credential sanitizer before publication to feature
+owners, history, or renderer DTOs. Bounded parsers apply the same string rule
+before truncation, including nested usage/language fields and request-ID
+headers. Model discovery filters reflected IDs; speech synthesis exports no
+response metadata. Unsafe optional metadata never discards otherwise valid
+transcript text; text reflection rejection and privacy-safe errors remain
+separate checks.
+
 The adapter remains focused instead of vendoring a general OpenAI SDK. A broad
 SDK would not replace the application's exact multipart-length and progress
 contract, older Speaches and buffered-SSE normalization, partial accepted-text

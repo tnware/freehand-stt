@@ -94,19 +94,19 @@ func (c *Client) ChatCompletion(ctx context.Context, base, model, key, systemPro
 	if key != "" && strings.Contains(text, key) {
 		return ChatCompletionResult{}, &Error{Kind: "credential_reflection", Message: "post-processing response rejected"}
 	}
-	metadata := metadataFromHeaders(resp.Header)
-	if requestID := boundedMetadataString(out.RequestID); requestID != "" {
+	metadata := metadataFromHeaders(resp.Header, key)
+	if requestID := safePeerString(out.RequestID, key); requestID != "" {
 		metadata.RequestID = requestID
 	}
-	metadata.ResponseID = boundedMetadataString(out.ID)
-	metadata.EffectiveModel = boundedMetadataString(out.Model)
-	metadata.Provider = boundedMetadataString(out.Provider)
-	metadata.FinishReason = boundedMetadataString(out.Choices[0].FinishReason)
-	metadata.ServiceTier = boundedMetadataString(out.ServiceTier)
-	metadata.SystemFingerprint = boundedMetadataString(out.SystemFingerprint)
+	metadata.ResponseID = safePeerString(out.ID, key)
+	metadata.EffectiveModel = safePeerString(out.Model, key)
+	metadata.Provider = safePeerString(out.Provider, key)
+	metadata.FinishReason = safePeerString(out.Choices[0].FinishReason, key)
+	metadata.ServiceTier = safePeerString(out.ServiceTier, key)
+	metadata.SystemFingerprint = safePeerString(out.SystemFingerprint, key)
 	metadata.CreatedAtUnix = optionalInt(out.Created)
 	metadata.RequestCount = 1
-	applyUsageMetadata(&metadata, out.Usage)
+	applyUsageMetadata(&metadata, out.Usage, key)
 	applyPerformanceMetadata(&metadata, out.Timings)
-	return ChatCompletionResult{Text: text, Metadata: metadata}, nil
+	return ChatCompletionResult{Text: text, Metadata: sanitizeResponseMetadata(metadata, key)}, nil
 }

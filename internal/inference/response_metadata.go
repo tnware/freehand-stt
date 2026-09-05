@@ -105,22 +105,58 @@ type ChatCompletionResult struct {
 	Metadata ResponseMetadata
 }
 
-func metadataFromHeaders(headers http.Header) ResponseMetadata {
+// safePeerString drops an entire optional value rather than substituting a
+// marker that could itself equal a short credential. Input/collection bounds
+// are enforced by the decoders; retained strings are bounded here as well.
+func safePeerString(value, key string) string {
+	if key != "" && strings.Contains(value, key) {
+		return ""
+	}
+	return boundedMetadataString(value)
+}
+
+// sanitizeResponseMetadata is the publication boundary for successful STT and
+// chat metadata, after JSON/SSE and header metadata have been combined. Keep
+// valid text and benign metrics while removing literal credential reflections.
+// Every retained peer string, including nested values, belongs here.
+func sanitizeResponseMetadata(metadata ResponseMetadata, key string) ResponseMetadata {
+	metadata.RequestID = safePeerString(metadata.RequestID, key)
+	metadata.ResponseID = safePeerString(metadata.ResponseID, key)
+	metadata.EffectiveModel = safePeerString(metadata.EffectiveModel, key)
+	metadata.Provider = safePeerString(metadata.Provider, key)
+	metadata.FinishReason = safePeerString(metadata.FinishReason, key)
+	metadata.ServiceTier = safePeerString(metadata.ServiceTier, key)
+	metadata.SystemFingerprint = safePeerString(metadata.SystemFingerprint, key)
+	metadata.Usage.Type = safePeerString(metadata.Usage.Type, key)
+	languages := make([]string, 0, min(len(metadata.DetectedLanguages), maxLanguages))
+	for _, language := range metadata.DetectedLanguages {
+		if language = safePeerString(language, key); language != "" && len(languages) < maxLanguages {
+			languages = append(languages, language)
+		}
+	}
+	metadata.DetectedLanguages = languages
+	if !metadata.Usage.Reported() {
+		metadata.UsageReportCount = 0
+	}
+	return metadata
+}
+
+func metadataFromHeaders(headers http.Header, key string) ResponseMetadata {
 	for _, name := range []string{"X-Request-Id", "OpenAI-Request-Id", "Request-Id"} {
-		if value := boundedMetadataString(headers.Get(name)); value != "" {
+		if value := safePeerString(headers.Get(name), key); value != "" {
 			return ResponseMetadata{RequestID: value}
 		}
 	}
 	return ResponseMetadata{}
 }
 
-func parseUsage(raw json.RawMessage) Usage {
+func parseUsage(raw json.RawMessage, key string) Usage {
 	fields := rawObject(raw)
 	if fields == nil {
 		return Usage{}
 	}
 	usage := Usage{
-		Type:         rawString(fields["type"]),
+		Type:         rawString(fields["type"], key),
 		InputTokens:  firstInt(fields, "input_tokens", "prompt_tokens"),
 		OutputTokens: firstInt(fields, "output_tokens", "completion_tokens"),
 		TotalTokens:  optionalInt(fields["total_tokens"]),
@@ -158,8 +194,8 @@ func parsePerformance(raw json.RawMessage) Performance {
 	}
 }
 
-func applyUsageMetadata(metadata *ResponseMetadata, raw json.RawMessage) {
-	metadata.Usage = parseUsage(raw)
+func applyUsageMetadata(metadata *ResponseMetadata, raw json.RawMessage, key string) {
+	metadata.Usage = parseUsage(raw, key)
 	if metadata.Usage.Reported() {
 		metadata.UsageReportCount = 1
 	}
@@ -175,10 +211,10 @@ func applyPerformanceMetadata(metadata *ResponseMetadata, raw json.RawMessage) {
 	}
 }
 
-func parseLanguages(raw json.RawMessage, single string) []string {
+func parseLanguages(raw json.RawMessage, single, key string) []string {
 	languages := make([]string, 0, maxLanguages)
 	appendLanguage := func(value string) {
-		value = boundedMetadataString(value)
+		value = safePeerString(value, key)
 		if value != "" && !slices.Contains(languages, value) && len(languages) < maxLanguages {
 			languages = append(languages, value)
 		}
@@ -192,11 +228,11 @@ func parseLanguages(raw json.RawMessage, single string) []string {
 		return languages
 	}
 	for _, value := range values {
-		if code := rawString(value); code != "" {
+		if code := rawString(value, key); code != "" {
 			appendLanguage(code)
 			continue
 		}
-		appendLanguage(rawString(rawObject(value)["code"]))
+		appendLanguage(rawString(rawObject(value)["code"], key))
 	}
 	return languages
 }
@@ -415,12 +451,12 @@ func firstInt(fields map[string]json.RawMessage, names ...string) *int64 {
 	return nil
 }
 
-func rawString(raw json.RawMessage) string {
+func rawString(raw json.RawMessage, key string) string {
 	var value string
 	if json.Unmarshal(raw, &value) != nil {
 		return ""
 	}
-	return boundedMetadataString(value)
+	return safePeerString(value, key)
 }
 
 func optionalInt(raw json.RawMessage) *int64 {

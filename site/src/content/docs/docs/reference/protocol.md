@@ -60,6 +60,22 @@ While a stored file is uploading or streaming, its backend-owned status is rende
 The client accepts an OpenAI-compatible base URL ending in `/v1` and joins endpoint paths without duplicating or removing that prefix.
 HTTPS is required by default. Plain HTTP is accepted only when **Allow insecure HTTP** is explicitly enabled in the saved or currently tested settings; this sends credentials and audio without transport encryption.
 
+All inference capabilities and metadata-only checks reject HTTP redirects
+(including 301, 302, 303, 307, and 308), with no second request or automatic
+retry. This includes same-origin redirects and HTTPS-to-HTTP downgrades,
+regardless of the insecure-HTTP setting. Configure the final base URL; a
+redirect is reported as an HTTP failure without exposing the Location header
+or response body.
+
+Successful STT (completed or streamed) and chat responses retain only bounded
+optional metadata. Strings containing the literal request credential are
+omitted, including request-ID headers, response/model/provider IDs, finish
+reason, service tier, fingerprint, detected languages, and usage type. The
+check precedes string truncation so a bound cannot retain a prefix of a
+reflected credential. Benign text and metrics survive unsafe optional
+metadata. Model discovery omits reflected IDs rather than making altered IDs
+selectable. These checks do not attempt to detect encoded credentials.
+
 ## Example deployment
 
 ```text title="Example speech endpoint settings"

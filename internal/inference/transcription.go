@@ -88,20 +88,20 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 	if key != "" && strings.Contains(text, key) {
 		return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
 	}
-	metadata := metadataFromHeaders(resp.Header)
-	if requestID := boundedMetadataString(out.RequestID); requestID != "" {
+	metadata := metadataFromHeaders(resp.Header, key)
+	if requestID := safePeerString(out.RequestID, key); requestID != "" {
 		metadata.RequestID = requestID
 	}
 	metadata.RequestCount = 1
-	metadata.ResponseID = boundedMetadataString(out.ID)
-	metadata.EffectiveModel = boundedMetadataString(out.Model)
-	metadata.Provider = boundedMetadataString(out.Provider)
+	metadata.ResponseID = safePeerString(out.ID, key)
+	metadata.EffectiveModel = safePeerString(out.Model, key)
+	metadata.Provider = safePeerString(out.Provider, key)
 	metadata.CreatedAtUnix = optionalInt(out.Created)
-	metadata.DetectedLanguages = parseLanguages(out.Languages, out.Language)
+	metadata.DetectedLanguages = parseLanguages(out.Languages, out.Language, key)
 	metadata.ServerAudioSeconds = optionalFloat(out.Duration)
-	metadata.ServiceTier = boundedMetadataString(out.ServiceTier)
-	metadata.SystemFingerprint = boundedMetadataString(out.SystemFingerprint)
-	applyUsageMetadata(&metadata, out.Usage)
+	metadata.ServiceTier = safePeerString(out.ServiceTier, key)
+	metadata.SystemFingerprint = safePeerString(out.SystemFingerprint, key)
+	applyUsageMetadata(&metadata, out.Usage, key)
 	applyPerformanceMetadata(&metadata, out.Timings)
-	return TranscriptionResult{Text: text, Metadata: metadata}, nil
+	return TranscriptionResult{Text: text, Metadata: sanitizeResponseMetadata(metadata, key)}, nil
 }

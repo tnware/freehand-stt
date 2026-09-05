@@ -7,6 +7,8 @@ description: Deterministic, integration, and native acceptance responsibilities.
 
 - Configuration validation, URL joining, header filtering, forward-compatible unknown-field preservation, and explicit invalid-file recovery without implicit replacement.
 - OpenAI multipart transcription request shape against an in-process HTTP server.
+- Inference redirect denial through the production constructor: 301/302/303/307/308 across STT, chat, completed/streamed file upload, speech generation, models, and health routes. Local fake transports assert exactly one request with canary credentials/payload, covering same-origin, cross-origin, and HTTPS-to-HTTP targets; failures expose neither Location nor peer body.
+- Successful-response credential canaries across completed STT/chat/file, SSE and buffered-SSE terminal metadata, all retained request-ID headers, nested languages/usage type, and discovered model IDs. Check before truncation (including straddling and long credentials), preserve benign text/metrics and unauthenticated controls, and serialize the real history service DTO to prove safe publication. Preserve text-reflection rejection, including split-stream guard behavior. These fixtures never contact inference infrastructure or invoke models.
 - Stored-file multipart streaming, exact declared body length, upload progress, current OpenAI SSE, older Speaches SSE, buffered-SSE JSON normalization, ordinary JSON fallback, cancellation, and provider-size rejection.
 - Capability-owned request deadlines, cancellation-versus-timeout classification, malformed responses, bounded response handling, and explicit stored-file partial publication when the transcript safety ceiling is reached.
 - Coordinator state transitions and stale-generation rejection.

@@ -9,6 +9,20 @@ accumulate in one release pull request. That pull request updates
 `build/config.yml`. Merging it creates a draft prerelease and a `v`-prefixed
 SemVer tag. The first intended public version is `v0.1.0-alpha.1`.
 
+The repository uses squash merges with the pull request title as the commit
+subject and an empty commit body. Write the **PR title** as a Conventional
+Commit, for example `fix(security): block inference redirects and sanitize response metadata`.
+Release Please reads that title after merge; individual branch commit messages
+and the PR description do not become separate release-note entries. Use `fix`
+for corrective changes, reserve `feat` for new capabilities, and do not add `!`
+or force a release version for an ordinary bug fix.
+
+Merge reviewed product fixes before the pending release PR so Release Please can
+refresh its changelog. Leave `CHANGELOG.md`, `.release-please-manifest.json`, and
+the version in `build/config.yml` to that release PR rather than editing them in
+fix branches. Merging a fix is not publication: merging the refreshed release PR
+starts the draft/tag and Windows packaging flow described below.
+
 `build/config.yml` is the release identity source. The release build derives
 Windows' required four-part numeric version from that SemVer value before it
 generates the executable resources and installer metadata. About reads the same
