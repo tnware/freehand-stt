@@ -414,7 +414,7 @@ func TestMetadataReportsStructuredFailures(t *testing.T) {
 		}))
 		defer s.Close()
 		result := New().TestMetadata(context.Background(), s.URL, "", "", "speech/stt", nil)
-		if !result.Reachable || result.ErrorKind != "" || result.ModelPresence != "unavailable" {
+		if !result.Reachable || result.ErrorKind != "response" || result.ModelPresence != "unavailable" {
 			t.Fatalf("malformed-list result = %#v", result)
 		}
 	})

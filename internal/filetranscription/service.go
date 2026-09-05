@@ -85,7 +85,7 @@ type fileStreamingCapabilityKey struct {
 	Model    string
 }
 
-const fileStreamingUnavailableNotice = "Streaming was not supported by this endpoint. Using completed transcripts."
+const fileStreamingUnavailableNotice = "Streaming is unavailable for this endpoint and model. New requests will use completed transcripts."
 
 var supportedAudioExtensions = map[string]struct{}{
 	".flac": {}, ".mp3": {}, ".mp4": {}, ".mpeg": {}, ".mpga": {},
@@ -331,25 +331,6 @@ func (s *Service) rememberFileStreamingUnsupported(generation uint64, cfg config
 		"reason", reason,
 		"fallback_outcome", fallbackOutcome,
 	)
-}
-
-func (s *Service) prepareFileCompletedFallback(generation uint64) {
-	s.fileMu.Lock()
-	if s.fileStatus.Generation != generation {
-		s.fileMu.Unlock()
-		return
-	}
-	s.fileStatus.Phase = FileTranscriptionUploading
-	s.fileStatus.BytesUploaded = 0
-	s.replaceFileTranscriptLocked("")
-	s.fileStatus.Streaming = false
-	s.fileStatus.Buffered = false
-	s.fileStatus.Message = "Retrying with a completed transcript"
-	s.fileLastPublish = time.Time{}
-	status := s.snapshotFileStatusLocked()
-	changed := s.fileChanged
-	s.fileMu.Unlock()
-	s.publishFileStatus(changed, status)
 }
 
 // TryFileStreamingAgain clears the remembered unsupported-stream capability
@@ -771,19 +752,11 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 		if unsupported.PartialText != "" {
 			text = unsupported.PartialText
 			s.rememberFileStreamingUnsupported(generation, cfg, unsupported.Reason, "partial_result_preserved", false)
-		} else if _, seekErr := file.Seek(0, io.SeekStart); seekErr != nil {
-			s.rememberFileStreamingUnsupported(generation, cfg, unsupported.Reason, "retry_unavailable", true)
 		} else {
-			s.rememberFileStreamingUnsupported(generation, cfg, unsupported.Reason, "retrying_completed_mode", true)
-			s.prepareFileCompletedFallback(generation)
-			details.ResponseMode = history.HistoryResponseCompleted
-			transcription, _, err = transcribe(false)
-			text = transcription.Text
-			outcome := "retry_succeeded"
-			if err != nil {
-				outcome = "retry_failed"
-			}
-			s.log().Info("audio file streaming fallback completed", "generation", generation, "server", connectionServer(cfg.BaseURL), "outcome", outcome)
+			// An unreadable stream may already represent completed inference.
+			// Remember the capability, but require an explicit new user action
+			// before submitting the file again, even after parameter rejection.
+			s.rememberFileStreamingUnsupported(generation, cfg, unsupported.Reason, "explicit_retry_required", true)
 		}
 	}
 	details.Transcription = history.NewResponseDetails(transcription.Metadata)

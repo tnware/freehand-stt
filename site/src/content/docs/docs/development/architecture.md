@@ -94,6 +94,8 @@ Focused operations use generated request DTOs. A connection probe receives only 
 
 Shortcut settings follow the same boundary. `internal/hotkey` owns one bounded action matrix for toggle recording, Show Freehand, and hold to talk. `internal/input` exposes that matrix as generated policy metadata, accepts one action-specific capture request, and emits bounded normalized chord progress while the native hook is active. The renderer never selects native validation flags or maintains a second key grammar. Expected capture rejections return structured categories; a cross-process global conflict remains knowable only when the transactional settings save asks Windows to register the replacement.
 
+Model probes require a valid JSON model-list shape; reachability remains distinct from inventory validation and inference compatibility. Health probes accept opaque successful bodies. Invalid model responses cannot satisfy first-run readiness.
+
 After loading the applied profile, the renderer runs one bounded metadata-only STT probe and repeats it only when that profile's connection identity changes. First-run readiness is an exclusive app-shell content state backed by a persisted completion flag; the Go recording command rejects both renderer and global-shortcut starts until it is complete. A later failed probe may take over the content area once, but the established user can continue without correction while the persistent status strip retains the warning. Dismissal is scoped to the exact failed endpoint/model/authentication/microphone condition rather than mutating durable settings.
 
 Ordinary Go collaborators remain ordinary types: `history.Store`, the inference client, post-processor, capture adapter, and insertion policy are injected by `internal/app` and are not registered with Wails. The settings/profile transaction remains one owner even though consumers receive narrow snapshot functions.
@@ -318,6 +320,15 @@ The capture adapter may receive the Windows mix format, commonly 48 kHz float/st
 Each recording also owns a bounded, non-blocking interruption signal from the native stop callback. The callback never tears down audio or enters UI/state-machine code. Dictation fences that signal by recording generation, cancels the recording-only timer, discards partial PCM, and releases the device before publishing failure. System-default capture keeps miniaudio's shared-mode WASAPI rerouting; an explicit device is never silently replaced.
 
 No audio is persisted after request completion, error, or cancellation.
+
+The file service submits at most one transcription request per explicit start.
+An unsupported stream records endpoint/model capability evidence and stops;
+a new completed-mode attempt requires a user action. A completed JSON response
+to a streaming request is consumed in place. The inference parser requires a
+final text event for typed SSE while retaining EOF completion for legacy
+Speaches segments. Incomplete typed streams and read/server failures return
+accepted partial text alongside an error. The file service marks it failed,
+skips cleanup, and permits explicit copy and bounded opt-in history retention.
 
 Stored-audio transcription is a separate service-owned cancellable job so it can continue while the settings window is hidden. It consumes only the Go-owned native selection, revalidates its identity and metadata, and streams multipart bytes from the opened file. Go accumulates progressive transcript text once and emits typed generation/revision deltas across the Wails bridge; it does not republish the complete growing string for every chunk. Main and Settings renderers reject stale or duplicate revisions, request the authoritative snapshot after a gap, and reconcile once with the terminal full result. Upload progress remains throttled and full snapshots are reserved for real phase boundaries or explicit recovery. If the fixed 8 MiB stored-file transcript ceiling is reached, the service stops accepting deltas, publishes an explicit partial-result state, and preserves already accepted text for manual copying rather than silently truncating it. The job is mutually exclusive with microphone dictation. Completed stored-file text is never auto-inserted because no safe target was captured when recording began; it can be explicitly copied and, when enabled, retained in the same bounded history.
 

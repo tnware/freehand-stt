@@ -15,9 +15,15 @@ export const shouldAutomaticallyTestConnection = (
 export const connectionSucceeded = (result: ConnectionResult): boolean =>
   result.errorKind === ConnectionErrorKind.$zero;
 
-export const connectionStatusLabel = (result: ConnectionResult | null): string => {
+export const connectionStatusLabel = (
+  result: ConnectionResult | null,
+): string => {
   if (!result) return "Not checked";
-  if (connectionSucceeded(result)) return "Connected";
+  if (connectionSucceeded(result)) {
+    return result.probe === ConnectionProbe.ConnectionProbeHealth
+      ? "Server reachable"
+      : "Model list received";
+  }
   switch (result.errorKind) {
     case ConnectionErrorKind.ConnectionErrorCredentialMissing:
       return "Credential required";
@@ -32,7 +38,7 @@ export const connectionStatusLabel = (result: ConnectionResult | null): string =
     case ConnectionErrorKind.ConnectionErrorResponseTooLarge:
       return "Response too large";
     case ConnectionErrorKind.ConnectionErrorResponse:
-      return "Response unreadable";
+      return "Invalid response";
     case ConnectionErrorKind.ConnectionErrorInvalidURL:
       return "Invalid endpoint";
     case ConnectionErrorKind.ConnectionErrorInvalidSettings:
@@ -47,8 +53,8 @@ export const connectionStatusLabel = (result: ConnectionResult | null): string =
 export const connectionDescription = (result: ConnectionResult): string => {
   if (connectionSucceeded(result)) {
     return result.probe === ConnectionProbe.ConnectionProbeHealth
-      ? "The configured health endpoint responded successfully."
-      : "The model inventory responded successfully. No model was invoked.";
+      ? "The configured health endpoint responded successfully. No model was invoked; inference compatibility is unverified."
+      : "A valid model list was received. No model was invoked; inference compatibility is unverified.";
   }
   switch (result.errorKind) {
     case ConnectionErrorKind.ConnectionErrorCredentialMissing:
@@ -66,7 +72,9 @@ export const connectionDescription = (result: ConnectionResult): string => {
     case ConnectionErrorKind.ConnectionErrorResponseTooLarge:
       return "The metadata response exceeded the 1 MiB safety limit.";
     case ConnectionErrorKind.ConnectionErrorResponse:
-      return "The metadata response could not be read.";
+      return result.probe === ConnectionProbe.ConnectionProbeHealth
+        ? "The health response could not be read."
+        : "The server responded, but its response could not be read as a valid model list.";
     case ConnectionErrorKind.ConnectionErrorInvalidURL:
       return "The configured endpoint could not be turned into a metadata URL.";
     case ConnectionErrorKind.ConnectionErrorInvalidSettings:
@@ -79,10 +87,14 @@ export const connectionDescription = (result: ConnectionResult): string => {
 };
 
 export const connectionProbeLabel = (result: ConnectionResult): string =>
-  result.probe === ConnectionProbe.ConnectionProbeHealth ? "GET /health" : "GET /models";
+  result.probe === ConnectionProbe.ConnectionProbeHealth
+    ? "GET /health"
+    : "GET /models";
 
 export const modelPresenceLabel = (result: ConnectionResult): string => {
-  if (result.modelPresence === ModelPresence.ModelPresenceListed) return "Listed";
-  if (result.modelPresence === ModelPresence.ModelPresenceNotListed) return "Not listed";
+  if (result.modelPresence === ModelPresence.ModelPresenceListed)
+    return "Listed";
+  if (result.modelPresence === ModelPresence.ModelPresenceNotListed)
+    return "Not listed";
   return "Unavailable";
 };

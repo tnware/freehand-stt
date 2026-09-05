@@ -28,31 +28,87 @@ const result = (errorKind = ConnectionErrorKind.$zero): ConnectionResult => ({
 
 describe("connection metadata presentation", () => {
   it("never probes an endpoint automatically before setup is complete", () => {
-    expect(shouldAutomaticallyTestConnection({ setupCompleted: false }, false, false)).toBe(
-      false,
-    );
-    expect(shouldAutomaticallyTestConnection({ setupCompleted: true }, false, false)).toBe(true);
-    expect(shouldAutomaticallyTestConnection({ setupCompleted: true }, true, false)).toBe(false);
-    expect(shouldAutomaticallyTestConnection({ setupCompleted: true }, false, true)).toBe(false);
+    expect(
+      shouldAutomaticallyTestConnection(
+        { setupCompleted: false },
+        false,
+        false,
+      ),
+    ).toBe(false);
+    expect(
+      shouldAutomaticallyTestConnection({ setupCompleted: true }, false, false),
+    ).toBe(true);
+    expect(
+      shouldAutomaticallyTestConnection({ setupCompleted: true }, true, false),
+    ).toBe(false);
+    expect(
+      shouldAutomaticallyTestConnection({ setupCompleted: true }, false, true),
+    ).toBe(false);
   });
 
   it("recognizes a successful metadata-only model probe", () => {
     const value = result();
     expect(connectionSucceeded(value)).toBe(true);
-    expect(connectionStatusLabel(value)).toBe("Connected");
+    expect(connectionStatusLabel(value)).toBe("Model list received");
     expect(connectionProbeLabel(value)).toBe("GET /models");
     expect(connectionDescription(value)).toContain("No model was invoked");
     expect(modelPresenceLabel(value)).toBe("Listed");
   });
 
+  it("distinguishes health reachability from model inventory validation", () => {
+    const value = {
+      ...result(),
+      probe: ConnectionProbe.ConnectionProbeHealth,
+      modelPresence: ModelPresence.ModelPresenceUnavailable,
+      modelIDs: [],
+    };
+    expect(connectionSucceeded(value)).toBe(true);
+    expect(connectionStatusLabel(value)).toBe("Server reachable");
+    expect(connectionDescription(value)).toContain(
+      "inference compatibility is unverified",
+    );
+  });
+
+  it("does not label an HTTP 200 malformed model list as a successful check", () => {
+    const value = {
+      ...result(ConnectionErrorKind.ConnectionErrorResponse),
+      reachable: true,
+      httpStatus: 200,
+      modelPresence: ModelPresence.ModelPresenceUnavailable,
+      modelIDs: [],
+    };
+    expect(connectionSucceeded(value)).toBe(false);
+    expect(connectionStatusLabel(value)).toBe("Invalid response");
+    expect(connectionDescription(value)).toContain("valid model list");
+  });
+
+  it("accepts an empty valid inventory without claiming the model is listed", () => {
+    const value = {
+      ...result(),
+      modelPresence: ModelPresence.ModelPresenceNotListed,
+      modelIDs: [],
+    };
+    expect(connectionStatusLabel(value)).toBe("Model list received");
+    expect(modelPresenceLabel(value)).toBe("Not listed");
+    expect(connectionDescription(value)).toContain(
+      "inference compatibility is unverified",
+    );
+  });
+
   it.each([
-    [ConnectionErrorKind.ConnectionErrorCredentialMissing, "Credential required"],
-    [ConnectionErrorKind.ConnectionErrorCredentialUnavailable, "Credential unavailable"],
+    [
+      ConnectionErrorKind.ConnectionErrorCredentialMissing,
+      "Credential required",
+    ],
+    [
+      ConnectionErrorKind.ConnectionErrorCredentialUnavailable,
+      "Credential unavailable",
+    ],
     [ConnectionErrorKind.ConnectionErrorDNS, "Name not found"],
     [ConnectionErrorKind.ConnectionErrorTLS, "TLS failed"],
     [ConnectionErrorKind.ConnectionErrorHTTP, "HTTP 401"],
     [ConnectionErrorKind.ConnectionErrorResponseTooLarge, "Response too large"],
-    [ConnectionErrorKind.ConnectionErrorResponse, "Response unreadable"],
+    [ConnectionErrorKind.ConnectionErrorResponse, "Invalid response"],
     [ConnectionErrorKind.ConnectionErrorInvalidURL, "Invalid endpoint"],
     [ConnectionErrorKind.ConnectionErrorInvalidSettings, "Check failed"],
     [ConnectionErrorKind.ConnectionErrorTimeout, "Timed out"],
