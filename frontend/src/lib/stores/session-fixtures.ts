@@ -1,3 +1,4 @@
+import { ID } from "$bindings/compatibility";
 import { CancellablePromise } from "@wailsio/runtime";
 import { vi } from "vitest";
 import {
@@ -51,6 +52,8 @@ vi.mock("$bindings/tts/service", () => ({
 }));
 
 const settings: Settings = {
+  compatibilityProfile: ID.Generic,
+  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
   authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
@@ -92,6 +95,7 @@ const settings: Settings = {
   segmentSeconds: 90,
   segmentSilenceMilliseconds: 700,
   postProcessing: {
+    compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "http://127.0.0.1:8080/v1",
     allowInsecureHTTP: false,
@@ -104,6 +108,7 @@ const settings: Settings = {
     timeoutSeconds: 120,
   },
   textToSpeech: {
+    compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "",
     allowInsecureHTTP: false,

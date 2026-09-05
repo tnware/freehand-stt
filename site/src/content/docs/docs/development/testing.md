@@ -3,6 +3,31 @@ title: Testing contract
 description: Deterministic, integration, and native acceptance responsibilities.
 ---
 
+## Compatibility profile acceptance
+
+The published catalog fixture compares the website export with the app-owned
+profile registry. Public directory rendering requires an editorial entry for
+every profile. Review desktop/mobile navigation, matrix scrolling, and provider
+guide links when changing the site.
+
+Automated fixtures cover old-document Generic defaults, independent selection
+round-trips, unavailable/wrong-operation rejection even for disabled features,
+and preserved configuration recovery. Catalog/resolver agreement prevents a
+planned entry from silently becoming a usable contract. Transport fixtures
+check unchanged microphone/file multipart fields, the five-field speech body,
+shared chat requests and truncated-cleanup rejection, typed final/empty-final
+semantics, legacy segment EOF, and rejection of vLLM-shaped SSE. Unavailable
+profiles fail before network work. Snapshot tests retain captured compatibility
+selections, and file tests isolate streaming observations by profile.
+
+For interactive Windows review, check each Settings selector, keyboard access,
+planned entry descriptions and disabled state, save/reopen persistence, and
+independent STT/processing/TTS choices. Confirm that S1-mini controls remain a
+separate preset. Using only a model explicitly chosen by the operator, compare
+Generic and the applicable dedicated profile for normal transcription, file
+streaming, cleanup, and speech playback. Never invoke model inventories.
+Builds and fixture tests do not establish this interactive or live-server acceptance.
+
 ## Unit and deterministic integration tests
 
 - Configuration validation, URL joining, header filtering, forward-compatible unknown-field preservation, and explicit invalid-file recovery without implicit replacement.
@@ -43,7 +68,7 @@ description: Deterministic, integration, and native acceptance responsibilities.
 - Wails-lifetime cancellation for connection and transcription work, tracked microphone preparation, closed-state capture fencing, late-publication suppression, and deterministic managed-worker tests proving that live stop returns before remote inference, cancellation reaches an active completion request, shutdown waits for the worker, and closed services reject new completion work.
 - OpenAI-compatible speech request shape, bounded/safe response handling, WAV validation and buffer ownership, backend-owned transcript selection, bounded first-class composer input, one-session playback transitions, canonical native WAV save, explicit memory clear, disabled-state dormancy, recording preemption, and shutdown cleanup. Automated tests use fixtures and fake players; they never invoke an installed TTS model.
 - Stored-file selection authority: renderer calls cannot bypass the native-selection capability to open an arbitrary supported-looking path.
-- Focused generated binding contracts: connection probes carry only endpoint/model-discovery/auth/header/transient-credential values, unrelated shortcut/VAD/window/history/processing drafts cannot invalidate them, and settings save uses one request DTO rather than positional credential arguments.
+- Focused generated binding contracts: connection probes carry only compatibility-profile/endpoint/model-discovery/auth/header/transient-credential values, unrelated shortcut/VAD/window/history/processing drafts cannot invalidate them, and settings save uses one request DTO rather than positional credential arguments.
 - Captured structured-log records: meaningful operations pair starts with terminal outcomes; error fields use bounded categories; settings, file selection, endpoint, post-processing, segmented-transcription, and direct-input logs exclude credential drafts, headers, transcript text, model IDs, full paths, URL paths/query, and target identity.
 - The configured Wails/application log level remains `Info`, so ordinary test and production configurations do not serialize bridge arguments or results.
 - Release-source parsing, semantic-to-Windows version derivation, generated-asset drift detection, and immutable renderer-safe About metadata.

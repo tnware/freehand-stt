@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/credential"
 )
@@ -371,11 +372,18 @@ func TestResetConfigurationExplicitlyReplacesSettingsButKeepsCredentials(t *test
 func TestRequestProfileCapturesSettingsAndCredentialsTogether(t *testing.T) {
 	service, _, _, keys := transactionalService(false)
 	service.cfg.Model = "captured-model"
+	service.cfg.CompatibilityProfile = compatibility.Speaches
+	service.cfg.PostProcessing.CompatibilityProfile = compatibility.LlamaCPP
 	service.cfg.AuthenticationMode = config.AuthenticationModeAPIKey
 	keys.value = "captured-key"
 	profile, err := RequestProfiles(service).Capture()
 	if err != nil {
 		t.Fatal(err)
+	}
+	service.cfg.CompatibilityProfile = compatibility.Generic
+	service.cfg.PostProcessing.CompatibilityProfile = compatibility.Generic
+	if profile.Settings.CompatibilityProfile != compatibility.Speaches || profile.Settings.PostProcessing.CompatibilityProfile != compatibility.LlamaCPP {
+		t.Fatal("captured compatibility selection changed")
 	}
 	if profile.Settings.Model != "captured-model" || profile.STTCredential != "captured-key" {
 		t.Fatalf("profile = %#v", profile)
@@ -385,7 +393,8 @@ func TestRequestProfileCapturesSettingsAndCredentialsTogether(t *testing.T) {
 func TestTextToSpeechProfileCapturesDedicatedCredential(t *testing.T) {
 	h := newTransactionHarness(&storeFake{log: &[]string{}})
 	h.service.cfg.TextToSpeech = config.TextToSpeechSettings{
-		Enabled: true, BaseURL: "https://example.test/v1",
+		CompatibilityProfile: compatibility.Speaches,
+		Enabled:              true, BaseURL: "https://example.test/v1",
 		AuthenticationMode: config.AuthenticationModeAPIKey,
 		Model:              "tts-model", Voice: "voice", Speed: 1,
 		TimeoutSeconds: config.DefaultTextToSpeechTimeoutSeconds,
@@ -393,6 +402,10 @@ func TestTextToSpeechProfileCapturesDedicatedCredential(t *testing.T) {
 	profile, err := TextToSpeechProfiles(h.service).Capture()
 	if err != nil {
 		t.Fatal(err)
+	}
+	h.service.cfg.TextToSpeech.CompatibilityProfile = compatibility.Generic
+	if profile.Settings.CompatibilityProfile != compatibility.Speaches {
+		t.Fatal("captured speech profile changed")
 	}
 	if profile.Settings.Model != "tts-model" || profile.Credential != "old-tts-secret" {
 		t.Fatalf("profile = %#v", profile)

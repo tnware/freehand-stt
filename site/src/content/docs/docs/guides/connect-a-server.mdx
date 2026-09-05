@@ -39,6 +39,42 @@ Use this when models live on different machines or runtimes. A cleanup outage
 does not invalidate successful STT: Freehand preserves and delivers the raw
 transcript.
 
+Compare operations and evidence in the [backend directory](../../../backends/),
+or browse the [backend guides](../../backends/).
+
+## Choose a compatibility profile
+
+Each connection has its own **Compatibility profile** in Settings:
+
+| Connection | Available profiles |
+| --- | --- |
+| Speech to text (microphone and files) | Generic OpenAI-compatible, Speaches |
+| Post-processing | Generic OpenAI-compatible, llama.cpp |
+| Speech playback | Generic OpenAI-compatible, Speaches |
+
+**Generic OpenAI-compatible** is the default and preserves existing behavior.
+Choose **Speaches** for your Speaches transcription or speech endpoint, or
+**llama.cpp** for its text post-processing endpoint. Selecting a profile does
+not change the URL, authentication, model, or prompt preset. S1-mini remains
+a separate post-processing prompt choice and also works with the Generic
+compatibility profile when the endpoint meets that contract.
+
+The selector explains each profile's current scope. Support can depend on the
+server version and selected model; a model listing or successful connection
+test does not establish inference capabilities. This release adds no vocabulary,
+voice instructions, or other advanced request fields.
+
+**Planned profiles** are visible but disabled, with a description of the work
+still needed. A server listed there may already work through Generic; disabled
+means its dedicated profile is not implemented. The list is scoped to the
+connection's operation. OpenAI hosted is a planned dedicated profile, separate
+from the generic protocol baseline.
+
+Save settings to apply a selection. A running job keeps the settings and
+credentials it captured when it started. Older configuration files default to
+Generic. These settings describe the current connections; named, selectable
+saved connections are not available yet.
+
 ## Information Freehand needs
 
 For speech to text, collect:

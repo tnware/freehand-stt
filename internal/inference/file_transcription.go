@@ -8,6 +8,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+
+	"github.com/tnware/freehand-stt/internal/compatibility"
 )
 
 const (
@@ -31,10 +33,20 @@ type FileTranscriptionCallbacks struct {
 // releases. Some compatible peers ignore stream=true and return JSON; that is
 // treated as a successful completed response rather than retried.
 func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key string, headers map[string]string, filename string, size int64, r io.Reader, stream bool, callbacks FileTranscriptionCallbacks) (TranscriptionResult, error) {
+	contract, err := c.contract(compatibility.Transcription)
+	if err != nil {
+		return TranscriptionResult{}, err
+	}
+	if language != "" && !contract.Capabilities.LanguageHint {
+		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "language hints are unavailable for this profile"}
+	}
+	if stream && !contract.Capabilities.FileStreaming {
+		return TranscriptionResult{}, &FileStreamUnsupportedError{Reason: "profile_streaming_unavailable"}
+	}
 	if size <= 0 {
 		return TranscriptionResult{}, &Error{Kind: "invalid_file", Message: "audio file is empty"}
 	}
-	u, err := endpoint(base, "audio/transcriptions")
+	u, err := endpoint(base, contract.Path)
 	if err != nil {
 		return TranscriptionResult{}, err
 	}
@@ -119,7 +131,7 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 
 	var result TranscriptionResult
 	if stream && strings.HasPrefix(strings.ToLower(resp.Header.Get("Content-Type")), "text/event-stream") {
-		result, err = readTranscriptionSSE(resp.Body, key, callbacks.Delta)
+		result, err = readTranscriptionSSEContract(resp.Body, key, callbacks.Delta, contract.Capabilities)
 	} else {
 		result, err = readTranscriptionJSON(resp.Body, maxFileResponse, key)
 		if err == nil && stream {
@@ -127,7 +139,7 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 				callbacks.StreamBuffered()
 			}
 			if looksLikeBufferedTranscriptionSSE(result.Text) {
-				result, err = readTranscriptionSSE(strings.NewReader(result.Text), key, callbacks.Delta)
+				result, err = readTranscriptionSSEContract(strings.NewReader(result.Text), key, callbacks.Delta, contract.Capabilities)
 			} else if callbacks.StreamUnsupported != nil {
 				callbacks.StreamUnsupported("completed_json")
 			}

@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/tnware/freehand-stt/internal/activity"
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/history"
@@ -81,6 +82,7 @@ func init() {
 }
 
 type fileStreamingCapabilityKey struct {
+	Profile  compatibility.ID
 	Endpoint string
 	Model    string
 }
@@ -263,7 +265,7 @@ func Active(service *Service) bool {
 func fileStreamingKey(cfg config.Settings) fileStreamingCapabilityKey {
 	parsed, err := url.Parse(cfg.BaseURL)
 	if err != nil {
-		return fileStreamingCapabilityKey{Endpoint: cfg.BaseURL, Model: cfg.Model}
+		return fileStreamingCapabilityKey{Profile: compatibility.Effective(cfg.CompatibilityProfile), Endpoint: cfg.BaseURL, Model: cfg.Model}
 	}
 	parsed.Scheme = strings.ToLower(parsed.Scheme)
 	parsed.Host = strings.ToLower(parsed.Host)
@@ -271,7 +273,7 @@ func fileStreamingKey(cfg config.Settings) fileStreamingCapabilityKey {
 	parsed.RawPath = ""
 	parsed.RawQuery = ""
 	parsed.Fragment = ""
-	return fileStreamingCapabilityKey{Endpoint: parsed.String(), Model: cfg.Model}
+	return fileStreamingCapabilityKey{Profile: compatibility.Effective(cfg.CompatibilityProfile), Endpoint: parsed.String(), Model: cfg.Model}
 }
 
 func connectionServer(requestedURL string) string {
@@ -709,7 +711,7 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 		unsupportedReason := ""
 		requestCtx, requestCancel := context.WithTimeout(ctx, time.Duration(cfg.FileTranscriptionTimeoutSeconds)*time.Second)
 		defer requestCancel()
-		result, err := s.client.TranscribeFile(requestCtx, cfg.BaseURL, cfg.Model, cfg.Language, key, cfg.Headers, filepath.Base(file.Name()), size, io.LimitReader(file, size), streaming, inference.FileTranscriptionCallbacks{
+		result, err := s.client.WithCompatibility(cfg.CompatibilityProfile).TranscribeFile(requestCtx, cfg.BaseURL, cfg.Model, cfg.Language, key, cfg.Headers, filepath.Base(file.Name()), size, io.LimitReader(file, size), streaming, inference.FileTranscriptionCallbacks{
 			UploadProgress: func(sent, _ int64) { s.updateFileUpload(generation, sent, false) },
 			UploadComplete: func() {
 				uploadMilliseconds.Store(time.Since(started).Milliseconds())

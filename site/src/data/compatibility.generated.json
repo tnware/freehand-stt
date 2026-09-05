@@ -1,0 +1,242 @@
+{
+  "transcription": [
+    {
+      "id": "generic",
+      "label": "Generic OpenAI-compatible",
+      "available": true,
+      "description": "Completed transcription and optional file streaming. Preserves support for typed events and legacy text segments; streaming and language hints depend on the selected model.",
+      "capabilities": {
+        "fileStreaming": true,
+        "typedTranscriptionEvents": true,
+        "legacyTranscriptionSegments": true,
+        "languageHint": true,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "speaches",
+      "label": "Speaches",
+      "available": true,
+      "description": "Completed transcription, typed file events, and older Speaches text segments that finish at end of stream. Language and streaming support depend on the model and server version.",
+      "capabilities": {
+        "fileStreaming": true,
+        "typedTranscriptionEvents": true,
+        "legacyTranscriptionSegments": true,
+        "languageHint": true,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "openai",
+      "label": "OpenAI hosted",
+      "available": false,
+      "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "localai",
+      "label": "LocalAI",
+      "available": false,
+      "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "whisper-cpp",
+      "label": "whisper.cpp",
+      "available": false,
+      "description": "Dedicated profile not implemented. Native routing and server-loaded model behavior need an adapter.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "vllm",
+      "label": "vLLM",
+      "available": false,
+      "description": "Dedicated profile not implemented. Transcription streaming needs its own response decoder.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    }
+  ],
+  "postProcessing": [
+    {
+      "id": "generic",
+      "label": "Generic OpenAI-compatible",
+      "available": true,
+      "description": "Text chat completions with system/user messages. Choose the cleanup prompt preset separately.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "llama-cpp",
+      "label": "llama.cpp",
+      "available": true,
+      "description": "Uses the shared text chat contract. S1-mini remains a separate prompt preset; configure model-specific server behavior separately.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "openai",
+      "label": "OpenAI hosted",
+      "available": false,
+      "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "localai",
+      "label": "LocalAI",
+      "available": false,
+      "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "vllm",
+      "label": "vLLM",
+      "available": false,
+      "description": "Dedicated profile not implemented. The dedicated text processing contract needs qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    }
+  ],
+  "speech": [
+    {
+      "id": "generic",
+      "label": "Generic OpenAI-compatible",
+      "available": true,
+      "description": "Buffered WAV speech with a voice ID and speed. The server must return PCM16 audio; model support varies.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": true
+      }
+    },
+    {
+      "id": "speaches",
+      "label": "Speaches",
+      "available": true,
+      "description": "Buffered PCM16 WAV speech using the installed model and voice IDs. Speed support depends on the model.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": true
+      }
+    },
+    {
+      "id": "openai",
+      "label": "OpenAI hosted",
+      "available": false,
+      "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "localai",
+      "label": "LocalAI",
+      "available": false,
+      "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "vllm-omni",
+      "label": "vLLM-Omni",
+      "available": false,
+      "description": "Dedicated profile not implemented. Model-specific voice inputs and audio output need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "kokoro-fastapi",
+      "label": "Kokoro-FastAPI",
+      "available": false,
+      "description": "Dedicated profile not implemented. Voice, speed, and WAV output need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    },
+    {
+      "id": "openedai-speech",
+      "label": "openedai-speech",
+      "available": false,
+      "description": "Dedicated profile not implemented. Server-configured voices and WAV output need qualification.",
+      "capabilities": {
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "speechSpeed": false
+      }
+    }
+  ]
+}

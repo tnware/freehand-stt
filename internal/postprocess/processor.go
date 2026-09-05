@@ -51,7 +51,7 @@ func (p *Processor) ProcessWithCredential(ctx context.Context, cfg config.PostPr
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.TimeoutSeconds)*time.Second)
 	defer cancel()
-	completion, err := p.client.ChatCompletion(requestCtx, cfg.BaseURL, cfg.Model, key, systemPrompt, userPrompt)
+	completion, err := p.client.WithCompatibility(cfg.CompatibilityProfile).ChatCompletion(requestCtx, cfg.BaseURL, cfg.Model, key, systemPrompt, userPrompt)
 	if err == nil && strings.TrimSpace(completion.Text) == "" {
 		err = errors.New("post-processing returned an empty transcript")
 	}

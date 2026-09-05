@@ -3,6 +3,33 @@ title: Architecture
 description: Runtime ownership, platform boundaries, and application data flow.
 ---
 
+## Server compatibility ownership
+
+The [backend maintenance guide](../backend-compatibility/) describes the shared
+app/site catalog export, public capability matrix, and evidence requirements.
+
+`internal/compatibility` owns the stable profile IDs, operation-scoped catalog,
+implemented capability flags, and route contracts. The Settings DTO exposes a
+fresh catalog for presentation; the renderer uses generated types and cannot
+change the authoritative registry. Planned entries carry no capabilities and
+cannot be selected through settings or connection-test bindings.
+
+`internal/config` persists one compatibility selection for each existing STT,
+post-processing, and TTS connection. `internal/settings` captures these with
+the endpoint/model and credentials in the same transaction. Inference uses an
+immutable client view per captured selection (TTS carries it on its focused
+request DTO); the shared HTTP client is never mutated. Request construction
+resolves and validates the operation before network or upload work, then uses
+the resolved route and capabilities. The stream decoder consumes explicit
+typed-event and legacy-segment permissions. File streaming observations include
+the effective profile in their cache key.
+
+Profiles identify implemented server contracts. The S1-mini preset continues
+to own prompt construction independently. Future model-specific options must
+add qualified capabilities and bounded request/response handling here; catalog
+availability alone cannot prove model support. Named saved connections and
+credential storage changes are outside this implementation.
+
 ## Authority map
 
 | Concern | Owner |
@@ -335,7 +362,7 @@ cancellation and focus checks, and shows an output-limit-specific notice.
 There is no provider-specific branch or automatic cleanup retry.
 
 The file service submits at most one transcription request per explicit start.
-An unsupported stream records endpoint/model capability evidence and stops;
+An unsupported stream records endpoint/model/compatibility-profile capability evidence and stops;
 a new completed-mode attempt requires a user action. A completed JSON response
 to a streaming request is consumed in place. The inference parser requires a
 final text event for typed SSE while retaining EOF completion for legacy

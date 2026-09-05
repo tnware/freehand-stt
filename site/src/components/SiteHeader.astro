@@ -2,7 +2,7 @@
 import mark from "../assets/freehand-mark.svg";
 
 interface Props {
-  current?: "home" | "download";
+  current?: "home" | "download" | "backends";
 }
 
 const { current } = Astro.props;
@@ -20,6 +20,7 @@ const href = (path: string) => `${base}${path}`;
     <nav class="desktop-navigation" aria-label="Primary navigation">
       <a href={href("/#workflow")}>How it works</a>
       <a href={href("/#principles")}>Privacy</a>
+      <a href={href("/backends/")} aria-current={current === "backends" ? "page" : undefined}>Backends</a>
       <a href={href("/docs/getting-started/")}>Docs</a>
       <a href={href("/download/")} aria-current={current === "download" ? "page" : undefined}>Download</a>
     </nav>
@@ -58,7 +59,8 @@ const href = (path: string) => `${base}${path}`;
       <nav aria-label="Primary navigation">
         <a href={href("/#workflow")}>How it works</a>
         <a href={href("/#principles")}>Privacy</a>
-        <a href={href("/docs/getting-started/")}>Docs</a>
+        <a href={href("/backends/")} aria-current={current === "backends" ? "page" : undefined}>Backends</a>
+      <a href={href("/docs/getting-started/")}>Docs</a>
         <a href={href("/download/")} aria-current={current === "download" ? "page" : undefined}>Download</a>
         <a href="https://github.com/tnware/freehand-stt">GitHub repository</a>
       </nav>

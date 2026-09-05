@@ -7,21 +7,31 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/tnware/freehand-stt/internal/compatibility"
 )
 
 const maxSpeechResponse = 32 << 20
 
 type SpeechRequest struct {
-	Model string
-	Voice string
-	Input string
-	Speed float64
+	CompatibilityProfile compatibility.ID
+	Model                string
+	Voice                string
+	Input                string
+	Speed                float64
 }
 
 // SynthesizeSpeech invokes the standard OpenAI-compatible speech endpoint.
 // Freehand requests WAV so native playback stays deterministic and requires no
 // compressed-audio decoder or helper process.
 func (c *Client) SynthesizeSpeech(ctx context.Context, base, key string, input SpeechRequest) ([]byte, error) {
+	contract, err := c.WithCompatibility(input.CompatibilityProfile).contract(compatibility.Speech)
+	if err != nil {
+		return nil, err
+	}
+	if input.Speed != 1 && !contract.Capabilities.SpeechSpeed {
+		return nil, &Error{Kind: "invalid_settings", Message: "speech speed is unavailable for this profile"}
+	}
 	request := struct {
 		Model          string  `json:"model"`
 		Input          string  `json:"input"`
@@ -34,7 +44,7 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, base, key string, input S
 		return nil, err
 	}
 	defer zeroBytes(body)
-	u, err := endpoint(base, "audio/speech")
+	u, err := endpoint(base, contract.Path)
 	if err != nil {
 		return nil, err
 	}

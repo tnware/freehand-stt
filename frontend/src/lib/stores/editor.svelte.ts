@@ -199,6 +199,7 @@ export class SettingsEditor {
     if (
       previous &&
       (previous.baseURL !== settings.baseURL ||
+        previous.compatibilityProfile !== settings.compatibilityProfile ||
         previous.model !== settings.model ||
         previous.allowInsecureHTTP !== settings.allowInsecureHTTP ||
         previous.authenticationMode !== settings.authenticationMode ||
@@ -210,6 +211,7 @@ export class SettingsEditor {
     if (
       previous &&
       (previous.postProcessing.baseURL !== settings.postProcessing.baseURL ||
+        previous.postProcessing.compatibilityProfile !== settings.postProcessing.compatibilityProfile ||
         previous.postProcessing.model !== settings.postProcessing.model)
     ) {
       this.#invalidateProcessingConnection();
@@ -217,6 +219,7 @@ export class SettingsEditor {
     if (
       previous &&
       (previous.textToSpeech.baseURL !== settings.textToSpeech.baseURL ||
+        previous.textToSpeech.compatibilityProfile !== settings.textToSpeech.compatibilityProfile ||
         previous.textToSpeech.model !== settings.textToSpeech.model ||
         previous.textToSpeech.allowInsecureHTTP !==
           settings.textToSpeech.allowInsecureHTTP ||
@@ -401,6 +404,7 @@ export class SettingsEditor {
         sttCredentialChanged ||
         (previous &&
           (previous.baseURL !== saved.baseURL ||
+            previous.compatibilityProfile !== saved.compatibilityProfile ||
             previous.model !== saved.model ||
             previous.allowInsecureHTTP !== saved.allowInsecureHTTP ||
             previous.authenticationMode !== saved.authenticationMode ||
@@ -413,6 +417,7 @@ export class SettingsEditor {
         processingCredentialChanged ||
         (previous &&
           (previous.postProcessing.baseURL !== saved.postProcessing.baseURL ||
+            previous.postProcessing.compatibilityProfile !== saved.postProcessing.compatibilityProfile ||
             previous.postProcessing.model !== saved.postProcessing.model))
       ) {
         this.#invalidateProcessingConnection();
@@ -421,6 +426,7 @@ export class SettingsEditor {
         ttsCredentialChanged ||
         (previous &&
           (previous.textToSpeech.baseURL !== saved.textToSpeech.baseURL ||
+            previous.textToSpeech.compatibilityProfile !== saved.textToSpeech.compatibilityProfile ||
             previous.textToSpeech.model !== saved.textToSpeech.model ||
             previous.textToSpeech.allowInsecureHTTP !==
               saved.textToSpeech.allowInsecureHTTP ||
@@ -564,6 +570,7 @@ export class SettingsEditor {
     try {
       const result = await this.#service.connection.TestConnection({
         baseURL: settings.baseURL,
+        compatibilityProfile: settings.compatibilityProfile,
         allowInsecureHTTP: settings.allowInsecureHTTP,
         authenticationMode: settings.authenticationMode,
         model: settings.model,
@@ -596,6 +603,7 @@ export class SettingsEditor {
       this.processingConnection =
         await this.#service.connection.TestPostProcessingConnection({
           baseURL: settings.postProcessing.baseURL,
+          compatibilityProfile: settings.postProcessing.compatibilityProfile,
           allowInsecureHTTP: settings.postProcessing.allowInsecureHTTP,
           model: settings.postProcessing.model,
           credentialDraft: apiKey,
@@ -620,6 +628,7 @@ export class SettingsEditor {
       this.ttsConnection =
         await this.#service.connection.TestTextToSpeechConnection({
           baseURL: settings.textToSpeech.baseURL,
+          compatibilityProfile: settings.textToSpeech.compatibilityProfile,
           allowInsecureHTTP: settings.textToSpeech.allowInsecureHTTP,
           authenticationMode: settings.textToSpeech.authenticationMode,
           model: settings.textToSpeech.model,

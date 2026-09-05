@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/hotkey"
 )
 
@@ -162,27 +163,29 @@ func S1MiniContextValues() []string {
 }
 
 type PostProcessingSettings struct {
-	Enabled           bool                 `json:"enabled"`
-	BaseURL           string               `json:"baseURL"`
-	AllowInsecureHTTP bool                 `json:"allowInsecureHTTP"`
-	Model             string               `json:"model"`
-	Preset            PostProcessingPreset `json:"preset"`
-	SystemPrompt      string               `json:"systemPrompt"`
-	Styling           string               `json:"styling"`
-	Structure         string               `json:"structure"`
-	Context           string               `json:"context"`
-	TimeoutSeconds    int                  `json:"timeoutSeconds"`
+	CompatibilityProfile compatibility.ID     `json:"compatibilityProfile"`
+	Enabled              bool                 `json:"enabled"`
+	BaseURL              string               `json:"baseURL"`
+	AllowInsecureHTTP    bool                 `json:"allowInsecureHTTP"`
+	Model                string               `json:"model"`
+	Preset               PostProcessingPreset `json:"preset"`
+	SystemPrompt         string               `json:"systemPrompt"`
+	Styling              string               `json:"styling"`
+	Structure            string               `json:"structure"`
+	Context              string               `json:"context"`
+	TimeoutSeconds       int                  `json:"timeoutSeconds"`
 }
 
 type TextToSpeechSettings struct {
-	Enabled            bool               `json:"enabled"`
-	BaseURL            string             `json:"baseURL"`
-	AllowInsecureHTTP  bool               `json:"allowInsecureHTTP"`
-	AuthenticationMode AuthenticationMode `json:"authenticationMode"`
-	Model              string             `json:"model"`
-	Voice              string             `json:"voice"`
-	Speed              float64            `json:"speed"`
-	TimeoutSeconds     int                `json:"timeoutSeconds"`
+	CompatibilityProfile compatibility.ID   `json:"compatibilityProfile"`
+	Enabled              bool               `json:"enabled"`
+	BaseURL              string             `json:"baseURL"`
+	AllowInsecureHTTP    bool               `json:"allowInsecureHTTP"`
+	AuthenticationMode   AuthenticationMode `json:"authenticationMode"`
+	Model                string             `json:"model"`
+	Voice                string             `json:"voice"`
+	Speed                float64            `json:"speed"`
+	TimeoutSeconds       int                `json:"timeoutSeconds"`
 }
 
 type VADMode string
@@ -195,6 +198,7 @@ const (
 )
 
 type Settings struct {
+	CompatibilityProfile            compatibility.ID       `json:"compatibilityProfile"`
 	BaseURL                         string                 `json:"baseURL"`
 	AllowInsecureHTTP               bool                   `json:"allowInsecureHTTP"`
 	AuthenticationMode              AuthenticationMode     `json:"authenticationMode"`
@@ -245,6 +249,7 @@ type Settings struct {
 
 func Default() Settings {
 	return Settings{
+		CompatibilityProfile: compatibility.Generic,
 		// First launch and settings recovery must not select a network peer or a
 		// credential-bearing authentication mode on the user's behalf. The setup
 		// flow owns that explicit trust decision.
@@ -263,16 +268,18 @@ func Default() Settings {
 		AutoStopSilenceMS: 2000, AutoStopMinimumSpeechMS: 300,
 		SegmentSeconds: 90, SegmentSilenceMS: 700,
 		PostProcessing: PostProcessingSettings{
-			BaseURL:      "http://127.0.0.1:8080/v1",
-			Preset:       PostProcessingPresetGeneric,
-			SystemPrompt: DefaultPostProcessingInstruction,
-			Styling:      "semi-casual", Structure: "prose", Context: "general",
+			CompatibilityProfile: compatibility.Generic,
+			BaseURL:              "http://127.0.0.1:8080/v1",
+			Preset:               PostProcessingPresetGeneric,
+			SystemPrompt:         DefaultPostProcessingInstruction,
+			Styling:              "semi-casual", Structure: "prose", Context: "general",
 			TimeoutSeconds: DefaultPostProcessingTimeoutSeconds,
 		},
 		TextToSpeech: TextToSpeechSettings{
-			AuthenticationMode: AuthenticationModeNone,
-			Speed:              1,
-			TimeoutSeconds:     DefaultTextToSpeechTimeoutSeconds,
+			CompatibilityProfile: compatibility.Generic,
+			AuthenticationMode:   AuthenticationModeNone,
+			Speed:                1,
+			TimeoutSeconds:       DefaultTextToSpeechTimeoutSeconds,
 		},
 	}
 }
@@ -294,6 +301,15 @@ func (s Settings) EffectiveAppearanceMode() AppearanceMode {
 var headerNameRE = regexp.MustCompile(`^[!#$%&'*+\-.^_` + "`" + `|~0-9A-Za-z]+$`)
 
 func Validate(s Settings) error {
+	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Transcription); err != nil {
+		return err
+	}
+	if _, err := compatibility.Resolve(s.PostProcessing.CompatibilityProfile, compatibility.PostProcessing); err != nil {
+		return err
+	}
+	if _, err := compatibility.Resolve(s.TextToSpeech.CompatibilityProfile, compatibility.Speech); err != nil {
+		return err
+	}
 	if err := validateTimeout("transcription request", s.TranscriptionTimeoutSeconds, MinRequestTimeoutSeconds, MaxRequestTimeoutSeconds); err != nil {
 		return err
 	}
@@ -379,6 +395,9 @@ func Validate(s Settings) error {
 }
 
 func ValidateTextToSpeech(s TextToSpeechSettings, requireConnection bool) error {
+	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Speech); err != nil {
+		return err
+	}
 	if err := validateTimeout("speech generation", s.TimeoutSeconds, MinRequestTimeoutSeconds, MaxRequestTimeoutSeconds); err != nil {
 		return err
 	}
@@ -582,6 +601,9 @@ func validateHeaders(headers map[string]string) error {
 }
 
 func ValidatePostProcessing(s PostProcessingSettings) error {
+	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.PostProcessing); err != nil {
+		return err
+	}
 	if err := validateTimeout("post-processing request", s.TimeoutSeconds, MinRequestTimeoutSeconds, MaxRequestTimeoutSeconds); err != nil {
 		return err
 	}

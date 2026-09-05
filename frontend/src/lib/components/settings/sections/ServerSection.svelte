@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { ID } from "$bindings/compatibility";
+  import CompatibilityProfilePicker from "$lib/components/settings/CompatibilityProfilePicker.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import * as Alert from "$lib/components/ui/alert";
@@ -43,6 +45,11 @@
   // The health path is optional configuration; revealing its field only when
   // it is wanted keeps the common case to three values.
   let customHealthPath = $state((settings.healthPath ?? "") !== "");
+  const compatibility = $derived(
+    settings.compatibilityProfiles.transcription?.find(
+      (profile) => profile.id === (settings.compatibilityProfile || ID.Generic),
+    ),
+  );
   const discoveredModels = $derived(connection?.modelIDs ?? []);
   const canSelectModel = $derived(discoveredModels.length > 0);
   const modelPresence = $derived.by(() => {
@@ -52,7 +59,11 @@
     return "Not listed";
   });
   const credentialStatus = $derived(
-    apiKey.trim() ? "Draft entered" : settings.credentialConfigured ? "Configured" : "Not configured",
+    apiKey.trim()
+      ? "Draft entered"
+      : settings.credentialConfigured
+        ? "Configured"
+        : "Not configured",
   );
   const noAuthentication = $derived(
     settings.authenticationMode === AuthenticationMode.AuthenticationModeNone,
@@ -98,11 +109,12 @@
 
 <div class="flex flex-col gap-4">
   <SettingsCard>
-    <ValueRow
-      id="base-url"
-      label="Base URL"
-      hint="OpenAI-compatible /v1 audio endpoint."
-    >
+    <CompatibilityProfilePicker
+      id="transcription-compatibility-profile"
+      bind:value={settings.compatibilityProfile}
+      profiles={settings.compatibilityProfiles.transcription ?? []}
+    />
+    <ValueRow id="base-url" label="Base URL" hint="OpenAI-compatible /v1 audio endpoint.">
       {#snippet control()}
         <ValueInput id="base-url" type="url" bind:value={settings.baseURL} spellcheck={false} />
       {/snippet}
@@ -216,6 +228,7 @@
       {#snippet control()}
         <ValueInput
           id="language"
+          disabled={!compatibility?.capabilities.languageHint}
           bind:value={settings.language}
           placeholder="Auto"
           spellcheck={false}
@@ -344,8 +357,8 @@
 
   <p class="px-1 text-xs leading-relaxed text-muted-foreground">
     The check reads only <code class="font-mono">/health</code> or
-    <code class="font-mono">/models</code> metadata, never invokes a model, and stops after 15
-    seconds. Safety ceilings are fixed at 8 MiB per microphone request, 2 GiB per stored audio
-    file, 1 MiB per completed response, and 8 MiB per stored-file transcript.
+    <code class="font-mono">/models</code> metadata, never invokes a model, and stops after 15 seconds.
+    Safety ceilings are fixed at 8 MiB per microphone request, 2 GiB per stored audio file, 1 MiB per
+    completed response, and 8 MiB per stored-file transcript.
   </p>
 </div>
