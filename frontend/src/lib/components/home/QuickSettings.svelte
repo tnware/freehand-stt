@@ -16,7 +16,7 @@
     type ProfileDescriptor,
     type Settings,
   } from "$lib/state";
-  import type { QuickSettingsField, QuickSettingsPatch } from "$lib/stores/session.svelte";
+  import type { QuickSettingsField, QuickSettingsPatch } from "$lib/stores/editor.svelte";
   import { connectionStatusLabel, connectionSucceeded, modelPresenceLabel } from "$lib/utils/connection";
   import { processingProfileName } from "$lib/utils/processingProfiles";
   import {

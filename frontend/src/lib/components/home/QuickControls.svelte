@@ -5,7 +5,7 @@
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import type { Device, Settings } from "$lib/state";
-  import type { QuickSettingsField, QuickSettingsPatch } from "$lib/stores/session.svelte";
+  import type { QuickSettingsField, QuickSettingsPatch } from "$lib/stores/editor.svelte";
   import {
     SYSTEM_DEFAULT_LABEL,
     SYSTEM_DEFAULT_MICROPHONE,

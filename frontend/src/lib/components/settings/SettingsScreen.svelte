@@ -39,27 +39,28 @@
   } = $props();
 
   const section = $derived(sectionByID(active));
-  const dirty = $derived(session.settingsDirty);
+  const dirty = $derived(session.editor.dirty);
 
   function selectSection(id: SettingsSectionID) {
     active = id;
-    if (id === "audio") void session.refreshDevices();
+    if (id === "audio") void session.editor.refreshDevices();
   }
 
   async function saveSettings() {
-    if (await session.save()) shortcutCapture.markSaved();
+    if (await session.editor.save()) shortcutCapture.markSaved();
   }
 
   // Settings has no transport to state its own progress, so the channel carries
   // both outcomes of whatever you just pressed.
   const messages = $derived.by(() => {
     const out: Message[] = [];
-    const configuration = session.appliedSettings?.configuration;
+    const configuration = session.editor.applied?.configuration;
     const preservedFields = configuration?.preservedFields ?? [];
     if (preservedFields.length > 0) {
       const remaining = Math.max(
         0,
-        (configuration?.preservedFieldCount ?? preservedFields.length) - preservedFields.length,
+        (configuration?.preservedFieldCount ?? preservedFields.length) -
+          preservedFields.length,
       );
       out.push({
         id: "configuration-compatibility",
@@ -68,31 +69,31 @@
         text: `Settings from a newer Freehand version are preserved but cannot be edited here: ${preservedFields.join(", ")}${remaining > 0 ? `, and ${remaining} more` : ""}.`,
       });
     }
-    if (session.info) {
+    if (session.messages.info) {
       out.push({
         id: "system-info",
         tone: "info",
         source: "system",
-        text: session.info,
-        onDismiss: () => session.dismissInfo(),
+        text: session.messages.info,
+        onDismiss: () => session.messages.dismissInfo(),
       });
     }
-    if (session.error) {
+    if (session.messages.error) {
       out.push({
         id: "error",
         tone: "error",
         source: "action",
-        text: session.error,
-        onDismiss: () => session.dismissError(),
+        text: session.messages.error,
+        onDismiss: () => session.messages.dismissError(),
       });
     }
-    if (session.notice) {
+    if (session.messages.notice) {
       out.push({
         id: "notice",
         tone: "success",
         source: "action",
-        text: session.notice,
-        onDismiss: () => session.dismissNotice(),
+        text: session.messages.notice,
+        onDismiss: () => session.messages.dismissNotice(),
       });
     }
     return out;
@@ -104,10 +105,17 @@
 
   <div class="flex min-w-0 flex-1 flex-col">
     <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-      <section aria-labelledby="settings-section-title" class="flex max-w-[620px] flex-col gap-3.5">
+      <section
+        aria-labelledby="settings-section-title"
+        class="flex max-w-[620px] flex-col gap-3.5"
+      >
         <div class="flex items-baseline gap-2.5">
-          <h3 class="text-base font-semibold tracking-[-0.01em]">{section.label}</h3>
-          <p class="min-w-0 text-[12px] text-muted-foreground">{section.blurb}</p>
+          <h3 class="text-base font-semibold tracking-[-0.01em]">
+            {section.label}
+          </h3>
+          <p class="min-w-0 text-[12px] text-muted-foreground">
+            {section.blurb}
+          </p>
         </div>
         <h2
           id="settings-section-title"
@@ -119,80 +127,83 @@
         </h2>
         <Notifications {messages} />
 
-        {#if session.settings}
+        {#if session.editor.draft}
           {#if active === "general"}
-            <GeneralSection bind:settings={session.settings} />
+            <GeneralSection bind:settings={session.editor.draft} />
           {:else if active === "shortcuts"}
             <ShortcutsSection
-              bind:settings={session.settings}
-              status={session.status}
+              bind:settings={session.editor.draft}
+              status={session.dictation.status}
               busy={session.busy}
               capture={shortcutCapture}
             />
           {:else if active === "audio"}
             <AudioSection
-              bind:settings={session.settings}
-              devices={session.devices}
-              microphoneChoice={session.microphoneChoice}
-              busy={session.devicesBusy}
-              onChooseMicrophone={(choice) => session.chooseMicrophone(choice)}
-              onRefreshDevices={() => session.refreshDevices()}
+              bind:settings={session.editor.draft}
+              devices={session.editor.devices}
+              microphoneChoice={session.editor.microphoneChoice}
+              busy={session.editor.devicesBusy}
+              onChooseMicrophone={(choice) =>
+                session.editor.chooseMicrophone(choice)}
+              onRefreshDevices={() => session.editor.refreshDevices()}
             />
           {:else if active === "overlay"}
             <OverlaySection
-              bind:settings={session.settings}
+              bind:settings={session.editor.draft}
               previewing={overlayPreviewing}
-              canPreview={session.status.state === State.Idle || session.status.state === State.Failed}
+              canPreview={session.dictation.status.state === State.Idle ||
+                session.dictation.status.state === State.Failed}
               onStartPreview={onStartOverlayPreview}
               onStopPreview={onStopOverlayPreview}
             />
           {:else if active === "server"}
             <ServerSection
-              bind:settings={session.settings}
-              bind:apiKey={session.apiKey}
-              bind:clearKey={session.clearKey}
-              connection={session.connection}
-              busy={session.sttConnectionTesting}
-              onTestConnection={() => session.testConnection()}
+              bind:settings={session.editor.draft}
+              bind:apiKey={session.editor.apiKey}
+              bind:clearKey={session.editor.clearKey}
+              connection={session.editor.connection}
+              busy={session.editor.sttConnectionTesting}
+              onTestConnection={() => session.editor.testConnection()}
             />
           {:else if active === "processing"}
             <ProcessingSection
-              bind:settings={session.settings}
-              bind:apiKey={session.processingAPIKey}
-              bind:clearKey={session.clearProcessingKey}
-              profiles={session.processingProfiles}
-              connection={session.processingConnection}
-              busy={session.processingConnectionTesting}
-              onTestConnection={() => session.testPostProcessingConnection()}
+              bind:settings={session.editor.draft}
+              bind:apiKey={session.editor.processingAPIKey}
+              bind:clearKey={session.editor.clearProcessingKey}
+              profiles={session.editor.processingProfiles}
+              connection={session.editor.processingConnection}
+              busy={session.editor.processingConnectionTesting}
+              onTestConnection={() =>
+                session.editor.testPostProcessingConnection()}
             />
           {:else if active === "speech"}
             <SpeechSection
-              bind:settings={session.settings}
-              bind:apiKey={session.ttsAPIKey}
-              bind:clearKey={session.clearTTSKey}
-              status={session.ttsStatus}
-              busy={session.ttsPreviewing}
-              connection={session.ttsConnection}
-              connectionBusy={session.ttsConnectionTesting}
-              canPreview={
-                session.status.state === State.Idle &&
-                !session.fileStatus.canCancel
-              }
-              onPreview={() => session.previewVoice()}
-              onStop={() => session.stopTTS()}
-              onSave={() => session.saveTTSAudio()}
-              onClear={() => session.clearTTSAudio()}
-              onTestConnection={() => session.testTextToSpeechConnection()}
+              bind:settings={session.editor.draft}
+              bind:apiKey={session.editor.ttsAPIKey}
+              bind:clearKey={session.editor.clearTTSKey}
+              status={session.speech.status}
+              busy={session.speech.previewing}
+              connection={session.editor.ttsConnection}
+              connectionBusy={session.editor.ttsConnectionTesting}
+              canPreview={session.dictation.status.state === State.Idle &&
+                !session.files.status.canCancel}
+              onPreview={() => session.speech.previewVoice()}
+              onStop={() => session.speech.stopTTS()}
+              onSave={() => session.speech.saveTTSAudio()}
+              onClear={() => session.speech.clearTTSAudio()}
+              onTestConnection={() =>
+                session.editor.testTextToSpeechConnection()}
             />
           {:else if active === "history"}
             <HistorySection
-              bind:settings={session.settings}
-              enabled={session.appliedSettings?.historyEnabled ?? false}
-              entries={session.history}
-              onCopy={(id) => session.copyHistoryEntry(id)}
-              onCopyVersion={(id, version) => session.copyHistoryEntryVersion(id, version)}
-              onDelete={(id) => session.deleteHistoryEntry(id)}
-              onClear={() => session.clearHistory()}
+              bind:settings={session.editor.draft}
+              enabled={session.editor.applied?.historyEnabled ?? false}
+              entries={session.history.entries}
+              onCopy={(id) => session.history.copyHistoryEntry(id)}
+              onCopyVersion={(id, version) =>
+                session.history.copyHistoryEntryVersion(id, version)}
+              onDelete={(id) => session.history.deleteHistoryEntry(id)}
+              onClear={() => session.history.clearHistory()}
             />
           {/if}
         {:else}
@@ -203,8 +214,10 @@
       </section>
     </div>
 
-    <div class="flex h-[58px] shrink-0 items-center justify-end gap-2.5 border-t border-hairline bg-layer-fill px-5">
-      {#if session.settings}
+    <div
+      class="flex h-[58px] shrink-0 items-center justify-end gap-2.5 border-t border-hairline bg-layer-fill px-5"
+    >
+      {#if session.editor.draft}
         <span
           class="figure mr-auto flex items-center gap-2 text-[10.5px] text-muted-foreground"
           aria-live="polite"
@@ -213,28 +226,36 @@
           <span
             class={cn(
               "size-1.5 rounded-full",
-              dirty || session.settingsSaving ? "bg-primary" : "bg-success",
+              dirty || session.editor.saving ? "bg-primary" : "bg-success",
             )}
             aria-hidden="true"
           ></span>
-          {session.settingsSaving
+          {session.editor.saving
             ? "Saving changes…"
             : dirty
               ? "Unsaved changes"
               : "All changes saved"}
         </span>
-        <Button variant="outline" disabled={session.settingsSaving} onclick={onClose}>Close</Button>
+        <Button
+          variant="outline"
+          disabled={session.editor.saving}
+          onclick={onClose}>Close</Button
+        >
         <Button
           disabled={session.busy || shortcutCapture.capturing || !dirty}
           onclick={saveSettings}
         >
-          {#if session.settingsSaving}
+          {#if session.editor.saving}
             <LoaderCircleIcon data-icon="inline-start" class="animate-spin" />
           {/if}
-          {session.settingsSaving ? "Saving…" : "Save changes"}
+          {session.editor.saving ? "Saving…" : "Save changes"}
         </Button>
       {:else}
-        <Button variant="outline" disabled={session.settingsSaving} onclick={onClose}>Close</Button>
+        <Button
+          variant="outline"
+          disabled={session.editor.saving}
+          onclick={onClose}>Close</Button
+        >
       {/if}
     </div>
   </div>
