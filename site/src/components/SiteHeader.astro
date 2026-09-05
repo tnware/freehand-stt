@@ -17,7 +17,7 @@ const href = (path: string) => `${base}${path}`;
       <span>Freehand</span>
     </a>
 
-    <nav aria-label="Primary navigation">
+    <nav class="desktop-navigation" aria-label="Primary navigation">
       <a href={href("/#workflow")}>How it works</a>
       <a href={href("/#principles")}>Privacy</a>
       <a href={href("/docs/getting-started/")}>Docs</a>
@@ -46,14 +46,50 @@ const href = (path: string) => `${base}${path}`;
       >—</a>
     </span>
 
-    <a class="header-cta" href={href("/download/")} aria-current={current === "download" ? "page" : undefined}>
+    <a class="header-cta" aria-label="Download Freehand for Windows" href={href("/download/")} aria-current={current === "download" ? "page" : undefined}>
       <span class="header-cta-label">Download</span>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg>
     </a>
+    <details class="mobile-navigation">
+      <summary>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <span>Menu</span>
+      </summary>
+      <nav aria-label="Primary navigation">
+        <a href={href("/#workflow")}>How it works</a>
+        <a href={href("/#principles")}>Privacy</a>
+        <a href={href("/docs/getting-started/")}>Docs</a>
+        <a href={href("/download/")} aria-current={current === "download" ? "page" : undefined}>Download</a>
+        <a href="https://github.com/tnware/freehand-stt">GitHub repository</a>
+      </nav>
+    </details>
   </div>
 </header>
 
 <script>
+  const menu = document.querySelector<HTMLDetailsElement>(".mobile-navigation");
+  const menuToggle = menu?.querySelector("summary");
+
+  if (menu) {
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && menu.open) {
+        menu.open = false;
+        menuToggle?.focus();
+      }
+    });
+    document.addEventListener("click", (event) => {
+      if (event.target instanceof Node && !menu.contains(event.target)) menu.open = false;
+    });
+    menu.querySelectorAll("nav a").forEach((link) => {
+      link.addEventListener("click", () => { menu.open = false; });
+    });
+    window.matchMedia("(max-width: 1040px)").addEventListener("change", () => {
+      const focusWasInside = menu.contains(document.activeElement);
+      menu.open = false;
+      if (focusWasInside) document.querySelector<HTMLAnchorElement>(".header-cta")?.focus();
+    });
+  }
+
   const count = document.querySelector<HTMLElement>("[data-star-count]");
 
   if (count) {

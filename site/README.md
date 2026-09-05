@@ -129,3 +129,20 @@ After authoring, run `npm run build` and check both local and GitHub Pages
 base-path links. For syntax and available props, use the official
 [Starlight component reference](https://starlight.astro.build/components/using-components/)
 and [Markdown guide](https://starlight.astro.build/guides/authoring-content/).
+
+## Custom-page metadata and responsive checks
+
+The homepage and download page share `CustomPageMetadata.astro`. Canonical and
+social URLs use `site-url.mjs`, the same `SITE_URL` configuration as Astro, and
+remain production URLs during local preview. Keep the page title and description
+in that component invocation. The dedicated share image in `public/social/freehand.jpg`
+is an optimized 1200 × 630 JPEG. Keep its wordmark and tagline away from the edges
+so modest platform cropping preserves them. When replacing it, update the image
+URL, MIME type, dimensions, and alt text in the metadata component as needed.
+This asset is independent of the repository README banners.
+
+For changes to the custom header or mobile layouts, check both pages at 320 px,
+390 px, the 1040 px navigation breakpoint, and desktop width. Verify viewport
+scale stays at 1, the menu exposes every navigation destination, keyboard users
+can open it and dismiss it with Escape, and icon-only links have accessible names.
+Check docs tabs and supporting text in both themes when changing palette tokens.

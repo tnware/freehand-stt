@@ -2,9 +2,7 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-const productionUrl = new URL(
-	process.env.SITE_URL ?? 'https://tnware.github.io/freehand-stt/',
-);
+import { productionUrl } from './site-url.mjs';
 const basePath = process.env.CI ? productionUrl.pathname : '/';
 const base = basePath.replace(/\/$/, '');
 

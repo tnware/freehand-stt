@@ -2,6 +2,7 @@
 import mark from "../assets/freehand-mark.svg";
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
+import CustomPageMetadata from "../components/CustomPageMetadata.astro";
 import ParticleBackground from "../components/ParticleBackground.astro";
 import "../styles/home.css";
 
@@ -16,10 +17,13 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="description" content="Dictate into Windows apps with speech models you choose, optional custom or S1-mini by Superwhisper cleanup, and built-in local voice detection." />
+    <CustomPageMetadata
+      title="Freehand — Speech to text, anywhere you type"
+      description="Dictate into Windows apps with speech models you choose, optional custom or S1-mini by Superwhisper cleanup, and built-in local voice detection."
+      path=""
+    />
     <meta name="theme-color" content="#070a12" />
     <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
-    <title>Freehand — Speech to text, anywhere you type</title>
   </head>
   <body>
     <ParticleBackground />
@@ -27,7 +31,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
 
     <SiteHeader current="home" />
 
-    <main id="main">
+    <main id="main" class="home-page">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
           <p class="kicker"><span></span> Your voice. Your models. Your Windows apps.</p>
