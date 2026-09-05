@@ -20,6 +20,16 @@ includes:
   android: ./build/android/Taskfile.yml
 
 tasks:
+  storage:generate:
+    summary: Generate SQLite queries with pinned sqlc and validate persistence boundaries
+    cmds:
+      - go run ./build/scripts/storage
+
+  storage:check:
+    summary: Verify SQLite generated code and persistence boundaries
+    cmds:
+      - go run ./build/scripts/storage -check
+
   build:
     summary: Builds the application
     cmds:

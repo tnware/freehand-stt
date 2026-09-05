@@ -82,6 +82,7 @@ export default defineConfig({
 					items: [
 						{ slug: 'docs/development' },
                         { slug: 'docs/development/backend-compatibility' },
+                        { slug: 'docs/development/storage' },
 					],
 				},
 			],

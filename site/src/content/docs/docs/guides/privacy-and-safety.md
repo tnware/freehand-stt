@@ -56,10 +56,27 @@ available for you to copy.
 Clipboard-paste insertion is not enabled. Freehand does not silently replace
 the clipboard as part of automatic delivery.
 
+## Saved settings and backups
+
+Non-secret settings are stored on this PC in
+`%LOCALAPPDATA%\Freehand\settings.db`. They include server addresses, model
+choices, custom instructions, and request headers. Database access is restricted
+to your Windows user and SYSTEM; the database is not encrypted. Treat it and its
+backups as private configuration. API keys remain in Windows Credential Manager,
+and transcript history remains memory-only. Window size and position are kept
+separately in `%APPDATA%\Freehand\window-state.json`.
+
+When upgrading from an older alpha, Freehand imports a valid
+`%APPDATA%\Freehand\settings.json` once and leaves the original untouched.
+Later settings saves use SQLite. Schema upgrades retain up to three database
+backups; explicit recovery resets retain an archive of the replaced database.
+See [settings recovery](../troubleshooting/#saved-settings-need-attention) before
+restoring or removing these files.
+
 ## Credentials and transport
 
 API keys are stored in Windows Credential Manager. They are not written to the
-JSON settings file or returned to the interface after saving.
+SQLite settings database or returned to the interface after saving.
 
 HTTPS is required by default. You can explicitly allow HTTP for a trusted local
 or LAN endpoint, but doing so sends audio, transcript text, and credentials

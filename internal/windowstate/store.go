@@ -17,7 +17,7 @@ type Store struct {
 	mu   sync.Mutex
 }
 
-// NewStore locates the placement file beside Freehand's settings file.
+// NewStore locates the disposable placement file in the per-user configuration directory.
 func NewStore() (*Store, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {

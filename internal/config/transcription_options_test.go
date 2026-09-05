@@ -17,7 +17,7 @@ func TestTranscriptionOptionsMigrationAndRoundTrip(t *testing.T) {
 	json.Unmarshal(raw, &document)
 	delete(document, "transcriptionOptions")
 	raw, _ = json.Marshal(document)
-	store := &Store{Path: filepath.Join(t.TempDir(), "settings.json")}
+	store := &LegacyReader{Path: filepath.Join(t.TempDir(), "settings.json")}
 	if err := os.WriteFile(store.Path, raw, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestTranscriptionOptionsMigrationAndRoundTrip(t *testing.T) {
 	}
 	loaded.CompatibilityProfile = compatibility.Speaches
 	loaded.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "Project 日本語", Hotwords: "Freehand", TemperatureOverride: true}
-	if err := store.Save(loaded); err != nil {
+	if err := writeLegacyFixture(store.Path, loaded); err != nil {
 		t.Fatal(err)
 	}
 	again, err := store.Load()
@@ -39,7 +39,7 @@ func TestTranscriptionOptionsMigrationAndRoundTrip(t *testing.T) {
 	}
 	again.TranscriptionOptions.TemperatureOverride = false
 	again.TranscriptionOptions.Temperature = 0.4
-	if err := store.Save(again); err != nil {
+	if err := writeLegacyFixture(store.Path, again); err != nil {
 		t.Fatal(err)
 	}
 	final, err := store.Load()

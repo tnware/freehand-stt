@@ -19,7 +19,7 @@ func TestCompatibilityProfilesMigrateAndRoundTrip(t *testing.T) {
 	delete(document["postProcessing"].(map[string]any), "compatibilityProfile")
 	delete(document["textToSpeech"].(map[string]any), "compatibilityProfile")
 	raw, _ = json.Marshal(document)
-	store := &Store{Path: filepath.Join(t.TempDir(), "settings.json")}
+	store := &LegacyReader{Path: filepath.Join(t.TempDir(), "settings.json")}
 	if err := os.WriteFile(store.Path, raw, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestCompatibilityProfilesMigrateAndRoundTrip(t *testing.T) {
 	loaded.CompatibilityProfile = compatibility.Speaches
 	loaded.PostProcessing.CompatibilityProfile = compatibility.LlamaCPP
 	loaded.TextToSpeech.CompatibilityProfile = compatibility.Speaches
-	if err := store.Save(loaded); err != nil {
+	if err := writeLegacyFixture(store.Path, loaded); err != nil {
 		t.Fatal(err)
 	}
 	again, err := store.Load()
@@ -69,7 +69,7 @@ func TestUnavailableCompatibilityProfilesFailEvenWhenFeatureDisabled(t *testing.
 	}
 	// Existing recovery behavior must preserve a future profile on disk.
 	raw, _ := json.Marshal(settings)
-	store := &Store{Path: filepath.Join(t.TempDir(), "settings.json")}
+	store := &LegacyReader{Path: filepath.Join(t.TempDir(), "settings.json")}
 	if err := os.WriteFile(store.Path, raw, 0600); err != nil {
 		t.Fatal(err)
 	}

@@ -30,13 +30,45 @@ audio files. Connect or enable a microphone, then select it under **Settings →
 - If an explicitly selected microphone is missing, choose another device or
   return to **System default**.
 
-<details>
-<summary>Freehand reports an invalid settings file</summary>
+## Saved settings need attention
 
-Retry loading it or deliberately reset it from the recovery screen. Freehand
-does not silently replace invalid saved settings.
+Freehand pauses new transcription and settings changes when saved configuration
+cannot be loaded or a save's outcome cannot be confirmed. It does not silently
+replace your settings with defaults.
 
-</details>
+- **In use or inaccessible:** close other Freehand instances, check file access
+  and available disk space, then choose **Retry loading**.
+- **Newer database:** update Freehand to a compatible version. Older builds do
+  not downgrade a newer settings database.
+- **Legacy import:** the first SQLite launch reads
+  `%APPDATA%\Freehand\settings.json`. Invalid values or unknown newer fields
+  block import without changing the file. Repair it or use a compatible version,
+  then retry. Once `settings.db` exists, changes to the old JSON file have no effect.
+- **Reset:** choose **Reset to defaults** only when you want a fresh setup.
+  Freehand archives an existing database and its sidecars in a
+  `settings-recovery-*` folder, then starts with safe defaults. Windows credentials
+  are not deleted, but keys may need entering again if their references could
+  not be recovered.
+
+To restore a database backup:
+
+1. **Quit Freehand from the tray.** Closing a window alone leaves it running.
+2. Open `%LOCALAPPDATA%\Freehand` in File Explorer. Copy `settings.db` and any
+   matching `settings.db-journal`, `settings.db-wal`, or `settings.db-shm` files
+   together into a separate recovery folder before removing them from this folder.
+3. Copy a known-good `.db` file from `backups` into the Freehand folder and name
+   the copy `settings.db`. Keep the original backup. Do not mix old sidecars with
+   the restored database.
+4. Reopen Freehand and review settings and authentication. Backups contain
+   configuration, not keys; replaced keys may need entering again.
+
+The app retains the newest three backups made before schema upgrades. Explicit
+reset archives are retained until you remove them. Keep any recovery files private:
+they can contain endpoint addresses, headers, and custom instructions.
+
+Older alpha builds still read the preserved JSON file, which may be stale after
+you save settings in a SQLite build. Returning to an older binary does not convert
+the database back to JSON.
 
 ## Connection and request failures
 

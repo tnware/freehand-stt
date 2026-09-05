@@ -56,8 +56,8 @@ func TestSetupReviewIsOneTimePersistedState(t *testing.T) {
 	settings.BaseURL = "https://example.test/v1"
 	settings.Model = "speech/stt"
 	settings.SetupCompleted = true
-	store := &Store{Path: filepath.Join(t.TempDir(), "settings.json")}
-	if err := store.Save(settings); err != nil {
+	store := &LegacyReader{Path: filepath.Join(t.TempDir(), "settings.json")}
+	if err := writeLegacyFixture(store.Path, settings); err != nil {
 		t.Fatal(err)
 	}
 	loaded, err := store.Load()
@@ -103,12 +103,12 @@ func TestCompletedSetupRequiresAnExplicitConnection(t *testing.T) {
 	}
 }
 
-func TestUnknownSettingsAreLoadedAndPreservedForNewerVersions(t *testing.T) {
+func TestLegacyUnknownSettingsAreReportedWithoutChangingSource(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.json")
 	if err := os.WriteFile(path, []byte(`{"unknownFutureSetting":{"enabled":true},"postProcessing":{"futureControl":"kept"},"showWindowOnLaunch":false}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	store := &Store{Path: path}
+	store := &LegacyReader{Path: path}
 	settings, err := store.Load()
 	if err != nil {
 		t.Fatalf("forward-compatible settings were rejected: %v", err)
@@ -122,10 +122,6 @@ func TestUnknownSettingsAreLoadedAndPreservedForNewerVersions(t *testing.T) {
 	}
 	if strings.Join(report.PreservedFields, ",") != "postProcessing.futureControl,unknownFutureSetting" {
 		t.Fatalf("preserved fields = %v", report.PreservedFields)
-	}
-	settings.ShowWindowOnLaunch = true
-	if err := store.Save(settings); err != nil {
-		t.Fatal(err)
 	}
 	var saved map[string]json.RawMessage
 	data, err := os.ReadFile(path)
@@ -156,7 +152,7 @@ func TestInvalidSettingsReturnSafeRecoveryDefaultsAndReason(t *testing.T) {
 	if err := os.WriteFile(path, original, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	settings, err := (&Store{Path: path}).Load()
+	settings, err := (&LegacyReader{Path: path}).Load()
 	if err == nil {
 		t.Fatal("invalid known setting was accepted")
 	}
@@ -503,7 +499,7 @@ func TestLoadPreservesDefaultWindowVisibilityForSparseFiles(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{}"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	settings, err := (&Store{Path: path}).Load()
+	settings, err := (&LegacyReader{Path: path}).Load()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -588,9 +584,9 @@ func TestAppearanceModeValidationAndMicaPolicy(t *testing.T) {
 	}
 }
 
-func TestSaveUsesWindowLaunchKey(t *testing.T) {
+func TestLegacyJSONUsesWindowLaunchKey(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := (&Store{Path: path}).Save(Default()); err != nil {
+	if err := writeLegacyFixture(path, Default()); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(path)
@@ -642,4 +638,16 @@ func TestS1MiniProfileRejectsUnknownControlValues(t *testing.T) {
 	if err := Validate(settings); err == nil || !strings.Contains(err.Error(), "S1-mini styling") {
 		t.Fatalf("invalid S1-mini control error = %v", err)
 	}
+}
+
+// Only tests write legacy fixtures; production JSON support is read-only.
+func writeLegacyFixture(path string, v Settings) error {
+	if err := Validate(v); err != nil {
+		return err
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0600)
 }

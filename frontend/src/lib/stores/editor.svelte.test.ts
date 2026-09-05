@@ -26,6 +26,19 @@ describe("SettingsEditor configuration recovery", () => {
     },
   };
 
+  it("adopts required recovery even when another window has an unsaved draft", () => {
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
+    editor.applySettingsSnapshot(settings);
+    editor.draft!.model = "unsaved-model";
+    editor.apiKey = "transient-fixture-key";
+    expect(editor.dirty).toBe(true);
+    expect(editor.applySettingsSnapshot(invalidSettings)).toBe(true);
+    expect(editor.applied?.configuration.recoveryRequired).toBe(true);
+    expect(editor.apiKey).toBe("");
+  });
+
   it("keeps the recovery state visible when retry still cannot load the file", async () => {
     const RetryConfiguration: SessionServices["settings"]["RetryConfiguration"] =
       vi.fn(() =>
@@ -332,8 +345,7 @@ describe("SettingsEditor settings snapshots", () => {
 
   it("applies quick settings from the confirmed snapshot instead of an unrelated draft", async () => {
     let received:
-      | Parameters<SessionServices["settings"]["SaveSettings"]>[0]
-      | undefined;
+      Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
     const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(
       (request) => {
         received = request;
@@ -412,8 +424,7 @@ describe("SettingsEditor settings snapshots", () => {
 
   it("persists the compact quick controls through the confirmed settings snapshot", async () => {
     let received:
-      | Parameters<SessionServices["settings"]["SaveSettings"]>[0]
-      | undefined;
+      Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
     const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(
       (request) => {
         received = request;
@@ -464,8 +475,7 @@ describe("SettingsEditor settings snapshots", () => {
 
   it("persists a processing behavior without changing its stored profile-specific values", async () => {
     let received:
-      | Parameters<SessionServices["settings"]["SaveSettings"]>[0]
-      | undefined;
+      Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
     const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(
       (request) => {
         received = request;
@@ -719,10 +729,11 @@ describe("SettingsEditor connection metadata", () => {
   });
 });
 
-
 describe("compatibility profile snapshots", () => {
   it("invalidates connection observations when only compatibility selections change", async () => {
-    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    const session = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
     await session.editor.load();
     session.editor.connection = connectionResult;
     session.editor.processingConnection = connectionResult;
@@ -730,12 +741,20 @@ describe("compatibility profile snapshots", () => {
     const changed: Settings = {
       ...settings,
       compatibilityProfile: ID.Speaches,
-      postProcessing: { ...settings.postProcessing, compatibilityProfile: ID.LlamaCPP },
-      textToSpeech: { ...settings.textToSpeech, compatibilityProfile: ID.Speaches },
+      postProcessing: {
+        ...settings.postProcessing,
+        compatibilityProfile: ID.LlamaCPP,
+      },
+      textToSpeech: {
+        ...settings.textToSpeech,
+        compatibilityProfile: ID.Speaches,
+      },
     };
     expect(session.editor.applySettingsSnapshot(changed)).toBe(true);
     expect(session.editor.applied?.compatibilityProfile).toBe(ID.Speaches);
-    expect(session.editor.draft?.postProcessing.compatibilityProfile).toBe(ID.LlamaCPP);
+    expect(session.editor.draft?.postProcessing.compatibilityProfile).toBe(
+      ID.LlamaCPP,
+    );
     expect(session.editor.connection).toBeNull();
     expect(session.editor.processingConnection).toBeNull();
     expect(session.editor.ttsConnection).toBeNull();
@@ -745,27 +764,35 @@ describe("compatibility profile snapshots", () => {
   });
 });
 
-
 describe("Transcription control drafts", () => {
   it("keeps unsaved nested controls separate from applied settings", async () => {
-    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    const session = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
     await session.editor.load();
-    if (!session.editor.draft || !session.editor.applied) throw new Error("settings missing");
+    if (!session.editor.draft || !session.editor.applied)
+      throw new Error("settings missing");
     session.editor.draft.transcriptionOptions.prompt = "unsaved context";
     session.editor.draft.transcriptionOptions.hotwords = "unsaved terms";
     session.editor.draft.transcriptionOptions.temperatureOverride = true;
-    expect(session.editor.applied.transcriptionOptions).toEqual(settings.transcriptionOptions);
+    expect(session.editor.applied.transcriptionOptions).toEqual(
+      settings.transcriptionOptions,
+    );
   });
 });
 
-
 describe("Cleanup generation control drafts", () => {
   it("keeps unsaved nested options separate from applied settings", async () => {
-    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    const session = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
     await session.editor.load();
-    if (!session.editor.draft || !session.editor.applied) throw new Error("settings missing");
+    if (!session.editor.draft || !session.editor.applied)
+      throw new Error("settings missing");
     session.editor.draft.postProcessing.generationOptions.maxOutputTokens = 8192;
     session.editor.draft.postProcessing.generationOptions.disableReasoning = true;
-    expect(session.editor.applied.postProcessing.generationOptions).toEqual(settings.postProcessing.generationOptions);
+    expect(session.editor.applied.postProcessing.generationOptions).toEqual(
+      settings.postProcessing.generationOptions,
+    );
   });
 });
