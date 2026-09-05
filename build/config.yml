@@ -11,7 +11,7 @@ info:
   description: "Speech to text, anywhere you type." # The application description
   copyright: "Copyright 2026 Tyler Woods" # Copyright text
   comments: "Focus-safe Windows speech to text for local or remote endpoints." # Comments
-  version: "0.1.0-alpha.1" # x-release-please-version; application version and human-readable release source
+  version: "0.1.0-alpha.2" # x-release-please-version; application version and human-readable release source
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"
