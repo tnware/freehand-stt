@@ -160,6 +160,42 @@ service keeps its fixed 15-second metadata-only probe deadline. Deadline and
 user cancellation are separate bounded error kinds; no timeout causes an
 automatic inference retry.
 
+## Renderer state ownership
+
+Each WebView composes its own `Session` from feature owners under
+`frontend/src/lib/stores`. `Session` owns construction, initial loading order,
+aggregate busy presentation, and presentation teardown; it is not a second
+command facade or a container for feature state.
+
+- `SettingsEditor` owns the applied settings snapshot, independent editable
+  settings/credential draft, connection probes, microphone choices, recovery,
+  and serialized quick saves. These remain together to preserve one coherent
+  editing transaction.
+- `DictationState` owns live-dictation projection and commands.
+- `FileTranscriptionState` owns stored-file projection, generation/revision
+  reconciliation, delta-gap recovery, and explicit file commands.
+- `SpeechState` owns playback projection and speech commands, including preview
+  admission. The generated speech and dictation `CurrentStatus` methods remain
+  in separate service namespaces.
+- `HistoryState` owns history refresh/mutation ordering. Successful refresh
+  acknowledges the completed file generation through an injected callback.
+- `SessionMessages` owns shared presentation notices and their timers, not
+  workflow state.
+
+Components access these owners directly. Generated services and DTOs remain
+wire authority; feature dependencies use narrow types derived from those
+services rather than handwritten transport shapes. Feature owners do not import
+`Session` or acquire subscriptions during construction.
+
+Both main and Settings windows install `subscribeSessionEvents` before loading
+snapshots. This shared composition routes events to the owners and reacts to
+accepted terminal transitions by refreshing history. Window-specific level and
+overlay reactions stay in the window callbacks. The disposer releases all
+session subscriptions; window teardown clears presentation timers and credential
+drafts without stopping Go-owned recording, transcription, or playback. Hiding
+the reusable Settings window continues to discard its draft through the existing
+settings lifecycle.
+
 ## Diagnostics boundary
 
 `internal/app` creates one hierarchy from Wails' default structured logger and assigns bounded component attributes before injecting it into feature services, the post-processor, and native overlay. Runtime code records lifecycle metadata and fixed error categories rather than formatting underlying errors. It never logs transcript/audio content, credential or header material, model IDs, full paths, URL paths/query, or insertion-target identity. High-frequency audio, VAD, progress, delta, and renderer-event traffic remains off the logging path.

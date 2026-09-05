@@ -10,7 +10,7 @@
 
   let { session }: { session: Session } = $props();
 
-  const configuration = $derived(session.appliedSettings?.configuration);
+  const configuration = $derived(session.editor.applied?.configuration);
   const recoveryRequired = $derived(configuration?.recoveryRequired ?? false);
 </script>
 
@@ -23,14 +23,19 @@
   >
     <Dialog.Header class="border-b border-hairline px-5 py-4">
       <div class="flex items-start gap-3">
-        <div class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+        <div
+          class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"
+        >
           <FileWarningIcon class="size-5" aria-hidden="true" />
         </div>
         <div class="min-w-0">
-          <Dialog.Title class="text-base font-semibold">Saved settings need attention</Dialog.Title>
+          <Dialog.Title class="text-base font-semibold"
+            >Saved settings need attention</Dialog.Title
+          >
           <Dialog.Description class="mt-1 text-[13px] leading-relaxed">
-            Freehand did not replace your configuration with defaults. Transcription and settings
-            changes are paused until the saved file can be loaded or you explicitly reset it.
+            Freehand did not replace your configuration with defaults.
+            Transcription and settings changes are paused until the saved file
+            can be loaded or you explicitly reset it.
           </Dialog.Description>
         </div>
       </div>
@@ -39,45 +44,61 @@
     <div class="space-y-3 px-5 py-4">
       <Alert.Root variant="destructive">
         <Alert.Title>Configuration could not be loaded</Alert.Title>
-        <Alert.Description>{configuration?.message ?? "The saved configuration is invalid."}</Alert.Description>
+        <Alert.Description
+          >{configuration?.message ??
+            "The saved configuration is invalid."}</Alert.Description
+        >
       </Alert.Root>
 
-      {#if session.error}
+      {#if session.messages.error}
         <Alert.Root variant="destructive">
           <Alert.Title>Recovery action failed</Alert.Title>
-          <Alert.Description>{session.error}</Alert.Description>
+          <Alert.Description>{session.messages.error}</Alert.Description>
         </Alert.Root>
       {/if}
 
       <p class="text-xs leading-relaxed text-muted-foreground">
-        If you edit or restore the settings file outside Freehand, retry loading it. Resetting
-        replaces that file with safe defaults; credentials stored by Windows are not deleted.
+        If you edit or restore the settings file outside Freehand, retry loading
+        it. Resetting replaces that file with safe defaults; credentials stored
+        by Windows are not deleted.
       </p>
     </div>
 
-    <Dialog.Footer class="border-t border-hairline bg-layer-fill px-5 py-4 sm:justify-between">
+    <Dialog.Footer
+      class="border-t border-hairline bg-layer-fill px-5 py-4 sm:justify-between"
+    >
       <Button
         variant="destructive"
-        disabled={session.configurationRetrying || session.configurationResetting}
-        onclick={() => session.resetConfiguration()}
+        disabled={session.editor.configurationRetrying ||
+          session.editor.configurationResetting}
+        onclick={() => session.editor.resetConfiguration()}
       >
-        {#if session.configurationResetting}
-          <LoaderCircleIcon data-icon="inline-start" class="animate-spin motion-reduce:animate-none" />
+        {#if session.editor.configurationResetting}
+          <LoaderCircleIcon
+            data-icon="inline-start"
+            class="animate-spin motion-reduce:animate-none"
+          />
         {:else}
           <RotateCcwIcon data-icon="inline-start" />
         {/if}
-        {session.configurationResetting ? "Resetting…" : "Reset to defaults"}
+        {session.editor.configurationResetting
+          ? "Resetting…"
+          : "Reset to defaults"}
       </Button>
       <Button
-        disabled={session.configurationRetrying || session.configurationResetting}
-        onclick={() => session.retryConfiguration()}
+        disabled={session.editor.configurationRetrying ||
+          session.editor.configurationResetting}
+        onclick={() => session.editor.retryConfiguration()}
       >
-        {#if session.configurationRetrying}
-          <LoaderCircleIcon data-icon="inline-start" class="animate-spin motion-reduce:animate-none" />
+        {#if session.editor.configurationRetrying}
+          <LoaderCircleIcon
+            data-icon="inline-start"
+            class="animate-spin motion-reduce:animate-none"
+          />
         {:else}
           <RefreshCcwIcon data-icon="inline-start" />
         {/if}
-        {session.configurationRetrying ? "Loading…" : "Retry loading"}
+        {session.editor.configurationRetrying ? "Loading…" : "Retry loading"}
       </Button>
     </Dialog.Footer>
   </Dialog.Content>

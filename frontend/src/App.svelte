@@ -9,16 +9,10 @@
   import StatusStrip from "$lib/components/shell/StatusStrip.svelte";
   import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
   import type { SettingsSectionID } from "$lib/navigation";
-  import {
-    FileTranscriptionPhase,
-    State,
-    type FileTranscriptionStatus,
-    type Settings,
-    type Status,
-    type TTSStatus,
-  } from "$lib/state";
+  import { FileTranscriptionPhase, State } from "$lib/state";
   import { levels } from "$lib/stores/levels.svelte";
   import { session } from "$lib/stores/session.svelte";
+  import { subscribeSessionEvents } from "$lib/stores/session-events";
   import { activeAppearanceMode } from "$lib/appearance";
   import { shouldAutomaticallyTestConnection } from "$lib/utils/connection";
 
@@ -30,17 +24,23 @@
   let version = $state("");
 
   const fileWorking = $derived(
-    session.fileStatus.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
-      session.fileStatus.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
-      session.fileStatus.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
-      session.fileStatus.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
+    session.files.status.phase ===
+      FileTranscriptionPhase.FileTranscriptionUploading ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionProcessing ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionStreaming ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionCancelling,
   );
   const voiceActive = $derived(
-    session.status.state !== State.Idle && session.status.state !== State.Failed,
+    session.dictation.status.state !== State.Idle &&
+      session.dictation.status.state !== State.Failed,
   );
 
   $effect(() => {
-    document.documentElement.dataset.material = session.appliedSettings?.micaActive
+    document.documentElement.dataset.material = session.editor.applied
+      ?.micaActive
       ? "mica"
       : "solid";
   });
@@ -49,118 +49,94 @@
   // the user to manufacture connection state manually. Failed checks remain
   // stable until an explicit retry or a confirmed STT profile change.
   $effect(() => {
-    const settings = session.appliedSettings;
+    const settings = session.editor.applied;
     if (
       !settings ||
       settings.configuration.recoveryRequired ||
       !shouldAutomaticallyTestConnection(
         settings,
-        session.sttConnectionChecked,
-        session.sttConnectionTesting,
+        session.editor.sttConnectionChecked,
+        session.editor.sttConnectionTesting,
       )
-    ) return;
-    void session.testConnection(settings, "", false);
+    )
+      return;
+    void session.editor.testConnection(settings, "", false);
   });
 
   onMount(() => {
     setMode("system");
 
-    const off = Events.On("dictation:status", (event: { data: Status }) => {
-      const wasRecording = session.status.state === "recording";
-      session.applyStatus(event.data);
-      if (event.data.state === State.Idle || event.data.state === State.Failed) {
-        void session.refreshHistory();
-      }
-      // Clear on both edges: a new recording starts from an empty meter, and
-      // stopping does not leave the tail of the last one frozen on screen.
-      if ((event.data.state === "recording") !== wasRecording) levels.reset();
-    });
+    const offSession = subscribeSessionEvents(
+      session,
+      Events.On,
+      (status, previous) => {
+        if (
+          (status.state === State.Recording) !==
+          (previous.state === State.Recording)
+        )
+          levels.reset();
+      },
+    );
     // Go only sends these while recording and while this window is on screen,
     // so there is no stream to pay for the rest of the time.
     const offLevel = Events.On("dictation:level", (event: { data: number }) => {
       levels.push(event.data);
     });
-    const offFile = Events.On(
-      "file-transcription:status",
-      (event: { data: FileTranscriptionStatus }) => {
-        if (event.data.generation < session.fileStatus.generation) return;
-        const wasActive = [
-          FileTranscriptionPhase.FileTranscriptionUploading,
-          FileTranscriptionPhase.FileTranscriptionProcessing,
-          FileTranscriptionPhase.FileTranscriptionStreaming,
-          FileTranscriptionPhase.FileTranscriptionCancelling,
-        ].includes(session.fileStatus.phase);
-        session.applyFileStatus(event.data);
-        const isActive = [
-          FileTranscriptionPhase.FileTranscriptionUploading,
-          FileTranscriptionPhase.FileTranscriptionProcessing,
-          FileTranscriptionPhase.FileTranscriptionStreaming,
-          FileTranscriptionPhase.FileTranscriptionCancelling,
-        ].includes(event.data.phase);
-        if (wasActive && !isActive) {
-          void session.refreshHistory();
-        }
-      },
-    );
-    const offFileDelta = Events.On("file-transcription:delta", (event) => {
-      if (session.applyFileDelta(event.data) === "gap") void session.refreshFileStatus();
-    });
-    const offTTS = Events.On("tts:status", (event: { data: TTSStatus }) => {
-      session.applyTTSStatus(event.data);
-    });
     const offHide = Events.On("common:WindowHide", () => {
-      session.clearCredentialDraft();
+      session.editor.clearCredentialDraft();
     });
     const offSecondInstance = Events.On("app:second-instance-revealed", () => {
-      session.reportInfo(
+      session.messages.reportInfo(
         "Freehand is already running — that launch revealed this window instead of starting a second recorder.",
       );
     });
-    const offSettingsVisibility = Events.On("settings:visibility", (event: { data: boolean }) => {
-      settingsOpen = event.data;
-    });
-    const offSettingsChanged = Events.On("settings:changed", (event: { data: Settings }) => {
-      session.applySettingsSnapshot(event.data);
-    });
-    const offAboutVisibility = Events.On("about:visibility", (event: { data: boolean }) => {
-      aboutOpen = event.data;
-    });
+    const offSettingsVisibility = Events.On(
+      "settings:visibility",
+      (event: { data: boolean }) => {
+        settingsOpen = event.data;
+      },
+    );
+    const offAboutVisibility = Events.On(
+      "about:visibility",
+      (event: { data: boolean }) => {
+        aboutOpen = event.data;
+      },
+    );
     void BuildInfoService.Current()
       .then((info) => (version = info.version))
       .catch(() => (version = ""));
     void WindowingService.SettingsVisible()
       .then((visible) => (settingsOpen = visible))
-      .catch((cause) => session.reportFailure(String(cause)));
+      .catch((cause) => session.messages.reportFailure(String(cause)));
     void WindowingService.AboutVisible()
       .then((visible) => (aboutOpen = visible))
-      .catch((cause) => session.reportFailure(String(cause)));
-    void session.load().finally(() => setMode(activeAppearanceMode(session.appliedSettings)));
+      .catch((cause) => session.messages.reportFailure(String(cause)));
+    void session
+      .load()
+      .finally(() => setMode(activeAppearanceMode(session.editor.applied)));
     return () => {
-      off();
+      offSession();
+      session.dispose();
       offLevel();
-      offFile();
-      offFileDelta();
-      offTTS();
       offHide();
       offSecondInstance();
       offSettingsVisibility();
-      offSettingsChanged();
       offAboutVisibility();
-      session.clearCredentialDraft();
+      session.editor.clearCredentialDraft();
     };
   });
 
   function openSettings(sectionID: SettingsSectionID = "general") {
-    session.clearMessages();
+    session.messages.clear();
     void WindowingService.OpenSettings(sectionID).catch((cause) => {
-      session.reportFailure(String(cause));
+      session.messages.reportFailure(String(cause));
     });
   }
 
   function openAbout() {
-    session.clearMessages();
+    session.messages.clear();
     void WindowingService.OpenAbout().catch((cause) => {
-      session.reportFailure(String(cause));
+      session.messages.reportFailure(String(cause));
     });
   }
 </script>
@@ -169,10 +145,12 @@
 
 <ConfigurationRecoveryDialog {session} />
 
-<div class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground">
+<div
+  class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground"
+>
   <AppHeader
     bind:inputMode
-    settings={session.appliedSettings ?? session.settings}
+    settings={session.editor.applied ?? session.editor.draft}
     {voiceActive}
     {fileWorking}
     onSettings={() => openSettings()}
@@ -193,8 +171,8 @@
   />
 
   <StatusStrip
-    settings={session.appliedSettings}
-    connection={session.connection}
+    settings={session.editor.applied}
+    connection={session.editor.connection}
     {version}
     {aboutOpen}
     onAbout={openAbout}
