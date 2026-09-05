@@ -1,4 +1,5 @@
 ---
+import ProviderIcon from "../components/ProviderIcon.astro";
 import mark from "../assets/freehand-mark.svg";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
@@ -50,7 +51,7 @@ const href = (path: string) => `${base}${path}`;
         <div class="backend-section-head"><div><p class="section-index">01 / Connect today</p><h2 id="available-title">Available profiles</h2></div><p>Start with Generic, or select a dedicated profile for a documented setup.</p></div>
         <div class="backend-grid">
           {availableBackends.map((backend) => <article class="backend-card">
-            <div class="backend-card-top"><span class="backend-monogram" aria-hidden="true">{backend.short}</span><span class="backend-status">Available profile</span></div>
+            <div class="backend-card-top"><ProviderIcon profile={backend.id} size={42} /><span class="backend-status">Available profile</span></div>
             <h3>{backend.name}</h3><p class="backend-summary">{backend.summary}</p>
             <ul class="backend-roles" aria-label="Available operations">{backend.entries.filter((entry) => entry.available).map((entry) => <li>{entry.role}</li>)}</ul>
             <div class="backend-evidence"><strong>{backend.evidence}</strong><p>{backend.detail}</p></div>
@@ -64,7 +65,7 @@ const href = (path: string) => `${base}${path}`;
           <table class="backend-matrix">
             <caption>Available profiles in the current development build</caption>
             <thead><tr><th scope="col">Compatibility profile</th>{features.map((feature) => <th scope="col">{feature.label}</th>)}</tr></thead>
-            <tbody>{availableBackends.map((backend) => <tr><th scope="row"><a href={href(backend.guide)}>{backend.name}</a></th>{features.map((feature) => <td><span class:list={["support-cell", backend.features[feature.key]]}>{backend.features[feature.key] === "available" && <span aria-hidden="true">✓ </span>}{supportLabel[backend.features[feature.key]]}<span class="sr-only">{backend.features[feature.key] === "none" ? "Not part of this profile" : ""}</span></span></td>)}</tr>)}</tbody>
+            <tbody>{availableBackends.map((backend) => <tr><th scope="row"><a class="backend-identity" href={href(backend.guide)}><ProviderIcon profile={backend.id} size={24} />{backend.name}</a></th>{features.map((feature) => <td><span class:list={["support-cell", backend.features[feature.key]]}>{backend.features[feature.key] === "available" && <span aria-hidden="true">✓ </span>}{supportLabel[backend.features[feature.key]]}<span class="sr-only">{backend.features[feature.key] === "none" ? "Not part of this profile" : ""}</span></span></td>)}</tr>)}</tbody>
           </table>
         </div>
         <div class="matrix-notes"><p><strong>File streaming</strong> delivers results from an uploaded file. It is separate from live microphone streaming.</p><p><strong>Speech playback</strong> currently buffers PCM16 WAV audio before playing. Advanced voice inputs and progressive playback are future work.</p><p><strong>—</strong> means the operation is outside this profile’s implemented scope. Transcription context and temperature are optional; hotwords use the Speaches contract. Their effect depends on the model. Cleanup token limits are optional; disabling reasoning requires a qualified llama.cpp or vLLM build and compatible model template. Diarization and timestamps remain outside the current scope.</p></div>
@@ -75,7 +76,7 @@ const href = (path: string) => `${base}${path}`;
       </section>
       <section id="planned" class="backend-section" aria-labelledby="planned-title">
         <div class="backend-section-head"><div><p class="section-index">04 / Room to grow</p><h2 id="planned-title">Planned profiles</h2></div><p>These entries match the disabled choices in Settings. Each links to the contract work still needed; no delivery date is promised.</p></div>
-        <div class="planned-grid">{plannedBackends.map((backend) => <article class="planned-card"><div class="planned-card-head"><h3>{backend.name}</h3><span>Planned</span></div><p>{backend.summary}</p><ul class="planned-roles" aria-label="Planned operation scope">{backend.entries.map((entry) => <li>{entry.role}</li>)}</ul><a href={href(backend.guide)}>Contract work remaining <span aria-hidden="true">→</span></a></article>)}</div>
+        <div class="planned-grid">{plannedBackends.map((backend) => <article class="planned-card"><div class="planned-card-head"><div class="backend-identity"><ProviderIcon profile={backend.id} size={28} /><h3>{backend.name}</h3></div><span>Planned</span></div><p>{backend.summary}</p><ul class="planned-roles" aria-label="Planned operation scope">{backend.entries.map((entry) => <li>{entry.role}</li>)}</ul><a href={href(backend.guide)}>Contract work remaining <span aria-hidden="true">→</span></a></article>)}</div>
       </section>
       <section class="backend-next" aria-label="Get connected"><div><h2>Have your endpoint ready?</h2><p>Choose your profile, enter your server URL, and connect the model you want to use.</p></div><a class="button button-light" href={href("/docs/guides/connect-a-server/")}>Connect a server <span aria-hidden="true">→</span></a></section>
     </main>

@@ -3,7 +3,8 @@ title: Backend compatibility
 description: Understand Freehand's profile contracts, validation evidence, and provider guides.
 ---
 
-import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+import ProviderIcon from "../../../../components/ProviderIcon.astro";
+import { availableBackends } from "../../../../data/backends";
 export const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 Freehand connects to infrastructure you choose. Start with the
@@ -16,14 +17,10 @@ options. An available profile describes Freehand's implemented contract;
 support can still depend on the server version and selected model.
 :::
 
-<CardGrid>
-  <LinkCard title="Generic OpenAI-compatible" description="The default transcription, text cleanup, and speech contracts." href={`${base}/docs/backends/generic/`} />
-  <LinkCard title="Speaches" description="Transcription and speech playback with version and model qualifications." href={`${base}/docs/backends/speaches/`} />
-  <LinkCard title="llama.cpp" description="Text post-processing and the separate S1-mini prompt preset." href={`${base}/docs/backends/llama-cpp/`} />
-  <LinkCard title="whisper.cpp" description="Native transcription with a server-loaded model." href={`${base}/docs/backends/whisper-cpp/`} />
-  <LinkCard title="vLLM" description="Completed and streamed transcription plus qualified text cleanup." href={`${base}/docs/backends/vllm/`} />
-  <LinkCard title="Planned profiles" description="Dedicated contracts still being implemented and qualified." href={`${base}/docs/backends/planned/`} />
-</CardGrid>
+<div class="provider-guide-grid">
+  {availableBackends.map((backend) => <a class="provider-guide-card" href={`${base}${backend.guide}`}><ProviderIcon profile={backend.id} size={32} /><span><strong>{backend.name}</strong><small>{backend.summary}</small></span></a>)}
+  <a class="provider-guide-card" href={`${base}/docs/backends/planned/`}><span><strong>Planned profiles</strong><small>Dedicated contracts still awaiting implementation and qualification.</small></span></a>
+</div>
 
 ## Run a backend
 

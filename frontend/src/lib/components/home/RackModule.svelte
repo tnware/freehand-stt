@@ -16,6 +16,7 @@
     controls,
     onToggle,
     actions,
+    icon,
     children,
   }: {
     label: string;
@@ -28,6 +29,7 @@
     controls?: string;
     onToggle?: () => void;
     actions?: Snippet;
+    icon?: Snippet;
     children: Snippet;
   } = $props();
 
@@ -62,6 +64,7 @@
         {#if dot}
           <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"></span>
         {/if}
+        {@render icon?.()}
         <h2 class="caption shrink-0">{label}</h2>
         <span class="flex-1"></span>
         {#if meta}
@@ -72,6 +75,7 @@
       {#if dot}
         <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"></span>
       {/if}
+      {@render icon?.()}
       <h2 class="caption">{label}</h2>
       <span class="flex-1"></span>
       {#if meta}
@@ -99,11 +103,18 @@
         aria-controls={controls}
         onclick={onToggle}
       >
-        <ChevronRightIcon class="size-[14px] transition-transform duration-200 {open ? 'rotate-90' : ''}" />
+        <ChevronRightIcon
+          class="size-[14px] transition-transform duration-200 {open ? 'rotate-90' : ''}"
+        />
       </button>
     {/if}
   </div>
-  <div class:closed={collapsible && !open} class="drawer" id={controls} inert={collapsible && !open}>
+  <div
+    class:closed={collapsible && !open}
+    class="drawer"
+    id={controls}
+    inert={collapsible && !open}
+  >
     <div class="drawer-inner">
       <div class="module-body">{@render children()}</div>
     </div>

@@ -11,6 +11,11 @@ choose. Use a global shortcut to dictate into the application where you are
 already working, with models running on your PC, your network, or a compatible
 hosted service.
 
+**Free forever. Open source. No Freehand subscription or account.** Your chosen
+provider or hosting may have its own costs. You do not need a dedicated local
+GPU: send inference to another machine to keep this PC's memory and GPU
+available for your other work, or run your models locally if you prefer.
+
 The current alpha is about an 8 MB installer or a 15 MB portable executable.
 Freehand stays compact by leaving model inference and model storage on the
 speech infrastructure you choose. These download sizes exclude WebView2 and

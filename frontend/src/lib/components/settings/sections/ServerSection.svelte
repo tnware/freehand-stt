@@ -110,6 +110,10 @@
 </script>
 
 <div class="flex flex-col gap-4">
+  <p class="px-1 text-xs leading-relaxed text-muted-foreground">
+    Your speech server can run on this PC, another machine on your network, or a remote service. A
+    remote endpoint keeps model memory and GPU work off this PC.
+  </p>
   <SettingsCard>
     <CompatibilityProfilePicker
       id="transcription-compatibility-profile"

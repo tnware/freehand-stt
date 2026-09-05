@@ -129,3 +129,23 @@ the user performed inference. This is user-reported interactive transcription
 evidence; Qwen-specific file-stream acceptance and latency tuning are not
 claimed. No client language or model-specific prompt override was introduced
 for the test. First-class language support remains separate follow-up work.
+
+## Provider identity assets
+
+The app, directory, matrix, and provider guides share the SVG collection and
+manifest in `branding/providers/`. Follow its README to add a pinned source,
+license notice, and asset mapping. This presentation registry does not grant
+capabilities or change the generated Go catalog. Use a documented neutral
+fallback when no suitable brand asset is available. Icons remain decorative
+beside text; availability and connection health are separate signals.
+
+The Svelte and Astro `ProviderIcon` wrappers use the same CSS tile and local
+assets. Provider guide frontmatter sets `provider` to the catalog ID, rendered
+through Starlight's supported PageTitle override. Full third-party notices ship
+in About and [Provider icon credits](../../reference/provider-icons/).
+
+For changes, run the actual Svelte autofixer on edited components, frontend
+check/build, and the site build. Check selectors and quick settings in the app,
+then backend cards, matrix, docs headings, and guide links on desktop/mobile
+and in both docs themes. Verify that icons load without external requests and
+that Generic/fallback icons do not imply a branded service or enabled support.

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import SparklesIcon from "@lucide/svelte/icons/sparkles";
@@ -55,7 +56,11 @@
       Boolean(settings.baseURL.trim() && settings.model.trim() && settings.voice.trim()),
   );
   const canSpeak = $derived(
-    configured && !unavailable && !working && characterCount > 0 && characterCount <= maximumCharacters,
+    configured &&
+      !unavailable &&
+      !working &&
+      characterCount > 0 &&
+      characterCount <= maximumCharacters,
   );
   const stateLabel = $derived.by(() => {
     if (!configured) return "Setup needed";
@@ -106,7 +111,7 @@
       </span>
     {/snippet}
 
-  {#snippet stage()}
+    {#snippet stage()}
       <div class="tts-stage flex h-full flex-col gap-2.5 py-4">
         <div class="flex items-center gap-2.5">
           <h2 class="caption">Write something to speak</h2>
@@ -130,10 +135,13 @@
       </div>
     {/snippet}
 
-  {#snippet readout()}
+    {#snippet readout()}
       <div class="tts-readout flex h-full flex-col gap-2.5 py-4">
         <div class="tts-endpoint flex min-w-0 flex-col gap-2.5">
-          <h2 class="caption">Endpoint</h2>
+          <div class="flex items-center gap-2">
+            <ProviderIcon profile={settings.compatibilityProfile} size={20} />
+            <h2 class="caption">Endpoint</h2>
+          </div>
           <span class="figure truncate text-[11px] text-card-foreground" title={settings.baseURL}>
             {settings.baseURL || "Not configured"}
           </span>
@@ -163,7 +171,12 @@
             {characterCount.toLocaleString()} / {maximumCharacters.toLocaleString()}
           </span>
           {#if !configured}
-            <Button variant="outline" size="sm" class="h-[26px] px-2.5 text-[11.5px]" onclick={onOpenSettings}>
+            <Button
+              variant="outline"
+              size="sm"
+              class="h-[26px] px-2.5 text-[11.5px]"
+              onclick={onOpenSettings}
+            >
               <SettingsIcon class="size-3" />
               Speech settings
             </Button>
@@ -189,19 +202,11 @@
           {/if}
         </div>
       </div>
-  {/snippet}
-</TransportShell>
+    {/snippet}
+  </TransportShell>
 
   {#if showPlayback}
-    <PlaybackBar
-      {status}
-      {onPause}
-      {onResume}
-      {onRestart}
-      {onStop}
-      {onSave}
-      {onClear}
-    />
+    <PlaybackBar {status} {onPause} {onResume} {onRestart} {onStop} {onSave} {onClear} />
   {/if}
 </div>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import * as Select from "$lib/components/ui/select";
   import ValueRow from "$lib/components/settings/ValueRow.svelte";
   import { ID, type Profile } from "$bindings/compatibility";
@@ -28,18 +29,27 @@
 >
   {#snippet control()}
     <Select.Root type="single" value={value || ID.Generic} onValueChange={choose}>
-      <Select.Trigger {id} class="w-full">{selected?.label ?? "Choose a profile"}</Select.Trigger>
+      <Select.Trigger {id} class="w-full"
+        ><span class="flex min-w-0 items-center gap-2"
+          ><ProviderIcon profile={selected?.id} size={22} /><span class="truncate"
+            >{selected?.label ?? "Choose a profile"}</span
+          ></span
+        ></Select.Trigger
+      >
       <Select.Content class="max-h-80">
         <Select.Group>
           <Select.Label>Available profiles</Select.Label>
           {#each available as profile (profile.id)}
-            <Select.Item value={profile.id} label={profile.label}>{profile.label}</Select.Item>
+            <Select.Item value={profile.id} label={profile.label}
+              ><ProviderIcon profile={profile.id} size={22} />{profile.label}</Select.Item
+            >
           {/each}
         </Select.Group>
         <Select.Group>
           <Select.Label>Planned profiles — dedicated support not implemented</Select.Label>
           {#each planned as profile (profile.id)}
             <Select.Item value={profile.id} label={profile.label} disabled>
+              <ProviderIcon profile={profile.id} size={22} />
               <div class="max-w-72 whitespace-normal">
                 <div>{profile.label}</div>
                 <div class="text-xs">{profile.description}</div>

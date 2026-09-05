@@ -1,4 +1,5 @@
 ---
+provider: vllm
 title: vLLM
 description: Configure vLLM for completed or streamed transcription and text cleanup.
 ---
