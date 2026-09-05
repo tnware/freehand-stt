@@ -121,7 +121,7 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 	if stream && strings.HasPrefix(strings.ToLower(resp.Header.Get("Content-Type")), "text/event-stream") {
 		result, err = readTranscriptionSSE(resp.Body, key, callbacks.Delta)
 	} else {
-		result, err = readTranscriptionJSON(resp.Body, maxFileResponse)
+		result, err = readTranscriptionJSON(resp.Body, maxFileResponse, key)
 		if err == nil && stream {
 			if callbacks.StreamBuffered != nil {
 				callbacks.StreamBuffered()
@@ -141,9 +141,10 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 		return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
 	}
 	if result.Metadata.RequestID == "" {
-		result.Metadata.RequestID = metadataFromHeaders(resp.Header).RequestID
+		result.Metadata.RequestID = metadataFromHeaders(resp.Header, key).RequestID
 	}
 	result.Metadata.RequestCount = 1
+	result.Metadata = sanitizeResponseMetadata(result.Metadata, key)
 	return result, nil
 }
 
@@ -246,7 +247,7 @@ func multipartLength(boundary, filename string, size int64, model, language stri
 	return int64(overhead.Len()) + size, nil
 }
 
-func readTranscriptionJSON(reader io.Reader, limit int64) (TranscriptionResult, error) {
+func readTranscriptionJSON(reader io.Reader, limit int64, key string) (TranscriptionResult, error) {
 	body, err := io.ReadAll(io.LimitReader(reader, limit+1))
 	if err != nil {
 		return TranscriptionResult{}, &Error{Kind: "response", Message: "transcription response could not be read"}
@@ -273,18 +274,18 @@ func readTranscriptionJSON(reader io.Reader, limit int64) (TranscriptionResult, 
 		return TranscriptionResult{}, &Error{Kind: "malformed_response", Message: "expected JSON object with text"}
 	}
 	metadata := ResponseMetadata{
-		RequestID:          boundedMetadataString(out.RequestID),
-		ResponseID:         boundedMetadataString(out.ID),
-		EffectiveModel:     boundedMetadataString(out.Model),
-		Provider:           boundedMetadataString(out.Provider),
+		RequestID:          safePeerString(out.RequestID, key),
+		ResponseID:         safePeerString(out.ID, key),
+		EffectiveModel:     safePeerString(out.Model, key),
+		Provider:           safePeerString(out.Provider, key),
 		CreatedAtUnix:      optionalInt(out.Created),
-		DetectedLanguages:  parseLanguages(out.Languages, out.Language),
+		DetectedLanguages:  parseLanguages(out.Languages, out.Language, key),
 		ServerAudioSeconds: optionalFloat(out.Duration),
-		ServiceTier:        boundedMetadataString(out.ServiceTier),
-		SystemFingerprint:  boundedMetadataString(out.SystemFingerprint),
+		ServiceTier:        safePeerString(out.ServiceTier, key),
+		SystemFingerprint:  safePeerString(out.SystemFingerprint, key),
 		RequestCount:       1,
 	}
-	applyUsageMetadata(&metadata, out.Usage)
+	applyUsageMetadata(&metadata, out.Usage, key)
 	applyPerformanceMetadata(&metadata, out.Timings)
 	return TranscriptionResult{Text: *out.Text, Metadata: metadata}, nil
 }

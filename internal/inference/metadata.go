@@ -93,6 +93,10 @@ func (c *Client) TestMetadata(ctx context.Context, base, health, key, model stri
 		result.ModelPresence = "not-listed"
 		seen := make(map[string]struct{}, min(len(list.Data), MaxDiscoveredModels))
 		for _, value := range list.Data {
+			// Do not publish reflected credentials as selectable model IDs.
+			if safePeerString(value.ID, key) == "" {
+				continue
+			}
 			if value.ID == model {
 				result.ModelPresence = "listed"
 			}

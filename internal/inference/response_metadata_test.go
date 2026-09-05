@@ -136,7 +136,7 @@ func TestChatCompletionCapturesPortableAndProviderMetadata(t *testing.T) {
 }
 
 func TestMalformedOptionalMetadataDoesNotRejectText(t *testing.T) {
-	result, err := readTranscriptionJSON(strings.NewReader(`{"text":"still valid","usage":"not an object","duration":"unknown","languages":{"unexpected":true}}`), maxResponse)
+	result, err := readTranscriptionJSON(strings.NewReader(`{"text":"still valid","usage":"not an object","duration":"unknown","languages":{"unexpected":true}}`), maxResponse, "")
 	if err != nil {
 		t.Fatal(err)
 	}

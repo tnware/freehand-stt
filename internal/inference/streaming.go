@@ -72,16 +72,16 @@ func readTranscriptionSSE(reader io.Reader, key string, onDelta func(string)) (T
 				}
 				completed = *event.Text
 			}
-			metadata.ResponseID = boundedMetadataString(event.ID)
-			metadata.RequestID = boundedMetadataString(event.RequestID)
-			metadata.EffectiveModel = boundedMetadataString(event.Model)
-			metadata.Provider = boundedMetadataString(event.Provider)
+			metadata.ResponseID = safePeerString(event.ID, key)
+			metadata.RequestID = safePeerString(event.RequestID, key)
+			metadata.EffectiveModel = safePeerString(event.Model, key)
+			metadata.Provider = safePeerString(event.Provider, key)
 			metadata.CreatedAtUnix = optionalInt(event.Created)
-			metadata.DetectedLanguages = parseLanguages(event.Languages, event.Language)
+			metadata.DetectedLanguages = parseLanguages(event.Languages, event.Language, key)
 			metadata.ServerAudioSeconds = optionalFloat(event.Duration)
-			metadata.ServiceTier = boundedMetadataString(event.ServiceTier)
-			metadata.SystemFingerprint = boundedMetadataString(event.SystemFingerprint)
-			applyUsageMetadata(&metadata, event.Usage)
+			metadata.ServiceTier = safePeerString(event.ServiceTier, key)
+			metadata.SystemFingerprint = safePeerString(event.SystemFingerprint, key)
+			applyUsageMetadata(&metadata, event.Usage, key)
 			applyPerformanceMetadata(&metadata, event.Timings)
 		case "error":
 			return TranscriptionResult{}, &Error{Kind: "response", Message: "transcription stream failed"}

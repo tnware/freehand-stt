@@ -65,6 +65,18 @@ HTTPS is required by default. You can explicitly allow HTTP for a trusted local
 or LAN endpoint, but doing so sends audio, transcript text, and credentials
 without transport encryption. Do not enable it across an untrusted network.
 
+Inference and connection-check requests never follow HTTP redirects, even to
+another path on the same server. Configure the final base URL instead of a
+redirecting alias; Freehand will not forward your key, audio, or text to the
+redirect destination.
+
+If a server echoes the request's API key literally in optional response details
+or discovered model IDs, Freehand removes those values before returning them
+to the interface or session history. Valid transcript text and unrelated
+details remain available. Text containing the key is rejected. This is a guard
+against literal reflection, not protection against a malicious server encoding
+or otherwise transforming a key it already received.
+
 ## Connection checks
 
 First launch requires an explicit connection test. After setup, Freehand
