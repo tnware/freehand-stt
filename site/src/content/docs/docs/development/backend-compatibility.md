@@ -76,3 +76,15 @@ instead of inheriting hotwords because they advertise an OpenAI-compatible API.
 Source evidence for Speaches is v0.8.3 and v0.9.0-rc.3 Whisper paths. Actual model
 response to hints still requires a scoped live report. No version-sensitive VAD
 or unexposed faster-whisper tuning field is implied by these flags.
+
+## Cleanup capabilities
+
+`cleanupOutputLimit` and `cleanupDisableReasoning` are generated capability flags
+shared by Settings and the public matrix. Generic and llama.cpp support the
+optional `max_tokens` shape; llama.cpp additionally qualifies
+`reasoning_effort: "none"`. The S1-mini preset always requires thinking disabled,
+so a qualified adapter enforces it automatically while Generic relies on the
+server. Record runtime/template evidence separately from the model requirement.
+The [llama.cpp guide](../../backends/llama-cpp/#source-qualification) pins source
+inspection to an exact upstream commit without claiming a minimum version or
+universal live compatibility.

@@ -156,3 +156,25 @@ the numeric input cannot silently save zero. Save new hints during a recording
 and confirm only the next recording uses them. Record runtime/model versions and
 observed behavior; fixtures and upstream source inspection are not live inference
 acceptance. No model invocation belongs in automated CI.
+
+### Cleanup generation controls
+
+Fixtures verify default omission, retained disabled limits, exact token-limit
+and reasoning fields, rejection before HTTP, no retries on provider rejection,
+and preservation of prompts and temperature zero. The S1-mini preset must derive
+reasoning off through llama.cpp even with its saved custom override unset.
+Migration and settings validation cover missing fields, disabled processing,
+invalid/zero enabled limits, and Generic reasoning rejection. Workflow fixtures
+exercise generation options with raw fallback, truncation, and cancellation;
+frontend tests protect nested draft isolation.
+
+For native acceptance with one explicitly chosen model: save/reopen an output
+limit, clear or enter a fractional value and verify validation, disable the limit
+and confirm it retains a valid value, and compare Generic versus llama.cpp
+reasoning controls. S1-mini with llama.cpp must show a checked, disabled
+**Required** reasoning control; S1-mini with Generic must show **Server required**.
+Verify preset changes preserve the custom-model preference. A deliberately low
+limit must retain raw text when the server reports truncation. Record runtime
+build and template/model details for reasoning behavior; neither a model list nor
+a successful client fixture proves a runtime honored the override. CI performs
+no provider inference.

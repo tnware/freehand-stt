@@ -19,13 +19,13 @@ models and server versions need their own qualification.
 The [post-processing guide](../../guides/post-processing/) covers setup and
 raw fallback. For the known model setup, follow
 [S1-mini with llama.cpp](../../guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp),
-including its exact prompt and server-side reasoning configuration.
+including its exact prompt and required thinking-disabled behavior.
 
 ## Implemented contract
 
 This profile shares the Generic non-streaming `chat/completions` adapter.
 Freehand sends the model, system/user string messages, temperature zero, and
-`stream=false`. It expects a string message in the first choice. A response
+`stream=false`, plus the configured generation controls described below. It expects a string message in the first choice. A response
 reporting `finish_reason=length` is a failed cleanup and cannot expose partial
 cleaned text as a successful result.
 
@@ -38,11 +38,51 @@ the same contract.
 
 - This Freehand profile qualifies text cleanup only. It makes no claim about
   transcription, speech synthesis, or other modalities supported by a runtime.
-- Model-specific reasoning, sampling, context, and template requirements remain
-  server configuration unless Freehand explicitly implements those controls.
+- Sampling, context size, and template selection remain server configuration.
+  Freehand supports only the output-limit and disable-reasoning controls below.
 - Cleanup uses one request. There is no automatic long-input chunking or replay.
 - A successful model-list test is not proof that the chosen model accepts the
   exact fields or follows the selected instruction.
 
 See [protocol details](../../reference/protocol/) and the
 [upstream llama.cpp server documentation](https://github.com/ggml-org/llama.cpp/tree/master/tools/server).
+
+## Cleanup generation controls
+
+In **Settings → Post-processing → Generation controls**:
+
+| Control | Request behavior |
+| --- | --- |
+| Limit output tokens | Sends `max_tokens` only when enabled, from 1 to 65,536. Off omits the field; a valid number is retained locally. |
+| Disable reasoning, Custom instruction | Sends `reasoning_effort: "none"` when enabled. Off leaves reasoning to the server. |
+| Disable reasoning, S1-mini | Required and automatically sent on every cleanup request through this profile. It cannot be turned off for this preset. |
+
+The optional controls start off in older settings. S1-mini's required override
+is derived from the preset and qualified compatibility profile; it does not
+change the saved optional override for Custom instruction. Prompts, trained S1
+controls, and temperature zero are preserved.
+
+The reasoning field requests thinking-disabled generation; it is not
+`reasoning_format: "none"`, which controls parsing of generated reasoning. A
+compatible server build and model template must honor the request. Unsupported
+requests fail through the normal raw-transcript fallback, without automatic
+retry or silently dropping the field. An older server that ignores an unknown
+field cannot be detected by a successful model-list check; keep server-side
+`--reasoning off` for S1-mini and explicitly check the chosen model's behavior.
+
+An output limit is a token budget, not a context-window setting or an automatic
+long-input strategy. A low limit may cause raw fallback; no sentence chunking or
+input-relative budget is added. See [generation controls](../../guides/post-processing/#generation-controls).
+
+### Source qualification
+
+The adapter was inspected against upstream llama.cpp commit
+[`6a1a922d2699`](https://github.com/ggml-org/llama.cpp/commit/6a1a922d269908a29cbd4b49c27e6a8e7fd10fae):
+
+- [Server schema](https://github.com/ggml-org/llama.cpp/blob/6a1a922d269908a29cbd4b49c27e6a8e7fd10fae/tools/server/server-schema.cpp) accepts `max_tokens` as a generation-limit alias.
+- [Chat request parser](https://github.com/ggml-org/llama.cpp/blob/6a1a922d269908a29cbd4b49c27e6a8e7fd10fae/tools/server/server-common.cpp) maps `reasoning_effort: "none"` to thinking disabled before applying the model template.
+
+This records source and client-fixture evidence, not a minimum supported release
+or a live test of every model/template. The reported S1-mini runtime's exact
+build is still unknown. Its launch log shows Jinja enabled and recognition of
+the newer reasoning option, which alone does not prove the HTTP override works.

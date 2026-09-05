@@ -457,3 +457,18 @@ fields for completed and streaming requests. File multipart sizing uses the same
 writer to preserve Content-Length. Optional values are omitted by default;
 explicit zero temperature uses a separate override flag. These hints are not
 added to diagnostic logs or history details. Cleanup presets remain independent.
+
+### Cleanup generation requirements
+
+`PostProcessingSettings.GenerationOptions` stores a value-only
+`compatibility.CleanupOptions`. Config validation checks bounds and profile
+support even while processing is disabled. The frontend editor deep-copies the
+nested value to keep drafts independent. Jobs capture it with the existing
+connection/credential snapshot, before either transcription or later cleanup.
+
+The post-processing preset layer derives S1-mini's required reasoning-off
+behavior whenever the selected contract advertises qualified enforcement. The
+inference adapter maps the effective options to `max_tokens` and
+`reasoning_effort: "none"`, without mutating persisted custom-model preferences.
+Generic still requires external reasoning configuration for S1-mini. No model-ID
+sniffing, arbitrary JSON extensions, automatic retries, or chunking are added.

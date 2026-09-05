@@ -21,15 +21,20 @@ func (c *Client) ChatCompletion(ctx context.Context, base, model, key, systemPro
 	if err != nil {
 		return ChatCompletionResult{}, err
 	}
+	if err := compatibility.ValidateCleanupOptions(c.profile, c.cleanupOptions); err != nil {
+		return ChatCompletionResult{}, &Error{Kind: "invalid_settings", Message: err.Error()}
+	}
 	type message struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
 	}
 	request := struct {
-		Model       string    `json:"model"`
-		Messages    []message `json:"messages"`
-		Temperature float64   `json:"temperature"`
-		Stream      bool      `json:"stream"`
+		Model           string    `json:"model"`
+		Messages        []message `json:"messages"`
+		Temperature     float64   `json:"temperature"`
+		Stream          bool      `json:"stream"`
+		MaxTokens       int       `json:"max_tokens,omitempty"`
+		ReasoningEffort string    `json:"reasoning_effort,omitempty"`
 	}{
 		Model: model,
 		Messages: []message{
@@ -38,6 +43,14 @@ func (c *Client) ChatCompletion(ctx context.Context, base, model, key, systemPro
 		},
 		Temperature: 0,
 		Stream:      false,
+	}
+	// The optional common output limit uses max_tokens. The qualified llama.cpp
+	// reasoning override uses reasoning_effort=none, never reasoning_format=none.
+	if c.cleanupOptions.LimitOutputTokens {
+		request.MaxTokens = c.cleanupOptions.MaxOutputTokens
+	}
+	if c.cleanupOptions.DisableReasoning {
+		request.ReasoningEffort = "none"
 	}
 	body, err := json.Marshal(request)
 	if err != nil {

@@ -30,6 +30,8 @@ export const features = [
   { key: "hotwords", label: "STT hotwords" },
   { key: "temperature", label: "STT temperature" },
   { key: "cleanup", label: "Cleanup" },
+  { key: "cleanupLimit", label: "Cleanup token limit" },
+  { key: "reasoningOff", label: "Disable reasoning" },
   { key: "playback", label: "Speech playback" },
 ] as const;
 const descriptions = new Map(editorial.map((entry) => [entry.id, entry]));
@@ -62,6 +64,8 @@ export const backends = ids.map((id) => {
       hotwords: stt?.available && stt.capabilities.transcriptionHotwords ? "available" : "none",
       temperature: stt?.available && stt.capabilities.transcriptionTemperature ? "available" : "none",
       cleanup: status(chat),
+      cleanupLimit: chat?.available && chat.capabilities.cleanupOutputLimit ? "available" : "none",
+      reasoningOff: chat?.available && chat.capabilities.cleanupDisableReasoning ? "available" : "none",
       playback: status(speech),
     } satisfies Record<(typeof features)[number]["key"], Support>,
   };

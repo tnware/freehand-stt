@@ -221,7 +221,7 @@ Context: general | email
 
 The alpha sends one cleanup request per input, with no sentence chunking or input-relative output limit. A completion explicitly reporting `finish_reason: "length"` fails with `incomplete_response`, even when its text is nonempty. The workflow uses the raw transcript, shows an output-limit notice, and retains safe response metadata when history is enabled. The partial cleaned text is discarded; no automatic cleanup retry occurs. Missing or other finish reasons retain the existing response rules, so unreported omissions cannot be detected. See the [input-length limits](../../guides/post-processing/#input-length-and-alpha-limits) before processing long text.
 
-The default is `semi-casual/prose/general`; `balanced` is not a trained S1-mini v1 value. Thinking must be disabled by the backend route. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) and the [post-processing setup guide](../../guides/post-processing/).
+The default is `semi-casual/prose/general`; `balanced` is not a trained S1-mini v1 value. Thinking must be disabled: the llama.cpp profile automatically requests this for S1-mini; Generic requires the backend route to enforce it. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) and the [post-processing setup guide](../../guides/post-processing/).
 
 ## Shelved realtime microphone STT research
 
@@ -254,3 +254,27 @@ Content-Length calculation. File streaming adds only its existing `stream=true`;
 there is no automatic retry after a rejection, and the existing typed completion
 and response-size rules are unchanged. These controls affect request construction;
 they do not establish model capabilities through metadata discovery.
+
+## Cleanup generation request fields
+
+`postProcessing.generationOptions` persists `limitOutputTokens`,
+`maxOutputTokens`, and `disableReasoning`. Missing fields load as false, zero,
+and false. The optional controls therefore preserve old request shapes for
+custom processing. A disabled numeric limit may retain 0–65,536; an enabled
+limit requires an integer from 1–65,536. Go validates these options even when
+post-processing is disabled and again before request I/O.
+
+Both Generic and llama.cpp send `max_tokens` only when the limit is enabled.
+They never send an explicit zero, a second token-limit alias, or a guessed
+model-specific field. An enabled reasoning override requires llama.cpp and maps
+to `reasoning_effort: "none"`. S1-mini through a qualified reasoning-capable
+profile derives that override automatically from its model requirement, even
+when the saved custom override is false. Generic cannot enforce reasoning via
+this request contract and still requires server-side configuration for S1-mini.
+
+The preset layer expresses the thinking-disabled requirement; compatibility
+capabilities qualify enforcement and the inference adapter owns the wire field.
+No `reasoning_format`, arbitrary template kwargs, or sampling overrides are
+added. Options are copied with the job's connection/credential profile. Both
+microphone and stored-file cleanup retain length-limit rejection, durable raw
+fallback, cancellation, and one request per cleanup attempt.

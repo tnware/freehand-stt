@@ -104,7 +104,7 @@ API key:             empty
 
 Choose **Save changes** after configuring the profile. Try a short English dictation with history enabled so you can compare both versions.
 
-The S1-mini profile sends the model's exact system prompt and control line and sets temperature `0`. Full Processing settings display the effective instruction and generated control line without allowing the fixed S1 contract to be edited. Reasoning is a backend concern rather than a portable OpenAI chat-completions field, so the runtime must disable it; current llama.cpp releases use `--reasoning off`.
+The S1-mini profile sends the model's exact system prompt and control line and sets temperature `0`. Full Processing settings display the effective instruction and generated control line without allowing the fixed S1 contract to be edited. Thinking must be disabled. With the **llama.cpp compatibility profile**, Freehand automatically sends the qualified disable-reasoning request for S1-mini and shows it as required. With **Generic**, configure the server to enforce it; current llama.cpp releases support `--reasoning off`. A model-list test does not verify reasoning behavior.
 
 ### Input length and alpha limits
 
@@ -120,3 +120,37 @@ especially for long recordings and stored files, or leave cleanup off.
 :::
 
 The styling, structure, and context controls are limited to values on which S1-mini was trained. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) for the request contract and design constraints.
+
+## Generation controls
+
+Open **Settings → Post-processing → Generation controls**. Save before starting a
+new recording or stored-file job; an active job keeps the settings captured at
+its start, even if cleanup runs later.
+
+**Limit output tokens** is optional for Generic and llama.cpp. Turning it on
+initially supplies 2,048 tokens; adjust this for your selected model and the
+length of the complete cleaned transcript. The accepted range is 1–65,536 whole
+tokens, not words. Turning it off uses the server's limit and retains a valid
+number for later. This setting neither enlarges the model's context window nor
+splits long inputs. The request timeout remains independent. A limit that is too
+small can cause an incomplete response and raw-transcript fallback.
+
+**Disable reasoning** is optional for Custom instruction under the llama.cpp
+profile. It asks the model to return its result without a thinking phase, using
+a supported server/template contract. Off retains the server's configured behavior.
+
+For **S1-mini**, thinking disabled is a requirement, not a preference. Under
+llama.cpp, the control is marked **Required** and cannot be switched off; each
+request enforces it independently of the optional custom-model setting. Under
+Generic, Settings shows **Server required**, and the server must enforce it.
+The exact S1 prompt, trained styling/structure/context values, and temperature
+zero stay fixed. No extra sampling controls are introduced.
+
+When switching from llama.cpp to Generic with the custom reasoning override
+saved, turn that override off before saving. A provider rejection or reported
+output truncation uses the existing raw-text fallback; Freehand does not silently
+retry with different controls. Optional controls remain off for older settings,
+while S1-mini through llama.cpp gains its required reasoning-off request.
+
+Consult [llama.cpp qualifications](../../backends/llama-cpp/#source-qualification)
+for the inspected server revision and model/template limits.

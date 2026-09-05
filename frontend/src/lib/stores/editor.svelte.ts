@@ -84,7 +84,7 @@ const copySettings = (settings: Settings): Settings => ({
   transcriptionOptions: { ...settings.transcriptionOptions },
   headers:
     settings.headers == null ? settings.headers : { ...settings.headers },
-  postProcessing: { ...settings.postProcessing },
+  postProcessing: { ...settings.postProcessing, generationOptions: { ...settings.postProcessing.generationOptions } },
   textToSpeech: { ...settings.textToSpeech },
   microphoneID: settings.microphoneID ?? "",
 });

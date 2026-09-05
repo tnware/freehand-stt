@@ -163,6 +163,8 @@ func S1MiniContextValues() []string {
 }
 
 type PostProcessingSettings struct {
+	GenerationOptions compatibility.CleanupOptions `json:"generationOptions"`
+
 	CompatibilityProfile compatibility.ID     `json:"compatibilityProfile"`
 	Enabled              bool                 `json:"enabled"`
 	BaseURL              string               `json:"baseURL"`
@@ -383,6 +385,9 @@ func Validate(s Settings) error {
 		HoldToTalk:      s.HoldShortcut,
 	}); err != nil {
 		return fmt.Errorf("invalid shortcut settings: %w", err)
+	}
+	if err := compatibility.ValidateCleanupOptions(s.PostProcessing.CompatibilityProfile, s.PostProcessing.GenerationOptions); err != nil {
+		return err
 	}
 	if s.PostProcessing.Enabled {
 		if err := ValidatePostProcessing(s.PostProcessing); err != nil {
@@ -606,6 +611,9 @@ func validateHeaders(headers map[string]string) error {
 }
 
 func ValidatePostProcessing(s PostProcessingSettings) error {
+	if err := compatibility.ValidateCleanupOptions(s.CompatibilityProfile, s.GenerationOptions); err != nil {
+		return err
+	}
 	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.PostProcessing); err != nil {
 		return err
 	}

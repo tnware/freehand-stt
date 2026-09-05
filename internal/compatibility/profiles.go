@@ -33,6 +33,8 @@ const (
 // Capabilities are the implemented wire contract. Model-specific advanced
 // parameters must acquire their own qualified rules before being exposed.
 type Capabilities struct {
+	CleanupOutputLimit          bool `json:"cleanupOutputLimit"`
+	CleanupDisableReasoning     bool `json:"cleanupDisableReasoning"`
 	FileStreaming               bool `json:"fileStreaming"`
 	TypedTranscriptionEvents    bool `json:"typedTranscriptionEvents"`
 	LegacyTranscriptionSegments bool `json:"legacyTranscriptionSegments"`
@@ -83,6 +85,7 @@ func options(role Role) []Profile {
 		caps = Capabilities{FileStreaming: true, TypedTranscriptionEvents: true, LegacyTranscriptionSegments: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}
 		genericDescription = "Completed transcription and optional file streaming. Preserves support for typed events and legacy text segments; streaming and language hints depend on the selected model."
 	case PostProcessing:
+		caps.CleanupOutputLimit = true
 		genericDescription = "Text chat completions with system/user messages. Choose the cleanup prompt preset separately."
 	case Speech:
 		caps.SpeechSpeed = true
@@ -97,7 +100,8 @@ func options(role Role) []Profile {
 	} else if role == Speech {
 		result = append(result, Profile{ID: Speaches, Label: "Speaches", Available: true, Description: "Buffered PCM16 WAV speech using the installed model and voice IDs. Speed support depends on the model.", Capabilities: caps})
 	} else {
-		result = append(result, Profile{ID: LlamaCPP, Label: "llama.cpp", Available: true, Description: "Uses the shared text chat contract. S1-mini remains a separate prompt preset; configure model-specific server behavior separately.", Capabilities: caps})
+		caps.CleanupDisableReasoning = true
+		result = append(result, Profile{ID: LlamaCPP, Label: "llama.cpp", Available: true, Description: "Text cleanup with an optional output-token limit and disable-reasoning override. Reasoning control requires a compatible llama.cpp build and model template; S1-mini remains a separate prompt preset.", Capabilities: caps})
 	}
 	planned := func(id ID, label, reason string) {
 		result = append(result, Profile{ID: id, Label: label, Description: "Dedicated profile not implemented. " + reason})

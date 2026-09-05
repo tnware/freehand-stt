@@ -7,6 +7,20 @@ description: Keep speech recognition and optional transcript normalization as se
 - Date: 2026-08-29
 - Authority: [superwhisper/s1-mini v1 model card](https://huggingface.co/superwhisper/s1-mini/tree/v1)
 
+## Generation-control clarification — 2026-09-05
+
+Thinking disabled remains a mandatory S1-mini requirement. The qualified
+llama.cpp adapter now sends `reasoning_effort: "none"` automatically whenever
+the S1-mini preset is selected; the UI marks it required. Generic continues to
+require server-side enforcement. This supersedes the earlier implementation's
+exclusive reliance on server configuration and does not change the trained
+prompt, temperature, or control values.
+
+An optional fixed output-token limit is also implemented. Input-relative
+budgets and sentence chunking remain unimplemented; the fixed limit does not
+fulfill those separate design requirements. See the [provider qualification](../../backends/llama-cpp/#source-qualification)
+for source evidence and runtime/template limits.
+
 ## Protocol reliability clarification — 2026-09-05
 
 The client now rejects cleanup explicitly marked `finish_reason: "length"` and
