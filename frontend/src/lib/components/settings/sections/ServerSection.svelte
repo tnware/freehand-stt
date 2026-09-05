@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TranscriptionControls from "$lib/components/settings/TranscriptionControls.svelte";
   import { ID } from "$bindings/compatibility";
   import CompatibilityProfilePicker from "$lib/components/settings/CompatibilityProfilePicker.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
@@ -354,6 +355,11 @@
       </ValueRow>
     {/if}
   </SettingsCard>
+
+  <TranscriptionControls
+    bind:options={settings.transcriptionOptions}
+    capabilities={compatibility?.capabilities}
+  />
 
   <p class="px-1 text-xs leading-relaxed text-muted-foreground">
     The check reads only <code class="font-mono">/health</code> or

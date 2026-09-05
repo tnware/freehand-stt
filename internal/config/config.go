@@ -245,6 +245,8 @@ type Settings struct {
 	SegmentSilenceMS                int                    `json:"segmentSilenceMilliseconds"`
 	PostProcessing                  PostProcessingSettings `json:"postProcessing"`
 	TextToSpeech                    TextToSpeechSettings   `json:"textToSpeech"`
+
+	TranscriptionOptions compatibility.TranscriptionOptions `json:"transcriptionOptions"`
 }
 
 func Default() Settings {
@@ -326,6 +328,9 @@ func Validate(s Settings) error {
 	case AppearanceModeSystem, AppearanceModeLight, AppearanceModeDark:
 	default:
 		return errors.New("appearance mode is invalid")
+	}
+	if err := compatibility.ValidateTranscriptionOptions(s.CompatibilityProfile, s.TranscriptionOptions); err != nil {
+		return err
 	}
 	if len(s.Language) > 32 || strings.ContainsAny(s.Language, "\r\n") {
 		return errors.New("language must be at most 32 characters")

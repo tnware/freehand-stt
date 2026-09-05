@@ -258,7 +258,7 @@ func transcribePCM(ctx context.Context, client *inference.Client, cfg config.Set
 	defer zero(wav)
 	requestCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.TranscriptionTimeoutSeconds)*time.Second)
 	defer cancel()
-	return client.WithCompatibility(cfg.CompatibilityProfile).Transcribe(requestCtx, cfg.BaseURL, cfg.Model, cfg.Language, key, cfg.Headers, wav)
+	return client.WithCompatibility(cfg.CompatibilityProfile).WithTranscriptionOptions(cfg.TranscriptionOptions).Transcribe(requestCtx, cfg.BaseURL, cfg.Model, cfg.Language, key, cfg.Headers, wav)
 }
 
 func drainFrames(pipe *audio.FramePipe) {

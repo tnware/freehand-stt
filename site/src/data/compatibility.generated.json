@@ -10,7 +10,10 @@
         "typedTranscriptionEvents": true,
         "legacyTranscriptionSegments": true,
         "languageHint": true,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": true,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": true
       }
     },
     {
@@ -23,7 +26,10 @@
         "typedTranscriptionEvents": true,
         "legacyTranscriptionSegments": true,
         "languageHint": true,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": true,
+        "transcriptionHotwords": true,
+        "transcriptionTemperature": true
       }
     },
     {
@@ -36,7 +42,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -49,7 +58,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -62,7 +74,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -75,7 +90,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     }
   ],
@@ -90,7 +108,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -103,7 +124,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -116,7 +140,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -129,7 +156,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -142,7 +172,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     }
   ],
@@ -157,7 +190,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": true
+        "speechSpeed": true,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -170,7 +206,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": true
+        "speechSpeed": true,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -183,7 +222,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -196,7 +238,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -209,7 +254,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -222,7 +270,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     },
     {
@@ -235,7 +286,10 @@
         "typedTranscriptionEvents": false,
         "legacyTranscriptionSegments": false,
         "languageHint": false,
-        "speechSpeed": false
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
       }
     }
   ]

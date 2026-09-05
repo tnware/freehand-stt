@@ -61,8 +61,9 @@ compatibility profile when the endpoint meets that contract.
 
 The selector explains each profile's current scope. Support can depend on the
 server version and selected model; a model listing or successful connection
-test does not establish inference capabilities. This release adds no vocabulary,
-voice instructions, or other advanced request fields.
+test does not establish inference capabilities. Optional transcription controls
+are described below; voice instructions and other unimplemented features remain
+unavailable.
 
 **Planned profiles** are visible but disabled, with a description of the work
 still needed. A server listed there may already work through Generic; disabled
@@ -241,3 +242,37 @@ for the exact wire contracts and [Transcript post-processing](../post-processing
 for the validated llama.cpp/S1-mini command.
 
 For connection and request failures, see [Troubleshooting](../troubleshooting/).
+
+## Transcription controls
+
+Open **Transcription controls** in the speech-to-text Settings section. These
+settings apply to microphone recordings, every pause-aware checkpoint, and stored
+audio files, including streamed file results. Save before starting a new job.
+An active job keeps the settings it captured at its start.
+
+| Setting | Use | Availability |
+| --- | --- | --- |
+| Transcription context | Short subject matter, names, or examples of expected wording. Sent as `prompt`; blank omits it. | Generic and Speaches; model support varies. |
+| Hotwords | Terms to favor during recognition, such as project names. Sent as `hotwords`; blank omits it. | Speaches, qualified against the inspected Whisper paths. |
+| Override temperature | Send a value from 0 to 1. Turning it off omits the field and uses the server default. Turning it on with 0 sends an explicit zero. | Generic and Speaches; decoder behavior varies. |
+
+These are recognition hints, separate from the post-processing system instruction.
+They do not guarantee spelling or replace words after transcription. Keep context
+short: Freehand permits up to 8,192 UTF-8 bytes for context and 2,048 for hotwords,
+but a model can have a smaller token budget. Higher temperatures may produce more
+variation; leave the override off unless you want to tune the selected model.
+
+Context and hotwords are saved in ordinary local settings and sent with each
+transcription request. They are not credentials. Turning the temperature override
+off retains its numeric value for later use but does not send it.
+
+Switching from Speaches to Generic with hotwords configured requires clearing
+hotwords before saving. The field offers a **Clear hotwords** action; switching
+back to Speaches preserves the draft. Freehand never silently sends the
+provider-only field through Generic.
+
+Old settings keep every new control unset. **Test** remains metadata-only and
+does not send these fields or verify whether a model honors them. For a live
+comparison, explicitly transcribe a short sample with your chosen model, change
+one option, and compare the result. A server rejection is reported without an
+automatic second inference request.

@@ -744,3 +744,16 @@ describe("compatibility profile snapshots", () => {
     expect(session.editor.ttsConnectionStale).toBe(true);
   });
 });
+
+
+describe("Transcription control drafts", () => {
+  it("keeps unsaved nested controls separate from applied settings", async () => {
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    await session.editor.load();
+    if (!session.editor.draft || !session.editor.applied) throw new Error("settings missing");
+    session.editor.draft.transcriptionOptions.prompt = "unsaved context";
+    session.editor.draft.transcriptionOptions.hotwords = "unsaved terms";
+    session.editor.draft.transcriptionOptions.temperatureOverride = true;
+    expect(session.editor.applied.transcriptionOptions).toEqual(settings.transcriptionOptions);
+  });
+});

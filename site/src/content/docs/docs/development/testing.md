@@ -136,3 +136,23 @@ Tyler's first alpha test should verify:
 ## Model safety
 
 CI and native acceptance must not enumerate models and then call them. Model-list requests are metadata only. Automated tests use fakes or in-process protocol fixtures; real inference is limited to one route and model deliberately selected by the user for the workflow under test. Post-processing acceptance may call its separately selected model only after the user deliberately enables and runs that stage.
+
+### Optional transcription controls
+
+Request fixtures cover microphone, completed-file, and typed-streamed-file
+requests with omitted controls, explicit zero temperature, Unicode context, and
+Speaches hotwords. They verify exact fields, unchanged audio, Content-Length,
+and one request per operation. Invalid controls must fail before transport or
+file reads. Persistence fixtures cover migration from absent options and an
+inactive retained temperature. Workflow fixtures verify forwarding through the
+recorder and file service, and checkpoint snapshots after settings changes.
+Frontend coverage protects separation of unsaved and applied nested options.
+
+For native acceptance, use only an explicitly chosen model. Compare baseline
+and short context/hotword samples, confirm zero versus default temperature, save
+and reopen settings, and test one microphone/checkpoint and stored-file workflow.
+Confirm a profile switch with hotwords cannot save until cleared, and clearing
+the numeric input cannot silently save zero. Save new hints during a recording
+and confirm only the next recording uses them. Record runtime/model versions and
+observed behavior; fixtures and upstream source inspection are not live inference
+acceptance. No model invocation belongs in automated CI.

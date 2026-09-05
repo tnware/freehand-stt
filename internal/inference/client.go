@@ -16,14 +16,17 @@ const maxResponse = 1 << 20
 // It intentionally exposes only the STT, post-processing, and metadata
 // capabilities consumed by this desktop client.
 type Client struct {
-	HTTP    *http.Client
-	profile compatibility.ID
+	HTTP                 *http.Client
+	profile              compatibility.ID
+	transcriptionOptions compatibility.TranscriptionOptions
 }
 
 // WithCompatibility captures the selection alongside the caller's existing
 // settings/credential snapshot while sharing only the concurrency-safe HTTP client.
 func (c *Client) WithCompatibility(id compatibility.ID) *Client {
-	return &Client{HTTP: c.HTTP, profile: id}
+	copy := *c
+	copy.profile = id
+	return &copy
 }
 
 func (c *Client) contract(role compatibility.Role) (compatibility.Contract, error) {

@@ -27,7 +27,8 @@ retries. A remembered streaming failure is scoped to normalized endpoint,
 model, and effective compatibility profile.
 
 The Go catalog exposes only implemented capabilities. It does not certify
-all models on a provider, and adds no advanced parameters. The dedicated
+all models on a provider. Optional STT controls are explicitly gated by their
+implemented capability flags. The dedicated
 profiles share implementations where their wire contracts match. New dialects
 must be implemented and tested before their catalog entries become available.
 Metadata tests remain GET-only and never discover capabilities through inference.
@@ -76,6 +77,9 @@ Content-Type: multipart/form-data
 file=<recording.wav>
 model=speech/stt
 language=<optional>
+prompt=<optional recognition context>
+hotwords=<optional; Speaches only>
+temperature=<optional 0–1; only with override enabled>
 response_format=json
 ```
 
@@ -229,3 +233,24 @@ supports optional cleanup, and produces one final delivery result.
 The proposed realtime transport and event contracts remain in
 [ADR 0002: Realtime transcription](../../decisions/0002-realtime-transcription/).
 :::
+
+## Optional STT control contract
+
+Root `transcriptionOptions` contains `prompt`, `hotwords`,
+`temperatureOverride`, and `temperature`. Missing options load as empty strings,
+false, and zero, preserving older requests. The boolean distinguishes an omitted
+temperature from explicit zero; inactive numeric values are retained locally.
+
+Both implemented STT profiles support optional `prompt` and `temperature` fields;
+only Speaches supports `hotwords`. Prompt is bounded to 8,192 UTF-8 bytes and
+hotwords to 2,048. Invalid UTF-8 and control characters other than CR, LF, and tab
+are rejected. Temperature must be finite and between 0 and 1. Go validates these
+rules when saving and again before building requests or reading file audio.
+Validation messages do not include hint contents.
+
+These settings are copied by value with the job's connection/credential snapshot.
+The same option writer is used for microphone and file multipart bodies and file
+Content-Length calculation. File streaming adds only its existing `stream=true`;
+there is no automatic retry after a rejection, and the existing typed completion
+and response-size rules are unchanged. These controls affect request construction;
+they do not establish model capabilities through metadata discovery.

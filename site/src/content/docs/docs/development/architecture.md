@@ -442,3 +442,18 @@ model, and event codec; it must never be folded implicitly into completed STT.
 The application normalizes provider messages into correlated speech, provisional-delta, and finalized-transcript events. Current Speaches v0.8.2 provides VAD plus finalized transcription events but not the newer OpenAI input-transcription delta event, so the UI must work well both with completed utterance chunks and true incremental text.
 
 Audio capture accepts a requested format specification: file STT currently uses 16 kHz PCM16 WAV, while Speaches realtime uses 24 kHz mono PCM16 chunks. Only finalized raw text may proceed to optional S1-mini and insertion. See [ADR 0002](../../decisions/0002-realtime-transcription/).
+
+### Transcription option snapshots
+
+`internal/compatibility.TranscriptionOptions` defines value-only recognition
+controls and shared bounds/capability validation. `config.Settings` persists this
+nested value; Settings validates it transactionally with connection changes. The
+frontend editor copies it independently for drafts and applied settings.
+
+Dictation captures options at recording start, including every checkpoint;
+stored-file jobs capture them with their request profile. The immutable inference
+client copy receives that value, validates it before I/O, and writes the same
+fields for completed and streaming requests. File multipart sizing uses the same
+writer to preserve Content-Length. Optional values are omitted by default;
+explicit zero temperature uses a separate override flag. These hints are not
+added to diagnostic logs or history details. Cleanup presets remain independent.
