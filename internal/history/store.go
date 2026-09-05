@@ -5,8 +5,10 @@ import (
 	"errors"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/tnware/freehand-stt/internal/insertion"
+	"github.com/tnware/freehand-stt/internal/postprocess"
 )
 
 // Store owns the bounded, process-local transcript history. It is ordinary Go
@@ -59,9 +61,32 @@ func (s *Store) Begin(text string, outcome HistoryOutcome, processing bool, comp
 	return s.nextID
 }
 
-func (s *Store) FinalizeProcessing(id uint64, raw, processed string, status HistoryProcessingStatus, message string, details HistoryRunDetails) {
-	if id == 0 {
-		return
+// FinalizeProcessing projects the shared cleanup decision into history. Return
+// the updated run details even when retention is disabled, absent or the entry
+// was removed while processing; retention must never control delivery policy.
+func (s *Store) FinalizeProcessing(id uint64, raw string, outcome postprocess.Outcome, details HistoryRunDetails) HistoryRunDetails {
+	status := HistoryProcessingCompleted
+	processed := outcome.Text
+	message := ""
+	details.Processing.StartedAt = outcome.StartedAt
+	details.Processing.CompletedAt = outcome.CompletedAt
+	details.Processing.ElapsedMilliseconds = outcome.ElapsedMilliseconds
+	details.Processing.Response = NewResponseDetails(outcome.Metadata)
+	details.Processing.ErrorKind = ErrorKind(outcome.Err)
+	details.Processing.ProcessedCharacters = 0
+	if outcome.Err != nil {
+		status = HistoryProcessingFailed
+		if outcome.Cancelled {
+			status = HistoryProcessingCancelled
+		}
+		processed = ""
+		message = outcome.Err.Error()
+	} else {
+		details.Processing.ProcessedCharacters = utf8.RuneCountInString(processed)
+	}
+	details.Processing.Status = status
+	if s == nil || id == 0 {
+		return details
 	}
 	if len(message) > 256 {
 		message = message[:256]
@@ -81,6 +106,7 @@ func (s *Store) FinalizeProcessing(id uint64, raw, processed string, status Hist
 			entry.Text = raw
 		}
 	})
+	return details
 }
 
 func (s *Store) UpdateDetails(id uint64, details HistoryRunDetails) {

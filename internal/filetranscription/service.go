@@ -818,55 +818,27 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 			s.fileMu.Unlock()
 		}
 
-		processed := ""
-		var processErr error
 		processingStarted := time.Now()
-		details.Processing.StartedAt = processingStarted.UTC()
-		details.Processing.Status = history.HistoryProcessingPending
+		var processingResult postprocess.Result
+		var processingErr error
 		if s.processor == nil {
-			processErr = errors.New("post-processing is unavailable")
+			processingErr = errors.New("post-processing is unavailable")
 		} else {
-			processingResult, err := s.processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, processingKey)
-			processed = processingResult.Text
-			processErr = err
-			details.Processing.Response = history.NewResponseDetails(processingResult.Metadata)
+			processingResult, processingErr = s.processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, processingKey)
 		}
-		// Cancellation owns the outcome even if a processor ignores the context
-		// and races a successful response against the cancel request. This mirrors
-		// the live-dictation pipeline and prevents late text from being delivered.
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			processed = ""
-			processErr = ctxErr
+		processing := postprocess.Resolve(ctx, text, processingResult, processingErr, processingStarted)
+		details = s.history.FinalizeProcessing(historyID, text, processing, details)
+		// Cancellation may arrive while history finalizes a failed attempt.
+		// Keep the final fallback-admission check with the live workflow owner.
+		if ctxErr := ctx.Err(); processing.Err != nil && errors.Is(ctxErr, context.Canceled) {
+			err = ctxErr
 		}
-		if processErr != nil {
-			processingStatus := history.HistoryProcessingFailed
-			if errors.Is(ctx.Err(), context.Canceled) {
-				processingStatus = history.HistoryProcessingCancelled
-			}
-			details.Processing.CompletedAt = time.Now().UTC()
-			details.Processing.ElapsedMilliseconds = time.Since(processingStarted).Milliseconds()
-			details.Processing.Status = processingStatus
-			details.Processing.ErrorKind = history.ErrorKind(processErr)
-			if s.history != nil {
-				s.history.FinalizeProcessing(historyID, text, "", processingStatus, processErr.Error(), details)
-			}
-			if errors.Is(ctx.Err(), context.Canceled) {
-				err = ctx.Err()
-			} else {
-				processingFallback = true
-				processingFallbackKind = diagnostics.ErrorKind(processErr)
-				s.log().Warn("audio file post-processing fell back to raw transcript", "generation", generation, "error_kind", diagnostics.ErrorKind(processErr))
-			}
-		} else {
-			details.Processing.CompletedAt = time.Now().UTC()
-			details.Processing.ElapsedMilliseconds = time.Since(processingStarted).Milliseconds()
-			details.Processing.Status = history.HistoryProcessingCompleted
-			details.Processing.ProcessedCharacters = utf8.RuneCountInString(processed)
-			if s.history != nil {
-				s.history.FinalizeProcessing(historyID, text, processed, history.HistoryProcessingCompleted, "", details)
-			}
-			text = processed
+		processingFallback = processing.Fallback() && err == nil
+		if processingFallback {
+			processingFallbackKind = diagnostics.ErrorKind(processing.Err)
+			s.log().Warn("audio file post-processing fell back to raw transcript", "generation", generation, "error_kind", processingFallbackKind)
 		}
+		text = processing.Text
 	}
 
 	s.fileMu.Lock()
