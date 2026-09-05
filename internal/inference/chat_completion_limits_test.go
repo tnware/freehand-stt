@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,7 +25,7 @@ func TestChatCompletionRejectsReportedLengthLimit(t *testing.T) {
 				_, _ = io.WriteString(w, `{"id":"limited","choices":[{"message":{"content":"private incomplete cleanup"},"finish_reason":"length"}],"usage":{"completion_tokens":8}}`)
 			}))
 			defer server.Close()
-			result, err := New().ChatCompletion(context.Background(), server.URL+"/v1", "generic-cleanup", key, "instruction", "raw transcript")
+			result, err := New().WithCleanupOptions(compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 8}).ChatCompletion(context.Background(), server.URL+"/v1", "generic-cleanup", key, "instruction", "raw transcript")
 			var failure *Error
 			if !errors.As(err, &failure) || failure.Kind != "incomplete_response" || result.Text != "" || calls != 1 {
 				t.Fatalf("result=%+v error=%v calls=%d", result, err, calls)
@@ -52,7 +53,7 @@ func TestChatCompletionDoesNotInferTruncationFromMissingOrOtherFinishReasons(t *
 			_, _ = io.Copy(io.Discard, r.Body)
 			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": "Complete cleanup."}, "finish_reason": reason}}})
 		}))
-		result, err := New().ChatCompletion(context.Background(), server.URL, "generic-cleanup", "", "instruction", "raw")
+		result, err := New().WithCleanupOptions(compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 8}).ChatCompletion(context.Background(), server.URL, "generic-cleanup", "", "instruction", "raw")
 		server.Close()
 		if err != nil || result.Text != "Complete cleanup." {
 			t.Fatalf("finish reason %v: result=%+v error=%v", reason, result, err)

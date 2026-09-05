@@ -757,3 +757,15 @@ describe("Transcription control drafts", () => {
     expect(session.editor.applied.transcriptionOptions).toEqual(settings.transcriptionOptions);
   });
 });
+
+
+describe("Cleanup generation control drafts", () => {
+  it("keeps unsaved nested options separate from applied settings", async () => {
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    await session.editor.load();
+    if (!session.editor.draft || !session.editor.applied) throw new Error("settings missing");
+    session.editor.draft.postProcessing.generationOptions.maxOutputTokens = 8192;
+    session.editor.draft.postProcessing.generationOptions.disableReasoning = true;
+    expect(session.editor.applied.postProcessing.generationOptions).toEqual(settings.postProcessing.generationOptions);
+  });
+});

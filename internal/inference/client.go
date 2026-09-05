@@ -19,6 +19,7 @@ type Client struct {
 	HTTP                 *http.Client
 	profile              compatibility.ID
 	transcriptionOptions compatibility.TranscriptionOptions
+	cleanupOptions       compatibility.CleanupOptions
 }
 
 // WithCompatibility captures the selection alongside the caller's existing

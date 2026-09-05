@@ -2,6 +2,7 @@ package filetranscription
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -54,6 +55,8 @@ func TestFileProcessingOutcomes(t *testing.T) {
 				cfg.PostProcessing.Enabled = mode != "raw"
 				cfg.PostProcessing.BaseURL = "https://cleanup.example/v1"
 				cfg.PostProcessing.Model = "cleanup"
+				cfg.PostProcessing.CompatibilityProfile = compatibility.LlamaCPP
+				cfg.PostProcessing.GenerationOptions = compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 2048, DisableReasoning: true}
 				transcripts := history.NewStore(retention == "enabled", nil)
 				if retention == "absent" {
 					transcripts = nil
@@ -61,7 +64,7 @@ func TestFileProcessingOutcomes(t *testing.T) {
 				calls := 0
 				client := inference.New()
 				client.HTTP.Transport = processingTransport(func(r *http.Request) (*http.Response, error) {
-					if r.Body != nil && r.URL.Path != "/v1/audio/transcriptions" {
+					if r.Body != nil && r.URL.Path != "/v1/audio/transcriptions" && r.URL.Path != "/v1/chat/completions" {
 						_, _ = io.Copy(io.Discard, r.Body)
 						_ = r.Body.Close()
 					}
@@ -77,6 +80,13 @@ func TestFileProcessingOutcomes(t *testing.T) {
 							}
 						}
 					case "/v1/chat/completions":
+						var request map[string]json.RawMessage
+						if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+							t.Error(err)
+						}
+						if string(request["max_tokens"]) != "2048" || string(request["reasoning_effort"]) != `"none"` {
+							t.Error("cleanup lost generation controls")
+						}
 						calls++
 						if r.Header.Get("Authorization") != "Bearer [REDACTED]" {
 							t.Error("operation credential was not forwarded")

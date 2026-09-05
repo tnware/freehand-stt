@@ -69,6 +69,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   segmentSeconds: 90,
   segmentSilenceMilliseconds: 700,
   postProcessing: {
+    generationOptions: { limitOutputTokens: false, maxOutputTokens: 0, disableReasoning: false },
     compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "http://127.0.0.1:8080/v1",

@@ -25,7 +25,7 @@ to Generic when no compatibility profile was previously stored.
 | --- | --- |
 | Microphone and audio-file transcription | Multipart `file`, `model`, `response_format=json`, and optional `language`, `prompt`, and `temperature`; completed JSON with string `text`. |
 | Optional file streaming | `stream=true`; typed transcript delta/done events or legacy per-segment text events. A server may return completed JSON instead. |
-| Transcript cleanup | Non-streaming text chat completions with system/user string messages and temperature zero. |
+| Transcript cleanup | Non-streaming text chat completions with system/user string messages, temperature zero, and optional `max_tokens`. |
 | Speech playback | `model`, `input`, string `voice`, `speed`, and `response_format=wav`; fully buffered PCM16 WAV audio. |
 
 The base URL is a prefix: Freehand appends `audio/transcriptions`,
@@ -63,3 +63,17 @@ not send `hotwords`; that field requires the Speaches profile.
 
 See [Transcription controls](../../guides/connect-a-server/#transcription-controls)
 for limits, persistence, and the difference between recognition hints and cleanup.
+
+## Cleanup generation controls
+
+Generic offers an optional output-token limit using `max_tokens`. Leave it off
+when the selected endpoint/model does not accept that field. Freehand does not
+substitute `max_completion_tokens`, send both fields, or retry after rejection.
+The supported UI range is 1–65,536; the model can impose a smaller limit.
+
+Generic does not send reasoning controls. S1-mini still requires thinking to be
+disabled by the server. Choose the qualified llama.cpp profile for automatic
+S1-mini request enforcement. An explicit custom reasoning override must be
+turned off before switching from llama.cpp to Generic.
+
+See [generation controls](../../guides/post-processing/#generation-controls).

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { ID } from "$bindings/compatibility";
+  import CleanupControls from "$lib/components/settings/CleanupControls.svelte";
   import CompatibilityProfilePicker from "$lib/components/settings/CompatibilityProfilePicker.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
@@ -49,6 +51,11 @@
   } = $props();
 
   const processor = $derived(settings.postProcessing);
+  const compatibility = $derived(
+    settings.compatibilityProfiles.postProcessing?.find(
+      (profile) => profile.id === (processor.compatibilityProfile || ID.Generic),
+    ),
+  );
   const selectedProfile = $derived(processingProfile(profiles, processor.preset));
   const discoveredModels = $derived(connection?.modelIDs ?? []);
   const canSelectModel = $derived(discoveredModels.length > 0);
@@ -279,6 +286,12 @@
       {/if}
     </div>
   </SettingsCard>
+
+  <CleanupControls
+    bind:options={settings.postProcessing.generationOptions}
+    capabilities={compatibility?.capabilities}
+    s1Mini={processor.preset === PostProcessingPreset.PostProcessingPresetS1Mini}
+  />
 
   <p class="px-1 text-xs leading-relaxed text-muted-foreground">
     Raw transcription always completes first. With history enabled, raw and processed text are kept

@@ -2,6 +2,7 @@ package dictation
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -43,6 +44,8 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				cfg.PostProcessing.Enabled = mode != "raw"
 				cfg.PostProcessing.BaseURL = "https://cleanup.example/v1"
 				cfg.PostProcessing.Model = "cleanup"
+				cfg.PostProcessing.CompatibilityProfile = compatibility.LlamaCPP
+				cfg.PostProcessing.GenerationOptions = compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 2048, DisableReasoning: true}
 				var recorder *testRecorder
 				calls := 0
 				client := inference.New()
@@ -59,6 +62,13 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 							}
 						}
 					case "/v1/chat/completions":
+						var request map[string]json.RawMessage
+						if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+							t.Error(err)
+						}
+						if string(request["max_tokens"]) != "2048" || string(request["reasoning_effort"]) != `"none"` {
+							t.Error("cleanup lost generation controls")
+						}
 						calls++
 						if r.Header.Get("Authorization") != "Bearer [REDACTED]" {
 							t.Error("operation credential was not forwarded")

@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/inference"
@@ -39,6 +40,16 @@ func (p *Processor) ProcessWithCredential(ctx context.Context, cfg config.PostPr
 		return Result{}, errors.New("post-processing client is unavailable")
 	}
 
+	options := cfg.GenerationOptions
+	if cfg.Preset == config.PostProcessingPresetS1Mini {
+		contract, err := compatibility.Resolve(cfg.CompatibilityProfile, compatibility.PostProcessing)
+		if err != nil {
+			return Result{}, err
+		}
+		// S1-mini requires thinking-disabled generation. Enforce the requirement
+		// through a qualified adapter; Generic still requires server configuration.
+		options.DisableReasoning = options.DisableReasoning || contract.Capabilities.CleanupDisableReasoning
+	}
 	systemPrompt, userPrompt := prompts(cfg, raw)
 	started := time.Now()
 	if p.logger != nil {
@@ -51,7 +62,7 @@ func (p *Processor) ProcessWithCredential(ctx context.Context, cfg config.PostPr
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, time.Duration(cfg.TimeoutSeconds)*time.Second)
 	defer cancel()
-	completion, err := p.client.WithCompatibility(cfg.CompatibilityProfile).ChatCompletion(requestCtx, cfg.BaseURL, cfg.Model, key, systemPrompt, userPrompt)
+	completion, err := p.client.WithCompatibility(cfg.CompatibilityProfile).WithCleanupOptions(options).ChatCompletion(requestCtx, cfg.BaseURL, cfg.Model, key, systemPrompt, userPrompt)
 	if err == nil && strings.TrimSpace(completion.Text) == "" {
 		err = errors.New("post-processing returned an empty transcript")
 	}

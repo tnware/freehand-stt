@@ -374,6 +374,7 @@ func TestRequestProfileCapturesSettingsAndCredentialsTogether(t *testing.T) {
 	service.cfg.Model = "captured-model"
 	service.cfg.CompatibilityProfile = compatibility.Speaches
 	service.cfg.PostProcessing.CompatibilityProfile = compatibility.LlamaCPP
+	service.cfg.PostProcessing.GenerationOptions = compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 2048, DisableReasoning: true}
 	service.cfg.AuthenticationMode = config.AuthenticationModeAPIKey
 	keys.value = "captured-key"
 	profile, err := RequestProfiles(service).Capture()
@@ -382,6 +383,10 @@ func TestRequestProfileCapturesSettingsAndCredentialsTogether(t *testing.T) {
 	}
 	service.cfg.CompatibilityProfile = compatibility.Generic
 	service.cfg.PostProcessing.CompatibilityProfile = compatibility.Generic
+	service.cfg.PostProcessing.GenerationOptions = compatibility.CleanupOptions{MaxOutputTokens: 8192}
+	if profile.Settings.PostProcessing.GenerationOptions != (compatibility.CleanupOptions{LimitOutputTokens: true, MaxOutputTokens: 2048, DisableReasoning: true}) {
+		t.Fatal("captured cleanup options changed")
+	}
 	if profile.Settings.CompatibilityProfile != compatibility.Speaches || profile.Settings.PostProcessing.CompatibilityProfile != compatibility.LlamaCPP {
 		t.Fatal("captured compatibility selection changed")
 	}
