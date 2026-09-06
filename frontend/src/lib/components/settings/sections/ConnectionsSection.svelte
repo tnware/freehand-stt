@@ -34,29 +34,51 @@
     { id: Purpose.Speech, label: "Speech playback" },
   ];
   const roleLabel = (p: Purpose) => roles.find((r) => r.id === p)?.label ?? "Connection";
-  const profiles = $derived(
-    form?.purpose === Purpose.Transcription
-      ? editor.applied?.compatibilityProfiles.transcription
-      : form?.purpose === Purpose.Cleanup
-        ? editor.applied?.compatibilityProfiles.postProcessing
-        : editor.applied?.compatibilityProfiles.speech,
-  );
+  const profiles = $derived.by(() => {
+    const all = [
+      ...(editor.applied?.compatibilityProfiles.transcription ?? []),
+      ...(editor.applied?.compatibilityProfiles.postProcessing ?? []),
+      ...(editor.applied?.compatibilityProfiles.speech ?? []),
+    ];
+    return [...new Map(all.map((p) => [p.id, p])).values()].map((p) => ({
+      ...p,
+      available: all.some((x) => x.id === p.id && x.available),
+      description: all.some((x) => x.id === p.id && x.available)
+        ? "Uses this backend’s implemented contracts for the features enabled below."
+        : p.description,
+    }));
+  });
+  function supports(purpose: Purpose, profile = form?.details.compatibilityProfile) {
+    const catalog = editor.applied?.compatibilityProfiles;
+    const list =
+      purpose === Purpose.Transcription
+        ? catalog?.transcription
+        : purpose === Purpose.Cleanup
+          ? catalog?.postProcessing
+          : catalog?.speech;
+    return !!list?.some((p) => p.id === profile && p.available);
+  }
+  function setProfile(profile: ID) {
+    if (!form) return;
+    form.details.compatibilityProfile = profile;
+    form.uses = form.uses.filter((p) => supports(p, profile));
+    if (!form.uses.includes(Purpose.Transcription)) {
+      form.details.healthPath = "";
+      form.details.headers = {};
+    }
+  }
+  function setUse(p: Purpose, enabled: boolean) {
+    if (!form) return;
+    form.uses = enabled ? [...form.uses, p] : form.uses.filter((x) => x !== p);
+    if (!form.uses.includes(Purpose.Transcription)) {
+      form.details.healthPath = "";
+      form.details.headers = {};
+    }
+  }
+  const activeUses = (id: string) => roles.filter((role) => catalog?.selected?.[role.id] === id);
   let deleting = $state<Connection | null>(null);
   let deleteOpen = $state(false);
   let testedID = $state("");
-  function changePurpose(p: string) {
-    if (!form) return;
-    form.purpose = p as Purpose;
-    form.details = {
-      compatibilityProfile: ID.Generic,
-      baseURL: "",
-      allowInsecureHTTP: false,
-      authenticationMode: AuthenticationMode.AuthenticationModeNone,
-      healthPath: "",
-      headers: {},
-    };
-    form.credentialDraft = "";
-  }
   function changeAuth(value: string) {
     if (!form) return;
     form.details.authenticationMode = value as AuthenticationMode;
@@ -67,16 +89,12 @@
     while (new TextEncoder().encode(prefix).length > 60) prefix = [...prefix].slice(0, -1).join("");
     let n = 1,
       name = `${prefix} copy`;
-    while (
-      entries.some((e) => e.purpose === c.purpose && e.name.toLowerCase() === name.toLowerCase())
-    )
+    while (entries.some((e) => e.name.toLowerCase() === name.toLowerCase()))
       name = `${prefix} copy ${++n}`;
     void editor.changeConnection({
       action: Action.Duplicate,
-      purpose: c.purpose,
       id: c.id,
       name,
-      replacementID: "",
     });
   }
   async function remove() {
@@ -84,10 +102,8 @@
     if (
       await editor.changeConnection({
         action: Action.Delete,
-        purpose: deleting.purpose,
         id: deleting.id,
         name: "",
-        replacementID: "",
       })
     ) {
       deleteOpen = false;
@@ -136,11 +152,10 @@
       </h4>
       <Badge variant="outline">Connection settings</Badge>
     </div>
-    {#if !form.creating && catalog?.selected?.[form.purpose] === form.id}<p
-        class="text-xs text-muted-foreground"
-      >
+    {#if !form.creating && activeUses(form.id).length > 0}<p class="text-xs text-muted-foreground">
         This connection is in use. Saving updates its connection details for new requests; model and
-        feature options stay on the {roleLabel(form.purpose)} page.
+        feature options stay on their own feature pages. This updates every feature using this
+        server.
       </p>{/if}
     <SettingsCard>
       <ValueRow
@@ -158,30 +173,40 @@
             placeholder="For example, Office speech server"
           />{/snippet}
       </ValueRow>
-      <ValueRow
-        id="connection-purpose"
-        label="Used for"
-        hint="Connections are listed only for their compatible feature."
-      >
-        {#snippet control()}<Select.Root
-            type="single"
-            value={form.purpose}
-            onValueChange={changePurpose}
-            disabled={busy || !form.creating}
-            ><Select.Trigger id="connection-purpose" class="w-full"
-              >{roleLabel(form.purpose)}</Select.Trigger
-            ><Select.Content
-              >{#each roles as role (role.id)}<Select.Item value={role.id} label={role.label}
-                  >{role.label}</Select.Item
-                >{/each}</Select.Content
-            ></Select.Root
-          >{/snippet}
-      </ValueRow>
       <CompatibilityProfilePicker
         id="connection-profile"
-        bind:value={form.details.compatibilityProfile}
-        profiles={profiles ?? []}
+        bind:value={() => form.details.compatibilityProfile, setProfile}
+        {profiles}
       />
+      <div class="space-y-3 px-5 py-4">
+        <h4 class="text-sm font-medium">Used for</h4>
+        <p class="text-xs text-muted-foreground">
+          Enable only the operations your deployed server provides. Each use becomes selectable
+          independently; enabling it here does not activate it or verify inference support.
+        </p>
+        {#each roles as role (role.id)}
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <label for={`connection-use-${role.id}`} class="text-sm">{role.label}</label>
+              {#if !supports(role.id)}<p class="text-xs text-muted-foreground">
+                  Not implemented for this profile.
+                </p>{/if}
+              {#if catalog?.selected?.[role.id] === form.id}<p
+                  class="text-xs text-muted-foreground"
+                >
+                  In use. Deselect on its feature page before removing.
+                </p>{/if}
+            </div>
+            <Switch
+              id={`connection-use-${role.id}`}
+              checked={form.uses.includes(role.id)}
+              onCheckedChange={(enabled) => setUse(role.id, enabled)}
+              disabled={busy || !supports(role.id) || catalog?.selected?.[role.id] === form.id}
+              aria-label={`Use for ${role.label}`}
+            />
+          </div>
+        {/each}
+      </div>
       <ValueRow
         id="connection-url"
         label="Base URL"
@@ -211,36 +236,31 @@
             aria-label="Allow insecure HTTP"
           />{/snippet}</SettingRow
       >
-      {#if form.purpose !== Purpose.Cleanup}
-        <ValueRow
-          id="connection-auth"
-          label="Authentication"
-          hint="Choose whether this connection sends an API key."
-          >{#snippet control()}<Select.Root
-              type="single"
-              value={form.details.authenticationMode}
-              onValueChange={changeAuth}
-              disabled={busy}
-              ><Select.Trigger id="connection-auth" class="w-full"
-                >{form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey
-                  ? "API key"
-                  : "None"}</Select.Trigger
-              ><Select.Content
-                ><Select.Item value={AuthenticationMode.AuthenticationModeNone}>None</Select.Item
-                ><Select.Item value={AuthenticationMode.AuthenticationModeAPIKey}
-                  >API key</Select.Item
-                ></Select.Content
-              ></Select.Root
-            >{/snippet}</ValueRow
-        >
-      {/if}
-      {#if form.purpose === Purpose.Cleanup || form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey}
+      <ValueRow
+        id="connection-auth"
+        label="Authentication"
+        hint="Choose whether this connection sends an API key."
+        >{#snippet control()}<Select.Root
+            type="single"
+            value={form.details.authenticationMode}
+            onValueChange={changeAuth}
+            disabled={busy}
+            ><Select.Trigger id="connection-auth" class="w-full"
+              >{form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey
+                ? "API key"
+                : "None"}</Select.Trigger
+            ><Select.Content
+              ><Select.Item value={AuthenticationMode.AuthenticationModeNone}>None</Select.Item
+              ><Select.Item value={AuthenticationMode.AuthenticationModeAPIKey}>API key</Select.Item
+              ></Select.Content
+            ></Select.Root
+          >{/snippet}</ValueRow
+      >
+      {#if form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey}
         <ValueRow
           id="connection-api-key"
           label="API key"
-          hint={form.purpose === Purpose.Cleanup
-            ? "Optional. Stored in Windows Credential Manager and never returned to this window."
-            : "Stored in Windows Credential Manager and never returned to this window."}
+          hint="One stored key shared by this server’s enabled uses. Never returned to this window."
           >{#snippet control()}<ValueInput
               id="connection-api-key"
               type="password"
@@ -271,9 +291,11 @@
           >{/if}
       {/if}
     </SettingsCard>
-    {#if form.purpose === Purpose.Transcription}
+    {#if form.uses.includes(Purpose.Transcription)}
       <details class="rounded-xl border border-hairline bg-layer-fill p-4">
-        <summary class="cursor-pointer text-sm font-medium">Advanced connection settings</summary>
+        <summary class="cursor-pointer text-sm font-medium"
+          >Transcription connection options</summary
+        >
         <div class="mt-4 space-y-4">
           <div class="space-y-2">
             <label for="connection-health" class="text-xs font-medium">Custom health path</label
@@ -288,7 +310,7 @@
             </p>
           </div>
           <div class="space-y-2">
-            <p class="text-xs font-medium">Custom headers</p>
+            <p class="text-xs font-medium">Custom transcription headers</p>
             {#each Object.entries(form.details.headers ?? {}) as [key, value] (key)}<div
                 class="flex gap-2"
               >
@@ -334,7 +356,12 @@
         variant="outline"
         disabled={busy}
         onclick={() => editor.cancelConnectionEdit()}>Cancel</Button
-      ><Button type="submit" disabled={busy || !form.name.trim() || !form.details.baseURL.trim()}
+      ><Button
+        type="submit"
+        disabled={busy ||
+          !form.name.trim() ||
+          !form.details.baseURL.trim() ||
+          form.uses.length === 0}
         >{#if editor.saving}<LoaderCircleIcon class="animate-spin" />{/if}Save connection</Button
       >
     </div>
@@ -354,75 +381,76 @@
         </p>
       </div></SettingsCard
     >{/if}
-  {#each roles as role (role.id)}
-    {#if entries.some((c) => c.purpose === role.id)}<div class="space-y-2">
-        <h4 class="text-xs font-medium text-muted-foreground">{role.label}</h4>
-        <SettingsCard>
-          {#each entries.filter((c) => c.purpose === role.id) as c (c.id)}
-            <div class="space-y-3 px-5 py-4">
-              <div class="flex items-start gap-3">
-                <ProviderIcon profile={c.details.compatibilityProfile} />
-                <div class="min-w-0 flex-1">
-                  <p class="truncate text-sm font-semibold">{c.name}</p>
-                  <p class="break-all text-xs text-muted-foreground">{c.details.baseURL}</p>
-                </div>
-                {#if catalog?.selected?.[c.purpose] === c.id}<Badge variant="secondary"
-                    >In use</Badge
-                  >{/if}
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={busy || editor.runtimeDirty}
-                  onclick={() => editor.beginConnection(c)}>Edit</Button
-                ><Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={busy ||
-                    editor.runtimeDirty ||
-                    entries.filter((e) => e.purpose === c.purpose).length >= 32}
-                  onclick={() => duplicate(c)}>Duplicate</Button
-                ><Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={busy}
-                  onclick={() => {
-                    testedID = c.id;
-                    void editor.testSavedConnection(c.id);
-                  }}>Test connection</Button
-                ><Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={busy || editor.runtimeDirty || catalog?.selected?.[c.purpose] === c.id}
-                  onclick={() => {
-                    deleting = c;
-                    deleteOpen = true;
-                  }}>Delete</Button
-                ><Button variant="link" size="sm" onclick={() => onOpenFeature(c.purpose)}
-                  >Open {role.label}</Button
-                >
-              </div>
-              {#if catalog?.selected?.[c.purpose] === c.id}<p
-                  class="text-[11px] text-muted-foreground"
-                >
-                  To delete, choose another connection or None in {role.label} first.
-                </p>{/if}
-              {#if testedID === c.id && editor.managedConnectionTesting}<p
-                  role="status"
-                  class="text-xs text-muted-foreground"
-                >
-                  Checking metadata…
-                </p>{:else if testedID === c.id && editor.managedConnectionResult}<p
-                  role="status"
-                  class="text-xs text-muted-foreground"
-                >
-                  {connectionDescription(editor.managedConnectionResult)}
-                </p>{/if}
-            </div>
-          {/each}
-        </SettingsCard>
-      </div>{/if}
+  {#each entries as c (c.id)}
+    <SettingsCard
+      ><div class="space-y-3 px-5 py-4">
+        <div class="flex items-start gap-3">
+          <ProviderIcon profile={c.details.compatibilityProfile} />
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold">{c.name}</p>
+            <p class="break-all text-xs text-muted-foreground">{c.details.baseURL}</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {#each c.uses as p (p)}<Badge
+              variant={catalog?.selected?.[p] === c.id ? "secondary" : "outline"}
+              >{roleLabel(p)}{catalog?.selected?.[p] === c.id ? " · In use" : ""}</Badge
+            >{/each}
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={busy || editor.runtimeDirty}
+            onclick={() => editor.beginConnection(c)}>Edit</Button
+          >
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy || editor.runtimeDirty || entries.length >= 96}
+            onclick={() => duplicate(c)}>Duplicate</Button
+          >
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onclick={() => {
+              testedID = c.id;
+              void editor.testSavedConnection(c.id);
+            }}>Test connection</Button
+          >
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy || editor.runtimeDirty || activeUses(c.id).length > 0}
+            onclick={() => {
+              deleting = c;
+              deleteOpen = true;
+            }}>Delete</Button
+          >
+        </div>
+        <div class="flex flex-wrap gap-1">
+          {#each c.uses as p (p)}<Button variant="link" size="sm" onclick={() => onOpenFeature(p)}
+              >Open {roleLabel(p)}</Button
+            >{/each}
+        </div>
+        {#if activeUses(c.id).length}<p class="text-[11px] text-muted-foreground">
+            To delete, choose another connection or None in every feature using this server.
+          </p>{/if}
+        {#if testedID === c.id && editor.managedConnectionTesting}<p
+            role="status"
+            class="text-xs text-muted-foreground"
+          >
+            Checking metadata…
+          </p>
+        {:else if testedID === c.id && editor.managedConnectionResult}<p
+            role="status"
+            class="text-xs text-muted-foreground"
+          >
+            {connectionDescription(editor.managedConnectionResult)}
+          </p>{/if}
+      </div></SettingsCard
+    >
   {/each}
   <p class="text-xs text-muted-foreground">
     Tests read health or model-list metadata only. No model is started or invoked.

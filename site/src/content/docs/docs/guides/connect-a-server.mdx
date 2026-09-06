@@ -26,7 +26,8 @@ costs are separate.
 ## Choose a topology
 
 All capabilities may share one gateway, or each may use a different server.
-They remain independently configurable either way.
+Feature selections, models, and runtime options remain independent either way;
+features selecting the same saved server share its URL and authentication.
 
 ### One gateway
 
@@ -38,8 +39,9 @@ Freehand
 ```
 
 Use this when one compatible gateway exposes every route and model you need.
-Freehand still saves and tests each capability separately because support for
-one route does not imply support for the others.
+Save the gateway once in Connections and enable the uses it exposes. Each feature
+selects it independently and keeps its own model/options. A metadata check does
+not verify support for every enabled operation.
 
 ### Separate services
 

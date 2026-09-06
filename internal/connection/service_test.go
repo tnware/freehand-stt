@@ -126,7 +126,7 @@ func TestSavedConnectionUsesOnlyItsOwnCredentialAndMetadata(t *testing.T) {
 	cfg := config.Default()
 	cfg.BaseURL = server.URL + "/v1"
 	cfg.AuthenticationMode = config.AuthenticationModeAPIKey
-	source := &savedSourceFake{connection: savedconnection.Connection{ID: "inactive", Purpose: savedconnection.Transcription, Details: savedconnection.Extract(cfg, savedconnection.Transcription)}, key: "inactive-fixture"}
+	source := &savedSourceFake{connection: savedconnection.Connection{ID: "inactive", Uses: []savedconnection.Purpose{savedconnection.Transcription}, Details: savedconnection.Extract(cfg, savedconnection.Transcription)}, key: "inactive-fixture"}
 	active := &keyFake{value: "active-fixture"}
 	service := NewService(active, active, active, &inference.Client{HTTP: server.Client()}, nil, source)
 	result := service.TestSavedConnection("inactive")

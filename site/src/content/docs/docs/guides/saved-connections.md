@@ -5,13 +5,17 @@ description: Create server connections in one place, then choose which connectio
 
 Open **Settings → Connections** to create and manage the servers Freehand can
 use. New installations start with an empty list. Existing configured endpoints
-are retained when upgrading. Each connection belongs to Transcription,
-Post-processing, or Speech playback; those features have independent selections.
+are retained when upgrading. A connection represents one reusable server: its
+URL, backend profile, authentication, and HTTP permission are shared. Enable
+Transcription, Post-processing, and/or Speech playback under **Used for**, then
+select the same connection independently in each feature.
 
 ## Create a connection
 
-1. Choose **New connection**, enter a name, and choose **Used for**.
-2. Choose the server's **Compatibility profile** and enter its base URL.
+1. Choose **New connection**, enter a name, and choose the server's **Compatibility profile**.
+2. Enable its **Used for** switches and enter its base URL. Only uses with an
+   implemented contract for that profile can be enabled. Choose the operations
+   your deployed server actually exposes; a backend name does not prove this.
 3. Configure authentication and explicitly allow HTTP if your trusted server
    uses it. Transcription also offers a custom health path and non-secret headers.
 4. Choose **Save connection**. This saves the entry without activating it.
@@ -26,17 +30,31 @@ For first-time transcription setup, return to the readiness screen, explicitly
 
 | Settings → Connections | Feature settings pages |
 | --- | --- |
-| Connection name and purpose | Active connection selection |
+| Connection name and supported uses | Active connection selection |
 | Compatibility profile and base URL | Model and language |
 | Authentication and stored API key | Cleanup preset and instructions |
 | Allow insecure HTTP | Voice, speed, and feature enable switches |
 | Transcription health path and headers | Timeouts and provider-specific options |
 
 **Save connection** updates only that connection. Editing an active connection
-applies its endpoint settings to new requests; its model and feature options
-remain on the feature page. **Save feature settings** does not edit the saved
+applies its endpoint settings and key to new requests from **every feature using
+that server** in one save. Each feature keeps its own model and options. **Save feature settings** does not edit the saved
 connection. The home screen has the same active connection selectors. Its separate settings
 links open feature settings; model and other quick controls save runtime settings.
+
+## Reuse a server
+
+A Speaches connection can enable both Transcription and Speech playback, while
+vLLM can enable Transcription and Post-processing. Generic offers all three uses;
+llama.cpp currently offers Post-processing, and whisper.cpp offers Transcription.
+These choices describe Freehand's implemented contracts, not detected server
+capabilities. A particular vLLM deployment may expose only one operation.
+
+To extend an existing connection, **Edit** it, enable another supported use, and
+**Save connection**. Then select it on the other feature page and choose that
+feature's model. Use separate connections when URLs, credentials, or backend
+profiles differ. Transcription's custom health path and headers apply only to
+transcription; they do not get sent through cleanup or playback adapters.
 
 ## Switch, edit, duplicate, or delete
 
@@ -49,10 +67,13 @@ links open feature settings; model and other quick controls save runtime setting
 - **Duplicate** creates an inactive copy. Later edits and key replacements affect
   only that copy. Rename it through **Edit** if needed.
 - **Delete** removes an inactive entry after confirmation. To delete an active
-  entry, select another connection or **None** on its feature page first.
+  entry, select another connection or **None** in every feature using it first.
+  The same rule applies before removing an enabled use from a connection.
   Deleting the last inactive entry is allowed.
 
-Names are unique within each feature, with up to 32 connections per feature.
+New names must be unique across the connection library, with up to 32 available
+connections per feature. Upgrades preserve existing names and entries; duplicate
+URLs are not automatically merged because their authentication or uses may differ.
 Switching preserves language, voice, instructions, and provider options. If the
 new connection cannot accept an enabled provider option, the switch fails and
 keeps your current setup; adjust and save that option before switching.

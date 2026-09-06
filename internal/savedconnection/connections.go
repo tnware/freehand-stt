@@ -3,6 +3,7 @@ package savedconnection
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -32,12 +33,12 @@ const (
 const MaxPerPurpose = 32
 
 type Change struct {
-	Action        Action   `json:"action"`
-	Details       *Details `json:"details,omitempty"`
-	Purpose       Purpose  `json:"purpose"`
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	ReplacementID string   `json:"replacementID"`
+	Action        Action    `json:"action"`
+	Details       *Details  `json:"details,omitempty"`
+	Uses          []Purpose `json:"uses,omitempty"`
+	Purpose       Purpose   `json:"purpose,omitempty"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
 }
 
 // Details are connection-scoped. Language and general workflow preferences remain operation-scoped.
@@ -50,11 +51,11 @@ type Details struct {
 	Headers              map[string]string         `json:"headers"`
 }
 type Connection struct {
-	ID            string  `json:"id"`
-	Name          string  `json:"name"`
-	Purpose       Purpose `json:"purpose"`
-	Details       Details `json:"details"`
-	HasCredential bool    `json:"hasCredential"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Uses          []Purpose `json:"uses"`
+	Details       Details   `json:"details"`
+	HasCredential bool      `json:"hasCredential"`
 }
 type Catalog struct {
 	Entries  []Connection       `json:"entries"`
@@ -145,16 +146,13 @@ func Validate(p Purpose, d Details) error {
 	if _, err := compatibility.Resolve(d.CompatibilityProfile, operation); err != nil {
 		return err
 	}
-	if p != Transcription && (d.HealthPath != "" || len(d.Headers) != 0) {
-		return errors.New("custom headers and health paths belong to transcription connections")
+	if err := config.ValidateSTTConnection(d.BaseURL, d.AllowInsecureHTTP, d.AuthenticationMode, "", d.HealthPath, d.Headers); err != nil {
+		return err
 	}
 	switch p {
 	case Transcription:
 		return config.ValidateSTTConnection(d.BaseURL, d.AllowInsecureHTTP, d.AuthenticationMode, "", d.HealthPath, d.Headers)
 	case Cleanup:
-		if d.AuthenticationMode != config.AuthenticationModeNone {
-			return errors.New("cleanup authentication uses an optional API key")
-		}
 		return config.ValidatePostProcessingConnection(d.BaseURL, d.AllowInsecureHTTP, "")
 	default:
 		return config.ValidateTextToSpeechConnection(d.BaseURL, d.AllowInsecureHTTP, d.AuthenticationMode, "")
@@ -175,4 +173,39 @@ func ClearModel(v config.Settings, p Purpose) config.Settings {
 		v.TextToSpeech.Enabled = false
 	}
 	return v
+}
+
+// Supports is the user's explicit declaration of an implemented use, not inferred server evidence.
+func (c Connection) Supports(p Purpose) bool { return slices.Contains(c.Uses, p) }
+func ValidateUses(uses []Purpose, d Details) error {
+	if len(uses) == 0 || len(uses) > 3 {
+		return errors.New("choose at least one supported use")
+	}
+	seen := map[Purpose]bool{}
+	for _, p := range uses {
+		if seen[p] {
+			return errors.New("duplicate connection use")
+		}
+		seen[p] = true
+		if err := Validate(p, d); err != nil {
+			return err
+		}
+	}
+	if !seen[Transcription] && (d.HealthPath != "" || len(d.Headers) != 0) {
+		return errors.New("custom health paths and headers require transcription use")
+	}
+	return nil
+}
+
+// Project reflects the fields owned by one runtime; the connection keeps its full shared details.
+func Project(d Details, p Purpose) Details {
+	d = CloneDetails(d)
+	if p != Transcription {
+		d.HealthPath = ""
+		d.Headers = map[string]string{}
+	}
+	if p == Cleanup {
+		d.AuthenticationMode = config.AuthenticationModeNone
+	}
+	return d
 }

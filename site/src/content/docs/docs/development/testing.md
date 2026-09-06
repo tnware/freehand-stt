@@ -236,6 +236,19 @@ With a chosen model and fixed sample, verify raw fallback for non-English input
 and S1-mini cleanup under the displayed English assumption when metadata is
 absent. Live model runs remain manual and scoped; do not probe inventories.
 
+## Reusable server acceptance
+
+Create one Speaches connection with transcription and speech uses. Confirm it is
+listed once in Connections and appears in both feature selectors, but not cleanup.
+Select it independently and choose different models. Edit its endpoint/key once;
+new requests from both features must use the new coherent connection snapshot,
+while running requests keep the old one. Unselecting one feature must leave the
+other active. Removing an active use or deleting an active shared connection must
+fail without changes. Duplicate and independently replace its key; deleting one
+entry must retain a key referenced by the other. Check failed SQL writes, restart,
+and v3/v4 upgrades. A vLLM deployment may implement one or both offered operations;
+no automatic inference checks may be used to discover that.
+
 ## Saved connection acceptance
 
 Fixtures cover forward migration, empty initialization, inactive create/duplicate,

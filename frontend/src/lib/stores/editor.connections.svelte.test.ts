@@ -24,7 +24,7 @@ function configured(): Settings {
         {
           id: "first",
           name: "First",
-          purpose: Purpose.Transcription,
+          uses: [Purpose.Transcription],
           hasCredential: true,
           details: {
             compatibilityProfile: ID.Generic,
@@ -44,7 +44,6 @@ const select = {
   purpose: Purpose.Transcription,
   id: "second",
   name: "",
-  replacementID: "",
 };
 
 describe("saved connection editor", () => {

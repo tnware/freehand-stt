@@ -447,20 +447,20 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 		return
 	}
 	defer func() { key = "" }()
-	if err = savedconnection.Validate(c.Purpose, c.Details); err != nil {
+	if err = savedconnection.ValidateUses(c.Uses, c.Details); err != nil {
 		result.ErrorKind = ConnectionErrorInvalidSettings
 		return
 	}
-	if c.Purpose != savedconnection.Cleanup && c.Details.AuthenticationMode == config.AuthenticationModeNone {
+	if c.Details.AuthenticationMode == config.AuthenticationModeNone {
 		key = ""
 	}
 	health := ""
-	if c.Purpose == savedconnection.Transcription {
+	if c.Supports(savedconnection.Transcription) {
 		health = compatibility.TranscriptionHealthPath(c.Details.CompatibilityProfile, c.Details.HealthPath)
 	}
-	s.log().Info("saved connection test started", "purpose", c.Purpose)
+	s.log().Info("saved connection test started", "use_count", len(c.Uses))
 	defer func() {
-		s.log().Info("saved connection test completed", "purpose", c.Purpose, "reachable", result.Reachable, "error_kind", result.ErrorKind, "latency_ms", result.LatencyMilliseconds)
+		s.log().Info("saved connection test completed", "use_count", len(c.Uses), "reachable", result.Reachable, "error_kind", result.ErrorKind, "latency_ms", result.LatencyMilliseconds)
 	}()
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()

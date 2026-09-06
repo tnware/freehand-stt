@@ -83,7 +83,6 @@ type RequestHeader struct {
 
 type SavedConnection struct {
 	ID                   string
-	Purpose              string
 	Name                 string
 	CompatibilityProfile string
 	BaseUrl              string
@@ -97,6 +96,11 @@ type SavedConnectionHeader struct {
 	ConnectionID string
 	Name         string
 	Value        string
+}
+
+type SavedConnectionUse struct {
+	ConnectionID string
+	Purpose      string
 }
 
 type SelectedConnection struct {

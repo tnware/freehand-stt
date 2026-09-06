@@ -115,7 +115,8 @@ credentials or connections.
 
 Use a Base URL ending in `/v1`, such as `http://127.0.0.1:8000/v1`, and the
 model ID advertised by that server. In **Settings → Connections**, create an
-entry for Transcription or Post-processing with the **vLLM** profile, URL,
+entry with the **vLLM** profile and enable Transcription and/or Post-processing
+under **Used for**, according to the routes your deployment exposes. Set its URL,
 authentication, and HTTP permission, then **Save connection**. Select that entry
 on its feature page, choose the model, and save feature settings. Connection
 tests read `/models` beneath the base URL without inference.

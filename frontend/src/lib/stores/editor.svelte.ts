@@ -86,6 +86,7 @@ const copySettings = (settings: Settings): Settings => ({
     selected: { ...settings.savedConnections.selected },
     entries: (settings.savedConnections.entries ?? []).map((c) => ({
       ...c,
+      uses: [...(c.uses ?? [])],
       details: { ...c.details, headers: { ...c.details.headers } },
     })),
   },
@@ -111,10 +112,8 @@ const settingsMatch = (
 /** Owns one coherent settings/credential draft, probes, and serialized quick saves. */
 export class SettingsEditor {
   connectionDraft = $state<
-    | (Pick<
-        Connection,
-        "id" | "name" | "purpose" | "details" | "hasCredential"
-      > & {
+    | (Pick<Connection, "id" | "name" | "details" | "hasCredential"> & {
+        uses: Purpose[];
         creating: boolean;
         credentialDraft: string;
         clearCredential: boolean;
@@ -450,7 +449,7 @@ export class SettingsEditor {
     this.connectionDraft = {
       id: connection?.id ?? "",
       name: connection?.name ?? "",
-      purpose: connection?.purpose ?? purpose,
+      uses: connection ? [...(connection.uses ?? [])] : [purpose],
       hasCredential: connection?.hasCredential ?? false,
       creating: !connection,
       details: connection
@@ -476,10 +475,9 @@ export class SettingsEditor {
     return this.changeConnection(
       {
         action: form.creating ? Action.Create : Action.Update,
-        purpose: form.purpose,
+        uses: [...form.uses],
         id: form.id,
         name: form.name.trim(),
-        replacementID: "",
         details: form.details,
       },
       form.credentialDraft,
@@ -535,11 +533,9 @@ export class SettingsEditor {
       });
       this.#adopt(saved);
       this.clearCredentialDraft();
-      if (change.purpose === Purpose.Transcription)
-        this.#invalidateSTTConnection();
-      if (change.purpose === Purpose.Cleanup)
-        this.#invalidateProcessingConnection();
-      if (change.purpose === Purpose.Speech) this.#invalidateTTSConnection();
+      this.#invalidateSTTConnection();
+      this.#invalidateProcessingConnection();
+      this.#invalidateTTSConnection();
       this.#announceSettingsSaved(
         saved,
         change.action === Action.Select

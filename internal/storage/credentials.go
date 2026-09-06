@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/tnware/freehand-stt/internal/credential"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/storage/dbgen"
 )
 
@@ -75,7 +76,7 @@ func (v *credentialView) Set(value string) error {
 	}
 	account, err := s.stageCredential(v.purpose, value)
 	if err == nil {
-		s.pending[v.purpose] = account
+		s.setPendingCredential(v.purpose, account)
 	}
 	return err
 }
@@ -114,7 +115,7 @@ func (v *credentialView) Delete() error {
 	if s.pending == nil {
 		return errors.New("credential change requires a settings transaction")
 	}
-	s.pending[v.purpose] = ""
+	s.setPendingCredential(v.purpose, "")
 	return nil
 }
 func (s *Store) BeginCredentialChanges() error {
@@ -158,7 +159,7 @@ func readReferences(ctx context.Context, q *dbgen.Queries) (map[string]string, e
 	}
 	refs := map[string]string{}
 	for _, r := range rows {
-		if legacyAccount(r.Purpose) == "" || (r.Account != "" && r.Account != legacyAccount(r.Purpose) && !ownedAccount(r.Purpose, r.Account)) {
+		if legacyAccount(r.Purpose) == "" || (r.Account != "" && !connectionAccount(r.Account)) {
 			return nil, errors.New("invalid credential reference")
 		}
 		refs[r.Purpose] = r.Account
@@ -175,7 +176,7 @@ func (s *Store) collectCredentials(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		owned := false
+		owned := ownedAccount("connection", account)
 		for _, p := range purposes {
 			owned = owned || ownedAccount(p, account) || account == legacyAccount(p)
 		}
@@ -199,4 +200,30 @@ func ownedAccount(purpose, account string) bool {
 	}
 	_, err := hex.DecodeString(suffix)
 	return err == nil
+}
+
+func connectionAccount(account string) bool {
+	if ownedAccount("connection", account) {
+		return true
+	}
+	for _, p := range purposes {
+		if account == legacyAccount(p) || ownedAccount(p, account) {
+			return true
+		}
+	}
+	return false
+}
+
+// Legacy credential adapters still publish a coherent reference for every active use.
+func (s *Store) setPendingCredential(purpose, account string) {
+	s.pending[purpose] = account
+	id := s.connections.selected[savedconnection.Purpose(purpose)]
+	if id == "" {
+		return
+	}
+	for p, selected := range s.connections.selected {
+		if selected == id {
+			s.pending[string(p)] = account
+		}
+	}
 }

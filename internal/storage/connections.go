@@ -28,6 +28,7 @@ type connectionState struct {
 func (state connectionState) clone() connectionState {
 	next := connectionState{entries: map[string]storedConnection{}, selected: map[savedconnection.Purpose]string{}}
 	for id, c := range state.entries {
+		c.Uses = append([]savedconnection.Purpose{}, c.Uses...)
 		c.Details = savedconnection.CloneDetails(c.Details)
 		next.entries[id] = c
 	}
@@ -42,15 +43,13 @@ func (s *Store) ConnectionCatalog() savedconnection.Catalog {
 	catalog := savedconnection.Catalog{Entries: []savedconnection.Connection{}, Selected: map[savedconnection.Purpose]string{}}
 	for _, stored := range s.connections.entries {
 		c := stored.Connection
+		c.Uses = append([]savedconnection.Purpose{}, c.Uses...)
 		c.Details = savedconnection.CloneDetails(c.Details)
 		c.HasCredential = stored.account != ""
 		catalog.Entries = append(catalog.Entries, c)
 	}
 	sort.Slice(catalog.Entries, func(i, j int) bool {
 		a, b := catalog.Entries[i], catalog.Entries[j]
-		if a.Purpose != b.Purpose {
-			return a.Purpose < b.Purpose
-		}
 		return strings.ToLower(a.Name) < strings.ToLower(b.Name)
 	})
 	for p, id := range s.connections.selected {
@@ -59,7 +58,7 @@ func (s *Store) ConnectionCatalog() savedconnection.Catalog {
 	return catalog
 }
 func seedConnections(ctx context.Context, q *dbgen.Queries) error {
-	for _, seed := range []func(context.Context) error{q.SeedTranscriptionConnection, q.SeedCleanupConnection, q.SeedSpeechConnection, q.SeedSelectedConnections, q.SeedConnectionHeaders} {
+	for _, seed := range []func(context.Context) error{q.SeedTranscriptionConnection, q.SeedCleanupConnection, q.SeedSpeechConnection, q.SeedConnectionUses, q.SeedSelectedConnections, q.SeedConnectionHeaders} {
 		if err := seed(ctx); err != nil {
 			return err
 		}
@@ -75,19 +74,31 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	if len(rows) > savedconnection.MaxPerPurpose*3 {
 		return state, errors.New("too many saved connections")
 	}
-	counts := map[savedconnection.Purpose]int{}
 	for _, row := range rows {
-		p := savedconnection.Purpose(row.Purpose)
-		counts[p]++
-		if !savedconnection.ValidPurpose(p) || counts[p] > savedconnection.MaxPerPurpose || savedconnection.ValidateName(row.Name) != nil {
+		if savedconnection.ValidateName(row.Name) != nil || (row.CredentialAccount != "" && !connectionAccount(row.CredentialAccount)) {
 			return state, errors.New("invalid saved connection")
 		}
-		if row.CredentialAccount != "" && row.CredentialAccount != legacyAccount(row.Purpose) && !ownedAccount(row.Purpose, row.CredentialAccount) {
-			return state, errors.New("invalid connection credential reference")
+		state.entries[row.ID] = storedConnection{Connection: savedconnection.Connection{ID: row.ID, Name: row.Name, Uses: []savedconnection.Purpose{}, Details: savedconnection.Details{CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), HealthPath: row.HealthPath, Headers: map[string]string{}}}, account: row.CredentialAccount}
+	}
+	uses, err := q.ListConnectionUses(ctx)
+	if err != nil {
+		return state, err
+	}
+	counts := map[savedconnection.Purpose]int{}
+	for _, use := range uses {
+		p := savedconnection.Purpose(use.Purpose)
+		c, ok := state.entries[use.ConnectionID]
+		counts[p]++
+		if !ok || !savedconnection.ValidPurpose(p) || counts[p] > savedconnection.MaxPerPurpose {
+			return state, errors.New("invalid connection uses")
 		}
-		state.entries[row.ID] = storedConnection{Connection: savedconnection.Connection{ID: row.ID, Name: row.Name, Purpose: p, Details: savedconnection.Details{
-			CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), HealthPath: row.HealthPath, Headers: map[string]string{},
-		}}, account: row.CredentialAccount}
+		c.Uses = append(c.Uses, p)
+		state.entries[c.ID] = c
+	}
+	for _, c := range state.entries {
+		if len(c.Uses) == 0 {
+			return state, errors.New("connection has no supported uses")
+		}
 	}
 	headers, err := q.ListConnectionHeaders(ctx)
 	if err != nil {
@@ -98,7 +109,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	}
 	for _, h := range headers {
 		c, ok := state.entries[h.ConnectionID]
-		if !ok || c.Purpose != savedconnection.Transcription {
+		if !ok || !c.Supports(savedconnection.Transcription) {
 			return state, errors.New("invalid saved headers")
 		}
 		c.Details.Headers[h.Name] = h.Value
@@ -117,7 +128,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	for _, row := range selected {
 		p := savedconnection.Purpose(row.Purpose)
 		c, ok := state.entries[row.ConnectionID]
-		if !ok || c.Purpose != p || c.account != refs[row.Purpose] || !reflect.DeepEqual(c.Details, savedconnection.Extract(v, p)) {
+		if !ok || !c.Supports(p) || c.account != refs[row.Purpose] || !reflect.DeepEqual(savedconnection.Project(c.Details, p), savedconnection.Extract(v, p)) {
 			return state, errors.New("connection selection does not match committed settings")
 		}
 		state.selected[p] = row.ConnectionID
@@ -133,13 +144,13 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	if s.closed || s.db == nil || s.uncertain || s.pending != nil {
 		return v, failure("unavailable", nil)
 	}
-	if !savedconnection.ValidPurpose(change.Purpose) {
+	if change.Action == savedconnection.Select && !savedconnection.ValidPurpose(change.Purpose) {
 		return v, errors.New("invalid connection purpose")
 	}
 	state := s.connections.clone()
 	p := change.Purpose
 	current, ok := state.entries[change.ID]
-	if change.Action != savedconnection.Create && !(change.Action == savedconnection.Select && change.ID == "") && (!ok || current.Purpose != p) {
+	if change.Action != savedconnection.Create && !(change.Action == savedconnection.Select && change.ID == "") && (!ok || (change.Action == savedconnection.Select && !current.Supports(p))) {
 		return v, errors.New("saved connection is unavailable; reload settings")
 	}
 	name := strings.TrimSpace(change.Name)
@@ -148,7 +159,7 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 			return v, err
 		}
 		for id, c := range state.entries {
-			if c.Purpose == p && strings.EqualFold(c.Name, name) && ((change.Action != savedconnection.Rename && change.Action != savedconnection.Update) || id != change.ID) {
+			if strings.EqualFold(c.Name, name) && ((change.Action != savedconnection.Rename && change.Action != savedconnection.Update) || id != change.ID) {
 				return v, errors.New("a connection with that name already exists")
 			}
 		}
@@ -157,29 +168,24 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	target := ""
 	switch change.Action {
 	case savedconnection.Create, savedconnection.Duplicate:
-		count := 0
-		for _, c := range state.entries {
-			if c.Purpose == p {
-				count++
-			}
-		}
-		if count >= savedconnection.MaxPerPurpose {
-			return v, errors.New("each capability can save at most 32 connections")
+		if len(state.entries) >= savedconnection.MaxPerPurpose*3 {
+			return v, errors.New("connection limit reached")
 		}
 		var id [16]byte
 		if _, err := rand.Read(id[:]); err != nil {
 			return v, failure("unavailable", err)
 		}
-		c := storedConnection{Connection: savedconnection.Connection{ID: "connection-" + hex.EncodeToString(id[:]), Purpose: p, Name: name}}
+		c := storedConnection{Connection: savedconnection.Connection{ID: "connection-" + hex.EncodeToString(id[:]), Uses: append([]savedconnection.Purpose{}, change.Uses...), Name: name}}
 		if change.Action == savedconnection.Duplicate {
 			c.Details = savedconnection.CloneDetails(current.Details)
+			c.Uses = append([]savedconnection.Purpose{}, current.Uses...)
 			c.account = current.account
 		} else {
 			if change.Details == nil {
 				return v, errors.New("connection details are required")
 			}
 			c.Details = savedconnection.CloneDetails(*change.Details)
-			if err := savedconnection.Validate(p, c.Details); err != nil {
+			if err := savedconnection.ValidateUses(c.Uses, c.Details); err != nil {
 				return v, err
 			}
 			target = c.ID
@@ -189,15 +195,21 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 		if change.Details == nil {
 			return v, errors.New("connection details are required")
 		}
-		if err := savedconnection.Validate(p, *change.Details); err != nil {
+		if err := savedconnection.ValidateUses(change.Uses, *change.Details); err != nil {
 			return v, err
 		}
 		current.Name = name
+		current.Uses = append([]savedconnection.Purpose{}, change.Uses...)
 		current.Details = savedconnection.CloneDetails(*change.Details)
 		state.entries[current.ID] = current
 		target = current.ID
-		if state.selected[p] == current.ID {
-			v = savedconnection.Apply(v, p, current.Details)
+		for role, id := range state.selected {
+			if id == current.ID {
+				if !current.Supports(role) {
+					return v, errors.New("deselect this connection from the feature before removing its use")
+				}
+				v = savedconnection.Apply(v, role, current.Details)
+			}
 		}
 	case savedconnection.Select:
 		if state.selected[p] != change.ID {
@@ -214,12 +226,23 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 		current.Name = name
 		state.entries[current.ID] = current
 	case savedconnection.Delete:
-		if state.selected[p] == current.ID {
-			return v, errors.New("choose another connection or None in the feature settings before deleting this connection")
+		for _, id := range state.selected {
+			if id == current.ID {
+				return v, errors.New("choose another connection or None in every active feature before deleting this connection")
+			}
 		}
 		delete(state.entries, current.ID)
 	default:
 		return v, errors.New("invalid connection action")
+	}
+	counts := map[savedconnection.Purpose]int{}
+	for _, c := range state.entries {
+		for _, role := range c.Uses {
+			counts[role]++
+			if counts[role] > savedconnection.MaxPerPurpose {
+				return v, errors.New("each feature supports at most 32 connections")
+			}
+		}
 	}
 	pending := map[string]string{}
 	for _, purpose := range purposes {
@@ -242,12 +265,17 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 		if !ok {
 			continue
 		}
-		c.Details = savedconnection.Extract(v, p)
 		c.account = s.refs[purpose]
 		if s.pending != nil {
 			c.account = s.pending[purpose]
 		}
 		state.entries[id] = c
+	}
+	if err := q.ClearSelectedConnections(ctx); err != nil {
+		return state, err
+	}
+	if err := q.ClearConnectionUses(ctx); err != nil {
+		return state, err
 	}
 	ids := make([]string, 0, len(state.entries))
 	for id := range state.entries {
@@ -257,8 +285,13 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 	for _, id := range ids {
 		c := state.entries[id]
 		d := c.Details
-		if err := q.PutSavedConnection(ctx, dbgen.PutSavedConnectionParams{ID: c.ID, Purpose: string(c.Purpose), Name: c.Name, CompatibilityProfile: string(d.CompatibilityProfile), BaseUrl: d.BaseURL, AllowInsecureHttp: boolean(d.AllowInsecureHTTP), AuthenticationMode: string(d.AuthenticationMode), HealthPath: d.HealthPath, CredentialAccount: c.account}); err != nil {
+		if err := q.PutSavedConnection(ctx, dbgen.PutSavedConnectionParams{ID: c.ID, Name: c.Name, CompatibilityProfile: string(d.CompatibilityProfile), BaseUrl: d.BaseURL, AllowInsecureHttp: boolean(d.AllowInsecureHTTP), AuthenticationMode: string(d.AuthenticationMode), HealthPath: d.HealthPath, CredentialAccount: c.account}); err != nil {
 			return state, err
+		}
+		for _, p := range c.Uses {
+			if err := q.PutConnectionUse(ctx, dbgen.PutConnectionUseParams{ConnectionID: id, Purpose: string(p)}); err != nil {
+				return state, err
+			}
 		}
 		if err := q.ClearConnectionHeaders(ctx, id); err != nil {
 			return state, err
@@ -328,18 +361,20 @@ func (s *Store) StageConnectionCredential(value string, clear bool) error {
 	if clear {
 		c.account = ""
 	} else if strings.TrimSpace(value) != "" {
-		account, err := s.stageCredential(string(c.Purpose), value)
+		account, err := s.stageCredential("connection", value)
 		if err != nil {
 			return err
 		}
 		c.account = account
 	}
-	if c.Purpose != savedconnection.Cleanup && c.Details.AuthenticationMode == config.AuthenticationModeNone {
+	if c.Details.AuthenticationMode == config.AuthenticationModeNone {
 		c.account = ""
 	}
 	s.pendingConnections.entries[c.ID] = c
-	if s.pendingConnections.selected[c.Purpose] == c.ID {
-		s.pending[string(c.Purpose)] = c.account
+	for p, id := range s.pendingConnections.selected {
+		if id == c.ID {
+			s.pending[string(p)] = c.account
+		}
 	}
 	return nil
 }
@@ -355,13 +390,13 @@ func (s *Store) ResolveSavedConnection(id string) (savedconnection.Connection, s
 	}
 	c.Details = savedconnection.CloneDetails(c.Details)
 	key := ""
-	if c.account != "" && (c.Purpose == savedconnection.Cleanup || c.Details.AuthenticationMode == config.AuthenticationModeAPIKey) {
+	if c.account != "" && c.Details.AuthenticationMode == config.AuthenticationModeAPIKey {
 		var err error
 		key, err = s.vault.Get(c.account)
 		if err != nil {
 			return savedconnection.Connection{}, "", err
 		}
-	} else if c.Purpose != savedconnection.Cleanup && c.Details.AuthenticationMode == config.AuthenticationModeAPIKey {
+	} else if c.Details.AuthenticationMode == config.AuthenticationModeAPIKey {
 		return savedconnection.Connection{}, "", credential.ErrNotFound
 	}
 	return c.Connection, key, nil

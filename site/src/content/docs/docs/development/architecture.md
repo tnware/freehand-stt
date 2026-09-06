@@ -12,8 +12,10 @@ retains coherent saves and immutable request profiles. See the
 [storage maintenance guide](../storage/) for schema changes and recovery.
 Transcript history remains optional and memory-only.
 
-Named connections are capability-scoped records, with independent active IDs for
-transcription, cleanup, and playback. A dedicated Connections page owns creation,
+Named connections represent reusable servers, with explicit supported uses and
+independent active selections for transcription, cleanup, and playback. One ID
+can be selected by multiple features; their models and runtime options remain
+independent while URL, profile, authentication, and credential reference are shared. A dedicated Connections page owns creation,
 editing, duplication, deletion, endpoint/authentication/profile fields, and saved
 metadata tests. Creation is inactive; feature pages own active selection, model,
 language, presets, voice, and other runtime options. Fresh catalogs are empty.
@@ -337,7 +339,7 @@ Wails stays at `Info` because the pinned bridge's debug tracing serializes bindi
 
 ## Configuration boundaries
 
-Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS also have independent endpoint, model, HTTP-policy, and credential identities even when the user points them at the same server. Stored credentials remain in Windows Credential Manager; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
+Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS retain independent runtime models and selections. Selecting the same reusable connection explicitly shares its endpoint, HTTP policy, backend profile, and credential reference; selecting separate connections keeps those identities independent. Stored credentials remain in Windows Credential Manager; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
 
 `internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation and closes native output deterministically.
 

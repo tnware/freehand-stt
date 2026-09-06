@@ -17,12 +17,12 @@
     compact?: boolean;
     onChange: (change: Change) => Promise<boolean>;
   } = $props();
-  const entries = $derived((catalog.entries ?? []).filter((c) => c.purpose === purpose));
+  const entries = $derived((catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)));
   const selected = $derived(entries.find((c) => c.id === catalog.selected?.[purpose]));
   async function select(id: string) {
     const next = id === "none" ? "" : id;
     if (next === (selected?.id ?? "")) return;
-    await onChange({ action: Action.Select, purpose, id: next, name: "", replacementID: "" });
+    await onChange({ action: Action.Select, purpose, id: next, name: "" });
   }
 </script>
 

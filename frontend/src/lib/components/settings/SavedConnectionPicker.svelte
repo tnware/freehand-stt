@@ -17,7 +17,7 @@
     onChange: (change: Change) => Promise<boolean>;
     onManage: () => void;
   } = $props();
-  const entries = $derived((catalog.entries ?? []).filter((c) => c.purpose === purpose));
+  const entries = $derived((catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)));
   const selected = $derived(entries.find((c) => c.id === catalog.selected?.[purpose]));
 </script>
 

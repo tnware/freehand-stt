@@ -91,10 +91,12 @@ Under **Settings → Connections**, create a **Transcription** connection with t
 Choose **Save connection**, then select it in **Settings → Transcription** and
 choose an installed model. Save feature settings.
 
-For playback, create a separate **Speech playback** connection with the Speaches
-profile. Select it in **Settings → Speech playback**, choose the installed TTS
-model and voice, enable playback, and save before explicitly previewing a voice.
-The operations may share a server but retain separate credentials and settings.
+For playback on the same server, edit that connection and enable **Speech
+playback** under **Used for**. Save it, then select the same entry in **Settings →
+Speech playback**, choose the installed TTS model and voice, enable playback, and
+save before explicitly previewing a voice. Both features share the connection
+and key while retaining separate models and options. Create another connection
+when the playback endpoint or credentials differ.
 
 The [connection guide](../../guides/connect-a-server/) explains deployment
 topologies and shared settings. Freehand neither installs models nor loads all
