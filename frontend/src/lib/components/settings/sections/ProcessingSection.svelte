@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Purpose } from "$bindings/savedconnection";
+  import { rememberedModels } from "$lib/utils/modelSettings";
   import { ID } from "$bindings/compatibility";
   import RuntimeModelPicker from "$lib/components/settings/RuntimeModelPicker.svelte";
   import CleanupControls from "$lib/components/settings/CleanupControls.svelte";
@@ -23,12 +25,18 @@
     profiles,
     connection,
     busy = false,
+    draftModels = [],
+    onChooseModel,
+    onForgetModel,
     onTestConnection,
   }: {
     settings: Settings;
     profiles: ProfileDescriptor[];
     connection: ConnectionResult | null;
     busy?: boolean;
+    draftModels?: string[];
+    onChooseModel: (model: string) => boolean;
+    onForgetModel: () => void;
     onTestConnection: () => void;
   } = $props();
   const processor = $derived(settings.postProcessing);
@@ -57,7 +65,11 @@
     >
     <RuntimeModelPicker
       id="post-processing-model"
-      bind:value={settings.postProcessing.model}
+      value={settings.postProcessing.model}
+      {draftModels}
+      onChoose={onChooseModel}
+      onForget={onForgetModel}
+      savedModels={rememberedModels(settings, Purpose.Cleanup).map((e) => e.model)}
       models={connection?.modelIDs ?? []}
       {busy}
       onDiscover={onTestConnection}

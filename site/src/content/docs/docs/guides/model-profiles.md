@@ -51,16 +51,48 @@ of the model ID your server exposes. Its requirements are shown near the picker:
 
 See [post-processing](../post-processing/) and [languages](../languages/).
 
-## What gets saved?
+## Remember settings for each model
 
-Each feature saves its current model profile and options independently. Editing
-a shared connection does not replace those choices. Model profiles do not own
-URLs, credentials, shortcuts, or recording behavior.
+Freehand remembers your choices separately for each **connection, feature, and
+model ID**. Choose a saved model from the searchable **Model** picker to restore those options
+without listing models on the server. A new model ID starts with Generic and
+Freehand's default model options; its name never selects a specialized profile.
 
-Changing a model ID does not automatically switch its profile. Review the
-profile when selecting another model. Separately remembered settings for each
-model are future work; the current feature settings remain explicit.
+| Feature | Remembered model options |
+| --- | --- |
+| Transcription | Model profile, language, context hint, hotwords, and temperature override |
+| Post-processing | Model profile, custom instruction, S1-mini controls, output limit, and reasoning override |
+| Speech playback | Model profile, voice, and speed |
 
-Existing installations retain their cleanup profile, instructions, and output
-controls. Transcription and speech playback start with Generic. Running jobs
-keep the profile captured when they began.
+Search or enter a model ID in the **Model** picker, select it, then review its options.
+**Save feature settings** saves the current selection and all edited model options together.
+Switching models in Settings changes your draft; **Discard** restores the applied
+selection. You can switch freely: unsaved options stay in this editing session for each
+model, and returning to that model restores your edits. Discard clears all of
+these model drafts. Home-screen model controls apply and save
+immediately, including the restored options.
+
+Switching connections restores that connection's last selected model for the
+feature. A connection without a remembered selection starts with defaults and
+needs a model chosen. Enable switches, recording behavior, shortcuts, and request
+timeouts remain feature or application settings rather than model preferences.
+Running jobs continue with the settings captured when they started.
+
+The model actions menu’s **Forget saved settings for this model** removes its saved preferences and clears the current model
+selection. Save or discard edits first. You can enter the same ID again to start
+from defaults. Freehand remembers up to 32 models per connection and feature;
+forget an unused model if you reach that limit.
+
+Renaming a connection or changing its authentication keeps remembered models.
+Changing its URL or backend profile clears its remembered models and active model
+choices, because the previous options may describe a different server contract.
+Duplicating a connection starts a separate set of model preferences. Deleting a
+connection, or removing one of its inactive uses, removes the corresponding
+remembered preferences.
+
+For whisper.cpp, options belong to the connection's **Server-loaded model** slot.
+Freehand cannot identify a replacement model loaded by that server; review its
+language and options yourself when changing it. The server still owns model loading.
+
+Upgrades retain current model selections and seed their remembered preferences.
+No credentials or generated transcripts are included in model preferences.

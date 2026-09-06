@@ -12,6 +12,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/credential"
+	"github.com/tnware/freehand-stt/internal/modelsettings"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/storage/dbgen"
 )
@@ -21,12 +22,14 @@ type storedConnection struct {
 	account string
 }
 type connectionState struct {
+	models   []modelsettings.Entry
 	entries  map[string]storedConnection
 	selected map[savedconnection.Purpose]string
 }
 
 func (state connectionState) clone() connectionState {
 	next := connectionState{entries: map[string]storedConnection{}, selected: map[savedconnection.Purpose]string{}}
+	next.models = append([]modelsettings.Entry{}, state.models...)
 	for id, c := range state.entries {
 		c.Uses = append([]savedconnection.Purpose{}, c.Uses...)
 		c.Details = savedconnection.CloneDetails(c.Details)
@@ -133,6 +136,14 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 		}
 		state.selected[p] = row.ConnectionID
 	}
+	if err := readRememberedModels(ctx, q, &state); err != nil {
+		return state, err
+	}
+	// Legacy import creates connections after schema migration; capture active choices too.
+	if err := rememberActiveModels(&state, v); err != nil {
+		return state, err
+	}
+
 	return state, nil
 }
 
@@ -198,6 +209,10 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 		if err := savedconnection.ValidateUses(change.Uses, *change.Details); err != nil {
 			return v, err
 		}
+		modelIdentityChanged := current.Details.BaseURL != change.Details.BaseURL || current.Details.CompatibilityProfile != change.Details.CompatibilityProfile
+		if modelIdentityChanged {
+			state.forgetModels(current.ID)
+		}
 		current.Name = name
 		current.Uses = append([]savedconnection.Purpose{}, change.Uses...)
 		current.Details = savedconnection.CloneDetails(*change.Details)
@@ -209,10 +224,15 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 					return v, errors.New("deselect this connection from the feature before removing its use")
 				}
 				v = savedconnection.Apply(v, role, current.Details)
+				if modelIdentityChanged {
+					v = state.restoreModel(savedconnection.ClearModel(v, role), role, current.ID)
+				}
 			}
 		}
 	case savedconnection.Select:
-		if state.selected[p] != change.ID {
+		previous := v
+		selectionChanged := state.selected[p] != change.ID
+		if selectionChanged {
 			v = savedconnection.ClearModel(v, p)
 		}
 		if change.ID == "" {
@@ -221,6 +241,19 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 		} else {
 			state.selected[p] = current.ID
 			v = savedconnection.Apply(v, p, current.Details)
+		}
+		if selectionChanged {
+			v = state.restoreModel(v, p, change.ID)
+			if modelsettings.Model(v, p) != "" {
+				switch p {
+				case savedconnection.Transcription:
+					v.SetupCompleted = previous.SetupCompleted
+				case savedconnection.Cleanup:
+					v.PostProcessing.Enabled = previous.PostProcessing.Enabled
+				case savedconnection.Speech:
+					v.TextToSpeech.Enabled = previous.TextToSpeech.Enabled
+				}
+			}
 		}
 	case savedconnection.Rename:
 		current.Name = name

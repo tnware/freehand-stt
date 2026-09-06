@@ -185,3 +185,16 @@ Generated queries read/write all three through the same settings transaction.
 The v5 upgrade fixture verifies cleanup choices, connections, credentials, and
 restart persistence; unknown profile IDs enter recovery instead of silently
 falling back to Generic. No connection or settings reset is required.
+
+## Remembered model preferences
+
+Migration `00007_remembered_models.sql` adds a STRICT table with an explicit
+connection/purpose/model primary key, bounded typed option columns, a cascading
+connection foreign key, and a partial unique index for each use's last selection.
+It seeds current selections without changing active settings. Legacy import also
+captures its active choices after creating connections. The settings transaction
+persists remembered and active options together through sqlc; no configuration
+JSON, credentials, audio, or generated transcript content is stored in these rows.
+Go validates role ownership, model behavior, backend options, and per-use counts
+on load and save. Recovery loads the same catalog and preserves existing backup,
+forward-only migration, and commit-uncertainty behavior.

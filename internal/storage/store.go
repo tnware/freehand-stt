@@ -148,6 +148,9 @@ func (s *Store) Save(v config.Settings) error {
 	if err != nil {
 		return failure("write_failed", err)
 	}
+	if err = writeRememberedModels(ctx, q, &nextConnections, v); err != nil {
+		return failure("write_failed", err)
+	}
 	if err = tx.Commit(); err != nil {
 		s.uncertain = true
 		// A failed COMMIT may leave a driver transaction open. Drop the handle
