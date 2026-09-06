@@ -22,13 +22,17 @@ import (
 // unexported implementation detail in this same package, not a shared runtime
 // or a second service layer.
 type Service struct {
-	recorder   *recorder
-	settings   settings.Source
-	activity   *activity.Coordinator
-	closed     atomic.Bool
-	workerMu   sync.Mutex
-	completion chan func()
-	workerDone chan struct{}
+	recorder     *recorder
+	settings     settings.Source
+	activity     *activity.Coordinator
+	closed       atomic.Bool
+	workerMu     sync.Mutex
+	completion   chan func()
+	workerDone   chan struct{}
+	rootCancel   context.CancelFunc
+	shutdownOnce sync.Once
+	shutdownDone chan struct{}
+	shutdownErr  error
 }
 
 func NewService(capture audio.Capture, input insertion.Platform, client *inference.Client, processor *postprocess.Processor, source settings.Source, profiles settings.ProfileSource, transcripts *history.Store, admission *activity.Coordinator, changed func(Status), logger *slog.Logger) *Service {
@@ -39,9 +43,10 @@ func NewService(capture audio.Capture, input insertion.Platform, client *inferen
 		transcripts = history.NewStore(source.Current().HistoryEnabled, input)
 	}
 	service := &Service{
-		recorder: newRecorder(capture, input, client, processor, source, profiles, transcripts, changed, logger),
-		settings: source,
-		activity: admission,
+		recorder:     newRecorder(capture, input, client, processor, source, profiles, transcripts, changed, logger),
+		settings:     source,
+		activity:     admission,
+		shutdownDone: make(chan struct{}),
 	}
 	service.recorder.scheduleCompletion = service.scheduleCompletion
 	return service
@@ -51,13 +56,18 @@ func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptio
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	s.closed.Store(false)
-	s.recorder.setRootContext(ctx)
 	s.workerMu.Lock()
+	if s.closed.Load() {
+		s.workerMu.Unlock()
+		return errors.New("dictation service is closed")
+	}
 	if s.completion != nil {
 		s.workerMu.Unlock()
 		return nil
 	}
+	root, cancel := context.WithCancel(ctx)
+	s.rootCancel = cancel
+	s.recorder.setRootContext(root)
 	s.completion = make(chan func(), 1)
 	queue := s.completion
 	s.workerDone = make(chan struct{})
@@ -73,27 +83,42 @@ func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptio
 }
 
 func (s *Service) ServiceShutdown() error {
-	if !s.closed.CompareAndSwap(false, true) {
-		return nil
-	}
-	s.activity.Close()
-	closeErr := s.recorder.close()
-	s.workerMu.Lock()
-	if s.completion != nil {
-		close(s.completion)
-		s.completion = nil
-	}
-	done := s.workerDone
-	s.workerDone = nil
-	s.workerMu.Unlock()
-	if done == nil {
-		return closeErr
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return s.shutdown(ctx)
+}
+
+// One deadline covers transition locks, native capture teardown and completion.
+// Cleanup retains ownership if a driver does not return before that deadline.
+func (s *Service) shutdown(ctx context.Context) error {
+	s.shutdownOnce.Do(func() {
+		s.closed.Store(true)
+		s.recorder.closed.Store(true)
+		s.activity.Close()
+		s.workerMu.Lock()
+		if s.rootCancel != nil {
+			s.rootCancel()
+			s.rootCancel = nil
+		}
+		if s.completion != nil {
+			close(s.completion)
+			s.completion = nil
+		}
+		done := s.workerDone
+		s.workerMu.Unlock()
+		go func() {
+			s.shutdownErr = s.recorder.close()
+			if done != nil {
+				<-done
+			}
+			close(s.shutdownDone)
+		}()
+	})
 	select {
-	case <-done:
-		return closeErr
-	case <-time.After(5 * time.Second):
-		return errors.Join(closeErr, errors.New("dictation completion shutdown exceeded the service deadline"))
+	case <-s.shutdownDone:
+		return s.shutdownErr
+	case <-ctx.Done():
+		return errors.Join(errors.New("dictation shutdown exceeded the service deadline"), ctx.Err())
 	}
 }
 

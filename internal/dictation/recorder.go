@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -95,7 +96,7 @@ type recorder struct {
 	profiles           settings.ProfileSource
 	history            *history.Store
 	changed            func(Status)
-	closed             bool
+	closed             atomic.Bool
 	targets            map[uint64]insertion.Target
 	pending            string
 	runProfiles        map[uint64]settings.RequestProfile
@@ -160,7 +161,7 @@ func (c *recorder) setRootContext(ctx context.Context) {
 		ctx = context.Background()
 	}
 	c.mu.Lock()
-	if !c.closed {
+	if !c.closed.Load() {
 		c.rootContext = ctx
 	}
 	c.mu.Unlock()
@@ -193,10 +194,7 @@ func (c *recorder) cancelWorkLocked() {
 	}
 }
 func (c *recorder) publish(s Status) {
-	c.mu.Lock()
-	closed := c.closed
-	c.mu.Unlock()
-	if closed {
+	if c.closed.Load() {
 		return
 	}
 	if c.changed != nil {
@@ -220,7 +218,7 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 	c.transition.Lock()
 	defer c.transition.Unlock()
 	c.mu.Lock()
-	if c.closed {
+	if c.closed.Load() {
 		c.mu.Unlock()
 		return errors.New("application is shutting down")
 	}
@@ -244,7 +242,7 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 		target = insertion.Target{}
 	}
 	c.mu.Lock()
-	if c.closed {
+	if c.closed.Load() {
 		c.mu.Unlock()
 		return errors.New("application is shutting down")
 	}
@@ -364,6 +362,9 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 		c.logger.Error("dictation capture failed to start", "generation", gen, "duration_ms", time.Since(startRequested).Milliseconds(), "error_kind", diagnostics.ErrorKind(e))
 		return e
 	}
+	if c.closed.Load() || c.ctx.Err() != nil {
+		return errors.New("recording cancelled during microphone startup")
+	}
 	readyAt := time.Now().UTC()
 	c.mu.Lock()
 	if c.status.Generation == gen && c.status.State == Recording {
@@ -395,7 +396,7 @@ func (c *recorder) publishVADState(gen uint64, active bool) {
 		state = VADSpeech
 	}
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != Recording || c.status.VADState == state {
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != Recording || c.status.VADState == state {
 		c.mu.Unlock()
 		return
 	}
@@ -416,7 +417,7 @@ func (c *recorder) publishAutoStopState(gen uint64, armed, countdown bool, remai
 		deadline = time.Now().UTC().Add(time.Duration(remainingMilliseconds) * time.Millisecond)
 	}
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != Recording ||
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != Recording ||
 		(c.status.AutoStopState == state && c.status.AutoStopDeadline.Equal(deadline)) {
 		c.mu.Unlock()
 		return
@@ -430,7 +431,7 @@ func (c *recorder) publishAutoStopState(gen uint64, armed, countdown bool, remai
 
 func (c *recorder) publishSegmentProgress(gen uint64, segment int, phase SegmentPhase) {
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != Recording {
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != Recording {
 		c.mu.Unlock()
 		return
 	}
@@ -482,7 +483,7 @@ func segmentedAutoStop(run *segmentedRun) <-chan struct{} {
 func (c *recorder) captureInterrupted(gen uint64, cause error) {
 	c.transition.Lock()
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != Recording {
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != Recording {
 		c.mu.Unlock()
 		c.transition.Unlock()
 		return
@@ -507,7 +508,7 @@ func (c *recorder) captureInterrupted(gen uint64, cause error) {
 	}
 
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != Recording {
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != Recording {
 		c.mu.Unlock()
 		c.transition.Unlock()
 		return
@@ -551,7 +552,7 @@ func (c *recorder) stop(gen uint64, limit, automatic bool) error {
 func (c *recorder) stopCapture(gen uint64, limit, automatic bool) (*stoppedRecording, error) {
 	c.transition.Lock()
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != Recording {
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != Recording {
 		c.mu.Unlock()
 		c.transition.Unlock()
 		return nil, nil
@@ -689,7 +690,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	processingFallbackKind := ""
 	completionState := Transcribing
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != Transcribing {
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != Transcribing {
 		c.mu.Unlock()
 		return nil
 	}
@@ -752,7 +753,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		}
 	}
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != completionState {
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != completionState {
 		c.mu.Unlock()
 		return nil
 	}
@@ -762,7 +763,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	c.mu.Unlock()
 	c.publish(s)
 	c.mu.Lock()
-	if c.status.Generation != gen || c.status.State != Ready || ctx.Err() != nil {
+	if c.closed.Load() || c.status.Generation != gen || c.status.State != Ready || ctx.Err() != nil {
 		c.mu.Unlock()
 		return nil
 	}
@@ -845,6 +846,9 @@ func (c *recorder) cancelRecording() error {
 	c.mu.Lock()
 	if c.status.State == Idle {
 		c.cancelWorkLocked()
+		if c.closed.Load() {
+			c.status = Status{State: Idle, Generation: c.generation}
+		}
 		c.mu.Unlock()
 		return nil
 	}
@@ -863,7 +867,7 @@ func (c *recorder) cancelRecording() error {
 	c.mu.Unlock()
 	c.logger.Info("dictation cancellation requested", "generation", activeGeneration)
 	c.publish(s)
-	_ = c.capture.Cancel(context.Background())
+	cancelErr := c.capture.Cancel(context.Background())
 	if segmented != nil {
 		_ = segmented.wait()
 	}
@@ -877,12 +881,17 @@ func (c *recorder) cancelRecording() error {
 		durationMilliseconds = time.Since(startedAt).Milliseconds()
 	}
 	c.logger.Info("dictation cancelled", "generation", activeGeneration, "duration_ms", durationMilliseconds, "outcome", "cancelled")
+	// Interactive cancellation remains a best-effort reset after device loss.
+	// Shutdown reports cleanup failures to the lifecycle owner.
+	if c.closed.Load() {
+		return cancelErr
+	}
 	return nil
 }
 
 func (c *recorder) copyPending() error {
 	c.mu.Lock()
-	if c.closed {
+	if c.closed.Load() {
 		c.mu.Unlock()
 		return errors.New("application is shutting down")
 	}
@@ -910,7 +919,7 @@ func (c *recorder) copyPending() error {
 
 func (c *recorder) fail(gen uint64, msg string) {
 	c.mu.Lock()
-	if c.status.Generation == gen {
+	if !c.closed.Load() && c.status.Generation == gen {
 		c.cancelWorkLocked()
 		delete(c.targets, gen)
 		delete(c.runProfiles, gen)
@@ -924,22 +933,23 @@ func (c *recorder) fail(gen uint64, msg string) {
 	c.mu.Unlock()
 }
 func (c *recorder) close() error {
+	c.closed.Store(true)
 	c.mu.Lock()
-	c.closed = true
+	c.cancelWorkLocked()
 	c.pending = ""
 	clear(c.targets)
 	clear(c.runProfiles)
 	clear(c.runDetails)
 	c.mu.Unlock()
-	_ = c.cancelRecording()
-	return c.capture.Close()
+	cancelErr := c.cancelRecording()
+	return errors.Join(cancelErr, c.capture.Close())
 }
 
 // Explicit current-result commands never depend on optional history retention.
 func (c *recorder) copyCurrent(generation uint64) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.closed || generation != c.status.Generation || c.status.Transcript == "" {
+	if c.closed.Load() || generation != c.status.Generation || c.status.Transcript == "" {
 		return errors.New("current transcript is no longer available")
 	}
 	return c.targetPlatform.Copy(context.Background(), c.status.Transcript)
@@ -947,7 +957,7 @@ func (c *recorder) copyCurrent(generation uint64) error {
 
 func (c *recorder) clearCurrent(generation uint64) error {
 	c.mu.Lock()
-	if c.closed || generation != c.status.Generation || (c.status.State != Idle && c.status.State != Failed) {
+	if c.closed.Load() || generation != c.status.Generation || (c.status.State != Idle && c.status.State != Failed) {
 		c.mu.Unlock()
 		return errors.New("current transcript cannot be cleared")
 	}
