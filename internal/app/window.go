@@ -48,14 +48,14 @@ func opaqueWindowTheme() application.ThemeSettings {
 			BorderColour:    application.NewRGBPtr(229, 231, 235),
 		},
 		DarkModeActive: &application.WindowTheme{
-			TitleBarColour:  application.NewRGBPtr(15, 17, 21),
-			TitleTextColour: application.NewRGBPtr(247, 248, 250),
-			BorderColour:    application.NewRGBPtr(42, 48, 57),
+			TitleBarColour:  application.NewRGBPtr(17, 23, 34),
+			TitleTextColour: application.NewRGBPtr(231, 236, 243),
+			BorderColour:    application.NewRGBPtr(53, 66, 86),
 		},
 		DarkModeInactive: &application.WindowTheme{
-			TitleBarColour:  application.NewRGBPtr(15, 17, 21),
-			TitleTextColour: application.NewRGBPtr(148, 163, 184),
-			BorderColour:    application.NewRGBPtr(42, 48, 57),
+			TitleBarColour:  application.NewRGBPtr(17, 23, 34),
+			TitleTextColour: application.NewRGBPtr(147, 160, 178),
+			BorderColour:    application.NewRGBPtr(53, 66, 86),
 		},
 	}
 }
@@ -116,7 +116,7 @@ func baseWindowOptions(name, title, url string, width, height, minWidth, minHeig
 		},
 	}
 	if appearanceIsDark(effectiveAppearance, systemDark) {
-		options.BackgroundColour = application.NewRGB(15, 17, 21)
+		options.BackgroundColour = application.NewRGB(17, 23, 34)
 	}
 	if useMica {
 		options.BackgroundColour = application.NewRGBA(0, 0, 0, 0)

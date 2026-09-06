@@ -278,3 +278,11 @@ discard confirmation on Back, Cancel, or another sidebar section. Keep editing a
 Escape retain the draft; discard clears the key without saving. Check keyboard section
 order against the visible Capture, Features, and Application groups, including narrow
 layouts.
+
+For dark-palette review, check the main window, Settings, About, connection/model
+menus, dialogs, inputs, focused controls, disabled controls, and recording overlay.
+Confirm navy surfaces and cobalt accents in solid dark mode, readable muted text,
+and unchanged status colours. Compare light mode and dark Mica over both light
+and dark desktop backgrounds; the Mica result depends on Windows and wallpaper.
+Check native active/inactive title bars and startup background after relaunch.
+Browser material fixtures establish CSS composition, not native DWM acceptance.
