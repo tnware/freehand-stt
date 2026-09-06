@@ -38,6 +38,11 @@
     if (editor.connectionDirty) discardOpen = true;
     else close();
   }
+  function requestDismiss(event: Event) {
+    // Bits UI changes open before onOpenChange. Guard the interaction first.
+    event.preventDefault();
+    requestClose();
+  }
   // Window-hide handling clears the transient editor draft. Close this entrance too.
   $effect(() => {
     if (!editor.connectionDraft && !editor.saving) onClose();
@@ -45,15 +50,12 @@
   onDestroy(() => editor.cancelConnectionEdit());
 </script>
 
-<Dialog.Root
-  open
-  onOpenChange={(open) => {
-    if (!open) requestClose();
-  }}
->
+<Dialog.Root open>
   <Dialog.Content
     class="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-[660px]"
     showCloseButton={false}
+    onEscapeKeydown={requestDismiss}
+    onInteractOutside={requestDismiss}
     onCloseAutoFocus={(event) => {
       event.preventDefault();
       if (returnFocus instanceof HTMLElement && returnFocus.isConnected) returnFocus.focus();

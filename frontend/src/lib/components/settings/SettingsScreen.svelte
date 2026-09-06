@@ -52,6 +52,10 @@
 
   let setupPurpose = $state<Purpose | null>(null);
   let pendingConnectionAction = $state<(() => void) | null>(null);
+  function preventDismissWhileSaving(event: Event) {
+    // onOpenChange observes a close; these hooks can prevent it.
+    if (session.editor.saving) event.preventDefault();
+  }
   function withSavedSettings(action: () => void) {
     if (session.editor.saving) return;
     if (session.editor.runtimeDirty) pendingConnectionAction = action;
@@ -443,7 +447,11 @@
     if (!open && !session.editor.saving) pendingConnectionAction = null;
   }}
 >
-  <Dialog.Content showCloseButton={!session.editor.saving}>
+  <Dialog.Content
+    showCloseButton={!session.editor.saving}
+    onEscapeKeydown={preventDismissWhileSaving}
+    onInteractOutside={preventDismissWhileSaving}
+  >
     <Dialog.Header>
       <Dialog.Title>Save settings before changing connections?</Dialog.Title>
       <Dialog.Description

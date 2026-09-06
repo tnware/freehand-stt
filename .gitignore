@@ -14,3 +14,7 @@ build/android/overlay.json
 build/android/gen/
 # Scratch image exports
 ChatGPT Image *.png
+
+# Playwright browser-test output
+frontend/test-results/
+frontend/playwright-report/

@@ -343,7 +343,10 @@ first-run STT panel reuses quick connection/model controls. Settings connections
 apply immediately; model/task drafts apply with Save settings. Switching, adding,
 or editing a connection with a dirty runtime draft requires Save and continue,
 Discard and continue, or Keep editing. Failed saves retain the draft and do not
-continue the action.
+continue the action. Guarded dialogs intercept Escape and outside interactions
+before Bits UI closes them; `onOpenChange` is a notification, not a dismissal veto.
+The connection editor remains mounted during discard confirmation, and pending
+saves keep their error/retry prompt available.
 
 Library connection editor navigation is owned by `SettingsScreen`: it remembers the originating
 feature and returns there after Back or save. The editor compares non-credential fields
