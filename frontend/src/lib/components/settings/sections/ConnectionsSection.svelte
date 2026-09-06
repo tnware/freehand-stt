@@ -22,8 +22,15 @@
     editor,
     error,
     onOpenFeature,
-  }: { editor: SettingsEditor; error: string; onOpenFeature: (purpose: Purpose) => void } =
-    $props();
+    onBack,
+    onSaved,
+  }: {
+    editor: SettingsEditor;
+    error: string;
+    onBack: () => void;
+    onSaved: () => void;
+    onOpenFeature: (purpose: Purpose) => void;
+  } = $props();
   const form = $derived(editor.connectionDraft);
   const catalog = $derived(editor.applied?.savedConnections);
   const entries = $derived(catalog?.entries ?? []);
@@ -140,9 +147,9 @@
 </p>
 {#if form}
   <form
-    onsubmit={(event) => {
+    onsubmit={async (event) => {
       event.preventDefault();
-      void editor.saveConnection();
+      if (await editor.saveConnection()) onSaved();
     }}
     class="flex flex-col gap-3.5"
   >
@@ -351,11 +358,7 @@
     {/if}
     {#if error}<p role="alert" class="text-sm text-destructive">{error}</p>{/if}
     <div class="flex justify-end gap-2">
-      <Button
-        type="button"
-        variant="outline"
-        disabled={busy}
-        onclick={() => editor.cancelConnectionEdit()}>Cancel</Button
+      <Button type="button" variant="outline" disabled={busy} onclick={onBack}>Cancel</Button
       ><Button
         type="submit"
         disabled={busy ||

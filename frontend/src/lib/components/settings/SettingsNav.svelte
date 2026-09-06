@@ -13,7 +13,7 @@
     navigationRef?: HTMLElement | null;
   } = $props();
 
-  const groups = ["capture", "delivery", "server", "data"] as const;
+  const groups = ["capture", "features", "application"] as const;
 
   // Compact navigation keeps the recognizable section icons. At full width the
   // icon gives way to the label, and the active row is marked by an accent edge
@@ -33,17 +33,19 @@
 
     event.preventDefault();
     const currentIndex = SETTINGS_SECTIONS.findIndex((section) => section.id === current);
-    const nextIndex = event.key === "Home"
-      ? 0
-      : event.key === "End"
-        ? SETTINGS_SECTIONS.length - 1
-        : (currentIndex + (event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1) + SETTINGS_SECTIONS.length) % SETTINGS_SECTIONS.length;
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? SETTINGS_SECTIONS.length - 1
+          : (currentIndex +
+              (event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1) +
+              SETTINGS_SECTIONS.length) %
+            SETTINGS_SECTIONS.length;
     const next = SETTINGS_SECTIONS[nextIndex];
     onSelect(next.id);
     queueMicrotask(() => {
-      navigationRef
-        ?.querySelector<HTMLElement>(`[data-settings-section="${next.id}"]`)
-        ?.focus();
+      navigationRef?.querySelector<HTMLElement>(`[data-settings-section="${next.id}"]`)?.focus();
     });
   }
 </script>
@@ -54,7 +56,8 @@
   class="flex w-14 shrink-0 flex-col gap-4 border-r border-hairline bg-layer-fill px-2 py-4 sm:w-[200px] sm:px-2.5"
 >
   <p id="settings-nav-help" class="sr-only">
-    Use the arrow keys to move between settings sections. Press Home or End to jump to the first or last section.
+    Use the arrow keys to move between settings sections. Press Home or End to jump to the first or
+    last section.
   </p>
   {#each groups as group (group)}
     <div class="flex flex-col gap-[3px]">

@@ -2,11 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CancellablePromise } from "@wailsio/runtime";
 import { Action, Purpose } from "$bindings/savedconnection";
 import { ID } from "$bindings/compatibility";
-import {
-  AuthenticationMode,
-  PostProcessingPreset,
-  type Settings,
-} from "$lib/state";
+import { AuthenticationMode, PostProcessingPreset, type Settings } from "$lib/state";
 import {
   createEditor,
   settings,
@@ -47,6 +43,48 @@ const select = {
 };
 
 describe("saved connection editor", () => {
+  it("only marks changed connection fields or credential intent as dirty", () => {
+    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    editor.applySettingsSnapshot(configured());
+    editor.beginConnection(editor.applied!.savedConnections.entries![0]);
+    expect(editor.dirty).toBe(false);
+    const form = editor.connectionDraft!;
+    form.name = "Renamed";
+    expect(editor.connectionDirty).toBe(true);
+    form.name = "First";
+    expect(editor.connectionDirty).toBe(false);
+    form.uses.push(Purpose.Speech);
+    expect(editor.connectionDirty).toBe(true);
+    form.uses.pop();
+    form.details.baseURL += "/changed";
+    expect(editor.connectionDirty).toBe(true);
+    form.details.baseURL = settings.baseURL;
+    expect(editor.connectionDirty).toBe(false);
+    form.credentialDraft = "transient-canary";
+    expect(editor.dirty).toBe(true);
+    form.credentialDraft = "";
+    form.clearCredential = true;
+    expect(editor.dirty).toBe(true);
+    form.clearCredential = false;
+    expect(editor.dirty).toBe(false);
+    editor.cancelConnectionEdit();
+    editor.beginConnection();
+    expect(editor.dirty).toBe(false);
+    editor.connectionDraft!.name = "New";
+    expect(editor.dirty).toBe(true);
+    editor.cancelConnectionEdit();
+    expect(editor.connectionDraft).toBeNull();
+    expect(editor.dirty).toBe(false);
+  });
+  it("preserves an open unchanged connection against another window's snapshot", () => {
+    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    editor.applySettingsSnapshot(configured());
+    editor.beginConnection(editor.applied!.savedConnections.entries![0]);
+    const changed = configured();
+    changed.savedConnections.entries![0].name = "Changed elsewhere";
+    expect(editor.applySettingsSnapshot(changed)).toBe(false);
+    expect(editor.connectionDraft!.name).toBe("First");
+  });
   it("blocks switching an unsaved draft", async () => {
     const SaveSettings = vi.fn(() => CancellablePromise.resolve(configured()));
     const { editor } = createEditor(
@@ -91,9 +129,7 @@ describe("saved connection editor", () => {
     expect(editor.applied?.savedConnections.selected?.stt).toBe("first");
   });
   it("clears a connection credential draft when Settings is hidden", () => {
-    const { editor } = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     editor.applySettingsSnapshot(configured());
     editor.beginConnection();
     editor.connectionDraft!.credentialDraft = "draft-canary";
@@ -106,8 +142,7 @@ describe("saved connection editor", () => {
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: {
-          SaveSettings: () =>
-            CancellablePromise.reject(new Error("fixture failure")),
+          SaveSettings: () => CancellablePromise.reject(new Error("fixture failure")),
         },
       }),
     );
@@ -118,11 +153,9 @@ describe("saved connection editor", () => {
   });
   it("ignores an old cleanup probe after another window selects a connection", async () => {
     let complete!: (v: typeof connectionResult) => void;
-    const pending = new CancellablePromise<typeof connectionResult>(
-      (resolve) => {
-        complete = resolve;
-      },
-    );
+    const pending = new CancellablePromise<typeof connectionResult>((resolve) => {
+      complete = resolve;
+    });
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         connection: { TestPostProcessingConnection: () => pending },

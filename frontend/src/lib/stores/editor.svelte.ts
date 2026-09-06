@@ -120,6 +120,7 @@ export class SettingsEditor {
       })
     | null
   >(null);
+  #connectionBaseline = "";
   managedConnectionResult = $state<ConnectionResult | null>(null);
   managedConnectionTesting = $state(false);
   #managedConnectionRevision = 0;
@@ -222,7 +223,7 @@ export class SettingsEditor {
       this.clearCredentialDraft();
       return true;
     }
-    if (this.dirty && !this.saving) {
+    if ((this.dirty || this.connectionDraft !== null) && !this.saving) {
       this.#messages.reportInfo(
         "Settings changed in another window. Save or discard this draft, then reopen Settings to load the latest values.",
       );
@@ -275,6 +276,7 @@ export class SettingsEditor {
 
   clearCredentialDraft() {
     this.connectionDraft = null;
+    this.#connectionBaseline = "";
     this.#managedConnectionRevision++;
     this.managedConnectionResult = null;
     this.managedConnectionTesting = false;
@@ -287,7 +289,30 @@ export class SettingsEditor {
   }
 
   get dirty(): boolean {
-    return this.runtimeDirty || this.connectionDraft !== null;
+    return this.runtimeDirty || this.connectionDirty;
+  }
+
+  // Only non-credential fields enter the comparison snapshot. A replacement
+  // key stays solely in the transient form and is checked for presence.
+  #connectionFields(): string {
+    const form = this.connectionDraft;
+    return form
+      ? JSON.stringify({
+          name: form.name,
+          uses: [...form.uses].sort(),
+          details: form.details,
+        })
+      : "";
+  }
+
+  get connectionDirty(): boolean {
+    const form = this.connectionDraft;
+    return (
+      form !== null &&
+      (form.credentialDraft !== "" ||
+        form.clearCredential ||
+        this.#connectionFields() !== this.#connectionBaseline)
+    );
   }
 
   get runtimeDirty(): boolean {
@@ -465,6 +490,7 @@ export class SettingsEditor {
       credentialDraft: "",
       clearCredential: false,
     };
+    this.#connectionBaseline = this.#connectionFields();
   }
   cancelConnectionEdit() {
     this.clearCredentialDraft();

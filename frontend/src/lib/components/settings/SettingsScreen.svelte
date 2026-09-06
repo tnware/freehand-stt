@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { tick } from "svelte";
+  import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
+  import * as Dialog from "$lib/components/ui/dialog";
   import ConnectionsSection from "$lib/components/settings/sections/ConnectionsSection.svelte";
   import SavedConnectionPicker from "$lib/components/settings/SavedConnectionPicker.svelte";
   import { Purpose } from "$bindings/savedconnection";
@@ -25,6 +28,7 @@
 
   let {
     session,
+    visible = true,
     active = $bindable(),
     navigationRef = $bindable(null),
     onClose,
@@ -33,6 +37,7 @@
     onStopOverlayPreview,
   }: {
     session: Session;
+    visible?: boolean;
     active: SettingsSectionID;
     navigationRef?: HTMLElement | null;
     onClose: () => void;
@@ -44,15 +49,51 @@
   const section = $derived(sectionByID(active));
   const dirty = $derived(session.editor.dirty);
 
-  function selectSection(id: SettingsSectionID) {
-    if (session.editor.connectionDraft && id !== "connections") {
-      session.messages.reportInfo(
-        "Save or cancel your connection edit before leaving Connections.",
-      );
-      return;
+  let connectionOrigin = $state<SettingsSectionID | null>(null);
+  let discardConnectionOpen = $state(false);
+  let pendingSection = $state<SettingsSectionID>("connections");
+  const backSection = $derived(connectionOrigin ?? "connections");
+  const connectionBusy = $derived(session.editor.saving || session.editor.managedConnectionTesting);
+
+  $effect(() => {
+    if (!visible) {
+      connectionOrigin = null;
+      discardConnectionOpen = false;
     }
+  });
+
+  async function leaveConnection(id: SettingsSectionID) {
+    session.editor.cancelConnectionEdit();
+    connectionOrigin = null;
     active = id;
     if (id === "audio") void session.editor.refreshDevices();
+    await tick();
+    navigationRef?.querySelector<HTMLElement>(`[data-settings-section="${id}"]`)?.focus();
+  }
+
+  function requestConnectionBack(id = backSection) {
+    if (connectionBusy) return;
+    if (session.editor.connectionDirty) {
+      pendingSection = id;
+      discardConnectionOpen = true;
+    } else {
+      void leaveConnection(id);
+    }
+  }
+
+  function selectSection(id: SettingsSectionID) {
+    if (id === active) return;
+    if (session.editor.connectionDraft) {
+      requestConnectionBack(id);
+      return;
+    }
+    connectionOrigin = null;
+    active = id;
+    if (id === "audio") void session.editor.refreshDevices();
+  }
+
+  function connectionSaved() {
+    if (connectionOrigin) void leaveConnection(connectionOrigin);
   }
 
   async function saveSettings() {
@@ -114,6 +155,17 @@
   <div class="flex min-w-0 flex-1 flex-col">
     <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
       <section aria-labelledby="settings-section-title" class="flex max-w-[620px] flex-col gap-3.5">
+        {#if active === "connections" && (session.editor.connectionDraft || connectionOrigin)}
+          <Button
+            variant="ghost"
+            size="sm"
+            class="self-start"
+            disabled={connectionBusy}
+            onclick={() => requestConnectionBack()}
+          >
+            <ArrowLeftIcon class="size-4" />Back to {sectionByID(backSection).label}
+          </Button>
+        {/if}
         <div class="flex items-baseline gap-2.5">
           <h3 class="text-base font-semibold tracking-[-0.01em]">
             {section.label}
@@ -155,6 +207,7 @@
                 const c = session.editor.applied?.savedConnections.entries?.find(
                   (c) => c.id === session.editor.applied?.savedConnections.selected?.[purpose],
                 );
+                connectionOrigin = active;
                 active = "connections";
                 if (c) session.editor.beginConnection(c);
               }}
@@ -164,6 +217,8 @@
             <ConnectionsSection
               editor={session.editor}
               error={session.messages.error}
+              onBack={() => requestConnectionBack()}
+              onSaved={connectionSaved}
               onOpenFeature={(p) =>
                 selectSection(
                   p === Purpose.Transcription
@@ -297,3 +352,26 @@
     </div>
   </div>
 </div>
+
+<Dialog.Root bind:open={discardConnectionOpen}>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Discard connection changes?</Dialog.Title>
+      <Dialog.Description
+        >Your connection edits have not been saved. Going back will discard these edits, including
+        any new API key.</Dialog.Description
+      >
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="outline" onclick={() => (discardConnectionOpen = false)}>Keep editing</Button
+      >
+      <Button
+        variant="destructive"
+        onclick={() => {
+          discardConnectionOpen = false;
+          void leaveConnection(pendingSection);
+        }}>Discard changes</Button
+      >
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

@@ -270,3 +270,11 @@ Repeat selection from the home rack, including failed saves and role filtering;
 confirm its selectors match Settings and its cards use the same single border
 and fill. Browser fixtures and native builds do not replace interactive Windows acceptance.
 Use only operator-selected models for deliberate live inference acceptance.
+
+For connection navigation, open Edit connection from each feature and confirm Back and
+save return to that feature. Editing from Connections returns to the library. Unchanged
+forms leave without a prompt; changed fields or a replacement/removal key require
+discard confirmation on Back, Cancel, or another sidebar section. Keep editing and
+Escape retain the draft; discard clears the key without saving. Check keyboard section
+order against the visible Capture, Features, and Application groups, including narrow
+layouts.

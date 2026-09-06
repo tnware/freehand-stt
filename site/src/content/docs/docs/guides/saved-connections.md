@@ -4,7 +4,8 @@ description: Create server connections in one place, then choose which connectio
 ---
 
 Open **Settings → Connections** to create and manage the servers Freehand can
-use. New installations start with an empty list. Existing configured endpoints
+use. Connections is under **Application**; Transcription, Post-processing, and
+Speech playback are grouped under **Features**. New installations start with an empty list. Existing configured endpoints
 are retained when upgrading. A connection represents one reusable server: its
 URL, backend profile, authentication, and HTTP permission are shared. Enable
 Transcription, Post-processing, and/or Speech playback under **Used for**, then
@@ -63,7 +64,11 @@ transcription; they do not get sent through cleanup or playback adapters.
   playback turn off until configured and enabled again. Transcription needs its
   setup completed again. Running jobs keep their captured settings and keys.
 - Choose **Edit connection** to open the selected entry in Connections. Save or
-  discard feature edits first. Save or cancel a connection form before navigating.
+  discard feature edits first. The **Back** button at the top returns to the
+  feature you came from, or to the connection list when editing there. Saving
+  returns to that feature too. Simply viewing a connection needs no save or
+  discard. If you changed something, Back, Cancel, or choosing another section
+  lets you keep editing or discard the connection edits.
 - **Duplicate** creates an inactive copy. Later edits and key replacements affect
   only that copy. Rename it through **Edit** if needed.
 - **Delete** removes an inactive entry after confirmation. To delete an active

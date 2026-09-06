@@ -331,6 +331,15 @@ Internal row dividers remain; card outlines do not stack with elevation shadows.
 The shared switch uses a pill track and an inset circular thumb, retaining
 Bits UI state, keyboard semantics, and visible focus indicators.
 
+Connection editor navigation is owned by `SettingsScreen`: it remembers the originating
+feature and returns there after Back or save. The editor compares non-credential fields
+with its opening snapshot; credential presence/removal is checked separately without
+copying a password into that snapshot. Opening a form alone is not dirty, but still
+reserves the draft against external-window updates. Navigation confirms before
+discarding changed connection fields and clears the transient key on exit. Settings
+groups separate Capture, Features, and Application; visual and keyboard section order
+match.
+
 ## Diagnostics boundary
 
 `internal/app` creates one hierarchy from Wails' default structured logger and assigns bounded component attributes before injecting it into feature services, the post-processor, and native overlay. Runtime code records lifecycle metadata and fixed error categories rather than formatting underlying errors. It never logs transcript/audio content, credential or header material, model IDs, full paths, URL paths/query, or insertion-target identity. High-frequency audio, VAD, progress, delta, and renderer-event traffic remains off the logging path.
