@@ -127,8 +127,13 @@ jobs:
       - name: Install NSIS 3.12 when unavailable
         shell: pwsh
         run: ./.github/workflows/scripts/install-nsis.ps1
-      - name: Test native SQLite storage
-        run: go test ./internal/storage ./internal/settings ./build/scripts/storage
+      - name: Prepare frontend placeholder for native tests
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force frontend/dist | Out-Null
+          Set-Content frontend/dist/index.html "<!doctype html><title>CI compile placeholder</title>"
+      - name: Test Windows safety and application packages
+        run: go test ./...
       - name: Build executable and per-user installer
         shell: pwsh
         run: wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=user

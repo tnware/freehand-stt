@@ -655,3 +655,17 @@ or model selection. The voice picker preserves custom IDs and never treats
 inventory membership as request admission. Lists are ephemeral; selected voices
 use the existing modelsettings/sqlc save transaction, requiring no migration.
 Kokoro's `stream: false` is a backend wire adaptation, not a model preference.
+
+### Ordered runtime publication and speech lifecycle
+
+Settings mutations serialize through runtime publication, including recovery. The
+transaction lock is released before callbacks so subscribers can capture settings;
+a separate publication lock prevents a later commit from overtaking those callbacks.
+Overlay snapshots refresh when recording shortcuts change.
+
+Speech player operations and status publication share the service control boundary.
+Stop, Clear, replacement, and Restart fence prior work with a new generation. Stale
+completion cannot pause or unload the current player. Save Audio releases control
+while the native dialog is open and rechecks the generation before writing. Shutdown
+cancels work and allows two seconds for inference workers; late workers cannot use
+the closed player or publish status.

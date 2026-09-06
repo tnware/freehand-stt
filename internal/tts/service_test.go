@@ -285,3 +285,92 @@ func TestCompletedSpeechCanBeSavedThenExplicitlyCleared(t *testing.T) {
 		t.Fatal("player retained audio after clear")
 	}
 }
+
+func TestStaleCompletionCannotPauseReplacement(t *testing.T) {
+	player := &playerFake{playing: true, loaded: true}
+	service := NewService(nil, nil, player, nil, nil, nil, nil, nil, nil)
+	service.generation = 2
+	service.status = Status{Generation: 2, Phase: Playing}
+	service.finish(1, Completed, "old completion", "")
+	player.mu.Lock()
+	playing := player.playing
+	player.mu.Unlock()
+	if !playing || service.CurrentStatus().Phase != Playing {
+		t.Fatal("stale completion altered replacement")
+	}
+}
+
+func TestStopFencesDelayedGeneration(t *testing.T) {
+	player := &playerFake{}
+	service := NewService(nil, nil, player, nil, nil, nil, nil, nil, nil)
+	service.generation = 1
+	service.status = Status{Generation: 1, Phase: Generating, CanStop: true}
+	if err := service.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	service.update(1, Status{Generation: 1, Phase: Playing})
+	if service.CurrentStatus().Phase != Cancelled {
+		t.Fatal("delayed generation revived stopped playback")
+	}
+}
+
+func TestSaveDialogDoesNotBlockStopOrSaveReplacement(t *testing.T) {
+	entered, release := make(chan struct{}), make(chan struct{})
+	player := &playerFake{loaded: true}
+	service := NewService(nil, nil, player, nil, nil, func() (string, error) {
+		close(entered)
+		<-release
+		return "chosen.wav", nil
+	}, nil, nil, nil)
+	service.generation = 1
+	service.status = Status{Generation: 1, Phase: Playing, CanSave: true}
+	saved := make(chan error, 1)
+	go func() { _, err := service.SaveAudio(); saved <- err }()
+	<-entered
+	stopped := make(chan error, 1)
+	go func() { stopped <- service.Stop() }()
+	select {
+	case err := <-stopped:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		close(release)
+		t.Fatal("dialog blocked Stop")
+	}
+	close(release)
+	if err := <-saved; err == nil {
+		t.Fatal("saved a changed session")
+	}
+	if player.saved != "" {
+		t.Fatal("stale save reached player")
+	}
+}
+
+func TestSaveDialogDoesNotBlockShutdown(t *testing.T) {
+	entered, release := make(chan struct{}), make(chan struct{})
+	service := NewService(nil, nil, &playerFake{}, nil, nil, func() (string, error) {
+		close(entered)
+		<-release
+		return "chosen.wav", nil
+	}, nil, nil, nil)
+	service.status = Status{Generation: 1, Phase: Completed, CanSave: true}
+	saved := make(chan error, 1)
+	go func() { _, err := service.SaveAudio(); saved <- err }()
+	<-entered
+	done := make(chan error, 1)
+	go func() { done <- service.ServiceShutdown() }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		close(release)
+		t.Fatal("dialog blocked shutdown")
+	}
+	close(release)
+	if err := <-saved; err == nil {
+		t.Fatal("save after shutdown accepted")
+	}
+}
