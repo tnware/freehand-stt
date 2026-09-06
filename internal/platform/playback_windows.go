@@ -4,7 +4,6 @@ package platform
 
 import (
 	"errors"
-	"os"
 	"sync"
 	"time"
 
@@ -17,10 +16,16 @@ import (
 // short previews do not get stopped while their only buffer is still queued.
 const playbackDrainGrace = 100 * time.Millisecond
 
+type playbackDevice interface {
+	Start() error
+	Stop() error
+	Uninit()
+}
+
 type Playback struct {
 	mu       sync.Mutex
 	ctx      *malgo.AllocatedContext
-	dev      *malgo.Device
+	dev      playbackDevice
 	data     []byte
 	position int
 	channels uint32
@@ -123,21 +128,24 @@ func (p *Playback) Pause() error {
 	return nil
 }
 
-func (p *Playback) Restart() error {
+// Rewind never starts the device; the caller must recheck cancellation before Play.
+func (p *Playback) Rewind() error {
 	p.mu.Lock()
 	dev := p.dev
 	p.mu.Unlock()
 	if dev == nil {
 		return errors.New("no speech audio is loaded")
 	}
-	_ = dev.Stop()
+	if err := dev.Stop(); err != nil {
+		return err
+	}
 	p.mu.Lock()
 	p.position = 0
 	p.elapsed = 0
 	p.started = time.Time{}
 	p.playing = false
 	p.mu.Unlock()
-	return p.Play()
+	return nil
 }
 
 func (p *Playback) Position() (int64, int64, bool) {
@@ -168,26 +176,15 @@ func (p *Playback) OutputName() string {
 	return p.output
 }
 
-// Save writes a canonical WAV snapshot of the current in-memory session. The
-// caller supplies a path chosen by the native save dialog; no temporary file
-// or WebView audio payload is involved.
-func (p *Playback) Save(path string) error {
+// Snapshot returns an independent canonical WAV. The speech service owns its
+// lifetime and disk export; no filesystem operation holds player ownership.
+func (p *Playback) Snapshot() ([]byte, error) {
 	p.mu.Lock()
-	if p.dev == nil || len(p.data) == 0 {
-		p.mu.Unlock()
-		return errors.New("no speech audio is loaded")
+	defer p.mu.Unlock()
+	if p.closed || len(p.data) == 0 {
+		return nil, errors.New("no speech audio is loaded")
 	}
-	data := append([]byte(nil), p.data...)
-	rate, channels := p.rate, p.channels
-	p.mu.Unlock()
-	defer clear(data)
-
-	wav, err := audio.PCM16WAV(data, rate, channels)
-	if err != nil {
-		return err
-	}
-	defer clear(wav)
-	return os.WriteFile(path, wav, 0o666)
+	return audio.PCM16WAV(p.data, p.rate, p.channels)
 }
 
 func (p *Playback) Stop() error {

@@ -2,6 +2,7 @@ package tts
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -49,10 +50,10 @@ func (p *playerFake) Load([]byte, uint32, uint32) error {
 }
 func (p *playerFake) Play() error  { p.mu.Lock(); p.playing = true; p.mu.Unlock(); return nil }
 func (p *playerFake) Pause() error { p.mu.Lock(); p.playing = false; p.mu.Unlock(); return nil }
-func (p *playerFake) Restart() error {
+func (p *playerFake) Rewind() error {
 	p.mu.Lock()
 	p.position = 0
-	p.playing = true
+	p.playing = false
 	p.mu.Unlock()
 	return nil
 }
@@ -65,12 +66,15 @@ func (p *playerFake) Position() (int64, int64, bool) {
 	return p.position, p.duration, p.position >= p.duration
 }
 func (p *playerFake) OutputName() string { return "Test speakers" }
-func (p *playerFake) Save(path string) error {
+func (p *playerFake) Snapshot() ([]byte, error) {
 	p.mu.Lock()
-	p.saved = path
-	p.mu.Unlock()
-	return nil
+	defer p.mu.Unlock()
+	if !p.loaded {
+		return nil, errors.New("no audio loaded")
+	}
+	return audio.WAV([]byte{1, 0, 2, 0})
 }
+
 func (p *playerFake) Stop() error {
 	p.mu.Lock()
 	p.playing = false
@@ -248,6 +252,12 @@ func TestCompletedSpeechCanBeSavedThenExplicitlyCleared(t *testing.T) {
 		func() (string, error) { return `C:\chosen\speech.wav`, nil },
 		nil, nil, nil,
 	)
+	service.writeAudio = func(_ context.Context, path string, _ []byte) error {
+		player.mu.Lock()
+		defer player.mu.Unlock()
+		player.saved = path
+		return nil
+	}
 	if err := service.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -399,8 +409,8 @@ func TestShutdownBoundsUncooperativeInferenceWorker(t *testing.T) {
 	go func() { done <- service.ServiceShutdown() }()
 	select {
 	case err := <-done:
-		if err != nil {
-			t.Fatal(err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("shutdown error = %v", err)
 		}
 	case <-time.After(shutdownTimeout + time.Second):
 		close(client.release)
@@ -410,5 +420,22 @@ func TestShutdownBoundsUncooperativeInferenceWorker(t *testing.T) {
 	service.workers.Wait()
 	if !service.closed.Load() {
 		t.Fatal("service remained open")
+	}
+}
+
+func TestRestartPlaysTheRetainedSessionAfterRewind(t *testing.T) {
+	player := newPlayerGate("")
+	player.loaded, player.position = true, 1000
+	service, _ := testSpeechService(t, player)
+	service.generation = 1
+	service.status = Status{Generation: 1, Phase: Completed, CanRestart: true}
+	if err := service.Restart(); err != nil {
+		t.Fatal(err)
+	}
+	if player.plays.Load() != 1 {
+		t.Fatal("Restart did not explicitly start playback after rewind")
+	}
+	if service.CurrentStatus().Generation != 2 {
+		t.Fatal("Restart did not advance the generation")
 	}
 }

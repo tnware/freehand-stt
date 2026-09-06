@@ -140,6 +140,8 @@ type Service struct {
 	rootCancel               context.CancelFunc
 	workers                  sync.WaitGroup
 	closed                   atomic.Bool
+	shutdownOnce             sync.Once
+	shutdownDone             chan struct{}
 }
 
 func NewService(source settings.Source, profiles settings.ProfileSource, client *inference.Client, processor transcriptProcessor, transcripts *history.Store, input insertion.Platform, pickAudioFile func() (string, error), changed func(FileTranscriptionStatus), delta func(FileTranscriptionDelta), admission *activity.Coordinator, logger *slog.Logger) *Service {
@@ -149,7 +151,7 @@ func NewService(source settings.Source, profiles settings.ProfileSource, client 
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
-	return &Service{settings: source, profiles: profiles, client: client, processor: processor, history: transcripts, input: input, pickAudioFile: pickAudioFile, fileChanged: changed, fileDelta: delta, activity: admission, logger: logger.With("component", "file-transcription")}
+	return &Service{shutdownDone: make(chan struct{}), settings: source, profiles: profiles, client: client, processor: processor, history: transcripts, input: input, pickAudioFile: pickAudioFile, fileChanged: changed, fileDelta: delta, activity: admission, logger: logger.With("component", "file-transcription")}
 }
 
 // snapshotFileStatusLocked materializes the accumulated transcript only at a
@@ -218,38 +220,54 @@ func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptio
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	s.closed.Store(false)
 	s.lifecycleMu.Lock()
+	if s.closed.Load() {
+		s.lifecycleMu.Unlock()
+		return errors.New("file transcription service is closed")
+	}
 	s.rootContext, s.rootCancel = context.WithCancel(ctx)
 	s.lifecycleMu.Unlock()
 	return nil
 }
 
 func (s *Service) ServiceShutdown() error {
-	if !s.closed.CompareAndSwap(false, true) {
-		return nil
-	}
-	s.activity.Close()
-	s.lifecycleMu.Lock()
-	cancelRoot := s.rootCancel
-	s.rootCancel = nil
-	s.lifecycleMu.Unlock()
-	if cancelRoot != nil {
-		cancelRoot()
-	}
-	s.fileMu.Lock()
-	cancelFile := s.fileCancel
-	s.fileMu.Unlock()
-	if cancelFile != nil {
-		cancelFile()
-	}
-	done := make(chan struct{})
-	go func() { s.workers.Wait(); close(done) }()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return s.shutdown(ctx)
+}
+
+func (s *Service) shutdown(ctx context.Context) error {
+	s.shutdownOnce.Do(func() {
+		s.closed.Store(true)
+		s.activity.Close()
+		s.lifecycleMu.Lock()
+		if s.rootCancel != nil {
+			s.rootCancel()
+			s.rootCancel = nil
+		}
+		s.lifecycleMu.Unlock()
+		go func() {
+			// The owner's state lock is part of the budget too. It serializes worker
+			// admission, so Wait cannot overtake a successful workers.Add.
+			s.fileMu.Lock()
+			if s.fileCancel != nil {
+				s.fileCancel()
+				s.fileCancel = nil
+			}
+			s.fileGeneration++
+			s.fileStatus = FileTranscriptionStatus{Generation: s.fileGeneration, Phase: FileTranscriptionEmpty}
+			s.fileSelection = nil
+			s.resetFileTranscriptLocked("")
+			s.fileMu.Unlock()
+			s.workers.Wait()
+			close(s.shutdownDone)
+		}()
+	})
 	select {
-	case <-done:
+	case <-s.shutdownDone:
 		return nil
-	case <-time.After(5 * time.Second):
-		return errors.New("file transcription shutdown exceeded the service deadline")
+	case <-ctx.Done():
+		return errors.Join(errors.New("file transcription shutdown exceeded the service deadline"), ctx.Err())
 	}
 }
 
@@ -778,6 +796,9 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 	totalTranscriptionMilliseconds := time.Since(started).Milliseconds()
 	details.UploadMilliseconds = uploadMilliseconds.Load()
 	details.TranscriptionMilliseconds = max(0, totalTranscriptionMilliseconds-details.UploadMilliseconds)
+	if s.closed.Load() {
+		return
+	}
 	s.fileMu.Lock()
 	details.Buffered = s.fileStatus.Generation == generation && s.fileStatus.Buffered
 	if text != "" && err != nil && s.fileStatus.Generation == generation {
@@ -837,7 +858,7 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 	}
 
 	s.fileMu.Lock()
-	if s.fileStatus.Generation != generation {
+	if s.closed.Load() || s.fileStatus.Generation != generation {
 		s.fileMu.Unlock()
 		return
 	}
