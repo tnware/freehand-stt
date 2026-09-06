@@ -82,7 +82,10 @@ Run `go test -race ./internal/dictation ./internal/filetranscription ./internal/
 transport, and export boundaries exercise blocked teardown, cancellation before
 lock acquisition, late completion, repeated shutdown, and independent export
 ownership. Tests hold and release operations explicitly; deadline cases check the
-returned timeout and then join cleanup after releasing the blocked call. Normal
+returned timeout and then join cleanup after releasing the blocked call. The
+Restart regression runs the actual speech service and Windows playback adapter
+with a fake device whose native Stop is held through shutdown; releasing it must
+not cause another device Start, and cleanup must close it once. Normal
 CI uses fake devices and services and never performs inference.
 
 For opt-in hardware acceptance on a Windows desktop, set
@@ -90,7 +93,7 @@ For opt-in hardware acceptance on a Windows desktop, set
 `go test ./internal/platform -run '^TestNativeAudioShutdown$' -count=1 -v -timeout 20s`.
 Remove the environment variable afterward. This exercises the default microphone
 for 100 ms in memory and discards it, then closes real WASAPI output while playing
-silence and while paused. It does not save audio or contact a server. A pass proves
+silence, while paused, and after an explicit rewind/play. It does not save audio or contact a server. A pass proves
 those native device paths on that machine, not interactive tray/dialog behavior.
 
 Finish with the [native checklist](../../safety/native-test-checklist/): Quit during

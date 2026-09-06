@@ -554,6 +554,8 @@ state/control locks, native teardown, and worker drain. A deadline returns an
 explicit error; it does not close a resource concurrently with a native call that
 still owns it. Cleanup retains ownership until that call returns, and late work
 cannot publish a result, insert a transcript, or start a subsequent playback step.
+Restart separates native stop/reset (`Rewind`) from `Play`; the speech owner
+rechecks cancellation between them, just as it does between `Load` and `Play`.
 
 Speech export takes an independent canonical WAV snapshot under player control,
 then releases control before disk I/O. The export worker owns and clears that

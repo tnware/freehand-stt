@@ -50,10 +50,10 @@ func (p *playerFake) Load([]byte, uint32, uint32) error {
 }
 func (p *playerFake) Play() error  { p.mu.Lock(); p.playing = true; p.mu.Unlock(); return nil }
 func (p *playerFake) Pause() error { p.mu.Lock(); p.playing = false; p.mu.Unlock(); return nil }
-func (p *playerFake) Restart() error {
+func (p *playerFake) Rewind() error {
 	p.mu.Lock()
 	p.position = 0
-	p.playing = true
+	p.playing = false
 	p.mu.Unlock()
 	return nil
 }
@@ -420,5 +420,22 @@ func TestShutdownBoundsUncooperativeInferenceWorker(t *testing.T) {
 	service.workers.Wait()
 	if !service.closed.Load() {
 		t.Fatal("service remained open")
+	}
+}
+
+func TestRestartPlaysTheRetainedSessionAfterRewind(t *testing.T) {
+	player := newPlayerGate("")
+	player.loaded, player.position = true, 1000
+	service, _ := testSpeechService(t, player)
+	service.generation = 1
+	service.status = Status{Generation: 1, Phase: Completed, CanRestart: true}
+	if err := service.Restart(); err != nil {
+		t.Fatal(err)
+	}
+	if player.plays.Load() != 1 {
+		t.Fatal("Restart did not explicitly start playback after rewind")
+	}
+	if service.CurrentStatus().Generation != 2 {
+		t.Fatal("Restart did not advance the generation")
 	}
 }

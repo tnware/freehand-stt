@@ -39,11 +39,7 @@ func TestNativeAudioShutdown(t *testing.T) {
 			t.Fatal("microphone retained resources after Close")
 		}
 	})
-	for _, paused := range []bool{false, true} {
-		name := "playing"
-		if paused {
-			name = "paused"
-		}
+	for _, name := range []string{"playing", "paused", "restarted"} {
 		t.Run(name, func(t *testing.T) {
 			player := &Playback{}
 			if err := player.Load(make([]byte, 16000*2), 16000, 1); err != nil {
@@ -53,8 +49,16 @@ func TestNativeAudioShutdown(t *testing.T) {
 				t.Fatal(err)
 			}
 			time.Sleep(100 * time.Millisecond)
-			if paused {
+			if name == "paused" {
 				if err := player.Pause(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if name == "restarted" {
+				if err := player.Rewind(); err != nil {
+					t.Fatal(err)
+				}
+				if err := player.Play(); err != nil {
 					t.Fatal(err)
 				}
 			}

@@ -16,10 +16,16 @@ import (
 // short previews do not get stopped while their only buffer is still queued.
 const playbackDrainGrace = 100 * time.Millisecond
 
+type playbackDevice interface {
+	Start() error
+	Stop() error
+	Uninit()
+}
+
 type Playback struct {
 	mu       sync.Mutex
 	ctx      *malgo.AllocatedContext
-	dev      *malgo.Device
+	dev      playbackDevice
 	data     []byte
 	position int
 	channels uint32
@@ -122,21 +128,24 @@ func (p *Playback) Pause() error {
 	return nil
 }
 
-func (p *Playback) Restart() error {
+// Rewind never starts the device; the caller must recheck cancellation before Play.
+func (p *Playback) Rewind() error {
 	p.mu.Lock()
 	dev := p.dev
 	p.mu.Unlock()
 	if dev == nil {
 		return errors.New("no speech audio is loaded")
 	}
-	_ = dev.Stop()
+	if err := dev.Stop(); err != nil {
+		return err
+	}
 	p.mu.Lock()
 	p.position = 0
 	p.elapsed = 0
 	p.started = time.Time{}
 	p.playing = false
 	p.mu.Unlock()
-	return p.Play()
+	return nil
 }
 
 func (p *Playback) Position() (int64, int64, bool) {

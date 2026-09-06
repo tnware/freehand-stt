@@ -59,7 +59,7 @@ type player struct {
 func (*player) Load([]byte, uint32, uint32) error { return nil }
 func (*player) Play() error                       { return nil }
 func (*player) Pause() error                      { return nil }
-func (*player) Restart() error                    { return nil }
+func (*player) Rewind() error                     { return nil }
 func (*player) Position() (int64, int64, bool)    { return 0, 0, false }
 func (*player) OutputName() string                { return "fixture" }
 func (*player) Snapshot() ([]byte, error)         { return nil, nil }

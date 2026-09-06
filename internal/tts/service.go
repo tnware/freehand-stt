@@ -64,7 +64,8 @@ type Player interface {
 	Load([]byte, uint32, uint32) error
 	Play() error
 	Pause() error
-	Restart() error
+	// Rewind stops and resets the retained session without starting playback.
+	Rewind() error
 	Position() (int64, int64, bool)
 	OutputName() string
 	Snapshot() ([]byte, error)
@@ -441,10 +442,25 @@ func (s *Service) Restart() error {
 	s.status.Generation = generation
 	s.operation = cancel
 	s.mu.Unlock()
-	if err := s.player.Restart(); err != nil {
+	if err := s.player.Rewind(); err != nil {
 		cancel()
 		return err
 	}
+	// Native Stop inside Rewind may have outlived shutdown's wait budget.
+	// Play is a separate step and must not be admitted after cancellation.
+	if s.closed.Load() {
+		cancel()
+		return context.Canceled
+	}
+	if err := ctx.Err(); err != nil {
+		cancel()
+		return err
+	}
+	if err := s.player.Play(); err != nil {
+		cancel()
+		return err
+	}
+
 	s.mu.Lock()
 	if s.status.Generation == generation {
 		s.status.Phase = Playing
