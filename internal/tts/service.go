@@ -19,6 +19,9 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// Workers must observe cancellation; shutdown allows two seconds for their exit.
+const shutdownTimeout = 2 * time.Second
+
 type Phase string
 type Source string
 
@@ -93,6 +96,7 @@ type Service struct {
 	generation  uint64
 	workers     sync.WaitGroup
 	closed      atomic.Bool
+	saving      atomic.Bool
 }
 
 func NewService(profiles settings.TextToSpeechProfileSource, client SpeechClient, player Player, transcripts *history.Store, fileText func() (string, error), saveFile func() (string, error), admission *activity.Coordinator, changed func(Status), logger *slog.Logger) *Service {
@@ -136,7 +140,13 @@ func (s *Service) ServiceShutdown() error {
 	_ = s.player.Stop()
 	_ = s.player.Unload()
 	s.control.Unlock()
-	s.workers.Wait()
+	done := make(chan struct{})
+	go func() { s.workers.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(shutdownTimeout):
+		s.logger.Warn("speech shutdown worker deadline reached", "error_kind", "timeout")
+	}
 	return s.player.Close()
 }
 
@@ -251,29 +261,30 @@ func (s *Service) generate(ctx context.Context, generation uint64, profile setti
 	pcm, err := decodeWAV(audioBytes)
 	clear(audioBytes)
 	pcmBytes := len(pcm.Data)
-	if err == nil {
-		s.control.Lock()
-		if s.closed.Load() || ctx.Err() != nil || !s.isCurrent(generation) {
-			s.control.Unlock()
-			clear(pcm.Data)
-			return
-		}
-		err = s.player.Load(pcm.Data, pcm.SampleRate, pcm.Channels)
+	// Player access, admission, and publication are one ordered operation.
+	s.control.Lock()
+	if s.closed.Load() || ctx.Err() != nil || !s.isCurrent(generation) {
+		s.control.Unlock()
 		clear(pcm.Data)
+		return
+	}
+	if err == nil {
+		err = s.player.Load(pcm.Data, pcm.SampleRate, pcm.Channels)
 		if err == nil {
 			err = s.player.Play()
 		}
-		s.control.Unlock()
 	}
+	clear(pcm.Data)
 	if err != nil {
 		_ = s.player.Unload()
-		s.logger.Warn("speech playback failed", "generation", generation, "error_kind", diagnostics.ErrorKind(err))
-		s.finish(generation, Failed, err.Error(), diagnostics.ErrorKind(err))
+		s.finishLocked(generation, Failed, err.Error(), diagnostics.ErrorKind(err))
+		s.control.Unlock()
 		return
 	}
 	position, duration, _ := s.player.Position()
-	s.update(generation, Status{Generation: generation, Phase: Playing, Source: s.source(generation), HistoryID: s.historyID(generation), HistoryVersion: s.historyVersion(generation), PositionMilliseconds: position, DurationMilliseconds: duration, Message: "Playing transcript", CanPause: true, CanRestart: true, CanStop: true, CanSave: true, CanClear: true})
+	s.update(generation, Status{Generation: generation, Phase: Playing, Source: s.source(generation), HistoryID: s.historyID(generation), HistoryVersion: s.historyVersion(generation), PositionMilliseconds: position, DurationMilliseconds: duration, Message: "Playing speech", CanPause: true, CanRestart: true, CanStop: true, CanSave: true, CanClear: true})
 	s.logger.Info("speech playback started", "generation", generation, "generation_ms", time.Since(started).Milliseconds(), "audio_ms", duration, "sample_rate", pcm.SampleRate, "channels", pcm.Channels, "pcm_bytes", pcmBytes, "output_device", s.player.OutputName())
+	s.control.Unlock()
 	s.monitor(ctx, generation)
 }
 
@@ -285,22 +296,24 @@ func (s *Service) monitor(ctx context.Context, generation uint64) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			s.control.Lock()
+			if s.closed.Load() || ctx.Err() != nil || !s.isCurrent(generation) {
+				s.control.Unlock()
+				return
+			}
 			position, duration, done := s.player.Position()
 			if done {
-				s.finish(generation, Completed, "Playback complete", "")
+				s.finishLocked(generation, Completed, "Playback complete", "")
+				s.control.Unlock()
 				return
 			}
 			s.mu.Lock()
-			if s.status.Generation == generation {
-				s.status.PositionMilliseconds = position
-				s.status.DurationMilliseconds = duration
-				status := s.status
-				s.mu.Unlock()
-				s.publish(status)
-			} else {
-				s.mu.Unlock()
-				return
-			}
+			s.status.PositionMilliseconds = position
+			s.status.DurationMilliseconds = duration
+			status := s.status
+			s.mu.Unlock()
+			s.publish(status)
+			s.control.Unlock()
 		}
 	}
 }
@@ -377,7 +390,6 @@ func (s *Service) Restart() error {
 		return errors.New("application is shutting down")
 	}
 	s.mu.Lock()
-	generation := s.status.Generation
 	valid := s.status.CanRestart
 	if !valid {
 		s.mu.Unlock()
@@ -391,6 +403,9 @@ func (s *Service) Restart() error {
 		s.operation()
 	}
 	ctx, cancel := context.WithCancel(root)
+	s.generation++
+	generation := s.generation
+	s.status.Generation = generation
 	s.operation = cancel
 	s.mu.Unlock()
 	if err := s.player.Restart(); err != nil {
@@ -419,20 +434,25 @@ func (s *Service) Restart() error {
 func (s *Service) Stop() error {
 	s.control.Lock()
 	defer s.control.Unlock()
+	if s.closed.Load() {
+		return errors.New("application is shutting down")
+	}
 	s.mu.Lock()
 	if s.operation != nil {
 		s.operation()
 		s.operation = nil
 	}
 	active := s.status.Phase == Generating || s.status.Phase == Playing || s.status.Phase == Paused || s.status.Phase == Completed
-	generation := s.status.Generation
+	s.generation++
+	generation := s.generation
+	s.status.Generation = generation
 	s.mu.Unlock()
 	if err := s.player.Stop(); err != nil {
 		return err
 	}
 	_ = s.player.Unload()
 	if active {
-		s.finish(generation, Cancelled, "Speech playback stopped", "")
+		s.finishLocked(generation, Cancelled, "Speech playback stopped", "")
 	}
 	return nil
 }
@@ -441,8 +461,10 @@ func (s *Service) Stop() error {
 // The native dialog owns path selection and cancellation; audio remains inside
 // Go for the entire operation.
 func (s *Service) SaveAudio() (bool, error) {
-	s.control.Lock()
-	defer s.control.Unlock()
+	if !s.saving.CompareAndSwap(false, true) {
+		return false, errors.New("speech audio save dialog is already open")
+	}
+	defer s.saving.Store(false)
 	if s.closed.Load() {
 		return false, errors.New("application is shutting down")
 	}
@@ -462,6 +484,11 @@ func (s *Service) SaveAudio() (bool, error) {
 	}
 	if path == "" {
 		return false, nil
+	}
+	s.control.Lock()
+	defer s.control.Unlock()
+	if s.closed.Load() || !s.isCurrent(generation) {
+		return false, errors.New("speech session changed while choosing a save location")
 	}
 	if err := s.player.Save(path); err != nil {
 		s.logger.Warn("speech audio save failed", "generation", generation, "error_kind", diagnostics.ErrorKind(err))
@@ -484,7 +511,6 @@ func (s *Service) ClearAudio() error {
 		s.operation()
 		s.operation = nil
 	}
-	generation := s.status.Generation
 	canClear := s.status.CanClear
 	s.mu.Unlock()
 	if !canClear {
@@ -497,6 +523,8 @@ func (s *Service) ClearAudio() error {
 		return err
 	}
 	s.mu.Lock()
+	s.generation++
+	generation := s.generation
 	s.status = Status{Generation: generation, Phase: Idle}
 	status := s.status
 	s.mu.Unlock()
@@ -548,6 +576,17 @@ func (s *Service) isCurrent(generation uint64) bool {
 }
 
 func (s *Service) finish(generation uint64, phase Phase, message, errorKind string) {
+	s.control.Lock()
+	defer s.control.Unlock()
+	s.finishLocked(generation, phase, message, errorKind)
+}
+
+// Caller owns control; stale work must never touch the shared player.
+func (s *Service) finishLocked(generation uint64, phase Phase, message, errorKind string) {
+	if s.closed.Load() || !s.isCurrent(generation) {
+		return
+	}
+
 	if phase == Completed {
 		_ = s.player.Pause()
 	}

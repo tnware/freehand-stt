@@ -19,7 +19,7 @@ independent while URL, profile, authentication, and credential reference are sha
 editing, duplication, deletion, endpoint/authentication/profile fields, and saved
 metadata tests. Creation is inactive; feature pages own active selection, model,
 language, presets, voice, and other runtime options. Fresh catalogs are empty.
-Selection restores remembered model options for the connection and use; an
+Selection restores remembered engine options while preserving task intent (ADR 0007); an
 unconfigured connection starts with defaults and disables optional features.
 The domain contract lives in
 `internal/savedconnection`; SQLite adapters remain in storage. The existing
@@ -422,9 +422,20 @@ The Win32 renderer queues all changes onto its locked message-loop thread, uses 
 
 Settings can request a presentation-only native preview through a narrow Wails binding. Draft presentation changes update the same renderer, real dictation preempts preview, Settings close stops it, and the applied saved configuration is restored. Preview can temporarily create a surface while the applied feature is disabled, but stopping it destroys that surface. Overlay creation remains a degraded optional capability: native failure is logged without failing dictation or rolling back the saved preference.
 
-The home-screen rack is a narrow immediate-save surface for STT and post-processing models, explicit processing-profile selection, trained S1-mini output controls, and the capture/delivery switches. It is composed of `RackModule` panels grouped as Speech to text, Cleanup, Capture and Delivery, so the main window and the Settings navigation name the same concerns identically. Each update starts from the backend-confirmed settings snapshot and restores remembered options when a model changes, then applies the named quick fields before calling the same transactional settings owner with no credential mutation. It must never save the full editable Settings-window draft, and it is disabled while that modeless window is visible. The rack uses the same active connection selector as feature settings, with separate links for editing settings. Connections exclusively owns endpoint credentials, authentication, HTTP policy, and provider profiles; custom instructions and runtime options remain on feature pages.
-
-The main renderer treats transcript-list disclosure as a presentation-only WebView preference. It is written to versioned local storage and falls back safely to open when storage is missing, malformed, or unavailable. The preference never enters the Go settings transaction and does not affect configuration, history retention, or runtime authority. The rack does not collapse: its modules are compact enough to stay open, and the rack column scrolls on its own at the minimum window height.
+Home presents the selected task and current result first. The workspace keeps a readable width and uses a wider two-column layout when
+recent history is enabled: current work and controls on the left, history on the
+right. Narrow windows stack those areas. The current-result card has a compact, stable height across empty, working,
+recovery, and completed states, with status explanations inside it. Short history
+lists size to their content. In wide layouts the history scroll limit grows to
+match the adjacent result and task-settings column. Long results and history remain
+scrollable. An expandable task-settings
+area retains immediate-save STT and cleanup controls; microphone and delivery controls
+appear only for dictation. TTS shows its own connection and model/voice settings link.
+Each quick update starts from backend-confirmed settings, restores only engine options
+when a model changes, and calls the same transactional owner without credential mutation.
+Quick controls remain disabled while the Settings window owns an editable draft.
+Current results and playback controls stay accessible independently of recent history.
+Optional history is a secondary disclosure. These disclosures do not alter retention.
 
 Every input mode and every dictation state shares one `TransportShell`: a fixed 116px control cell, an elastic stage, and a 236px readout cell spanning the window under the header. Because that geometry never changes, starting a recording, switching input modes, or failing a request never moves anything else on screen. `TransportBar`, `AudioFileTranscription`, and `TextToSpeech` supply the three cells; the shell owns the progress rail, which is indeterminate for endpoint work that reports no progress and determinate only for the file-upload leg, whose length is known.
 
@@ -655,3 +666,37 @@ or model selection. The voice picker preserves custom IDs and never treats
 inventory membership as request admission. Lists are ephemeral; selected voices
 use the existing modelsettings/sqlc save transaction, requiring no migration.
 Kokoro's `stream: false` is a backend wire adaptation, not a model preference.
+
+### Ordered runtime publication and speech lifecycle
+
+Settings mutations serialize through runtime publication, including recovery. The
+transaction lock is released before callbacks so subscribers can capture settings;
+a separate publication lock prevents a later commit from overtaking those callbacks.
+Overlay snapshots refresh when recording shortcuts change.
+
+Speech player operations and status publication share the service control boundary.
+Stop, Clear, replacement, and Restart fence prior work with a new generation. Stale
+completion cannot pause or unload the current player. Save Audio releases control
+while the native dialog is open and rechecks the generation before writing. Shutdown
+cancels work and allows two seconds for inference workers; late workers cannot use
+the closed player or publish status.
+
+### Current work and optional retention
+
+The dictation owner exposes one current transcript in its bounded status DTO.
+Copy and Clear carry a generation and reject stale commands; failed-insertion
+pending-copy remains backend owned. Starting a recording, Clear, cancellation,
+and shutdown release the current transcript. File transcription continues to own
+its current result and source-file capability. Neither relies on history being on.
+The speech renderer store owns an unsent composer draft for the WebView lifetime;
+component unmount does not discard it, and session disposal clears it. No draft or
+current result is persisted in SQLite or browser storage.
+
+### Task preference ownership
+
+[ADR 0007](../../decisions/0007-task-state-and-preference-ownership/) defines the
+selection contract shared by `modelsettings.Select` and the renderer model editor.
+Language, cleanup intent, and speaking speed survive model/connection switches;
+engine options and voice remain scoped to a model. The existing SQLite snapshot
+format stays readable without changing released migrations. Historical task fields
+in model rows are not restored over the current task.

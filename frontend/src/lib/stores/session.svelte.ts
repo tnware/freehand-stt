@@ -72,6 +72,7 @@ export class Session {
   }
 
   dispose() {
+    this.speech.draft = "";
     this.editor.dispose();
     this.messages.dispose();
   }

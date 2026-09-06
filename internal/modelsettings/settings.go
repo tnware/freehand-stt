@@ -131,3 +131,17 @@ func Validate(e Entry, d savedconnection.Details) error {
 	}
 	return errors.New("invalid remembered model purpose")
 }
+
+// Select restores engine behavior without replacing the user's current task.
+// Apply remains the full snapshot decoder for validating the existing SQLite
+// format; historical task fields in remembered rows are not selection authority.
+func Select(v config.Settings, p savedconnection.Purpose, model string, o Options) config.Settings {
+	next := Apply(v, p, model, o)
+	next.Language = v.Language
+	next.PostProcessing.SystemPrompt = v.PostProcessing.SystemPrompt
+	next.PostProcessing.Styling = v.PostProcessing.Styling
+	next.PostProcessing.Structure = v.PostProcessing.Structure
+	next.PostProcessing.Context = v.PostProcessing.Context
+	next.TextToSpeech.Speed = v.TextToSpeech.Speed
+	return next
+}

@@ -11,7 +11,7 @@ model names and the same model can run behind different backends.
 
 ## Choose a model profile
 
-Open **Settings → Transcription**, **Post-processing**, or **Speech playback**.
+Open **Settings → Transcription**, **Cleanup**, or **Text to speech**.
 Choose an active connection, choose or enter the model, and review **Model
 profile** directly beneath it. Choose a specialized profile only when you know
 that is the model your server is running, then **Save feature settings**.
@@ -19,12 +19,11 @@ that is the model your server is running, then **Save feature settings**.
 | Feature | Available model profiles | Behavior |
 | --- | --- | --- |
 | Transcription | Generic | Standard transcription with the options available through the selected backend. |
-| Post-processing | Generic; S1-mini by Superwhisper | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls. |
-| Speech playback | Generic | Standard WAV speech generation with a provider voice ID. |
+| Cleanup | Generic; S1-mini by Superwhisper | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls. |
+| Text to speech | Generic | Standard WAV speech generation with a provider voice ID. |
 
-Where only Generic is available, Freehand shows its name and explanation instead
-of a dropdown with a single choice. The home screen also identifies the
-transcription model profile and lets you choose a cleanup model profile.
+Where only Generic is available, the redundant profile row is hidden. The standard
+backend contract still applies; there is no extra choice to make.
 
 **Generic is a baseline, not a claim that every model supports every option.**
 Language support, voice IDs, context hints, temperature, and generation controls
@@ -56,13 +55,20 @@ See [post-processing](../post-processing/) and [languages](../languages/).
 Freehand remembers your choices separately for each **connection, feature, and
 model ID**. Choose a saved model from the searchable **Model** picker to restore those options
 without listing models on the server. A new model ID starts with Generic and
-Freehand's default model options; its name never selects a specialized profile.
+Freehand's default engine options; its name never selects a specialized profile.
 
 | Feature | Remembered model options |
 | --- | --- |
-| Transcription | Model profile, language, context hint, hotwords, and temperature override |
-| Post-processing | Model profile, custom instruction, S1-mini controls, output limit, and reasoning override |
-| Speech playback | Model profile, voice, and speed |
+| Transcription | Model profile, context hint, hotwords, and temperature override |
+| Cleanup | Model profile, output limit, and reasoning override |
+| Text to speech | Model profile and voice |
+
+**Task intent stays in place when you change models or connections:** transcription
+language, the custom cleanup instruction, S1-mini style/structure/context choices,
+and speaking speed. Switching engines does not replace these with an older model's
+values. Recognition hints and hotwords remain model options because their meaning
+and availability depend on the backend. Specialized profiles still constrain what
+can run: S1-mini's English-only behavior never changes the transcription language.
 
 Search or enter a model ID in the **Model** picker, select it, then review its options.
 **Save feature settings** saves the current selection and all edited model options together.

@@ -43,3 +43,26 @@ func TestModelOptionsValidateWhileFeatureDisabled(t *testing.T) {
 		t.Fatal("control characters accepted")
 	}
 }
+
+func TestSelectionPreservesTaskIntent(t *testing.T) {
+	v := config.Default()
+	v.Language = "ja"
+	v.TranscriptionOptions.Prompt = "Proper names"
+	v.TranscriptionOptions.Hotwords = "Freehand"
+	v.PostProcessing.SystemPrompt = "Keep punctuation."
+	v.PostProcessing.Styling = "formal"
+	v.TextToSpeech.Speed = 1.5
+	for p, o := range Defaults() {
+		o.Voice = "model-voice"
+		next := Select(v, p, "new-model", o)
+		if next.Language != v.Language || next.PostProcessing.SystemPrompt != v.PostProcessing.SystemPrompt || next.PostProcessing.Styling != v.PostProcessing.Styling || next.TextToSpeech.Speed != v.TextToSpeech.Speed {
+			t.Fatal("model selection replaced task intent")
+		}
+		if Model(next, p) != "new-model" {
+			t.Fatal("model was not selected")
+		}
+		if p == savedconnection.Speech && next.TextToSpeech.Voice != "model-voice" {
+			t.Fatal("model voice was not restored")
+		}
+	}
+}

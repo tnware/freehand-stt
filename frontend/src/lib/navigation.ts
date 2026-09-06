@@ -63,15 +63,15 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   },
   {
     id: "processing",
-    label: "Post-processing",
+    label: "Cleanup",
     blurb: "Optionally clean completed transcripts with a separate language model.",
     icon: WandSparklesIcon,
     group: "features",
   },
   {
     id: "speech",
-    label: "Speech playback",
-    blurb: "Optionally listen to completed transcripts through a separate TTS endpoint.",
+    label: "Text to speech",
+    blurb: "Write text to speak, or listen to completed transcripts.",
     icon: Volume2Icon,
     group: "features",
   },
@@ -92,7 +92,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "history",
     label: "History",
-    blurb: "An in-memory safety net for transcripts that did not land.",
+    blurb: "Optional recent transcripts, kept in memory until you quit.",
     icon: HistoryIcon,
     group: "application",
   },

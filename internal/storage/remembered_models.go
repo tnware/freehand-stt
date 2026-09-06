@@ -31,10 +31,10 @@ func (s *connectionState) forgetModels(id string) {
 func (s connectionState) restoreModel(v config.Settings, p savedconnection.Purpose, id string) config.Settings {
 	for _, e := range s.models {
 		if e.ConnectionID == id && e.Purpose == p && e.Selected {
-			return modelsettings.Apply(v, p, e.Model, e.Options)
+			return modelsettings.Select(v, p, e.Model, e.Options)
 		}
 	}
-	return modelsettings.Apply(v, p, "", modelsettings.Defaults()[p])
+	return modelsettings.Select(v, p, "", modelsettings.Defaults()[p])
 }
 func readRememberedModels(ctx context.Context, q *dbgen.Queries, state *connectionState) error {
 	rows, err := q.ListRememberedModels(ctx)
@@ -94,7 +94,7 @@ func (s *Store) BeginForgetModel(key modelsettings.Key, v config.Settings) (conf
 		return v, errors.New("remembered model is unavailable; reload settings")
 	}
 	if modelsettings.Model(v, key.Purpose) == key.Model {
-		v = modelsettings.Apply(savedconnection.ClearModel(v, key.Purpose), key.Purpose, "", modelsettings.Defaults()[key.Purpose])
+		v = modelsettings.Select(savedconnection.ClearModel(v, key.Purpose), key.Purpose, "", modelsettings.Defaults()[key.Purpose])
 	}
 	s.pendingConnections = &state
 	return v, nil

@@ -256,6 +256,8 @@ const serviceWithStatus = (
     StopRecording: () => CancellablePromise.resolve(),
     Cancel: () => CancellablePromise.resolve(),
     CopyPending: () => CancellablePromise.resolve(),
+    CopyCurrent: () => CancellablePromise.resolve(),
+    ClearCurrent: () => CancellablePromise.resolve(),
     ...overrides.dictation,
   },
   settings: {

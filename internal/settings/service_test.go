@@ -601,3 +601,54 @@ func TestEveryOverlayPreferenceParticipatesInLiveReconfiguration(t *testing.T) {
 		t.Fatal("unchanged overlay settings triggered live reconfiguration")
 	}
 }
+
+// A blocked runtime callback must hold back the next commit/publication, while
+// remaining free to read a coherent snapshot through GetSettings.
+func TestSettingsPublicationOrdersConcurrentSaves(t *testing.T) {
+	service, _, _, _ := transactionalService(false)
+	entered, release := make(chan struct{}), make(chan struct{})
+	var applied []bool
+	service.historyEnabledChanged = func(enabled bool) {
+		if enabled {
+			close(entered)
+			<-release
+		}
+		_ = service.GetSettings()
+		applied = append(applied, enabled)
+	}
+	first, second := make(chan error, 1), make(chan error, 1)
+	next := config.Default()
+	next.HistoryEnabled = true
+	go func() { _, err := service.SaveSettings(request(next, "")); first <- err }()
+	<-entered
+	go func() { _, err := service.SaveSettings(request(config.Default(), "")); second <- err }()
+	select {
+	case <-second:
+		t.Fatal("second save passed a pending runtime publication")
+	case <-time.After(30 * time.Millisecond):
+	}
+	close(release)
+	if err := <-first; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-second; err != nil {
+		t.Fatal(err)
+	}
+	if len(applied) != 2 || !applied[0] || applied[1] || service.GetSettings().HistoryEnabled {
+		t.Fatalf("publication order = %v", applied)
+	}
+}
+
+func TestShortcutChangesRefreshOverlayHints(t *testing.T) {
+	old := config.Default()
+	next := old
+	next.ToggleShortcut = "Ctrl+Alt+G"
+	if !overlaySettingsDiffer(old, next) {
+		t.Fatal("toggle hint not refreshed")
+	}
+	next = old
+	next.HoldShortcut = "Ctrl+Alt+H"
+	if !overlaySettingsDiffer(old, next) {
+		t.Fatal("hold hint not refreshed")
+	}
+}

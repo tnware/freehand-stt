@@ -114,6 +114,7 @@ func WithUpdateChecks(apply func(bool)) Option {
 
 type Service struct {
 	mu                     sync.RWMutex
+	publicationMu          sync.Mutex // Serializes commits through runtime publication; callbacks may read settings.
 	saveMu                 sync.Mutex
 	cfg                    config.Settings
 	store                  ConfigStore
@@ -349,6 +350,8 @@ func (s *Service) GetPostProcessingProfiles() []postprocess.ProfileDescriptor {
 // SaveSettings atomically applies one complete settings and credential change
 // request, rolling back native changes if persistence fails.
 func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO, err error) {
+	s.publicationMu.Lock()
+	defer s.publicationMu.Unlock()
 	started := time.Now()
 	s.log().Info("settings save started",
 		"stt_credential_action", credentialLogAction(request.STTCredentialDraft, request.ClearSTTCredential),
@@ -671,6 +674,8 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 // validation failure is returned as renderer-safe status rather than a rejected
 // promise so the recovery dialog can update without losing its actions.
 func (s *Service) RetryConfiguration() (result SettingsDTO, err error) {
+	s.publicationMu.Lock()
+	defer s.publicationMu.Unlock()
 	started := time.Now()
 	s.log().Info("settings recovery retry started")
 	s.saveMu.Lock()
@@ -717,6 +722,8 @@ func (s *Service) RetryConfiguration() (result SettingsDTO, err error) {
 // document. Credentials remain in the native credential store and are never
 // copied into the replacement configuration.
 func (s *Service) ResetConfiguration() (result SettingsDTO, err error) {
+	s.publicationMu.Lock()
+	defer s.publicationMu.Unlock()
 	started := time.Now()
 	s.log().Info("settings recovery reset started")
 	s.saveMu.Lock()
@@ -809,7 +816,9 @@ func cloneConfigurationStatus(status ConfigurationStatus) ConfigurationStatus {
 }
 
 func overlaySettingsDiffer(old, next config.Settings) bool {
-	return old.OverlayEnabled != next.OverlayEnabled ||
+	return old.ToggleShortcut != next.ToggleShortcut ||
+		old.HoldShortcut != next.HoldShortcut ||
+		old.OverlayEnabled != next.OverlayEnabled ||
 		old.OverlaySizePercent != next.OverlaySizePercent ||
 		old.OverlayOpacityPercent != next.OverlayOpacityPercent ||
 		old.OverlayTopOffset != next.OverlayTopOffset ||

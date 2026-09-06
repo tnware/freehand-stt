@@ -99,7 +99,7 @@
       case FileTranscriptionPhase.FileTranscriptionCompleted:
         return status.buffered
           ? "The server returned the stream as one completed result."
-          : "The completed result is available in History.";
+          : "The current result is ready to inspect and copy.";
       case FileTranscriptionPhase.FileTranscriptionFailed:
         return status.message || "The file could not be transcribed.";
       default:
@@ -109,9 +109,8 @@
 
   const fileDescription = $derived.by(() => {
     if (!hasFile) return "FLAC, MP3, MP4, M4A, OGG, WAV, or WebM";
-    if (working) return "Follow the live result in History";
-    if (completed)
-      return status.transcript ? "Transcript retained in History" : "No speech detected";
+    if (working) return "Follow the current result below";
+    if (completed) return status.transcript ? "Transcript ready to copy" : "No speech detected";
     if (failed) return "Ready to retry or choose another file";
     return stream && !status.streamingUnavailable
       ? "Transcript will appear progressively"
@@ -125,11 +124,11 @@
       case FileTranscriptionPhase.FileTranscriptionProcessing:
         return "audio sent ✓";
       case FileTranscriptionPhase.FileTranscriptionStreaming:
-        return "history updates live";
+        return "result updates live";
       case FileTranscriptionPhase.FileTranscriptionCancelling:
         return "discarding";
       case FileTranscriptionPhase.FileTranscriptionCompleted:
-        return "history updated ✓";
+        return "result ready ✓";
       case FileTranscriptionPhase.FileTranscriptionFailed:
         return "nothing added";
       case FileTranscriptionPhase.FileTranscriptionSelected:
@@ -169,7 +168,7 @@
       phaseAnnouncement = "Cancelling audio file transcription.";
     } else if (phase === FileTranscriptionPhase.FileTranscriptionCompleted) {
       phaseAnnouncement = status.transcript
-        ? "Audio file transcription complete. History updated."
+        ? "Audio file transcription complete. Result ready to copy."
         : "Audio file transcription complete. No speech detected.";
     } else if (phase === FileTranscriptionPhase.FileTranscriptionFailed) {
       phaseAnnouncement = status.message || "Audio file transcription failed.";

@@ -39,6 +39,8 @@ export class SpeechState {
   }
   status = $state<TTSStatus>(IDLE_TTS);
   previewing = $state(false);
+  // Unsent work belongs to the WebView session, never browser or disk storage.
+  draft = $state("");
   #ttsStatusRevision = 0;
 
   applyStatus(status: TTSStatus) {

@@ -18,8 +18,8 @@ describe("settings navigation", () => {
     ]);
     expect(sectionsInGroup("features").map((section) => section.label)).toEqual([
       "Transcription",
-      "Post-processing",
-      "Speech playback",
+      "Cleanup",
+      "Text to speech",
     ]);
     expect(SETTINGS_SECTIONS.map((section) => section.id)).toEqual(
       ["capture", "features", "application"].flatMap((group) =>

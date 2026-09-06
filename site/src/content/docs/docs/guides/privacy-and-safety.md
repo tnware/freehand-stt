@@ -37,6 +37,16 @@ audio or text according to its own policy.
 
 ## Transcripts and history
 
+The latest dictation result stays in memory for inspection and explicit copying,
+until the next recording, Clear, or exit. File transcription keeps its current
+result until you clear or replace the selected file, start another transcription,
+or exit. These single current results are available with history off. Failed
+insertion recovery also works without history.
+
+Unsent text in the Text to speech composer stays in the current window session
+across task and settings navigation. It is never written to browser storage or
+the settings database; reloading the window or quitting clears it.
+
 Transcript history is disabled by default. When enabled, it is memory-only,
 bounded to 20 entries and 2 MiB, and cleared when Freehand exits. It stores
 raw and cleaned transcript text and limited non-secret run details—not audio,

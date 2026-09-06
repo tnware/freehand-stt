@@ -15,6 +15,7 @@
   import { readDisclosurePreference, writeDisclosurePreference } from "$lib/utils/viewPreferences";
 
   let {
+    playbackVisibleElsewhere = false,
     enabled = false,
     entries,
     fileStatus,
@@ -38,6 +39,7 @@
     ttsWorkspaceVisible = false,
     collapsible = true,
   }: {
+    playbackVisibleElsewhere?: boolean;
     enabled?: boolean;
     entries: HistoryEntry[];
     fileStatus: FileTranscriptionStatus;
@@ -126,7 +128,8 @@
     return entries.length === 1 ? "1 kept · in memory" : `${entries.length} kept · in memory`;
   });
   const showPlayback = $derived(
-    ttsStatus.phase !== TTSPhase.Idle &&
+    !playbackVisibleElsewhere &&
+      ttsStatus.phase !== TTSPhase.Idle &&
       ttsStatus.phase !== TTSPhase.Cancelled &&
       !(ttsWorkspaceVisible && ttsStatus.source === "compose"),
   );
@@ -154,7 +157,7 @@
 >
   {#if collapsible}
     <DisclosureHeader
-      label="Transcripts"
+      label="Recent history"
       {summary}
       {open}
       controls="history-detail"
@@ -165,6 +168,7 @@
   <div class="drawer" id="history-detail" inert={!open}>
     {#if enabled || entries.length > 0 || live}
       <HistoryList
+        maxHeight={collapsible ? undefined : "var(--history-max-height, 24rem)"}
         {entries}
         {live}
         {onCopy}
@@ -185,8 +189,8 @@
         <div class="max-w-sm">
           <p class="text-[13px] font-medium">Nothing is being kept</p>
           <p class="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
-            Turn history on to recover transcripts that did not land. Entries stay in memory only
-            and are cleared when Freehand quits.
+            Recent history is optional. Current results and failed-insertion recovery work with
+            history off. Entries stay in memory and are cleared when Freehand quits.
           </p>
         </div>
         <Button variant="outline" size="sm" onclick={onOpenSettings}>Turn history on</Button>
@@ -220,10 +224,15 @@
   .history-card.open {
     flex-grow: 1;
   }
-  /* Without a header there is no collapsed height to hold, so the card simply
-     fills the pane it was given. */
+  /* The parent bounds scrolling; short history lists size to their content. */
   .history-card.bare {
-    flex: 1 1 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    flex: 0 0 auto;
+  }
+  .history-card.bare .drawer {
+    flex: 0 0 auto;
   }
 
   /* Inset rather than a border, so the hairline costs no height while closed. */

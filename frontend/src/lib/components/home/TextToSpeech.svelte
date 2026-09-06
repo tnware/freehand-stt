@@ -14,6 +14,7 @@
   const maximumCharacters = 4096;
 
   let {
+    text = $bindable(""),
     settings,
     status,
     unavailable = false,
@@ -26,6 +27,7 @@
     onClear,
     onOpenSettings,
   }: {
+    text?: string;
     settings: Settings["textToSpeech"];
     status: TTSStatus;
     unavailable?: boolean;
@@ -39,7 +41,6 @@
     onOpenSettings: () => void;
   } = $props();
 
-  let text = $state("");
   const characterCount = $derived(Array.from(text).length);
   const isOwnSession = $derived(status.source === TTSSource.SourceCompose);
   const working = $derived(
@@ -127,7 +128,7 @@
         <Textarea
           bind:value={text}
           maxlength={maximumCharacters}
-          disabled={!configured || unavailable || working}
+          disabled={working}
           class="field-sizing-fixed min-h-0 flex-1 resize-none overflow-y-auto bg-well text-[13px] leading-relaxed"
           placeholder="Enter text for Freehand to read aloud…"
           aria-label="Text to speak"

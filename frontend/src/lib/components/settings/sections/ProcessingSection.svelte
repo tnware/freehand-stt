@@ -66,7 +66,7 @@
         />{/snippet}</SettingRow
     >
     <RuntimeModelPicker
-      id="post-processing-model"
+      id="cleanup-model"
       value={settings.postProcessing.model}
       {draftModels}
       onChoose={onChooseModel}
@@ -96,11 +96,11 @@
       }}
     />
     <ValueRow
-      id="post-processing-timeout"
+      id="cleanup-timeout"
       label="Request timeout"
       hint="Maximum seconds for cleanup before falling back to the raw transcript."
       >{#snippet control()}<ValueInput
-          id="post-processing-timeout"
+          id="cleanup-timeout"
           type="number"
           min={10}
           max={3600}

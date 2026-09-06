@@ -103,24 +103,27 @@ event.
 The interface shows the file name, size, progress, status, and transcript. It
 does not expose the full path to page content.
 
-## The rack
+## Current result and task settings
 
-The column on the left of the main window applies frequently changed values immediately, without a save step. Its first card keeps the most frequently changed behavior controls together:
+Home centers on the selected task and its **Current result**. Dictation keeps the
+latest delivered transcript here too; Copy and Clear work with history off. A new
+recording replaces that result. File results stay available until cleared or
+replaced. If insertion could not complete, the result explains that copying is
+needed; enabling history is not required for recovery.
 
-- **Capture** — microphone, voice detection, checkpoints, and the recording overlay.
-- **Delivery** — whether transcripts are typed straight in or wait to be copied, and whether history is kept.
+Expand **Dictation settings** or **Transcription settings** below the result for
+frequent connection, model, and cleanup choices. These quick changes apply
+immediately. Microphone and delivery controls appear only for dictation. Text to
+speech shows its own connection and links to its model and voice settings.
 
-The infrastructure controls follow beneath it:
+Each task has its own requirements. Audio file transcription does not require a
+microphone, recording shortcut, or completed dictation setup. Text to speech does
+not require a transcription connection. Dictation remains the default task.
 
-- **Speech to text** — an active connection selector, model, and a connection test.
-- **Cleanup** — on or off, an active connection selector, model, processing profile, and the S1-mini styling, structure, and context controls.
-
-Each group links to its matching Settings section. Speech to text and Cleanup can be collapsed independently; their choices persist across launches and their headers continue to show connection health and the selected model.
-
-Endpoint, credentials, authentication, and HTTP permission are managed only in **Settings → Connections**. Select an active connection on each feature page; custom instructions and other feature options remain there.
-
-Settings edits apply to the next operation and do not change a request already
-in progress.
+Endpoint and credential changes belong in **Settings → Connections**. Feature
+pages choose an active connection and model. Settings-page edits use **Save feature
+settings**; switching an active connection applies immediately. Running jobs keep
+their captured settings and credentials.
 
 ## Transcript cleanup
 
@@ -152,9 +155,11 @@ Optional speech playback uses its own endpoint, model, voice ID, credential, tra
 <Steps>
 
 1. **Create a speech connection** under **Settings → Connections** and save its
-   endpoint and authentication. In **Settings → Speech playback**, select that
+   endpoint and authentication. In **Settings → Text to speech**, select that
    connection, set the model and voice ID, enable playback, and save feature settings.
-2. **Open Text to speech** and enter the text you want to hear.
+2. **Open Text to speech** and enter the text you want to hear. Your unsent text
+   survives switching tasks or visiting Settings, and is cleared when the window
+   reloads or Freehand exits.
 3. **Choose Speak** to generate and play the audio.
 4. **Use the playback controls** to pause, resume, replay, stop, or explicitly
    save the generated audio.
