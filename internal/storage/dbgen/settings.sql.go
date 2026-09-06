@@ -237,10 +237,11 @@ func (q *Queries) GetPreferences(ctx context.Context) (GetPreferencesRow, error)
 }
 
 const getSpeech = `-- name: GetSpeech :one
-SELECT compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds FROM speech_settings WHERE id=1
+SELECT model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds FROM speech_settings WHERE id=1
 `
 
 type GetSpeechRow struct {
+	ModelProfile         string
 	CompatibilityProfile string
 	Enabled              int64
 	BaseUrl              string
@@ -256,6 +257,7 @@ func (q *Queries) GetSpeech(ctx context.Context) (GetSpeechRow, error) {
 	row := q.db.QueryRowContext(ctx, getSpeech)
 	var i GetSpeechRow
 	err := row.Scan(
+		&i.ModelProfile,
 		&i.CompatibilityProfile,
 		&i.Enabled,
 		&i.BaseUrl,
@@ -270,10 +272,11 @@ func (q *Queries) GetSpeech(ctx context.Context) (GetSpeechRow, error) {
 }
 
 const getTranscription = `-- name: GetTranscription :one
-SELECT compatibility_profile, base_url, allow_insecure_http, authentication_mode, model, language, health_path, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_hotwords, transcription_options_temperature_override, transcription_options_temperature FROM transcription_settings WHERE id=1
+SELECT model_profile, compatibility_profile, base_url, allow_insecure_http, authentication_mode, model, language, health_path, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_hotwords, transcription_options_temperature_override, transcription_options_temperature FROM transcription_settings WHERE id=1
 `
 
 type GetTranscriptionRow struct {
+	ModelProfile                            string
 	CompatibilityProfile                    string
 	BaseUrl                                 string
 	AllowInsecureHttp                       int64
@@ -293,6 +296,7 @@ func (q *Queries) GetTranscription(ctx context.Context) (GetTranscriptionRow, er
 	row := q.db.QueryRowContext(ctx, getTranscription)
 	var i GetTranscriptionRow
 	err := row.Scan(
+		&i.ModelProfile,
 		&i.CompatibilityProfile,
 		&i.BaseUrl,
 		&i.AllowInsecureHttp,
@@ -503,12 +507,13 @@ func (q *Queries) PutPreferences(ctx context.Context, arg PutPreferencesParams) 
 }
 
 const putSpeech = `-- name: PutSpeech :exec
-INSERT INTO speech_settings (id, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, voice=excluded.voice, speed=excluded.speed, timeout_seconds=excluded.timeout_seconds
+INSERT INTO speech_settings (id, model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, voice=excluded.voice, speed=excluded.speed, timeout_seconds=excluded.timeout_seconds
 `
 
 type PutSpeechParams struct {
+	ModelProfile         string
 	CompatibilityProfile string
 	Enabled              int64
 	BaseUrl              string
@@ -522,6 +527,7 @@ type PutSpeechParams struct {
 
 func (q *Queries) PutSpeech(ctx context.Context, arg PutSpeechParams) error {
 	_, err := q.db.ExecContext(ctx, putSpeech,
+		arg.ModelProfile,
 		arg.CompatibilityProfile,
 		arg.Enabled,
 		arg.BaseUrl,
@@ -536,12 +542,13 @@ func (q *Queries) PutSpeech(ctx context.Context, arg PutSpeechParams) error {
 }
 
 const putTranscription = `-- name: PutTranscription :exec
-INSERT INTO transcription_settings (id, compatibility_profile, base_url, allow_insecure_http, authentication_mode, model, language, health_path, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_hotwords, transcription_options_temperature_override, transcription_options_temperature)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET compatibility_profile=excluded.compatibility_profile, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, language=excluded.language, health_path=excluded.health_path, transcription_timeout_seconds=excluded.transcription_timeout_seconds, file_transcription_timeout_seconds=excluded.file_transcription_timeout_seconds, transcription_options_prompt=excluded.transcription_options_prompt, transcription_options_hotwords=excluded.transcription_options_hotwords, transcription_options_temperature_override=excluded.transcription_options_temperature_override, transcription_options_temperature=excluded.transcription_options_temperature
+INSERT INTO transcription_settings (id, model_profile, compatibility_profile, base_url, allow_insecure_http, authentication_mode, model, language, health_path, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_hotwords, transcription_options_temperature_override, transcription_options_temperature)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, compatibility_profile=excluded.compatibility_profile, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, language=excluded.language, health_path=excluded.health_path, transcription_timeout_seconds=excluded.transcription_timeout_seconds, file_transcription_timeout_seconds=excluded.file_transcription_timeout_seconds, transcription_options_prompt=excluded.transcription_options_prompt, transcription_options_hotwords=excluded.transcription_options_hotwords, transcription_options_temperature_override=excluded.transcription_options_temperature_override, transcription_options_temperature=excluded.transcription_options_temperature
 `
 
 type PutTranscriptionParams struct {
+	ModelProfile                            string
 	CompatibilityProfile                    string
 	BaseUrl                                 string
 	AllowInsecureHttp                       int64
@@ -559,6 +566,7 @@ type PutTranscriptionParams struct {
 
 func (q *Queries) PutTranscription(ctx context.Context, arg PutTranscriptionParams) error {
 	_, err := q.db.ExecContext(ctx, putTranscription,
+		arg.ModelProfile,
 		arg.CompatibilityProfile,
 		arg.BaseUrl,
 		arg.AllowInsecureHttp,

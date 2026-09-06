@@ -17,6 +17,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/hotkey"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"github.com/tnware/freehand-stt/internal/speechlanguage"
 )
 
@@ -136,8 +137,8 @@ const (
 )
 
 const (
-	PostProcessingPresetGeneric PostProcessingPreset = "generic"
-	PostProcessingPresetS1Mini  PostProcessingPreset = "s1-mini"
+	PostProcessingPresetGeneric PostProcessingPreset = PostProcessingPreset(modelprofile.Generic)
+	PostProcessingPresetS1Mini  PostProcessingPreset = PostProcessingPreset(modelprofile.S1Mini)
 )
 
 var (
@@ -165,20 +166,23 @@ func S1MiniContextValues() []string {
 type PostProcessingSettings struct {
 	GenerationOptions compatibility.CleanupOptions `json:"generationOptions"`
 
-	CompatibilityProfile compatibility.ID     `json:"compatibilityProfile"`
-	Enabled              bool                 `json:"enabled"`
-	BaseURL              string               `json:"baseURL"`
-	AllowInsecureHTTP    bool                 `json:"allowInsecureHTTP"`
-	Model                string               `json:"model"`
-	Preset               PostProcessingPreset `json:"preset"`
-	SystemPrompt         string               `json:"systemPrompt"`
-	Styling              string               `json:"styling"`
-	Structure            string               `json:"structure"`
-	Context              string               `json:"context"`
-	TimeoutSeconds       int                  `json:"timeoutSeconds"`
+	CompatibilityProfile compatibility.ID `json:"compatibilityProfile"`
+	Enabled              bool             `json:"enabled"`
+	BaseURL              string           `json:"baseURL"`
+	AllowInsecureHTTP    bool             `json:"allowInsecureHTTP"`
+	Model                string           `json:"model"`
+	// Preset is the cleanup model-profile ID. Keep the persisted/wire key so
+	// existing alpha settings and legacy JSON imports retain their selection.
+	Preset         PostProcessingPreset `json:"preset"`
+	SystemPrompt   string               `json:"systemPrompt"`
+	Styling        string               `json:"styling"`
+	Structure      string               `json:"structure"`
+	Context        string               `json:"context"`
+	TimeoutSeconds int                  `json:"timeoutSeconds"`
 }
 
 type TextToSpeechSettings struct {
+	ModelProfile         modelprofile.ID    `json:"modelProfile"`
 	CompatibilityProfile compatibility.ID   `json:"compatibilityProfile"`
 	Enabled              bool               `json:"enabled"`
 	BaseURL              string             `json:"baseURL"`
@@ -200,6 +204,7 @@ const (
 )
 
 type Settings struct {
+	ModelProfile                    modelprofile.ID        `json:"modelProfile"`
 	CompatibilityProfile            compatibility.ID       `json:"compatibilityProfile"`
 	BaseURL                         string                 `json:"baseURL"`
 	AllowInsecureHTTP               bool                   `json:"allowInsecureHTTP"`
@@ -257,7 +262,7 @@ func Default() Settings {
 		// First launch and settings recovery must not select a network peer or a
 		// credential-bearing authentication mode on the user's behalf. The setup
 		// flow owns that explicit trust decision.
-		BaseURL: "", Model: "",
+		BaseURL: "", Model: "", ModelProfile: modelprofile.Generic,
 		AuthenticationMode: AuthenticationModeNone,
 		ToggleShortcut:     "CmdOrCtrl+Shift+Space", ShowShortcut: "",
 		MaxDurationSeconds: 120, TranscriptionTimeoutSeconds: DefaultTranscriptionTimeoutSeconds,
@@ -280,6 +285,7 @@ func Default() Settings {
 			TimeoutSeconds: DefaultPostProcessingTimeoutSeconds,
 		},
 		TextToSpeech: TextToSpeechSettings{
+			ModelProfile:         modelprofile.Generic,
 			CompatibilityProfile: compatibility.Generic,
 			AuthenticationMode:   AuthenticationModeNone,
 			Speed:                1,
@@ -331,7 +337,7 @@ func Validate(s Settings) error {
 	default:
 		return errors.New("appearance mode is invalid")
 	}
-	if err := compatibility.ValidateTranscriptionOptions(s.CompatibilityProfile, s.TranscriptionOptions); err != nil {
+	if err := modelprofile.ValidateTranscription(s.ModelProfile, s.CompatibilityProfile, s.Language, s.TranscriptionOptions); err != nil {
 		return err
 	}
 	if err := speechlanguage.Validate(s.Language); err != nil {
@@ -386,7 +392,7 @@ func Validate(s Settings) error {
 	}); err != nil {
 		return fmt.Errorf("invalid shortcut settings: %w", err)
 	}
-	if err := compatibility.ValidateCleanupOptions(s.PostProcessing.CompatibilityProfile, s.PostProcessing.GenerationOptions); err != nil {
+	if err := modelprofile.ValidateCleanup(modelprofile.ID(s.PostProcessing.Preset), s.PostProcessing.CompatibilityProfile, s.PostProcessing.GenerationOptions); err != nil {
 		return err
 	}
 	if s.PostProcessing.Enabled {
@@ -405,6 +411,9 @@ func Validate(s Settings) error {
 }
 
 func ValidateTextToSpeech(s TextToSpeechSettings, requireConnection bool) error {
+	if err := modelprofile.ValidateSpeech(s.ModelProfile, s.CompatibilityProfile, s.Speed); err != nil {
+		return err
+	}
 	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Speech); err != nil {
 		return err
 	}
@@ -615,7 +624,7 @@ func validateHeaders(headers map[string]string) error {
 }
 
 func ValidatePostProcessing(s PostProcessingSettings) error {
-	if err := compatibility.ValidateCleanupOptions(s.CompatibilityProfile, s.GenerationOptions); err != nil {
+	if err := modelprofile.ValidateCleanup(modelprofile.ID(s.Preset), s.CompatibilityProfile, s.GenerationOptions); err != nil {
 		return err
 	}
 	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.PostProcessing); err != nil {

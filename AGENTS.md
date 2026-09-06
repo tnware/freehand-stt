@@ -42,6 +42,18 @@ Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are 
 - `internal/dictation` owns the live recording state machine. `internal/history` owns transcript retention, and `internal/settings` owns coherent settings/credential snapshots. Platform callbacks and HTTP completions report into their owning feature; they do not mutate UI or insertion state independently.
 - OpenAI compatibility is represented as separate STT, post-processing/chat, realtime, and on-demand TTS capabilities. Do not overload one endpoint or credential setting to mean all of them. TTS remains explicit and dormant when disabled. History/file playback selects transcript text through backend-owned capabilities; the first-class TTS composer accepts only bounded user-authored text. Synthesized audio never crosses Wails.
 
+## Model behavior contracts
+
+- `internal/compatibility` owns server APIs; `internal/modelprofile` owns explicit
+  model behavior and intersects its capabilities with the selected backend.
+  Generic is a baseline, not proof of support by every deployed model.
+- Model profiles belong to feature settings, independently of reusable server
+  connections. Do not infer them from model IDs, URLs, or model inventories.
+- Add specialized profiles only with a justified, qualified per-role contract,
+  backend validation, request fixtures, language/option restrictions, and user
+  documentation. UI controls and request admission must use the same resolved
+  contract. Retain immutable in-flight settings and raw cleanup fallback.
+
 ## Wails binding and lifecycle rules
 
 - Use generated Wails models, enums, and service functions directly in Svelte. Do not duplicate generated wire shapes or hide them behind assertion-heavy adapters.

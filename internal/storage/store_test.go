@@ -312,7 +312,7 @@ func withUpgrade(s *Store, sql string) {
 		data, _ := embeddedMigrations.ReadFile("migrations/" + entry.Name())
 		migrations[entry.Name()] = &fstest.MapFile{Data: data}
 	}
-	migrations["00006_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
+	migrations["00007_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
 	s.migrations = migrations
 }
 func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
@@ -344,7 +344,7 @@ func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
 			var current int
 			db.QueryRow("SELECT max(version_id) FROM goose_db_version").Scan(&current)
 			db.Close()
-			if fail && current != 5 {
+			if fail && current != 6 {
 				t.Fatal("failed migration advanced version")
 			}
 			restore := newStore(s.path, s.legacy, s.vault)
@@ -466,7 +466,8 @@ func TestVersionOneUpgradePreservesSettingsAndReferences(t *testing.T) {
 	sql := string(initial)
 	start := strings.Index(sql, "CREATE TABLE speech_settings (")
 	end := strings.Index(sql[start:], ") STRICT;") + len(") STRICT;")
-	_, err = s.db.Exec(`ALTER TABLE preferences_settings RENAME COLUMN vad_enabled TO vadenabled;
+	_, err = s.db.Exec(`ALTER TABLE transcription_settings DROP COLUMN model_profile;
+ ALTER TABLE preferences_settings RENAME COLUMN vad_enabled TO vadenabled;
  ALTER TABLE preferences_settings RENAME COLUMN vad_mode TO vadmode;
  ALTER TABLE preferences_settings RENAME COLUMN vad_activity_silence_ms TO vadactivity_silence_ms;
  ALTER TABLE speech_settings RENAME TO speech_fixture;` + sql[start:start+end] + `
@@ -527,7 +528,7 @@ func restoreConnectionSchema(t *testing.T, s *Store, version int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.db.Exec(`DROP TABLE selected_connections; DROP TABLE saved_connection_headers; DROP TABLE saved_connection_uses; DROP TABLE saved_connections;` + string(old)); err != nil {
+	if _, err = s.db.Exec(`ALTER TABLE transcription_settings DROP COLUMN model_profile; ALTER TABLE speech_settings DROP COLUMN model_profile; DROP TABLE selected_connections; DROP TABLE saved_connection_headers; DROP TABLE saved_connection_uses; DROP TABLE saved_connections;` + string(old)); err != nil {
 		t.Fatal(err)
 	}
 	// Recreate the configured-only catalog used by this fixture, without v3 bootstrap rows.

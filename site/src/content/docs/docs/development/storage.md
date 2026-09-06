@@ -178,3 +178,10 @@ reference still used by any saved entry. SQL rollback leaves the old catalog and
 keys intact. `TestSavedConnection` resolves the specified entry's details and key
 under the store lock, never borrowing an active connection's credential. It reads
 metadata only. Restored databases must pass catalog/runtime/reference checks.
+
+Model-profile selection is feature-owned. Migration 00006 adds transcription and
+speech IDs, defaulting to Generic; cleanup retains its existing `preset` ID.
+Generated queries read/write all three through the same settings transaction.
+The v5 upgrade fixture verifies cleanup choices, connections, credentials, and
+restart persistence; unknown profile IDs enter recovery instead of silently
+falling back to Generic. No connection or settings reset is required.

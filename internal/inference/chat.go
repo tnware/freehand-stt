@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
 const maxChatRequest = 2 << 20
@@ -21,7 +22,7 @@ func (c *Client) ChatCompletion(ctx context.Context, base, model, key, systemPro
 	if err != nil {
 		return ChatCompletionResult{}, err
 	}
-	if err := compatibility.ValidateCleanupOptions(c.profile, c.cleanupOptions); err != nil {
+	if err := modelprofile.ValidateCleanup(c.modelProfile, c.profile, c.cleanupOptions); err != nil {
 		return ChatCompletionResult{}, &Error{Kind: "invalid_settings", Message: err.Error()}
 	}
 	type message struct {

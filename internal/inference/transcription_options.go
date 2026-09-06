@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
 // WithTranscriptionOptions captures request controls without mutating a shared
@@ -16,7 +17,7 @@ func (c *Client) WithTranscriptionOptions(options compatibility.TranscriptionOpt
 }
 
 func (c *Client) validateTranscriptionOptions() error {
-	if err := compatibility.ValidateTranscriptionOptions(c.profile, c.transcriptionOptions); err != nil {
+	if err := modelprofile.ValidateTranscription(c.modelProfile, c.profile, "", c.transcriptionOptions); err != nil {
 		return &Error{Kind: "invalid_settings", Message: err.Error()}
 	}
 	return nil

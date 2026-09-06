@@ -1,6 +1,10 @@
 package postprocess
 
-import "github.com/tnware/freehand-stt/internal/config"
+import (
+	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/config"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
+)
 
 // S1MiniSystemInstruction is the fixed instruction from the S1-mini v1 model
 // contract. It is exported so the renderer can display the effective request
@@ -35,20 +39,21 @@ type ProfileControlOptions struct {
 // The custom profile's instruction lives in durable user settings; a built-in
 // profile supplies its exact fixed instruction here for transparent UI display.
 func Profiles() []ProfileDescriptor {
+	catalog := modelprofile.Profiles(compatibility.Generic, compatibility.Generic, compatibility.Generic).PostProcessing
 	return []ProfileDescriptor{
 		{
 			ID:                      config.PostProcessingPresetGeneric,
-			Name:                    "Custom instruction",
-			Description:             "Use any OpenAI-compatible chat model with your own transcript-cleanup instruction.",
+			Name:                    catalog[0].Name,
+			Description:             catalog[0].Description,
 			InstructionEditable:     true,
 			RecommendedInstruction:  config.DefaultPostProcessingInstruction,
 			MaximumInstructionBytes: config.MaxPromptBytes,
 		},
 		{
 			ID:                config.PostProcessingPresetS1Mini,
-			Name:              "S1-mini by Superwhisper",
-			Language:          "en",
-			Description:       "English-only cleanup with S1-mini's fixed normalization contract and trained output controls. Unknown input language is assumed to be English.",
+			Name:              catalog[1].Name,
+			Language:          catalog[1].Language,
+			Description:       catalog[1].Description,
 			SystemInstruction: S1MiniSystemInstruction,
 			Controls: &ProfileControlOptions{
 				Styling:   config.S1MiniStylingValues(),

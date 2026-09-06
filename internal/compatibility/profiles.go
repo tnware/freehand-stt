@@ -88,7 +88,7 @@ func options(role Role) []Profile {
 		genericDescription = "Completed transcription and optional file streaming. Preserves support for typed events and legacy text segments; streaming and language hints depend on the selected model."
 	case PostProcessing:
 		caps.CleanupOutputLimit = true
-		genericDescription = "Text chat completions with system/user messages. Choose the cleanup prompt preset separately."
+		genericDescription = "Text chat completions with system/user messages. Choose the model profile separately in feature settings."
 	case Speech:
 		caps.SpeechSpeed = true
 		genericDescription = "Buffered WAV speech with a voice ID and speed. The server must return PCM16 audio; model support varies."
@@ -103,7 +103,7 @@ func options(role Role) []Profile {
 		result = append(result, Profile{ID: Speaches, Label: "Speaches", Available: true, Description: "Buffered PCM16 WAV speech using the installed model and voice IDs. Speed support depends on the model.", Capabilities: caps})
 	} else {
 		caps.CleanupDisableReasoning = true
-		result = append(result, Profile{ID: LlamaCPP, Label: "llama.cpp", Available: true, Description: "Text cleanup with an optional output-token limit and disable-reasoning override. Reasoning control requires a compatible llama.cpp build and model template; S1-mini remains a separate prompt preset.", Capabilities: caps})
+		result = append(result, Profile{ID: LlamaCPP, Label: "llama.cpp", Available: true, Description: "Text cleanup with an optional output-token limit and disable-reasoning override. Reasoning control requires a compatible llama.cpp build and model template; S1-mini behavior uses a separate model profile.", Capabilities: caps})
 	}
 	planned := func(id ID, label, reason string) {
 		result = append(result, Profile{ID: id, Label: label, Description: "Dedicated profile not implemented. " + reason})

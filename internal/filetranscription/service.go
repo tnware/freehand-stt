@@ -724,7 +724,7 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 		unsupportedReason := ""
 		requestCtx, requestCancel := context.WithTimeout(ctx, time.Duration(cfg.FileTranscriptionTimeoutSeconds)*time.Second)
 		defer requestCancel()
-		result, err := s.client.WithCompatibility(cfg.CompatibilityProfile).WithTranscriptionOptions(cfg.TranscriptionOptions).TranscribeFile(requestCtx, cfg.BaseURL, cfg.Model, cfg.Language, key, cfg.Headers, filepath.Base(file.Name()), size, io.LimitReader(file, size), streaming, inference.FileTranscriptionCallbacks{
+		result, err := s.client.WithCompatibility(cfg.CompatibilityProfile).WithModelProfile(cfg.ModelProfile).WithTranscriptionOptions(cfg.TranscriptionOptions).TranscribeFile(requestCtx, cfg.BaseURL, cfg.Model, cfg.Language, key, cfg.Headers, filepath.Base(file.Name()), size, io.LimitReader(file, size), streaming, inference.FileTranscriptionCallbacks{
 			UploadProgress: func(sent, _ int64) { s.updateFileUpload(generation, sent, false) },
 			UploadComplete: func() {
 				uploadMilliseconds.Store(time.Since(started).Milliseconds())

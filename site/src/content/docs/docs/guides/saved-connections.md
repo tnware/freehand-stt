@@ -32,7 +32,7 @@ For first-time transcription setup, return to the readiness screen, explicitly
 | Settings → Connections | Feature settings pages |
 | --- | --- |
 | Connection name and supported uses | Active connection selection |
-| Compatibility profile and base URL | Model and language |
+| Compatibility profile and base URL | Model, model profile, and language |
 | Authentication and stored API key | Cleanup preset and instructions |
 | Allow insecure HTTP | Voice, speed, and feature enable switches |
 | Transcription health path and headers | Timeouts and provider-specific options |
@@ -82,7 +82,8 @@ URLs are not automatically merged because their authentication or uses may diffe
 Switching preserves language, voice, instructions, and provider options. If the
 new connection cannot accept an enabled provider option, the switch fails and
 keeps your current setup; adjust and save that option before switching.
-Separate saved preferences for each model are future work.
+[Model profiles](../model-profiles/) describe each model’s behavior separately
+from the backend profile. Separate saved preferences for each model are future work.
 
 ## Test and protect credentials
 

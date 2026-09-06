@@ -119,6 +119,7 @@ type SpeechSetting struct {
 	Voice                string
 	Speed                float64
 	TimeoutSeconds       int64
+	ModelProfile         string
 }
 
 type TranscriptionSetting struct {
@@ -136,4 +137,5 @@ type TranscriptionSetting struct {
 	TranscriptionOptionsHotwords            string
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
+	ModelProfile                            string
 }

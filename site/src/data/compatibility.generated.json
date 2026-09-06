@@ -126,7 +126,7 @@
       "id": "generic",
       "label": "Generic OpenAI-compatible",
       "available": true,
-      "description": "Text chat completions with system/user messages. Choose the cleanup prompt preset separately.",
+      "description": "Text chat completions with system/user messages. Choose the model profile separately in feature settings.",
       "capabilities": {
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -146,7 +146,7 @@
       "id": "llama-cpp",
       "label": "llama.cpp",
       "available": true,
-      "description": "Text cleanup with an optional output-token limit and disable-reasoning override. Reasoning control requires a compatible llama.cpp build and model template; S1-mini remains a separate prompt preset.",
+      "description": "Text cleanup with an optional output-token limit and disable-reasoning override. Reasoning control requires a compatible llama.cpp build and model template; S1-mini behavior uses a separate model profile.",
       "capabilities": {
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,

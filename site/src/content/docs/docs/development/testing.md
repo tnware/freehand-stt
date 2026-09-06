@@ -286,3 +286,19 @@ and unchanged status colours. Compare light mode and dark Mica over both light
 and dark desktop backgrounds; the Mica result depends on Windows and wallpaper.
 Check native active/inactive title bars and startup background after relaunch.
 Browser material fixtures establish CSS composition, not native DWM acceptance.
+
+For model-profile acceptance, verify Generic is shown beneath the model in
+Transcription and Speech playback, while Post-processing offers Generic and
+S1-mini. Selecting S1-mini exposes its trained controls, English-only admission,
+and reasoning-off requirement; Generic restores the custom instruction editor.
+Check supported reasoning overrides on llama.cpp/vLLM and the explicit server
+configuration requirement on Generic. Save and reopen; verify connections,
+models, and credentials remain independent. Changing an inventory model ID must
+not infer or select a model profile. Check home labels and model profile selection.
+
+Automated tests cover backend/model capability intersection, wrong-role and
+unknown IDs while features are disabled, rejection before HTTP, immutable request
+selection, S1-mini prompt/reasoning/language regressions, and migration from v5
+with existing selections and credential references. New specialized model
+profiles need per-role request fixtures and explicit runtime qualification; a
+catalog entry alone does not establish support. Do not probe model inventories.

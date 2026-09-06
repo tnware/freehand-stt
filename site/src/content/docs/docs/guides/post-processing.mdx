@@ -16,7 +16,7 @@ checks or explicit-copy setting; cancellation prevents automatic insertion.
 | Choice | Configuration |
 | --- | --- |
 | Leave transcription unchanged | Keep **Cleanup** off; no chat endpoint is needed. |
-| Use your own cleanup model | Enable processing, select **Custom instruction**, and supply a compatible chat endpoint and model. |
+| Use your own cleanup model | Enable processing, select **Generic**, and supply a compatible chat endpoint and model. |
 | Use S1-mini by Superwhisper | Enable processing, select its dedicated profile, and connect a server hosting that English cleanup model. |
 
 :::tip[Compare both versions]
@@ -38,7 +38,7 @@ First create a **Post-processing** connection under **Settings → Connections**
 3. Enable **Allow insecure HTTP** only for a trusted local or LAN server using `http://`.
 4. Add the processor's API key when that endpoint requires one.
 5. Choose **Save connection**. Open **Settings → Post-processing**, select that active connection, enable cleanup, and list models or enter the exact model ID. Model listing reads metadata; it does not test cleanup quality.
-6. Choose **Custom instruction** and write the system instruction for the selected model. Freehand shows the UTF-8 storage limit, validates empty or oversized instructions, and can restore the recommended instruction.
+6. Choose **Generic** and write the system instruction for the selected model. Freehand shows the UTF-8 storage limit, validates empty or oversized instructions, and can restore the recommended instruction.
 7. Choose **Save feature settings**. Dictate a short example and review the result before using cleanup for longer text.
 
 </Steps>
@@ -59,7 +59,7 @@ For vLLM, use its separate [S1-mini launch recipe](../../backends/vllm/#start-s1
 
 Create and save a **Post-processing** connection in **Settings → Connections**
 using the endpoint, HTTP permission, and compatibility profile below. Then select
-it on **Settings → Post-processing** and set the model and prompt preset:
+it on **Settings → Post-processing** and set the model and model profile:
 
 ```text title="Connection and feature settings"
 Enabled:             On
@@ -104,7 +104,7 @@ number for later. This setting neither enlarges the model's context window nor
 splits long inputs. The request timeout remains independent. A limit that is too
 small can cause an incomplete response and raw-transcript fallback.
 
-**Disable reasoning** is optional for Custom instruction under the llama.cpp or vLLM
+**Disable reasoning** is optional for Generic cleanup under the llama.cpp or vLLM
 profile. It asks the model to return its result without a thinking phase, using
 a supported server/template contract. Off retains the server's configured behavior.
 
@@ -139,3 +139,7 @@ S1-mini cleanup supports English only. Non-English selections or reported
 languages use raw text instead. With no known language, S1-mini runs assuming
 English, as stated in its controls. Custom cleanup depends on the selected
 model and instruction. See [language selection](../languages/).
+
+The **Model profile** field uses the same model-behavior contract as transcription
+and speech playback. See [model profiles](../model-profiles/) for how it differs
+from a connection’s backend profile.

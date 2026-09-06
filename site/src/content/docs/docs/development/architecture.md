@@ -340,6 +340,33 @@ discarding changed connection fields and clears the transient key on exit. Setti
 groups separate Capture, Features, and Application; visual and keyboard section order
 match.
 
+## Model behavior contracts
+
+`internal/modelprofile` owns explicit role-specific model IDs, requirements, and
+backend/model capability intersection. Generic preserves the existing baseline;
+S1-mini is qualified for cleanup only. `SettingsDTO.ModelProfiles` exposes the
+resolved catalog for each active backend. Feature controls read that metadata,
+and Go validates selections even when a feature is disabled. Unknown or
+wrong-role IDs fail closed before inference; model inventory names never select
+behavior. Backend routes, event formats, and server-loaded-model semantics remain
+in `internal/compatibility`.
+
+The post-process owner still builds trained prompts. It takes S1-mini's language
+and reasoning requirements from the shared model contract, preserves raw fallback,
+and enforces reasoning off through qualified adapters. Generic servers retain
+the explicit requirement for server-side reasoning configuration. Microphone,
+checkpoint, file, and speech request paths carry model-profile selection in their
+existing immutable settings snapshot. Model-specific fields never become
+connection credentials or connection-owned settings.
+
+SQLite migration 00006 adds transcription and speech `model_profile` columns with
+Generic defaults. Cleanup's existing `preset` column and JSON key already hold
+its model-profile ID; retaining those names preserves legacy import and saved
+choices without a second source of truth. The existing cleanup descriptor service
+supplies prompt/control metadata; shared catalog metadata supplies behavior names,
+capabilities, and requirements. Separate remembered preferences per model remain
+out of scope.
+
 ## Diagnostics boundary
 
 `internal/app` creates one hierarchy from Wails' default structured logger and assigns bounded component attributes before injecting it into feature services, the post-processor, and native overlay. Runtime code records lifecycle metadata and fixed error categories rather than formatting underlying errors. It never logs transcript/audio content, credential or header material, model IDs, full paths, URL paths/query, or insertion-target identity. High-frequency audio, VAD, progress, delta, and renderer-event traffic remains off the logging path.

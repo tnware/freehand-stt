@@ -1,4 +1,5 @@
 import { ID } from "$bindings/compatibility";
+import { ID as ModelProfileID } from "$bindings/modelprofile";
 import { CancellablePromise } from "@wailsio/runtime";
 import { vi } from "vitest";
 import {
@@ -52,6 +53,8 @@ vi.mock("$bindings/tts/service", () => ({
 }));
 
 const settings: Settings = {
+  modelProfile: ModelProfileID.Generic,
+  modelProfiles: {transcription: [], postProcessing: [], speech: []},
   transcriptionOptions: {
     prompt: "",
     hotwords: "",
@@ -120,6 +123,7 @@ const settings: Settings = {
     timeoutSeconds: 120,
   },
   textToSpeech: {
+    modelProfile: ModelProfileID.Generic,
     compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "",
