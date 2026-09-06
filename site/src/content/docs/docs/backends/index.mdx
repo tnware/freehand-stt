@@ -33,6 +33,7 @@ whose cards link to these same guides.
 | whisper.cpp | [Native Windows](./whisper-cpp/#run-natively-on-windows) or [Docker](./whisper-cpp/#run-whispercpp-with-docker) | Transcription with a server-loaded model |
 | vLLM | [Windows + Docker, NVIDIA GPU](./vllm/#run-vllm-with-docker) | Qwen3-ASR transcription or S1-mini cleanup |
 | Speaches | [Docker GPU or CPU](./speaches/#run-speaches-with-docker) | Transcription; optional speech playback |
+| Kokoro-FastAPI | [Docker CPU or GPU](./kokoro-fastapi/#run-kokoro-fastapi-with-docker) | Speech playback with voice discovery |
 | llama.cpp | [Native Windows server](./llama-cpp/#run-llamacpp-on-windows) | S1-mini or compatible custom cleanup |
 | Generic OpenAI-compatible | [Connect an existing endpoint](./generic/) | The operations implemented by your server |
 
@@ -66,14 +67,16 @@ for separate STT, cleanup, and speech endpoints.
 There is no certification or blanket approval of a provider. In particular,
 **Test** reads health or model-list metadata only. It does not prove that a
 model transcribes audio, accepts cleanup parameters, or returns playable speech.
+**Refresh voices** is also metadata-only and available for qualified speech profiles.
 
 ## Choose profiles per operation
 
 The microphone and stored-file workflows share the transcription connection.
 Post-processing and speech playback each have their own connection and profile.
-All three may use the same server or different servers. Endpoint, credentials,
-model selection, and compatibility profile remain independent of the cleanup
-prompt preset. Named saved connections are not implemented yet.
+All three may use the same saved connection or different connections. Manage
+endpoint, authentication, and backend profile in **Settings → Connections**.
+Choose models, model profiles, voices, and other model options in feature settings;
+Freehand remembers those options for each connection and model.
 
 ## Beyond the current contract
 

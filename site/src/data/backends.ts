@@ -11,7 +11,7 @@ const editorial = [
   { id: "whisper-cpp", summary: "A transcription profile for the native whisper.cpp HTTP server.", guide: "/docs/backends/whisper-cpp/", evidence: "Pinned source + contract fixtures", detail: "Native /inference uploads, server-loaded model, and /health checks. Completed microphone and file transcription; no file streaming." },
   { id: "vllm", summary: "Dedicated transcription and text-cleanup contracts for vLLM.", guide: "/docs/backends/vllm/", evidence: "v0.28.0 source + contract fixtures", detail: "Completed transcription, vLLM file streams, and text cleanup with output limits and reasoning-off controls. Model and template behavior still needs scoped live acceptance." },
   { id: "vllm-omni", summary: "A speech playback profile with explicit model and voice requirements.", guide: "/docs/backends/planned/#vllm-omni", evidence: "Dedicated profile planned", detail: "Qualify preset-voice inputs and playable WAV output separately from cloning features." },
-  { id: "kokoro-fastapi", summary: "A dedicated connection contract for Kokoro-FastAPI speech generation.", guide: "/docs/backends/planned/#kokoro-fastapi", evidence: "Dedicated profile planned", detail: "Qualify voice IDs, speed handling, and compatible WAV responses." },
+  { id: "kokoro-fastapi", summary: "A dedicated connection contract for Kokoro-FastAPI speech generation.", guide: "/docs/backends/kokoro-fastapi/", evidence: "Live API 0.6.0 sample + contract fixtures", detail: "Voice discovery and one af_heart sample returned PCM16 WAV through the buffered adapter. Other voices and deployments still require testing." },
   { id: "openedai-speech", summary: "A speech profile for endpoints with server-configured voice aliases.", guide: "/docs/backends/planned/#openedai-speech", evidence: "Dedicated profile planned", detail: "Qualify the voice configuration and the returned audio encoding." },
 ];
 
@@ -34,6 +34,7 @@ export const features = [
   { key: "cleanupLimit", label: "Cleanup token limit" },
   { key: "reasoningOff", label: "Disable reasoning" },
   { key: "playback", label: "Speech playback" },
+  { key: "voices", label: "Voice discovery" },
 ] as const;
 const descriptions = new Map(editorial.map((entry) => [entry.id, entry]));
 const ids = [...new Set(roles.flatMap(({ key }) => catalog[key].map((profile) => profile.id)))];
@@ -69,6 +70,7 @@ export const backends = ids.map((id) => {
       cleanupLimit: chat?.available && chat.capabilities.cleanupOutputLimit ? "available" : "none",
       reasoningOff: chat?.available && chat.capabilities.cleanupDisableReasoning ? "available" : "none",
       playback: status(speech),
+      voices: speech?.available && speech.capabilities.voiceDiscovery ? "available" : "none",
     } satisfies Record<(typeof features)[number]["key"], Support>,
   };
 });

@@ -254,6 +254,7 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
       description: "Native server",
       available: true,
       capabilities: {
+        voiceDiscovery: false,
         serverLoadedModel: true,
         vllmTranscriptionEvents: false,
         cleanupOutputLimit: false,

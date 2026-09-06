@@ -26,7 +26,7 @@ Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are 
 
 ## Non-negotiable safety rules
 
-1. Model discovery and endpoint health checks are metadata-only. Use `/health` or `/v1/models`.
+1. Model discovery and endpoint health checks are metadata-only. Use `/health` or `/v1/models`; qualified speech profiles may also read `/v1/audio/voices` for voice discovery.
 2. Never invoke, preload, iterate through, or smoke-test model inventories. The user's desktop GPU can hold only one Ollama model at a time; a prior multi-model probe crashed Windows.
 3. Never paste a completed transcription into a different focused window. Capture the target HWND at recording start and fail closed if focus changed.
 4. Store credentials in Windows Credential Manager. User-entered API keys may exist only as a bounded, transient renderer draft; never persist them in JSON, TOML, SQLite, logs, argv, events, or crash reports, and never return a stored credential to the renderer.

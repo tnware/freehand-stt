@@ -637,3 +637,21 @@ is scoped to that route; advertised IDs do not imply feature support. There are
 no inference probes, automatic inventory iterations, capability guesses, or new
 readiness gates for unlisted aliases. Model and option checks do not replace
 normal runtime admission and captured request settings.
+
+
+### Voice discovery ownership
+
+`internal/compatibility` advertises voice discovery only for qualified speech
+backends. `internal/connection.ListSpeechVoices` captures saved connection
+details and credentials through the existing settings owner. `internal/inference`
+performs bounded metadata GETs and normalizes provider shapes into voice IDs,
+display names, language labels, and model/server scope. Generic remains manual.
+The renderer never supplies a key or endpoint to this operation, and no model
+lifecycle or inference routes are used. Logs contain only bounded outcomes and
+counts, not URLs, model IDs, voice IDs, or credentials.
+
+The settings editor rejects late results from an obsolete connection revision
+or model selection. The voice picker preserves custom IDs and never treats
+inventory membership as request admission. Lists are ephemeral; selected voices
+use the existing modelsettings/sqlc save transaction, requiring no migration.
+Kokoro's `stream: false` is a backend wire adaptation, not a model preference.

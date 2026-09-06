@@ -1,4 +1,6 @@
 <script lang="ts">
+  import VoicePicker from "$lib/components/settings/VoicePicker.svelte";
+  import type { VoicesResult } from "$bindings/inference";
   import { Purpose } from "$bindings/savedconnection";
   import { rememberedModels } from "$lib/utils/modelSettings";
   import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
@@ -31,6 +33,9 @@
     onForgetModel,
     connectionStale = false,
     onTestConnection,
+    voices = null,
+    voicesBusy = false,
+    onDiscoverVoices,
     onPreview,
     onStop,
     onSave,
@@ -47,6 +52,9 @@
     onForgetModel: () => void;
     connectionStale?: boolean;
     onTestConnection: () => void;
+    voices?: VoicesResult | null;
+    voicesBusy?: boolean;
+    onDiscoverVoices: () => void;
     onPreview: () => void;
     onStop: () => void;
     onSave: () => void;
@@ -104,18 +112,14 @@
       profiles={settings.modelProfiles.speech ?? []}
       onChange={(id) => (settings.textToSpeech.modelProfile = id)}
     />
-    <ValueRow
+    <VoicePicker
       id="tts-voice"
-      label="Voice"
-      hint="A provider voice ID. The compatible API does not define voice discovery."
-    >
-      {#snippet control()}<ValueInput
-          id="tts-voice"
-          bind:value={settings.textToSpeech.voice}
-          placeholder="af_heart"
-          spellcheck={false}
-        />{/snippet}
-    </ValueRow>
+      bind:value={settings.textToSpeech.voice}
+      supported={!!compatibility?.capabilities.voiceDiscovery}
+      result={voices}
+      busy={voicesBusy}
+      onDiscover={onDiscoverVoices}
+    />
 
     <ValueRow
       id="tts-format"

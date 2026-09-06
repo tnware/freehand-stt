@@ -41,6 +41,7 @@ type Capabilities struct {
 	TypedTranscriptionEvents    bool `json:"typedTranscriptionEvents"`
 	LegacyTranscriptionSegments bool `json:"legacyTranscriptionSegments"`
 	LanguageHint                bool `json:"languageHint"`
+	VoiceDiscovery              bool `json:"voiceDiscovery"`
 	SpeechSpeed                 bool `json:"speechSpeed"`
 	TranscriptionPrompt         bool `json:"transcriptionPrompt"`
 	TranscriptionHotwords       bool `json:"transcriptionHotwords"`
@@ -100,6 +101,7 @@ func options(role Role) []Profile {
 		caps.TranscriptionHotwords = true
 		result = append(result, Profile{ID: Speaches, Label: "Speaches", Available: true, Description: "Completed transcription, typed file events, and older Speaches text segments that finish at end of stream. Language and streaming support depend on the model and server version.", Capabilities: caps})
 	} else if role == Speech {
+		caps.VoiceDiscovery = true
 		result = append(result, Profile{ID: Speaches, Label: "Speaches", Available: true, Description: "Buffered PCM16 WAV speech using the installed model and voice IDs. Speed support depends on the model.", Capabilities: caps})
 	} else {
 		caps.CleanupDisableReasoning = true
@@ -120,7 +122,7 @@ func options(role Role) []Profile {
 		result = append(result, Profile{ID: VLLM, Label: "vLLM", Available: true, Description: "Text cleanup with output-token and reasoning-off controls, qualified against v0.28.0. Reasoning control requires a compatible model template.", Capabilities: Capabilities{CleanupOutputLimit: true, CleanupDisableReasoning: true}})
 	case Speech:
 		planned(VLLMOmni, "vLLM-Omni", "Model-specific voice inputs and audio output need qualification.")
-		planned(KokoroFastAPI, "Kokoro-FastAPI", "Voice, speed, and WAV output need qualification.")
+		result = append(result, Profile{ID: KokoroFastAPI, Label: "Kokoro-FastAPI", Available: true, Description: "Buffered PCM16 WAV speech, selectable server voices, and speed control. Requests explicitly disable streaming.", Capabilities: Capabilities{SpeechSpeed: true, VoiceDiscovery: true}})
 		planned(OpenedAISpeech, "openedai-speech", "Server-configured voices and WAV output need qualification.")
 	}
 	return result

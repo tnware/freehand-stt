@@ -198,7 +198,7 @@ may impose a lower limit.
 
 ## Text to speech
 
-On-demand speech uses an independent `POST /audio/speech` capability profile and requests PCM16 WAV for native playback. It has its own endpoint, model, voice, authentication, plaintext-HTTP opt-in, credential, and request budget even when it shares a server with another capability. The compatible API defines no portable voice-list endpoint, so model discovery uses `GET /models` and the voice ID remains explicit.
+On-demand speech uses an independent `POST /audio/speech` capability profile and requests PCM16 WAV for native playback. It has its own endpoint, model, voice, authentication, plaintext-HTTP opt-in, credential, and request budget even when it shares a server with another capability. The Generic compatible baseline defines no portable voice-list endpoint. Speaches and Kokoro-FastAPI add qualified metadata discovery; manual voice IDs remain valid.
 
 Example self-hosted values:
 
@@ -308,3 +308,28 @@ profile descriptor. Selected or reported non-English input bypasses cleanup
 and preserves raw text with `unsupported_language`; unknown language assumes
 English as displayed in the controls. The fixed prompt and reasoning-off
 contract are unchanged. See [language selection](../../guides/languages/).
+
+
+## Speech voice discovery
+
+`ListSpeechVoices` resolves one saved connection and credential snapshot in Go.
+Only profiles advertising voice discovery make requests. Kokoro-FastAPI reads
+`GET /audio/voices` and accepts `voices` containing ID/name objects or the older
+string entries. Speaches first reads `GET /models` for the selected model's
+`voices`; when absent, it falls back to `GET /audio/voices` and identifies that
+list as server-wide. An empty model list is not replaced with unrelated voices.
+All paths are relative to the configured base URL, preserving reverse-proxy prefixes.
+
+Metadata uses a 15-second operation budget, a 1 MiB response limit, at most 500
+unique voice IDs, and IDs of at most 200 UTF-8 bytes without control characters.
+Reflected credentials are omitted, redirects are not followed, and raw response
+bodies never appear in diagnostics. Names and language labels are bounded display
+metadata, not inferred model capabilities. No discovery call invokes inference.
+Lists are transient and scoped to the current connection/model. The selected
+voice uses the existing per-model setting; absence from a list does not block it.
+
+Kokoro-FastAPI's speech request uses the existing model/input/voice/speed/WAV
+fields plus `stream: false`. This override belongs only to the Kokoro backend;
+Generic and Speaches keep their existing request shape. Freehand buffers and
+validates PCM16 WAV before native playback. Voice blending management, language
+overrides, normalization, and progressive playback are outside this contract.

@@ -46,6 +46,7 @@ export default defineConfig({
                   { slug: 'docs/backends' },
                   { slug: 'docs/backends/generic' },
                   { slug: 'docs/backends/speaches' },
+                  { slug: 'docs/backends/kokoro-fastapi' },
                   { slug: 'docs/backends/llama-cpp' },
                   { slug: 'docs/backends/whisper-cpp' },
                   { slug: 'docs/backends/vllm' },
