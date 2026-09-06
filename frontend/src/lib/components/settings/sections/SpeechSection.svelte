@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
   import { ID } from "$bindings/compatibility";
   import RuntimeModelPicker from "$lib/components/settings/RuntimeModelPicker.svelte";
   import SettingsCard from "$lib/components/settings/SettingsCard.svelte";
@@ -48,9 +49,7 @@
       status.phase === TTSPhase.Paused,
   );
   const compatibility = $derived(
-    settings.compatibilityProfiles.speech?.find(
-      (p) => p.id === (speech.compatibilityProfile || ID.Generic),
-    ),
+    settings.modelProfiles.speech?.find((p) => p.id === (speech.modelProfile || ID.Generic)),
   );
   $effect(() => {
     if (settings.textToSpeech.enabled && settings.textToSpeech.speed === 0)
@@ -74,6 +73,12 @@
       models={connection?.modelIDs ?? []}
       busy={connectionBusy}
       onDiscover={onTestConnection}
+    />
+    <ModelProfilePicker
+      id="speech-model-profile"
+      value={speech.modelProfile}
+      profiles={settings.modelProfiles.speech ?? []}
+      onChange={(id) => (settings.textToSpeech.modelProfile = id)}
     />
     <ValueRow
       id="tts-voice"

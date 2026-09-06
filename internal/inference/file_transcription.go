@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
 const (
@@ -39,6 +40,9 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 	}
 	if err := c.validateTranscriptionOptions(); err != nil {
 		return TranscriptionResult{}, err
+	}
+	if err := modelprofile.ValidateLanguage(c.modelProfile, compatibility.Transcription, language, nil); err != nil {
+		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: err.Error()}
 	}
 	language, err = contract.TranscriptionLanguage(language)
 	if err != nil {

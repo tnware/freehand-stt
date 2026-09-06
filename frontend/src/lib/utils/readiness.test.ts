@@ -1,4 +1,5 @@
 import { ID } from "$bindings/compatibility";
+import { ID as ModelProfileID } from "$bindings/modelprofile";
 import { describe, expect, it } from "vitest";
 import {
   AuthenticationMode,
@@ -34,6 +35,8 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   },
   compatibilityProfile: ID.Generic,
   compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
+  modelProfiles: { transcription: [], postProcessing: [], speech: [] },
+  modelProfile: ModelProfileID.Generic,
   transcriptionLanguages: [],
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
@@ -94,6 +97,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     timeoutSeconds: 120,
   },
   textToSpeech: {
+    modelProfile: ModelProfileID.Generic,
     compatibilityProfile: ID.Generic,
     enabled: false,
     baseURL: "",

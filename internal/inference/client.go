@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
 const maxResponse = 1 << 20
@@ -17,6 +18,7 @@ const maxResponse = 1 << 20
 // capabilities consumed by this desktop client.
 type Client struct {
 	HTTP                 *http.Client
+	modelProfile         modelprofile.ID
 	profile              compatibility.ID
 	transcriptionOptions compatibility.TranscriptionOptions
 	cleanupOptions       compatibility.CleanupOptions
@@ -30,12 +32,19 @@ func (c *Client) WithCompatibility(id compatibility.ID) *Client {
 	return &copy
 }
 
+// WithModelProfile captures explicit model behavior without changing the shared client.
+func (c *Client) WithModelProfile(id modelprofile.ID) *Client {
+	copy := *c
+	copy.modelProfile = id
+	return &copy
+}
+
 func (c *Client) contract(role compatibility.Role) (compatibility.Contract, error) {
-	contract, err := compatibility.Resolve(c.profile, role)
+	contract, err := modelprofile.Resolve(c.modelProfile, c.profile, role)
 	if err != nil {
 		return compatibility.Contract{}, &Error{Kind: "invalid_settings", Message: err.Error()}
 	}
-	return contract, nil
+	return contract.Backend, nil
 }
 
 func New() *Client {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
   import LanguagePicker from "$lib/components/settings/LanguagePicker.svelte";
   import RuntimeModelPicker from "$lib/components/settings/RuntimeModelPicker.svelte";
   import TranscriptionControls from "$lib/components/settings/TranscriptionControls.svelte";
@@ -21,8 +22,8 @@
     onTestConnection: () => void;
   } = $props();
   const compatibility = $derived(
-    settings.compatibilityProfiles.transcription?.find(
-      (p) => p.id === (settings.compatibilityProfile || ID.Generic),
+    settings.modelProfiles.transcription?.find(
+      (p) => p.id === (settings.modelProfile || ID.Generic),
     ),
   );
   function updateFileTimeoutMinutes(event: Event) {
@@ -39,6 +40,12 @@
     serverLoaded={!!compatibility?.capabilities.serverLoadedModel}
     {busy}
     onDiscover={onTestConnection}
+  />
+  <ModelProfilePicker
+    id="transcription-model-profile"
+    value={settings.modelProfile}
+    profiles={settings.modelProfiles.transcription ?? []}
+    onChange={(id) => (settings.modelProfile = id)}
   />
   <ValueRow
     id="language"

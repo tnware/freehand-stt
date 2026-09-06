@@ -105,6 +105,11 @@
   const processingEnabled = $derived(settings.postProcessing.enabled);
   const discoveredModels = $derived(connection?.modelIDs ?? []);
   const processingDiscoveredModels = $derived(processingConnection?.modelIDs ?? []);
+  const transcriptionModelProfile = $derived(
+    settings.modelProfiles.transcription?.find(
+      (p) => p.id === (settings.modelProfile || "generic"),
+    ),
+  );
   const selectedProcessingProfile = $derived(
     processingProfiles.find((profile) => profile.id === settings.postProcessing.preset),
   );
@@ -255,7 +260,7 @@
     if (!savedField || !panelFields.includes(savedField)) return "";
     if (savedField === "stt-model") return "Speech-to-text model saved.";
     if (savedField === "processing-model") return "Post-processing model saved.";
-    if (savedField === "processing-profile") return "Post-processing behavior saved.";
+    if (savedField === "processing-profile") return "Cleanup model profile saved.";
     if (savedField === "processing-enabled") return "Post-processing preference saved.";
     if (savedField === "processing-controls") return "Post-processing controls saved.";
     return "";
@@ -392,6 +397,9 @@
         {/if}
       {/snippet}
       {@render field("Model", "quick-stt-model", sttModelMeta, sttModelControl)}
+      <p class="text-[11px] text-muted-foreground">
+        Model profile · {transcriptionModelProfile?.name ?? "Generic"}
+      </p>
     </div>
   </RackModule>
 
@@ -558,7 +566,7 @@
           </Select.Content>
         </Select.Root>
       {/snippet}
-      {@render field("Profile", "quick-processing-profile", profileMeta, profileControl)}
+      {@render field("Model profile", "quick-processing-profile", profileMeta, profileControl)}
 
       {#if settings.postProcessing.preset === PostProcessingPreset.PostProcessingPresetS1Mini && selectedProcessingProfile}
         <div class="min-w-0 border-t border-hairline pt-2.5">

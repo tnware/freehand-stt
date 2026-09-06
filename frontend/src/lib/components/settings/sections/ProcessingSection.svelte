@@ -3,7 +3,7 @@
   import RuntimeModelPicker from "$lib/components/settings/RuntimeModelPicker.svelte";
   import CleanupControls from "$lib/components/settings/CleanupControls.svelte";
   import CustomInstructionEditor from "$lib/components/settings/CustomInstructionEditor.svelte";
-  import ProcessingProfilePicker from "$lib/components/settings/ProcessingProfilePicker.svelte";
+  import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
   import S1MiniProfileSettings from "$lib/components/settings/S1MiniProfileSettings.svelte";
   import SettingsCard from "$lib/components/settings/SettingsCard.svelte";
   import SettingRow from "$lib/components/settings/SettingRow.svelte";
@@ -33,8 +33,8 @@
   } = $props();
   const processor = $derived(settings.postProcessing);
   const compatibility = $derived(
-    settings.compatibilityProfiles.postProcessing?.find(
-      (p) => p.id === (processor.compatibilityProfile || ID.Generic),
+    settings.modelProfiles.postProcessing?.find(
+      (p) => String(p.id) === (processor.preset || ID.Generic),
     ),
   );
   const selectedProfile = $derived(processingProfile(profiles, processor.preset));
@@ -62,6 +62,15 @@
       {busy}
       onDiscover={onTestConnection}
     />
+    <ModelProfilePicker
+      id="cleanup-model-profile"
+      value={processor.preset}
+      profiles={settings.modelProfiles.postProcessing ?? []}
+      onChange={(id) => {
+        const profile = profiles.find((p) => String(p.id) === id);
+        if (profile) settings.postProcessing.preset = profile.id;
+      }}
+    />
     <ValueRow
       id="post-processing-timeout"
       label="Request timeout"
@@ -79,32 +88,24 @@
   {#if connection}<p role="status" class="text-xs text-muted-foreground">
       {connectionDescription(connection)}
     </p>{/if}
-  <SettingsCard>
-    <div class="px-5 py-5">
-      <ProcessingProfilePicker {profiles} bind:value={settings.postProcessing.preset} />
-    </div>
-
-    <div class="px-5 py-5">
-      {#if selectedProfile?.id === PostProcessingPreset.PostProcessingPresetS1Mini}
-        <S1MiniProfileSettings
-          processor={settings.postProcessing}
-          profile={selectedProfile}
-          onChange={updateS1Mini}
-        />
-      {:else if selectedProfile}
-        <CustomInstructionEditor
-          bind:value={settings.postProcessing.systemPrompt}
-          recommended={selectedProfile.recommendedInstruction ?? ""}
-          maximumBytes={selectedProfile.maximumInstructionBytes ?? 0}
-        />
-      {/if}
-    </div>
-  </SettingsCard>
+  {#if selectedProfile?.id === PostProcessingPreset.PostProcessingPresetS1Mini}
+    <S1MiniProfileSettings
+      processor={settings.postProcessing}
+      profile={selectedProfile}
+      onChange={updateS1Mini}
+    />
+  {:else if selectedProfile}
+    <CustomInstructionEditor
+      bind:value={settings.postProcessing.systemPrompt}
+      recommended={selectedProfile.recommendedInstruction ?? ""}
+      maximumBytes={selectedProfile.maximumInstructionBytes ?? 0}
+    />
+  {/if}
 
   <CleanupControls
     bind:options={settings.postProcessing.generationOptions}
     capabilities={compatibility?.capabilities}
-    s1Mini={processor.preset === PostProcessingPreset.PostProcessingPresetS1Mini}
+    s1Mini={!!compatibility?.reasoningOffRequired}
   />
 
   <p class="px-1 text-xs leading-relaxed text-muted-foreground">

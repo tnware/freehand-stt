@@ -6,6 +6,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"github.com/tnware/freehand-stt/internal/storage/dbgen"
 )
 
@@ -56,6 +57,7 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 		return err
 	}
 	if err := q.PutTranscription(ctx, dbgen.PutTranscriptionParams{
+		ModelProfile:                            string(modelprofile.Effective(v.ModelProfile)),
 		CompatibilityProfile:                    string(v.CompatibilityProfile),
 		BaseUrl:                                 v.BaseURL,
 		AllowInsecureHttp:                       boolean(v.AllowInsecureHTTP),
@@ -91,6 +93,7 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 		return err
 	}
 	if err := q.PutSpeech(ctx, dbgen.PutSpeechParams{
+		ModelProfile:         string(modelprofile.Effective(v.TextToSpeech.ModelProfile)),
 		CompatibilityProfile: string(v.TextToSpeech.CompatibilityProfile),
 		Enabled:              boolean(v.TextToSpeech.Enabled),
 		BaseUrl:              v.TextToSpeech.BaseURL,
@@ -170,6 +173,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	v.BaseURL = rTranscription.BaseUrl
 	v.AllowInsecureHTTP = rTranscription.AllowInsecureHttp != 0
 	v.AuthenticationMode = config.AuthenticationMode(rTranscription.AuthenticationMode)
+	v.ModelProfile = modelprofile.ID(rTranscription.ModelProfile)
 	v.Model = rTranscription.Model
 	v.Language = rTranscription.Language
 	v.HealthPath = rTranscription.HealthPath
@@ -206,6 +210,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	v.TextToSpeech.BaseURL = rSpeech.BaseUrl
 	v.TextToSpeech.AllowInsecureHTTP = rSpeech.AllowInsecureHttp != 0
 	v.TextToSpeech.AuthenticationMode = config.AuthenticationMode(rSpeech.AuthenticationMode)
+	v.TextToSpeech.ModelProfile = modelprofile.ID(rSpeech.ModelProfile)
 	v.TextToSpeech.Model = rSpeech.Model
 	v.TextToSpeech.Voice = rSpeech.Voice
 	v.TextToSpeech.Speed = rSpeech.Speed

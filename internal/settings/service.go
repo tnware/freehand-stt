@@ -14,6 +14,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"github.com/tnware/freehand-stt/internal/postprocess"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/speechlanguage"
@@ -23,6 +24,7 @@ import (
 // SettingsDTO is the renderer-safe settings snapshot. It reports credential
 // presence and native capability state but never returns credential values.
 type SettingsDTO struct {
+	ModelProfiles          modelprofile.Catalog    `json:"modelProfiles"`
 	SavedConnections       savedconnection.Catalog `json:"savedConnections"`
 	TranscriptionLanguages []speechlanguage.Option `json:"transcriptionLanguages"`
 	CompatibilityProfiles  compatibility.Catalog   `json:"compatibilityProfiles"`
@@ -314,6 +316,7 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 	return SettingsDTO{
 		SavedConnections:                   catalog,
 		CompatibilityProfiles:              compatibility.Profiles(),
+		ModelProfiles:                      modelprofile.Profiles(v.CompatibilityProfile, v.PostProcessing.CompatibilityProfile, v.TextToSpeech.CompatibilityProfile),
 		TranscriptionLanguages:             speechlanguage.Options(),
 		Settings:                           v,
 		Configuration:                      cloneConfigurationStatus(s.configuration),

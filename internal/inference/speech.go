@@ -9,11 +9,13 @@ import (
 	"strings"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
 const maxSpeechResponse = 32 << 20
 
 type SpeechRequest struct {
+	ModelProfile         modelprofile.ID
 	CompatibilityProfile compatibility.ID
 	Model                string
 	Voice                string
@@ -25,7 +27,7 @@ type SpeechRequest struct {
 // Freehand requests WAV so native playback stays deterministic and requires no
 // compressed-audio decoder or helper process.
 func (c *Client) SynthesizeSpeech(ctx context.Context, base, key string, input SpeechRequest) ([]byte, error) {
-	contract, err := c.WithCompatibility(input.CompatibilityProfile).contract(compatibility.Speech)
+	contract, err := c.WithCompatibility(input.CompatibilityProfile).WithModelProfile(input.ModelProfile).contract(compatibility.Speech)
 	if err != nil {
 		return nil, err
 	}
