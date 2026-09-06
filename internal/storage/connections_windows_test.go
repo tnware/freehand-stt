@@ -207,12 +207,16 @@ func TestConnectionSwitchRestoresOptionsForEachBackend(t *testing.T) {
 	selected := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: connectionID(t, added, "Speaches")})
 	next := selected.Settings
 	next.Model = "whisper"
+	next.Language = "ja"
 	next.TranscriptionOptions.Hotwords = "Freehand"
 	saved, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: next})
 	if err != nil {
 		t.Fatal(err)
 	}
 	got := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: id})
+	if got.Language != "ja" {
+		t.Fatal("connection switch replaced task language")
+	}
 	if got.TranscriptionOptions.Hotwords != "" {
 		t.Fatal("hotwords leaked to another backend")
 	}

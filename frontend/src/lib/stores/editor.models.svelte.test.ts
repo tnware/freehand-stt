@@ -42,17 +42,17 @@ function configured() {
   return v;
 }
 describe("remembered model settings", () => {
-  it("restores all feature options without mutating connection or saved values", () => {
+  it("restores engine options and preserves task intent without mutating connection or saved values", () => {
     const v = configured();
     const connections = structuredClone(v.savedConnections);
     const timeout = v.postProcessing.timeoutSeconds;
     expect(applyModel(v, Purpose.Cleanup, "s1")).toBe(true);
     expect(v.postProcessing.preset).toBe(PostProcessingPreset.PostProcessingPresetS1Mini);
-    expect(v.postProcessing.styling).toBe("formal");
+    expect(v.postProcessing.styling).toBe(settings.postProcessing.styling);
     expect(applyModel(v, Purpose.Transcription, "whisper")).toBe(true);
-    expect(v.language).toBe("ja");
+    expect(v.language).toBe(settings.language);
     expect(applyModel(v, Purpose.Speech, "voice-model")).toBe(true);
-    expect(v.textToSpeech.speed).toBe(1.4);
+    expect(v.textToSpeech.speed).toBe(settings.textToSpeech.speed);
     expect(v.textToSpeech.voice).toBe("voice-a");
     expect(v.savedConnections).toEqual(connections);
     expect(v.postProcessing.timeoutSeconds).toBe(timeout);
@@ -89,7 +89,7 @@ describe("remembered model settings", () => {
       await editor.updateQuickSettings({ postProcessing: { model: "s1" } }, "processing-model"),
     ).toBe(true);
     const request = vi.mocked(bindings.settings.SaveSettings).mock.calls[0][0];
-    expect(request.settings.postProcessing.styling).toBe("formal");
+    expect(request.settings.postProcessing.styling).toBe(settings.postProcessing.styling);
     expect(request.settings.postProcessing.preset).toBe(
       PostProcessingPreset.PostProcessingPresetS1Mini,
     );

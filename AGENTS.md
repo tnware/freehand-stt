@@ -48,7 +48,9 @@ Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are 
   model behavior and intersects its capabilities with the selected backend.
   Generic is a baseline, not proof of support by every deployed model.
 - `internal/modelsettings` owns the non-secret per-connection/use/model option
-  subset. Persist it with active settings through the existing settings transaction
+  subset. Follow ADR 0007 for task-versus-model ownership: selection preserves language,
+  cleanup intent, and speaking speed; historical task fields in saved model snapshots
+  are not selection authority. Persist it with active settings through the existing settings transaction
   and sqlc queries; never store transport or credentials in model preferences.
 - Model profiles belong to feature settings, independently of reusable server
   connections. Do not infer them from model IDs, URLs, or model inventories.

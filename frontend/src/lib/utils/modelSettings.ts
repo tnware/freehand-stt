@@ -79,7 +79,8 @@ export function applyModelOptions(
   model: string,
   options: Options,
 ) {
-  // Copy value objects so editing a draft cannot mutate the saved catalog.
+  // Restore engine options while preserving task intent. Historical task fields
+  // remain in the saved snapshot format, but do not control model selection.
   const o = {
     ...options,
     transcription: { ...options.transcription },
@@ -88,7 +89,6 @@ export function applyModelOptions(
   if (purpose === Purpose.Transcription) {
     settings.model = model;
     settings.modelProfile = o.profile;
-    settings.language = o.language;
     settings.transcriptionOptions = o.transcription;
   } else if (purpose === Purpose.Cleanup) {
     Object.assign(settings.postProcessing, {
@@ -98,17 +98,12 @@ export function applyModelOptions(
           ? PostProcessingPreset.PostProcessingPresetS1Mini
           : PostProcessingPreset.PostProcessingPresetGeneric,
       generationOptions: o.cleanup,
-      systemPrompt: o.systemPrompt,
-      styling: o.styling,
-      structure: o.structure,
-      context: o.context,
     });
   } else {
     Object.assign(settings.textToSpeech, {
       model,
       modelProfile: o.profile,
       voice: o.voice,
-      speed: o.speed,
     });
   }
   return true;

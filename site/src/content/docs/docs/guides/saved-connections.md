@@ -81,8 +81,8 @@ transcription; they do not get sent through cleanup or playback adapters.
 New names must be unique across the connection library, with up to 32 available
 connections per feature. Upgrades preserve existing names and entries; duplicate
 URLs are not automatically merged because their authentication or uses may differ.
-Language, voice, instructions, and provider options follow the remembered model
-for the selected connection and feature. See [Model profiles](../model-profiles/)
+Voice and provider-specific engine options follow the remembered model. Language,
+cleanup instructions and style, and speaking speed stay with the current task. See [Model profiles](../model-profiles/)
 for choosing, saving, and forgetting those preferences.
 
 ## Test and protect credentials
@@ -111,8 +111,7 @@ and [settings recovery](../troubleshooting/#saved-settings-need-attention).
 
 ### Discover speech voices
 
-Speaches and Kokoro-FastAPI connections offer **Refresh voices** in Speech
-playback settings. Search the voice field or type an ID. Speaches may identify
+Speaches and Kokoro-FastAPI connections offer **Refresh voices** in Text to speech settings. Search the voice field or type an ID. Speaches may identify
 voices for the selected model; server-wide lists are labelled accordingly.
 Changing the connection or model hides results from another selection. Refreshing
 voices neither changes the selected voice nor generates audio. Save feature
