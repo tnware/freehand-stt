@@ -31,6 +31,7 @@
     emptyDescription = "The next finalized transcript will appear here.",
     clamp = true,
     scrollable = true,
+    maxHeight,
     live,
     onCopy,
     onCopyVersion,
@@ -49,6 +50,7 @@
     clamp?: boolean;
     /** Home owns an independent history scroller; settings scrolls as one page. */
     scrollable?: boolean;
+    maxHeight?: string;
     /** Ephemeral presentation of an active file run; retained history remains owned by Go. */
     live?: {
       text: string;
@@ -217,6 +219,7 @@
 
 <div
   bind:this={scrollContainer}
+  style:max-height={maxHeight}
   class={cn("min-h-0 flex-1", scrollable && "overflow-y-auto overscroll-contain")}
 >
   {#if entries.length === 0 && !live}
@@ -233,7 +236,9 @@
           class="bg-primary/5 px-4 pt-3.5 pb-2"
           aria-label={live.working ? "Live audio file transcript" : "Audio file transcript result"}
         >
-          <div class="-mx-4 -mt-3.5 flex min-h-8 min-w-0 items-center justify-between gap-3 border-b border-hairline bg-layer-fill px-4 py-1">
+          <div
+            class="-mx-4 -mt-3.5 flex min-h-8 min-w-0 items-center justify-between gap-3 border-b border-hairline bg-layer-fill px-4 py-1"
+          >
             <div class="flex min-w-0 items-center gap-2">
               <span
                 class={cn(
@@ -269,11 +274,19 @@
             {/if}
           </p>
 
-          <div class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2">
+          <div
+            class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
+          >
             <span class="font-mono text-[10px] text-primary">audio file · {live.status}</span>
             <div class="flex items-center">
               {#if ttsEnabled && onListenLive && !live.working}
-                <Button variant="ghost" size="icon-xs" disabled={!ttsAvailable} aria-label="Listen to audio file transcript" onclick={onListenLive}>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={!ttsAvailable}
+                  aria-label="Listen to audio file transcript"
+                  onclick={onListenLive}
+                >
                   {#if ttsStatus?.source === TTSSource.SourceFile && ttsStatus.phase === TTSPhase.Generating}
                     <LoaderCircleIcon class="animate-spin motion-reduce:animate-none" />
                   {:else}
@@ -351,7 +364,9 @@
                   </Badge>
                 {/if}
               </span>
-              <span class="disclosure-affordance grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground">
+              <span
+                class="disclosure-affordance grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground"
+              >
                 <ChevronDownIcon
                   class={cn(
                     "size-4 transition-transform duration-150 motion-reduce:transition-none",
@@ -382,10 +397,14 @@
               {#if isComparing}
                 {@const processedText = entry.processedText ?? entry.text}
                 {@const comparison = compareTranscriptText(entry.rawText, processedText)}
-                <div class="comparison-layout mt-3 overflow-hidden rounded-lg border border-hairline bg-background/35">
+                <div
+                  class="comparison-layout mt-3 overflow-hidden rounded-lg border border-hairline bg-background/35"
+                >
                   <section class="comparison-panel px-3 py-2.5" aria-label="Raw transcript">
                     <div class="mb-1.5 flex items-center justify-between gap-3">
-                      <span class="truncate font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase">
+                      <span
+                        class="truncate font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase"
+                      >
                         Raw · {compactModel(entry.details.model)}
                       </span>
                       <Button
@@ -404,8 +423,10 @@
                       </Button>
                     </div>
                     <p class="text-[13px] leading-relaxed break-words whitespace-pre-wrap">
-                      {#each comparison.raw as part}
-                        <span class={cn(part.kind === "removed" && "diff-removed")}>{part.text}</span>
+                      {#each comparison.raw as part, index (index)}
+                        <span class={cn(part.kind === "removed" && "diff-removed")}
+                          >{part.text}</span
+                        >
                       {/each}
                     </p>
                   </section>
@@ -415,7 +436,9 @@
                     aria-label="Cleaned transcript"
                   >
                     <div class="mb-1.5 flex items-center justify-between gap-3">
-                      <span class="truncate font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase">
+                      <span
+                        class="truncate font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase"
+                      >
                         Cleaned · {compactModel(entry.details.processing.model)}
                         {#if entry.details.processing.preset}
                           · {processingProfileName([], entry.details.processing.preset)}
@@ -424,7 +447,8 @@
                       <Button
                         variant="ghost"
                         size="icon-xs"
-                        aria-label={copiedKey === `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`
+                        aria-label={copiedKey ===
+                        `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`
                           ? "Cleaned transcript copied"
                           : "Copy cleaned transcript"}
                         onclick={() =>
@@ -438,7 +462,7 @@
                       </Button>
                     </div>
                     <p class="text-[13px] leading-relaxed break-words whitespace-pre-wrap">
-                      {#each comparison.processed as part}
+                      {#each comparison.processed as part, index (index)}
                         <span class={cn(part.kind === "added" && "diff-added")}>{part.text}</span>
                       {/each}
                     </p>
@@ -458,20 +482,28 @@
                 aria-controls={`history-entry-${entry.id}-content`}
                 onclick={() => toggleExpanded(entry.id)}
               >
-                <span class="line-clamp-2 text-[13px] leading-relaxed break-words">{entry.text}</span>
+                <span class="line-clamp-2 text-[13px] leading-relaxed break-words"
+                  >{entry.text}</span
+                >
               </button>
             {/if}
           </div>
 
-          <div class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2">
-            <div class="flex min-w-0 items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
+          <div
+            class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
+          >
+            <div
+              class="flex min-w-0 items-center gap-1.5 font-mono text-[10px] text-muted-foreground"
+            >
               <span class="shrink-0">{characterLabel(entry.characterCount)}</span>
               <span class="shrink-0" aria-hidden="true">·</span>
               <span class="max-w-48 truncate">{sourceMetadata(entry)}</span>
               {#if hasProcessing(entry) && !hasCleaned}
                 <span class="shrink-0" aria-hidden="true">·</span>
                 {#if entry.processingStatus === HistoryProcessingStatus.HistoryProcessingPending}
-                  <LoaderCircleIcon class="size-3 shrink-0 animate-spin motion-reduce:animate-none" />
+                  <LoaderCircleIcon
+                    class="size-3 shrink-0 animate-spin motion-reduce:animate-none"
+                  />
                   <span class="min-w-0 truncate">Waiting for the processor.</span>
                 {:else}
                   <CircleAlertIcon class="size-3 shrink-0" />
@@ -489,7 +521,8 @@
                     variant="ghost"
                     size="icon-xs"
                     disabled={!ttsAvailable}
-                    aria-label={ttsStatus?.historyID === entry.id && ttsStatus.phase === TTSPhase.Generating
+                    aria-label={ttsStatus?.historyID === entry.id &&
+                    ttsStatus.phase === TTSPhase.Generating
                       ? "Generating speech for this transcript"
                       : "Listen to transcript"}
                     onclick={() => onListen(entry.id, finalVersion)}

@@ -422,7 +422,13 @@ The Win32 renderer queues all changes onto its locked message-loop thread, uses 
 
 Settings can request a presentation-only native preview through a narrow Wails binding. Draft presentation changes update the same renderer, real dictation preempts preview, Settings close stops it, and the applied saved configuration is restored. Preview can temporarily create a surface while the applied feature is disabled, but stopping it destroys that surface. Overlay creation remains a degraded optional capability: native failure is logged without failing dictation or rolling back the saved preference.
 
-Home presents the selected task and current result first. An expandable task-settings
+Home presents the selected task and current result first. The workspace keeps a readable width and uses a wider two-column layout when
+recent history is enabled: current work and controls on the left, history on the
+right. Narrow windows stack those areas. The current-result card has a compact, stable height across empty, working,
+recovery, and completed states, with status explanations inside it. Short history
+lists size to their content. In wide layouts the history scroll limit grows to
+match the adjacent result and task-settings column. Long results and history remain
+scrollable. An expandable task-settings
 area retains immediate-save STT and cleanup controls; microphone and delivery controls
 appear only for dictation. TTS shows its own connection and model/voice settings link.
 Each quick update starts from backend-confirmed settings, restores only engine options
