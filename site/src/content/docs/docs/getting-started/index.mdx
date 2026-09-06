@@ -36,11 +36,11 @@ Freehand opens a readiness screen the first time it starts. Work through each re
 
 <Steps>
 
-1. **Speech-to-text server** — enter the base URL and model ID under **Settings → Transcription**.
-2. **Authentication** — under **Settings → Transcription**, select **Authentication → API key** if the endpoint requires one, then enter the key. Saved keys use Windows Credential Manager. Leave authentication at **None** for an endpoint without authentication.
+1. **Save a server** — open **Settings → Connections → New connection**. Name it, choose **Transcription**, select its compatibility profile, and enter the base URL. Configure authentication and HTTP permission as required, then choose **Save connection**. Keys use Windows Credential Manager.
+2. **Select it for transcription** — open **Settings → Transcription**, choose the **Active connection**, and list models or enter the model ID. whisper.cpp uses its server-loaded model. Choose **Save feature settings**.
 3. **Microphone** — select **System default** or a specific device under **Settings → Audio**.
 4. **Recording shortcut** — keep the default toggle shortcut (**Ctrl+Shift+Space**), or configure another toggle shortcut and an optional hold-to-talk chord under **Settings → Shortcuts**.
-5. **Save** — choose **Save changes** and return to the readiness screen.
+5. **Save** — save any remaining settings and return to the readiness screen.
 6. **Connection check** — choose **Test connection** on the readiness screen. If it fails, correct the settings, save, and retry. First launch requires this explicit check; after setup, Freehand checks the saved speech connection automatically.
 7. **Finish** — when all requirements are ready, choose **Finish setup** to open the workspace.
 

@@ -202,7 +202,7 @@ func New(opts Options) (*App, error) {
 		rootLogger,
 	)
 	a.history = history.NewService(transcripts)
-	a.connection = connection.NewService(keys, processingKeys, ttsKeys, client, rootLogger)
+	a.connection = connection.NewService(keys, processingKeys, ttsKeys, client, rootLogger, store)
 	a.inputService = inputservice.NewService(a.audio, a.capture, a, admission, settingsSource, a.publishShortcutCapture, rootLogger)
 	a.buildInfo = buildinfo.NewService(
 		opts.Release.ProductName,

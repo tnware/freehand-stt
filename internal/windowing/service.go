@@ -10,13 +10,14 @@ import (
 )
 
 var settingsSections = map[string]struct{}{
-	"general":    {},
-	"shortcuts":  {},
-	"audio":      {},
-	"overlay":    {},
-	"server":     {},
-	"processing": {},
-	"history":    {},
+	"general":     {},
+	"shortcuts":   {},
+	"audio":       {},
+	"overlay":     {},
+	"server":      {},
+	"connections": {},
+	"processing":  {},
+	"history":     {},
 }
 
 type Service struct {

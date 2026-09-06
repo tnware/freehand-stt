@@ -169,6 +169,9 @@ func TestReadOnlyAndDiskFullSavePreserveSettings(t *testing.T) {
 			if mode == "readonly" {
 				s.db.Exec("PRAGMA query_only=ON")
 			} else {
+				if _, err := s.db.Exec("VACUUM"); err != nil {
+					t.Fatal(err)
+				}
 				var pages int
 				s.db.QueryRow("PRAGMA page_count").Scan(&pages)
 				s.db.Exec("PRAGMA max_page_count=" + fmtInt(pages))
@@ -309,7 +312,7 @@ func withUpgrade(s *Store, sql string) {
 		data, _ := embeddedMigrations.ReadFile("migrations/" + entry.Name())
 		migrations[entry.Name()] = &fstest.MapFile{Data: data}
 	}
-	migrations["00003_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
+	migrations["00006_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
 	s.migrations = migrations
 }
 func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
@@ -341,7 +344,7 @@ func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
 			var current int
 			db.QueryRow("SELECT max(version_id) FROM goose_db_version").Scan(&current)
 			db.Close()
-			if fail && current != 2 {
+			if fail && current != 5 {
 				t.Fatal("failed migration advanced version")
 			}
 			restore := newStore(s.path, s.legacy, s.vault)
@@ -469,7 +472,7 @@ func TestVersionOneUpgradePreservesSettingsAndReferences(t *testing.T) {
  ALTER TABLE speech_settings RENAME TO speech_fixture;` + sql[start:start+end] + `
  INSERT INTO speech_settings(id,compatibility_profile,enabled,base_url,allow_insecure_http,authentication_mode,model,voice,speed,timeout_seconds)
  SELECT id,compatibility_profile,enabled,base_url,allow_insecure_http,authentication_mode,model,voice,speed,timeout_seconds FROM speech_fixture;
- DROP TABLE speech_fixture; DELETE FROM goose_db_version WHERE version_id=2;`)
+ DROP TABLE speech_fixture; DROP TABLE saved_connection_headers; DROP TABLE selected_connections; DROP TABLE saved_connection_uses; DROP TABLE saved_connections; DELETE FROM goose_db_version WHERE version_id>=2;`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -483,5 +486,78 @@ func TestVersionOneUpgradePreservesSettingsAndReferences(t *testing.T) {
 	backups, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "backups", "*.db"))
 	if len(backups) != 1 {
 		t.Fatal("v1 upgrade missing backup")
+	}
+}
+
+func TestVersionThreeUpgradeKeepsRuntimeModelsAndConnectionKeys(t *testing.T) {
+	s := testStore(t)
+	initial := config.Default()
+	initial.BaseURL = "https://stt.example.test/v1"
+	initial.Model = "current-stt"
+	initial.PostProcessing.BaseURL = "https://cleanup.example.test/v1"
+	initial.PostProcessing.Model = "current-cleanup"
+	writeLegacy(t, s, initial)
+	want := loadStore(t, s)
+	if err := s.BeginCredentialChanges(); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.STTCredentials().Set("migration-fixture"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Save(want); err != nil {
+		t.Fatal(err)
+	}
+	before := s.ConnectionCatalog()
+	restoreConnectionSchema(t, s, 3)
+	s = reopen(t, s)
+	if got := loadStore(t, s); !reflect.DeepEqual(got, want) {
+		t.Fatal("upgrade changed runtime choices")
+	}
+	if !reflect.DeepEqual(s.ConnectionCatalog(), before) {
+		t.Fatal("upgrade changed connection selections")
+	}
+	if key, err := s.STTCredentials().Get(); err != nil || key != "migration-fixture" {
+		t.Fatal("upgrade lost key reference")
+	}
+}
+
+func restoreConnectionSchema(t *testing.T, s *Store, version int) {
+	t.Helper()
+	old, err := embeddedMigrations.ReadFile("migrations/00003_saved_connections.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.db.Exec(`DROP TABLE selected_connections; DROP TABLE saved_connection_headers; DROP TABLE saved_connection_uses; DROP TABLE saved_connections;` + string(old)); err != nil {
+		t.Fatal(err)
+	}
+	// Recreate the configured-only catalog used by this fixture, without v3 bootstrap rows.
+	if _, err = s.db.Exec(`DELETE FROM selected_connections WHERE connection_id IN(SELECT id FROM saved_connections WHERE base_url=''); DELETE FROM saved_connections WHERE base_url='';`); err != nil {
+		t.Fatal(err)
+	}
+	if version == 4 {
+		next, _ := embeddedMigrations.ReadFile("migrations/00004_connection_manager.sql")
+		if _, err = s.db.Exec(string(next)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = s.db.Exec("DELETE FROM goose_db_version WHERE version_id>?", version); err != nil {
+		t.Fatal(err)
+	}
+}
+func TestVersionFourUpgradePreservesConnectionUses(t *testing.T) {
+	s := testStore(t)
+	initial := config.Default()
+	initial.BaseURL = "https://speech.example.test/v1"
+	initial.Model = "chosen-model"
+	writeLegacy(t, s, initial)
+	want := loadStore(t, s)
+	before := s.ConnectionCatalog()
+	restoreConnectionSchema(t, s, 4)
+	s = reopen(t, s)
+	if got := loadStore(t, s); !reflect.DeepEqual(got, want) {
+		t.Fatal("upgrade changed runtime settings")
+	}
+	if !reflect.DeepEqual(s.ConnectionCatalog(), before) {
+		t.Fatal("upgrade changed original connection use or selection")
 	}
 }

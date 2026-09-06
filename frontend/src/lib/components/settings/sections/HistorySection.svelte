@@ -44,8 +44,8 @@
 
   <div class="flex items-center justify-between gap-4 px-1">
     <p class="text-[13px] leading-relaxed text-muted-foreground">
-      {enabled ? "Retention is active." : "Retention is off."} Turning it off or quitting clears
-      every entry. History is never written to disk.
+      {enabled ? "Retention is active." : "Retention is off."} Turning it off or quitting clears every
+      entry. History is never written to disk.
     </p>
     <Button variant="outline" size="sm" disabled={entries.length === 0} onclick={onClear}>
       <TrashIcon data-icon="inline-start" />
@@ -53,7 +53,7 @@
     </Button>
   </div>
 
-  <div class="min-h-44 overflow-hidden rounded-xl bg-card shadow-lift">
+  <div class="min-h-44 overflow-hidden rounded-xl border border-hairline bg-layer-fill">
     <HistoryList {entries} clamp={false} scrollable={false} {onCopy} {onCopyVersion} {onDelete} />
   </div>
 </div>

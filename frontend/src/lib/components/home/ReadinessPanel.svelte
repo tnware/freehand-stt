@@ -53,7 +53,7 @@
       </p>
     </div>
 
-    <div class="overflow-hidden rounded-lg border border-card-stroke bg-card shadow-lift">
+    <div class="overflow-hidden rounded-lg border border-hairline bg-layer-fill">
       {#each readiness.steps as step (step.id)}
         <div
           class={cn(
@@ -66,7 +66,8 @@
               "grid size-6 shrink-0 place-items-center rounded-full",
               step.status === "complete" && "bg-success/12 text-success",
               step.status === "pending" && "bg-muted text-muted-foreground",
-              step.status === "attention" && "border border-accent-edge bg-accent-wash text-accent-text",
+              step.status === "attention" &&
+                "border border-accent-edge bg-accent-wash text-accent-text",
             )}
             aria-hidden="true"
           >
@@ -82,13 +83,17 @@
           <div class="flex min-w-0 flex-1 flex-col gap-0.5">
             <span class="text-[13.5px] font-medium">{step.label}</span>
             {#if step.id === "shortcut" && step.status === "complete"}
-              <span class="mt-0.5 flex"><ShortcutKeys value={step.detail} label="Toggle recording shortcut" /></span>
+              <span class="mt-0.5 flex"
+                ><ShortcutKeys value={step.detail} label="Toggle recording shortcut" /></span
+              >
             {:else}
               <span
                 class={cn(
                   "text-[11.5px] leading-relaxed break-words",
                   step.id === "server" && "figure text-[10.5px]",
-                  step.status === "attention" ? "text-secondary-foreground" : "text-muted-foreground",
+                  step.status === "attention"
+                    ? "text-secondary-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 {step.detail}
@@ -113,7 +118,11 @@
         <span class="mr-auto flex items-center gap-2.5" aria-live="polite">
           <span class="flex items-center gap-1" aria-hidden="true">
             {#each readiness.steps as step (step.id)}
-              <span class={cn("h-[3px] w-[18px] rounded-full", step.status === "complete" ? "bg-success" : "bg-border")}
+              <span
+                class={cn(
+                  "h-[3px] w-[18px] rounded-full",
+                  step.status === "complete" ? "bg-success" : "bg-border",
+                )}
               ></span>
             {/each}
           </span>
@@ -130,16 +139,26 @@
             onclick={onComplete}
           >
             {#if completing}
-              <LoaderCircleIcon data-icon="inline-start" class="animate-spin motion-reduce:animate-none" />
+              <LoaderCircleIcon
+                data-icon="inline-start"
+                class="animate-spin motion-reduce:animate-none"
+              />
             {/if}
             {completing ? "Finishing…" : "Finish setup"}
           </Button>
         {:else}
           <Button variant="ghost" size="sm" onclick={onDismiss}>Continue anyway</Button>
         {/if}
-        <Button size="sm" disabled={!readiness.canTestConnection || testing || completing} onclick={onTestConnection}>
+        <Button
+          size="sm"
+          disabled={!readiness.canTestConnection || testing || completing}
+          onclick={onTestConnection}
+        >
           {#if testing}
-            <LoaderCircleIcon data-icon="inline-start" class="animate-spin motion-reduce:animate-none" />
+            <LoaderCircleIcon
+              data-icon="inline-start"
+              class="animate-spin motion-reduce:animate-none"
+            />
           {:else}
             <ArrowRightIcon data-icon="inline-start" />
           {/if}

@@ -5,8 +5,8 @@ description: Maintain the schema, generated queries, credential references, and 
 
 Freehand persists non-secret settings in SQLite. Follow
 [ADR 0006](../../decisions/0006-sqlite-storage-contract/) and the repository's
-`AGENTS.md` for every storage change. Saved connections, reusable model
-preferences, and persistent history are separate features. Disposable window
+`AGENTS.md` for every storage change. Saved connections use stable server records with explicit capability memberships. Reusable model
+preferences and persistent history are separate features. Disposable window
 placement remains in `window-state.json`, independent of settings recovery.
 
 ## Ownership and tools
@@ -35,7 +35,7 @@ Generated rows and database handles never cross into Wails or domain services.
 
 ## Change the schema or a query
 
-1. Add the next five-digit goose SQL migration, such as `00003_example.sql`.
+1. Add the next five-digit goose SQL migration, such as `00004_example.sql`.
    Never edit or delete a migration already on the target branch. Runtime startup
    runs forward only; migrations must remain transactional.
 2. Add explicit, parameterized application queries under `queries/`. `sqlc.yaml`
@@ -139,3 +139,42 @@ The Windows service integration uses an isolated fake vault and startup adapter;
 it does not change personal credentials or startup registration. Interactive
 app acceptance and real Credential Manager behavior remain distinct from fixtures
 and compilation; follow the [native checklist](../../safety/native-test-checklist/).
+
+## Saved connections
+
+Migration 00003 imports singleton connections. Forward migration 00004 removes
+connection-level model/preset columns and unused empty bootstrap entries;
+current model and preset values remain in runtime tables. Earlier migrations
+remain unchanged. Fresh initialization starts with no saved connections;
+legacy import seeds only configured endpoints. Forward migration 00005 adds
+`saved_connection_uses`, removes exclusive purpose ownership, and preserves
+existing IDs, original uses, names, and opaque key references without merging
+servers. Historical same-name entries are preserved; the serialized settings
+owner rejects newly conflicting names across the library.
+
+`saved_connections`, `selected_connections`, and `saved_connection_headers`
+retain stable IDs, typed endpoint fields, opaque credential references,
+bounded names and explicit foreign keys. Selected (connection, purpose) pairs
+reference `saved_connection_uses`, so an undeclared use cannot be selected. Each capability has
+zero or one active selection. `internal/savedconnection` owns domain validation
+and selection application; `internal/settings` remains the sole save coordinator.
+
+Explicit create/update actions take bounded connection details and a transient
+credential draft. Creating or duplicating does not select. Runtime saves restore
+the committed connection fields before validation and save only feature options.
+Selection clears the role's model; optional features disable until configured.
+Settings, selected IDs, entry mutations, and active credential references commit
+in one transaction, then publish. Expected selected IDs reject stale editors.
+An entry must be deselected from every active feature before deletion or removal
+of an active use; empty catalogs are valid. Shared edits project endpoint details
+into every selected feature while preserving model/options. Credential replacement
+stages one connection-owned account and updates every selected reference in the
+same transaction. Legacy credential adapters also synchronize all active uses.
+Opaque references from older purpose-scoped accounts remain valid for shared use.
+
+Inactive entries retain their keys. Duplication can share a reference, while
+replacement creates a new reference for the edited entry. Cleanup excludes every
+reference still used by any saved entry. SQL rollback leaves the old catalog and
+keys intact. `TestSavedConnection` resolves the specified entry's details and key
+under the store lock, never borrowing an active connection's credential. It reads
+metadata only. Restored databases must pass catalog/runtime/reference checks.

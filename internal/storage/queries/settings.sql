@@ -45,7 +45,7 @@ INSERT INTO credential_gc(account) VALUES(?) ON CONFLICT(account) DO NOTHING;
 -- name: CompleteCredentialGC :exec
 DELETE FROM credential_gc WHERE account=?;
 -- name: PendingCredentialGC :many
-SELECT account FROM credential_gc WHERE account NOT IN (SELECT account FROM credential_refs) ORDER BY account LIMIT 128;
+SELECT account FROM credential_gc WHERE account NOT IN (SELECT account FROM credential_refs) AND account NOT IN (SELECT credential_account FROM saved_connections) ORDER BY account LIMIT 128;
 -- name: GetInitialization :one
 SELECT source FROM initialization WHERE id=1;
 -- name: Initialize :exec
@@ -53,4 +53,4 @@ INSERT INTO initialization(id,source) VALUES(1,?);
 
 
 -- name: CountCredentialGC :one
-SELECT count(*) FROM credential_gc;
+SELECT count(*) FROM credential_gc WHERE account NOT IN (SELECT account FROM credential_refs) AND account NOT IN (SELECT credential_account FROM saved_connections);

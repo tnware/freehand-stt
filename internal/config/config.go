@@ -259,21 +259,21 @@ func Default() Settings {
 		// flow owns that explicit trust decision.
 		BaseURL: "", Model: "",
 		AuthenticationMode: AuthenticationModeNone,
-		ToggleShortcut:     "CmdOrCtrl+Shift+Space", ShowShortcut: "CmdOrCtrl+Shift+D",
+		ToggleShortcut:     "CmdOrCtrl+Shift+Space", ShowShortcut: "",
 		MaxDurationSeconds: 120, TranscriptionTimeoutSeconds: DefaultTranscriptionTimeoutSeconds,
 		FileTranscriptionTimeoutSeconds: DefaultFileTranscriptionTimeoutSeconds,
 		AutoInsert:                      true, ShowWindowOnLaunch: true, CheckForUpdates: true,
 		AppearanceMode: AppearanceModeSystem,
-		OverlayEnabled: true, OverlaySizePercent: 100, OverlayOpacityPercent: 100, OverlayTopOffset: 18, OverlayGlowPercent: 100,
-		OverlayLayout: OverlayLayoutCapsule, OverlayAnchor: OverlayAnchorTopCenter, OverlayVisibility: OverlayVisibilityAll,
-		OverlayMotion: OverlayMotionSystem, OverlaySurface: OverlaySurfaceGlass, OverlayVisualizer: OverlayVisualizerBars,
+		OverlayEnabled: true, OverlaySizePercent: 100, OverlayOpacityPercent: 85, OverlayTopOffset: 18, OverlayGlowPercent: 70,
+		OverlayLayout: OverlayLayoutCapsule, OverlayAnchor: OverlayAnchorBottomCenter, OverlayVisibility: OverlayVisibilityAll,
+		OverlayMotion: OverlayMotionSystem, OverlaySurface: OverlaySurfaceMinimal, OverlayVisualizer: OverlayVisualizerEnvelope,
 		Headers: map[string]string{}, VADEnabled: true, VADMode: VADModeAggressive,
 		VADActivitySilenceMS: 400, SpeechPaddingMS: 300,
 		AutoStopSilenceMS: 2000, AutoStopMinimumSpeechMS: 300,
 		SegmentSeconds: 90, SegmentSilenceMS: 700,
 		PostProcessing: PostProcessingSettings{
 			CompatibilityProfile: compatibility.Generic,
-			BaseURL:              "http://127.0.0.1:8080/v1",
+			BaseURL:              "",
 			Preset:               PostProcessingPresetGeneric,
 			SystemPrompt:         DefaultPostProcessingInstruction,
 			Styling:              "semi-casual", Structure: "prose", Context: "general",
@@ -411,7 +411,10 @@ func ValidateTextToSpeech(s TextToSpeechSettings, requireConnection bool) error 
 	if err := validateTimeout("speech generation", s.TimeoutSeconds, MinRequestTimeoutSeconds, MaxRequestTimeoutSeconds); err != nil {
 		return err
 	}
-	if !requireConnection && strings.TrimSpace(s.BaseURL) == "" && strings.TrimSpace(s.Model) == "" && strings.TrimSpace(s.Voice) == "" {
+	if (requireConnection && strings.TrimSpace(s.Voice) == "") || len(s.Voice) > 200 {
+		return errors.New("speech playback voice is required and must be at most 200 characters")
+	}
+	if !requireConnection && strings.TrimSpace(s.BaseURL) == "" && strings.TrimSpace(s.Model) == "" {
 		if s.Speed == 0 {
 			return nil
 		}
@@ -422,9 +425,6 @@ func ValidateTextToSpeech(s TextToSpeechSettings, requireConnection bool) error 
 	}
 	if err := validateTextToSpeechConnection(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, s.Model, requireConnection); err != nil {
 		return err
-	}
-	if (requireConnection && strings.TrimSpace(s.Voice) == "") || len(s.Voice) > 200 {
-		return errors.New("speech playback voice is required and must be at most 200 characters")
 	}
 	if s.Speed < 0.25 || s.Speed > 4 {
 		return errors.New("speech playback speed must be between 0.25 and 4")
@@ -555,7 +555,7 @@ func validatePersistedSTTSettings(s Settings) error {
 	if err != nil {
 		return err
 	}
-	return validateSTTConnection(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, s.Model, s.HealthPath, s.Headers, !contract.Capabilities.ServerLoadedModel)
+	return validateSTTConnection(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, s.Model, s.HealthPath, s.Headers, s.SetupCompleted && !contract.Capabilities.ServerLoadedModel)
 }
 
 // ValidateSTTConnection validates only renderer-controlled values needed for

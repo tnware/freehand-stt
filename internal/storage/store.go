@@ -30,18 +30,21 @@ const applicationID = 1179796804 // FRHD: database identity, not a schema versio
 const operationTimeout = 10 * time.Second
 
 type Store struct {
-	mu           sync.Mutex
-	path, legacy string
-	db           *sql.DB
-	lock         *os.File
-	closed       bool
-	uncertain    bool
-	ctx          context.Context
-	cancel       context.CancelFunc
-	migrations   fs.FS
-	refs         map[string]string
-	pending      map[string]string
-	vault        Vault
+	connections             connectionState
+	pendingConnections      *connectionState
+	pendingConnectionTarget string
+	mu                      sync.Mutex
+	path, legacy            string
+	db                      *sql.DB
+	lock                    *os.File
+	closed                  bool
+	uncertain               bool
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	migrations              fs.FS
+	refs                    map[string]string
+	pending                 map[string]string
+	vault                   Vault
 }
 
 // NewStore does not open or modify any files. Load owns initialization/recovery.
@@ -92,6 +95,12 @@ func (s *Store) Load() (config.Settings, error) {
 	if err = s.loadReferences(ctx); err != nil {
 		return config.Default(), failure("corrupt", err)
 	}
+	state, err := readConnections(ctx, dbgen.New(s.db), v, s.refs)
+	if err != nil {
+		return config.Default(), failure("corrupt", err)
+	}
+	s.connections = state
+	s.pendingConnections = nil
 	s.pending = nil
 	s.uncertain = false
 	s.collectCredentials(ctx) // Failed deletions stay durably queued for a later attempt.
@@ -135,6 +144,10 @@ func (s *Store) Save(v config.Settings) error {
 			}
 		}
 	}
+	nextConnections, err := s.writeConnections(ctx, q, v)
+	if err != nil {
+		return failure("write_failed", err)
+	}
 	if err = tx.Commit(); err != nil {
 		s.uncertain = true
 		// A failed COMMIT may leave a driver transaction open. Drop the handle
@@ -147,6 +160,8 @@ func (s *Store) Save(v config.Settings) error {
 		s.refs = s.pending
 		s.pending = nil
 	}
+	s.connections = nextConnections
+	s.pendingConnections = nil
 	s.collectCredentials(ctx)
 	return nil
 }
@@ -332,6 +347,9 @@ func (s *Store) initialize(ctx context.Context, db *sql.DB, v config.Settings, s
 		if err = q.PutCredentialRef(ctx, dbgen.PutCredentialRefParams{Purpose: purpose, Account: account}); err != nil {
 			return err
 		}
+	}
+	if err = seedConnections(ctx, q); err != nil {
+		return err
 	}
 	if err = q.Initialize(ctx, source); err != nil {
 		return err

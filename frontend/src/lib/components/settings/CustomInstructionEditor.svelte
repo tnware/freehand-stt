@@ -5,10 +5,7 @@
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
   import { Textarea } from "$lib/components/ui/textarea";
-  import {
-    instructionBytes,
-    instructionError,
-  } from "$lib/utils/processingProfiles";
+  import { instructionBytes, instructionError } from "$lib/utils/processingProfiles";
 
   let {
     value = $bindable(),
@@ -27,13 +24,13 @@
   const canRestore = $derived(Boolean(recommended) && value !== recommended);
 </script>
 
-<Card.Root size="sm" class="border border-card-stroke">
+<Card.Root size="sm">
   <Card.Header>
     <Card.Title>Custom system instruction</Card.Title>
     <Card.Description>
-      This is sent as the system message. The raw transcript is sent separately as the user
-      message, so the instruction does not need a transcript placeholder. It is stored locally
-      with your ordinary Freehand settings; credentials remain separate.
+      This is sent as the system message. The raw transcript is sent separately as the user message,
+      so the instruction does not need a transcript placeholder. It is stored locally with your
+      ordinary Freehand settings; credentials remain separate.
     </Card.Description>
     <Card.Action><Badge variant="secondary">Editable</Badge></Card.Action>
   </Card.Header>

@@ -42,7 +42,7 @@
   nothing on screen; only the contents of the three cells change.
 -->
 <section
-  class="transport relative shrink-0 border-b border-card-stroke bg-card shadow-lift"
+  class="transport relative shrink-0 border-b border-hairline bg-layer-fill"
   class:tall
   data-state={state}
   aria-busy={busy}

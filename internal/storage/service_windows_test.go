@@ -25,7 +25,12 @@ func (f *fixtureStartup) Set(v bool) error {
 
 func TestSettingsServiceUsesCommittedSQLiteAndCredentialSnapshot(t *testing.T) {
 	s := testStore(t)
-	initial := loadStore(t, s)
+	initial := config.Default()
+	initial.BaseURL = "https://example.test/v1"
+	initial.Model = "fixture"
+	initial.AuthenticationMode = config.AuthenticationModeAPIKey
+	writeLegacy(t, s, initial)
+	initial = loadStore(t, s)
 	startup := &fixtureStartup{}
 	service := settings.NewService(s, initial, s.STTCredentials(), s.CleanupCredentials(), startup, func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil, config.LoadReport{}))
 	defer service.ServiceShutdown()
@@ -73,7 +78,7 @@ func TestSettingsServiceUsesCommittedSQLiteAndCredentialSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if profile.Settings.BaseURL != failed.BaseURL || profile.STTCredential != "second-fixture-key" || startup.enabled {
+	if profile.Settings.BaseURL != next.BaseURL || profile.STTCredential != "second-fixture-key" || startup.enabled {
 		t.Fatal("new profile did not commit coherently")
 	}
 	if captured.STTCredential != "first-fixture-key" {

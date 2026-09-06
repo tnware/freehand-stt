@@ -3,6 +3,7 @@ import HistoryIcon from "@lucide/svelte/icons/history";
 import KeyboardIcon from "@lucide/svelte/icons/keyboard";
 import MicIcon from "@lucide/svelte/icons/mic";
 import PictureInPictureIcon from "@lucide/svelte/icons/picture-in-picture-2";
+import FileAudioIcon from "@lucide/svelte/icons/file-audio";
 import ServerIcon from "@lucide/svelte/icons/server";
 import SettingsIcon from "@lucide/svelte/icons/settings";
 import WandSparklesIcon from "@lucide/svelte/icons/wand-sparkles";
@@ -13,6 +14,7 @@ export type SettingsSectionID =
   | "shortcuts"
   | "audio"
   | "overlay"
+  | "connections"
   | "server"
   | "processing"
   | "speech"
@@ -23,7 +25,7 @@ export type SettingsSection = {
   label: string;
   blurb: string;
   icon: Component;
-  group: "capture" | "delivery" | "server" | "data";
+  group: "capture" | "features" | "application";
 };
 
 /**
@@ -48,62 +50,62 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "overlay",
     label: "Overlay",
-    blurb:
-      "Control the passive status indicator shown above other applications.",
+    blurb: "Control the passive status indicator shown above other applications.",
     icon: PictureInPictureIcon,
     group: "capture",
+  },
+  {
+    id: "server",
+    label: "Transcription",
+    blurb: "Choose a connection, model, language, and transcription options.",
+    icon: FileAudioIcon,
+    group: "features",
+  },
+  {
+    id: "processing",
+    label: "Post-processing",
+    blurb: "Optionally clean completed transcripts with a separate language model.",
+    icon: WandSparklesIcon,
+    group: "features",
+  },
+  {
+    id: "speech",
+    label: "Speech playback",
+    blurb: "Optionally listen to completed transcripts through a separate TTS endpoint.",
+    icon: Volume2Icon,
+    group: "features",
   },
   {
     id: "general",
     label: "General",
     blurb: "Startup, transcript delivery and appearance.",
     icon: SettingsIcon,
-    group: "delivery",
+    group: "application",
   },
   {
-    id: "server",
-    label: "Transcription",
-    blurb: "The OpenAI-compatible endpoint that transcribes your speech.",
+    id: "connections",
+    label: "Connections",
+    blurb: "Create and manage saved server connections.",
     icon: ServerIcon,
-    group: "server",
-  },
-  {
-    id: "processing",
-    label: "Post-processing",
-    blurb:
-      "Optionally clean completed transcripts with a separate language model.",
-    icon: WandSparklesIcon,
-    group: "server",
-  },
-  {
-    id: "speech",
-    label: "Speech playback",
-    blurb:
-      "Optionally listen to completed transcripts through a separate TTS endpoint.",
-    icon: Volume2Icon,
-    group: "delivery",
+    group: "application",
   },
   {
     id: "history",
     label: "History",
     blurb: "An in-memory safety net for transcripts that did not land.",
     icon: HistoryIcon,
-    group: "data",
+    group: "application",
   },
 ];
 
 export const GROUP_LABELS: Record<SettingsSection["group"], string> = {
   capture: "Capture",
-  delivery: "Delivery",
-  server: "Server",
-  data: "Data",
+  features: "Features",
+  application: "Application",
 };
 
-export const sectionsInGroup = (
-  group: SettingsSection["group"],
-): SettingsSection[] =>
+export const sectionsInGroup = (group: SettingsSection["group"]): SettingsSection[] =>
   SETTINGS_SECTIONS.filter((section) => section.group === group);
 
 export const sectionByID = (id: SettingsSectionID): SettingsSection =>
-  SETTINGS_SECTIONS.find((section) => section.id === id) ??
-  SETTINGS_SECTIONS[0];
+  SETTINGS_SECTIONS.find((section) => section.id === id) ?? SETTINGS_SECTIONS[0];

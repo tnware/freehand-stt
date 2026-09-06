@@ -86,14 +86,17 @@ Installing an STT model alone does not provision voices or a TTS model.
 
 ## Configure Freehand
 
-For transcription, choose **Speaches** in the speech-to-text connection,
-enter the server's base URL including `/v1`, and select an installed
-transcription model. Set authentication to match the server.
+Under **Settings → Connections**, create a **Transcription** connection with the
+**Speaches** profile, base URL including `/v1`, authentication, and HTTP permission.
+Choose **Save connection**, then select it in **Settings → Transcription** and
+choose an installed model. Save feature settings.
 
-For speech playback, enable it in its own Settings section, choose **Speaches**,
-and provide the speech base URL, installed TTS model, and an appropriate voice
-ID. Save settings before explicitly previewing a voice. The two operations may
-share a server but retain separate credentials and settings.
+For playback on the same server, edit that connection and enable **Speech
+playback** under **Used for**. Save it, then select the same entry in **Settings →
+Speech playback**, choose the installed TTS model and voice, enable playback, and
+save before explicitly previewing a voice. Both features share the connection
+and key while retaining separate models and options. Create another connection
+when the playback endpoint or credentials differ.
 
 The [connection guide](../../guides/connect-a-server/) explains deployment
 topologies and shared settings. Freehand neither installs models nor loads all

@@ -15,6 +15,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/postprocess"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/speechlanguage"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -22,6 +23,7 @@ import (
 // SettingsDTO is the renderer-safe settings snapshot. It reports credential
 // presence and native capability state but never returns credential values.
 type SettingsDTO struct {
+	SavedConnections       savedconnection.Catalog `json:"savedConnections"`
 	TranscriptionLanguages []speechlanguage.Option `json:"transcriptionLanguages"`
 	CompatibilityProfiles  compatibility.Catalog   `json:"compatibilityProfiles"`
 	config.Settings
@@ -49,13 +51,17 @@ type ConfigurationStatus struct {
 // SaveSettingsRequest groups the persisted settings and transient credential
 // changes into one binding argument. Credential drafts are never returned.
 type SaveSettingsRequest struct {
-	Settings                      config.Settings `json:"settings"`
-	STTCredentialDraft            string          `json:"sttCredentialDraft,omitempty"`
-	ClearSTTCredential            bool            `json:"clearSTTCredential"`
-	PostProcessingCredentialDraft string          `json:"postProcessingCredentialDraft,omitempty"`
-	ClearPostProcessingCredential bool            `json:"clearPostProcessingCredential"`
-	TextToSpeechCredentialDraft   string          `json:"textToSpeechCredentialDraft,omitempty"`
-	ClearTextToSpeechCredential   bool            `json:"clearTextToSpeechCredential"`
+	ConnectionCredentialDraft     string                             `json:"connectionCredentialDraft,omitempty"`
+	ClearConnectionCredential     bool                               `json:"clearConnectionCredential"`
+	ExpectedConnections           map[savedconnection.Purpose]string `json:"expectedConnections,omitempty"`
+	ConnectionChange              *savedconnection.Change            `json:"connectionChange,omitempty"`
+	Settings                      config.Settings                    `json:"settings"`
+	STTCredentialDraft            string                             `json:"sttCredentialDraft,omitempty"`
+	ClearSTTCredential            bool                               `json:"clearSTTCredential"`
+	PostProcessingCredentialDraft string                             `json:"postProcessingCredentialDraft,omitempty"`
+	ClearPostProcessingCredential bool                               `json:"clearPostProcessingCredential"`
+	TextToSpeechCredentialDraft   string                             `json:"textToSpeechCredentialDraft,omitempty"`
+	ClearTextToSpeechCredential   bool                               `json:"clearTextToSpeechCredential"`
 }
 
 type HoldInfo func() (bool, string)
@@ -285,7 +291,7 @@ func rollback(primary error, steps ...rollbackStep) error {
 }
 
 // Settings and profile bindings. This section owns the single transaction for
-// JSON settings, native shortcuts, startup registration, and credentials.
+// durable settings, native shortcuts, startup registration, and credentials.
 
 // GetSettings returns a renderer-safe snapshot of the active runtime profile.
 func (s *Service) GetSettings() SettingsDTO {
@@ -299,7 +305,14 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 	ok, reason := s.hold()
 	processingCredentialConfigured := s.processKeys != nil && s.processKeys.Configured()
 	ttsCredentialConfigured := s.ttsKeys != nil && s.ttsKeys.Configured()
+	catalog := savedconnection.Catalog{Entries: []savedconnection.Connection{}, Selected: map[savedconnection.Purpose]string{}}
+	if store, ok := s.store.(interface {
+		ConnectionCatalog() savedconnection.Catalog
+	}); ok {
+		catalog = store.ConnectionCatalog()
+	}
 	return SettingsDTO{
+		SavedConnections:                   catalog,
 		CompatibilityProfiles:              compatibility.Profiles(),
 		TranscriptionLanguages:             speechlanguage.Options(),
 		Settings:                           v,
@@ -372,20 +385,73 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 		if clearTTSKey && strings.TrimSpace(newTTSAPIKey) != "" {
 			return SettingsDTO{}, errors.New("cannot set and clear the speech playback API key together")
 		}
-		if validateErr := config.Validate(v); validateErr != nil {
-			return SettingsDTO{}, validateErr
+		if request.ExpectedConnections != nil {
+			store, ok := s.store.(interface {
+				ConnectionCatalog() savedconnection.Catalog
+			})
+			if !ok {
+				return SettingsDTO{}, errors.New("saved connections are unavailable")
+			}
+			selected := store.ConnectionCatalog().Selected
+			if len(request.ExpectedConnections) != len(selected) {
+				return SettingsDTO{}, errors.New("connections changed; reload settings before saving")
+			}
+			for p, id := range selected {
+				if request.ExpectedConnections[p] != id {
+					return SettingsDTO{}, errors.New("connections changed; reload settings before saving")
+				}
+			}
 		}
 
-		// Durable credential references stage secret replacements independently;
-		// the settings save commits their references with the endpoint configuration.
-		if staged, ok := s.store.(interface {
-			BeginCredentialChanges() error
-			DiscardCredentialChanges()
-		}); ok {
-			if err := staged.BeginCredentialChanges(); err != nil {
-				return SettingsDTO{}, err
+		if change := request.ConnectionChange; change != nil {
+			store, ok := s.store.(interface {
+				BeginConnectionChange(savedconnection.Change, config.Settings) (config.Settings, error)
+				StageConnectionCredential(string, bool) error
+				DiscardCredentialChanges()
+			})
+			if !ok {
+				return SettingsDTO{}, errors.New("saved connections are unavailable")
 			}
-			defer staged.DiscardCredentialChanges()
+			if newAPIKey != "" || newProcessingAPIKey != "" || newTTSAPIKey != "" || clearKey || clearProcessingKey || clearTTSKey {
+				return SettingsDTO{}, errors.New("connection edits use their own credential draft")
+			}
+			if len(request.ConnectionCredentialDraft) > MaxAPIKeyBytes || (request.ClearConnectionCredential && strings.TrimSpace(request.ConnectionCredentialDraft) != "") {
+				return SettingsDTO{}, errors.New("invalid connection credential draft")
+			}
+			var prepareErr error
+			v, prepareErr = store.BeginConnectionChange(*change, s.current())
+			if prepareErr != nil {
+				return SettingsDTO{}, prepareErr
+			}
+			defer store.DiscardCredentialChanges()
+			if change.Action == savedconnection.Create || change.Action == savedconnection.Update {
+				if err := store.StageConnectionCredential(request.ConnectionCredentialDraft, request.ClearConnectionCredential); err != nil {
+					return SettingsDTO{}, err
+				}
+			} else if request.ConnectionCredentialDraft != "" || request.ClearConnectionCredential {
+				return SettingsDTO{}, errors.New("credentials require an explicit connection edit")
+			}
+		} else {
+			if request.ConnectionCredentialDraft != "" || request.ClearConnectionCredential {
+				return SettingsDTO{}, errors.New("credentials require an explicit connection edit")
+			}
+			if store, ok := s.store.(interface {
+				ApplySelectedConnections(config.Settings) config.Settings
+			}); ok {
+				v = store.ApplySelectedConnections(v)
+			}
+			if staged, ok := s.store.(interface {
+				BeginCredentialChanges() error
+				DiscardCredentialChanges()
+			}); ok {
+				if err := staged.BeginCredentialChanges(); err != nil {
+					return SettingsDTO{}, err
+				}
+				defer staged.DiscardCredentialChanges()
+			}
+		}
+		if validateErr := config.Validate(v); validateErr != nil {
+			return SettingsDTO{}, validateErr
 		}
 
 		old = s.current()

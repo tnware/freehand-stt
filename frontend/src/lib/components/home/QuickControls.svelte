@@ -143,7 +143,7 @@
      rule rather than nested cards. They stay open because these are the rack's
      immediate behavior controls; the longer endpoint modules fold below it. -->
 <section
-  class="shrink-0 overflow-hidden rounded-lg border border-card-stroke bg-card shadow-lift"
+  class="shrink-0 overflow-hidden rounded-lg border border-hairline bg-layer-fill"
   aria-label="Capture and delivery"
 >
   <div class="control-group">
@@ -162,112 +162,112 @@
     </div>
 
     <div class="grid grid-cols-2 gap-x-3.5 gap-y-2">
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger disabled={controlsDisabled}>
-        {#snippet child({ props })}
-          <button
-            {...props}
-            type="button"
-            class="lamp-row"
-            aria-label={`Microphone: ${selectedMicrophoneLabel}`}
-            title={`Microphone: ${selectedMicrophoneLabel}`}
-          >
-            <span
-              class={cn(
-                "size-1.5 shrink-0 rounded-full",
-                selectedMicrophoneMissing ? "bg-warning" : "bg-success",
-              )}
-            ></span>
-            <span class="min-w-0 flex-1 truncate text-left">{selectedMicrophoneLabel}</span>
-            <ChevronDownIcon class="size-3 shrink-0 text-ink-quiet" />
-          </button>
-        {/snippet}
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="start" class="w-72">
-        <DropdownMenu.Group>
-          <DropdownMenu.GroupHeading>Microphone</DropdownMenu.GroupHeading>
-          <DropdownMenu.RadioGroup
-            bind:value={selectedMicrophone}
-            onValueChange={(choice) => void chooseMicrophone(choice)}
-          >
-            <DropdownMenu.RadioItem value={SYSTEM_DEFAULT_MICROPHONE}>
-              {SYSTEM_DEFAULT_LABEL}
-            </DropdownMenu.RadioItem>
-            {#if selectedMicrophoneMissing}
-              <DropdownMenu.RadioItem value={selectedMicrophone}>
-                {selectedMicrophoneLabel}
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger disabled={controlsDisabled}>
+          {#snippet child({ props })}
+            <button
+              {...props}
+              type="button"
+              class="lamp-row"
+              aria-label={`Microphone: ${selectedMicrophoneLabel}`}
+              title={`Microphone: ${selectedMicrophoneLabel}`}
+            >
+              <span
+                class={cn(
+                  "size-1.5 shrink-0 rounded-full",
+                  selectedMicrophoneMissing ? "bg-warning" : "bg-success",
+                )}
+              ></span>
+              <span class="min-w-0 flex-1 truncate text-left">{selectedMicrophoneLabel}</span>
+              <ChevronDownIcon class="size-3 shrink-0 text-ink-quiet" />
+            </button>
+          {/snippet}
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content align="start" class="w-72">
+          <DropdownMenu.Group>
+            <DropdownMenu.GroupHeading>Microphone</DropdownMenu.GroupHeading>
+            <DropdownMenu.RadioGroup
+              bind:value={selectedMicrophone}
+              onValueChange={(choice) => void chooseMicrophone(choice)}
+            >
+              <DropdownMenu.RadioItem value={SYSTEM_DEFAULT_MICROPHONE}>
+                {SYSTEM_DEFAULT_LABEL}
               </DropdownMenu.RadioItem>
-            {/if}
-            {#each devices as device (device.id)}
-              <DropdownMenu.RadioItem value={device.id}>{device.name}</DropdownMenu.RadioItem>
-            {/each}
-          </DropdownMenu.RadioGroup>
-        </DropdownMenu.Group>
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+              {#if selectedMicrophoneMissing}
+                <DropdownMenu.RadioItem value={selectedMicrophone}>
+                  {selectedMicrophoneLabel}
+                </DropdownMenu.RadioItem>
+              {/if}
+              {#each devices as device (device.id)}
+                <DropdownMenu.RadioItem value={device.id}>{device.name}</DropdownMenu.RadioItem>
+              {/each}
+            </DropdownMenu.RadioGroup>
+          </DropdownMenu.Group>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
 
-    <button
-      type="button"
-      class="lamp-row"
-      role="switch"
-      aria-checked={vadEnabled}
-      disabled={controlsDisabled}
-      onclick={() => void toggleVAD(!vadEnabled)}
-    >
-      <span class="size-1.5 shrink-0 rounded-full {lamp(vadEnabled)}"></span>
-      <span class="min-w-0 flex-1 truncate text-left">Voice detection</span>
-      {#if isPending("vad-enabled")}
-        <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
-      {:else if savedField === "vad-enabled"}
-        <CheckIcon class="size-3 shrink-0 text-success" />
-      {:else}
-        <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-          {vadEnabled ? "ON" : "OFF"}
-        </span>
-      {/if}
-    </button>
+      <button
+        type="button"
+        class="lamp-row"
+        role="switch"
+        aria-checked={vadEnabled}
+        disabled={controlsDisabled}
+        onclick={() => void toggleVAD(!vadEnabled)}
+      >
+        <span class="size-1.5 shrink-0 rounded-full {lamp(vadEnabled)}"></span>
+        <span class="min-w-0 flex-1 truncate text-left">Voice detection</span>
+        {#if isPending("vad-enabled")}
+          <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
+        {:else if savedField === "vad-enabled"}
+          <CheckIcon class="size-3 shrink-0 text-success" />
+        {:else}
+          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
+            {vadEnabled ? "ON" : "OFF"}
+          </span>
+        {/if}
+      </button>
 
-    <button
-      type="button"
-      class="lamp-row"
-      role="switch"
-      aria-checked={checkpointsEnabled}
-      disabled={controlsDisabled}
-      onclick={() => void toggleCheckpoints(!checkpointsEnabled)}
-    >
-      <span class="size-1.5 shrink-0 rounded-full {lamp(checkpointsEnabled)}"></span>
-      <span class="min-w-0 flex-1 truncate text-left">Checkpoints</span>
-      {#if isPending("silence-splitting")}
-        <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
-      {:else if savedField === "silence-splitting"}
-        <CheckIcon class="size-3 shrink-0 text-success" />
-      {:else}
-        <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-          {checkpointsEnabled ? "ON" : "OFF"}
-        </span>
-      {/if}
-    </button>
+      <button
+        type="button"
+        class="lamp-row"
+        role="switch"
+        aria-checked={checkpointsEnabled}
+        disabled={controlsDisabled}
+        onclick={() => void toggleCheckpoints(!checkpointsEnabled)}
+      >
+        <span class="size-1.5 shrink-0 rounded-full {lamp(checkpointsEnabled)}"></span>
+        <span class="min-w-0 flex-1 truncate text-left">Checkpoints</span>
+        {#if isPending("silence-splitting")}
+          <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
+        {:else if savedField === "silence-splitting"}
+          <CheckIcon class="size-3 shrink-0 text-success" />
+        {:else}
+          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
+            {checkpointsEnabled ? "ON" : "OFF"}
+          </span>
+        {/if}
+      </button>
 
-    <button
-      type="button"
-      class="lamp-row"
-      role="switch"
-      aria-checked={overlayEnabled}
-      disabled={controlsDisabled}
-      onclick={() => void toggleOverlay(!overlayEnabled)}
-    >
-      <span class="size-1.5 shrink-0 rounded-full {lamp(overlayEnabled)}"></span>
-      <span class="min-w-0 flex-1 truncate text-left">Overlay</span>
-      {#if isPending("overlay-enabled")}
-        <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
-      {:else if savedField === "overlay-enabled"}
-        <CheckIcon class="size-3 shrink-0 text-success" />
-      {:else}
-        <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-          {overlayEnabled ? "ON" : "OFF"}
-        </span>
-      {/if}
-    </button>
+      <button
+        type="button"
+        class="lamp-row"
+        role="switch"
+        aria-checked={overlayEnabled}
+        disabled={controlsDisabled}
+        onclick={() => void toggleOverlay(!overlayEnabled)}
+      >
+        <span class="size-1.5 shrink-0 rounded-full {lamp(overlayEnabled)}"></span>
+        <span class="min-w-0 flex-1 truncate text-left">Overlay</span>
+        {#if isPending("overlay-enabled")}
+          <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
+        {:else if savedField === "overlay-enabled"}
+          <CheckIcon class="size-3 shrink-0 text-success" />
+        {:else}
+          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
+            {overlayEnabled ? "ON" : "OFF"}
+          </span>
+        {/if}
+      </button>
     </div>
   </div>
 
@@ -287,49 +287,49 @@
     </div>
 
     <div class="grid grid-cols-2 gap-x-3.5 gap-y-2">
-    <button
-      type="button"
-      class="lamp-row"
-      role="switch"
-      aria-checked={directInputEnabled}
-      disabled={controlsDisabled}
-      onclick={() => void toggleDelivery(!directInputEnabled)}
-    >
-      <span class="size-1.5 shrink-0 rounded-full {lamp(directInputEnabled)}"></span>
-      <span class="min-w-0 flex-1 truncate text-left">
-        {directInputEnabled ? "Typed straight in" : "Manual copy"}
-      </span>
-      {#if isPending("delivery")}
-        <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
-      {:else if savedField === "delivery"}
-        <CheckIcon class="size-3 shrink-0 text-success" />
-      {:else}
-        <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-          {directInputEnabled ? "ON" : "OFF"}
+      <button
+        type="button"
+        class="lamp-row"
+        role="switch"
+        aria-checked={directInputEnabled}
+        disabled={controlsDisabled}
+        onclick={() => void toggleDelivery(!directInputEnabled)}
+      >
+        <span class="size-1.5 shrink-0 rounded-full {lamp(directInputEnabled)}"></span>
+        <span class="min-w-0 flex-1 truncate text-left">
+          {directInputEnabled ? "Typed straight in" : "Manual copy"}
         </span>
-      {/if}
-    </button>
+        {#if isPending("delivery")}
+          <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
+        {:else if savedField === "delivery"}
+          <CheckIcon class="size-3 shrink-0 text-success" />
+        {:else}
+          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
+            {directInputEnabled ? "ON" : "OFF"}
+          </span>
+        {/if}
+      </button>
 
-    <button
-      type="button"
-      class="lamp-row"
-      role="switch"
-      aria-checked={historyEnabled}
-      disabled={controlsDisabled}
-      onclick={() => void toggleHistory(!historyEnabled)}
-    >
-      <span class="size-1.5 shrink-0 rounded-full {lamp(historyEnabled)}"></span>
-      <span class="min-w-0 flex-1 truncate text-left">Keep history</span>
-      {#if isPending("history-enabled")}
-        <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
-      {:else if savedField === "history-enabled"}
-        <CheckIcon class="size-3 shrink-0 text-success" />
-      {:else}
-        <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-          {historyEnabled ? "ON" : "OFF"}
-        </span>
-      {/if}
-    </button>
+      <button
+        type="button"
+        class="lamp-row"
+        role="switch"
+        aria-checked={historyEnabled}
+        disabled={controlsDisabled}
+        onclick={() => void toggleHistory(!historyEnabled)}
+      >
+        <span class="size-1.5 shrink-0 rounded-full {lamp(historyEnabled)}"></span>
+        <span class="min-w-0 flex-1 truncate text-left">Keep history</span>
+        {#if isPending("history-enabled")}
+          <LoaderCircleIcon class="size-3 shrink-0 animate-spin text-ink-quiet" />
+        {:else if savedField === "history-enabled"}
+          <CheckIcon class="size-3 shrink-0 text-success" />
+        {:else}
+          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
+            {historyEnabled ? "ON" : "OFF"}
+          </span>
+        {/if}
+      </button>
     </div>
   </div>
 </section>

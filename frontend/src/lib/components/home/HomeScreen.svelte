@@ -12,12 +12,7 @@
   import { connectionSucceeded } from "$lib/utils/connection";
   import { isFailure, statusMessage } from "$lib/utils/status";
   import { appReadiness, readinessVisible } from "$lib/utils/readiness";
-  import {
-    FileTranscriptionPhase,
-    State,
-    TTSPhase,
-    TTSSource,
-  } from "$lib/state";
+  import { FileTranscriptionPhase, State, TTSPhase, TTSSource } from "$lib/state";
 
   let {
     session,
@@ -44,14 +39,10 @@
   } = $props();
 
   const fileWorking = $derived(
-    session.files.status.phase ===
-      FileTranscriptionPhase.FileTranscriptionUploading ||
-      session.files.status.phase ===
-        FileTranscriptionPhase.FileTranscriptionProcessing ||
-      session.files.status.phase ===
-        FileTranscriptionPhase.FileTranscriptionStreaming ||
-      session.files.status.phase ===
-        FileTranscriptionPhase.FileTranscriptionCancelling,
+    session.files.status.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
+      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
+      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
+      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
   );
   const voiceActive = $derived(
     session.dictation.status.state !== State.Idle &&
@@ -62,9 +53,7 @@
       session.speech.status.phase === TTSPhase.Playing ||
       session.speech.status.phase === TTSPhase.Paused,
   );
-  const runtimeSettings = $derived(
-    session.editor.applied ?? session.editor.draft,
-  );
+  const runtimeSettings = $derived(session.editor.applied ?? session.editor.draft);
   const readiness = $derived(
     runtimeSettings
       ? appReadiness(
@@ -79,9 +68,9 @@
   const showReadiness = $derived(
     Boolean(
       readiness &&
-        readinessVisible(readiness, dismissedRecoveryKey) &&
-        !voiceActive &&
-        !fileWorking,
+      readinessVisible(readiness, dismissedRecoveryKey) &&
+      !voiceActive &&
+      !fileWorking,
     ),
   );
   /*
@@ -95,19 +84,13 @@
   let pane = $state<"transcripts" | "setup">("transcripts");
   const setupNeedsAttention = $derived(
     session.editor.sttConnectionStale ||
-      Boolean(
-        session.editor.connection &&
-          !connectionSucceeded(session.editor.connection),
-      ),
+      Boolean(session.editor.connection && !connectionSucceeded(session.editor.connection)),
   );
 
   const microphoneLabel = $derived.by(() => {
     const selectedID = runtimeSettings?.microphoneID ?? "";
     if (!selectedID) return "system default";
-    return (
-      session.editor.devices.find((device) => device.id === selectedID)?.name ??
-      "selected"
-    );
+    return session.editor.devices.find((device) => device.id === selectedID)?.name ?? "selected";
   });
 
   // Keep the active job visible. A hotkey can start voice capture while the
@@ -115,10 +98,7 @@
   $effect(() => {
     if (voiceActive) inputMode = "voice";
     else if (fileWorking) inputMode = "file";
-    else if (
-      ttsWorking &&
-      session.speech.status.source === TTSSource.SourceCompose
-    )
+    else if (ttsWorking && session.speech.status.source === TTSSource.SourceCompose)
       inputMode = "tts";
   });
 
@@ -140,8 +120,7 @@
     if (preservedFields.length > 0) {
       const remaining = Math.max(
         0,
-        (configuration?.preservedFieldCount ?? preservedFields.length) -
-          preservedFields.length,
+        (configuration?.preservedFieldCount ?? preservedFields.length) - preservedFields.length,
       );
       out.push({
         id: "configuration-compatibility",
@@ -215,8 +194,7 @@
         />
       {:else}
         <TextToSpeech
-          settings={runtimeSettings?.textToSpeech ??
-            session.editor.draft.textToSpeech}
+          settings={runtimeSettings?.textToSpeech ?? session.editor.draft.textToSpeech}
           status={session.speech.status}
           unavailable={voiceActive || fileWorking}
           onSpeak={(text) => session.speech.speakText(text)}
@@ -243,8 +221,7 @@
           {readiness}
           testing={session.editor.sttConnectionTesting}
           completing={session.editor.setupCompleting}
-          onTestConnection={() =>
-            session.editor.testConnection(session.editor.applied, "")}
+          onTestConnection={() => session.editor.testConnection(session.editor.applied, "")}
           onComplete={() => session.editor.completeSetup()}
           onDismiss={() => {
             dismissedRecoveryKey = readiness.recoveryKey;
@@ -281,9 +258,7 @@
             >
               Setup
               {#if setupNeedsAttention}
-                <span
-                  class="size-1.5 shrink-0 rounded-full bg-warning"
-                  aria-label="Needs attention"
+                <span class="size-1.5 shrink-0 rounded-full bg-warning" aria-label="Needs attention"
                 ></span>
               {/if}
             </button>
@@ -310,16 +285,12 @@
               savedField={session.editor.quickSettingsSaved}
               sttTesting={session.editor.sttConnectionTesting}
               processingTesting={session.editor.processingConnectionTesting}
-              onUpdate={(patch, field) =>
-                session.editor.updateQuickSettings(patch, field)}
-              onTestConnection={() =>
-                session.editor.testConnection(session.editor.applied, "")}
+              onChangeConnection={(change) => session.editor.changeConnection(change)}
+              onUpdate={(patch, field) => session.editor.updateQuickSettings(patch, field)}
+              onTestConnection={() => session.editor.testConnection(session.editor.applied, "")}
               onTestProcessingConnection={() =>
-                session.editor.testPostProcessingConnection(
-                  session.editor.applied,
-                  "",
-                )}
-              disabled={quickSettingsDisabled}
+                session.editor.testPostProcessingConnection(session.editor.applied, "")}
+              disabled={quickSettingsDisabled || session.editor.saving}
               {onOpenServerSettings}
               {onOpenProcessingSettings}
               {onOpenAudioSettings}
@@ -341,15 +312,13 @@
               fileHistoryGeneration={session.files.historyGeneration}
               onOpenSettings={onOpenHistorySettings}
               onCopy={(id) => session.history.copyHistoryEntry(id)}
-              onCopyVersion={(id, version) =>
-                session.history.copyHistoryEntryVersion(id, version)}
+              onCopyVersion={(id, version) => session.history.copyHistoryEntryVersion(id, version)}
               onDelete={(id) => session.history.deleteHistoryEntry(id)}
               onCopyFile={() => session.files.copyFileTranscript()}
               ttsEnabled={runtimeSettings?.textToSpeech.enabled ?? false}
               ttsAvailable={!voiceActive && !fileWorking}
               ttsStatus={session.speech.status}
-              onListen={(id, version) =>
-                session.speech.listenHistoryEntry(id, version)}
+              onListen={(id, version) => session.speech.listenHistoryEntry(id, version)}
               onListenFile={() => session.speech.listenFileTranscript()}
               onPauseTTS={() => session.speech.pauseTTS()}
               onResumeTTS={() => session.speech.resumeTTS()}
@@ -464,9 +433,9 @@
     color: var(--foreground);
   }
   .pane-tab[aria-selected="true"] {
-    border-color: var(--card-stroke);
-    background-color: var(--card);
-    box-shadow: var(--lift);
+    border-color: var(--hairline);
+    background-color: var(--layer-fill);
+    box-shadow: none;
     color: var(--foreground);
     font-weight: 500;
   }

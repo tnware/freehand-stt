@@ -20,7 +20,11 @@ semantics, legacy segment EOF, and rejection of vLLM-shaped SSE. Unavailable
 profiles fail before network work. Snapshot tests retain captured compatibility
 selections, and file tests isolate streaming observations by profile.
 
-For interactive Windows review, check each Settings selector, keyboard access,
+For interactive Windows review, check that settings cards and saved-connection
+cards share a single hairline border and subtle fill in light/dark themes with
+solid and Mica materials, preserving internal row dividers. Check switch thumb
+spacing in both sizes and states, disabled appearance, keyboard focus/Space,
+and right-to-left placement. Check each Settings selector, keyboard access,
 planned entry descriptions and disabled state, save/reopen persistence, and
 independent STT/processing/TTS choices. Confirm that S1-mini controls remain a
 separate preset. Using only a model explicitly chosen by the operator, compare
@@ -231,3 +235,46 @@ Escape, narrow layouts, light/dark themes, and the English-only S1-mini notice.
 With a chosen model and fixed sample, verify raw fallback for non-English input
 and S1-mini cleanup under the displayed English assumption when metadata is
 absent. Live model runs remain manual and scoped; do not probe inventories.
+
+## Reusable server acceptance
+
+Create one Speaches connection with transcription and speech uses. Confirm it is
+listed once in Connections and appears in both feature selectors, but not cleanup.
+Select it independently and choose different models. Edit its endpoint/key once;
+new requests from both features must use the new coherent connection snapshot,
+while running requests keep the old one. Unselecting one feature must leave the
+other active. Removing an active use or deleting an active shared connection must
+fail without changes. Duplicate and independently replace its key; deleting one
+entry must retain a key referenced by the other. Check failed SQL writes, restart,
+and v3/v4 upgrades. A vLLM deployment may implement one or both offered operations;
+no automatic inference checks may be used to discover that.
+
+## Saved connection acceptance
+
+Fixtures cover forward migration, empty initialization, inactive create/duplicate,
+independent selections, model reset on switching, runtime/connection save boundaries,
+inactive-key isolation, stale editors, SQL rollback, durable reopen, and credential
+retention until the last referencing entry is deleted. Metadata tests must use
+only the requested saved connection's key and must never invoke inference.
+Frontend tests cover connection draft lifetime and stale metadata results.
+
+On Windows, begin with an empty catalog and create a connection. Confirm it stays
+inactive until selected on its feature page. Choose a model, save feature options,
+then edit the connection in Connections. Duplicate it, independently replace its
+key, switch to it, select None, and delete the inactive entries. Repeat for cleanup
+and playback. Check keyboard navigation, dirty-draft guards, restart persistence,
+and active-request isolation. Verify clean defaults: capsule/envelope/minimal,
+bottom-center, 85% opacity, 70% glow, and an unassigned Show Freehand shortcut.
+Assign then clear that shortcut and confirm tray access remains available.
+Repeat selection from the home rack, including failed saves and role filtering;
+confirm its selectors match Settings and its cards use the same single border
+and fill. Browser fixtures and native builds do not replace interactive Windows acceptance.
+Use only operator-selected models for deliberate live inference acceptance.
+
+For connection navigation, open Edit connection from each feature and confirm Back and
+save return to that feature. Editing from Connections returns to the library. Unchanged
+forms leave without a prompt; changed fields or a replacement/removal key require
+discard confirmation on Back, Cancel, or another sidebar section. Keep editing and
+Escape retain the draft; discard clears the key without saving. Check keyboard section
+order against the visible Capture, Features, and Application groups, including narrow
+layouts.

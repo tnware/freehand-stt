@@ -114,9 +114,12 @@ credentials or connections.
 ## Connect
 
 Use a Base URL ending in `/v1`, such as `http://127.0.0.1:8000/v1`, and the
-model ID advertised by that server. Select **vLLM** in the relevant Settings
-section, choose the authentication appropriate to your deployment, test, and
-save. Connection tests read `/models` beneath the base URL without inference.
+model ID advertised by that server. In **Settings → Connections**, create an
+entry with the **vLLM** profile and enable Transcription and/or Post-processing
+under **Used for**, according to the routes your deployment exposes. Set its URL,
+authentication, and HTTP permission, then **Save connection**. Select that entry
+on its feature page, choose the model, and save feature settings. Connection
+tests read `/models` beneath the base URL without inference.
 An explicit transcription health path retains the existing base-relative rules.
 
 `Qwen/Qwen3-ASR-0.6B` was confirmed working by a user in the native Freehand

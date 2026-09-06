@@ -6,6 +6,10 @@ description: Configure local, LAN, private remote, or hosted OpenAI-compatible s
 Freehand connects to speech services you provide. It does not install or run a
 model itself.
 
+You can now keep multiple named endpoints and switch them independently for each
+capability. See [saved connections](../saved-connections/) for creating,
+duplicating, renaming, and deleting entries.
+
 ## Decide where models run
 
 A local GPU is optional. If your PC has limited memory, or you want its GPU
@@ -22,7 +26,8 @@ costs are separate.
 ## Choose a topology
 
 All capabilities may share one gateway, or each may use a different server.
-They remain independently configurable either way.
+Feature selections, models, and runtime options remain independent either way;
+features selecting the same saved server share its URL and authentication.
 
 ### One gateway
 
@@ -34,8 +39,9 @@ Freehand
 ```
 
 Use this when one compatible gateway exposes every route and model you need.
-Freehand still saves and tests each capability separately because support for
-one route does not imply support for the others.
+Save the gateway once in Connections and enable the uses it exposes. Each feature
+selects it independently and keeps its own model/options. A metadata check does
+not verify support for every enabled operation.
 
 ### Separate services
 
@@ -65,7 +71,7 @@ English-only cleanup behavior. Language selection does not request translation.
 
 ## Choose a compatibility profile
 
-Each connection has its own **Compatibility profile** in Settings:
+Each connection has its own **Compatibility profile** under **Settings → Connections**:
 
 | Connection | Available profiles |
 | --- | --- |
@@ -93,10 +99,10 @@ means its dedicated profile is not implemented. The list is scoped to the
 connection's operation. OpenAI hosted is a planned dedicated profile, separate
 from the generic protocol baseline.
 
-Save settings to apply a selection. A running job keeps the settings and
-credentials it captured when it started. Older configuration files default to
-Generic. These settings describe the current connections; named, selectable
-saved connections are not available yet.
+Choose **Save connection** to store the profile and endpoint. Select that entry
+on the relevant feature page, then choose its model and save feature settings.
+A running job keeps the settings and credentials it captured when it started.
+Older configuration files default to Generic.
 
 ## Information Freehand needs
 
@@ -136,7 +142,7 @@ The [backend guide index](../../backends/#run-a-backend) compares those recipes.
 
 `http://127.0.0.1:8000/v1` and a private address such as
 `http://192.168.1.50:8000/v1` are plaintext connections. Freehand rejects them
-until **Allow insecure HTTP** is explicitly enabled for that capability.
+until **Allow insecure HTTP** is explicitly enabled in that saved connection.
 
 Only enable plaintext HTTP on a network you trust. Audio, transcript text, and
 credentials sent over HTTP are not encrypted in transit. Prefer HTTPS for a

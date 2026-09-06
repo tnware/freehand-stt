@@ -12,6 +12,21 @@ retains coherent saves and immutable request profiles. See the
 [storage maintenance guide](../storage/) for schema changes and recovery.
 Transcript history remains optional and memory-only.
 
+Named connections represent reusable servers, with explicit supported uses and
+independent active selections for transcription, cleanup, and playback. One ID
+can be selected by multiple features; their models and runtime options remain
+independent while URL, profile, authentication, and credential reference are shared. A dedicated Connections page owns creation,
+editing, duplication, deletion, endpoint/authentication/profile fields, and saved
+metadata tests. Creation is inactive; feature pages own active selection, model,
+language, presets, voice, and other runtime options. Fresh catalogs are empty.
+Selection clears the model and disables unconfigured optional features.
+The domain contract lives in
+`internal/savedconnection`; SQLite adapters remain in storage. The existing
+settings owner commits catalog mutations, active configuration, and credential
+references together. UI connection actions reuse that transaction and reject
+stale selected IDs. Captured requests retain their settings and key strings
+across connection switches and deletion. See [saved connections](../../guides/saved-connections/).
+
 ## Server compatibility ownership
 
 The [backend maintenance guide](../backend-compatibility/) describes the shared
@@ -36,8 +51,8 @@ the effective profile in their cache key.
 Profiles identify implemented server contracts. The S1-mini preset continues
 to own prompt construction independently. Future model-specific options must
 add qualified capabilities and bounded request/response handling here; catalog
-availability alone cannot prove model support. Named saved connections and
-credential storage changes are outside this implementation.
+availability alone cannot prove model support. Named saved connections retain
+these provider contracts with their endpoint and opaque credential reference.
 
 ## Authority map
 
@@ -310,6 +325,21 @@ drafts without stopping Go-owned recording, transcription, or playback. Hiding
 the reusable Settings window continues to discard its draft through the existing
 settings lifecycle.
 
+Settings clusters use the shared `SettingsCard` component with the same
+`layer-fill` background and single `hairline` border as saved-connection cards.
+Internal row dividers remain; card outlines do not stack with elevation shadows.
+The shared switch uses a pill track and an inset circular thumb, retaining
+Bits UI state, keyboard semantics, and visible focus indicators.
+
+Connection editor navigation is owned by `SettingsScreen`: it remembers the originating
+feature and returns there after Back or save. The editor compares non-credential fields
+with its opening snapshot; credential presence/removal is checked separately without
+copying a password into that snapshot. Opening a form alone is not dirty, but still
+reserves the draft against external-window updates. Navigation confirms before
+discarding changed connection fields and clears the transient key on exit. Settings
+groups separate Capture, Features, and Application; visual and keyboard section order
+match.
+
 ## Diagnostics boundary
 
 `internal/app` creates one hierarchy from Wails' default structured logger and assigns bounded component attributes before injecting it into feature services, the post-processor, and native overlay. Runtime code records lifecycle metadata and fixed error categories rather than formatting underlying errors. It never logs transcript/audio content, credential or header material, model IDs, full paths, URL paths/query, or insertion-target identity. High-frequency audio, VAD, progress, delta, and renderer-event traffic remains off the logging path.
@@ -318,7 +348,7 @@ Wails stays at `Info` because the pinned bridge's debug tracing serializes bindi
 
 ## Configuration boundaries
 
-Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS also have independent endpoint, model, HTTP-policy, and credential identities even when the user points them at the same server. Stored credentials remain in Windows Credential Manager; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
+Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS retain independent runtime models and selections. Selecting the same reusable connection explicitly shares its endpoint, HTTP policy, backend profile, and credential reference; selecting separate connections keeps those identities independent. Stored credentials remain in Windows Credential Manager; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
 
 `internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation and closes native output deterministically.
 
@@ -332,7 +362,7 @@ The Win32 renderer queues all changes onto its locked message-loop thread, uses 
 
 Settings can request a presentation-only native preview through a narrow Wails binding. Draft presentation changes update the same renderer, real dictation preempts preview, Settings close stops it, and the applied saved configuration is restored. Preview can temporarily create a surface while the applied feature is disabled, but stopping it destroys that surface. Overlay creation remains a degraded optional capability: native failure is logged without failing dictation or rolling back the saved preference.
 
-The home-screen rack is a narrow immediate-save surface for STT and post-processing endpoints/models, explicit processing-profile selection, trained S1-mini output controls, and the capture/delivery switches. It is composed of `RackModule` panels grouped as Speech to text, Cleanup, Capture and Delivery, so the main window and the Settings navigation name the same concerns identically. Each update starts from the backend-confirmed settings snapshot and changes only the named quick fields before calling the same transactional settings owner with no credential mutation. It must never save the full editable Settings-window draft, and it is disabled while that modeless window is visible. Endpoint credentials, authentication mode, insecure-HTTP policy, custom instructions, and other advanced settings remain in the full Settings window.
+The home-screen rack is a narrow immediate-save surface for STT and post-processing models, explicit processing-profile selection, trained S1-mini output controls, and the capture/delivery switches. It is composed of `RackModule` panels grouped as Speech to text, Cleanup, Capture and Delivery, so the main window and the Settings navigation name the same concerns identically. Each update starts from the backend-confirmed settings snapshot and changes only the named quick fields before calling the same transactional settings owner with no credential mutation. It must never save the full editable Settings-window draft, and it is disabled while that modeless window is visible. The rack uses the same active connection selector as feature settings, with separate links for editing settings. Connections exclusively owns endpoint credentials, authentication, HTTP policy, and provider profiles; custom instructions and runtime options remain on feature pages.
 
 The main renderer treats transcript-list disclosure as a presentation-only WebView preference. It is written to versioned local storage and falls back safely to open when storage is missing, malformed, or unavailable. The preference never enters the Go settings transaction and does not affect configuration, history retention, or runtime authority. The rack does not collapse: its modules are compact enough to stay open, and the rack column scrolls on its own at the minimum window height.
 

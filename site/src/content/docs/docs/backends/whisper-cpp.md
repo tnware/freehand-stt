@@ -147,13 +147,14 @@ for native builds, other accelerators, and optional format conversion.
 ## Connect
 
 1. Start `whisper-server` with the model you want to use.
-2. In **Settings → Server**, select **whisper.cpp**.
+2. In **Settings → Connections**, create a named **Transcription** connection with the **whisper.cpp** profile.
 3. Set the Base URL to the server root, for example `http://127.0.0.1:8081`.
    Omit `/v1` and `/inference`. A reverse-proxy prefix can be included.
 4. Choose the authentication mode required by your deployment and permit HTTP
    only where appropriate. The native server may need a proxy for authentication.
-5. Run **Test**, then save. The model field shows **Server-loaded model**;
-   no client model ID is required or sent.
+5. Choose **Save connection**, then select it in **Settings → Transcription**.
+   Use **Check server** for metadata. The model field shows **Server-loaded model**;
+   no client model ID is required or sent. Save feature settings and finish setup.
 
 The default test reads `/health` beneath that root/prefix. An explicit custom
 health path overrides the default. A successful health check establishes server

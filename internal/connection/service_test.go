@@ -8,6 +8,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/inference"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
 )
 
 type keyFake struct {
@@ -97,5 +98,50 @@ func TestTextToSpeechConnectionUsesDedicatedCredentialAndDiscoversModels(t *test
 	result := service.TestTextToSpeechConnection(TextToSpeechConnectionTestRequest{BaseURL: server.URL + "/v1", AuthenticationMode: config.AuthenticationModeAPIKey})
 	if !result.Reachable || result.ErrorKind != "" || len(result.ModelIDs) != 2 || result.ModelIDs[1] != "local/kokoro" || ttsKeys.reads != 1 {
 		t.Fatalf("result=%#v tts key reads=%d", result, ttsKeys.reads)
+	}
+}
+
+type savedSourceFake struct {
+	connection savedconnection.Connection
+	key        string
+	err        error
+	requested  string
+}
+
+func (f *savedSourceFake) ResolveSavedConnection(id string) (savedconnection.Connection, string, error) {
+	f.requested = id
+	return f.connection, f.key, f.err
+}
+func TestSavedConnectionUsesOnlyItsOwnCredentialAndMetadata(t *testing.T) {
+	requests := 0
+	wantAuth := "Bearer inactive-fixture"
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if r.Method != "GET" || r.URL.Path != "/v1/models" || r.Header.Get("Authorization") != wantAuth {
+			t.Error("saved probe used wrong route, method, or credential")
+		}
+		_, _ = w.Write([]byte(`{"data":[{"id":"chosen-model"}]}`))
+	}))
+	defer server.Close()
+	cfg := config.Default()
+	cfg.BaseURL = server.URL + "/v1"
+	cfg.AuthenticationMode = config.AuthenticationModeAPIKey
+	source := &savedSourceFake{connection: savedconnection.Connection{ID: "inactive", Uses: []savedconnection.Purpose{savedconnection.Transcription}, Details: savedconnection.Extract(cfg, savedconnection.Transcription)}, key: "inactive-fixture"}
+	active := &keyFake{value: "active-fixture"}
+	service := NewService(active, active, active, &inference.Client{HTTP: server.Client()}, nil, source)
+	result := service.TestSavedConnection("inactive")
+	if !result.Reachable || result.ErrorKind != "" || source.requested != "inactive" || active.reads != 0 || requests != 1 {
+		t.Fatalf("saved metadata result=%#v reads=%d requests=%d", result, active.reads, requests)
+	}
+	wantAuth = ""
+	source.connection.Details.AuthenticationMode = config.AuthenticationModeNone
+	if result := service.TestSavedConnection("inactive-no-auth"); !result.Reachable || requests != 2 || active.reads != 0 {
+		t.Fatal("no-auth saved metadata failed")
+	}
+	source.connection.Details.AuthenticationMode = config.AuthenticationModeAPIKey
+	source.err = credential.ErrNotFound
+	result = service.TestSavedConnection("missing-key")
+	if result.ErrorKind != ConnectionErrorCredentialMissing || active.reads != 0 || requests != 2 {
+		t.Fatal("missing saved credential fell back to an active credential or sent a request")
 	}
 }

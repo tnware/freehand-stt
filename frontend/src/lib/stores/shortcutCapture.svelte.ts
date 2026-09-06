@@ -142,7 +142,7 @@ export class ShortcutCapture {
     setShortcutValue(settings, action, "");
     this.feedback[action] = {
       state: "captured",
-      message: "Cleared. Save changes to disable hold to talk.",
+      message: "Cleared. Save changes to leave this action without a shortcut.",
     };
   }
 

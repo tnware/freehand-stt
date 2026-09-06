@@ -1,3 +1,12 @@
+import {
+  Action,
+  Purpose,
+  type Change,
+  type Connection,
+  type Details,
+} from "$bindings/savedconnection";
+import { AuthenticationMode } from "$lib/state";
+import { ID } from "$bindings/compatibility";
 import type {
   Settings,
   ConnectionResult,
@@ -27,6 +36,7 @@ export interface SettingsEditorServices {
   input: Pick<typeof InputBindings, "ListMicrophones">;
   connection: Pick<
     typeof ConnectionBindings,
+    | "TestSavedConnection"
     | "TestConnection"
     | "TestPostProcessingConnection"
     | "TestTextToSpeechConnection"
@@ -47,18 +57,11 @@ export type QuickSettingsPatch = Partial<
     | "overlayEnabled"
   >
 > & {
-  baseURL?: string;
   model?: string;
   postProcessing?: Partial<
     Pick<
       Settings["postProcessing"],
-      | "enabled"
-      | "baseURL"
-      | "model"
-      | "preset"
-      | "styling"
-      | "structure"
-      | "context"
+      "enabled" | "model" | "preset" | "styling" | "structure" | "context"
     >
   >;
 };
@@ -70,10 +73,8 @@ export type QuickSettingsField =
   | "delivery"
   | "history-enabled"
   | "overlay-enabled"
-  | "stt-endpoint"
   | "stt-model"
   | "processing-enabled"
-  | "processing-endpoint"
   | "processing-model"
   | "processing-profile"
   | "processing-controls";
@@ -81,6 +82,14 @@ export type QuickSettingsField =
 /** Keeps the editable draft independent from the backend-confirmed snapshot. */
 const copySettings = (settings: Settings): Settings => ({
   ...settings,
+  savedConnections: {
+    selected: { ...settings.savedConnections.selected },
+    entries: (settings.savedConnections.entries ?? []).map((c) => ({
+      ...c,
+      uses: [...(c.uses ?? [])],
+      details: { ...c.details, headers: { ...c.details.headers } },
+    })),
+  },
   transcriptionOptions: { ...settings.transcriptionOptions },
   headers:
     settings.headers == null ? settings.headers : { ...settings.headers },
@@ -102,6 +111,19 @@ const settingsMatch = (
 
 /** Owns one coherent settings/credential draft, probes, and serialized quick saves. */
 export class SettingsEditor {
+  connectionDraft = $state<
+    | (Pick<Connection, "id" | "name" | "details" | "hasCredential"> & {
+        uses: Purpose[];
+        creating: boolean;
+        credentialDraft: string;
+        clearCredential: boolean;
+      })
+    | null
+  >(null);
+  #connectionBaseline = "";
+  managedConnectionResult = $state<ConnectionResult | null>(null);
+  managedConnectionTesting = $state(false);
+  #managedConnectionRevision = 0;
   readonly #service: SettingsEditorServices;
   readonly #messages: SessionMessages;
   readonly #refreshHistory: () => Promise<void>;
@@ -143,6 +165,8 @@ export class SettingsEditor {
   quickSettingsSaved = $state<QuickSettingsField | null>(null);
   devicesBusy = $state(false);
   #sttConnectionRevision = 0;
+  #processingConnectionRevision = 0;
+  #ttsConnectionRevision = 0;
   #quickSettingsSavedTimer: ReturnType<typeof setTimeout> | undefined;
   #quickSettingsQueue: Promise<void> = Promise.resolve();
 
@@ -175,12 +199,14 @@ export class SettingsEditor {
   }
 
   #invalidateProcessingConnection() {
+    this.#processingConnectionRevision++;
     this.processingConnectionStale =
       this.processingConnectionStale || this.processingConnection !== null;
     this.processingConnection = null;
   }
 
   #invalidateTTSConnection() {
+    this.#ttsConnectionRevision++;
     this.ttsConnectionStale =
       this.ttsConnectionStale || this.ttsConnection !== null;
     this.ttsConnection = null;
@@ -197,7 +223,7 @@ export class SettingsEditor {
       this.clearCredentialDraft();
       return true;
     }
-    if (this.dirty && !this.saving) {
+    if ((this.dirty || this.connectionDraft !== null) && !this.saving) {
       this.#messages.reportInfo(
         "Settings changed in another window. Save or discard this draft, then reopen Settings to load the latest values.",
       );
@@ -207,7 +233,9 @@ export class SettingsEditor {
     this.#adopt(settings);
     if (
       previous &&
-      (previous.baseURL !== settings.baseURL ||
+      (previous.savedConnections.selected?.stt !==
+        settings.savedConnections.selected?.stt ||
+        previous.baseURL !== settings.baseURL ||
         previous.compatibilityProfile !== settings.compatibilityProfile ||
         previous.model !== settings.model ||
         previous.allowInsecureHTTP !== settings.allowInsecureHTTP ||
@@ -219,7 +247,9 @@ export class SettingsEditor {
     }
     if (
       previous &&
-      (previous.postProcessing.baseURL !== settings.postProcessing.baseURL ||
+      (previous.savedConnections.selected?.cleanup !==
+        settings.savedConnections.selected?.cleanup ||
+        previous.postProcessing.baseURL !== settings.postProcessing.baseURL ||
         previous.postProcessing.compatibilityProfile !==
           settings.postProcessing.compatibilityProfile ||
         previous.postProcessing.model !== settings.postProcessing.model)
@@ -228,7 +258,9 @@ export class SettingsEditor {
     }
     if (
       previous &&
-      (previous.textToSpeech.baseURL !== settings.textToSpeech.baseURL ||
+      (previous.savedConnections.selected?.speech !==
+        settings.savedConnections.selected?.speech ||
+        previous.textToSpeech.baseURL !== settings.textToSpeech.baseURL ||
         previous.textToSpeech.compatibilityProfile !==
           settings.textToSpeech.compatibilityProfile ||
         previous.textToSpeech.model !== settings.textToSpeech.model ||
@@ -243,6 +275,11 @@ export class SettingsEditor {
   }
 
   clearCredentialDraft() {
+    this.connectionDraft = null;
+    this.#connectionBaseline = "";
+    this.#managedConnectionRevision++;
+    this.managedConnectionResult = null;
+    this.managedConnectionTesting = false;
     this.apiKey = "";
     this.clearKey = false;
     this.processingAPIKey = "";
@@ -252,6 +289,33 @@ export class SettingsEditor {
   }
 
   get dirty(): boolean {
+    return this.runtimeDirty || this.connectionDirty;
+  }
+
+  // Only non-credential fields enter the comparison snapshot. A replacement
+  // key stays solely in the transient form and is checked for presence.
+  #connectionFields(): string {
+    const form = this.connectionDraft;
+    return form
+      ? JSON.stringify({
+          name: form.name,
+          uses: [...form.uses].sort(),
+          details: form.details,
+        })
+      : "";
+  }
+
+  get connectionDirty(): boolean {
+    const form = this.connectionDraft;
+    return (
+      form !== null &&
+      (form.credentialDraft !== "" ||
+        form.clearCredential ||
+        this.#connectionFields() !== this.#connectionBaseline)
+    );
+  }
+
+  get runtimeDirty(): boolean {
     return (
       !settingsMatch(this.draft, this.applied) ||
       this.apiKey !== "" ||
@@ -391,6 +455,130 @@ export class SettingsEditor {
     }
   }
 
+  #connectionExpectation() {
+    return this.applied?.savedConnections.entries?.length
+      ? { expectedConnections: { ...this.applied.savedConnections.selected } }
+      : {};
+  }
+
+  beginConnection(connection?: Connection, purpose = Purpose.Transcription) {
+    if (this.runtimeDirty || this.saving) {
+      this.#messages.reportInfo(
+        "Save or discard feature settings before editing a connection.",
+      );
+      return;
+    }
+    this.#messages.clear();
+    this.managedConnectionResult = null;
+    this.#managedConnectionRevision++;
+    this.connectionDraft = {
+      id: connection?.id ?? "",
+      name: connection?.name ?? "",
+      uses: connection ? [...(connection.uses ?? [])] : [purpose],
+      hasCredential: connection?.hasCredential ?? false,
+      creating: !connection,
+      details: connection
+        ? { ...connection.details, headers: { ...connection.details.headers } }
+        : {
+            compatibilityProfile: ID.Generic,
+            baseURL: "",
+            allowInsecureHTTP: false,
+            authenticationMode: AuthenticationMode.AuthenticationModeNone,
+            healthPath: "",
+            headers: {},
+          },
+      credentialDraft: "",
+      clearCredential: false,
+    };
+    this.#connectionBaseline = this.#connectionFields();
+  }
+  cancelConnectionEdit() {
+    this.clearCredentialDraft();
+  }
+  async saveConnection(): Promise<boolean> {
+    const form = this.connectionDraft;
+    if (!form) return false;
+    return this.changeConnection(
+      {
+        action: form.creating ? Action.Create : Action.Update,
+        uses: [...form.uses],
+        id: form.id,
+        name: form.name.trim(),
+        details: form.details,
+      },
+      form.credentialDraft,
+      form.clearCredential,
+    );
+  }
+  async testSavedConnection(id: string): Promise<void> {
+    const revision = ++this.#managedConnectionRevision;
+    this.managedConnectionTesting = true;
+    this.managedConnectionResult = null;
+    try {
+      const result = await this.#service.connection.TestSavedConnection(id);
+      if (revision === this.#managedConnectionRevision)
+        this.managedConnectionResult = result;
+    } catch (cause) {
+      if (revision === this.#managedConnectionRevision)
+        this.#messages.fail(cause);
+    } finally {
+      if (revision === this.#managedConnectionRevision)
+        this.managedConnectionTesting = false;
+    }
+  }
+  async changeConnection(
+    change: Change,
+    credentialDraft = "",
+    clearCredential = false,
+  ): Promise<boolean> {
+    if (!this.draft || this.saving || this.quickSettingsPending.length)
+      return false;
+    if (
+      this.runtimeDirty ||
+      (this.connectionDraft &&
+        change.action !== Action.Create &&
+        change.action !== Action.Update)
+    ) {
+      this.#messages.reportInfo(
+        "Save or discard your current edits before changing connections.",
+      );
+      return false;
+    }
+    this.saving = true;
+    this.#messages.clear();
+    try {
+      const saved = await this.#service.settings.SaveSettings({
+        expectedConnections: { ...this.applied?.savedConnections.selected },
+        connectionChange: change,
+        connectionCredentialDraft: credentialDraft,
+        clearConnectionCredential: clearCredential,
+        settings: this.applied!,
+        clearSTTCredential: false,
+        clearPostProcessingCredential: false,
+        clearTextToSpeechCredential: false,
+      });
+      this.#adopt(saved);
+      this.clearCredentialDraft();
+      this.#invalidateSTTConnection();
+      this.#invalidateProcessingConnection();
+      this.#invalidateTTSConnection();
+      this.#announceSettingsSaved(
+        saved,
+        change.action === Action.Select
+          ? "Connection selected. Choose a model for this feature; saved connection details are unchanged."
+          : change.action === Action.Delete
+            ? "Connection deleted."
+            : "Connection saved. Active feature selections are unchanged.",
+      );
+      return true;
+    } catch (cause) {
+      this.#messages.fail(cause);
+      return false;
+    } finally {
+      this.saving = false;
+    }
+  }
+
   async save(): Promise<boolean> {
     if (!this.draft || this.saving) return false;
     this.saving = true;
@@ -402,6 +590,8 @@ export class SettingsEditor {
         this.processingAPIKey !== "" || this.clearProcessingKey;
       const ttsCredentialChanged = this.ttsAPIKey !== "" || this.clearTTSKey;
       const saved = await this.#service.settings.SaveSettings({
+        ...this.#connectionExpectation(),
+        clearConnectionCredential: false,
         settings: this.draft,
         sttCredentialDraft: this.apiKey,
         clearSTTCredential: this.clearKey,
@@ -468,6 +658,8 @@ export class SettingsEditor {
       const next = copySettings(this.applied);
       next.setupCompleted = true;
       const saved = await this.#service.settings.SaveSettings({
+        ...this.#connectionExpectation(),
+        clearConnectionCredential: false,
         settings: next,
         sttCredentialDraft: "",
         clearSTTCredential: false,
@@ -505,7 +697,6 @@ export class SettingsEditor {
     const operation = this.#quickSettingsQueue.then(async () => {
       if (!this.applied) return;
       const next = copySettings(this.applied);
-      if (patch.baseURL !== undefined) next.baseURL = patch.baseURL;
       if (patch.model !== undefined) next.model = patch.model;
       if (patch.microphoneID !== undefined)
         next.microphoneID = patch.microphoneID;
@@ -533,6 +724,8 @@ export class SettingsEditor {
       }
 
       const saved = await this.#service.settings.SaveSettings({
+        ...this.#connectionExpectation(),
+        clearConnectionCredential: false,
         settings: next,
         sttCredentialDraft: "",
         clearSTTCredential: false,
@@ -542,13 +735,10 @@ export class SettingsEditor {
         clearTextToSpeechCredential: false,
       });
       this.#adopt(saved);
-      if (patch.baseURL !== undefined || patch.model !== undefined) {
+      if (patch.model !== undefined) {
         this.#invalidateSTTConnection();
       }
-      if (
-        patch.postProcessing?.baseURL !== undefined ||
-        patch.postProcessing?.model !== undefined
-      ) {
+      if (patch.postProcessing?.model !== undefined) {
         this.#invalidateProcessingConnection();
       }
       this.#markQuickSettingsSaved(field);
@@ -609,11 +799,12 @@ export class SettingsEditor {
     apiKey = this.processingAPIKey,
   ) {
     if (this.processingConnectionTesting || !settings) return;
+    const revision = this.#processingConnectionRevision;
     this.processingConnectionTesting = true;
     this.processingConnection = null;
     this.#messages.clear();
     try {
-      this.processingConnection =
+      const result =
         await this.#service.connection.TestPostProcessingConnection({
           baseURL: settings.postProcessing.baseURL,
           compatibilityProfile: settings.postProcessing.compatibilityProfile,
@@ -621,9 +812,13 @@ export class SettingsEditor {
           model: settings.postProcessing.model,
           credentialDraft: apiKey,
         });
-      this.processingConnectionStale = false;
+      if (revision === this.#processingConnectionRevision) {
+        this.processingConnection = result;
+        this.processingConnectionStale = false;
+      }
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (revision === this.#processingConnectionRevision)
+        this.#messages.fail(cause);
     } finally {
       this.processingConnectionTesting = false;
     }
@@ -634,22 +829,25 @@ export class SettingsEditor {
     apiKey = this.ttsAPIKey,
   ) {
     if (this.ttsConnectionTesting || !settings) return;
+    const revision = this.#ttsConnectionRevision;
     this.ttsConnectionTesting = true;
     this.ttsConnection = null;
     this.#messages.clear();
     try {
-      this.ttsConnection =
-        await this.#service.connection.TestTextToSpeechConnection({
-          baseURL: settings.textToSpeech.baseURL,
-          compatibilityProfile: settings.textToSpeech.compatibilityProfile,
-          allowInsecureHTTP: settings.textToSpeech.allowInsecureHTTP,
-          authenticationMode: settings.textToSpeech.authenticationMode,
-          model: settings.textToSpeech.model,
-          credentialDraft: apiKey,
-        });
-      this.ttsConnectionStale = false;
+      const result = await this.#service.connection.TestTextToSpeechConnection({
+        baseURL: settings.textToSpeech.baseURL,
+        compatibilityProfile: settings.textToSpeech.compatibilityProfile,
+        allowInsecureHTTP: settings.textToSpeech.allowInsecureHTTP,
+        authenticationMode: settings.textToSpeech.authenticationMode,
+        model: settings.textToSpeech.model,
+        credentialDraft: apiKey,
+      });
+      if (revision === this.#ttsConnectionRevision) {
+        this.ttsConnection = result;
+        this.ttsConnectionStale = false;
+      }
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (revision === this.#ttsConnectionRevision) this.#messages.fail(cause);
     } finally {
       this.ttsConnectionTesting = false;
     }
@@ -658,6 +856,7 @@ export class SettingsEditor {
   busy = $derived(
     this.saving ||
       this.setupCompleting ||
+      this.managedConnectionTesting ||
       this.sttConnectionTesting ||
       this.processingConnectionTesting ||
       this.ttsConnectionTesting ||

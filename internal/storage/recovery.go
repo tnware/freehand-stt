@@ -158,7 +158,21 @@ func (s *Store) Reset(v config.Settings) error {
 		return err
 	}
 	s.uncertain = false
-	return s.loadReferences(ctx)
+	if err := s.loadReferences(ctx); err != nil {
+		return err
+	}
+	cfg, err := readSettings(ctx, dbgen.New(s.db))
+	if err != nil {
+		return err
+	}
+	state, err := readConnections(ctx, dbgen.New(s.db), cfg, s.refs)
+	if err != nil {
+		return err
+	}
+	s.connections = state
+	s.pendingConnections = nil
+	s.pending = nil
+	return nil
 }
 
 func (s *Store) archiveDatabase() error {
@@ -260,7 +274,11 @@ func (s *Store) RestoreBackup(path string) error {
 		if err = config.Validate(v); err != nil {
 			return failure("invalid_values", err)
 		}
-		if _, err = readReferences(ctx, q); err != nil {
+		refs, err := readReferences(ctx, q)
+		if err != nil {
+			return failure("corrupt", err)
+		}
+		if _, err = readConnections(ctx, q, v, refs); err != nil {
 			return failure("corrupt", err)
 		}
 		return nil
@@ -298,5 +316,19 @@ func (s *Store) RestoreBackup(path string) error {
 		return err
 	}
 	s.uncertain = false
-	return s.loadReferences(ctx)
+	if err := s.loadReferences(ctx); err != nil {
+		return err
+	}
+	cfg, err := readSettings(ctx, dbgen.New(s.db))
+	if err != nil {
+		return err
+	}
+	state, err := readConnections(ctx, dbgen.New(s.db), cfg, s.refs)
+	if err != nil {
+		return err
+	}
+	s.connections = state
+	s.pendingConnections = nil
+	s.pending = nil
+	return nil
 }

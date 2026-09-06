@@ -203,6 +203,7 @@
 >
   <SettingsScreen
     {session}
+    visible={windowVisible}
     bind:active
     bind:navigationRef
     onClose={requestSettingsClose}

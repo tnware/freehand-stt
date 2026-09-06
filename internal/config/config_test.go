@@ -195,6 +195,7 @@ func TestFocusedConnectionValidationAllowsDiscoveryWithoutUnrelatedSettings(t *t
 
 func TestFocusedPostProcessingConnectionValidationAllowsModelDiscovery(t *testing.T) {
 	settings := Default().PostProcessing
+	settings.BaseURL = "http://127.0.0.1:8080/v1"
 	settings.Model = ""
 	settings.Preset = "not-a-preset"
 	settings.SystemPrompt = ""
@@ -521,11 +522,11 @@ func TestLoadPreservesDefaultWindowVisibilityForSparseFiles(t *testing.T) {
 	if !settings.OverlayEnabled {
 		t.Fatal("a sparse settings file silently disabled the status overlay")
 	}
-	if settings.OverlaySizePercent != 100 || settings.OverlayOpacityPercent != 100 || settings.OverlayTopOffset != 18 || settings.OverlayGlowPercent != 100 {
+	if settings.OverlaySizePercent != 100 || settings.OverlayOpacityPercent != 85 || settings.OverlayTopOffset != 18 || settings.OverlayGlowPercent != 70 {
 		t.Fatalf("sparse settings overlay appearance = size %d opacity %d offset %d glow %d", settings.OverlaySizePercent, settings.OverlayOpacityPercent, settings.OverlayTopOffset, settings.OverlayGlowPercent)
 	}
-	if settings.OverlayLayout != OverlayLayoutCapsule || settings.OverlayAnchor != OverlayAnchorTopCenter || settings.OverlayVisibility != OverlayVisibilityAll ||
-		settings.OverlayMotion != OverlayMotionSystem || settings.OverlaySurface != OverlaySurfaceGlass || settings.OverlayVisualizer != OverlayVisualizerBars {
+	if settings.OverlayLayout != OverlayLayoutCapsule || settings.OverlayAnchor != OverlayAnchorBottomCenter || settings.OverlayVisibility != OverlayVisibilityAll ||
+		settings.OverlayMotion != OverlayMotionSystem || settings.OverlaySurface != OverlaySurfaceMinimal || settings.OverlayVisualizer != OverlayVisualizerEnvelope {
 		t.Fatalf("sparse settings overlay presentation = %+v", settings.OverlayPreferences())
 	}
 }
@@ -617,6 +618,7 @@ func TestLegacyJSONUsesWindowLaunchKey(t *testing.T) {
 
 func TestPostProcessingRequiresExplicitHTTPOptInWhenEnabled(t *testing.T) {
 	settings := Default()
+	settings.PostProcessing.BaseURL = "http://127.0.0.1:8080/v1"
 	settings.PostProcessing.Enabled = true
 	settings.PostProcessing.Model = "local-model"
 	if err := Validate(settings); err == nil || !strings.Contains(err.Error(), "post-processing base URL uses insecure HTTP") {

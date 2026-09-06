@@ -582,7 +582,7 @@ func TestEveryOverlayPreferenceParticipatesInLiveReconfiguration(t *testing.T) {
 		"visibility": func(s *config.Settings) { s.OverlayVisibility = config.OverlayVisibilityRecording },
 		"motion":     func(s *config.Settings) { s.OverlayMotion = config.OverlayMotionReduced },
 		"surface":    func(s *config.Settings) { s.OverlaySurface = config.OverlaySurfaceSolid },
-		"visualizer": func(s *config.Settings) { s.OverlayVisualizer = config.OverlayVisualizerEnvelope },
+		"visualizer": func(s *config.Settings) { s.OverlayVisualizer = config.OverlayVisualizerBars },
 		"size":       func(s *config.Settings) { s.OverlaySizePercent = 125 },
 		"opacity":    func(s *config.Settings) { s.OverlayOpacityPercent = 80 },
 		"edge":       func(s *config.Settings) { s.OverlayTopOffset = 42 },

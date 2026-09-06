@@ -11,15 +11,23 @@ describe("settings navigation", () => {
       "audio",
       "overlay",
     ]);
-    expect(sectionsInGroup("delivery").map((section) => section.id)).toEqual([
+    expect(sectionsInGroup("application").map((section) => section.id)).toEqual([
       "general",
-      "speech",
+      "connections",
+      "history",
     ]);
-    expect(sectionsInGroup("server").map((section) => section.label)).toEqual([
+    expect(sectionsInGroup("features").map((section) => section.label)).toEqual([
       "Transcription",
       "Post-processing",
+      "Speech playback",
     ]);
-    expect(sectionsInGroup("data").map((section) => section.id)).toEqual(["history"]);
+    expect(SETTINGS_SECTIONS.map((section) => section.id)).toEqual(
+      ["capture", "features", "application"].flatMap((group) =>
+        sectionsInGroup(group as Parameters<typeof sectionsInGroup>[0]).map(
+          (section) => section.id,
+        ),
+      ),
+    );
   });
 
   it("keeps section identifiers unique", () => {

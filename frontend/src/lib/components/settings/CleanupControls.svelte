@@ -37,7 +37,7 @@
   }
 </script>
 
-<details class="rounded-xl border border-card-stroke bg-card shadow-lift">
+<details class="rounded-xl border border-hairline bg-layer-fill">
   <summary
     class="cursor-pointer rounded-xl px-5 py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring"
     >Generation controls</summary

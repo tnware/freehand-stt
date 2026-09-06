@@ -60,9 +60,9 @@ explains raw fallback and the trained S1-mini controls.
 
 ## Configure Freehand
 
-1. Enable post-processing and choose **llama.cpp** as the compatibility profile.
-2. Enter the chat API base URL, normally ending in `/v1`, and the served model ID.
-3. Configure any required authentication and test model-list metadata.
+1. Create a **Post-processing** connection in **Settings → Connections**, using the **llama.cpp** profile.
+2. Name it and enter the chat API base URL, normally ending in `/v1`.
+3. Configure authentication and HTTP permission, then **Save connection**. In **Settings → Post-processing**, select that connection, enable cleanup, and list models or enter the served model ID.
 4. Choose the prompt preset separately: **Custom instruction** or **S1-mini**.
 5. Save, then explicitly review cleanup of a short transcript.
 

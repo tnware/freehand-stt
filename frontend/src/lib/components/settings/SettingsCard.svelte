@@ -10,7 +10,7 @@
   card supplies the broader information hierarchy.
 -->
 <div
-  class="overflow-hidden rounded-xl border border-card-stroke bg-card shadow-lift [&>*+*]:border-t [&>*+*]:border-hairline"
+  class="overflow-hidden rounded-xl border border-hairline bg-layer-fill [&>*+*]:border-t [&>*+*]:border-hairline"
 >
   {@render children()}
 </div>

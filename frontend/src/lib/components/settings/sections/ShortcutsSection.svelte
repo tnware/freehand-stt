@@ -68,15 +68,13 @@
             disabled={unavailable(policy.action) ||
               !editable ||
               capture.busyElsewhere(policy.action)}
-            clearable={policy.action === ShortcutAction.HoldToTalk}
+            clearable={!policy.required}
             restorable={Boolean(policy.defaultShortcut) &&
               !isRecommendedShortcut(policy, shortcutValue(settings, policy.action))}
             feedback={capture.feedbackFor(policy.action)}
             onRecord={() => capture.record(settings, policy.action)}
             onCancel={() => capture.cancel()}
-            onClear={policy.action === ShortcutAction.HoldToTalk
-              ? () => capture.clear(settings, policy.action)
-              : undefined}
+            onClear={!policy.required ? () => capture.clear(settings, policy.action) : undefined}
             onRestore={() => capture.restore(settings, policy)}
           />
         {/each}

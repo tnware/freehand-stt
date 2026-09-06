@@ -10,7 +10,7 @@ want to use.
 | Action | Required | Accepted forms | Default |
 | --- | --- | --- | --- |
 | Toggle recording | Yes | One or more modifiers plus a supported primary key; or F13-F24 alone | `Ctrl+Shift+Space` |
-| Show Freehand | Yes | One or more modifiers plus a supported primary key; or F13-F24 alone | `Ctrl+Shift+D` |
+| Show Freehand | No | One or more modifiers plus a supported primary key; or F13-F24 alone | Unassigned |
 | Hold to talk | No | The global forms above; or two or more modifiers alone | Unassigned |
 
 The supported primary-key groups are A-Z, 0-9, Space, F1-F11, and F13-F24.
