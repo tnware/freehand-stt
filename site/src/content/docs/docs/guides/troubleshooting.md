@@ -4,8 +4,8 @@ description: Diagnose setup, connection, recording, delivery, cleanup, and playb
 ---
 
 Start with the status shown in Freehand. Connection checks are metadata-only:
-they can confirm that a server, credentials, and model listing are reachable,
-but they do not submit audio or prove that inference will succeed.
+they report what a health or model-list endpoint accepted and validate model
+options locally. They do not submit audio or prove that inference will succeed.
 
 ## Setup does not complete
 
@@ -23,12 +23,40 @@ audio files. Connect or enable a microphone, then select it under **Settings →
 - Enter the exact transcription model ID expected by the server. If model
   discovery is available, select an ID from the returned list.
 - If the endpoint requires a key, select **Authentication → API key** under
-  **Settings → Transcription**, then enter it. Leave authentication at **None**
+  **Settings → Connections**, edit the selected connection, then enter it. Leave authentication at **None**
   only for an endpoint that does not require a key.
 - Enable insecure HTTP only when you intentionally use a trusted plaintext
   local or LAN endpoint.
 - If an explicitly selected microphone is missing, choose another device or
   return to **System default**.
+
+## Understand connection-check results
+
+On a feature page, **Refresh models** (or **Check server** for whisper.cpp) runs
+one metadata request and shows a **Connection check** panel. **Check again**
+repeats it explicitly. The panel distinguishes four things:
+
+| Check | What it establishes |
+| --- | --- |
+| Connection | Whether the configured metadata route returned a usable response. Failures include the next setting or server condition to check. |
+| Authentication | Whether that metadata request was accepted. A public health endpoint does not prove that the key works on inference routes. |
+| Selected model | Whether the requested ID appears in the model list. Health-only checks cannot identify models; whisper.cpp reports a server-loaded model. |
+| Configuration | Whether the selected model profile and options satisfy Freehand's backend/model contracts. Speech needs a voice ID; Generic S1-mini connections need reasoning disabled on the server. |
+
+An unlisted model is a reason to review the ID, not proof that it cannot run: some
+servers accept aliases they do not advertise. A listed model may also be unsuitable
+for the selected feature. Metadata cannot verify transcription quality, supported
+languages or voices, cleanup behavior, or inference permissions.
+
+When you change the connection, model, or relevant model options, previous results
+are marked as applying to older settings or cleared. Run another check to assess
+the current draft. Changing capture duration or unrelated application preferences
+does not invalidate a model-options check.
+
+The **Test connection** action on the Connections page checks only that saved
+server and its authentication, without selecting it. Open a feature page to check
+its model and options. Actual audio or text requests happen only through your
+explicit transcription, cleanup, or speech workflow.
 
 ## Saved settings need attention
 
@@ -80,7 +108,7 @@ deliberately.** Test speech, cleanup, and playback connections independently.
 | Invalid settings | Freehand rejected the configuration before networking | API prefix, required fields, and plaintext HTTP policy |
 | Connection failed | No usable HTTP response arrived | Server process, hostname, port, firewall, TLS, and reverse proxy |
 | Unauthorized or forbidden | The server or gateway rejected authentication | Authentication mode, current API key, and gateway policy |
-| Model not found | Metadata worked but the configured ID was absent | Select a discovered model or enter the exact routed ID |
+| Model not advertised | The model list does not include the configured ID | Check the ID or alias with your server; an unlisted alias may still work |
 | Request too large | The server or proxy rejected the upload | Proxy body limit, server upload limit, and selected file size |
 | Timed out | The capability's configured request budget expired | Request budget, server load, model warmup, and network path |
 | Route unsupported | The server is reachable but lacks that capability | Confirm the specific STT, chat, or TTS route |

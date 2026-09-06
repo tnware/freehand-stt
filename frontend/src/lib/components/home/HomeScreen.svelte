@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Purpose } from "$bindings/savedconnection";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
   import ReadinessPanel from "$lib/components/home/ReadinessPanel.svelte";
   import AudioFileTranscription from "$lib/components/home/AudioFileTranscription.svelte";
@@ -84,6 +85,7 @@
   let pane = $state<"transcripts" | "setup">("transcripts");
   const setupNeedsAttention = $derived(
     session.editor.sttConnectionStale ||
+      session.editor.connectionResultStale(Purpose.Transcription, runtimeSettings) ||
       Boolean(session.editor.connection && !connectionSucceeded(session.editor.connection)),
   );
 
@@ -279,8 +281,10 @@
               processingProfiles={session.editor.processingProfiles}
               connection={session.editor.connection}
               processingConnection={session.editor.processingConnection}
-              sttStale={session.editor.sttConnectionStale}
-              processingStale={session.editor.processingConnectionStale}
+              sttStale={session.editor.sttConnectionStale ||
+                session.editor.connectionResultStale(Purpose.Transcription, runtimeSettings)}
+              processingStale={session.editor.processingConnectionStale ||
+                session.editor.connectionResultStale(Purpose.Cleanup, runtimeSettings)}
               pending={session.editor.quickSettingsPending}
               savedField={session.editor.quickSettingsSaved}
               sttTesting={session.editor.sttConnectionTesting}

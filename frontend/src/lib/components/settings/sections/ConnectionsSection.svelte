@@ -16,7 +16,7 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
-  import { connectionDescription } from "$lib/utils/connection";
+  import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
 
   let {
     editor,
@@ -450,12 +450,11 @@
           >
             Checking metadata…
           </p>
-        {:else if testedID === c.id && editor.managedConnectionResult}<p
-            role="status"
-            class="text-xs text-muted-foreground"
+        {:else if testedID === c.id && editor.managedConnectionResult}<div
+            class="border-t border-hairline pt-4"
           >
-            {connectionDescription(editor.managedConnectionResult)}
-          </p>{/if}
+            <ConnectionDiagnostics result={editor.managedConnectionResult} />
+          </div>{/if}
       </div></SettingsCard
     >
   {/each}

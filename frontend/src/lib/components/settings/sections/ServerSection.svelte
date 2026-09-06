@@ -11,7 +11,7 @@
   import { Badge } from "$lib/components/ui/badge";
   import { PostProcessingPreset, type Settings, type ConnectionResult } from "$lib/state";
   import { ID } from "$bindings/compatibility";
-  import { connectionDescription } from "$lib/utils/connection";
+  import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   let {
     settings = $bindable(),
     connection,
@@ -19,6 +19,7 @@
     draftModels = [],
     onChooseModel,
     onForgetModel,
+    connectionStale = false,
     onTestConnection,
   }: {
     settings: Settings;
@@ -27,6 +28,7 @@
     draftModels?: string[];
     onChooseModel: (model: string) => boolean;
     onForgetModel: () => void;
+    connectionStale?: boolean;
     onTestConnection: () => void;
   } = $props();
   const compatibility = $derived(
@@ -53,6 +55,16 @@
     {busy}
     onDiscover={onTestConnection}
   />
+  {#if connection}
+    <div class="p-5">
+      <ConnectionDiagnostics
+        result={connection}
+        stale={connectionStale}
+        {busy}
+        onCheck={onTestConnection}
+      />
+    </div>
+  {/if}
   <ModelProfilePicker
     id="transcription-model-profile"
     value={settings.modelProfile}
@@ -119,9 +131,7 @@
     {#snippet action()}<Badge variant="outline">minutes</Badge>{/snippet}
   </ValueRow>
 </SettingsCard>
-{#if connection}<p role="status" class="text-xs text-muted-foreground">
-    {connectionDescription(connection)}
-  </p>{/if}
+
 <TranscriptionControls
   bind:options={settings.transcriptionOptions}
   capabilities={compatibility?.capabilities}

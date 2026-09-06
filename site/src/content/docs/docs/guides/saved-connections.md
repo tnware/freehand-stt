@@ -89,7 +89,13 @@ for choosing, saving, and forgetting those preferences.
 
 **Test connection** in Connections checks that saved entry, including its own
 credential, without selecting it. It reads health or model-list metadata only.
-A successful check establishes reachability, not inference compatibility.
+Results distinguish metadata access and authentication. They do not assess every
+feature that can use this connection. Open a feature and choose **Refresh models**
+to check its selected model and local option requirements too. See
+[connection-check results](../troubleshooting/#understand-connection-check-results)
+for interpreting advertised models, health-only checks, and stale results.
+A successful metadata check does not establish inference compatibility or
+inference authorization.
 
 Keys stay in Windows Credential Manager. The app never displays a stored key;
 leave its password field blank to keep it, enter a replacement, or explicitly
