@@ -18,7 +18,7 @@
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
   import { TTSPhase, type Settings, type ConnectionResult, type TTSStatus } from "$lib/state";
-  import { connectionDescription } from "$lib/utils/connection";
+  import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   let {
     settings = $bindable(),
     status,
@@ -29,6 +29,7 @@
     draftModels = [],
     onChooseModel,
     onForgetModel,
+    connectionStale = false,
     onTestConnection,
     onPreview,
     onStop,
@@ -44,6 +45,7 @@
     draftModels?: string[];
     onChooseModel: (model: string) => boolean;
     onForgetModel: () => void;
+    connectionStale?: boolean;
     onTestConnection: () => void;
     onPreview: () => void;
     onStop: () => void;
@@ -86,6 +88,16 @@
       busy={connectionBusy}
       onDiscover={onTestConnection}
     />
+    {#if connection}
+      <div class="p-5">
+        <ConnectionDiagnostics
+          result={connection}
+          stale={connectionStale}
+          {busy}
+          onCheck={onTestConnection}
+        />
+      </div>
+    {/if}
     <ModelProfilePicker
       id="speech-model-profile"
       value={speech.modelProfile}
@@ -160,9 +172,7 @@
       {#snippet action()}<Badge variant="outline">seconds</Badge>{/snippet}
     </ValueRow>
   </SettingsCard>
-  {#if connection}<p role="status" class="text-xs text-muted-foreground">
-      {connectionDescription(connection)}
-    </p>{/if}
+
   <SettingsCard>
     <div class="flex items-center justify-between gap-4 px-5 py-4">
       <div class="min-w-0">

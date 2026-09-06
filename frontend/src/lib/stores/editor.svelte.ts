@@ -1,3 +1,4 @@
+import { connectionInputKey } from "$lib/utils/connectionInputs";
 import type { Edit } from "$bindings/modelsettings";
 import {
   Action,
@@ -162,6 +163,7 @@ export class SettingsEditor {
   quickSettingsPending = $state<QuickSettingsField[]>([]);
   quickSettingsSaved = $state<QuickSettingsField | null>(null);
   devicesBusy = $state(false);
+  #testedInputs = $state<Partial<Record<Purpose, string>>>({});
   #sttConnectionRevision = 0;
   #processingConnectionRevision = 0;
   #ttsConnectionRevision = 0;
@@ -802,8 +804,14 @@ export class SettingsEditor {
     }
   }
 
+  connectionResultStale(purpose: Purpose, settings = this.draft): boolean {
+    const tested = this.#testedInputs[purpose];
+    return !!(tested && settings && tested !== connectionInputKey(settings, purpose));
+  }
+
   async testConnection(settings = this.draft, apiKey = this.apiKey, clearExistingMessages = true) {
     if (this.sttConnectionTesting || !settings) return;
+    const inputKey = connectionInputKey(settings, Purpose.Transcription);
     const revision = this.#sttConnectionRevision;
     this.sttConnectionTesting = true;
     if (clearExistingMessages) this.#messages.clear();
@@ -816,9 +824,11 @@ export class SettingsEditor {
         model: settings.model,
         healthPath: settings.healthPath ?? "",
         headers: settings.headers,
+        options: modelOptions(settings, Purpose.Transcription),
         credentialDraft: apiKey,
       });
       if (revision === this.#sttConnectionRevision) {
+        this.#testedInputs[Purpose.Transcription] = inputKey;
         this.connection = result;
         this.sttConnectionStale = false;
       }
@@ -832,9 +842,9 @@ export class SettingsEditor {
 
   async testPostProcessingConnection(settings = this.draft, apiKey = this.processingAPIKey) {
     if (this.processingConnectionTesting || !settings) return;
+    const inputKey = connectionInputKey(settings, Purpose.Cleanup);
     const revision = this.#processingConnectionRevision;
     this.processingConnectionTesting = true;
-    this.processingConnection = null;
     this.#messages.clear();
     try {
       const result = await this.#service.connection.TestPostProcessingConnection({
@@ -842,9 +852,11 @@ export class SettingsEditor {
         compatibilityProfile: settings.postProcessing.compatibilityProfile,
         allowInsecureHTTP: settings.postProcessing.allowInsecureHTTP,
         model: settings.postProcessing.model,
+        options: modelOptions(settings, Purpose.Cleanup),
         credentialDraft: apiKey,
       });
       if (revision === this.#processingConnectionRevision) {
+        this.#testedInputs[Purpose.Cleanup] = inputKey;
         this.processingConnection = result;
         this.processingConnectionStale = false;
       }
@@ -857,9 +869,9 @@ export class SettingsEditor {
 
   async testTextToSpeechConnection(settings = this.draft, apiKey = this.ttsAPIKey) {
     if (this.ttsConnectionTesting || !settings) return;
+    const inputKey = connectionInputKey(settings, Purpose.Speech);
     const revision = this.#ttsConnectionRevision;
     this.ttsConnectionTesting = true;
-    this.ttsConnection = null;
     this.#messages.clear();
     try {
       const result = await this.#service.connection.TestTextToSpeechConnection({
@@ -868,9 +880,11 @@ export class SettingsEditor {
         allowInsecureHTTP: settings.textToSpeech.allowInsecureHTTP,
         authenticationMode: settings.textToSpeech.authenticationMode,
         model: settings.textToSpeech.model,
+        options: modelOptions(settings, Purpose.Speech),
         credentialDraft: apiKey,
       });
       if (revision === this.#ttsConnectionRevision) {
+        this.#testedInputs[Purpose.Speech] = inputKey;
         this.ttsConnection = result;
         this.ttsConnectionStale = false;
       }

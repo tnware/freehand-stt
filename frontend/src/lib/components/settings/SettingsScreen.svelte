@@ -258,6 +258,7 @@
           {:else if active === "server"}
             {#if session.editor.draft.savedConnections.selected?.stt}
               <ServerSection
+                connectionStale={session.editor.connectionResultStale(Purpose.Transcription)}
                 draftModels={session.editor.modelDraftIDs(Purpose.Transcription)}
                 onChooseModel={(model) => session.editor.chooseModel(Purpose.Transcription, model)}
                 onForgetModel={() => session.editor.forgetModel(Purpose.Transcription)}
@@ -270,6 +271,7 @@
           {:else if active === "processing"}
             {#if session.editor.draft.savedConnections.selected?.cleanup}
               <ProcessingSection
+                connectionStale={session.editor.connectionResultStale(Purpose.Cleanup)}
                 draftModels={session.editor.modelDraftIDs(Purpose.Cleanup)}
                 onChooseModel={(model) => session.editor.chooseModel(Purpose.Cleanup, model)}
                 onForgetModel={() => session.editor.forgetModel(Purpose.Cleanup)}
@@ -283,6 +285,7 @@
           {:else if active === "speech"}
             {#if session.editor.draft.savedConnections.selected?.speech}
               <SpeechSection
+                connectionStale={session.editor.connectionResultStale(Purpose.Speech)}
                 draftModels={session.editor.modelDraftIDs(Purpose.Speech)}
                 onChooseModel={(model) => session.editor.chooseModel(Purpose.Speech, model)}
                 onForgetModel={() => session.editor.forgetModel(Purpose.Speech)}

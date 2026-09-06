@@ -326,3 +326,22 @@ Browser fixtures cover presentation and editor behavior only. Native Windows
 execution separately covers SQLite, migration, settings transactions, and builds;
 interactive Windows acceptance remains a user review step. No inference inventory
 probes are part of these checks.
+
+## Connection diagnostic acceptance
+
+- Exercise a valid model list with listed, absent, and unselected model IDs, and a
+  health-only whisper.cpp endpoint. Health success must not verify a model ID.
+- Distinguish 401/403, bad metadata routes, malformed/oversized responses, network
+  failures, and successful metadata access. Success must not claim inference
+  permissions or feature support.
+- Check invalid provider options, a missing speech voice, and S1-mini on both
+  Generic and qualified reasoning adapters. Metadata refresh must remain possible
+  while local model options need fixing.
+- Edit model options during a pending check and after a completed check. Results
+  must be stale for the new draft; unrelated capture edits must not stale them.
+  Cleanup, speech, and transcription keep separate assessment inputs.
+- Saved-connection checks assess that saved entry only, without selecting it.
+  Fixtures must assert GET-only metadata routes and avoid inference calls. Check
+  that returned diagnostic text does not reflect user instructions or credentials.
+- Review the results panel in light/dark themes and a narrow settings window.
+  Pair browser presentation checks with native Windows tests and builds.

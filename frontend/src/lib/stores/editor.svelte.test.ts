@@ -1,4 +1,6 @@
 import { ID } from "$bindings/compatibility";
+import { Purpose } from "$bindings/savedconnection";
+import { modelOptions } from "$lib/utils/modelSettings";
 import { CancellablePromise } from "@wailsio/runtime";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -625,6 +627,7 @@ describe("SettingsEditor connection metadata", () => {
     await session.editor.testConnection();
 
     expect(TestConnection).toHaveBeenCalledWith({
+      options: modelOptions(session.editor.draft!, Purpose.Transcription),
       compatibilityProfile: ID.Generic,
       baseURL: "https://example.test/v1",
       allowInsecureHTTP: false,
@@ -673,7 +676,7 @@ describe("SettingsEditor connection metadata", () => {
     expect(session.messages.notice).toBe("Settings saved and active.");
   });
 
-  it("sends only focused post-processing probe values", async () => {
+  it("sends focused post-processing metadata and local option checks", async () => {
     const TestPostProcessingConnection: SessionServices["connection"]["TestPostProcessingConnection"] =
       vi.fn(() => CancellablePromise.resolve(connectionResult));
     const session = createEditor(
@@ -691,6 +694,7 @@ describe("SettingsEditor connection metadata", () => {
     await session.editor.testPostProcessingConnection();
 
     expect(TestPostProcessingConnection).toHaveBeenCalledWith({
+      options: modelOptions(session.editor.draft!, Purpose.Cleanup),
       compatibilityProfile: ID.Generic,
       baseURL: "http://127.0.0.1:8080/v1",
       allowInsecureHTTP: false,
@@ -720,6 +724,7 @@ describe("SettingsEditor connection metadata", () => {
     await session.editor.testTextToSpeechConnection();
 
     expect(TestTextToSpeechConnection).toHaveBeenCalledWith({
+      options: modelOptions(session.editor.draft!, Purpose.Speech),
       compatibilityProfile: ID.Generic,
       baseURL: "http://127.0.0.1:8000/v1",
       allowInsecureHTTP: true,

@@ -614,3 +614,26 @@ for dictation segments). Rejection makes no cleanup request and uses existing
 raw fallback, cancellation precedence, history projection, and focus-safe
 delivery. Unknown language assumes English by explicit product policy. Provider
 capability, model language support, and a selected input language remain distinct.
+
+## Connection assessments
+
+`internal/connection` adds bounded diagnostic checks to its existing metadata
+results. Endpoint and credential failures remain distinct from advertised model
+presence and local model-option validation. Optional value-only model settings
+are validated through `internal/modelsettings` and `internal/modelprofile`;
+invalid options do not prevent metadata discovery. Saved-connection tests assess
+only transport/access and never claim readiness for all enabled uses.
+
+The renderer captures a non-secret input signature when each feature check starts.
+A later draft with different transport, selected model, or model options marks
+that assessment stale while retaining useful model-list choices. Signatures are
+not persisted, logged, or sent to the server; unrelated capture preferences do
+not invalidate them. A response completing after a draft edit retains its original
+signature. Existing connection revisions still discard superseded connection
+results. Request options and signatures contain no credential values.
+
+Checks make one bounded GET request to the configured metadata route. HTTP success
+is scoped to that route; advertised IDs do not imply feature support. There are
+no inference probes, automatic inventory iterations, capability guesses, or new
+readiness gates for unlisted aliases. Model and option checks do not replace
+normal runtime admission and captured request settings.

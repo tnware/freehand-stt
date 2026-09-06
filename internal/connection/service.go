@@ -16,12 +16,14 @@ import (
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/inference"
+	"github.com/tnware/freehand-stt/internal/modelsettings"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/settings"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type ConnectionTestRequest struct {
+	Options              *modelsettings.Options    `json:"options,omitempty"`
 	CompatibilityProfile compatibility.ID          `json:"compatibilityProfile"`
 	BaseURL              string                    `json:"baseURL"`
 	AllowInsecureHTTP    bool                      `json:"allowInsecureHTTP"`
@@ -33,14 +35,16 @@ type ConnectionTestRequest struct {
 }
 
 type PostProcessingConnectionTestRequest struct {
-	CompatibilityProfile compatibility.ID `json:"compatibilityProfile"`
-	BaseURL              string           `json:"baseURL"`
-	AllowInsecureHTTP    bool             `json:"allowInsecureHTTP"`
-	Model                string           `json:"model"`
-	CredentialDraft      string           `json:"credentialDraft,omitempty"`
+	Options              *modelsettings.Options `json:"options,omitempty"`
+	CompatibilityProfile compatibility.ID       `json:"compatibilityProfile"`
+	BaseURL              string                 `json:"baseURL"`
+	AllowInsecureHTTP    bool                   `json:"allowInsecureHTTP"`
+	Model                string                 `json:"model"`
+	CredentialDraft      string                 `json:"credentialDraft,omitempty"`
 }
 
 type TextToSpeechConnectionTestRequest struct {
+	Options              *modelsettings.Options    `json:"options,omitempty"`
 	CompatibilityProfile compatibility.ID          `json:"compatibilityProfile"`
 	BaseURL              string                    `json:"baseURL"`
 	AllowInsecureHTTP    bool                      `json:"allowInsecureHTTP"`
@@ -81,6 +85,7 @@ const (
 )
 
 type ConnectionResult struct {
+	Checks              []Check             `json:"checks,omitempty"`
 	Reachable           bool                `json:"reachable"`
 	Probe               ConnectionProbe     `json:"probe"`
 	RequestedURL        string              `json:"requestedURL"`
@@ -169,6 +174,9 @@ func (s *Service) ServiceShutdown() error {
 
 // TestConnection probes STT health or model discovery without invoking a model.
 func (s *Service) TestConnection(request ConnectionTestRequest) (result ConnectionResult) {
+	defer func() {
+		result.Checks = assess(result, savedconnection.Transcription, request.CompatibilityProfile, request.Model, request.Options, request.AuthenticationMode)
+	}()
 	checkedAt := time.Now().UTC()
 	healthPath := compatibility.TranscriptionHealthPath(request.CompatibilityProfile, request.HealthPath)
 	probe, requestedURL, targetErr := inference.MetadataTarget(request.BaseURL, healthPath)
@@ -255,6 +263,9 @@ func (s *Service) TestConnection(request ConnectionTestRequest) (result Connecti
 // TestPostProcessingConnection probes post-processing model discovery without
 // sending transcript content or invoking a model.
 func (s *Service) TestPostProcessingConnection(request PostProcessingConnectionTestRequest) (result ConnectionResult) {
+	defer func() {
+		result.Checks = assess(result, savedconnection.Cleanup, request.CompatibilityProfile, request.Model, request.Options, config.AuthenticationModeNone)
+	}()
 	checkedAt := time.Now().UTC()
 	probe, requestedURL, targetErr := inference.MetadataTarget(request.BaseURL, "")
 	validationError := ""
@@ -323,6 +334,9 @@ func (s *Service) TestPostProcessingConnection(request PostProcessingConnectionT
 // Voice discovery is intentionally absent because the compatible API does not
 // define a portable endpoint for it.
 func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestRequest) (result ConnectionResult) {
+	defer func() {
+		result.Checks = assess(result, savedconnection.Speech, request.CompatibilityProfile, request.Model, request.Options, request.AuthenticationMode)
+	}()
 	checkedAt := time.Now().UTC()
 	probe, requestedURL, targetErr := inference.MetadataTarget(request.BaseURL, "")
 	validationError := ""
@@ -432,6 +446,8 @@ func connectionServer(requestedURL string) string {
 
 // TestSavedConnection checks an explicitly saved connection without selecting it or invoking a model.
 func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
+	auth := config.AuthenticationModeNone
+	defer func() { result.Checks = assess(result, "", compatibility.Generic, "", nil, auth) }()
 	result.CheckedAt = time.Now().UTC()
 	result.ModelPresence = ModelPresenceUnavailable
 	if s.savedConnections == nil {
@@ -446,6 +462,7 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 		}
 		return
 	}
+	auth = c.Details.AuthenticationMode
 	defer func() { key = "" }()
 	if err = savedconnection.ValidateUses(c.Uses, c.Details); err != nil {
 		result.ErrorKind = ConnectionErrorInvalidSettings
