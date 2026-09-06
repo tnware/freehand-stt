@@ -374,3 +374,41 @@ func TestSaveDialogDoesNotBlockShutdown(t *testing.T) {
 		t.Fatal("save after shutdown accepted")
 	}
 }
+
+type cancellationIgnoringSpeechClient struct{ entered, release chan struct{} }
+
+func (c *cancellationIgnoringSpeechClient) SynthesizeSpeech(context.Context, string, string, inference.SpeechRequest) ([]byte, error) {
+	close(c.entered)
+	<-c.release
+	return nil, context.Canceled
+}
+func TestShutdownBoundsUncooperativeInferenceWorker(t *testing.T) {
+	client := &cancellationIgnoringSpeechClient{make(chan struct{}), make(chan struct{})}
+	cfg := config.Default().TextToSpeech
+	cfg.Enabled, cfg.BaseURL, cfg.Model, cfg.Voice = true, "https://example.test/v1", "speech-model", "voice"
+	cfg.AuthenticationMode = config.AuthenticationModeNone
+	service := NewService(func() (settings.TextToSpeechProfile, error) { return settings.TextToSpeechProfile{Settings: cfg}, nil }, client, &playerFake{}, nil, nil, nil, nil, nil, nil)
+	if err := service.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.SpeakText("Fixed test text"); err != nil {
+		t.Fatal(err)
+	}
+	<-client.entered
+	done := make(chan error, 1)
+	go func() { done <- service.ServiceShutdown() }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(shutdownTimeout + time.Second):
+		close(client.release)
+		t.Fatal("uncooperative worker prevented shutdown")
+	}
+	close(client.release)
+	service.workers.Wait()
+	if !service.closed.Load() {
+		t.Fatal("service remained open")
+	}
+}
