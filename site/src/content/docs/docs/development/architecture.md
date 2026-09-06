@@ -416,7 +416,7 @@ Wails stays at `Info` because the pinned bridge's debug tracing serializes bindi
 
 Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS retain independent runtime models and selections. Selecting the same reusable connection explicitly shares its endpoint, HTTP policy, backend profile, and credential reference; selecting separate connections keeps those identities independent. Stored credentials remain in Windows Credential Manager; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
 
-`internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation and closes native output deterministically.
+`internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation immediately and serializes native output teardown within the service wait budget described below.
 
 The main, Settings, and About windows use the opaque product palette by default.
 Dark surfaces adapt the website’s navy to a tighter desktop ladder (`#111722`,
@@ -543,7 +543,33 @@ History never contains a URL path supplied by the user, target-window identity, 
 - Tray Quit clears the optional in-memory transcript ring before process exit.
 - Automatic startup currently uses an app-owned HKCU entry and never requires elevation; replacement with Wails Autostart remains separate backlog work.
 - Automatic release checks are opt-out, quiet metadata reads scheduled by `internal/updates`; Wails owns GitHub release comparison, checksum verification, its review window, download, executable staging, and restart. The service stops polling and rejects new checks during shutdown.
-- Services that own asynchronous work retain a child of Wails' application context themselves. Live `StopRecording` owns only the serialized native capture-stop transition; it then submits exactly one generation-scoped completion to the dictation service's single managed worker, which owns transcription, post-processing, history finalization, and insertion. Renderer, toggle, hold-release, duration-limit, and automatic-silence callers therefore share status events as their outcome contract instead of blocking a bridge or native callback on inference. Shutdown atomically stops completion admission, cancels stored-file and dictation work, waits for the managed completion worker within five seconds, suppresses late publications, closes shortcut capture before the dictation/audio owner, and returns within the shared deadline even if an operating-system file read does not respond. Native capture has a closed-state fence before and after device preparation so a late warmup cannot recreate resources.
+- Services that own asynchronous work retain a child of Wails' application context themselves. Live `StopRecording` owns only the serialized native capture-stop transition; it then submits exactly one generation-scoped completion to the dictation service's single managed worker, which owns transcription, post-processing, history finalization, and insertion. Renderer, toggle, hold-release, duration-limit, and automatic-silence callers therefore share status events as their outcome contract instead of blocking a bridge or native callback on inference. Shutdown atomically stops admission and cancels the service root before waiting for native or workflow locks. Dictation and stored-file transcription each allow five seconds for the complete teardown; speech allows two seconds. These are per-service wait budgets, not a global process-exit guarantee. Wails closes shortcut capture before the dictation/audio owner. Native capture has a closed-state fence before and after device preparation so a late warmup cannot recreate resources.
+
+
+### Shutdown and audio export ownership
+
+Each workflow starts one tracked cleanup operation and fences new work before
+waiting. Repeated shutdown calls join that same operation. Its deadline includes
+state/control locks, native teardown, and worker drain. A deadline returns an
+explicit error; it does not close a resource concurrently with a native call that
+still owns it. Cleanup retains ownership until that call returns, and late work
+cannot publish a result, insert a transcript, or start a subsequent playback step.
+
+Speech export takes an independent canonical WAV snapshot under player control,
+then releases control before disk I/O. The export worker owns and clears that
+snapshot, so Stop, Clear, replacement, and native teardown can proceed. Once the
+save location and generation are validated, export stays attached to that audio
+snapshot even if playback changes. Shutdown cancels export; the writer checks
+cancellation before opening the destination and between chunks. A save that
+returns after shutdown cannot report success.
+
+Go cannot forcibly interrupt arbitrary driver calls or every filesystem syscall.
+A timed-out operation may retain its resources until it returns or the process
+exits. An interrupted write may leave a partial file at the explicitly selected
+destination. These service budgets do not bound unrelated Wails shutdown hooks,
+window-placement persistence, native dialog dispatch, or all OS cleanup. Preserve
+that distinction in acceptance reports; do not replace serialized cleanup with
+concurrent frees or an unconditional process kill.
 
 ## Shelved conversation research
 

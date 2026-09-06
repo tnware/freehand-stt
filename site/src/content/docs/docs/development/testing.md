@@ -74,6 +74,32 @@ or `--grep "Keep editing"`. Failure traces and screenshots go to `frontend/test-
 the HTML report is in `frontend/playwright-report`. No app settings, credentials,
 or inference are accessed. Browser coverage does not establish native Wails acceptance.
 
+
+## Shutdown and cancellation acceptance
+
+Run `go test -race ./internal/dictation ./internal/filetranscription ./internal/tts
+./internal/platform ./internal/activity` on Windows. Controlled capture, player,
+transport, and export boundaries exercise blocked teardown, cancellation before
+lock acquisition, late completion, repeated shutdown, and independent export
+ownership. Tests hold and release operations explicitly; deadline cases check the
+returned timeout and then join cleanup after releasing the blocked call. Normal
+CI uses fake devices and services and never performs inference.
+
+For opt-in hardware acceptance on a Windows desktop, set
+`$env:FREEHAND_NATIVE_AUDIO_ACCEPTANCE = "1"`, then run
+`go test ./internal/platform -run '^TestNativeAudioShutdown$' -count=1 -v -timeout 20s`.
+Remove the environment variable afterward. This exercises the default microphone
+for 100 ms in memory and discards it, then closes real WASAPI output while playing
+silence and while paused. It does not save audio or contact a server. A pass proves
+those native device paths on that machine, not interactive tray/dialog behavior.
+
+Finish with the [native checklist](../../safety/native-test-checklist/): Quit during
+recording, upload, cleanup, generation, playback, and an open Save Audio dialog.
+Check process exit, tray/hotkey removal, and absence of late insertion or playback.
+For a slow export destination, verify playback controls stay responsive. A blocked
+OS call may outlive its service wait deadline; keep that limitation distinct from
+successful native cleanup, and inspect an interrupted export before using it.
+
 ## SQLite acceptance
 
 Run `go run ./build/scripts/storage -check -base main` and
