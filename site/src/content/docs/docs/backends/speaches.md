@@ -114,6 +114,7 @@ models during a connection test.
 | Hotwords | Optional `hotwords`, at most 2,048 UTF-8 bytes; Speaches-specific field. |
 | Decoding temperature | Optional `temperature` from 0 to 1; explicit zero is supported. |
 | Speech playback | Voice ID, speed request, and buffered PCM16 WAV. |
+| Voice discovery | Model-associated voices from `/v1/models`, with a labelled server-wide `/v1/audio/voices` fallback. |
 | Transcript cleanup | Configure a separate Generic, llama.cpp, or vLLM chat connection. |
 
 Generic retains these compatible response shapes for older Freehand settings.
@@ -136,10 +137,28 @@ These are source and client-fixture qualifications, not live tests of every
 release or executor. The RC label is retained here intentionally. Actual model
 and voice IDs, decoder support, and speed behavior depend on the served setup.
 
+## Choose a voice
+
+In **Settings → Speech playback**, select the Speaches connection and TTS model,
+then use **Refresh voices** beside the voice field. Search the list by ID, name,
+or language when the server supplies it. You can also type a custom voice ID.
+The selection is saved with this connection and model's existing settings.
+
+Freehand first reads `/v1/models` and uses the selected model's `voices` field.
+If it is absent, it reads `/v1/audio/voices` and labels the result as server-wide;
+those voices are not guaranteed to work with every model. An explicitly empty
+model voice list remains empty. Discovery does not synthesize previews or load
+models. Changing connection or model hides results from a different selection.
+Errors and older servers leave manual voice entry available.
+
+Voice discovery is qualified against the
+[Speaches metadata routes](https://github.com/speaches-ai/speaches/blob/fc50e7133c175bae320eed6e0db9a342fcb21837/src/speaches/routers/models.py)
+and local fixtures. This does not claim live acceptance of every Speaches release.
+
 ## Current limits
 
 The profile does not add timestamps, a translation workflow, server VAD
-controls, voice instructions, cloning inputs, or voice catalog discovery.
+controls, voice instructions, or cloning inputs.
 Provider limits and Freehand's bounded-buffer limits still apply; consult the
 [protocol reference](../../reference/protocol/).
 

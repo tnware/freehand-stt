@@ -285,6 +285,9 @@
           {:else if active === "speech"}
             {#if session.editor.draft.savedConnections.selected?.speech}
               <SpeechSection
+                voices={session.editor.voices}
+                voicesBusy={session.editor.voicesBusy}
+                onDiscoverVoices={() => session.editor.discoverVoices()}
                 connectionStale={session.editor.connectionResultStale(Purpose.Speech)}
                 draftModels={session.editor.modelDraftIDs(Purpose.Speech)}
                 onChooseModel={(model) => session.editor.chooseModel(Purpose.Speech, model)}

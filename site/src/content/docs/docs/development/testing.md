@@ -345,3 +345,25 @@ probes are part of these checks.
   that returned diagnostic text does not reflect user instructions or credentials.
 - Review the results panel in light/dark themes and a narrow settings window.
   Pair browser presentation checks with native Windows tests and builds.
+
+
+### Voice discovery and Kokoro playback
+
+Run inference and connection tests for current/legacy Kokoro voice shapes,
+Speaches model-scoped and server-wide fallback lists, explicit empty lists,
+credentials, HTTP failures, redirects, malformed/oversized responses, bounded
+IDs/counts, and service shutdown. Check that Generic makes no voice-discovery
+request and its speech request remains unchanged while Kokoro sends `stream: false`.
+
+In settings, refresh voices, search by ID/name/language, choose and save a voice,
+and switch models to verify remembered options. Manual entry must remain usable
+without metadata, after a failed refresh, and for an unlisted alias. Change the
+connection/model while discovery is pending: old results must not populate the
+new selection. Inspect keyboard selection and light/dark/narrow layouts.
+
+Manual Kokoro acceptance used one fixed `af_heart` sample with `kokoro` at speed
+1.0 against API 0.6.0. The Windows adapter and WAV decoder accepted 24 kHz mono
+PCM16 audio. Audio was not retained and the manual harness is not committed or
+run in CI. Native speaker-device preview is a separate interactive check.
+Verify the site matrix exposes accessible support labels with visual checkmarks
+and links the Kokoro guide from the directory and documentation navigation.

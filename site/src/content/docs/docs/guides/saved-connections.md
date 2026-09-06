@@ -107,3 +107,13 @@ preserve the previously committed settings and credentials.
 
 See [connect a server](../connect-a-server/), [backend guides](../../backends/),
 and [settings recovery](../troubleshooting/#saved-settings-need-attention).
+
+
+### Discover speech voices
+
+Speaches and Kokoro-FastAPI connections offer **Refresh voices** in Speech
+playback settings. Search the voice field or type an ID. Speaches may identify
+voices for the selected model; server-wide lists are labelled accordingly.
+Changing the connection or model hides results from another selection. Refreshing
+voices neither changes the selected voice nor generates audio. Save feature
+settings to remember the chosen voice for that connection and model.

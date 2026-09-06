@@ -40,7 +40,12 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, base, key string, input S
 		Voice          string  `json:"voice"`
 		ResponseFormat string  `json:"response_format"`
 		Speed          float64 `json:"speed"`
+		Stream         *bool   `json:"stream,omitempty"`
 	}{Model: input.Model, Input: input.Input, Voice: input.Voice, ResponseFormat: "wav", Speed: input.Speed}
+	if contract.ID == compatibility.KokoroFastAPI {
+		buffered := false
+		request.Stream = &buffered
+	}
 	body, err := json.Marshal(request)
 	if err != nil {
 		return nil, err

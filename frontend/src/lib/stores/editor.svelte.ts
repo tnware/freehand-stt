@@ -1,3 +1,4 @@
+import { VoiceScope, type VoicesResult } from "$bindings/inference";
 import { connectionInputKey } from "$lib/utils/connectionInputs";
 import type { Edit } from "$bindings/modelsettings";
 import {
@@ -40,6 +41,7 @@ export interface SettingsEditorServices {
   input: Pick<typeof InputBindings, "ListMicrophones">;
   connection: Pick<
     typeof ConnectionBindings,
+    | "ListSpeechVoices"
     | "TestSavedConnection"
     | "TestConnection"
     | "TestPostProcessingConnection"
@@ -163,6 +165,54 @@ export class SettingsEditor {
   quickSettingsPending = $state<QuickSettingsField[]>([]);
   quickSettingsSaved = $state<QuickSettingsField | null>(null);
   devicesBusy = $state(false);
+  voicesBusy = $state(false);
+  #voices = $state<VoicesResult | null>(null);
+  #voicesInput = $state("");
+  #voicesRevision = $state(-1);
+
+  #voiceInput(): string {
+    const settings = this.draft;
+    if (!settings) return "";
+    return JSON.stringify([
+      settings.savedConnections.selected?.speech,
+      settings.textToSpeech.model,
+      settings.textToSpeech.compatibilityProfile,
+      settings.textToSpeech.baseURL,
+    ]);
+  }
+
+  get voices(): VoicesResult | null {
+    return this.#voicesInput === this.#voiceInput() &&
+      this.#voicesRevision === this.#ttsConnectionRevision ? this.#voices : null;
+  }
+
+  async discoverVoices() {
+    const connectionID = this.draft?.savedConnections.selected?.speech;
+    if (this.voicesBusy || !connectionID || !this.draft) return;
+    const input = this.#voiceInput();
+    const revision = this.#ttsConnectionRevision;
+    this.voicesBusy = true;
+    try {
+      const result = await this.#service.connection.ListSpeechVoices({
+        connectionID,
+        model: this.draft.textToSpeech.model,
+      });
+      if (revision === this.#ttsConnectionRevision && input === this.#voiceInput()) {
+        this.#voices = result;
+        this.#voicesInput = input;
+        this.#voicesRevision = revision;
+      }
+    } catch {
+      if (revision === this.#ttsConnectionRevision && input === this.#voiceInput()) {
+        this.#voices = { voices: [], scope: VoiceScope.$zero, errorKind: "network", httpStatus: 0, latencyMilliseconds: 0, truncated: false };
+        this.#voicesInput = input;
+        this.#voicesRevision = revision;
+      }
+    } finally {
+      this.voicesBusy = false;
+    }
+  }
+
   #testedInputs = $state<Partial<Record<Purpose, string>>>({});
   #sttConnectionRevision = 0;
   #processingConnectionRevision = 0;

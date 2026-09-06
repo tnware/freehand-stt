@@ -1,3 +1,4 @@
+import { VoiceScope } from "$bindings/inference";
 import { modelOptions } from "$lib/utils/modelSettings";
 import { Purpose } from "$bindings/savedconnection";
 import { ID } from "$bindings/compatibility";
@@ -270,6 +271,7 @@ const serviceWithStatus = (
     ...overrides.input,
   },
   connection: {
+    ListSpeechVoices: () => CancellablePromise.resolve({ voices: [], scope: VoiceScope.VoiceScopeServer, errorKind: "", httpStatus: 200, latencyMilliseconds: 1, truncated: false }),
     TestSavedConnection: () => CancellablePromise.resolve(connectionResult),
     TestConnection: () => CancellablePromise.resolve(connectionResult),
     TestPostProcessingConnection: () => CancellablePromise.resolve(connectionResult),
