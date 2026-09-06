@@ -158,6 +158,9 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	if change.Action == savedconnection.Select && !savedconnection.ValidPurpose(change.Purpose) {
 		return v, errors.New("invalid connection purpose")
 	}
+	if change.ActivateFor != "" && (change.Action != savedconnection.Create || !savedconnection.ValidPurpose(change.ActivateFor)) {
+		return v, errors.New("activation requires a new connection and a valid purpose")
+	}
 	state := s.connections.clone()
 	p := change.Purpose
 	current, ok := state.entries[change.ID]
@@ -202,6 +205,14 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 			target = c.ID
 		}
 		state.entries[c.ID] = c
+		if role := change.ActivateFor; role != "" {
+			if !c.Supports(role) {
+				return v, errors.New("connection must support the task using it")
+			}
+			state.selected[role] = c.ID
+			v = savedconnection.Apply(savedconnection.ClearModel(v, role), role, c.Details)
+			v = state.restoreModel(v, role, c.ID)
+		}
 	case savedconnection.Update:
 		if change.Details == nil {
 			return v, errors.New("connection details are required")

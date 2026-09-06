@@ -336,3 +336,143 @@ func TestSharedConnectionRejectsUnqualifiedUsesAndRollsBackAllSelections(t *test
 		}
 	}
 }
+
+func TestCreateAndActivateConnectionIsOneCoherentSave(t *testing.T) {
+	for _, purpose := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech} {
+		t.Run(string(purpose), func(t *testing.T) {
+			s, svc := connectionService(t)
+			before := svc.GetSettings()
+			captured, err := settings.RequestProfiles(svc).Capture()
+			if err != nil {
+				t.Fatal(err)
+			}
+			d := savedconnection.Details{CompatibilityProfile: compatibility.Generic, BaseURL: "https://new.example.test/v1", AuthenticationMode: config.AuthenticationModeAPIKey, Headers: map[string]string{}}
+			saved, err := svc.SaveSettings(settings.SaveSettingsRequest{
+				ExpectedConnections:       before.SavedConnections.Selected,
+				ConnectionChange:          &savedconnection.Change{Action: savedconnection.Create, Name: "New task server", Uses: []savedconnection.Purpose{purpose}, Details: &d, ActivateFor: purpose},
+				ConnectionCredentialDraft: "new-task-canary",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			id := connectionID(t, saved, "New task server")
+			if saved.SavedConnections.Selected[purpose] != id {
+				t.Fatal("new connection not selected")
+			}
+			for _, other := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech} {
+				if other != purpose && saved.SavedConnections.Selected[other] != before.SavedConnections.Selected[other] {
+					t.Fatal("changed an unrelated selection")
+				}
+			}
+			if saved.Language != before.Language || saved.PostProcessing.SystemPrompt != before.PostProcessing.SystemPrompt || saved.TextToSpeech.Speed != before.TextToSpeech.Speed {
+				t.Fatal("changed task intent")
+			}
+			profile, err := settings.RequestProfiles(svc).Capture()
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch purpose {
+			case savedconnection.Transcription:
+				if profile.STTCredential != "new-task-canary" || saved.Model != "" || saved.SetupCompleted {
+					t.Fatal("incoherent STT activation")
+				}
+			case savedconnection.Cleanup:
+				key, keyErr := s.CleanupCredentials().Get()
+				if keyErr != nil || key != "new-task-canary" || saved.PostProcessing.Model != "" || saved.PostProcessing.Enabled {
+					t.Fatal("incoherent cleanup activation")
+				}
+			case savedconnection.Speech:
+				key, keyErr := s.SpeechCredentials().Get()
+				if keyErr != nil || key != "new-task-canary" || saved.TextToSpeech.Model != "" || saved.TextToSpeech.Enabled {
+					t.Fatal("incoherent speech activation")
+				}
+			}
+			if captured.STTCredential != "stt-canary" || captured.Settings.Model != "original-stt" {
+				t.Fatal("mutated an in-flight request")
+			}
+			body, _ := json.Marshal(saved)
+			if strings.Contains(string(body), "canary") {
+				t.Fatal("credential in renderer snapshot")
+			}
+			s.Close()
+			reopened := newStore(s.path, s.legacy, s.vault)
+			defer reopened.Close()
+			loadStore(t, reopened)
+			if reopened.ConnectionCatalog().Selected[purpose] != id {
+				t.Fatal("selection not durable")
+			}
+		})
+	}
+}
+
+func TestCreateAndActivateRejectsInvalidIntentAndRollsBackFailure(t *testing.T) {
+	s, svc := connectionService(t)
+	before := svc.GetSettings()
+	d := savedconnection.Extract(before.Settings, savedconnection.Transcription)
+	change := savedconnection.Change{Action: savedconnection.Create, Name: "New", Uses: []savedconnection.Purpose{savedconnection.Transcription}, Details: &d, ActivateFor: savedconnection.Transcription}
+	for _, invalid := range []savedconnection.Change{
+		{Action: savedconnection.Create, Name: "Wrong role", Uses: change.Uses, Details: &d, ActivateFor: savedconnection.Speech},
+		{Action: savedconnection.Create, Name: "Unknown role", Uses: change.Uses, Details: &d, ActivateFor: "invented"},
+		{Action: savedconnection.Update, ID: before.SavedConnections.Selected[savedconnection.Transcription], Name: "Original stt", Uses: change.Uses, Details: &d, ActivateFor: savedconnection.Transcription},
+	} {
+		if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &invalid}); err == nil {
+			t.Fatal("invalid activation accepted")
+		}
+	}
+	if _, err := s.db.Exec(`CREATE TRIGGER reject_setup BEFORE INSERT ON saved_connections BEGIN SELECT RAISE(ABORT,'fixture'); END;`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &change, ConnectionCredentialDraft: "failed-task-canary"}); err == nil {
+		t.Fatal("failed save accepted")
+	}
+	if got := svc.GetSettings(); !reflect.DeepEqual(got.SavedConnections, before.SavedConnections) || !reflect.DeepEqual(got.Settings, before.Settings) {
+		t.Fatal("failed activation published state")
+	}
+	if len(s.vault.(*memoryVault).values) != 3 {
+		t.Fatal("failed activation leaked credential")
+	}
+	if got := loadStore(t, s); !reflect.DeepEqual(got, before.Settings) {
+		t.Fatal("failed activation changed disk settings")
+	}
+}
+
+func TestFreshTaskSetupNeedsNoOtherConfiguredFeature(t *testing.T) {
+	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech} {
+		t.Run(string(p), func(t *testing.T) {
+			s := testStore(t)
+			initial := loadStore(t, s)
+			svc := settings.NewService(s, initial, s.STTCredentials(), s.CleanupCredentials(), &fixtureStartup{}, func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil, config.LoadReport{}))
+			defer svc.ServiceShutdown()
+			d := savedconnection.Details{CompatibilityProfile: compatibility.Generic, BaseURL: "https://fresh.example.test/v1", AuthenticationMode: config.AuthenticationModeNone, Headers: map[string]string{}}
+			saved, err := svc.SaveSettings(settings.SaveSettingsRequest{ExpectedConnections: map[savedconnection.Purpose]string{}, ConnectionChange: &savedconnection.Change{Action: savedconnection.Create, Name: "First server", Uses: []savedconnection.Purpose{p}, Details: &d, ActivateFor: p}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(saved.SavedConnections.Selected) != 1 || saved.SavedConnections.Selected[p] == "" {
+				t.Fatal("fresh task requires another selection")
+			}
+			next := saved.Settings
+			switch p {
+			case savedconnection.Transcription:
+				next.Model = "fixture-model"
+			case savedconnection.Cleanup:
+				next.PostProcessing.Model = "fixture-model"
+				next.PostProcessing.Enabled = true
+			case savedconnection.Speech:
+				next.TextToSpeech.Model = "fixture-model"
+				next.TextToSpeech.Voice = "fixture-voice"
+				next.TextToSpeech.Enabled = true
+			}
+			configured, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: next, ExpectedConnections: saved.SavedConnections.Selected})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if configured.SetupCompleted {
+				t.Fatal("companion setup completed dictation implicitly")
+			}
+			if p != savedconnection.Transcription && configured.BaseURL != "" {
+				t.Fatal("companion setup invented STT endpoint")
+			}
+		})
+	}
+}
