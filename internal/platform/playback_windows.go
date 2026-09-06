@@ -4,7 +4,6 @@ package platform
 
 import (
 	"errors"
-	"os"
 	"sync"
 	"time"
 
@@ -168,26 +167,15 @@ func (p *Playback) OutputName() string {
 	return p.output
 }
 
-// Save writes a canonical WAV snapshot of the current in-memory session. The
-// caller supplies a path chosen by the native save dialog; no temporary file
-// or WebView audio payload is involved.
-func (p *Playback) Save(path string) error {
+// Snapshot returns an independent canonical WAV. The speech service owns its
+// lifetime and disk export; no filesystem operation holds player ownership.
+func (p *Playback) Snapshot() ([]byte, error) {
 	p.mu.Lock()
-	if p.dev == nil || len(p.data) == 0 {
-		p.mu.Unlock()
-		return errors.New("no speech audio is loaded")
+	defer p.mu.Unlock()
+	if p.closed || len(p.data) == 0 {
+		return nil, errors.New("no speech audio is loaded")
 	}
-	data := append([]byte(nil), p.data...)
-	rate, channels := p.rate, p.channels
-	p.mu.Unlock()
-	defer clear(data)
-
-	wav, err := audio.PCM16WAV(data, rate, channels)
-	if err != nil {
-		return err
-	}
-	defer clear(wav)
-	return os.WriteFile(path, wav, 0o666)
+	return audio.PCM16WAV(p.data, p.rate, p.channels)
 }
 
 func (p *Playback) Stop() error {

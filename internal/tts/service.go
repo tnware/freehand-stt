@@ -19,7 +19,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Workers must observe cancellation; shutdown allows two seconds for their exit.
+// The entire speech teardown shares this budget, including player locks and export.
 const shutdownTimeout = 2 * time.Second
 
 type Phase string
@@ -67,7 +67,7 @@ type Player interface {
 	Restart() error
 	Position() (int64, int64, bool)
 	OutputName() string
-	Save(string) error
+	Snapshot() ([]byte, error)
 	Stop() error
 	Unload() error
 	Close() error
@@ -78,25 +78,30 @@ type SpeechClient interface {
 }
 
 type Service struct {
-	control     sync.Mutex
-	mu          sync.Mutex
-	profiles    settings.TextToSpeechProfileSource
-	client      SpeechClient
-	player      Player
-	history     *history.Store
-	fileText    func() (string, error)
-	saveFile    func() (string, error)
-	activity    *activity.Coordinator
-	changed     func(Status)
-	logger      *slog.Logger
-	rootContext context.Context
-	rootCancel  context.CancelFunc
-	operation   context.CancelFunc
-	status      Status
-	generation  uint64
-	workers     sync.WaitGroup
-	closed      atomic.Bool
-	saving      atomic.Bool
+	control      sync.Mutex
+	mu           sync.Mutex
+	profiles     settings.TextToSpeechProfileSource
+	client       SpeechClient
+	player       Player
+	history      *history.Store
+	fileText     func() (string, error)
+	saveFile     func() (string, error)
+	activity     *activity.Coordinator
+	changed      func(Status)
+	logger       *slog.Logger
+	lifecycleMu  sync.Mutex
+	rootContext  context.Context
+	rootCancel   context.CancelFunc
+	operation    context.CancelFunc
+	status       Status
+	generation   uint64
+	workers      sync.WaitGroup
+	closed       atomic.Bool
+	saving       atomic.Bool
+	writeAudio   func(context.Context, string, []byte) error
+	shutdownOnce sync.Once
+	shutdownDone chan struct{}
+	shutdownErr  error
 }
 
 func NewService(profiles settings.TextToSpeechProfileSource, client SpeechClient, player Player, transcripts *history.Store, fileText func() (string, error), saveFile func() (string, error), admission *activity.Coordinator, changed func(Status), logger *slog.Logger) *Service {
@@ -106,48 +111,66 @@ func NewService(profiles settings.TextToSpeechProfileSource, client SpeechClient
 	if admission == nil {
 		admission = activity.New(activity.Sources{})
 	}
-	return &Service{profiles: profiles, client: client, player: player, history: transcripts, fileText: fileText, saveFile: saveFile, activity: admission, changed: changed, logger: logger.With("component", "tts"), status: Status{Phase: Idle}}
+	root, cancel := context.WithCancel(context.Background())
+	return &Service{rootContext: root, rootCancel: cancel, shutdownDone: make(chan struct{}), writeAudio: writeAudioFile, profiles: profiles, client: client, player: player, history: transcripts, fileText: fileText, saveFile: saveFile, activity: admission, changed: changed, logger: logger.With("component", "tts"), status: Status{Phase: Idle}}
 }
 
 func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	s.mu.Lock()
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
+	if s.closed.Load() {
+		return errors.New("speech service is closed")
+	}
+	s.rootCancel()
 	s.rootContext, s.rootCancel = context.WithCancel(ctx)
-	s.closed.Store(false)
-	s.mu.Unlock()
 	return nil
 }
 
 func (s *Service) ServiceShutdown() error {
-	s.activity.Close()
-	s.control.Lock()
-	if !s.closed.CompareAndSwap(false, true) {
-		s.control.Unlock()
-		return nil
-	}
-	s.mu.Lock()
-	if s.operation != nil {
-		s.operation()
-		s.operation = nil
-	}
-	if s.rootCancel != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	return s.shutdown(ctx)
+}
+
+func (s *Service) shutdown(ctx context.Context) error {
+	s.shutdownOnce.Do(func() {
+		s.closed.Store(true)
+		s.activity.Close()
+		// Neither native calls nor the player control lock can delay cancellation.
+		s.lifecycleMu.Lock()
 		s.rootCancel()
-		s.rootCancel = nil
-	}
-	s.mu.Unlock()
-	_ = s.player.Stop()
-	_ = s.player.Unload()
-	s.control.Unlock()
-	done := make(chan struct{})
-	go func() { s.workers.Wait(); close(done) }()
+		s.lifecycleMu.Unlock()
+		go func() {
+			s.control.Lock()
+			s.mu.Lock()
+			s.operation = nil
+			s.generation++
+			s.status = Status{Generation: s.generation, Phase: Idle}
+			s.mu.Unlock()
+			// Stay serialized with in-flight native calls, even if the caller times out.
+			s.shutdownErr = errors.Join(s.player.Stop(), s.player.Unload(), s.player.Close())
+			s.control.Unlock()
+			// Acquiring control above also fences all workers.Add calls.
+			s.workers.Wait()
+			close(s.shutdownDone)
+		}()
+	})
 	select {
-	case <-done:
-	case <-time.After(shutdownTimeout):
-		s.logger.Warn("speech shutdown worker deadline reached", "error_kind", "timeout")
+	case <-s.shutdownDone:
+		return s.shutdownErr
+	case <-ctx.Done():
+		s.logger.Warn("speech shutdown deadline reached", "error_kind", "timeout")
+		return errors.Join(errors.New("speech shutdown exceeded the service deadline"), ctx.Err())
 	}
-	return s.player.Close()
+}
+
+func (s *Service) operationContext() (context.Context, context.CancelFunc) {
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
+	return context.WithCancel(s.rootContext)
 }
 
 func (s *Service) CurrentStatus() Status {
@@ -217,15 +240,16 @@ func (s *Service) start(text string, source Source, historyID uint64, version hi
 	if s.operation != nil {
 		s.operation()
 	}
+	s.mu.Unlock()
 	_ = s.player.Stop()
 	_ = s.player.Unload()
+	if s.closed.Load() {
+		return errors.New("application is shutting down")
+	}
+	s.mu.Lock()
 	s.generation++
 	generation := s.generation
-	root := s.rootContext
-	if root == nil {
-		root = context.Background()
-	}
-	ctx, cancel := context.WithCancel(root)
+	ctx, cancel := s.operationContext()
 	s.operation = cancel
 	s.status = Status{Generation: generation, Phase: Generating, Source: source, HistoryID: historyID, HistoryVersion: version, Message: "Generating speech", CanStop: true}
 	status := s.status
@@ -270,11 +294,15 @@ func (s *Service) generate(ctx context.Context, generation uint64, profile setti
 	}
 	if err == nil {
 		err = s.player.Load(pcm.Data, pcm.SampleRate, pcm.Channels)
-		if err == nil {
+		if err == nil && !s.closed.Load() && ctx.Err() == nil {
 			err = s.player.Play()
 		}
 	}
 	clear(pcm.Data)
+	if s.closed.Load() || ctx.Err() != nil {
+		s.control.Unlock()
+		return
+	}
 	if err != nil {
 		_ = s.player.Unload()
 		s.finishLocked(generation, Failed, err.Error(), diagnostics.ErrorKind(err))
@@ -319,6 +347,9 @@ func (s *Service) monitor(ctx context.Context, generation uint64) {
 }
 
 func (s *Service) Pause() error {
+	if s.closed.Load() {
+		return errors.New("application is shutting down")
+	}
 	s.control.Lock()
 	defer s.control.Unlock()
 	if s.closed.Load() {
@@ -353,6 +384,9 @@ func (s *Service) Pause() error {
 }
 
 func (s *Service) Resume() error {
+	if s.closed.Load() {
+		return errors.New("application is shutting down")
+	}
 	s.control.Lock()
 	defer s.control.Unlock()
 	if s.closed.Load() {
@@ -384,6 +418,9 @@ func (s *Service) Resume() error {
 }
 
 func (s *Service) Restart() error {
+	if s.closed.Load() {
+		return errors.New("application is shutting down")
+	}
 	s.control.Lock()
 	defer s.control.Unlock()
 	if s.closed.Load() {
@@ -395,14 +432,10 @@ func (s *Service) Restart() error {
 		s.mu.Unlock()
 		return errors.New("speech playback cannot be restarted")
 	}
-	root := s.rootContext
-	if root == nil {
-		root = context.Background()
-	}
 	if s.operation != nil {
 		s.operation()
 	}
-	ctx, cancel := context.WithCancel(root)
+	ctx, cancel := s.operationContext()
 	s.generation++
 	generation := s.generation
 	s.status.Generation = generation
@@ -432,6 +465,9 @@ func (s *Service) Restart() error {
 }
 
 func (s *Service) Stop() error {
+	if s.closed.Load() {
+		return errors.New("application is shutting down")
+	}
 	s.control.Lock()
 	defer s.control.Unlock()
 	if s.closed.Load() {
@@ -486,11 +522,28 @@ func (s *Service) SaveAudio() (bool, error) {
 		return false, nil
 	}
 	s.control.Lock()
-	defer s.control.Unlock()
 	if s.closed.Load() || !s.isCurrent(generation) {
+		s.control.Unlock()
 		return false, errors.New("speech session changed while choosing a save location")
 	}
-	if err := s.player.Save(path); err != nil {
+	// Pin this generation's audio while serialized with replacement/clear. Disk
+	// I/O owns only the independent WAV, so playback can stop immediately.
+	wav, err := s.player.Snapshot()
+	if err != nil {
+		s.control.Unlock()
+		return false, errors.New("generated speech could not be saved")
+	}
+	ctx, cancel := s.operationContext()
+	s.workers.Add(1)
+	s.control.Unlock()
+	defer s.workers.Done()
+	defer cancel()
+	defer clear(wav)
+	err = s.writeAudio(ctx, path, wav)
+	if ctx.Err() != nil || s.closed.Load() {
+		return false, errors.New("speech audio save cancelled during shutdown")
+	}
+	if err != nil {
 		s.logger.Warn("speech audio save failed", "generation", generation, "error_kind", diagnostics.ErrorKind(err))
 		return false, errors.New("generated speech could not be saved")
 	}
@@ -501,6 +554,9 @@ func (s *Service) SaveAudio() (bool, error) {
 // ClearAudio explicitly releases the retained PCM session and returns the
 // player to idle. Completed audio otherwise remains available for Restart.
 func (s *Service) ClearAudio() error {
+	if s.closed.Load() {
+		return errors.New("application is shutting down")
+	}
 	s.control.Lock()
 	defer s.control.Unlock()
 	if s.closed.Load() {
@@ -560,7 +616,7 @@ func (s *Service) historyVersion(generation uint64) history.HistoryTextVersion {
 
 func (s *Service) update(generation uint64, status Status) {
 	s.mu.Lock()
-	if s.status.Generation != generation {
+	if s.closed.Load() || s.status.Generation != generation {
 		s.mu.Unlock()
 		return
 	}
@@ -592,7 +648,7 @@ func (s *Service) finishLocked(generation uint64, phase Phase, message, errorKin
 	}
 	position, duration, _ := s.player.Position()
 	s.mu.Lock()
-	if s.status.Generation != generation {
+	if s.closed.Load() || s.status.Generation != generation {
 		s.mu.Unlock()
 		return
 	}

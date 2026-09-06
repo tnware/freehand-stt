@@ -24,7 +24,7 @@ func (*Playback) Pause() error                      { return unavailable }
 func (*Playback) Restart() error                    { return unavailable }
 func (*Playback) Position() (int64, int64, bool)    { return 0, 0, false }
 func (*Playback) OutputName() string                { return "System default" }
-func (*Playback) Save(string) error                 { return unavailable }
+func (*Playback) Snapshot() ([]byte, error)         { return nil, unavailable }
 func (*Playback) Stop() error                       { return nil }
 func (*Playback) Unload() error                     { return nil }
 func (*Playback) Close() error                      { return nil }

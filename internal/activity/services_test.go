@@ -62,7 +62,7 @@ func (*player) Pause() error                      { return nil }
 func (*player) Restart() error                    { return nil }
 func (*player) Position() (int64, int64, bool)    { return 0, 0, false }
 func (*player) OutputName() string                { return "fixture" }
-func (*player) Save(string) error                 { return nil }
+func (*player) Snapshot() ([]byte, error)         { return nil, nil }
 func (p *player) Stop() error {
 	p.stopped.Add(1)
 	if p.stop != nil {
