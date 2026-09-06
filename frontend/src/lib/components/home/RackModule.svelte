@@ -51,7 +51,7 @@
   The rack replaced a single collapsing panel of seven unlabelled icon toggles,
   so every module here says what it is in words.
 -->
-<section class="module-card shrink-0 rounded-lg border border-card-stroke bg-card p-3 shadow-lift">
+<section class="module-card shrink-0 rounded-lg border border-hairline bg-layer-fill p-3">
   <div class="flex items-center gap-2">
     {#if collapsible}
       <button

@@ -12,10 +12,7 @@
     TTSPhase,
     type TTSStatus,
   } from "$lib/state";
-  import {
-    readDisclosurePreference,
-    writeDisclosurePreference,
-  } from "$lib/utils/viewPreferences";
+  import { readDisclosurePreference, writeDisclosurePreference } from "$lib/utils/viewPreferences";
 
   let {
     enabled = false,
@@ -150,7 +147,7 @@
   swapping a flex child in and out of the layout would jump.
 -->
 <section
-  class="history-card rounded-lg border border-card-stroke bg-card shadow-lift"
+  class="history-card rounded-lg border border-hairline bg-layer-fill"
   class:open
   class:bare={!collapsible}
   aria-label="Transcript history"

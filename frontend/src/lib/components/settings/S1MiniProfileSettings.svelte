@@ -9,9 +9,7 @@
   import { s1MiniControlLine } from "$lib/utils/processingProfiles";
 
   type ProcessorSettings = Settings["postProcessing"];
-  type S1MiniPatch = Partial<
-    Pick<ProcessorSettings, "styling" | "structure" | "context">
-  >;
+  type S1MiniPatch = Partial<Pick<ProcessorSettings, "styling" | "structure" | "context">>;
 
   let {
     processor,
@@ -28,7 +26,7 @@
   const controlLine = $derived(s1MiniControlLine(processor));
 </script>
 
-<Card.Root size="sm" class="border border-card-stroke">
+<Card.Root size="sm">
   <Card.Header>
     <Card.Title>S1-mini request profile</Card.Title>
     <Card.Description>
@@ -43,13 +41,7 @@
     </Card.Action>
   </Card.Header>
   <Card.Content class="flex flex-col gap-4">
-    <S1MiniControls
-      {processor}
-      {profile}
-      idPrefix="settings-s1-mini"
-      {disabled}
-      {onChange}
-    />
+    <S1MiniControls {processor} {profile} idPrefix="settings-s1-mini" {disabled} {onChange} />
 
     <Separator />
 
@@ -77,7 +69,8 @@
         <code
           id="s1-mini-control-line"
           class="block overflow-x-auto rounded-md border border-input bg-muted px-3 py-2 text-xs text-foreground"
-        >{controlLine}</code>
+          >{controlLine}</code
+        >
         <Field.Description>
           Freehand places this line before the raw transcript in the user message.
         </Field.Description>

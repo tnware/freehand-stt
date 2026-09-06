@@ -1,4 +1,6 @@
 <script lang="ts">
+  import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
+  import { Purpose, type Change } from "$bindings/savedconnection";
   import { usesServerLoadedModel } from "$lib/utils/compatibility";
   import CheckIcon from "@lucide/svelte/icons/check";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
@@ -41,6 +43,7 @@
     sttTesting = false,
     processingTesting = false,
     onUpdate,
+    onChangeConnection,
     onTestConnection,
     onTestProcessingConnection,
     onOpenServerSettings,
@@ -61,6 +64,7 @@
     savedField?: QuickSettingsField | null;
     sttTesting?: boolean;
     processingTesting?: boolean;
+    onChangeConnection: (change: Change) => Promise<boolean>;
     onUpdate: (patch: QuickSettingsPatch, field: QuickSettingsField) => Promise<boolean>;
     onTestConnection: () => Promise<void>;
     onTestProcessingConnection: () => Promise<void>;
@@ -311,22 +315,21 @@
     <div class="contents">
       {#snippet sttEndpointMeta()}{/snippet}
       {#snippet sttEndpointControl()}
-        <Button
+        <ConnectionSelect
           id="quick-stt-endpoint"
-          variant="outline"
-          class="h-[30px] min-w-0 flex-1 justify-start"
-          onclick={onOpenServerSettings}
-          ><span class="truncate"
-            >{settings.savedConnections.entries?.find(
-              (c) => c.id === settings.savedConnections.selected?.stt,
-            )?.name ?? "Choose a connection"}</span
-          ></Button
-        >
+          catalog={settings.savedConnections}
+          purpose={Purpose.Transcription}
+          compact
+          disabled={disabled || pending.length > 0 || modelTouched}
+          onChange={onChangeConnection}
+        />
         <Button
           variant="ghost"
           size="sm"
           class="h-[30px] shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
-          disabled={sttTesting || isPending("stt-model")}
+          disabled={sttTesting ||
+            !settings.savedConnections.selected?.stt ||
+            isPending("stt-model")}
           onclick={() => void testSTTConnection()}
         >
           {#if sttTesting}<LoaderCircleIcon class="animate-spin" />{/if}
@@ -436,22 +439,21 @@
     <div class={cn("flex min-w-0 flex-col gap-2.5", !processingEnabled && "opacity-60")}>
       {#snippet cleanupEndpointMeta()}{/snippet}
       {#snippet cleanupEndpointControl()}
-        <Button
+        <ConnectionSelect
           id="quick-processing-endpoint"
-          variant="outline"
-          class="h-[30px] min-w-0 flex-1 justify-start"
-          onclick={onOpenProcessingSettings}
-          ><span class="truncate"
-            >{settings.savedConnections.entries?.find(
-              (c) => c.id === settings.savedConnections.selected?.cleanup,
-            )?.name ?? "Choose a connection"}</span
-          ></Button
-        >
+          catalog={settings.savedConnections}
+          purpose={Purpose.Cleanup}
+          compact
+          disabled={disabled || pending.length > 0 || processingModelTouched}
+          onChange={onChangeConnection}
+        />
         <Button
           variant="ghost"
           size="sm"
           class="h-[30px] shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
-          disabled={processingTesting || !processingEnabled || isPending("processing-model")}
+          disabled={processingTesting ||
+            !settings.savedConnections.selected?.cleanup ||
+            isPending("processing-model")}
           onclick={() => void testProcessingConnection()}
         >
           {#if processingTesting}<LoaderCircleIcon class="animate-spin" />{/if}

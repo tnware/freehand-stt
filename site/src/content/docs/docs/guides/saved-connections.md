@@ -35,8 +35,8 @@ For first-time transcription setup, return to the readiness screen, explicitly
 **Save connection** updates only that connection. Editing an active connection
 applies its endpoint settings to new requests; its model and feature options
 remain on the feature page. **Save feature settings** does not edit the saved
-connection. The home-screen connection labels link to feature settings; model
-and other quick controls still save their own runtime settings.
+connection. The home screen has the same active connection selectors. Its separate settings
+links open feature settings; model and other quick controls save runtime settings.
 
 ## Switch, edit, duplicate, or delete
 

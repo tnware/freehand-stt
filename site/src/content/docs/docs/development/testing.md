@@ -253,5 +253,7 @@ and playback. Check keyboard navigation, dirty-draft guards, restart persistence
 and active-request isolation. Verify clean defaults: capsule/envelope/minimal,
 bottom-center, 85% opacity, 70% glow, and an unassigned Show Freehand shortcut.
 Assign then clear that shortcut and confirm tray access remains available.
-Browser fixtures and native builds do not replace interactive Windows acceptance.
+Repeat selection from the home rack, including failed saves and role filtering;
+confirm its selectors match Settings and its cards use the same single border
+and fill. Browser fixtures and native builds do not replace interactive Windows acceptance.
 Use only operator-selected models for deliberate live inference acceptance.
