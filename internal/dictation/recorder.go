@@ -62,6 +62,7 @@ const (
 )
 
 type Status struct {
+	Transcript                   string        `json:"transcript,omitempty"` // Current result only; cleared by the next recording, Clear, or shutdown.
 	State                        State         `json:"state"`
 	RecordingMode                RecordingMode `json:"recordingMode,omitempty"`
 	Generation                   uint64        `json:"generation"`
@@ -800,6 +801,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	} else {
 		c.status = Status{State: Idle, Generation: gen}
 	}
+	c.status.Transcript = text
 	completedAt := time.Now().UTC()
 	details.Processing.DeliveredCharacters = utf8.RuneCountInString(text)
 	if historyID == 0 {
@@ -896,7 +898,7 @@ func (c *recorder) copyPending() error {
 	}
 	if c.status.Generation == gen && c.pending == text {
 		c.pending = ""
-		c.status = Status{State: Idle, Generation: gen, Message: "Transcript copied"}
+		c.status = Status{State: Idle, Generation: gen, Message: "Transcript copied", Transcript: text}
 		s := c.status
 		c.mu.Unlock()
 		c.publish(s)
@@ -931,4 +933,28 @@ func (c *recorder) close() error {
 	c.mu.Unlock()
 	_ = c.cancelRecording()
 	return c.capture.Close()
+}
+
+// Explicit current-result commands never depend on optional history retention.
+func (c *recorder) copyCurrent(generation uint64) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed || generation != c.status.Generation || c.status.Transcript == "" {
+		return errors.New("current transcript is no longer available")
+	}
+	return c.targetPlatform.Copy(context.Background(), c.status.Transcript)
+}
+
+func (c *recorder) clearCurrent(generation uint64) error {
+	c.mu.Lock()
+	if c.closed || generation != c.status.Generation || (c.status.State != Idle && c.status.State != Failed) {
+		c.mu.Unlock()
+		return errors.New("current transcript cannot be cleared")
+	}
+	c.pending = ""
+	c.status = Status{State: Idle, Generation: generation}
+	status := c.status
+	c.mu.Unlock()
+	c.publish(status)
+	return nil
 }

@@ -104,3 +104,15 @@ describe("SpeechState", () => {
     expect(messages.error).toContain("preview failed");
   });
 });
+
+
+it("keeps unsent text through status refresh and playback commands", async () => {
+ const messages = new SessionMessages();
+ const speech = new SpeechState(bindings(), messages);
+ speech.draft = "An unfinished thought.";
+ await speech.load();
+ await speech.stopTTS();
+ await speech.clearTTSAudio();
+ expect(speech.draft).toBe("An unfinished thought.");
+ messages.dispose();
+});

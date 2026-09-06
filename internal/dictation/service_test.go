@@ -256,3 +256,37 @@ func TestServiceShutdownWaitsForTheManagedCompletionWorker(t *testing.T) {
 		t.Fatal("shutdown service accepted new completion work")
 	}
 }
+
+func TestDeliveredResultAvailableWithoutHistory(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"text":"Current result"}`))
+	}))
+	defer server.Close()
+	service, platform := newCompletionService(server.URL)
+	cancel := startCompletionService(t, service)
+	defer cancel()
+	defer service.ServiceShutdown()
+	if err := service.StartRecording(RecordingToggle); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.StopRecording(); err != nil {
+		t.Fatal(err)
+	}
+	status := waitForServiceState(t, service, Idle)
+	if status.Transcript != "Current result" || platform.insertion() != status.Transcript {
+		t.Fatal("delivered text missing from current result")
+	}
+	if err := service.CopyCurrent(status.Generation); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.StartRecording(RecordingToggle); err != nil {
+		t.Fatal(err)
+	}
+	if service.CurrentStatus().Transcript != "" {
+		t.Fatal("new recording retained previous result")
+	}
+	if err := service.CopyCurrent(status.Generation); err == nil {
+		t.Fatal("old generation remained copyable")
+	}
+}

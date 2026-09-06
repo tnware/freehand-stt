@@ -8,6 +8,8 @@ export type DictationStateService = Pick<
   | "StopRecording"
   | "Cancel"
   | "CopyPending"
+  | "CopyCurrent"
+  | "ClearCurrent"
 >;
 
 const IDLE: Status = {
@@ -62,6 +64,19 @@ export class DictationState {
       this.#messages.fail(cause);
       return false;
     }
+  }
+
+  async copyCurrent(): Promise<boolean> {
+    try {
+      if (this.status.canCopy) await this.#service.CopyPending();
+      else await this.#service.CopyCurrent(this.status.generation);
+      return true;
+    } catch (cause) { this.#messages.fail(cause); return false; }
+  }
+
+  async clearCurrent() {
+    try { await this.#service.ClearCurrent(this.status.generation); }
+    catch (cause) { this.#messages.fail(cause); }
   }
 
   async load() {

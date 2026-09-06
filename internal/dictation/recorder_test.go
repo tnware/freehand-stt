@@ -342,3 +342,30 @@ func TestReflectedCredentialNeverBecomesInsertOrPendingText(t *testing.T) {
 		t.Fatal("credential retained as pending text")
 	}
 }
+
+func TestCurrentResultIsIndependentOfHistoryAndGenerationBound(t *testing.T) {
+	platform := &platFake{}
+	c := New(capFake{}, platform, nil, nil, settingsFake{}, nil)
+	c.status = Status{State: Idle, Generation: 3, Transcript: "current result"}
+	if err := c.copyCurrent(2); err == nil {
+		t.Fatal("stale result copied")
+	}
+	if err := c.copyCurrent(3); err != nil {
+		t.Fatal(err)
+	}
+	if platform.copies != 1 {
+		t.Fatal("copy did not use current result")
+	}
+	if err := c.clearCurrent(2); err == nil {
+		t.Fatal("stale clear accepted")
+	}
+	if err := c.clearCurrent(3); err != nil {
+		t.Fatal(err)
+	}
+	if c.Status().Transcript != "" {
+		t.Fatal("clear retained current result")
+	}
+	if err := c.copyCurrent(3); err == nil {
+		t.Fatal("cleared result copied")
+	}
+}

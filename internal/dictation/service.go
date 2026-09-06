@@ -160,3 +160,6 @@ func Active(service *Service) bool {
 	state := Snapshot(service).State
 	return state != Idle && state != Failed
 }
+
+func (s *Service) CopyCurrent(generation uint64) error  { return s.recorder.copyCurrent(generation) }
+func (s *Service) ClearCurrent(generation uint64) error { return s.recorder.clearCurrent(generation) }
