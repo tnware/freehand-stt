@@ -213,6 +213,8 @@ export class SettingsEditor {
     }
   }
 
+  #pendingExternalSettings: Settings | null = null;
+
   #testedInputs = $state<Partial<Record<Purpose, string>>>({});
   #sttConnectionRevision = 0;
   #processingConnectionRevision = 0;
@@ -230,6 +232,7 @@ export class SettingsEditor {
 
   /** Applies a settings payload confirmed by Go and starts a fresh draft. */
   #adopt(settings: Settings) {
+    this.#pendingExternalSettings = null;
     this.#modelDrafts = [];
     this.applied = copySettings(settings);
     this.draft = copySettings(this.applied);
@@ -269,8 +272,9 @@ export class SettingsEditor {
       return true;
     }
     if ((this.dirty || this.connectionDraft !== null) && !this.saving) {
+      this.#pendingExternalSettings = copySettings(settings);
       this.#messages.reportInfo(
-        "Settings changed in another window. Save or discard this draft, then reopen Settings to load the latest values.",
+        "Settings changed in another window. Your edits are preserved; discard them to load the latest settings.",
       );
       return false;
     }
@@ -326,6 +330,11 @@ export class SettingsEditor {
     this.clearProcessingKey = false;
     this.ttsAPIKey = "";
     this.clearTTSKey = false;
+    // A discarded connection draft must not strand Home on the older snapshot.
+    // Keep runtime drafts protected until those edits are explicitly resolved too.
+    if (this.#pendingExternalSettings && !this.runtimeDirty && !this.saving) {
+      this.applySettingsSnapshot(this.#pendingExternalSettings);
+    }
   }
 
   get dirty(): boolean {
@@ -529,12 +538,13 @@ export class SettingsEditor {
   cancelConnectionEdit() {
     this.clearCredentialDraft();
   }
-  async saveConnection(): Promise<boolean> {
+  async saveConnection(activateFor?: Purpose): Promise<boolean> {
     const form = this.connectionDraft;
     if (!form) return false;
     return this.changeConnection(
       {
         action: form.creating ? Action.Create : Action.Update,
+        ...(activateFor ? { activateFor } : {}),
         uses: [...form.uses],
         id: form.id,
         name: form.name.trim(),
@@ -594,7 +604,9 @@ export class SettingsEditor {
           ? "Connection selected. Remembered model settings were restored where available; review the feature before use."
           : change.action === Action.Delete
             ? "Connection deleted."
-            : "Connection saved. Active feature selections are unchanged.",
+            : change.activateFor
+              ? "Connection saved and selected. Choose a model to finish setup."
+              : "Connection saved. Active feature selections are unchanged.",
       );
       return true;
     } catch (cause) {

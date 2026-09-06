@@ -15,9 +15,14 @@ Transcript history remains optional and memory-only.
 Named connections represent reusable servers, with explicit supported uses and
 independent active selections for transcription, cleanup, and playback. One ID
 can be selected by multiple features; their models and runtime options remain
-independent while URL, profile, authentication, and credential reference are shared. A dedicated Connections page owns creation,
-editing, duplication, deletion, endpoint/authentication/profile fields, and saved
-metadata tests. Creation is inactive; feature pages own active selection, model,
+independent while URL, profile, authentication, and credential reference are shared. The shared connection editor owns endpoint/authentication/profile fields.
+The Connections page provides library creation, editing, duplication, deletion,
+and saved metadata tests. Library creation is inactive; task pickers reuse that
+editor in a purpose-scoped dialog. Its explicit Save and use action sends
+`Change.ActivateFor` with Create so catalog, selection, settings, and key references
+commit together. Storage rejects invalid or unsupported activation purposes and
+activation on other actions. New selections still require model configuration;
+no inference or optional feature is enabled by creating a connection. Feature pages own active selection, model,
 language, presets, voice, and other runtime options. Fresh catalogs are empty.
 Selection restores remembered engine options while preserving task intent (ADR 0007); an
 unconfigured connection starts with defaults and disables optional features.
@@ -332,11 +337,19 @@ Internal row dividers remain; card outlines do not stack with elevation shadows.
 The shared switch uses a pill track and an inset circular thumb, retaining
 Bits UI state, keyboard semantics, and visible focus indicators.
 
-Connection editor navigation is owned by `SettingsScreen`: it remembers the originating
+Task-local creation uses `ConnectionSetupDialog` over the existing Home or Settings
+page, preserving the originating task and returning there on save/cancel. Home's
+first-run STT panel reuses quick connection/model controls. Settings connections
+apply immediately; model/task drafts apply with Save settings. Switching, adding,
+or editing a connection with a dirty runtime draft requires Save and continue,
+Discard and continue, or Keep editing. Failed saves retain the draft and do not
+continue the action.
+
+Library connection editor navigation is owned by `SettingsScreen`: it remembers the originating
 feature and returns there after Back or save. The editor compares non-credential fields
 with its opening snapshot; credential presence/removal is checked separately without
 copying a password into that snapshot. Opening a form alone is not dirty, but still
-reserves the draft against external-window updates. Navigation confirms before
+reserves the draft against external-window updates. The editor retains the latest non-secret external snapshot and adopts it after drafts are discarded, so cancelling task-local creation does not leave Home on an obsolete selection. Navigation confirms before
 discarding changed connection fields and clears the transient key on exit. Settings
 groups separate Capture, Features, and Application; visual and keyboard section order
 match.

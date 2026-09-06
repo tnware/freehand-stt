@@ -171,3 +171,50 @@ describe("saved connection editor", () => {
     expect(editor.processingConnection).toBeNull();
   });
 });
+
+describe("task connection creation", () => {
+  it.each([Purpose.Transcription, Purpose.Cleanup, Purpose.Speech])("preselects %s and requests one atomic save", async (purpose) => {
+    const next = configured();
+    const SaveSettings = vi.fn(() => CancellablePromise.resolve(next));
+    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle), { settings: { SaveSettings } }));
+    editor.applySettingsSnapshot(configured());
+    editor.beginConnection(undefined, purpose);
+    expect(editor.connectionDraft!.uses).toEqual([purpose]);
+    editor.connectionDraft!.name = "New task server";
+    editor.connectionDraft!.details.baseURL = "https://new.example.test/v1";
+    expect(await editor.saveConnection(purpose)).toBe(true);
+    expect(SaveSettings).toHaveBeenCalledTimes(1);
+    expect(SaveSettings).toHaveBeenCalledWith(expect.objectContaining({ connectionChange: expect.objectContaining({ action: Action.Create, activateFor: purpose, uses: [purpose] }) }));
+    expect(editor.connectionDraft).toBeNull();
+  });
+  it("retains a failed new-connection draft and the active selection for retry", async () => {
+    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle), { settings: { SaveSettings: () => CancellablePromise.reject(new Error("fixture save failure")) } }));
+    editor.applySettingsSnapshot(configured());
+    editor.beginConnection(undefined, Purpose.Speech);
+    editor.connectionDraft!.name = "New speech server";
+    expect(await editor.saveConnection(Purpose.Speech)).toBe(false);
+    expect(editor.connectionDraft!.name).toBe("New speech server");
+    expect(editor.applied!.savedConnections.selected!.speech).toBe("speech");
+    editor.cancelConnectionEdit();
+    expect(editor.connectionDraft).toBeNull();
+  });
+});
+
+it("adopts the latest external selection only after discarding a connection draft", () => {
+  const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+  editor.applySettingsSnapshot(configured());
+  editor.beginConnection(undefined, Purpose.Transcription);
+  editor.connectionDraft!.name = "Unfinished server";
+  editor.connectionDraft!.credentialDraft = "transient-canary";
+  const changed = configured();
+  changed.savedConnections.selected!.stt = "other-window";
+  changed.model = "other-model";
+  expect(editor.applySettingsSnapshot(changed)).toBe(false);
+  expect(editor.connectionDraft!.name).toBe("Unfinished server");
+  expect(editor.applied!.savedConnections.selected!.stt).toBe("first");
+  editor.cancelConnectionEdit();
+  expect(editor.connectionDraft).toBeNull();
+  expect(editor.applied!.savedConnections.selected!.stt).toBe("other-window");
+  expect(editor.draft!.model).toBe("other-model");
+  expect(editor.dirty).toBe(false);
+});

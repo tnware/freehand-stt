@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
@@ -13,6 +14,7 @@
 
   let {
     readiness,
+    serverControls,
     testing = false,
     completing = false,
     onTestConnection,
@@ -21,6 +23,7 @@
     onOpenSettings,
   }: {
     readiness: Readiness;
+    serverControls?: Snippet;
     testing?: boolean;
     completing?: boolean;
     onTestConnection: () => void;
@@ -42,16 +45,16 @@
     <div class="flex flex-col gap-2">
       <span class="caption">{readiness.initialSetup ? "First run" : "Needs attention"}</span>
       <h2 class="text-[26px] leading-tight font-semibold tracking-[-0.015em]">
-        {readiness.initialSetup
-          ? `${total} checks and you can dictate anywhere.`
-          : "Set up this task to continue."}
+        {readiness.initialSetup ? "Set up dictation" : "Set up this task to continue."}
       </h2>
       <p class="max-w-[60ch] text-[13.5px] leading-relaxed text-secondary-foreground">
         {readiness.initialSetup
-          ? "Choose a speech service you run or trust. Test connection reads metadata without sending audio or running a model. After setup, Freehand checks the saved speech connection automatically. Update checks can be disabled in Settings → General."
+          ? "Choose a connection and model, then test access. Review your microphone and recording shortcut below."
           : "Review the requirements below. Other tasks remain available from the navigation above."}
       </p>
     </div>
+
+    {#if serverControls}{@render serverControls()}{/if}
 
     <div class="overflow-hidden rounded-lg border border-hairline bg-layer-fill">
       {#each readiness.steps as step (step.id)}

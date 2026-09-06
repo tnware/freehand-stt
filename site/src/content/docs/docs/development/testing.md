@@ -32,6 +32,24 @@ Generic and the applicable dedicated profile for normal transcription, file
 streaming, cleanup, and speech playback. Never invoke model inventories.
 Builds and fixture tests do not establish this interactive or live-server acceptance.
 
+## Task-local setup acceptance
+
+Use an isolated configuration for fresh-install review, preserving the operator's live
+settings and credential store. Start independently with Voice, Audio file, and Text to
+speech. Add a connection from each picker, verify the purpose is preselected and cannot
+be removed, and verify Save and use returns to the same task with the new selection.
+File and speech setup must work without completing dictation setup. Choose or discover
+a model; test metadata access without invoking model inventories.
+
+Repeat from Transcription, Cleanup, and Text to speech Settings. Cancel an unchanged
+form; discard a changed form; inject a failed save and retry. Verify selections and
+unsaved task/model edits survive Keep editing, Save and continue failures do not advance,
+and Discard and continue applies no discarded edits. Test keyboard entry, Escape,
+focus return, window-hide credential cleanup, and a narrow viewport. Library creation
+must still remain inactive. Windows service fixtures use temporary SQLite files and a
+fake vault to check atomic activation, unsupported-purpose rejection, durable selection,
+credential rollback, and unchanged in-flight snapshots.
+
 ## SQLite acceptance
 
 Run `go run ./build/scripts/storage -check -base main` and

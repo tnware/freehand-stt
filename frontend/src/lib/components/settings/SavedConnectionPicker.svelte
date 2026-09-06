@@ -9,6 +9,7 @@
     busy,
     onChange,
     onManage,
+    onAdd,
   }: {
     catalog: Catalog;
     purpose: Purpose;
@@ -16,6 +17,7 @@
     busy: boolean;
     onChange: (change: Change) => Promise<boolean>;
     onManage: () => void;
+    onAdd: () => void;
   } = $props();
   const entries = $derived((catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)));
   const selected = $derived(entries.find((c) => c.id === catalog.selected?.[purpose]));
@@ -24,27 +26,28 @@
 <div class="space-y-3 rounded-xl border border-hairline bg-layer-fill p-4">
   <div class="flex items-center justify-between gap-2">
     <label for={`saved-connection-${purpose}`} class="text-xs font-medium">Active connection</label
-    ><Button variant="link" size="sm" onclick={onManage}
-      >{selected ? "Edit connection" : "Manage connections"}</Button
+    ><Button variant="link" size="sm" disabled={busy} onclick={selected ? onManage : onAdd}
+      >{selected ? "Edit connection" : "Add connection"}</Button
     >
   </div>
   <ConnectionSelect
     id={`saved-connection-${purpose}`}
     {catalog}
     {purpose}
-    disabled={busy || dirty}
+    disabled={busy}
     {onChange}
+    {onAdd}
   />
   {#if selected}<p class="break-all text-xs text-muted-foreground">
       {selected.details.baseURL}
     </p>{:else}<p class="text-xs text-muted-foreground">
       {entries.length
         ? "Choose a saved connection to configure this feature."
-        : "Create a connection on the Connections page, then select it here."}
+        : "Add a server to get started. You’ll return here to choose its model."}
     </p>{/if}
   <p class="text-[11px] leading-relaxed text-muted-foreground">
     {dirty
-      ? "Save or discard feature settings before switching connections."
-      : "Switching applies immediately and restores this connection’s remembered model and options when available. Save option changes below for the selected model."}
+      ? "You’ll be asked to save or discard these edits before changing connections."
+      : "Connection selection applies immediately. Model and task options below apply when you press Save settings."}
   </p>
 </div>

@@ -2,6 +2,7 @@
   import { Purpose } from "$bindings/savedconnection";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
   import CurrentResult from "$lib/components/home/CurrentResult.svelte";
+  import ConnectionSetupDialog from "$lib/components/settings/ConnectionSetupDialog.svelte";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Button } from "$lib/components/ui/button";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
@@ -70,6 +71,12 @@
       : null,
   );
   let dismissedRecoveryKey = $state("");
+  let setupPurpose = $state<Purpose | null>(null);
+  function addConnection(purpose: Purpose) {
+    if (quickSettingsDisabled) return;
+    session.editor.beginConnection(undefined, purpose);
+    if (session.editor.connectionDraft) setupPurpose = purpose;
+  }
   let taskHeight = $state(0);
   const showReadiness = $derived(
     Boolean(
@@ -257,7 +264,38 @@
                 else if (section === "shortcuts") onOpenShortcutSettings();
                 else onOpenServerSettings();
               }}
-            />
+            >
+              {#snippet serverControls()}
+                <QuickSettings
+                  showCapture={false}
+                  showCleanup={false}
+                  settings={runtimeSettings!}
+                  devices={session.editor.devices}
+                  processingProfiles={session.editor.processingProfiles}
+                  connection={session.editor.connection}
+                  processingConnection={session.editor.processingConnection}
+                  sttStale={session.editor.sttConnectionStale ||
+                    session.editor.connectionResultStale(Purpose.Transcription, runtimeSettings)}
+                  processingStale={session.editor.processingConnectionStale ||
+                    session.editor.connectionResultStale(Purpose.Cleanup, runtimeSettings)}
+                  pending={session.editor.quickSettingsPending}
+                  savedField={session.editor.quickSettingsSaved}
+                  sttTesting={session.editor.sttConnectionTesting}
+                  processingTesting={session.editor.processingConnectionTesting}
+                  onAddConnection={addConnection}
+                  onChangeConnection={(change) => session.editor.changeConnection(change)}
+                  onUpdate={(patch, field) => session.editor.updateQuickSettings(patch, field)}
+                  onTestConnection={() => session.editor.testConnection(session.editor.applied, "")}
+                  onTestProcessingConnection={() =>
+                    session.editor.testPostProcessingConnection(session.editor.applied, "")}
+                  disabled={quickSettingsDisabled || session.editor.saving}
+                  {onOpenServerSettings}
+                  {onOpenProcessingSettings}
+                  {onOpenAudioSettings}
+                  onOpenDeliverySettings={onOpenGeneralSettings}
+                />
+              {/snippet}
+            </ReadinessPanel>
           {:else}
             {#if inputMode === "tts"}
               <section
@@ -273,6 +311,7 @@
                       id="home-speech-connection"
                       catalog={runtimeSettings!.savedConnections}
                       purpose={Purpose.Speech}
+                      onAdd={() => addConnection(Purpose.Speech)}
                       disabled={quickSettingsDisabled || session.editor.saving}
                       onChange={(change) => session.editor.changeConnection(change)}
                     />
@@ -298,7 +337,7 @@
                 <div class="p-3">
                   <QuickSettings
                     showCapture={inputMode === "voice"}
-                    settings={session.editor.applied ?? session.editor.draft}
+                    settings={runtimeSettings!}
                     devices={session.editor.devices}
                     processingProfiles={session.editor.processingProfiles}
                     connection={session.editor.connection}
@@ -311,6 +350,7 @@
                     savedField={session.editor.quickSettingsSaved}
                     sttTesting={session.editor.sttConnectionTesting}
                     processingTesting={session.editor.processingConnectionTesting}
+                    onAddConnection={addConnection}
                     onChangeConnection={(change) => session.editor.changeConnection(change)}
                     onUpdate={(patch, field) => session.editor.updateQuickSettings(patch, field)}
                     onTestConnection={() =>
@@ -390,6 +430,16 @@
     </div>
   </div>
 </main>
+
+{#if setupPurpose}
+  <ConnectionSetupDialog
+    editor={session.editor}
+    blocked={quickSettingsDisabled}
+    purpose={setupPurpose}
+    error={session.messages.error}
+    onClose={() => (setupPurpose = null)}
+  />
+{/if}
 
 <style>
   .home {
