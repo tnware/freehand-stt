@@ -3,29 +3,42 @@ title: Saved connections
 description: Create server connections in one place, then choose which connection each feature uses.
 ---
 
-Open **Settings → Connections** to create and manage the servers Freehand can
-use. Connections is under **Application**; Transcription, Post-processing, and
-Speech playback are grouped under **Features**. New installations start with an empty list. Existing configured endpoints
-are retained when upgrading. A connection represents one reusable server: its
-URL, backend profile, authentication, and HTTP permission are shared. Enable
-Transcription, Post-processing, and/or Speech playback under **Used for**, then
-select the same connection independently in each feature.
+Start from the task you want to use. Its connection picker offers **Add connection…**;
+feature Settings pages also have an **Add connection** button when none is selected.
+The same editor is available in **Settings → Connections** for managing your library.
+New installations start with an empty list; upgrading retains existing connections.
 
-## Create a connection
+A connection represents one reusable server: its URL, backend profile, authentication,
+and HTTP permission. Transcription, Cleanup, and Text to speech select connections
+independently and can share the same server.
 
-1. Choose **New connection**, enter a name, and choose the server's **Compatibility profile**.
-2. Enable its **Used for** switches and enter its base URL. Only uses with an
-   implemented contract for that profile can be enabled. Choose the operations
-   your deployed server actually exposes; a backend name does not prove this.
-3. Configure authentication and explicitly allow HTTP if your trusted server
-   uses it. Transcription also offers a custom health path and non-secret headers.
-4. Choose **Save connection**. This saves the entry without activating it.
-5. Open the corresponding feature page and choose its **Active connection**.
-6. List models or enter the exact model ID, configure the feature's options,
-   and choose **Save feature settings**. whisper.cpp uses its server-loaded model.
+## Add a connection while setting up a task
 
-For first-time transcription setup, return to the readiness screen, explicitly
-**Test connection**, and finish setup. See [Get started](../../getting-started/).
+1. Open the task's connection picker and choose **Add connection…**.
+2. Enter a recognizable name, choose the server's **Compatibility profile**, and
+   enter its base URL. The task you came from is already selected under supported uses.
+3. Configure authentication and explicitly allow HTTP if your trusted server uses it.
+   **Also use this server for other tasks** lets you declare additional operations
+   the deployment exposes; this does not select it for those tasks.
+4. Choose **Save and use connection**. Saving and selecting happen together. On
+   failure, the previous selection stays active and the form remains available to retry.
+5. You return to the same task or Settings page. Discover models or enter an exact model
+   ID; whisper.cpp uses its server-loaded model. Home's quick controls apply immediately.
+   In Settings, model and task edits apply with **Save settings**.
+
+**Cancel** returns without changing the active connection. If you edited the form,
+you can keep editing or discard those changes. Closing the window clears its transient key draft.
+
+Dictation's first-run screen includes connection and model controls. Run **Test connection**
+and **Finish setup** after reviewing the microphone and shortcut. Audio-file transcription
+and Text to speech have independent setup; neither requires dictation setup to be complete.
+See [Get started](../../getting-started/).
+
+## Create a library entry without using it yet
+
+Open **Settings → Connections → New connection**, enter the server details and supported
+uses, then choose **Save connection**. This creates an inactive entry. Select it later
+from any task it supports. The library remains the place to edit, duplicate, or delete servers.
 
 ## What goes where?
 
@@ -40,15 +53,15 @@ For first-time transcription setup, return to the readiness screen, explicitly
 **Save connection** updates only that connection. Editing an active connection
 applies its endpoint settings and key to new requests from **every feature using
 that server** in one save. Renames and key changes retain model preferences;
-changing the URL or backend profile clears them and the active model choices. **Save feature settings** does not edit the saved
+changing the URL or backend profile clears them and the active model choices. **Save settings** does not edit the saved
 connection. The home screen has the same active connection selectors. Its separate settings
 links open feature settings; model and other quick controls save runtime settings.
 
 ## Reuse a server
 
-A Speaches connection can enable both Transcription and Speech playback, while
-vLLM can enable Transcription and Post-processing. Generic offers all three uses;
-llama.cpp currently offers Post-processing, and whisper.cpp offers Transcription.
+A Speaches connection can enable both Transcription and Text to speech, while
+vLLM can enable Transcription and Cleanup. Generic offers all three uses;
+llama.cpp currently offers Cleanup, and whisper.cpp offers Transcription.
 These choices describe Freehand's implemented contracts, not detected server
 capabilities. A particular vLLM deployment may expose only one operation.
 
@@ -61,12 +74,13 @@ transcription; they do not get sent through cleanup or playback adapters.
 ## Switch, edit, duplicate, or delete
 
 - Choose an **Active connection** on a feature page to switch immediately.
+  Unsaved Settings edits must be saved or discarded before the switch; **Keep editing** cancels it.
   A different connection restores its last selected model and remembered options
   for that feature. A connection without a remembered model starts with defaults;
-  cleanup and speech playback turn off until configured and enabled again, and
+  cleanup and text to speech turn off until configured and enabled again, and
   transcription needs its setup completed again. Running jobs keep their captured settings and keys.
 - Choose **Edit connection** to open the selected entry in Connections. Save or
-  discard feature edits first. The **Back** button at the top returns to the
+  discard feature edits first using **Save and continue**, **Discard and continue**, or **Keep editing** when prompted. The **Back** button at the top returns to the
   feature you came from, or to the connection list when editing there. Saving
   returns to that feature too. Simply viewing a connection needs no save or
   discard. If you changed something, Back, Cancel, or choosing another section

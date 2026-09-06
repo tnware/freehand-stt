@@ -17,6 +17,7 @@ var settingsSections = map[string]struct{}{
 	"server":      {},
 	"connections": {},
 	"processing":  {},
+	"speech":      {},
 	"history":     {},
 }
 

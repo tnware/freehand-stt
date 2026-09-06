@@ -32,6 +32,48 @@ Generic and the applicable dedicated profile for normal transcription, file
 streaming, cleanup, and speech playback. Never invoke model inventories.
 Builds and fixture tests do not establish this interactive or live-server acceptance.
 
+## Task-local setup acceptance
+
+Use an isolated configuration for fresh-install review, preserving the operator's live
+settings and credential store. Start independently with Voice, Audio file, and Text to
+speech. Add a connection from each picker, verify the purpose is preselected and cannot
+be removed, and verify Save and use returns to the same task with the new selection.
+File and speech setup must work without completing dictation setup. Choose or discover
+a model; test metadata access without invoking model inventories.
+
+Repeat from Transcription, Cleanup, and Text to speech Settings. Cancel an unchanged
+form; discard a changed form; inject a failed save and retry. Verify selections and
+unsaved task/model edits survive Keep editing, Save and continue failures do not advance,
+and Discard and continue applies no discarded edits. Test keyboard entry, Escape,
+focus return, window-hide credential cleanup, and a narrow viewport. Library creation
+must still remain inactive. Windows service fixtures use temporary SQLite files and a
+fake vault to check atomic activation, unsupported-purpose rejection, durable selection,
+credential rollback, and unchanged in-flight snapshots.
+
+Run `npm --prefix frontend run test:browser` after generating bindings and installing
+frontend dependencies. This uses the standard `@playwright/test` runner described in
+[Svelte's testing guide](https://svelte.dev/docs/svelte/testing#End-to-end-tests-with-Playwright).
+`frontend/playwright.config.ts` owns the browser, viewport, test server lifecycle,
+and failure reports; `frontend/tests/browser/vite.config.ts` serves the fixture without
+the native Wails bridge. Vitest excludes the browser specs.
+
+The browser fixture mounts the actual Settings screen, connection picker, and dialogs
+with the installed Bits UI library. Fake services reuse synthetic DTOs at the Wails
+boundary. Tests edit fields through the UI; the fixture API only waits for a save to
+start and completes that save with success or failure. Assertions inspect visible
+forms, selected connections, and error/retry actions, without exposing stores or
+inspecting event handlers. Separately named Escape and outside-click cases cover
+Keep editing, discard, unchanged-form close, pending connection/settings saves,
+failed-save retry, and idle prompt dismissal.
+
+The existing Windows CI job runs these tests in Edge after packaging. Local Windows
+runs also use Edge; on other platforms run `npx playwright install chromium` from
+`frontend`, or set `PLAYWRIGHT_CHANNEL` to an installed browser channel. Pass standard
+runner options after `--`, for example `npm --prefix frontend run test:browser -- --ui`
+or `--grep "Keep editing"`. Failure traces and screenshots go to `frontend/test-results`;
+the HTML report is in `frontend/playwright-report`. No app settings, credentials,
+or inference are accessed. Browser coverage does not establish native Wails acceptance.
+
 ## SQLite acceptance
 
 Run `go run ./build/scripts/storage -check -base main` and

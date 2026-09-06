@@ -20,12 +20,14 @@
 
   let {
     editor,
+    activateFor,
     error,
     onOpenFeature,
     onBack,
     onSaved,
   }: {
     editor: SettingsEditor;
+    activateFor?: Purpose;
     error: string;
     onBack: () => void;
     onSaved: () => void;
@@ -42,14 +44,23 @@
   ];
   const roleLabel = (p: Purpose) => roles.find((r) => r.id === p)?.label ?? "Connection";
   const profiles = $derived.by(() => {
-    const all = [
-      ...(editor.applied?.compatibilityProfiles.transcription ?? []),
-      ...(editor.applied?.compatibilityProfiles.postProcessing ?? []),
-      ...(editor.applied?.compatibilityProfiles.speech ?? []),
-    ];
+    const catalog = editor.applied?.compatibilityProfiles;
+    const all = activateFor
+      ? ((activateFor === Purpose.Transcription
+          ? catalog?.transcription
+          : activateFor === Purpose.Cleanup
+            ? catalog?.postProcessing
+            : catalog?.speech) ?? [])
+      : [
+          ...(catalog?.transcription ?? []),
+          ...(catalog?.postProcessing ?? []),
+          ...(catalog?.speech ?? []),
+        ];
     return [...new Map(all.map((p) => [p.id, p])).values()].map((p) => ({
       ...p,
-      available: all.some((x) => x.id === p.id && x.available),
+      available:
+        all.some((x) => x.id === p.id && x.available) &&
+        (!activateFor || supports(activateFor, p.id)),
       description: all.some((x) => x.id === p.id && x.available)
         ? "Uses this backend’s implemented contracts for the features enabled below."
         : p.description,
@@ -140,236 +151,264 @@
   }
 </script>
 
-<p class="text-xs leading-relaxed text-muted-foreground">
-  Save the servers Freehand can connect to here. Then choose a connection and model in
-  Transcription, Cleanup, or Text to speech. Creating or duplicating a connection does not activate
-  it.
-</p>
+{#if !activateFor}
+  <p class="text-xs leading-relaxed text-muted-foreground">
+    Save servers here, then select them in a task. Creating or duplicating a connection in this
+    library does not activate it.
+  </p>
+{/if}
 {#if form}
   <form
     onsubmit={async (event) => {
       event.preventDefault();
-      if (await editor.saveConnection()) onSaved();
+      if (await editor.saveConnection(activateFor)) onSaved();
     }}
-    class="flex flex-col gap-3.5"
+    class="flex min-h-0 flex-col gap-3.5"
   >
-    <div class="flex items-center justify-between">
-      <h4 class="text-sm font-semibold">
-        {form.creating ? "New connection" : `Edit ${form.name || "connection"}`}
-      </h4>
-      <Badge variant="outline">Connection settings</Badge>
-    </div>
-    {#if !form.creating && activeUses(form.id).length > 0}<p class="text-xs text-muted-foreground">
-        This connection is in use. Saving updates its connection details for new requests; model and
-        feature options stay on their own feature pages. This updates every feature using this
-        server.
-      </p>{/if}
-    <SettingsCard>
-      <ValueRow
-        id="connection-name"
-        label="Connection name"
-        hint="A name you will recognize in the feature selectors."
-      >
-        {#snippet control()}<ValueInput
-            id="connection-name"
-            bind:value={form.name}
-            maxlength={80}
-            required
-            disabled={busy}
-            mono={false}
-            placeholder="For example, Office speech server"
-          />{/snippet}
-      </ValueRow>
-      <CompatibilityProfilePicker
-        id="connection-profile"
-        bind:value={() => form.details.compatibilityProfile, setProfile}
-        {profiles}
-      />
-      <div class="space-y-3 px-5 py-4">
-        <h4 class="text-sm font-medium">Used for</h4>
-        <p class="text-xs text-muted-foreground">
-          Enable only the operations your deployed server provides. Each use becomes selectable
-          independently; enabling it here does not activate it or verify inference support.
-        </p>
-        {#each roles as role (role.id)}
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <label for={`connection-use-${role.id}`} class="text-sm">{role.label}</label>
-              {#if !supports(role.id)}<p class="text-xs text-muted-foreground">
-                  Not implemented for this profile.
-                </p>{/if}
-              {#if catalog?.selected?.[role.id] === form.id}<p
-                  class="text-xs text-muted-foreground"
-                >
-                  In use. Deselect on its feature page before removing.
-                </p>{/if}
-            </div>
-            <Switch
-              id={`connection-use-${role.id}`}
-              checked={form.uses.includes(role.id)}
-              onCheckedChange={(enabled) => setUse(role.id, enabled)}
-              disabled={busy || !supports(role.id) || catalog?.selected?.[role.id] === form.id}
-              aria-label={`Use for ${role.label}`}
-            />
-          </div>
-        {/each}
-      </div>
-      <ValueRow
-        id="connection-url"
-        label="Base URL"
-        hint={form.details.compatibilityProfile === ID.WhisperCPP
-          ? "Native whisper.cpp server root, without /v1 or /inference."
-          : "The server’s OpenAI-compatible /v1 base URL."}
-      >
-        {#snippet control()}<ValueInput
-            id="connection-url"
-            type="url"
-            bind:value={form.details.baseURL}
-            required
-            disabled={busy}
-            placeholder="https://server.example/v1"
-            spellcheck={false}
-          />{/snippet}
-      </ValueRow>
-      {#if !form.creating}<p class="px-5 pb-3 text-xs leading-relaxed text-muted-foreground">
-          Changing the base URL or backend profile clears this connection’s remembered models and
-          active model choices. Renames and authentication changes keep them.
-        </p>{/if}
-      <SettingRow
-        title="Allow insecure HTTP"
-        description="Required for an HTTP endpoint, including localhost. HTTPS keeps credentials and requests encrypted in transit."
-        >{#snippet control()}<Switch
-            checked={form.details.allowInsecureHTTP}
-            onCheckedChange={(v) => {
-              if (form) form.details.allowInsecureHTTP = v;
-            }}
-            disabled={busy}
-            aria-label="Allow insecure HTTP"
-          />{/snippet}</SettingRow
-      >
-      <ValueRow
-        id="connection-auth"
-        label="Authentication"
-        hint="Choose whether this connection sends an API key."
-        >{#snippet control()}<Select.Root
-            type="single"
-            value={form.details.authenticationMode}
-            onValueChange={changeAuth}
-            disabled={busy}
-            ><Select.Trigger id="connection-auth" class="w-full"
-              >{form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey
-                ? "API key"
-                : "None"}</Select.Trigger
-            ><Select.Content
-              ><Select.Item value={AuthenticationMode.AuthenticationModeNone}>None</Select.Item
-              ><Select.Item value={AuthenticationMode.AuthenticationModeAPIKey}>API key</Select.Item
-              ></Select.Content
-            ></Select.Root
-          >{/snippet}</ValueRow
-      >
-      {#if form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey}
-        <ValueRow
-          id="connection-api-key"
-          label="API key"
-          hint="One stored key shared by this server’s enabled uses. Never returned to this window."
-          >{#snippet control()}<ValueInput
-              id="connection-api-key"
-              type="password"
-              autocomplete="new-password"
-              maxlength={2048}
-              bind:value={form.credentialDraft}
-              disabled={busy || form.clearCredential}
-              placeholder={form.hasCredential
-                ? "Leave blank to keep the stored key"
-                : "Enter a key if required"}
-              mono={false}
-            />{/snippet}</ValueRow
-        >
-        {#if form.hasCredential}<SettingRow
-            title="Remove stored key"
-            description="Applies when you save this connection."
-            >{#snippet control()}<Switch
-                checked={form.clearCredential}
-                onCheckedChange={(v) => {
-                  if (form) {
-                    form.clearCredential = v;
-                    if (v) form.credentialDraft = "";
-                  }
-                }}
-                disabled={busy}
-                aria-label="Remove stored key"
-              />{/snippet}</SettingRow
-          >{/if}
+    <div class="flex min-h-0 flex-col gap-3.5" class:overflow-y-auto={activateFor !== undefined}>
+      {#if !activateFor}
+        <div class="flex items-center justify-between">
+          <h4 class="text-sm font-semibold">
+            {form.creating ? "New connection" : `Edit ${form.name || "connection"}`}
+          </h4>
+          <Badge variant="outline">Connection settings</Badge>
+        </div>
       {/if}
-    </SettingsCard>
-    {#if form.uses.includes(Purpose.Transcription)}
-      <details class="rounded-xl border border-hairline bg-layer-fill p-4">
-        <summary class="cursor-pointer text-sm font-medium"
-          >Transcription connection options</summary
+      {#if !form.creating && activeUses(form.id).length > 0}<p
+          class="text-xs text-muted-foreground"
         >
-        <div class="mt-4 space-y-4">
-          <div class="space-y-2">
-            <label for="connection-health" class="text-xs font-medium">Custom health path</label
-            ><ValueInput
-              id="connection-health"
-              bind:value={form.details.healthPath}
-              placeholder="Optional, for example /health"
-              disabled={busy}
-            />
+          This connection is in use. Saving updates its connection details for new requests; model
+          and feature options stay on their own feature pages. This updates every feature using this
+          server.
+        </p>{/if}
+      {#snippet supportedUses()}
+        {#if form}
+          <div class="space-y-3 px-5 py-4">
+            <h4 class="text-sm font-medium">Used for</h4>
             <p class="text-xs text-muted-foreground">
-              Appended to the base URL. Leave blank for the profile’s default metadata route.
+              Enable only the operations your deployed server provides. Each use becomes selectable
+              independently; enabling it here does not activate it or verify inference support.
             </p>
+            {#each roles as role (role.id)}
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <label for={`connection-use-${role.id}`} class="text-sm">{role.label}</label>
+                  {#if !supports(role.id)}<p class="text-xs text-muted-foreground">
+                      Not implemented for this profile.
+                    </p>{/if}
+                  {#if catalog?.selected?.[role.id] === form.id}<p
+                      class="text-xs text-muted-foreground"
+                    >
+                      In use. Deselect on its feature page before removing.
+                    </p>{/if}
+                </div>
+                <Switch
+                  id={`connection-use-${role.id}`}
+                  checked={form.uses.includes(role.id)}
+                  onCheckedChange={(enabled) => setUse(role.id, enabled)}
+                  disabled={busy ||
+                    role.id === activateFor ||
+                    !supports(role.id) ||
+                    catalog?.selected?.[role.id] === form.id}
+                  aria-label={`Use for ${role.label}`}
+                />
+              </div>
+            {/each}
           </div>
-          <div class="space-y-2">
-            <p class="text-xs font-medium">Custom transcription headers</p>
-            {#each Object.entries(form.details.headers ?? {}) as [key, value] (key)}<div
-                class="flex gap-2"
-              >
-                <ValueInput
-                  aria-label="Header name"
-                  value={key}
-                  onblur={(e) => renameHeader(key, e.currentTarget.value)}
-                  disabled={busy}
-                /><ValueInput
-                  aria-label={`Value for ${key}`}
-                  value={value ?? ""}
-                  oninput={(e) => {
-                    if (form)
-                      form.details.headers = {
-                        ...form.details.headers,
-                        [key]: e.currentTarget.value,
-                      };
+        {/if}
+      {/snippet}
+      <SettingsCard>
+        <ValueRow
+          id="connection-name"
+          label="Connection name"
+          hint="A name you will recognize in the feature selectors."
+        >
+          {#snippet control()}<ValueInput
+              id="connection-name"
+              bind:value={form.name}
+              maxlength={80}
+              required
+              disabled={busy}
+              mono={false}
+              placeholder="For example, Office speech server"
+            />{/snippet}
+        </ValueRow>
+        <CompatibilityProfilePicker
+          id="connection-profile"
+          bind:value={() => form.details.compatibilityProfile, setProfile}
+          {profiles}
+        />
+
+        {#if !activateFor}{@render supportedUses()}{/if}
+        <ValueRow
+          id="connection-url"
+          label="Base URL"
+          hint={form.details.compatibilityProfile === ID.WhisperCPP
+            ? "Native whisper.cpp server root, without /v1 or /inference."
+            : "The server’s OpenAI-compatible /v1 base URL."}
+        >
+          {#snippet control()}<ValueInput
+              id="connection-url"
+              type="url"
+              bind:value={form.details.baseURL}
+              required
+              disabled={busy}
+              placeholder="https://server.example/v1"
+              spellcheck={false}
+            />{/snippet}
+        </ValueRow>
+        {#if !form.creating}<p class="px-5 pb-3 text-xs leading-relaxed text-muted-foreground">
+            Changing the base URL or backend profile clears this connection’s remembered models and
+            active model choices. Renames and authentication changes keep them.
+          </p>{/if}
+        <SettingRow
+          title="Allow insecure HTTP"
+          description="Required for an HTTP endpoint, including localhost. HTTPS keeps credentials and requests encrypted in transit."
+          >{#snippet control()}<Switch
+              checked={form.details.allowInsecureHTTP}
+              onCheckedChange={(v) => {
+                if (form) form.details.allowInsecureHTTP = v;
+              }}
+              disabled={busy}
+              aria-label="Allow insecure HTTP"
+            />{/snippet}</SettingRow
+        >
+        <ValueRow
+          id="connection-auth"
+          label="Authentication"
+          hint="Choose whether this connection sends an API key."
+          >{#snippet control()}<Select.Root
+              type="single"
+              value={form.details.authenticationMode}
+              onValueChange={changeAuth}
+              disabled={busy}
+              ><Select.Trigger id="connection-auth" class="w-full"
+                >{form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey
+                  ? "API key"
+                  : "None"}</Select.Trigger
+              ><Select.Content
+                ><Select.Item value={AuthenticationMode.AuthenticationModeNone}>None</Select.Item
+                ><Select.Item value={AuthenticationMode.AuthenticationModeAPIKey}
+                  >API key</Select.Item
+                ></Select.Content
+              ></Select.Root
+            >{/snippet}</ValueRow
+        >
+        {#if form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey}
+          <ValueRow
+            id="connection-api-key"
+            label="API key"
+            hint="One stored key shared by this server’s enabled uses. Never returned to this window."
+            >{#snippet control()}<ValueInput
+                id="connection-api-key"
+                type="password"
+                autocomplete="new-password"
+                maxlength={2048}
+                bind:value={form.credentialDraft}
+                disabled={busy || form.clearCredential}
+                placeholder={form.hasCredential
+                  ? "Leave blank to keep the stored key"
+                  : "Enter a key if required"}
+                mono={false}
+              />{/snippet}</ValueRow
+          >
+          {#if form.hasCredential}<SettingRow
+              title="Remove stored key"
+              description="Applies when you save this connection."
+              >{#snippet control()}<Switch
+                  checked={form.clearCredential}
+                  onCheckedChange={(v) => {
+                    if (form) {
+                      form.clearCredential = v;
+                      if (v) form.credentialDraft = "";
+                    }
                   }}
                   disabled={busy}
-                /><Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onclick={() => removeHeader(key)}
-                  disabled={busy}>Remove</Button
-                >
-              </div>{/each}<Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onclick={addHeader}
-              disabled={busy || Object.keys(form.details.headers ?? {}).length >= 32}
-              >Add header</Button
+                  aria-label="Remove stored key"
+                />{/snippet}</SettingRow
+            >{/if}
+        {/if}
+        {#if activateFor}
+          <details class="border-t border-hairline">
+            <summary class="cursor-pointer px-5 py-3 text-sm font-medium"
+              >Also use this server for other tasks</summary
             >
+            {@render supportedUses()}
+          </details>
+        {/if}
+      </SettingsCard>
+      {#if form.uses.includes(Purpose.Transcription)}
+        <details class="rounded-xl border border-hairline bg-layer-fill p-4">
+          <summary class="cursor-pointer text-sm font-medium"
+            >Transcription connection options</summary
+          >
+          <div class="mt-4 space-y-4">
+            <div class="space-y-2">
+              <label for="connection-health" class="text-xs font-medium">Custom health path</label
+              ><ValueInput
+                id="connection-health"
+                bind:value={form.details.healthPath}
+                placeholder="Optional, for example /health"
+                disabled={busy}
+              />
+              <p class="text-xs text-muted-foreground">
+                Appended to the base URL. Leave blank for the profile’s default metadata route.
+              </p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium">Custom transcription headers</p>
+              {#each Object.entries(form.details.headers ?? {}) as [key, value] (key)}<div
+                  class="flex gap-2"
+                >
+                  <ValueInput
+                    aria-label="Header name"
+                    value={key}
+                    onblur={(e) => renameHeader(key, e.currentTarget.value)}
+                    disabled={busy}
+                  /><ValueInput
+                    aria-label={`Value for ${key}`}
+                    value={value ?? ""}
+                    oninput={(e) => {
+                      if (form)
+                        form.details.headers = {
+                          ...form.details.headers,
+                          [key]: e.currentTarget.value,
+                        };
+                    }}
+                    disabled={busy}
+                  /><Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onclick={() => removeHeader(key)}
+                    disabled={busy}>Remove</Button
+                  >
+                </div>{/each}<Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onclick={addHeader}
+                disabled={busy || Object.keys(form.details.headers ?? {}).length >= 32}
+                >Add header</Button
+              >
+            </div>
           </div>
-        </div>
-      </details>
-    {/if}
-    {#if error}<p role="alert" class="text-sm text-destructive">{error}</p>{/if}
-    <div class="flex justify-end gap-2">
+        </details>
+      {/if}
+    </div>
+    {#if error}<p role="alert" class="shrink-0 text-sm text-destructive">{error}</p>{/if}
+    <div class="flex shrink-0 justify-end gap-2">
       <Button type="button" variant="outline" disabled={busy} onclick={onBack}>Cancel</Button
       ><Button
         type="submit"
         disabled={busy ||
           !form.name.trim() ||
           !form.details.baseURL.trim() ||
-          form.uses.length === 0}
-        >{#if editor.saving}<LoaderCircleIcon class="animate-spin" />{/if}Save connection</Button
+          form.uses.length === 0 ||
+          (activateFor !== undefined && !form.uses.includes(activateFor))}
+        >{#if editor.saving}<LoaderCircleIcon class="animate-spin" />{/if}{activateFor
+          ? "Save and use connection"
+          : "Save connection"}</Button
       >
     </div>
   </form>

@@ -17,5 +17,13 @@
       ]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "bindings"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "bindings",
+    "tests/browser/**/*.ts",
+    "tests/browser/**/*.svelte",
+    "playwright.config.ts"
+  ]
 }

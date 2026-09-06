@@ -33,12 +33,15 @@ const (
 const MaxPerPurpose = 32
 
 type Change struct {
-	Action  Action    `json:"action"`
-	Details *Details  `json:"details,omitempty"`
-	Uses    []Purpose `json:"uses,omitempty"`
-	Purpose Purpose   `json:"purpose,omitempty"`
-	ID      string    `json:"id"`
-	Name    string    `json:"name"`
+	// ActivateFor selects a newly created connection in the same settings transaction.
+	// Library creation omits it and remains inactive.
+	ActivateFor Purpose   `json:"activateFor,omitempty"`
+	Action      Action    `json:"action"`
+	Details     *Details  `json:"details,omitempty"`
+	Uses        []Purpose `json:"uses,omitempty"`
+	Purpose     Purpose   `json:"purpose,omitempty"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
 }
 
 // Details are connection-scoped. Model preferences and workflow settings are separate.

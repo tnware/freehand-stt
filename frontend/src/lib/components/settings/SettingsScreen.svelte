@@ -3,6 +3,7 @@
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import * as Dialog from "$lib/components/ui/dialog";
   import ConnectionsSection from "$lib/components/settings/sections/ConnectionsSection.svelte";
+  import ConnectionSetupDialog from "$lib/components/settings/ConnectionSetupDialog.svelte";
   import SavedConnectionPicker from "$lib/components/settings/SavedConnectionPicker.svelte";
   import { Purpose } from "$bindings/savedconnection";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
@@ -49,6 +50,33 @@
   const section = $derived(sectionByID(active));
   const dirty = $derived(session.editor.dirty);
 
+  let setupPurpose = $state<Purpose | null>(null);
+  let pendingConnectionAction = $state<(() => void) | null>(null);
+  function preventDismissWhileSaving(event: Event) {
+    // onOpenChange observes a close; these hooks can prevent it.
+    if (session.editor.saving) event.preventDefault();
+  }
+  function withSavedSettings(action: () => void) {
+    if (session.editor.saving) return;
+    if (session.editor.runtimeDirty) pendingConnectionAction = action;
+    else action();
+  }
+  function addConnection(purpose: Purpose) {
+    withSavedSettings(() => {
+      session.editor.beginConnection(undefined, purpose);
+      if (session.editor.connectionDraft) setupPurpose = purpose;
+    });
+  }
+  async function continueConnection(save: boolean) {
+    if (save) {
+      if (!(await session.editor.save())) return;
+      shortcutCapture.markSaved();
+    }
+    if (!save) session.editor.discardSettingsDraft();
+    const action = pendingConnectionAction;
+    pendingConnectionAction = null;
+    action?.();
+  }
   let connectionOrigin = $state<SettingsSectionID | null>(null);
   let discardConnectionOpen = $state(false);
   let pendingSection = $state<SettingsSectionID>("connections");
@@ -58,6 +86,8 @@
   $effect(() => {
     if (!visible) {
       connectionOrigin = null;
+      setupPurpose = null;
+      pendingConnectionAction = null;
       discardConnectionOpen = false;
     }
   });
@@ -190,27 +220,36 @@
                   : Purpose.Speech}
               dirty={session.editor.dirty}
               busy={session.editor.saving || session.editor.quickSettingsPending.length > 0}
-              onChange={(change) => session.editor.changeConnection(change)}
-              onManage={() => {
-                if (session.editor.runtimeDirty) {
-                  session.messages.reportInfo(
-                    "Save or discard feature settings before editing a connection.",
-                  );
-                  return;
-                }
-                const purpose =
+              onChange={async (change) => {
+                if (!session.editor.runtimeDirty) return session.editor.changeConnection(change);
+                withSavedSettings(() => {
+                  void session.editor.changeConnection(change);
+                });
+                return false;
+              }}
+              onAdd={() =>
+                addConnection(
                   active === "server"
                     ? Purpose.Transcription
                     : active === "processing"
                       ? Purpose.Cleanup
-                      : Purpose.Speech;
-                const c = session.editor.applied?.savedConnections.entries?.find(
-                  (c) => c.id === session.editor.applied?.savedConnections.selected?.[purpose],
-                );
-                connectionOrigin = active;
-                active = "connections";
-                if (c) session.editor.beginConnection(c);
-              }}
+                      : Purpose.Speech,
+                )}
+              onManage={() =>
+                withSavedSettings(() => {
+                  const purpose =
+                    active === "server"
+                      ? Purpose.Transcription
+                      : active === "processing"
+                        ? Purpose.Cleanup
+                        : Purpose.Speech;
+                  const c = session.editor.applied?.savedConnections.entries?.find(
+                    (c) => c.id === session.editor.applied?.savedConnections.selected?.[purpose],
+                  );
+                  connectionOrigin = active;
+                  active = "connections";
+                  if (c) session.editor.beginConnection(c);
+                })}
             />
           {/if}
           {#if active === "connections"}
@@ -347,6 +386,13 @@
               ? "Unsaved changes"
               : "All changes saved"}
         </span>
+        {#if session.editor.runtimeDirty && active !== "connections"}
+          <Button
+            variant="ghost"
+            disabled={session.editor.saving}
+            onclick={() => session.editor.discardSettingsDraft()}>Discard changes</Button
+          >
+        {/if}
         <Button variant="outline" disabled={session.editor.saving} onclick={onClose}>Close</Button>
         {#if active !== "connections"}<Button
             disabled={session.busy || shortcutCapture.capturing || !dirty}
@@ -355,11 +401,7 @@
             {#if session.editor.saving}
               <LoaderCircleIcon data-icon="inline-start" class="animate-spin" />
             {/if}
-            {session.editor.saving
-              ? "Saving…"
-              : ["server", "processing", "speech"].includes(active)
-                ? "Save feature settings"
-                : "Save settings"}
+            {session.editor.saving ? "Saving…" : "Save settings"}
           </Button>{/if}
       {:else}
         <Button variant="outline" disabled={session.editor.saving} onclick={onClose}>Close</Button>
@@ -386,6 +428,53 @@
           discardConnectionOpen = false;
           void leaveConnection(pendingSection);
         }}>Discard changes</Button
+      >
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
+{#if setupPurpose}
+  <ConnectionSetupDialog
+    editor={session.editor}
+    purpose={setupPurpose}
+    error={session.messages.error}
+    onClose={() => (setupPurpose = null)}
+  />
+{/if}
+<Dialog.Root
+  open={pendingConnectionAction !== null}
+  onOpenChange={(open) => {
+    if (!open && !session.editor.saving) pendingConnectionAction = null;
+  }}
+>
+  <Dialog.Content
+    showCloseButton={!session.editor.saving}
+    onEscapeKeydown={preventDismissWhileSaving}
+    onInteractOutside={preventDismissWhileSaving}
+  >
+    <Dialog.Header>
+      <Dialog.Title>Save settings before changing connections?</Dialog.Title>
+      <Dialog.Description
+        >Your model and task edits have not been applied. Save them for the current connection, or
+        discard them before continuing.</Dialog.Description
+      >
+    </Dialog.Header>
+    {#if session.messages.error}<p role="alert" class="text-destructive">
+        {session.messages.error}
+      </p>{/if}
+    <Dialog.Footer>
+      <Button
+        variant="outline"
+        disabled={session.editor.saving}
+        onclick={() => (pendingConnectionAction = null)}>Keep editing</Button
+      >
+      <Button
+        variant="secondary"
+        disabled={session.editor.saving}
+        onclick={() => continueConnection(false)}>Discard and continue</Button
+      >
+      <Button disabled={session.editor.saving} onclick={() => continueConnection(true)}
+        >Save and continue</Button
       >
     </Dialog.Footer>
   </Dialog.Content>

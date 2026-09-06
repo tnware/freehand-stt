@@ -72,3 +72,15 @@ func TestAboutWindowActions(t *testing.T) {
 		t.Fatal("missing About window was treated as available")
 	}
 }
+
+func TestOpenSettingsAcceptsEveryTask(t *testing.T) {
+	for _, section := range []string{"server", "processing", "speech"} {
+		t.Run(section, func(t *testing.T) {
+			opened := ""
+			service := NewService(func(s string) { opened = s }, nil, nil, nil, nil, nil)
+			if err := service.OpenSettings(section); err != nil || opened != section {
+				t.Fatalf("task setup inaccessible: section=%s err=%v", opened, err)
+			}
+		})
+	}
+}
