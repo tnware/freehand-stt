@@ -277,3 +277,23 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
     appReadiness(cfg, null, devices, false).steps.find((step) => step.id === "server")?.status,
   ).toBe("attention");
 });
+
+
+describe("task-specific prerequisites", () => {
+  it("allows file transcription before dictation setup without microphone or shortcut", () => {
+    const v = settings({ setupCompleted: false, toggleShortcut: "", credentialConfigured: true });
+    const file = appReadiness(v, null, [], false, "file");
+    expect(file.initialSetup).toBe(false);
+    expect(file.steps.map(s => s.id)).not.toContain("microphone");
+    expect(file.steps.map(s => s.id)).not.toContain("shortcut");
+    expect(file.recoveryNeeded).toBe(false);
+    const voice = appReadiness(v, null, [], false);
+    expect(voice.initialSetup).toBe(true);
+    expect(voice.recoveryNeeded).toBe(true);
+  });
+  it("still requires file transcription endpoint and credentials", () => {
+    const file = appReadiness(settings({ baseURL: "", credentialConfigured: false }), null, [], false, "file");
+    expect(file.recoveryNeeded).toBe(true);
+    expect(file.steps.filter(s => s.blocking).map(s => s.id)).toEqual(["server", "credential"]);
+  });
+});

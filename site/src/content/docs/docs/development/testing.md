@@ -375,3 +375,10 @@ then assert ordered retention updates and callback-safe settings reads. TTS test
 cover stale completion, Stop fencing, and native save-dialog interleavings with Stop
 and shutdown. Windows CI runs the complete Go suite, including platform-specific
 input, playback, storage, and settings tests; these do not invoke inference servers.
+
+Current-result tests cover copy/clear generation admission without history.
+Renderer coverage checks that speech commands preserve the composer draft and
+that file readiness excludes microphone and shortcut prerequisites while retaining
+endpoint and authentication checks. Interactive acceptance should switch between
+all three tasks and Settings, confirm unsent text survives, then verify current
+results can be copied and cleared with history disabled.

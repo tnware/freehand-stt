@@ -1,5 +1,9 @@
 <script lang="ts">
   import { Purpose } from "$bindings/savedconnection";
+  import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
+  import CurrentResult from "$lib/components/home/CurrentResult.svelte";
+  import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
+  import { Button } from "$lib/components/ui/button";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
   import ReadinessPanel from "$lib/components/home/ReadinessPanel.svelte";
   import AudioFileTranscription from "$lib/components/home/AudioFileTranscription.svelte";
@@ -10,7 +14,6 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import type { Session } from "$lib/stores/session.svelte";
   import type { Message } from "$lib/utils/messages";
-  import { connectionSucceeded } from "$lib/utils/connection";
   import { isFailure, statusMessage } from "$lib/utils/status";
   import { appReadiness, readinessVisible } from "$lib/utils/readiness";
   import { FileTranscriptionPhase, State, TTSPhase, TTSSource } from "$lib/state";
@@ -62,33 +65,20 @@
           session.editor.connection,
           session.editor.devices,
           session.editor.devicesBusy,
+          inputMode === "file" ? "file" : "voice",
         )
       : null,
   );
   let dismissedRecoveryKey = $state("");
   const showReadiness = $derived(
     Boolean(
+      inputMode !== "tts" &&
       readiness &&
       readinessVisible(readiness, dismissedRecoveryKey) &&
       !voiceActive &&
       !fileWorking,
     ),
   );
-  /*
-   * Below the stacking width the rack and the transcript list stop being
-   * columns and become two panes. Setup is something you touch when something
-   * is wrong; the transcript is what you opened the window to read, so it is
-   * the pane that opens first, and Setup carries a lamp when it needs you.
-   */
-  let homeWidth = $state(0);
-  const stacked = $derived(homeWidth > 0 && homeWidth <= 959);
-  let pane = $state<"transcripts" | "setup">("transcripts");
-  const setupNeedsAttention = $derived(
-    session.editor.sttConnectionStale ||
-      session.editor.connectionResultStale(Purpose.Transcription, runtimeSettings) ||
-      Boolean(session.editor.connection && !connectionSucceeded(session.editor.connection)),
-  );
-
   const microphoneLabel = $derived.by(() => {
     const selectedID = runtimeSettings?.microphoneID ?? "";
     if (!selectedID) return "system default";
@@ -108,7 +98,7 @@
     const out: Message[] = [];
     // The status explanation comes first: it is about the screen you are
     // looking at, where the other two are about an action you took.
-    const explanation = statusMessage(session.dictation.status);
+    const explanation = inputMode === "voice" ? statusMessage(session.dictation.status) : "";
     if (explanation) {
       out.push({
         id: "status",
@@ -167,7 +157,7 @@
   of settings modules on the left, the transcript feed filling the rest. First
   run replaces both columns, because there is nothing to dictate into yet.
 -->
-<main class="home" aria-label="Freehand workspace" bind:clientWidth={homeWidth}>
+<main class="home" aria-label="Freehand workspace">
   {#if session.editor.draft}
     {#if !showReadiness}
       {#if inputMode === "voice"}
@@ -196,6 +186,7 @@
         />
       {:else}
         <TextToSpeech
+          bind:text={session.speech.draft}
           settings={runtimeSettings?.textToSpeech ?? session.editor.draft.textToSpeech}
           status={session.speech.status}
           unavailable={voiceActive || fileWorking}
@@ -216,6 +207,45 @@
 
   <div class="body">
     <Notifications {messages} />
+    {#if session.speech.status.source !== TTSSource.SourceCompose && session.speech.status.phase !== TTSPhase.Idle && session.speech.status.phase !== TTSPhase.Cancelled}
+      <PlaybackBar
+        status={session.speech.status}
+        onPause={() => session.speech.pauseTTS()}
+        onResume={() => session.speech.resumeTTS()}
+        onRestart={() => session.speech.restartTTS()}
+        onStop={() => session.speech.stopTTS()}
+        onSave={() => session.speech.saveTTSAudio()}
+        onClear={() => session.speech.clearTTSAudio()}
+      />
+    {/if}
+    {#if session.editor.draft && inputMode !== "tts" && (!showReadiness || (inputMode === "file" ? session.files.status.transcript : session.dictation.status.transcript))}
+      <CurrentResult
+        resultKey={`${inputMode}:${inputMode === "file" ? session.files.status.generation : session.dictation.status.generation}`}
+        mode={inputMode === "file" ? "file" : "voice"}
+        text={inputMode === "file"
+          ? (session.files.status.transcript ?? "")
+          : (session.dictation.status.transcript ?? "")}
+        working={inputMode === "file" ? fileWorking : voiceActive}
+        canCopy={inputMode === "file"
+          ? session.files.status.canCopy
+          : Boolean(session.dictation.status.transcript)}
+        recovery={inputMode === "voice" && session.dictation.status.canCopy}
+        onCopy={() =>
+          inputMode === "file"
+            ? session.files.copyFileTranscript()
+            : session.dictation.copyCurrent()}
+        onClear={() => {
+          if (inputMode === "file") void session.files.clearAudioFile();
+          else void session.dictation.clearCurrent();
+        }}
+        onListen={inputMode === "file" &&
+        runtimeSettings?.textToSpeech.enabled &&
+        !voiceActive &&
+        !fileWorking
+          ? () => session.speech.listenFileTranscript()
+          : undefined}
+      />
+    {/if}
 
     {#if session.editor.draft}
       {#if showReadiness && readiness}
@@ -235,106 +265,119 @@
           }}
         />
       {:else}
-        {#if stacked}
-          <div class="switcher" role="tablist" aria-label="Workspace pane">
-            <button
-              type="button"
-              role="tab"
-              id="pane-tab-transcripts"
-              class="pane-tab"
-              aria-selected={pane === "transcripts"}
-              aria-controls="pane-transcripts"
-              onclick={() => (pane = "transcripts")}
-            >
-              Transcripts
-              <span class="figure count">{session.history.entries.length}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="pane-tab-setup"
-              class="pane-tab"
-              aria-selected={pane === "setup"}
-              aria-controls="pane-setup"
-              onclick={() => (pane = "setup")}
-            >
-              Setup
-              {#if setupNeedsAttention}
-                <span class="size-1.5 shrink-0 rounded-full bg-warning" aria-label="Needs attention"
-                ></span>
-              {/if}
-            </button>
-          </div>
+        {#if inputMode === "tts"}
+          <section
+            class="rounded-lg border border-hairline bg-layer-fill p-4"
+            aria-label="Text to speech connection"
+          >
+            <div class="flex flex-wrap items-center gap-3">
+              <label for="home-speech-connection" class="text-sm font-medium"
+                >Text to speech connection</label
+              >
+              <div class="min-w-48 flex-1">
+                <ConnectionSelect
+                  id="home-speech-connection"
+                  catalog={runtimeSettings!.savedConnections}
+                  purpose={Purpose.Speech}
+                  disabled={quickSettingsDisabled || session.editor.saving}
+                  onChange={(change) => session.editor.changeConnection(change)}
+                />
+              </div>
+              <Button variant="outline" size="sm" onclick={onOpenSpeechSettings}
+                >Model and voice settings</Button
+              >
+            </div>
+            <p class="mt-2 text-xs text-muted-foreground">
+              Connection selection applies immediately. Your unsent text stays here while you change
+              settings.
+            </p>
+          </section>
+        {:else}
+          <details class="rounded-lg border border-hairline bg-layer-fill">
+            <summary class="cursor-pointer px-4 py-3 text-sm font-medium"
+              >{inputMode === "voice" ? "Dictation" : "Transcription"} settings
+              <span class="ml-2 text-xs font-normal text-muted-foreground"
+                >{runtimeSettings?.model || "Choose a connection and model"} · quick changes apply immediately</span
+              >
+            </summary>
+            <div class="p-3">
+              <QuickSettings
+                showCapture={inputMode === "voice"}
+                settings={session.editor.applied ?? session.editor.draft}
+                devices={session.editor.devices}
+                processingProfiles={session.editor.processingProfiles}
+                connection={session.editor.connection}
+                processingConnection={session.editor.processingConnection}
+                sttStale={session.editor.sttConnectionStale ||
+                  session.editor.connectionResultStale(Purpose.Transcription, runtimeSettings)}
+                processingStale={session.editor.processingConnectionStale ||
+                  session.editor.connectionResultStale(Purpose.Cleanup, runtimeSettings)}
+                pending={session.editor.quickSettingsPending}
+                savedField={session.editor.quickSettingsSaved}
+                sttTesting={session.editor.sttConnectionTesting}
+                processingTesting={session.editor.processingConnectionTesting}
+                onChangeConnection={(change) => session.editor.changeConnection(change)}
+                onUpdate={(patch, field) => session.editor.updateQuickSettings(patch, field)}
+                onTestConnection={() => session.editor.testConnection(session.editor.applied, "")}
+                onTestProcessingConnection={() =>
+                  session.editor.testPostProcessingConnection(session.editor.applied, "")}
+                disabled={quickSettingsDisabled || session.editor.saving}
+                {onOpenServerSettings}
+                {onOpenProcessingSettings}
+                {onOpenAudioSettings}
+                onOpenDeliverySettings={onOpenGeneralSettings}
+              />
+            </div>
+          </details>
+          {#if runtimeSettings?.historyEnabled}
+            <details class="rounded-lg border border-hairline bg-layer-fill">
+              <summary class="cursor-pointer px-4 py-3 text-sm font-medium"
+                >Recent history · {session.history.entries.length}
+                <span class="ml-2 text-xs font-normal text-muted-foreground"
+                  >In memory until you quit</span
+                >
+              </summary>
+              <div class="history-area">
+                <HistoryPanel
+                  enabled={session.editor.applied?.historyEnabled ?? false}
+                  entries={session.history.entries}
+                  fileStatus={session.files.status}
+                  fileHistoryGeneration={session.files.historyGeneration}
+                  onOpenSettings={onOpenHistorySettings}
+                  onCopy={(id) => session.history.copyHistoryEntry(id)}
+                  onCopyVersion={(id, version) =>
+                    session.history.copyHistoryEntryVersion(id, version)}
+                  onDelete={(id) => session.history.deleteHistoryEntry(id)}
+                  onCopyFile={() => session.files.copyFileTranscript()}
+                  ttsEnabled={runtimeSettings?.textToSpeech.enabled ?? false}
+                  ttsAvailable={!voiceActive && !fileWorking}
+                  ttsStatus={session.speech.status}
+                  onListen={(id, version) => session.speech.listenHistoryEntry(id, version)}
+                  onListenFile={() => session.speech.listenFileTranscript()}
+                  onPauseTTS={() => session.speech.pauseTTS()}
+                  onResumeTTS={() => session.speech.resumeTTS()}
+                  onRestartTTS={() => session.speech.restartTTS()}
+                  onStopTTS={() => session.speech.stopTTS()}
+                  onSaveTTS={() => session.speech.saveTTSAudio()}
+                  onClearTTS={() => session.speech.clearTTSAudio()}
+                  ttsWorkspaceVisible={inputMode === "tts"}
+                  collapsible={false}
+                  playbackVisibleElsewhere
+                />
+              </div>
+            </details>
+          {:else}
+            <div class="flex items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
+              <span
+                >History is off. Current results remain available until you clear them or start
+                again.</span
+              >
+              <Button variant="ghost" size="sm" onclick={onOpenHistorySettings}
+                >History settings</Button
+              >
+            </div>
+          {/if}
         {/if}
-
-        <div class="columns">
-          <div
-            class="rack"
-            id="pane-setup"
-            role={stacked ? "tabpanel" : undefined}
-            aria-labelledby={stacked ? "pane-tab-setup" : undefined}
-            hidden={stacked && pane !== "setup"}
-          >
-            <QuickSettings
-              settings={session.editor.applied ?? session.editor.draft}
-              devices={session.editor.devices}
-              processingProfiles={session.editor.processingProfiles}
-              connection={session.editor.connection}
-              processingConnection={session.editor.processingConnection}
-              sttStale={session.editor.sttConnectionStale ||
-                session.editor.connectionResultStale(Purpose.Transcription, runtimeSettings)}
-              processingStale={session.editor.processingConnectionStale ||
-                session.editor.connectionResultStale(Purpose.Cleanup, runtimeSettings)}
-              pending={session.editor.quickSettingsPending}
-              savedField={session.editor.quickSettingsSaved}
-              sttTesting={session.editor.sttConnectionTesting}
-              processingTesting={session.editor.processingConnectionTesting}
-              onChangeConnection={(change) => session.editor.changeConnection(change)}
-              onUpdate={(patch, field) => session.editor.updateQuickSettings(patch, field)}
-              onTestConnection={() => session.editor.testConnection(session.editor.applied, "")}
-              onTestProcessingConnection={() =>
-                session.editor.testPostProcessingConnection(session.editor.applied, "")}
-              disabled={quickSettingsDisabled || session.editor.saving}
-              {onOpenServerSettings}
-              {onOpenProcessingSettings}
-              {onOpenAudioSettings}
-              onOpenDeliverySettings={onOpenGeneralSettings}
-            />
-          </div>
-
-          <div
-            class="feed"
-            id="pane-transcripts"
-            role={stacked ? "tabpanel" : undefined}
-            aria-labelledby={stacked ? "pane-tab-transcripts" : undefined}
-            hidden={stacked && pane !== "transcripts"}
-          >
-            <HistoryPanel
-              enabled={session.editor.applied?.historyEnabled ?? false}
-              entries={session.history.entries}
-              fileStatus={session.files.status}
-              fileHistoryGeneration={session.files.historyGeneration}
-              onOpenSettings={onOpenHistorySettings}
-              onCopy={(id) => session.history.copyHistoryEntry(id)}
-              onCopyVersion={(id, version) => session.history.copyHistoryEntryVersion(id, version)}
-              onDelete={(id) => session.history.deleteHistoryEntry(id)}
-              onCopyFile={() => session.files.copyFileTranscript()}
-              ttsEnabled={runtimeSettings?.textToSpeech.enabled ?? false}
-              ttsAvailable={!voiceActive && !fileWorking}
-              ttsStatus={session.speech.status}
-              onListen={(id, version) => session.speech.listenHistoryEntry(id, version)}
-              onListenFile={() => session.speech.listenFileTranscript()}
-              onPauseTTS={() => session.speech.pauseTTS()}
-              onResumeTTS={() => session.speech.resumeTTS()}
-              onRestartTTS={() => session.speech.restartTTS()}
-              onStopTTS={() => session.speech.stopTTS()}
-              onSaveTTS={() => session.speech.saveTTSAudio()}
-              onClearTTS={() => session.speech.clearTTSAudio()}
-              ttsWorkspaceVisible={inputMode === "tts"}
-              collapsible={!stacked}
-            />
-          </div>
-        </div>
       {/if}
     {:else}
       <div class="columns">
@@ -346,120 +389,28 @@
 </main>
 
 <style>
-  /* The container is the padding-free wrapper, so the query measures the
-     window rather than the window minus gutters. */
   .home {
-    container-type: inline-size;
     display: flex;
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
   }
   .body {
     display: flex;
-    min-height: 0;
     flex: 1;
     flex-direction: column;
+    gap: 0.875rem;
     padding: 0.875rem 1rem 1rem;
+  }
+  .history-area {
+    display: flex;
+    flex-direction: column;
+    height: 24rem;
+    min-height: 0;
   }
   .columns {
     display: flex;
-    min-height: 0;
-    flex: 1;
     gap: 0.875rem;
-  }
-  /*
-   * The rack is the fixed column so the feed absorbs every pixel the window
-   * gains, and it scrolls on its own: at the 560px minimum height the four
-   * modules are taller than the space below the transport.
-   */
-  .rack {
-    display: flex;
-    width: 23.25rem;
-    flex-shrink: 0;
-    min-height: 0;
-    min-width: 0;
-    flex-direction: column;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-  .feed {
-    display: flex;
-    min-height: 0;
-    min-width: 0;
-    flex: 1;
-    flex-direction: column;
-  }
-
-  /*
-   * Narrow, the two columns become two panes behind a switcher instead of a
-   * stack. Stacked, the transcript list sits under four rack modules: the
-   * thing you opened the window to read is the thing you have to scroll past
-   * everything else to reach. As panes they are peers, and each one still owns
-   * the full height and scrolls on its own.
-   */
-  @container (max-width: 959px) {
-    /* The column direction is the fallback for the frame before the width
-       binding reports: without it the two panes would briefly sit side by side
-       in a 560px window. */
-    .columns {
-      flex-direction: column;
-    }
-    .rack {
-      width: auto;
-      flex: 1;
-    }
-  }
-
-  .switcher {
-    display: flex;
-    flex: 0 0 auto;
-    gap: 0.25rem;
-    padding-bottom: 0.625rem;
-  }
-  .pane-tab {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    height: 1.875rem;
-    padding: 0 0.75rem;
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
-    font-size: 0.781rem;
-    color: var(--muted-foreground);
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
-  }
-  .pane-tab:hover {
-    background-color: var(--subtle-fill-hover);
-    color: var(--foreground);
-  }
-  .pane-tab[aria-selected="true"] {
-    border-color: var(--hairline);
-    background-color: var(--layer-fill);
-    box-shadow: none;
-    color: var(--foreground);
-    font-weight: 500;
-  }
-  .pane-tab:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 1px;
-  }
-  .count {
-    font-size: 0.594rem;
-    color: var(--ink-quiet);
-  }
-  /* Both panes stay mounted so switching keeps scroll position and in-flight
-     drafts; the attribute has to beat the column's own display rule. */
-  .rack[hidden],
-  .feed[hidden] {
-    display: none;
-  }
-  @container (max-width: 559px) {
-    .body {
-      padding: 0.75rem 0.75rem 0.875rem;
-    }
   }
 </style>

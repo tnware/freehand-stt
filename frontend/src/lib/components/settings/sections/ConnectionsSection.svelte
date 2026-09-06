@@ -37,8 +37,8 @@
   const busy = $derived(editor.saving || editor.managedConnectionTesting);
   const roles = [
     { id: Purpose.Transcription, label: "Transcription" },
-    { id: Purpose.Cleanup, label: "Post-processing" },
-    { id: Purpose.Speech, label: "Speech playback" },
+    { id: Purpose.Cleanup, label: "Cleanup" },
+    { id: Purpose.Speech, label: "Text to speech" },
   ];
   const roleLabel = (p: Purpose) => roles.find((r) => r.id === p)?.label ?? "Connection";
   const profiles = $derived.by(() => {
@@ -142,8 +142,8 @@
 
 <p class="text-xs leading-relaxed text-muted-foreground">
   Save the servers Freehand can connect to here. Then choose a connection and model in
-  Transcription, Post-processing, or Speech playback. Creating or duplicating a connection does not
-  activate it.
+  Transcription, Cleanup, or Text to speech. Creating or duplicating a connection does not activate
+  it.
 </p>
 {#if form}
   <form

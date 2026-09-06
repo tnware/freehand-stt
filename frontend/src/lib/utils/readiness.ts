@@ -47,8 +47,9 @@ export function appReadiness(
   connection: ConnectionResult | null,
   devices: Device[],
   devicesLoading: boolean,
+  task: "voice" | "file" = "voice",
 ): Readiness {
-  const initialSetup = !settings.setupCompleted;
+  const initialSetup = task === "voice" && !settings.setupCompleted;
   const serverLoadedModel = usesServerLoadedModel(settings);
   const serverConfigured = Boolean(
     settings.baseURL.trim() && (serverLoadedModel || settings.model.trim()),
@@ -66,7 +67,7 @@ export function appReadiness(
   const connectionVerified =
     connection !== null && connectionSucceeded(connection);
 
-  const steps: ReadinessStep[] = [
+  const allSteps: ReadinessStep[] = [
     {
       id: "server",
       label: "Speech-to-text server",
@@ -143,6 +144,7 @@ export function appReadiness(
     },
   ];
 
+  const steps = task === "file" ? allSteps.filter((step) => step.id !== "microphone" && step.id !== "shortcut") : allSteps;
   const blockers = steps.filter(
     (step) => step.blocking && step.status !== "complete",
   );

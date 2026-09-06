@@ -24,28 +24,30 @@
   }
 </script>
 
-<ValueRow
-  {id}
-  label="Model profile"
-  hint={selected?.description ?? "This model profile is unavailable for the selected connection."}
->
-  {#snippet control()}
-    {#if profiles.length === 1 && selected}
-      <div class="flex justify-end"><Badge {id} variant="outline">{selected.name}</Badge></div>
-    {:else}
-      <Select.Root type="single" value={value || ID.Generic} onValueChange={select} {disabled}>
-        <Select.Trigger {id} class="w-full" aria-label="Model profile">
-          {selected?.name ?? "Choose model profile"}
-        </Select.Trigger>
-        <Select.Content>
-          {#each profiles as profile (profile.id)}
-            <Select.Item value={profile.id} label={profile.name}>{profile.name}</Select.Item>
-          {/each}
-        </Select.Content>
-      </Select.Root>
-    {/if}
-  {/snippet}
-</ValueRow>
+{#if profiles.length !== 1 || !selected || selected.id !== ID.Generic}
+  <ValueRow
+    {id}
+    label="Model profile"
+    hint={selected?.description ?? "This model profile is unavailable for the selected connection."}
+  >
+    {#snippet control()}
+      {#if profiles.length === 1 && selected}
+        <div class="flex justify-end"><Badge {id} variant="outline">{selected.name}</Badge></div>
+      {:else}
+        <Select.Root type="single" value={value || ID.Generic} onValueChange={select} {disabled}>
+          <Select.Trigger {id} class="w-full" aria-label="Model profile">
+            {selected?.name ?? "Choose model profile"}
+          </Select.Trigger>
+          <Select.Content>
+            {#each profiles as profile (profile.id)}
+              <Select.Item value={profile.id} label={profile.name}>{profile.name}</Select.Item>
+            {/each}
+          </Select.Content>
+        </Select.Root>
+      {/if}
+    {/snippet}
+  </ValueRow>
+{/if}
 {#if selected?.language || selected?.reasoningOffRequired}
   <div class="flex flex-wrap items-center gap-2 px-5 pb-4 text-xs text-muted-foreground">
     {#if selected.language}<Badge variant="outline"

@@ -32,6 +32,7 @@
   import { cn } from "$lib/utils";
 
   let {
+    showCapture = true,
     settings,
     devices,
     processingProfiles,
@@ -54,6 +55,7 @@
     disabled = false,
   }: {
     /** Applied settings: every edit in this rack is persisted immediately. */
+    showCapture?: boolean;
     settings: Settings;
     devices: Device[];
     processingProfiles: ProfileDescriptor[];
@@ -116,11 +118,6 @@
       ...(processingConnection?.modelIDs ?? []),
     ]),
   ]);
-  const transcriptionModelProfile = $derived(
-    settings.modelProfiles.transcription?.find(
-      (p) => p.id === (settings.modelProfile || "generic"),
-    ),
-  );
   const selectedProcessingProfile = $derived(
     processingProfiles.find((profile) => profile.id === settings.postProcessing.preset),
   );
@@ -266,14 +263,14 @@
 
   const rackAnnouncement = $derived.by(() => {
     if (sttTesting) return "Testing speech-to-text connection.";
-    if (processingTesting) return "Testing post-processing connection.";
+    if (processingTesting) return "Testing cleanup connection.";
     if (pending.some((field) => panelFields.includes(field))) return "Saving quick settings.";
     if (!savedField || !panelFields.includes(savedField)) return "";
     if (savedField === "stt-model") return "Speech-to-text model saved.";
-    if (savedField === "processing-model") return "Post-processing model saved.";
+    if (savedField === "processing-model") return "Cleanup model saved.";
     if (savedField === "processing-profile") return "Cleanup model profile saved.";
-    if (savedField === "processing-enabled") return "Post-processing preference saved.";
-    if (savedField === "processing-controls") return "Post-processing controls saved.";
+    if (savedField === "processing-enabled") return "Cleanup preference saved.";
+    if (savedField === "processing-controls") return "Cleanup controls saved.";
     return "";
   });
 </script>
@@ -298,16 +295,18 @@
     {rackAnnouncement}
   </span>
 
-  <QuickControls
-    {settings}
-    {devices}
-    {pending}
-    {savedField}
-    {onUpdate}
-    {onOpenAudioSettings}
-    {onOpenDeliverySettings}
-    {disabled}
-  />
+  {#if showCapture}
+    <QuickControls
+      {settings}
+      {devices}
+      {pending}
+      {savedField}
+      {onUpdate}
+      {onOpenAudioSettings}
+      {onOpenDeliverySettings}
+      {disabled}
+    />
+  {/if}
 
   <RackModule
     label="Speech to text"
@@ -408,9 +407,6 @@
         {/if}
       {/snippet}
       {@render field("Model", "quick-stt-model", sttModelMeta, sttModelControl)}
-      <p class="text-[11px] text-muted-foreground">
-        Model profile · {transcriptionModelProfile?.name ?? "Generic"}
-      </p>
     </div>
   </RackModule>
 

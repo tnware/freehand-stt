@@ -78,11 +78,11 @@
 <div class="flex flex-col gap-4">
   <SettingsCard>
     <SettingRow
-      title="Enable speech playback"
+      title="Enable text to speech"
       description="Add on-demand Listen controls to completed transcripts. Nothing is read automatically."
       >{#snippet control()}<Switch
           bind:checked={settings.textToSpeech.enabled}
-          aria-label="Enable speech playback"
+          aria-label="Enable text to speech"
         />{/snippet}</SettingRow
     >
     <RuntimeModelPicker

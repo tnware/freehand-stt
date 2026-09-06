@@ -44,12 +44,12 @@
       <h2 class="text-[26px] leading-tight font-semibold tracking-[-0.015em]">
         {readiness.initialSetup
           ? `${total} checks and you can dictate anywhere.`
-          : "A requirement that was working is unavailable."}
+          : "Set up this task to continue."}
       </h2>
       <p class="max-w-[60ch] text-[13.5px] leading-relaxed text-secondary-foreground">
         {readiness.initialSetup
           ? "Choose a speech service you run or trust. Test connection reads metadata without sending audio or running a model. After setup, Freehand checks the saved speech connection automatically. Update checks can be disabled in Settings → General."
-          : "Your settings and transcripts are unchanged. Fix the step below, or continue and Freehand will keep working with what is still available."}
+          : "Review the requirements below. Other tasks remain available from the navigation above."}
       </p>
     </div>
 
