@@ -105,8 +105,8 @@ func TestMainWindowUsesNativeChrome(t *testing.T) {
 	}
 	assertWindowThemeColour(t, options.Windows.CustomTheme.LightModeActive, "light active", [3]uint8{247, 248, 250}, [3]uint8{15, 17, 21}, [3]uint8{229, 231, 235})
 	assertWindowThemeColour(t, options.Windows.CustomTheme.LightModeInactive, "light inactive", [3]uint8{247, 248, 250}, [3]uint8{100, 116, 139}, [3]uint8{229, 231, 235})
-	assertWindowThemeColour(t, options.Windows.CustomTheme.DarkModeActive, "dark active", [3]uint8{15, 17, 21}, [3]uint8{247, 248, 250}, [3]uint8{42, 48, 57})
-	assertWindowThemeColour(t, options.Windows.CustomTheme.DarkModeInactive, "dark inactive", [3]uint8{15, 17, 21}, [3]uint8{148, 163, 184}, [3]uint8{42, 48, 57})
+	assertWindowThemeColour(t, options.Windows.CustomTheme.DarkModeActive, "dark active", [3]uint8{17, 23, 34}, [3]uint8{231, 236, 243}, [3]uint8{53, 66, 86})
+	assertWindowThemeColour(t, options.Windows.CustomTheme.DarkModeInactive, "dark inactive", [3]uint8{17, 23, 34}, [3]uint8{147, 160, 178}, [3]uint8{53, 66, 86})
 }
 
 func assertWindowThemeColour(t *testing.T, theme *application.WindowTheme, name string, titleBar, titleText, border [3]uint8) {
@@ -151,14 +151,14 @@ func TestMainWindowDeniesUnusedWebViewCapabilities(t *testing.T) {
 
 func TestMainWindowUsesDarkSolidBackground(t *testing.T) {
 	options := mainWindowOptions(false, true, false, config.AppearanceModeSystem, true)
-	if options.BackgroundColour != application.NewRGB(15, 17, 21) {
-		t.Fatalf("default dark background = %#v, want charcoal", options.BackgroundColour)
+	if options.BackgroundColour != application.NewRGB(17, 23, 34) {
+		t.Fatalf("default dark background = %#v, want brand navy", options.BackgroundColour)
 	}
 }
 
 func TestMainWindowCanOverrideSystemAppearanceWithoutMica(t *testing.T) {
 	dark := mainWindowOptions(false, true, false, config.AppearanceModeDark, false)
-	if dark.Windows.Theme != application.Dark || dark.BackgroundColour != application.NewRGB(15, 17, 21) {
+	if dark.Windows.Theme != application.Dark || dark.BackgroundColour != application.NewRGB(17, 23, 34) {
 		t.Fatalf("forced dark appearance = theme %d background %#v", dark.Windows.Theme, dark.BackgroundColour)
 	}
 
