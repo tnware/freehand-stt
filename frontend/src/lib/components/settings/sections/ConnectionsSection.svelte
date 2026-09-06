@@ -231,6 +231,10 @@
             spellcheck={false}
           />{/snippet}
       </ValueRow>
+      {#if !form.creating}<p class="px-5 pb-3 text-xs leading-relaxed text-muted-foreground">
+          Changing the base URL or backend profile clears this connection’s remembered models and
+          active model choices. Renames and authentication changes keep them.
+        </p>{/if}
       <SettingRow
         title="Allow insecure HTTP"
         description="Required for an HTTP endpoint, including localhost. HTTPS keeps credentials and requests encrypted in transit."

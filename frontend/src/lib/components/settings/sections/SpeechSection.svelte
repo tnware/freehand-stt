@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Purpose } from "$bindings/savedconnection";
+  import { rememberedModels } from "$lib/utils/modelSettings";
   import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
   import { ID } from "$bindings/compatibility";
   import RuntimeModelPicker from "$lib/components/settings/RuntimeModelPicker.svelte";
@@ -24,6 +26,9 @@
     connection,
     connectionBusy = false,
     canPreview = true,
+    draftModels = [],
+    onChooseModel,
+    onForgetModel,
     onTestConnection,
     onPreview,
     onStop,
@@ -36,6 +41,9 @@
     connection: ConnectionResult | null;
     connectionBusy?: boolean;
     canPreview?: boolean;
+    draftModels?: string[];
+    onChooseModel: (model: string) => boolean;
+    onForgetModel: () => void;
     onTestConnection: () => void;
     onPreview: () => void;
     onStop: () => void;
@@ -69,7 +77,11 @@
     >
     <RuntimeModelPicker
       id="tts-model"
-      bind:value={settings.textToSpeech.model}
+      value={settings.textToSpeech.model}
+      {draftModels}
+      onChoose={onChooseModel}
+      onForget={onForgetModel}
+      savedModels={rememberedModels(settings, Purpose.Speech).map((e) => e.model)}
       models={connection?.modelIDs ?? []}
       busy={connectionBusy}
       onDiscover={onTestConnection}

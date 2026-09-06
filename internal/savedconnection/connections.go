@@ -33,15 +33,15 @@ const (
 const MaxPerPurpose = 32
 
 type Change struct {
-	Action        Action    `json:"action"`
-	Details       *Details  `json:"details,omitempty"`
-	Uses          []Purpose `json:"uses,omitempty"`
-	Purpose       Purpose   `json:"purpose,omitempty"`
-	ID            string    `json:"id"`
-	Name          string    `json:"name"`
+	Action  Action    `json:"action"`
+	Details *Details  `json:"details,omitempty"`
+	Uses    []Purpose `json:"uses,omitempty"`
+	Purpose Purpose   `json:"purpose,omitempty"`
+	ID      string    `json:"id"`
+	Name    string    `json:"name"`
 }
 
-// Details are connection-scoped. Language and general workflow preferences remain operation-scoped.
+// Details are connection-scoped. Model preferences and workflow settings are separate.
 type Details struct {
 	CompatibilityProfile compatibility.ID          `json:"compatibilityProfile"`
 	BaseURL              string                    `json:"baseURL"`
@@ -107,7 +107,7 @@ func Extract(v config.Settings, p Purpose) Details {
 	return d
 }
 
-// Apply selects endpoint details. The settings owner validates shared options before committing.
+// Apply selects endpoint details. The settings owner validates model options before committing.
 func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 	switch p {
 	case Transcription:

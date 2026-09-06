@@ -19,7 +19,8 @@ independent while URL, profile, authentication, and credential reference are sha
 editing, duplication, deletion, endpoint/authentication/profile fields, and saved
 metadata tests. Creation is inactive; feature pages own active selection, model,
 language, presets, voice, and other runtime options. Fresh catalogs are empty.
-Selection clears the model and disables unconfigured optional features.
+Selection restores remembered model options for the connection and use; an
+unconfigured connection starts with defaults and disables optional features.
 The domain contract lives in
 `internal/savedconnection`; SQLite adapters remain in storage. The existing
 settings owner commits catalog mutations, active configuration, and credential
@@ -364,8 +365,30 @@ Generic defaults. Cleanup's existing `preset` column and JSON key already hold
 its model-profile ID; retaining those names preserves legacy import and saved
 choices without a second source of truth. The existing cleanup descriptor service
 supplies prompt/control metadata; shared catalog metadata supplies behavior names,
-capabilities, and requirements. Separate remembered preferences per model remain
-out of scope.
+capabilities, and requirements.
+
+`internal/modelsettings` defines the value-only, non-secret subset remembered for
+(connection ID, purpose, exact model ID). It excludes transport, credentials,
+feature enablement, capture policy, and timeouts. `internal/storage` owns typed
+sqlc queries for `remembered_models` and loads them with connection state. The
+settings owner's save lock coordinates changes; active settings, remembered
+options, connection selection, and credential references commit in one SQLite
+transaction. Failed commits do not publish a new in-memory catalog. The renderer
+receives only models for the selected connections, plus Go-owned defaults.
+
+Model selection restores a copied option draft; changing an ID never derives a
+profile from its spelling. The editor retains a draft per model while switching. Save submits a bounded
+batch of option edits with the active selection; the storage owner validates
+every edit against its selected connection and commits the whole batch atomically. Quick controls restore and save in their existing queue.
+Forget requests carry connection, purpose, and model identity and run through the
+same settings transaction. Removing the active model clears selection and disables
+features that require configuration. Captured jobs remain immutable.
+
+Connection URL/backend changes clear model preferences; renames and credential
+rotation preserve them. Copies start independently, removed uses discard their
+preferences, and connection deletion cascades. A bounded 32 models per use keeps
+catalogs finite; exceeding the limit fails atomically without eviction. A blank
+ID is permitted only for whisper.cpp's explicit server-loaded slot.
 
 ## Diagnostics boundary
 
@@ -399,7 +422,7 @@ The Win32 renderer queues all changes onto its locked message-loop thread, uses 
 
 Settings can request a presentation-only native preview through a narrow Wails binding. Draft presentation changes update the same renderer, real dictation preempts preview, Settings close stops it, and the applied saved configuration is restored. Preview can temporarily create a surface while the applied feature is disabled, but stopping it destroys that surface. Overlay creation remains a degraded optional capability: native failure is logged without failing dictation or rolling back the saved preference.
 
-The home-screen rack is a narrow immediate-save surface for STT and post-processing models, explicit processing-profile selection, trained S1-mini output controls, and the capture/delivery switches. It is composed of `RackModule` panels grouped as Speech to text, Cleanup, Capture and Delivery, so the main window and the Settings navigation name the same concerns identically. Each update starts from the backend-confirmed settings snapshot and changes only the named quick fields before calling the same transactional settings owner with no credential mutation. It must never save the full editable Settings-window draft, and it is disabled while that modeless window is visible. The rack uses the same active connection selector as feature settings, with separate links for editing settings. Connections exclusively owns endpoint credentials, authentication, HTTP policy, and provider profiles; custom instructions and runtime options remain on feature pages.
+The home-screen rack is a narrow immediate-save surface for STT and post-processing models, explicit processing-profile selection, trained S1-mini output controls, and the capture/delivery switches. It is composed of `RackModule` panels grouped as Speech to text, Cleanup, Capture and Delivery, so the main window and the Settings navigation name the same concerns identically. Each update starts from the backend-confirmed settings snapshot and restores remembered options when a model changes, then applies the named quick fields before calling the same transactional settings owner with no credential mutation. It must never save the full editable Settings-window draft, and it is disabled while that modeless window is visible. The rack uses the same active connection selector as feature settings, with separate links for editing settings. Connections exclusively owns endpoint credentials, authentication, HTTP policy, and provider profiles; custom instructions and runtime options remain on feature pages.
 
 The main renderer treats transcript-list disclosure as a presentation-only WebView preference. It is written to versioned local storage and falls back safely to open when storage is missing, malformed, or unavailable. The preference never enters the Go settings transaction and does not affect configuration, history retention, or runtime authority. The rack does not collapse: its modules are compact enough to stay open, and the rack column scrolls on its own at the minimum window height.
 

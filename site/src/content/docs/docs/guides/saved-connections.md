@@ -39,7 +39,8 @@ For first-time transcription setup, return to the readiness screen, explicitly
 
 **Save connection** updates only that connection. Editing an active connection
 applies its endpoint settings and key to new requests from **every feature using
-that server** in one save. Each feature keeps its own model and options. **Save feature settings** does not edit the saved
+that server** in one save. Renames and key changes retain model preferences;
+changing the URL or backend profile clears them and the active model choices. **Save feature settings** does not edit the saved
 connection. The home screen has the same active connection selectors. Its separate settings
 links open feature settings; model and other quick controls save runtime settings.
 
@@ -60,16 +61,17 @@ transcription; they do not get sent through cleanup or playback adapters.
 ## Switch, edit, duplicate, or delete
 
 - Choose an **Active connection** on a feature page to switch immediately.
-  A different connection clears that feature's model choice; cleanup and speech
-  playback turn off until configured and enabled again. Transcription needs its
-  setup completed again. Running jobs keep their captured settings and keys.
+  A different connection restores its last selected model and remembered options
+  for that feature. A connection without a remembered model starts with defaults;
+  cleanup and speech playback turn off until configured and enabled again, and
+  transcription needs its setup completed again. Running jobs keep their captured settings and keys.
 - Choose **Edit connection** to open the selected entry in Connections. Save or
   discard feature edits first. The **Back** button at the top returns to the
   feature you came from, or to the connection list when editing there. Saving
   returns to that feature too. Simply viewing a connection needs no save or
   discard. If you changed something, Back, Cancel, or choosing another section
   lets you keep editing or discard the connection edits.
-- **Duplicate** creates an inactive copy. Later edits and key replacements affect
+- **Duplicate** creates an inactive copy with no remembered model preferences. Later edits and key replacements affect
   only that copy. Rename it through **Edit** if needed.
 - **Delete** removes an inactive entry after confirmation. To delete an active
   entry, select another connection or **None** in every feature using it first.
@@ -79,11 +81,9 @@ transcription; they do not get sent through cleanup or playback adapters.
 New names must be unique across the connection library, with up to 32 available
 connections per feature. Upgrades preserve existing names and entries; duplicate
 URLs are not automatically merged because their authentication or uses may differ.
-Switching preserves language, voice, instructions, and provider options. If the
-new connection cannot accept an enabled provider option, the switch fails and
-keeps your current setup; adjust and save that option before switching.
-[Model profiles](../model-profiles/) describe each model’s behavior separately
-from the backend profile. Separate saved preferences for each model are future work.
+Language, voice, instructions, and provider options follow the remembered model
+for the selected connection and feature. See [Model profiles](../model-profiles/)
+for choosing, saving, and forgetting those preferences.
 
 ## Test and protect credentials
 

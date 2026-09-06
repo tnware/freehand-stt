@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { rememberedModels } from "$lib/utils/modelSettings";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Purpose, type Change } from "$bindings/savedconnection";
   import { usesServerLoadedModel } from "$lib/utils/compatibility";
@@ -103,8 +104,18 @@
 
   const serverLoadedModel = $derived(usesServerLoadedModel(settings));
   const processingEnabled = $derived(settings.postProcessing.enabled);
-  const discoveredModels = $derived(connection?.modelIDs ?? []);
-  const processingDiscoveredModels = $derived(processingConnection?.modelIDs ?? []);
+  const discoveredModels = $derived([
+    ...new Set([
+      ...rememberedModels(settings, Purpose.Transcription).map((e) => e.model),
+      ...(connection?.modelIDs ?? []),
+    ]),
+  ]);
+  const processingDiscoveredModels = $derived([
+    ...new Set([
+      ...rememberedModels(settings, Purpose.Cleanup).map((e) => e.model),
+      ...(processingConnection?.modelIDs ?? []),
+    ]),
+  ]);
   const transcriptionModelProfile = $derived(
     settings.modelProfiles.transcription?.find(
       (p) => p.id === (settings.modelProfile || "generic"),
@@ -372,7 +383,7 @@
             </Select.Trigger>
             <Select.Content class="max-h-72">
               <Select.Group>
-                <Select.Label>Discovered models</Select.Label>
+                <Select.Label>Remembered and discovered models</Select.Label>
                 {#each discoveredModels as model (model)}
                   <Select.Item value={model} label={model}>{model}</Select.Item>
                 {/each}
@@ -505,7 +516,7 @@
             </Select.Trigger>
             <Select.Content class="max-h-72">
               <Select.Group>
-                <Select.Label>Discovered models</Select.Label>
+                <Select.Label>Remembered and discovered models</Select.Label>
                 {#each processingDiscoveredModels as model (model)}
                   <Select.Item value={model} label={model}>{model}</Select.Item>
                 {/each}

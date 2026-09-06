@@ -45,6 +45,6 @@
   <p class="text-[11px] leading-relaxed text-muted-foreground">
     {dirty
       ? "Save or discard feature settings before switching connections."
-      : "Switching applies immediately and clears this feature’s model choice. Options below save to this feature, not to the connection."}
+      : "Switching applies immediately and restores this connection’s remembered model and options when available. Save option changes below for the selected model."}
   </p>
 </div>

@@ -194,7 +194,7 @@ func TestConnectionValidationAndEmptyCatalog(t *testing.T) {
 		t.Fatal("last connection not cleared")
 	}
 }
-func TestConnectionSwitchPreservesIncompatibleSharedOptions(t *testing.T) {
+func TestConnectionSwitchRestoresOptionsForEachBackend(t *testing.T) {
 	_, svc := connectionService(t)
 	original := svc.GetSettings()
 	id := original.SavedConnections.Selected[savedconnection.Transcription]
@@ -212,13 +212,15 @@ func TestConnectionSwitchPreservesIncompatibleSharedOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: id}}); err == nil {
-		t.Fatal("unsupported hotwords accepted")
+	got := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: id})
+	if got.TranscriptionOptions.Hotwords != "" {
+		t.Fatal("hotwords leaked to another backend")
 	}
-	got := svc.GetSettings()
-	if got.TranscriptionOptions.Hotwords != "Freehand" || !reflect.DeepEqual(got.SavedConnections, saved.SavedConnections) {
-		t.Fatal("failed switch lost values")
+	got = changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: saved.SavedConnections.Selected[savedconnection.Transcription]})
+	if got.TranscriptionOptions.Hotwords != "Freehand" || got.Model != "whisper" {
+		t.Fatal("returning to the connection lost model options")
 	}
+
 }
 
 func TestReusableConnectionSharesTransportAndKeyAcrossFeatures(t *testing.T) {
@@ -260,8 +262,8 @@ func TestReusableConnectionSharesTransportAndKeyAcrossFeatures(t *testing.T) {
 	if updated.BaseURL != d.BaseURL || updated.PostProcessing.BaseURL != d.BaseURL || updated.TextToSpeech.BaseURL != d.BaseURL {
 		t.Fatal("shared endpoint did not update every active use")
 	}
-	if updated.Model != "stt-model" || updated.PostProcessing.Model != "chat-model" || updated.TextToSpeech.Model != "tts-model" {
-		t.Fatal("edit changed feature models")
+	if updated.Model != "" || updated.PostProcessing.Model != "" || updated.TextToSpeech.Model != "" {
+		t.Fatal("endpoint change retained old feature models")
 	}
 	if captured.STTCredential != "shared-canary" || captured.Settings.BaseURL == d.BaseURL {
 		t.Fatal("captured request mutated")

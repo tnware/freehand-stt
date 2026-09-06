@@ -1,3 +1,5 @@
+import { modelOptions } from "$lib/utils/modelSettings";
+import { Purpose } from "$bindings/savedconnection";
 import { ID } from "$bindings/compatibility";
 import { ID as ModelProfileID } from "$bindings/modelprofile";
 import { CancellablePromise } from "@wailsio/runtime";
@@ -54,7 +56,8 @@ vi.mock("$bindings/tts/service", () => ({
 
 const settings: Settings = {
   modelProfile: ModelProfileID.Generic,
-  modelProfiles: {transcription: [], postProcessing: [], speech: []},
+  rememberedModels: { entries: [], defaults: {} },
+  modelProfiles: { transcription: [], postProcessing: [], speech: [] },
   transcriptionOptions: {
     prompt: "",
     hotwords: "",
@@ -146,6 +149,11 @@ const settings: Settings = {
   holdAvailabilityReason: "",
   micaActive: false,
   appearanceModeActive: AppearanceMode.AppearanceModeSystem,
+};
+settings.rememberedModels.defaults = {
+  [Purpose.Transcription]: modelOptions(settings, Purpose.Transcription),
+  [Purpose.Cleanup]: modelOptions(settings, Purpose.Cleanup),
+  [Purpose.Speech]: modelOptions(settings, Purpose.Speech),
 };
 
 const processingProfiles: ProfileDescriptor[] = [
@@ -251,8 +259,7 @@ const serviceWithStatus = (
   },
   settings: {
     GetSettings: () => CancellablePromise.resolve(settings),
-    GetPostProcessingProfiles: () =>
-      CancellablePromise.resolve(processingProfiles),
+    GetPostProcessingProfiles: () => CancellablePromise.resolve(processingProfiles),
     RetryConfiguration: () => CancellablePromise.resolve(settings),
     ResetConfiguration: () => CancellablePromise.resolve(settings),
     SaveSettings: () => CancellablePromise.resolve(settings),
@@ -265,10 +272,8 @@ const serviceWithStatus = (
   connection: {
     TestSavedConnection: () => CancellablePromise.resolve(connectionResult),
     TestConnection: () => CancellablePromise.resolve(connectionResult),
-    TestPostProcessingConnection: () =>
-      CancellablePromise.resolve(connectionResult),
-    TestTextToSpeechConnection: () =>
-      CancellablePromise.resolve(connectionResult),
+    TestPostProcessingConnection: () => CancellablePromise.resolve(connectionResult),
+    TestTextToSpeechConnection: () => CancellablePromise.resolve(connectionResult),
     ...overrides.connection,
   },
   history: {

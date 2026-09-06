@@ -302,3 +302,27 @@ selection, S1-mini prompt/reasoning/language regressions, and migration from v5
 with existing selections and credential references. New specialized model
 profiles need per-role request fixtures and explicit runtime qualification; a
 catalog entry alone does not establish support. Do not probe model inventories.
+
+## Remembered model acceptance
+
+- Save distinct model choices for transcription, cleanup, and speech on one
+  shared connection. Switch away and back; verify profile, language, instruction,
+  trained controls, voice, and speed restore only for the matching use and model.
+- A new model ID starts from Generic defaults. Verify changing a name does not
+  infer S1-mini, and model edits leave capture settings and timeouts unchanged.
+- Switch freely between modified model drafts, save all edited options together,
+  and test invalid batch rollback. Discard must restore applied values and clear
+  every model draft; saved catalog objects must not mutate through a draft.
+- Verify quick model controls restore options before saving, without discovery
+  or inference. Settings pickers also list remembered IDs without a server probe.
+- Switch connections, restart, rename, rotate a key, change the URL/backend,
+  duplicate, remove an inactive use, and delete: check the documented retention
+  rules. Forgetting must clear active selection and survive restart.
+- Exercise version-six upgrades, failed SQL saves, stale forget requests, role
+  validation, and the model count bound with real SQLite. Previously captured
+  request settings and credentials must remain unchanged.
+
+Browser fixtures cover presentation and editor behavior only. Native Windows
+execution separately covers SQLite, migration, settings transactions, and builds;
+interactive Windows acceptance remains a user review step. No inference inventory
+probes are part of these checks.

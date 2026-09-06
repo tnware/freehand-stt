@@ -75,6 +75,28 @@ type PreferencesSetting struct {
 	SegmentSilenceMs        int64
 }
 
+type RememberedModel struct {
+	ConnectionID        string
+	Purpose             string
+	Model               string
+	Selected            int64
+	Profile             string
+	Language            string
+	Prompt              string
+	Hotwords            string
+	TemperatureOverride int64
+	Temperature         float64
+	LimitOutputTokens   int64
+	MaxOutputTokens     int64
+	DisableReasoning    int64
+	SystemPrompt        string
+	Styling             string
+	Structure           string
+	Context             string
+	Voice               string
+	Speed               float64
+}
+
 type RequestHeader struct {
 	SettingsID int64
 	Name       string

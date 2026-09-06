@@ -15,6 +15,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
+	"github.com/tnware/freehand-stt/internal/modelsettings"
 	"github.com/tnware/freehand-stt/internal/postprocess"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/speechlanguage"
@@ -24,6 +25,7 @@ import (
 // SettingsDTO is the renderer-safe settings snapshot. It reports credential
 // presence and native capability state but never returns credential values.
 type SettingsDTO struct {
+	RememberedModels       modelsettings.Catalog   `json:"rememberedModels"`
 	ModelProfiles          modelprofile.Catalog    `json:"modelProfiles"`
 	SavedConnections       savedconnection.Catalog `json:"savedConnections"`
 	TranscriptionLanguages []speechlanguage.Option `json:"transcriptionLanguages"`
@@ -53,6 +55,8 @@ type ConfigurationStatus struct {
 // SaveSettingsRequest groups the persisted settings and transient credential
 // changes into one binding argument. Credential drafts are never returned.
 type SaveSettingsRequest struct {
+	ModelEdits                    []modelsettings.Edit               `json:"modelEdits,omitempty"`
+	ForgetModel                   *modelsettings.Key                 `json:"forgetModel,omitempty"`
 	ConnectionCredentialDraft     string                             `json:"connectionCredentialDraft,omitempty"`
 	ClearConnectionCredential     bool                               `json:"clearConnectionCredential"`
 	ExpectedConnections           map[savedconnection.Purpose]string `json:"expectedConnections,omitempty"`
@@ -313,7 +317,12 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 	}); ok {
 		catalog = store.ConnectionCatalog()
 	}
+	models := modelsettings.Catalog{Entries: []modelsettings.Entry{}, Defaults: modelsettings.Defaults()}
+	if store, ok := s.store.(interface{ RememberedModels() modelsettings.Catalog }); ok {
+		models = store.RememberedModels()
+	}
 	return SettingsDTO{
+		RememberedModels:                   models,
 		SavedConnections:                   catalog,
 		CompatibilityProfiles:              compatibility.Profiles(),
 		ModelProfiles:                      modelprofile.Profiles(v.CompatibilityProfile, v.PostProcessing.CompatibilityProfile, v.TextToSpeech.CompatibilityProfile),
@@ -406,6 +415,9 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 			}
 		}
 
+		if request.ForgetModel != nil && request.ConnectionChange != nil {
+			return SettingsDTO{}, errors.New("model and connection changes must be separate")
+		}
 		if change := request.ConnectionChange; change != nil {
 			store, ok := s.store.(interface {
 				BeginConnectionChange(savedconnection.Change, config.Settings) (config.Settings, error)
@@ -453,6 +465,36 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 				defer staged.DiscardCredentialChanges()
 			}
 		}
+		if key := request.ForgetModel; key != nil {
+			store, ok := s.store.(interface {
+				BeginForgetModel(modelsettings.Key, config.Settings) (config.Settings, error)
+			})
+			if !ok {
+				return SettingsDTO{}, errors.New("remembered models are unavailable")
+			}
+			var forgetErr error
+			v, forgetErr = store.BeginForgetModel(*key, s.current())
+			if forgetErr != nil {
+				return SettingsDTO{}, forgetErr
+			}
+		}
+		if len(request.ModelEdits) > 0 {
+			if request.ConnectionChange != nil || request.ForgetModel != nil {
+				return SettingsDTO{}, errors.New("model edits must be saved separately from connection changes")
+			}
+			store, ok := s.store.(interface {
+				BeginModelEdits([]modelsettings.Edit) error
+			})
+			if !ok {
+				return SettingsDTO{}, errors.New("remembered models are unavailable")
+			}
+			if err := store.BeginModelEdits(request.ModelEdits); err != nil {
+				return SettingsDTO{}, err
+			}
+		}
+		v.Model = strings.TrimSpace(v.Model)
+		v.PostProcessing.Model = strings.TrimSpace(v.PostProcessing.Model)
+		v.TextToSpeech.Model = strings.TrimSpace(v.TextToSpeech.Model)
 		if validateErr := config.Validate(v); validateErr != nil {
 			return SettingsDTO{}, validateErr
 		}

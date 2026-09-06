@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Purpose } from "$bindings/savedconnection";
+  import { rememberedModels } from "$lib/utils/modelSettings";
   import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
   import LanguagePicker from "$lib/components/settings/LanguagePicker.svelte";
   import RuntimeModelPicker from "$lib/components/settings/RuntimeModelPicker.svelte";
@@ -14,11 +16,17 @@
     settings = $bindable(),
     connection,
     busy = false,
+    draftModels = [],
+    onChooseModel,
+    onForgetModel,
     onTestConnection,
   }: {
     settings: Settings;
     connection: ConnectionResult | null;
     busy?: boolean;
+    draftModels?: string[];
+    onChooseModel: (model: string) => boolean;
+    onForgetModel: () => void;
     onTestConnection: () => void;
   } = $props();
   const compatibility = $derived(
@@ -35,7 +43,11 @@
 <SettingsCard>
   <RuntimeModelPicker
     id="model"
-    bind:value={settings.model}
+    value={settings.model}
+    {draftModels}
+    onChoose={onChooseModel}
+    onForget={onForgetModel}
+    savedModels={rememberedModels(settings, Purpose.Transcription).map((e) => e.model)}
     models={connection?.modelIDs ?? []}
     serverLoaded={!!compatibility?.capabilities.serverLoadedModel}
     {busy}

@@ -47,6 +47,9 @@ Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are 
 - `internal/compatibility` owns server APIs; `internal/modelprofile` owns explicit
   model behavior and intersects its capabilities with the selected backend.
   Generic is a baseline, not proof of support by every deployed model.
+- `internal/modelsettings` owns the non-secret per-connection/use/model option
+  subset. Persist it with active settings through the existing settings transaction
+  and sqlc queries; never store transport or credentials in model preferences.
 - Model profiles belong to feature settings, independently of reusable server
   connections. Do not infer them from model IDs, URLs, or model inventories.
 - Add specialized profiles only with a justified, qualified per-role contract,
