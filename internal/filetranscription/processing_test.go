@@ -1,9 +1,12 @@
 package filetranscription
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -126,8 +129,9 @@ func TestFileProcessingOutcomes(t *testing.T) {
 					return &http.Response{StatusCode: status, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(body)), Request: r}, nil
 				})
 				var processor transcriptProcessor
+				var processingLogs bytes.Buffer
 				if mode != "unavailable" {
-					processor = postprocess.New(client, nil)
+					processor = postprocess.New(client, slog.New(slog.NewTextHandler(&processingLogs, nil)))
 				}
 				input := &processingInput{}
 				service := NewService(settings.Source(func() config.Settings { return cfg }), settings.ProfileSource(func() (settings.RequestProfile, error) {
@@ -159,6 +163,13 @@ func TestFileProcessingOutcomes(t *testing.T) {
 					wantStatus = history.HistoryProcessingNotRequested
 				}
 				status := service.CurrentFileTranscription()
+				if mode == "success" {
+					for _, field := range []string{"workflow=file", fmt.Sprintf("generation=%d", status.Generation)} {
+						if strings.Count(processingLogs.String(), field) != 2 {
+							t.Fatalf("cleanup start/end lost %s: %s", field, processingLogs.String())
+						}
+					}
+				}
 				if status.Phase != FileTranscriptionCompleted || status.Transcript != wantText || !status.CanCopy || !status.CanStart || status.CanCancel {
 					t.Fatalf("status = %+v", status)
 				}

@@ -146,6 +146,25 @@ func (s *Service) log() *slog.Logger {
 	return diagnostics.DiscardLogger()
 }
 
+// metadataLogOutcome uses the probe's bounded result taxonomy. Capture ctxErr
+// before the operation's deferred cancel: cleanup must not turn a failure into
+// cancellation, and cancellation after a successful result must not hide it.
+// This affects diagnostics only, not the renderer's existing result contract.
+func metadataLogOutcome(errorKind string, ctxErr error) (slog.Level, string, string) {
+	if errorKind == "" {
+		return slog.LevelInfo, "completed", ""
+	}
+	if errors.Is(ctxErr, context.Canceled) {
+		return slog.LevelInfo, "cancelled", diagnostics.ErrorKind(ctxErr)
+	}
+	switch errorKind {
+	case "invalid_settings", "invalid_url", "credential_missing", "unsupported":
+		return slog.LevelWarn, "failed", errorKind
+	default:
+		return slog.LevelError, "failed", errorKind
+	}
+}
+
 func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -174,6 +193,8 @@ func (s *Service) ServiceShutdown() error {
 
 // TestConnection probes STT health or model discovery without invoking a model.
 func (s *Service) TestConnection(request ConnectionTestRequest) (result ConnectionResult) {
+	started := time.Now()
+	var operationErr error
 	defer func() {
 		result.Checks = assess(result, savedconnection.Transcription, request.CompatibilityProfile, request.Model, request.Options, request.AuthenticationMode)
 	}()
@@ -208,14 +229,16 @@ func (s *Service) TestConnection(request ConnectionTestRequest) (result Connecti
 		"credential_source", credentialSource,
 	)
 	defer func() {
-		s.log().Info("connection test completed",
+		level, outcome, errorKind := metadataLogOutcome(string(result.ErrorKind), operationErr)
+		s.log().Log(context.Background(), level, "connection test "+outcome,
+			"outcome", outcome, "duration_ms", time.Since(started).Milliseconds(),
 			"server", server,
 			"probe", result.Probe,
 			"credential_source", credentialSource,
 			"reachable", result.Reachable,
 			"http_status", result.HTTPStatus,
 			"latency_ms", result.LatencyMilliseconds,
-			"error_kind", result.ErrorKind,
+			"error_kind", errorKind,
 			"validation_error", validationError,
 			"model_presence", result.ModelPresence,
 			"model_count", len(result.ModelIDs),
@@ -249,6 +272,7 @@ func (s *Service) TestConnection(request ConnectionTestRequest) (result Connecti
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
 	metadata := s.client.TestMetadata(ctx, request.BaseURL, healthPath, key, request.Model, request.Headers)
+	operationErr = ctx.Err()
 	result.Reachable = metadata.Reachable
 	result.Probe = ConnectionProbe(metadata.Probe)
 	result.RequestedURL = metadata.RequestedURL
@@ -263,6 +287,8 @@ func (s *Service) TestConnection(request ConnectionTestRequest) (result Connecti
 // TestPostProcessingConnection probes post-processing model discovery without
 // sending transcript content or invoking a model.
 func (s *Service) TestPostProcessingConnection(request PostProcessingConnectionTestRequest) (result ConnectionResult) {
+	started := time.Now()
+	var operationErr error
 	defer func() {
 		result.Checks = assess(result, savedconnection.Cleanup, request.CompatibilityProfile, request.Model, request.Options, config.AuthenticationModeNone)
 	}()
@@ -289,10 +315,12 @@ func (s *Service) TestPostProcessingConnection(request PostProcessingConnectionT
 	}
 	s.log().Info("post-processing connection test started", "server", server, "probe", result.Probe, "credential_source", credentialSource)
 	defer func() {
-		s.log().Info("post-processing connection test completed",
+		level, outcome, errorKind := metadataLogOutcome(string(result.ErrorKind), operationErr)
+		s.log().Log(context.Background(), level, "post-processing connection test "+outcome,
+			"outcome", outcome, "duration_ms", time.Since(started).Milliseconds(),
 			"server", server, "probe", result.Probe, "credential_source", credentialSource,
 			"reachable", result.Reachable, "http_status", result.HTTPStatus,
-			"latency_ms", result.LatencyMilliseconds, "error_kind", result.ErrorKind,
+			"latency_ms", result.LatencyMilliseconds, "error_kind", errorKind,
 			"validation_error", validationError, "model_presence", result.ModelPresence,
 			"model_count", len(result.ModelIDs),
 		)
@@ -327,6 +355,7 @@ func (s *Service) TestPostProcessingConnection(request PostProcessingConnectionT
 	result.ErrorKind = ConnectionErrorKind(metadata.ErrorKind)
 	result.ModelPresence = ModelPresence(metadata.ModelPresence)
 	result.ModelIDs = metadata.ModelIDs
+	operationErr = ctx.Err()
 	return result
 }
 
@@ -334,6 +363,8 @@ func (s *Service) TestPostProcessingConnection(request PostProcessingConnectionT
 // Voice discovery is intentionally absent because the compatible API does not
 // define a portable endpoint for it.
 func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestRequest) (result ConnectionResult) {
+	started := time.Now()
+	var operationErr error
 	defer func() {
 		result.Checks = assess(result, savedconnection.Speech, request.CompatibilityProfile, request.Model, request.Options, request.AuthenticationMode)
 	}()
@@ -358,10 +389,12 @@ func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestR
 	}
 	s.log().Info("speech playback connection test started", "server", server, "probe", result.Probe, "credential_source", credentialSource)
 	defer func() {
-		s.log().Info("speech playback connection test completed",
+		level, outcome, errorKind := metadataLogOutcome(string(result.ErrorKind), operationErr)
+		s.log().Log(context.Background(), level, "speech playback connection test "+outcome,
+			"outcome", outcome, "duration_ms", time.Since(started).Milliseconds(),
 			"server", server, "probe", result.Probe, "credential_source", credentialSource,
 			"reachable", result.Reachable, "http_status", result.HTTPStatus,
-			"latency_ms", result.LatencyMilliseconds, "error_kind", result.ErrorKind,
+			"latency_ms", result.LatencyMilliseconds, "error_kind", errorKind,
 			"validation_error", validationError, "model_presence", result.ModelPresence,
 			"model_count", len(result.ModelIDs),
 		)
@@ -406,6 +439,7 @@ func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestR
 	result.ErrorKind = ConnectionErrorKind(metadata.ErrorKind)
 	result.ModelPresence = ModelPresence(metadata.ModelPresence)
 	result.ModelIDs = metadata.ModelIDs
+	operationErr = ctx.Err()
 	return result
 }
 
@@ -446,6 +480,16 @@ func connectionServer(requestedURL string) string {
 
 // TestSavedConnection checks an explicitly saved connection without selecting it or invoking a model.
 func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
+	started := time.Now()
+	var operationErr error
+	useCount := 0
+	s.log().Info("saved connection test started")
+	defer func() {
+		level, outcome, errorKind := metadataLogOutcome(string(result.ErrorKind), operationErr)
+		s.log().Log(context.Background(), level, "saved connection test "+outcome,
+			"outcome", outcome, "duration_ms", time.Since(started).Milliseconds(),
+			"use_count", useCount, "reachable", result.Reachable, "error_kind", errorKind, "latency_ms", result.LatencyMilliseconds)
+	}()
 	auth := config.AuthenticationModeNone
 	defer func() { result.Checks = assess(result, "", compatibility.Generic, "", nil, auth) }()
 	result.CheckedAt = time.Now().UTC()
@@ -463,6 +507,7 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 		return
 	}
 	auth = c.Details.AuthenticationMode
+	useCount = len(c.Uses)
 	defer func() { key = "" }()
 	if err = savedconnection.ValidateUses(c.Uses, c.Details); err != nil {
 		result.ErrorKind = ConnectionErrorInvalidSettings
@@ -475,13 +520,10 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 	if c.Supports(savedconnection.Transcription) {
 		health = compatibility.TranscriptionHealthPath(c.Details.CompatibilityProfile, c.Details.HealthPath)
 	}
-	s.log().Info("saved connection test started", "use_count", len(c.Uses))
-	defer func() {
-		s.log().Info("saved connection test completed", "use_count", len(c.Uses), "reachable", result.Reachable, "error_kind", result.ErrorKind, "latency_ms", result.LatencyMilliseconds)
-	}()
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
 	metadata := s.client.TestMetadata(ctx, c.Details.BaseURL, health, key, "", c.Details.Headers)
+	operationErr = ctx.Err()
 	result.Reachable = metadata.Reachable
 	result.Probe = ConnectionProbe(metadata.Probe)
 	result.RequestedURL = metadata.RequestedURL

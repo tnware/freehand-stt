@@ -53,8 +53,9 @@ func (p *Processor) ProcessWithCredential(ctx context.Context, cfg config.PostPr
 
 	systemPrompt, userPrompt := prompts(cfg, raw)
 	started := time.Now()
+	logger := diagnostics.OperationLogger(ctx, p.logger)
 	if p.logger != nil {
-		p.logger.Info("transcript post-processing started",
+		logger.Info("transcript post-processing started",
 			"server", serverName(cfg.BaseURL),
 			"preset", cfg.Preset,
 			"input_characters", utf8.RuneCountInString(raw),
@@ -69,14 +70,21 @@ func (p *Processor) ProcessWithCredential(ctx context.Context, cfg config.PostPr
 	}
 	if p.logger != nil {
 		if err != nil {
-			p.logger.Warn("transcript post-processing failed",
+			kind := diagnostics.ErrorKind(err)
+			level, outcome := slog.LevelWarn, "failed"
+			if kind == "cancelled" {
+				level, outcome = slog.LevelInfo, "cancelled"
+			}
+			logger.Log(ctx, level, "transcript post-processing "+outcome,
 				"server", serverName(cfg.BaseURL),
 				"preset", cfg.Preset,
 				"duration_ms", time.Since(started).Milliseconds(),
-				"error_kind", diagnostics.ErrorKind(err),
+				"outcome", outcome,
+				"error_kind", kind,
 			)
 		} else {
-			p.logger.Info("transcript post-processing completed",
+			logger.Info("transcript post-processing completed",
+				"outcome", "completed",
 				"server", serverName(cfg.BaseURL),
 				"preset", cfg.Preset,
 				"output_characters", utf8.RuneCountInString(completion.Text),
