@@ -3,8 +3,10 @@ title: Privacy and safety
 description: What Freehand sends, retains, stores, and inserts on your Windows PC.
 ---
 
-Freehand is a desktop client for speech infrastructure you choose. Audio and
-transcript text leave the PC only when required by a capability you configured.
+Freehand is a lightweight Windows client for speech-to-text and text-to-speech
+services you choose. Audio and text are sent only as required by a capability
+you configured: transcription, optional transcript cleanup, or on-demand speech
+generation from your text or retained transcripts.
 The destination may be localhost, a private server, or a hosted provider, so
 that server's own privacy and retention policy still applies.
 
@@ -110,9 +112,11 @@ or otherwise transforming a key it already received.
 
 ## Connection checks
 
-First launch requires an explicit connection test. After setup, Freehand
-checks the saved speech connection automatically on launch and after relevant
-connection settings change. Automatic and manual checks request a health route or
+Finishing the initial **Voice** dictation setup requires an explicit connection
+test. That setup does not gate the **Audio file** or **Text to speech** tabs.
+After dictation setup, Freehand checks the saved STT connection automatically on
+launch and after relevant connection settings change. Automatic and manual
+checks request a health route or
 `GET /v1/models`. They do not submit audio, prompts, or synthetic inference
 jobs, and they do not cycle through discovered models. Model selection itself
 does not invoke the model.

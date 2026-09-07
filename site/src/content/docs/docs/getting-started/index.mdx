@@ -1,13 +1,13 @@
 ---
 title: Get started
-description: Install Freehand, connect a transcription endpoint, and complete your first dictation.
+description: Install Freehand and start voice dictation, audio-file transcription, or optional text to speech.
 ---
 
-import { CardGrid, LinkCard, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 
-This guide takes you from installation to a working voice dictation. Freehand
-connects to a speech-to-text service you provide; it does not install or run a
-model for you.
+Freehand is a lightweight Windows client for speech-to-text and text-to-speech
+services you choose. Start with voice dictation, transcribe an audio file, or
+generate speech from text. It does not install or run a model for you.
 
 Freehand is **free forever and open source**, with no Freehand subscription or
 account. Your chosen provider or hosting may have its own costs. A dedicated
@@ -17,9 +17,15 @@ service if your PC lacks the resources, or you want to keep them for other work.
 ## What you need
 
 - Windows 11 with WebView2.
-- A usable microphone to complete initial setup. This alpha requires microphone readiness even if you plan to transcribe stored audio files.
-- A reachable compatible transcription endpoint (see the [backend guides](../backends/)).
-- The endpoint's base URL, transcription model ID, and API key when authentication is required.
+- A reachable compatible service for your task (see the [backend guides](../backends/)).
+- Its base URL, model ID (except whisper.cpp's server-loaded model), and API key
+  when authentication is required.
+
+| Task | Additional requirements | Start here |
+| --- | --- | --- |
+| Voice dictation (default) | Speech-to-text service, a usable microphone, and a recording shortcut | [Run your first dictation](#run-your-first-dictation) |
+| Audio file transcription | Speech-to-text service and a supported audio file; no microphone or recording shortcut | [Transcribe a stored audio file](#transcribe-a-stored-audio-file) |
+| Text to speech (optional) | Speech synthesis service, model and voice ID, and text to speak; no transcription setup | [Generate speech](#generate-speech) |
 
 :::caution[Alpha distribution]
 Freehand's GitHub Releases provide an unsigned executable and per-user Windows installer. Download only from the official project, verify the corresponding entry in `SHA256SUMS`, and expect Windows to identify the publisher as unknown until Authenticode signing is introduced.
@@ -32,17 +38,17 @@ and for Freehand's in-app updater.
 
 ## First launch
 
-Freehand opens a readiness screen the first time it starts. Work through each required item:
+Freehand opens **Voice**, its default task, with a **Set up dictation** screen.
+The **Audio file** and **Text to speech** tabs remain available before you finish
+dictation setup. Choose the task you want; **Finish setup** belongs to dictation,
+not to every workflow.
+
+To connect a service from your chosen task:
 
 <Steps>
 
-1. **Add a server** — on the first-run screen, open the connection picker and choose **Add connection…**. Name it, select its compatibility profile, and enter the base URL. Transcription is preselected. Configure authentication and HTTP permission as required, then choose **Save and use connection**. Keys use Windows Credential Manager.
-2. **Choose a model** — back on the same screen, use **Test** to read model metadata or enter the model ID directly. Home quick controls apply immediately. whisper.cpp uses its server-loaded model. You can also configure model options in **Settings → Transcription**, then choose **Save settings**.
-3. **Microphone** — select **System default** or a specific device under **Settings → Audio**.
-4. **Recording shortcut** — keep the default toggle shortcut (**Ctrl+Shift+Space**), or configure another toggle shortcut and an optional hold-to-talk chord under **Settings → Shortcuts**.
-5. **Save** — save any remaining settings and return to the readiness screen.
-6. **Connection check** — choose **Test connection** on the readiness screen. If it fails, correct the settings, save, and retry. First launch requires this explicit check; after setup, Freehand checks the saved speech connection automatically.
-7. **Finish** — when all requirements are ready, choose **Finish setup** to open the workspace.
+1. **Add a server** — open the task's connection picker and choose **Add connection…**. Name it, select its compatibility profile, and enter the base URL. The task's use is preselected. Configure authentication and HTTP permission as required, then choose **Save and use connection**. Keys use Windows Credential Manager.
+2. **Choose a model** — for Voice or Audio file, use **Test** to read model metadata or enter the model ID directly. Home quick controls apply immediately; whisper.cpp uses its server-loaded model. For Text to speech, open **Model and voice settings** to configure its model, voice, and enable switch. Settings-page edits apply with **Save settings**.
 
 </Steps>
 
@@ -51,16 +57,22 @@ The connection check never submits audio and never invokes a discovered model.
 A successful check does not test transcription quality.
 :::
 
+Voice and Audio file share the same speech-to-text connection and model. Optional
+cleanup is a separate stage after transcription; Text to speech has its own
+connection and settings and can be used without either STT or cleanup.
+
 ## Choose the recording language
 
-Under **Settings → Transcription → Language**, search by name or code, or choose
+For dictation and audio files, under **Settings → Transcription → Language**,
+search by name or code, or choose
 **Server default** or **Automatic detection**. Your model must support the
 language. If you use S1-mini cleanup, its only supported language is English.
 See [language selection](../guides/languages/) for detection and fallback behavior.
 
 ## Configure the speech endpoint
 
-Freehand expects a base URL whose OpenAI API prefix is already present, typically:
+For Generic, Speaches, and vLLM transcription, include the OpenAI API prefix in
+the base URL, typically:
 
 ```text title="Speech endpoint base URL"
 https://speech.example.com/v1
@@ -74,6 +86,9 @@ POST https://speech.example.com/v1/audio/transcriptions
 
 Set the exact model ID expected by your gateway. Model discovery is bounded metadata; selecting a discovered ID does not run it.
 
+For whisper.cpp, use the server root without `/v1`; Freehand uses `/inference`
+and the server-loaded model instead.
+
 HTTPS is required by default. **Allow insecure HTTP** is an explicit opt-in for a trusted local or LAN service. It sends credentials and audio without transport encryption, so do not enable it for an untrusted network.
 
 See [Connect a speech server](../guides/connect-a-server/) for shared-gateway
@@ -82,36 +97,28 @@ failure guide.
 
 ## Choose your transcript workflow
 
-Leave **Cleanup** off for your first dictation. This delivers the speech model's
-transcript unchanged and requires only the speech endpoint.
+Leave **Cleanup** off for your first dictation or file transcription. Freehand
+delivers the speech model's transcript unchanged; no chat service is needed.
 
-<Tabs>
-  <TabItem label="No cleanup">
-
-Leave **Cleanup** off. Freehand delivers the speech model's transcript without
-an additional rewrite. No chat service is needed.
-
-  </TabItem>
-  <TabItem label="Custom instruction">
-
-Choose a compatible chat endpoint and model, then write your own cleanup
-instruction under **Settings → Post-processing**. Speech and cleanup have separate
-credentials and can run on different servers.
-
-[Configure custom cleanup](../guides/post-processing/#custom-instruction-processor)
-
-  </TabItem>
-  <TabItem label="S1-mini">
-
-Select **S1-mini by Superwhisper** for built-in style, structure, and context
-controls. This optional English cleanup model needs its own inference server.
-
-[Set up the S1-mini profile](../guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp)
-
-  </TabItem>
-</Tabs>
+Later, **Settings → Cleanup** can add an independently configured chat service
+after STT. Choose [custom instructions](../guides/post-processing/#custom-instruction-processor)
+or the optional English-only [S1-mini profile](../guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp).
+If cleanup fails, times out, or returns empty output, Freehand falls back to the
+raw transcript. Cleanup is not required for any of the three tasks.
 
 ## Run your first dictation
+
+In **Voice**, configure the STT connection and model as above, then complete the
+dictation-only readiness items:
+
+1. Select **System default** or a specific microphone under **Settings → Audio**.
+2. Keep **Ctrl+Shift+Space** for toggle recording, or configure another toggle
+   shortcut and an optional hold-to-talk chord under **Settings → Shortcuts**.
+3. Choose **Save settings** for Settings-page edits and return to **Voice**.
+4. Choose **Test connection**. Correct any failure and retry, then choose
+   **Finish setup** when all dictation requirements are ready.
+
+Now dictate into another application:
 
 <Steps>
 
@@ -127,9 +134,42 @@ If the same safe target still owns focus, Freehand inserts the text with Unicode
 
 ## Transcribe a stored audio file
 
-Choose **Audio file** in the main workspace and select FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, or WebM audio through the native picker.
+You do not need a microphone, recording shortcut, or completed dictation setup.
 
-Stored-audio transcription never inserts automatically because no destination was captured at recording start. Copy the completed result explicitly.
+<Steps>
+
+1. **Open Audio file** and configure the STT connection and model as above, if
+   you have not already done so for Voice.
+2. **Choose audio** to select a FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, or
+   WebM file through the native picker. Selecting it does not upload it.
+3. **Choose Transcribe** and wait for the result. Start with completed output;
+   compatible streaming is optional.
+4. **Copy** the completed transcript into the application you want.
+
+</Steps>
+
+Stored-audio transcription never inserts automatically because no destination
+was captured at recording start.
+
+## Generate speech
+
+Text to speech is optional and off by default. It needs a speech synthesis
+connection, not a microphone, recording shortcut, or STT setup.
+
+<Steps>
+
+1. **Open Text to speech** and add or select its connection as above.
+2. **Open Model and voice settings**. Choose the model and voice ID, turn on
+   **Enable text to speech**, and choose **Save settings**.
+3. **Enter your text**, then choose **Speak** to generate and play audio.
+4. **Use the playback controls** to pause, resume, restart, stop, or explicitly
+   **Save generated speech** to a file.
+
+</Steps>
+
+You can also use **Listen** on retained completed transcripts. Freehand does not
+automatically read transcripts aloud. See [Text to speech](../guides/using-freehand/#text-to-speech)
+for playback and text lifetimes.
 
 ## Optional features
 
@@ -151,8 +191,8 @@ enable automatic stop, silence trimming, or checkpoints.
 
 <CardGrid>
   <LinkCard
-    title="Explore voice and file workflows"
-    description="Configure capture, delivery, history, and optional playback."
+    title="Explore Freehand's tasks"
+    description="Dictate, transcribe files, and generate speech, with optional cleanup and history."
     href="../guides/using-freehand/"
   />
   <LinkCard

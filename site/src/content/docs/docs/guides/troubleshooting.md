@@ -9,26 +9,35 @@ options locally. They do not submit audio or prove that inference will succeed.
 
 ## Setup does not complete
 
-**Open the unfinished readiness item, correct its settings, and choose Save
-changes.** Return to the readiness screen, select **Test connection**, then
-choose **Finish setup** once all requirements are ready.
+**Check the requirements for the task you selected.** The **Voice** readiness
+screen and **Finish setup** are for dictation. You can switch to **Audio file**
+or **Text to speech** without finishing dictation setup.
 
-:::note[Initial setup requires a microphone]
-This alpha requires a usable microphone even if you plan to transcribe stored
-audio files. Connect or enable a microphone, then select it under **Settings → Audio**.
-:::
+| Task | What must be ready |
+| --- | --- |
+| Voice | STT connection and model, authentication if required, microphone, recording shortcut, and the initial metadata connection check |
+| Audio file | STT connection and model, authentication if required, and a supported file; no microphone or recording shortcut |
+| Text to speech | Its own connection, model and voice ID, authentication if required, and **Enable text to speech**; no STT connection required |
+
+For **Voice**, open the unfinished readiness item, correct its settings, and
+choose **Save settings** for Settings-page edits. Return to **Voice**, select
+**Test connection**, then choose **Finish setup** once all dictation requirements
+are ready. Home quick controls apply immediately.
+
+For transcription setup:
 
 - Confirm the speech-to-text base URL includes the server's API prefix,
-  normally `/v1`.
+  normally `/v1`. For whisper.cpp, use the server root without `/v1`.
 - Enter the exact transcription model ID expected by the server. If model
-  discovery is available, select an ID from the returned list.
+  discovery is available, select an ID from the returned list. whisper.cpp
+  uses its server-loaded model instead.
 - If the endpoint requires a key, select **Authentication → API key** under
   **Settings → Connections**, edit the selected connection, then enter it. Leave authentication at **None**
   only for an endpoint that does not require a key.
 - Enable insecure HTTP only when you intentionally use a trusted plaintext
   local or LAN endpoint.
-- If an explicitly selected microphone is missing, choose another device or
-  return to **System default**.
+- For dictation only, if an explicitly selected microphone is missing, choose
+  another device or return to **System default**.
 
 ## Understand connection-check results
 
@@ -155,7 +164,7 @@ configured delivery mode: manual copy never inserts automatically.
 
 ## Cleanup was skipped or failed
 
-**Use the raw transcript, then check Settings → Post-processing.** Confirm
+**Use the raw transcript, then check Settings → Cleanup.** Confirm
 cleanup is enabled and test its connection before another attempt.
 
 Transcript cleanup has its own endpoint, model, credentials, and timeout. Test
@@ -196,12 +205,14 @@ Automatic long-file segmentation is not currently provided.
 
 ## Speech playback produces no sound
 
-**Check the Windows output device and volume, then review Settings → Speech playback.**
+**Check the Windows output device and volume, then review Settings → Text to speech.**
 
-- Confirm text-to-speech is enabled and its endpoint implements
-  `POST /v1/audio/speech`.
+- Turn on **Enable text to speech**, choose **Save settings**, and confirm its
+  endpoint implements `POST /v1/audio/speech`.
 - Check the configured model and voice ID expected by that endpoint.
 - Verify the Windows default output device and system volume.
+- Choose **Speak** for text you enter, or **Listen** on a retained completed
+  transcript. Playback never starts automatically after transcription.
 - Generate the speech again after changing endpoint or output settings.
 
 ## Report a problem

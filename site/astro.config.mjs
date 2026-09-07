@@ -17,7 +17,7 @@ export default defineConfig({
 		starlight({
 			title: 'Freehand',
 			description:
-				'A native desktop client for self-hosted and OpenAI-compatible speech infrastructure.',
+				'A lightweight Windows client for speech-to-text and text-to-speech services you choose.',
 			// Starlight applies Astro's configured base path to root-relative
 			// assets. Supplying basePath here would double-prefix GitHub Pages.
 			favicon: '/favicon.svg',
