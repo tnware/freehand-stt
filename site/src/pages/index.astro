@@ -20,8 +20,8 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <CustomPageMetadata
-      title="Freehand — Speech to text, anywhere you type"
-      description="Dictate into Windows apps with speech models you choose, optional custom or S1-mini by Superwhisper cleanup, and built-in local voice detection."
+      title="Freehand — Speech to text and text to speech for Windows"
+      description="Dictate into apps, transcribe recordings, and generate spoken audio with speech services you choose. A lightweight Windows client for local, LAN, or hosted models."
       path=""
     />
     <meta name="theme-color" content="#070a12" />
@@ -36,9 +36,9 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
     <main id="main" class="home-page">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="kicker"><span></span> Your voice. Your models. Your Windows apps.</p>
+          <p class="kicker"><span></span> Your speech services. Your Windows apps.</p>
           <h1 id="hero-title">Think it.<br />Say it.<br /><em>It’s there.</em></h1>
-          <p class="hero-lede">Dictate into the Windows apps you already use, with a speech model and service you choose. Leave the transcript unchanged or add cleanup with a separately chosen model.</p>
+          <p class="hero-lede">Dictate into apps, transcribe recordings, or turn text into spoken audio. Freehand is a lightweight Windows client for speech services you choose—on your PC, your network, or a compatible hosted service.</p>
           <p class="freehand-promise"><strong>Free forever.</strong> Open source. No Freehand subscription.</p>
           <div class="hero-actions">
             <a class="button button-dark" href={href("/download/")}>Download for Windows <span aria-hidden="true">→</span></a>
@@ -76,55 +76,59 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
         <p class="section-index">01 / Purpose</p>
         <div>
           <h2 id="statement-title">Keep your computer<br /><em>free for your work.</em></h2>
-          <div class="statement-copy"><p>No room for a speech model? Or a powerful GPU you’d rather use for something else? Connect Freehand to another computer on your network or a compatible hosted service. Model memory and inference stay on that server.</p><p>Prefer to run everything on your own PC? That works too. Choose speech and optional cleanup services independently.</p><p class="service-cost-note">Freehand is free forever. Your chosen provider or hosting may have its own costs.</p></div>
+          <div class="statement-copy"><p>No room for a speech model? Or a powerful GPU you’d rather use for something else? Connect Freehand to another computer on your network or a compatible hosted service. Model memory and inference stay on that server.</p><p>Prefer to run everything on your own PC? That works too. Choose transcription, optional cleanup, and text-to-speech services independently.</p><p class="service-cost-note">Freehand is free forever. Your chosen provider or hosting may have its own costs.</p></div>
         </div>
       </section>
 
       <section id="workflow" class="workflow" aria-labelledby="workflow-title">
         <div class="section-intro">
-          <p class="section-index">02 / The path</p>
-          <h2 id="workflow-title">Speak where<br />you work.</h2>
-          <p>Use a shortcut to dictate directly into the application already in focus. Freehand handles capture, transcription, and safe text delivery.</p>
+          <p class="section-index">02 / Your task</p>
+          <h2 id="workflow-title">Speech and text.<br />Your way.</h2>
+          <p>Start with the task you need. Dictation is the default, but file transcription and text-to-speech work without completing dictation setup.</p>
         </div>
 
-        <ol class="workflow-track">
-          <li>
-            <span class="track-number">01</span>
-            <div class="track-copy"><small>Begin anywhere</small><h3>Press your shortcut</h3><p>Toggle recording or hold to talk. Freehand captures the exact Windows target before the microphone starts.</p></div>
-            <div class="track-art hotkey-art" aria-hidden="true"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd></div>
-          </li>
-          <li>
-            <span class="track-number">02</span>
-            <div class="track-copy"><small>Route deliberately</small><h3>Use your speech stack</h3><p>Your selected speech model transcribes the audio. Keep that result or send it to a separate chat model for optional cleanup.</p></div>
-            <div class="track-art route-art" aria-hidden="true"><span>voice</span><i></i><span>text</span></div>
-          </li>
-          <li>
-            <span class="track-number">03</span>
-            <div class="track-copy"><small>Finish safely</small><h3>Receive the words</h3><p>If the original target still owns focus, Freehand inserts the text. If anything changed, it stops and leaves the result ready to copy.</p></div>
-            <div class="track-art result-art" aria-hidden="true"><span>Original target</span><b>Verified</b></div>
-          </li>
-        </ol>
-
-        <section class="workflow-options" aria-labelledby="cleanup-choice-title">
-          <h3 id="cleanup-choice-title">One speech model. Three ways to finish.</h3>
-          <p>Start with a compatible speech endpoint and model. Then choose what happens to its transcript.</p>
-          <ul class="cleanup-choices">
+        <section class="workflow-options" aria-labelledby="task-choice-title">
+          <h3 id="task-choice-title">Choose your task</h3>
+          <p>Configure only what that task needs. Microphone and file transcription share the same speech-to-text settings; text-to-speech has its own connection and model.</p>
+          <ul class="task-choices">
             <li>
-              <h4>Leave it as transcribed</h4>
-              <p>Keep cleanup off to deliver the speech model’s text unchanged. No chat endpoint is needed.</p>
-              <a href={href("/docs/getting-started/")}>Start dictating <span aria-hidden="true">→</span></a>
+              <h4>Dictate into apps</h4>
+              <p>Use a microphone and global shortcut. Freehand delivers the transcript to the original safe target, or leaves it ready to copy.</p>
+              <a href={href("/docs/getting-started/#run-your-first-dictation")}>Start dictating <span aria-hidden="true">→</span></a>
             </li>
             <li>
-              <h4>Use your own cleanup model</h4>
-              <p>Choose a separate compatible chat endpoint, model, and custom instructions for the result you want.</p>
-              <a href={href("/docs/guides/post-processing/#custom-instruction-processor")}>Configure custom cleanup <span aria-hidden="true">→</span></a>
+              <h4>Transcribe a recording</h4>
+              <p>Choose an audio file, start transcription, and copy the result. No microphone or recording shortcut is required.</p>
+              <a href={href("/docs/getting-started/#transcribe-a-stored-audio-file")}>Start with a file <span aria-hidden="true">→</span></a>
             </li>
             <li>
-              <h4>S1-mini by Superwhisper</h4>
-              <p>Use built-in style, structure, and context controls for this optional English cleanup model, served on infrastructure you choose.</p>
-              <a href={href("/docs/guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp")}>Set up S1-mini <span aria-hidden="true">→</span></a>
+              <h4>Turn text into speech</h4>
+              <p>Enable text-to-speech, enter your text, then listen or explicitly save the generated audio. No transcription connection is required.</p>
+              <a href={href("/docs/getting-started/#generate-speech")}>Set up text-to-speech <span aria-hidden="true">→</span></a>
             </li>
           </ul>
+        </section>
+
+        <section class="workflow-options" aria-labelledby="dictation-path-title">
+          <h3 id="dictation-path-title">Dictation, from shortcut to text</h3>
+          <p>Speak where you work. Freehand handles capture, transcription, and safe delivery.</p>
+          <ol class="workflow-track">
+            <li>
+              <span class="track-number">01</span>
+              <div class="track-copy"><small>Begin anywhere</small><h4>Press your shortcut</h4><p>Toggle recording or hold to talk. Freehand captures the exact Windows target before the microphone starts.</p></div>
+              <div class="track-art hotkey-art" aria-hidden="true"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd></div>
+            </li>
+            <li>
+              <span class="track-number">02</span>
+              <div class="track-copy"><small>Route deliberately</small><h4>Use your speech stack</h4><p>Your selected speech model transcribes the audio. Keep that result or send it to a separate chat model for optional cleanup.</p></div>
+              <div class="track-art route-art" aria-hidden="true"><span>voice</span><i></i><span>text</span></div>
+            </li>
+            <li>
+              <span class="track-number">03</span>
+              <div class="track-copy"><small>Finish safely</small><h4>Receive the words</h4><p>If the original target still owns focus, Freehand inserts the text. If anything changed, it stops and leaves the result ready to copy.</p></div>
+              <div class="track-art result-art" aria-hidden="true"><span>Original target</span><b>Verified</b></div>
+            </li>
+          </ol>
         </section>
       </section>
 
@@ -158,7 +162,8 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
               <p><del>um can you send that to tyler tomorrow</del></p>
               <p><ins>Can you send that to Tyler tomorrow?</ins></p>
             </div>
-            <p>If cleanup fails or returns empty text, Freehand falls back to the raw transcript. Enable session history to retain raw and cleaned versions within its memory limits, until you exit.</p>
+            <p>For dictation and audio files, keep the transcript unchanged or add cleanup with custom instructions or the S1-mini by Superwhisper English profile. Cleanup uses a separately chosen chat model. If it fails or returns empty text, Freehand falls back to the raw transcript.</p>
+            <a href={href("/docs/guides/post-processing/")}>Choose transcript cleanup <span aria-hidden="true">→</span></a>
           </article>
 
           <article class="story story-file">
@@ -193,7 +198,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
         <div class="compatibility-copy">
           <p class="section-index">05 / Compatibility</p>
           <h2 id="compatibility-title">Your endpoint.<br />Your choice.</h2>
-          <p>Freehand does not bundle a model or manage an inference runtime. Speech, cleanup, and playback can each use infrastructure you operate or deliberately select.</p>
+          <p>Freehand does not bundle a model or manage an inference runtime. Transcription, cleanup, and text-to-speech can each use infrastructure you operate or deliberately select. It is a speech client, not a meeting recorder, notes workspace, or voice assistant.</p>
           <a class="button button-light" href={href("/backends/")}>Compare backends <span aria-hidden="true">→</span></a>
         </div>
         <nav class="provider-list" aria-label="Available backend guides">

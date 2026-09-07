@@ -3,6 +3,33 @@ title: Architecture
 description: Runtime ownership, platform boundaries, and application data flow.
 ---
 
+## Product boundary
+
+Freehand is a lightweight native Windows speech client for user-chosen,
+self-hosted and OpenAI-compatible infrastructure. Dictation is the default;
+file transcription is independently usable, and the optional TTS composer is
+a third, on-demand workflow:
+
+```text
+hotkey -> microphone capture -> optional VAD checkpoints -> STT
+       -> optional cleanup -> focus-safe insertion -> optional history
+native file selection -> STT -> optional cleanup -> explicit copy -> optional history
+bounded user-authored text -> explicit Speak -> TTS -> native playback
+       -> optional explicit generated-audio export
+```
+
+Separately, speech playback can synthesize backend-retained history text or a
+completed file transcript. It does not replay captured/source audio, and the
+composer does not require transcript history. Restart reuses generated PCM in
+the memory-only playback session without another inference request.
+
+Readiness is task-specific, not an application-wide setup prerequisite:
+dictation owns recording setup, file transcription needs STT but no microphone
+or completed dictation setup, and the TTS composer needs its own enabled speech
+configuration but neither STT nor a microphone. These are client workflows, not
+bundled inference or conversation mode. The remote-first boundary and non-goals
+in [ADR 0005](../../decisions/0005-remote-first-product-direction/) remain unchanged.
+
 ## Durable settings storage
 
 [ADR 0006](../../decisions/0006-sqlite-storage-contract/) governs the implemented
@@ -74,11 +101,11 @@ these provider contracts with their endpoint and opaque credential reference.
 | API credentials | Windows Credential Manager adapter |
 | Original target and insertion | Windows focus/input adapter |
 | Optional transcript history | `internal/history` memory store |
-| Optional transcript synthesis and native playback | `internal/tts` + inference speech capability + Windows playback adapter |
+| Optional authored-text/transcript synthesis, native playback, and explicit generated-audio export | `internal/tts` + inference speech capability + Windows playback adapter |
 | Optional passive status overlay | Cohesive Go overlay service + narrow native Win32 renderer |
 | Native tray presentation/actions | `internal/tray` consuming bounded domain snapshots |
 | Tray ownership, startup, single instance | Go/Wails Windows lifecycle |
-| Settings and status rendering | Svelte through generated Wails bindings |
+| Task, settings, and status rendering | Svelte through generated Wails bindings |
 | Durable non-secret configuration | `%LOCALAPPDATA%\Freehand\settings.db` (SQLite) |
 | Structured runtime diagnostics | One Wails default logger hierarchy, injected by `internal/app` |
 | Release identity and version | `build/config.yml`, parsed by `internal/releaseinfo` |
@@ -144,7 +171,7 @@ The renderer sees small Wails services registered from the package that owns eac
 | `dictation` | Live commands and status snapshot | Package-owned recorder |
 | `history` | Bounded history queries, copy, delete, and clear | Package-owned synchronized store |
 | `filetranscription` | Native picker grant, upload/transcription state, retry, cancellation, copy | Package-owned file job using the injected history store |
-| `tts` | Listen to backend-owned transcript versions; preview, pause, resume, restart, stop, and status | Package-owned synthesis/playback session |
+| `tts` | Speak bounded user-authored text; listen to backend-owned history versions or the completed file transcript; preview, pause, resume, restart, stop, save, clear, and status | Package-owned synthesis/playback session; native-dialog audio export |
 | `updates` | Current bounded status and explicit user-initiated update review | Package-owned polling policy over the configured Wails updater |
 
 Focused operations use generated request DTOs. A connection probe receives only its endpoint, model-discovery, headers, authentication policy, and bounded transient credential draft, so unrelated shortcut, VAD, window, history, or processing drafts cannot invalidate it. Settings save similarly receives one generated `SaveSettingsRequest` instead of a positional credential argument list. Svelte constructs and consumes those generated shapes directly.
@@ -155,9 +182,9 @@ Custom health targets retain the base-relative path-joining contract, including
 the leading slash in saved values. Settings help and validation describe that
 contract; no configuration migration or fallback model probe is performed.
 
-Model probes require a valid JSON model-list shape; reachability remains distinct from inventory validation and inference compatibility. Health probes accept opaque successful bodies. Invalid model responses cannot satisfy first-run readiness.
+Model probes require a valid JSON model-list shape; reachability remains distinct from inventory validation and inference compatibility. Health probes accept opaque successful bodies. Invalid model responses cannot satisfy first-run dictation readiness.
 
-After loading the applied profile, the renderer runs one bounded metadata-only STT probe and repeats it only when that profile's connection identity changes. First-run readiness is an exclusive app-shell content state backed by a persisted completion flag; the Go recording command rejects both renderer and global-shortcut starts until it is complete. A later failed probe may take over the content area once, but the established user can continue without correction while the persistent status strip retains the warning. Dismissal is scoped to the exact failed endpoint/model/authentication/microphone condition rather than mutating durable settings.
+After loading the applied profile, the renderer runs one bounded metadata-only STT probe and repeats it only when that profile's connection identity changes. The main shell initially selects dictation, but readiness is presented within the selected task rather than replacing the app shell or preventing task selection. The persisted setup-completion flag gates only dictation: the Go recording command rejects both renderer and global-shortcut starts until it is complete. File readiness uses the STT connection/authentication checks without microphone, shortcut, or dictation-completion requirements. The TTS composer does not show STT readiness and validates its own enabled speech configuration. A later failed STT check may show task-scoped recovery; dismissal leaves the persistent status warning and is scoped to the exact failed condition rather than mutating durable settings.
 
 Ordinary Go collaborators remain ordinary types: `history.Store`, the inference client, post-processor, capture adapter, and insertion policy are injected by `internal/app` and are not registered with Wails. The settings/profile transaction remains one owner even though consumers receive narrow snapshot functions.
 

@@ -3,6 +3,22 @@ title: Testing contract
 description: Deterministic, integration, and native acceptance responsibilities.
 ---
 
+## Product site and onboarding acceptance
+
+Run `npm --prefix site run build` after site or documentation edits. Check the
+rendered homepage and getting-started guide at desktop and narrow mobile widths:
+task links must reach the intended section, text must remain readable without
+horizontal scrolling, and headings/keyboard navigation must retain their order.
+Also build with `CI=true` when checking GitHub Pages base-path links.
+
+Keep the README, homepage metadata, and user prerequisites aligned: dictation
+leads, file transcription needs no microphone or shortcut, and optional
+text-to-speech needs no STT connection. Cleanup is subordinate to transcription.
+Existing readiness fixtures cover task gating; a documentation build alone does
+not establish native behavior or live-server compatibility. Keep generated
+artwork descriptions faithful to the artwork rather than changing alt text to
+advertise capabilities it does not depict.
+
 ## Compatibility profile acceptance
 
 The published catalog fixture compares the website export with the app-owned

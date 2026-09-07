@@ -3,29 +3,42 @@ title: Connect a speech server
 description: Configure local, LAN, private remote, or hosted OpenAI-compatible speech services.
 ---
 
-Freehand connects to speech services you provide. It does not install or run a
-model itself.
+Freehand is a lightweight Windows client for speech-to-text and text-to-speech
+services you choose. It does not install or run a model itself.
 
-You can now keep multiple named endpoints and switch them independently for each
+You can keep multiple named endpoints and switch them independently for each
 capability. See [saved connections](../saved-connections/) for creating,
 duplicating, renaming, and deleting entries.
 
 ## Start from your task
 
-Choose Voice, Audio file, or Text to speech, then **Add connection…** in its connection
+Choose **Voice**, **Audio file**, or **Text to speech**, then **Add connection…** in its connection
 picker. Enter the server details and choose **Save and use connection** to return to
 that task. Select a model next. You can also add connections from the feature's Settings
 page; **Save settings** applies model and task edits there. The connection library
 remains available under **Settings → Connections**.
+
+- **Voice dictation** is the default task. It needs STT, a microphone, and a
+  recording shortcut; complete its readiness screen before recording.
+- **Audio file** shares Voice's STT connection and model, but does not require
+  a microphone, recording shortcut, or completed dictation setup.
+- **Text to speech** needs its own speech connection, model and voice ID, and
+  **Enable text to speech** under **Settings → Text to speech**. It needs no STT
+  connection and can be used before dictation setup.
+
+Optional **Cleanup** adds a separately configured chat stage after microphone or
+file STT. Leave it off to use the raw transcript. STT, cleanup, and TTS are
+independent service capabilities; configuring one does not configure the others.
 
 ## Decide where models run
 
 A local GPU is optional. If your PC has limited memory, or you want its GPU
 available for games, creative work, or other models, run speech inference on
 another machine on your network or use a compatible hosted service. Freehand
-still handles microphone capture, shortcuts, and text delivery on your PC.
-Network speed and the server affect response time. Audio goes to the endpoint
-you choose, so its data handling policy also applies.
+still handles capture, file selection, safe text delivery, and explicit speech
+playback or export on your PC. Network speed and the server affect response time.
+Audio or text goes to the endpoint you choose, so its data handling policy also
+applies.
 
 Local inference is equally supported when you want to use this PC's resources.
 Freehand is free forever; any chosen provider, server rental, or other hosting
@@ -84,8 +97,8 @@ Each connection has its own **Compatibility profile** under **Settings → Conne
 | Connection | Available profiles |
 | --- | --- |
 | Speech to text (microphone and files) | Generic OpenAI-compatible, Speaches, whisper.cpp, vLLM |
-| Post-processing | Generic OpenAI-compatible, llama.cpp, vLLM |
-| Speech playback | Generic OpenAI-compatible, Speaches |
+| Cleanup (optional stage after STT) | Generic OpenAI-compatible, llama.cpp, vLLM |
+| Text to speech | Generic OpenAI-compatible, Speaches |
 
 **Generic OpenAI-compatible** is the default and preserves existing behavior.
 Choose the profile matching your server: **Speaches**, **whisper.cpp**, or
@@ -181,9 +194,10 @@ Include the leading slash in the field. Existing saved paths keep this behavior;
 a failed custom health check does not trigger a second request to the model list.
 Leave the custom path off to use the default model-list check.
 
-First launch requires an explicit **Test connection** before finishing setup.
-After setup is complete, Freehand automatically checks the saved STT connection
-on launch and after relevant saved connection fields change. A failed check
+The initial **Voice** readiness screen requires an explicit **Test connection**
+before **Finish setup**. This is dictation setup, not a prerequisite for file
+transcription or TTS. After dictation setup, Freehand automatically checks the
+saved STT connection on launch and after relevant saved connection fields change. A failed check
 waits for an explicit retry or a connection-setting change; it does not poll or
 iterate through discovered models.
 

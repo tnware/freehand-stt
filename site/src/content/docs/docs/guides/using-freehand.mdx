@@ -5,7 +5,13 @@ description: Voice dictation, stored audio, transcript history, cleanup, and spe
 
 import { Steps } from '@astrojs/starlight/components';
 
-Choose **Voice** to dictate into another application, **Audio file** to transcribe a recording, or optional **Text to speech** to listen to text. Voice and audio files use the same configured speech endpoint.
+Freehand is a lightweight Windows client for speech-to-text and text-to-speech
+services you choose. Choose **Voice** (the default) to dictate into another
+application, **Audio file** to transcribe a recording, or optional **Text to
+speech** to generate audio from your own text or listen to retained transcripts.
+Each task can be used independently; the tabs remain available before dictation
+setup is complete. Voice and audio files share the same configured STT connection
+and model. TTS has its own settings.
 
 New installations use a capsule overlay with an envelope visualizer, minimal
 surface, bottom-center position, 85% opacity, and 70% glow. Adjust these under
@@ -13,6 +19,10 @@ surface, bottom-center position, 85% opacity, and 70% glow. Adjust these under
 open the app from its tray icon or assign a shortcut in Settings.
 
 ## Voice dictation
+
+You need a usable microphone, a recording shortcut, and a configured STT service.
+Complete the **Voice** readiness screen before your first recording; see
+[Run your first dictation](../../getting-started/#run-your-first-dictation).
 
 Choose a recording style:
 
@@ -69,6 +79,9 @@ Checkpoints prefer natural pauses but still enforce a hard segment limit; they d
 
 ## Audio files
 
+Configure the STT connection and model, shared with Voice. You do not need a
+microphone, recording shortcut, or completed dictation setup.
+
 <Steps>
 
 1. **Open Audio file** and choose **Choose audio** to select a recording.
@@ -116,18 +129,17 @@ frequent connection, model, and cleanup choices. These quick changes apply
 immediately. Microphone and delivery controls appear only for dictation. Text to
 speech shows its own connection and links to its model and voice settings.
 
-Each task has its own requirements. Audio file transcription does not require a
-microphone, recording shortcut, or completed dictation setup. Text to speech does
-not require a transcription connection. Dictation remains the default task.
-
 Endpoint and credential changes belong in **Settings → Connections**. Feature
-pages choose an active connection and model. Settings-page edits use **Save feature
+pages choose an active connection and model. Settings-page edits use **Save
 settings**; switching an active connection applies immediately. Running jobs keep
 their captured settings and credentials.
 
 ## Transcript cleanup
 
-Freehand can send the raw transcript to an independently configured OpenAI-compatible chat endpoint after speech recognition.
+For either dictation or audio files, optional **Settings → Cleanup** can send the
+raw transcript to an independently configured OpenAI-compatible chat endpoint
+after speech recognition. This is an optional STT stage, not a separate task or
+a prerequisite for TTS.
 
 - **Raw mode** leaves transcription untouched.
 - **Custom instructions** use a bounded user-authored system instruction.
@@ -150,24 +162,28 @@ details. Each copy action is explicit.
 
 ## Text to speech
 
-Optional speech playback uses its own endpoint, model, voice ID, credential, transport policy, and request budget.
+Optional text to speech uses its own endpoint, model, voice ID, credential,
+transport policy, and request budget. It is off by default and does not require
+a microphone, recording shortcut, STT connection, or completed dictation setup.
 
 <Steps>
 
-1. **Create a speech connection** under **Settings → Connections** and save its
-   endpoint and authentication. In **Settings → Text to speech**, select that
-   connection, set the model and voice ID, enable playback, and save feature settings.
-2. **Open Text to speech** and enter the text you want to hear. Your unsent text
+1. **Open Text to speech** and use its connection picker to select a saved
+   connection or **Add connection…**. Then open **Model and voice settings**, set
+   the model and voice ID, turn on **Enable text to speech**, and choose **Save
+   settings**. These options also live under **Settings → Text to speech**.
+2. **Return to Text to speech** and enter the text you want to hear. Your unsent text
    survives switching tasks or visiting Settings, and is cleared when the window
    reloads or Freehand exits.
 3. **Choose Speak** to generate and play the audio.
-4. **Use the playback controls** to pause, resume, replay, stop, or explicitly
-   save the generated audio.
+4. **Use the playback controls** to pause, resume, restart, stop, or explicitly
+   **Save generated speech** to a file.
 
 </Steps>
 
-You can also listen to retained completed transcripts. Generated audio remains
-in memory until you clear or replace it, start a recording, or exit Freehand.
+You can also choose **Listen** on a completed file result or a retained history
+entry. Generated audio remains in memory until you clear or replace it, start a
+recording, or exit Freehand.
 
 Playback starts on demand. Freehand does not automatically read every transcript aloud or provide a voice conversation mode.
 

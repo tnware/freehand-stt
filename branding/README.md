@@ -33,9 +33,18 @@ belong in the build tree.
 ## Product language
 
 - Name: **Freehand**
-- Description: **Speech to text, anywhere you type.**
+- Description: **A lightweight Windows client for speech-to-text and text-to-speech services you choose.**
+- Dictation tagline: **Speech to text, anywhere you type.**
 - Repository: **freehand-stt**
 - Executable: **freehand**
+
+Lead with dictation, file transcription, and optional text-to-speech as distinct
+tasks. Cleanup is an optional transcription stage, not a separate product mode.
+The existing tagline in approved artwork and the About window describes the
+lead dictation use case; it is not the complete capability summary. Keep that
+artwork and its descriptive alt text intact unless intentionally revising the
+visual brand. Do not imply bundled inference, a voice assistant, or a media
+workspace.
 
 ## Visual foundation
 
