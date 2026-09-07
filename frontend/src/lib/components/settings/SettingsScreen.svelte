@@ -252,11 +252,11 @@
   <div class="flex min-w-0 flex-1 flex-col">
     <div
       bind:this={contentPane}
-      class="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+      class="min-h-0 flex-1 overflow-y-auto px-5 py-6"
     >
       <section
         aria-labelledby="settings-section-title"
-        class="flex max-w-[620px] flex-col gap-3.5"
+        class="@container flex max-w-[680px] flex-col gap-4"
       >
         {#if active === "connections" && (session.editor.connectionDraft || connectionOrigin)}
           <Button
@@ -270,15 +270,19 @@
               .label}
           </Button>
         {/if}
-        <div class="flex items-baseline gap-2.5">
+        <div class="space-y-1.5 pb-1">
           <h3
             id="settings-page-heading"
             tabindex="-1"
-            class="text-base font-semibold tracking-[-0.01em]"
+            class="text-xl font-semibold tracking-tight"
           >
-            {section.label}
+            {active === "connections" && session.editor.connectionDraft
+              ? session.editor.connectionDraft.creating
+                ? "New connection"
+                : "Edit connection"
+              : section.label}
           </h3>
-          <p class="min-w-0 text-[12px] text-muted-foreground">
+          <p class="max-w-xl text-[13px] leading-relaxed text-muted-foreground">
             {section.blurb}
           </p>
         </div>

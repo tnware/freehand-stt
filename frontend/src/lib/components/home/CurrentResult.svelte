@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import { Button } from "$lib/components/ui/button";
   let {
     resultKey,
@@ -12,7 +13,9 @@
     onCopy,
     onClear,
     onListen,
+    quickSettings,
   }: {
+    quickSettings?: Snippet;
     resultKey: string;
     mode: "voice" | "file";
     text: string;
@@ -33,14 +36,19 @@
 </script>
 
 <section
-  class="flex h-52 shrink-0 flex-col overflow-hidden rounded-lg border border-hairline bg-layer-fill"
+  class="@container flex min-h-40 flex-1 flex-col overflow-hidden rounded-lg border border-hairline bg-layer-fill"
   aria-label="Current result"
 >
   <div
-    class="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-4 py-3"
+    class="flex h-12 shrink-0 items-center gap-1 border-b border-hairline px-3"
   >
-    <h2 class="text-sm font-medium">Current result</h2>
-    <span class="mr-auto text-xs text-muted-foreground"
+    <h2 class={quickSettings ? "sr-only" : "text-sm font-medium"}>
+      Current result
+    </h2>
+    <span
+      class={quickSettings
+        ? "sr-only"
+        : "mr-auto text-xs text-muted-foreground"}
       >{working
         ? "In progress"
         : recovery
@@ -53,6 +61,9 @@
                 ? "No transcript yet"
                 : "Nothing recorded yet"}</span
     >
+    {#if quickSettings}
+      <div class="min-w-0 flex-1">{@render quickSettings()}</div>
+    {/if}
     {#if text}
       {#if onListen}<Button
           variant="ghost"
@@ -105,7 +116,7 @@
               ? "Turn an audio file into text"
               : "Speak into the application you’re using"}
         </p>
-        <p class="max-w-md text-xs leading-relaxed text-muted-foreground">
+        <p class="max-w-lg text-[13px] leading-relaxed text-muted-foreground">
           {working
             ? "You can keep working while Freehand finishes."
             : mode === "file"

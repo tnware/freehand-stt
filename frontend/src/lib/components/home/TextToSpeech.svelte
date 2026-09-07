@@ -1,11 +1,8 @@
 <script lang="ts">
-  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
-  import SparklesIcon from "@lucide/svelte/icons/sparkles";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
-  import TransportShell from "$lib/components/home/TransportShell.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Textarea } from "$lib/components/ui/textarea";
   import {
@@ -91,151 +88,100 @@
   }
 
   const failed = $derived(isOwnSession && status.phase === TTSPhase.Failed);
-  const rail = $derived(
-    failed
-      ? "error"
-      : isOwnSession && status.phase === TTSPhase.Completed
-        ? "done"
-        : isOwnSession && status.phase === TTSPhase.Generating
-          ? "working"
-          : "hidden",
-  );
 </script>
 
-<div class="flex shrink-0 flex-col">
-  <TransportShell
-    {rail}
-    tall
-    stageGrid={false}
-    busy={working}
-    state={status.phase}
+<div class="flex min-h-[360px] flex-1 flex-col gap-3">
+  <section
+    class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-hairline bg-layer-fill"
+    aria-label="Speech composer"
   >
-    {#snippet control()}
-      <span
-        class={cn(
-          "grid size-[62px] place-items-center self-start rounded-full border",
-          configured
-            ? "border-accent-edge bg-accent-wash text-accent-text"
-            : "border-hairline bg-control-fill text-muted-foreground",
-        )}
-        style="margin-top: 1.25rem"
-        aria-hidden="true"
-      >
-        {#if working && status.phase === TTSPhase.Generating}
-          <LoaderCircleIcon
-            class="size-[24px] animate-spin motion-reduce:animate-none"
-          />
-        {:else}
-          <Volume2Icon class="size-[24px]" />
-        {/if}
-      </span>
-    {/snippet}
-
-    {#snippet stage()}
-      <div class="tts-stage flex h-full flex-col gap-2.5 py-4">
-        <div class="flex items-center gap-2.5">
-          <h2 class="caption">Write something to speak</h2>
-          <span class="flex-1"></span>
-          <span
-            class="figure shrink-0 truncate text-[10px] text-ink-quiet"
-            title={`${settings.model || "No model"} · ${settings.voice || "No voice"}`}
-          >
-            {compactLabel(settings.model, "model")} · {compactLabel(
-              settings.voice,
-              "voice",
-            )}
-          </span>
-        </div>
-
-        <Textarea
-          bind:value={text}
-          maxlength={maximumCharacters}
-          disabled={working}
-          class="field-sizing-fixed min-h-0 flex-1 resize-none overflow-y-auto bg-well text-[13px] leading-relaxed"
-          placeholder="Enter text for Freehand to read aloud…"
-          aria-label="Text to speak"
-        />
-      </div>
-    {/snippet}
-
-    {#snippet readout()}
-      <div class="tts-readout flex h-full flex-col gap-2.5 py-4">
-        <div class="tts-endpoint flex min-w-0 flex-col gap-2.5">
-          <div class="flex items-center gap-2">
-            <ProviderIcon profile={settings.compatibilityProfile} size={20} />
-            <h2 class="caption">Endpoint</h2>
-          </div>
-          <span
-            class="figure truncate text-[11px] text-card-foreground"
-            title={settings.baseURL}
-          >
-            {settings.baseURL || "Not configured"}
-          </span>
-        </div>
-        <div class="tts-health flex items-center gap-2">
-          <span
-            class={cn(
-              "size-[7px] rounded-full",
-              failed
-                ? "bg-destructive"
-                : working
-                  ? "bg-primary shadow-[0_0_8px_var(--primary)]"
-                  : configured
-                    ? "bg-success"
-                    : "bg-border",
-            )}
-          ></span>
-          <span
-            class="caption text-secondary-foreground"
-            title="Local configuration only; connection checks appear in the footer."
-            >{stateLabel}</span
-          >
-        </div>
-        <p
-          class="tts-note figure mt-auto text-[10px] leading-relaxed text-ink-quiet"
-        >
-          {configured
-            ? "Local configuration only. Audio is generated when you press Speak."
-            : "Configure a speech endpoint, model, and voice first."}
+    <div class="flex flex-wrap items-start justify-between gap-3 px-5 pt-5">
+      <div class="space-y-1">
+        <h2 class="text-lg font-semibold tracking-tight">
+          Write something to speak
+        </h2>
+        <p class="text-[13px] text-muted-foreground">
+          Turn your text into audio with your selected voice.
         </p>
-        <div class="tts-actions flex items-center gap-2">
-          <span class="figure mr-auto text-[10px] text-ink-quiet">
-            {characterCount.toLocaleString()} / {maximumCharacters.toLocaleString()}
-          </span>
-          {#if !configured}
-            <Button
-              variant="outline"
-              size="sm"
-              class="h-[26px] px-2.5 text-[11.5px]"
-              onclick={onOpenSettings}
-            >
-              <SettingsIcon class="size-3" />
-              Text to speech settings
-            </Button>
-          {:else}
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-[26px] px-2.5 text-[11.5px]"
-              disabled={!text || working}
-              onclick={() => (text = "")}
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              class="h-[26px] px-3 text-[11.5px]"
-              disabled={!canSpeak}
-              onclick={() => onSpeak(text)}
-            >
-              <SparklesIcon class="size-3" />
-              Speak
-            </Button>
-          {/if}
-        </div>
       </div>
-    {/snippet}
-  </TransportShell>
+      <span
+        class="flex items-center gap-2 text-xs text-secondary-foreground"
+        title="Local configuration only; connection checks appear in the footer."
+      >
+        <span
+          class={cn(
+            "size-1.5 rounded-full",
+            failed
+              ? "bg-destructive"
+              : working
+                ? "bg-primary"
+                : configured
+                  ? "bg-success"
+                  : "bg-border",
+          )}
+        ></span>{stateLabel}
+      </span>
+    </div>
+    <div class="flex min-h-0 flex-1 flex-col p-5">
+      <Textarea
+        bind:value={text}
+        maxlength={maximumCharacters}
+        disabled={working}
+        class="field-sizing-fixed min-h-32 w-full flex-1 resize-none bg-well text-sm leading-relaxed"
+        placeholder="Enter text for Freehand to read aloud…"
+        aria-label="Text to speak"
+      />
+      <div
+        class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"
+      >
+        <span
+          class="min-w-0 truncate"
+          title={`${settings.model || "No model"} · ${settings.voice || "No voice"}`}
+          >{compactLabel(settings.model, "No model")} · {compactLabel(
+            settings.voice,
+            "No voice",
+          )}</span
+        >
+        <span class="shrink-0 tabular-nums"
+          >{characterCount.toLocaleString()} / {maximumCharacters.toLocaleString()}</span
+        >
+      </div>
+    </div>
+    <div
+      class="flex flex-wrap items-center justify-between gap-3 border-t border-hairline px-5 py-4"
+    >
+      <p class="max-w-sm flex-1 text-xs leading-relaxed text-muted-foreground">
+        {configured
+          ? "Audio is generated when you press Speak."
+          : "Choose a speech connection, model, and voice to get started."}
+      </p>
+      <div class="flex items-center gap-2">
+        {#if !configured}<Button variant="outline" onclick={onOpenSettings}
+            ><SettingsIcon />Text to speech settings</Button
+          >
+        {:else}
+          <Button
+            variant="ghost"
+            disabled={!text || working}
+            onclick={() => (text = "")}>Clear</Button
+          >
+          <Button
+            size="lg"
+            class="min-w-28"
+            disabled={!canSpeak}
+            onclick={() => onSpeak(text)}
+          >
+            {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
+                class="animate-spin motion-reduce:animate-none"
+              />{:else}<Volume2Icon />{/if}
+            {working && status.phase === TTSPhase.Generating
+              ? "Generating…"
+              : "Speak"}
+          </Button>
+        {/if}
+      </div>
+    </div>
+  </section>
 
   {#if showPlayback}
     <PlaybackBar
@@ -249,48 +195,3 @@
     />
   {/if}
 </div>
-
-<style>
-  /* The narrow transport gives endpoint facts one compact row instead of a
-     second tall panel beneath the editor. The same information remains
-     visible, but switching to Text to speech moves the workspace far less. */
-  @container (max-width: 699px) {
-    .tts-stage {
-      padding-block: 0;
-    }
-    .tts-readout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      grid-template-areas:
-        "endpoint health"
-        "actions actions";
-      align-content: center;
-      column-gap: 1rem;
-      row-gap: 0.25rem;
-      padding-block: 0;
-    }
-    .tts-endpoint {
-      grid-area: endpoint;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 0;
-    }
-    .tts-endpoint :global(h2) {
-      display: none;
-    }
-    .tts-health {
-      grid-area: health;
-    }
-    .tts-note {
-      display: none;
-    }
-    .tts-actions {
-      grid-area: actions;
-    }
-    .tts-actions :global(button) {
-      height: 1.5rem;
-      padding-inline: 0.5rem;
-    }
-  }
-</style>

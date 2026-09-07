@@ -1,7 +1,6 @@
 <script lang="ts">
-  import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import QuickToggle from "$lib/components/home/QuickToggle.svelte";
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import type { Device, Settings } from "$lib/state";
@@ -21,6 +20,7 @@
 
   let {
     settings,
+    section = "all",
     devices,
     pending = [],
     savedField = null,
@@ -30,6 +30,7 @@
     disabled = false,
   }: {
     settings: Settings;
+    section?: "all" | "audio" | "delivery";
     devices: Device[];
     pending?: QuickSettingsField[];
     savedField?: QuickSettingsField | null;
@@ -144,7 +145,6 @@
     }
   }
 
-  const lamp = (on: boolean) => (on ? "bg-primary" : "bg-border");
   const isPending = (field: QuickSettingsField) => pending.includes(field);
 </script>
 
@@ -156,273 +156,200 @@
      rule rather than nested cards. They stay open because these are the rack's
      immediate behavior controls; the longer endpoint modules fold below it. -->
 <section
-  class="shrink-0 overflow-hidden rounded-lg border border-hairline bg-layer-fill"
+  class="@container shrink-0 overflow-hidden"
+  class:framed={section === "all"}
   aria-label="Capture and delivery"
 >
-  <div class="control-group">
-    <div class="group-head">
-      <h2 class="caption">Capture</h2>
-      <span class="flex-1"></span>
-      <button
-        type="button"
-        class="door"
-        aria-label="Open audio settings"
-        title="Open audio settings"
-        onclick={onOpenAudioSettings}
-      >
-        <SlidersIcon class="size-[13px]" />
-      </button>
-    </div>
+  {#if section !== "delivery"}
+    <div class="control-group" class:embedded={section === "audio"}>
+      <div class="group-head">
+        <h2 class="text-sm font-semibold">Audio</h2>
+        <span class="flex-1"></span>
+        <button
+          type="button"
+          class="door"
+          aria-label="Open audio settings"
+          title="Open audio settings"
+          onclick={onOpenAudioSettings}
+        >
+          <SlidersIcon class="size-[13px]" />
+        </button>
+      </div>
 
-    <div class="grid grid-cols-2 gap-x-3.5 gap-y-2">
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger disabled={controlsDisabled}>
-          {#snippet child({ props })}
-            <button
-              {...props}
-              type="button"
-              class="lamp-row"
-              aria-label={`Microphone: ${selectedMicrophoneLabel}`}
-              title={`Microphone: ${selectedMicrophoneLabel}`}
-            >
-              <span
-                class={cn(
-                  "size-1.5 shrink-0 rounded-full",
-                  selectedMicrophoneMissing ? "bg-warning" : "bg-success",
-                )}
-              ></span>
-              <span class="min-w-0 flex-1 truncate text-left"
-                >{selectedMicrophoneLabel}</span
-              >
-              <ChevronDownIcon class="size-3 shrink-0 text-ink-quiet" />
-            </button>
-          {/snippet}
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="start" class="w-72">
-          <DropdownMenu.Group>
-            <DropdownMenu.GroupHeading>Microphone</DropdownMenu.GroupHeading>
-            <DropdownMenu.RadioGroup
-              bind:value={selectedMicrophone}
-              onValueChange={(choice) => void chooseMicrophone(choice)}
-            >
-              <DropdownMenu.RadioItem value={SYSTEM_DEFAULT_MICROPHONE}>
-                {SYSTEM_DEFAULT_LABEL}
-              </DropdownMenu.RadioItem>
-              {#if selectedMicrophoneMissing}
-                <DropdownMenu.RadioItem value={selectedMicrophone}>
-                  {selectedMicrophoneLabel}
-                </DropdownMenu.RadioItem>
-              {/if}
-              {#each devices as device (device.id)}
-                <DropdownMenu.RadioItem value={device.id}
-                  >{device.name}</DropdownMenu.RadioItem
+      <div class="grid grid-cols-1 gap-x-6 gap-y-1 @min-[460px]:grid-cols-2">
+        <div class="col-span-full mb-2">
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger disabled={controlsDisabled}>
+              {#snippet child({ props })}
+                <button
+                  {...props}
+                  type="button"
+                  class="microphone-control"
+                  aria-label={`Microphone: ${selectedMicrophoneLabel}`}
+                  title={`Microphone: ${selectedMicrophoneLabel}`}
                 >
-              {/each}
-            </DropdownMenu.RadioGroup>
-          </DropdownMenu.Group>
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
+                  <span
+                    class={cn(
+                      "size-1.5 shrink-0 rounded-full",
+                      selectedMicrophoneMissing ? "bg-warning" : "bg-success",
+                    )}
+                  ></span>
+                  <span class="min-w-0 flex-1 truncate text-left"
+                    >{selectedMicrophoneLabel}</span
+                  >
+                  <ChevronDownIcon class="size-3 shrink-0 text-ink-quiet" />
+                </button>
+              {/snippet}
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content align="start" class="w-72">
+              <DropdownMenu.Group>
+                <DropdownMenu.GroupHeading>Microphone</DropdownMenu.GroupHeading
+                >
+                <DropdownMenu.RadioGroup
+                  bind:value={selectedMicrophone}
+                  onValueChange={(choice) => void chooseMicrophone(choice)}
+                >
+                  <DropdownMenu.RadioItem value={SYSTEM_DEFAULT_MICROPHONE}>
+                    {SYSTEM_DEFAULT_LABEL}
+                  </DropdownMenu.RadioItem>
+                  {#if selectedMicrophoneMissing}
+                    <DropdownMenu.RadioItem value={selectedMicrophone}>
+                      {selectedMicrophoneLabel}
+                    </DropdownMenu.RadioItem>
+                  {/if}
+                  {#each devices as device (device.id)}
+                    <DropdownMenu.RadioItem value={device.id}
+                      >{device.name}</DropdownMenu.RadioItem
+                    >
+                  {/each}
+                </DropdownMenu.RadioGroup>
+              </DropdownMenu.Group>
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        </div>
 
-      <button
-        type="button"
-        class="lamp-row"
-        role="switch"
-        aria-checked={vadEnabled}
-        disabled={controlsDisabled}
-        onclick={() => void toggleVAD(!vadEnabled)}
-      >
-        <span class="size-1.5 shrink-0 rounded-full {lamp(vadEnabled)}"></span>
-        <span class="min-w-0 flex-1 truncate text-left">Voice detection</span>
-        {#if isPending("vad-enabled")}
-          <LoaderCircleIcon
-            class="size-3 shrink-0 animate-spin text-ink-quiet"
-          />
-        {:else if savedField === "vad-enabled"}
-          <CheckIcon class="size-3 shrink-0 text-success" />
-        {:else}
-          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-            {vadEnabled ? "ON" : "OFF"}
-          </span>
-        {/if}
-      </button>
-
-      <button
-        type="button"
-        class="lamp-row"
-        role="switch"
-        aria-checked={checkpointsEnabled}
-        disabled={controlsDisabled}
-        onclick={() => void toggleCheckpoints(!checkpointsEnabled)}
-      >
-        <span class="size-1.5 shrink-0 rounded-full {lamp(checkpointsEnabled)}"
-        ></span>
-        <span class="min-w-0 flex-1 truncate text-left">Checkpoints</span>
-        {#if isPending("silence-splitting")}
-          <LoaderCircleIcon
-            class="size-3 shrink-0 animate-spin text-ink-quiet"
-          />
-        {:else if savedField === "silence-splitting"}
-          <CheckIcon class="size-3 shrink-0 text-success" />
-        {:else}
-          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-            {checkpointsEnabled ? "ON" : "OFF"}
-          </span>
-        {/if}
-      </button>
-
-      <button
-        type="button"
-        class="lamp-row"
-        role="switch"
-        aria-checked={overlayEnabled}
-        disabled={controlsDisabled}
-        onclick={() => void toggleOverlay(!overlayEnabled)}
-      >
-        <span class="size-1.5 shrink-0 rounded-full {lamp(overlayEnabled)}"
-        ></span>
-        <span class="min-w-0 flex-1 truncate text-left">Overlay</span>
-        {#if isPending("overlay-enabled")}
-          <LoaderCircleIcon
-            class="size-3 shrink-0 animate-spin text-ink-quiet"
-          />
-        {:else if savedField === "overlay-enabled"}
-          <CheckIcon class="size-3 shrink-0 text-success" />
-        {:else}
-          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-            {overlayEnabled ? "ON" : "OFF"}
-          </span>
-        {/if}
-      </button>
+        <QuickToggle
+          label="Voice detection"
+          checked={vadEnabled}
+          disabled={controlsDisabled}
+          pending={isPending("vad-enabled")}
+          saved={savedField === "vad-enabled"}
+          onChange={toggleVAD}
+        />
+        <QuickToggle
+          label="Checkpoints"
+          checked={checkpointsEnabled}
+          disabled={controlsDisabled}
+          pending={isPending("silence-splitting")}
+          saved={savedField === "silence-splitting"}
+          onChange={toggleCheckpoints}
+        />
+        <QuickToggle
+          label="Overlay"
+          checked={overlayEnabled}
+          disabled={controlsDisabled}
+          pending={isPending("overlay-enabled")}
+          saved={savedField === "overlay-enabled"}
+          onChange={toggleOverlay}
+        />
+      </div>
     </div>
-  </div>
+  {/if}
+  {#if section !== "audio"}
+    <div
+      class="control-group"
+      class:embedded={section === "delivery"}
+      class:divided={section === "all"}
+    >
+      <div class="group-head">
+        <h2 class="text-sm font-semibold">Delivery</h2>
+        <span class="flex-1"></span>
+        <button
+          type="button"
+          class="door"
+          aria-label="Open general settings"
+          title="Open general settings"
+          onclick={onOpenDeliverySettings}
+        >
+          <SlidersIcon class="size-[13px]" />
+        </button>
+      </div>
 
-  <div class="control-group border-t border-hairline">
-    <div class="group-head">
-      <h2 class="caption">Delivery</h2>
-      <span class="flex-1"></span>
-      <button
-        type="button"
-        class="door"
-        aria-label="Open general settings"
-        title="Open general settings"
-        onclick={onOpenDeliverySettings}
-      >
-        <SlidersIcon class="size-[13px]" />
-      </button>
+      <div class="grid grid-cols-1 gap-x-6 gap-y-1 @min-[460px]:grid-cols-2">
+        <QuickToggle
+          label="Direct input"
+          checked={directInputEnabled}
+          disabled={controlsDisabled}
+          pending={isPending("delivery")}
+          saved={savedField === "delivery"}
+          onChange={toggleDelivery}
+        />
+        <QuickToggle
+          label="Keep history"
+          checked={historyEnabled}
+          disabled={controlsDisabled}
+          pending={isPending("history-enabled")}
+          saved={savedField === "history-enabled"}
+          onChange={toggleHistory}
+        />
+      </div>
+      <p class="mt-2 text-xs text-muted-foreground">
+        Direct input off uses manual copy.
+      </p>
     </div>
-
-    <div class="grid grid-cols-2 gap-x-3.5 gap-y-2">
-      <button
-        type="button"
-        class="lamp-row"
-        role="switch"
-        aria-checked={directInputEnabled}
-        disabled={controlsDisabled}
-        onclick={() => void toggleDelivery(!directInputEnabled)}
-      >
-        <span class="size-1.5 shrink-0 rounded-full {lamp(directInputEnabled)}"
-        ></span>
-        <span class="min-w-0 flex-1 truncate text-left">
-          {directInputEnabled ? "Direct input" : "Manual copy"}
-        </span>
-        {#if isPending("delivery")}
-          <LoaderCircleIcon
-            class="size-3 shrink-0 animate-spin text-ink-quiet"
-          />
-        {:else if savedField === "delivery"}
-          <CheckIcon class="size-3 shrink-0 text-success" />
-        {:else}
-          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-            {directInputEnabled ? "ON" : "OFF"}
-          </span>
-        {/if}
-      </button>
-
-      <button
-        type="button"
-        class="lamp-row"
-        role="switch"
-        aria-checked={historyEnabled}
-        disabled={controlsDisabled}
-        onclick={() => void toggleHistory(!historyEnabled)}
-      >
-        <span class="size-1.5 shrink-0 rounded-full {lamp(historyEnabled)}"
-        ></span>
-        <span class="min-w-0 flex-1 truncate text-left">Keep history</span>
-        {#if isPending("history-enabled")}
-          <LoaderCircleIcon
-            class="size-3 shrink-0 animate-spin text-ink-quiet"
-          />
-        {:else if savedField === "history-enabled"}
-          <CheckIcon class="size-3 shrink-0 text-success" />
-        {:else}
-          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">
-            {historyEnabled ? "ON" : "OFF"}
-          </span>
-        {/if}
-      </button>
-    </div>
-  </div>
+  {/if}
 </section>
 
 <style>
   .control-group {
-    padding: 0.75rem;
+    padding: 1rem;
+  }
+  .framed {
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg);
+    background: var(--layer-fill);
+  }
+  .embedded {
+    padding: 0;
+  }
+  .divided {
+    border-top: 1px solid var(--hairline);
   }
   .group-head {
     display: flex;
-    height: 1.25rem;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.625rem;
+    margin-bottom: 0.5rem;
   }
   .door {
     display: grid;
     place-items: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
     border-radius: var(--radius-sm);
-    color: var(--ink-quiet);
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
+    color: var(--secondary-foreground);
   }
   .door:hover {
-    background-color: var(--subtle-fill-hover);
-    color: var(--foreground);
+    background: var(--subtle-fill-hover);
   }
-  .door:focus-visible {
+  .door:focus-visible,
+  .microphone-control:focus-visible {
     outline: 2px solid var(--ring);
-    outline-offset: 1px;
+    outline-offset: 2px;
   }
-  .lamp-row {
+  .microphone-control {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    min-width: 0;
-    padding: 0.125rem 0.25rem;
-    margin: -0.125rem -0.25rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.719rem;
-    color: var(--card-foreground);
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
+    width: 100%;
+    min-height: 2.25rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--input);
+    border-radius: var(--radius-md);
+    background: var(--well);
+    font-size: 0.8125rem;
   }
-  .lamp-row:not(:disabled):hover {
-    background-color: var(--subtle-fill-hover);
-    color: var(--foreground);
-  }
-  .lamp-row[aria-checked="false"] {
-    color: var(--ink-quiet);
-  }
-  .lamp-row:disabled {
-    opacity: 0.6;
-    cursor: default;
-  }
-  .lamp-row:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 1px;
+  .microphone-control:disabled {
+    opacity: 0.5;
   }
 </style>

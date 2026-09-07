@@ -14,6 +14,8 @@
   import { Switch } from "$lib/components/ui/switch";
   import * as Select from "$lib/components/ui/select";
   import * as Dialog from "$lib/components/ui/dialog";
+  import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+  import MoreHorizontalIcon from "@lucide/svelte/icons/ellipsis";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import ConnectionSaveActions from "$lib/components/settings/ConnectionSaveActions.svelte";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
@@ -162,7 +164,7 @@
   }
 </script>
 
-{#if !activateFor}
+{#if !activateFor && !form}
   <p class="text-xs leading-relaxed text-muted-foreground">
     Save servers here, then select them in a task. Creating or duplicating a
     connection in this library does not activate it.
@@ -181,22 +183,11 @@
       class="flex min-h-0 flex-col gap-3.5"
       class:overflow-y-auto={activateFor !== undefined}
     >
-      {#if !activateFor}
-        <div class="flex items-center justify-between">
-          <h4 class="text-sm font-semibold">
-            {form.creating
-              ? "New connection"
-              : `Edit ${form.name || "connection"}`}
-          </h4>
-          <Badge variant="outline">Connection settings</Badge>
-        </div>
-      {/if}
       {#if !form.creating && activeUses(form.id).length > 0}<p
           class="text-xs text-muted-foreground"
         >
-          This connection is in use. Saving updates its connection details for
-          new requests; model and feature options stay on their own feature
-          pages. This updates every feature using this server.
+          Saving updates this server for every feature using it. Model and
+          feature options remain on their own pages.
         </p>{/if}
       {#snippet supportedUses()}
         {#if form}
@@ -474,53 +465,66 @@
                 : ""}</Badge
             >{/each}
         </div>
-        <div class="flex flex-wrap gap-1.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={busy || editor.runtimeDirty}
-            onclick={() => editor.beginConnection(c)}>Edit</Button
-          >
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={busy || editor.runtimeDirty || entries.length >= 96}
-            onclick={() => duplicate(c)}>Duplicate</Button
-          >
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={busy}
-            onclick={() => {
-              testedID = c.id;
-              void editor.testSavedConnection(c.id);
-            }}>Test connection</Button
-          >
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={busy ||
-              editor.runtimeDirty ||
-              activeUses(c.id).length > 0}
-            onclick={() => {
-              deleting = c;
-              deleteOpen = true;
-            }}>Delete</Button
-          >
-        </div>
-        <div class="flex flex-wrap gap-1">
-          {#each c.uses as p (p)}<Button
-              variant="link"
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-3"
+        >
+          <div class="flex flex-wrap gap-2">
+            {#each c.uses as p (p)}<Button
+                variant="link"
+                size="sm"
+                class="h-auto px-0 text-xs"
+                onclick={() => onOpenFeature(p)}>Open {roleLabel(p)}</Button
+              >{/each}
+          </div>
+          <div class="flex items-center gap-1">
+            <Button
+              variant="outline"
               size="sm"
-              onclick={() => onOpenFeature(p)}>Open {roleLabel(p)}</Button
-            >{/each}
+              disabled={busy || editor.runtimeDirty}
+              onclick={() => editor.beginConnection(c)}>Edit</Button
+            >
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger disabled={busy}>
+                {#snippet child({ props })}<Button
+                    {...props}
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Actions for ${c.name}`}
+                    ><MoreHorizontalIcon /></Button
+                  >{/snippet}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content align="end" class="w-64">
+                <DropdownMenu.Item
+                  disabled={busy}
+                  onSelect={() => {
+                    testedID = c.id;
+                    void editor.testSavedConnection(c.id);
+                  }}>Test connection</DropdownMenu.Item
+                >
+                <DropdownMenu.Item
+                  disabled={busy || editor.runtimeDirty || entries.length >= 96}
+                  onSelect={() => duplicate(c)}>Duplicate</DropdownMenu.Item
+                >
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item
+                  disabled={busy ||
+                    editor.runtimeDirty ||
+                    activeUses(c.id).length > 0}
+                  onSelect={() => {
+                    deleting = c;
+                    deleteOpen = true;
+                  }}>Delete</DropdownMenu.Item
+                >
+                {#if activeUses(c.id).length}<p
+                    class="px-2 py-1.5 text-xs leading-relaxed text-muted-foreground"
+                  >
+                    To delete, choose another connection or None in every
+                    feature using this server.
+                  </p>{/if}
+              </DropdownMenu.Content>
+            </DropdownMenu.Root>
+          </div>
         </div>
-        {#if activeUses(c.id).length}<p
-            class="text-[11px] text-muted-foreground"
-          >
-            To delete, choose another connection or None in every feature using
-            this server.
-          </p>{/if}
         {#if testedID === c.id && editor.managedConnectionTesting}<p
             role="status"
             class="text-xs text-muted-foreground"

@@ -4,6 +4,8 @@
   import CurrentResult from "$lib/components/home/CurrentResult.svelte";
   import ConnectionSetupDialog from "$lib/components/settings/ConnectionSetupDialog.svelte";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
+  import ResultQuickSettings from "./ResultQuickSettings.svelte";
+  import WorkspaceSplit from "./WorkspaceSplit.svelte";
   import { Button } from "$lib/components/ui/button";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
   import ReadinessPanel from "$lib/components/home/ReadinessPanel.svelte";
@@ -88,7 +90,6 @@
     session.editor.beginConnection(undefined, purpose);
     if (session.editor.connectionDraft) setupPurpose = purpose;
   }
-  let taskHeight = $state(0);
   const showReadiness = $derived(
     Boolean(
       inputMode !== "tts" &&
@@ -96,6 +97,11 @@
         readinessVisible(readiness, dismissedRecoveryKey) &&
         !voiceActive &&
         !fileWorking,
+    ),
+  );
+  const hasHistory = $derived(
+    Boolean(
+      runtimeSettings?.historyEnabled && inputMode !== "tts" && !showReadiness,
     ),
   );
   const microphoneLabel = $derived.by(() => {
@@ -169,9 +175,9 @@
 
 <main
   class="home"
-  class:with-history={runtimeSettings?.historyEnabled &&
-    inputMode !== "tts" &&
-    !showReadiness}
+  class:with-history={hasHistory}
+  class:speech-workspace={inputMode === "tts"}
+  class:onboarding={showReadiness}
   aria-label="Freehand workspace"
 >
   <div class="transport-frame">
@@ -236,189 +242,158 @@
         onClear={() => session.speech.clearTTSAudio()}
       />
     {/if}
-    <div class="task-grid" style:--task-height={`${taskHeight}px`}>
-      <div class="task-main" bind:clientHeight={taskHeight}>
-        {#if session.editor.draft && inputMode !== "tts" && (!showReadiness || (inputMode === "file" ? session.files.status.transcript : session.dictation.status.transcript))}
-          <CurrentResult
-            message={inputMode === "voice"
-              ? (statusMessage(session.dictation.status) ?? "")
-              : ""}
-            failed={inputMode === "voice" &&
-              isFailure(session.dictation.status)}
-            resultKey={`${inputMode}:${inputMode === "file" ? session.files.status.generation : session.dictation.status.generation}`}
-            mode={inputMode === "file" ? "file" : "voice"}
-            text={inputMode === "file"
-              ? (session.files.status.transcript ?? "")
-              : (session.dictation.status.transcript ?? "")}
-            working={inputMode === "file" ? fileWorking : voiceActive}
-            canCopy={inputMode === "file"
-              ? session.files.status.canCopy
-              : Boolean(session.dictation.status.transcript)}
-            recovery={inputMode === "voice" && session.dictation.status.canCopy}
-            onCopy={() =>
-              inputMode === "file"
-                ? session.files.copyFileTranscript()
-                : session.dictation.copyCurrent()}
-            onClear={() => {
-              if (inputMode === "file") void session.files.clearAudioFile();
-              else void session.dictation.clearCurrent();
-            }}
-            onListen={inputMode === "file" &&
-            runtimeSettings?.textToSpeech.enabled &&
-            !voiceActive &&
-            !fileWorking
-              ? () => session.speech.listenFileTranscript()
-              : undefined}
-          />
-        {/if}
-
-        {#if session.editor.draft}
-          {#if showReadiness && readiness}
-            <ReadinessPanel
-              {readiness}
-              testing={session.editor.sttConnectionTesting}
-              completing={session.editor.setupCompleting}
-              onTestConnection={() =>
-                session.editor.testConnection(session.editor.applied, "")}
-              onComplete={() => session.editor.completeSetup()}
-              onDismiss={() => {
-                dismissedRecoveryKey = readiness.recoveryKey;
+    <WorkspaceSplit
+      {hasHistory}
+      historyCount={session.history.entries.length}
+      working={voiceActive || fileWorking}
+    >
+      {#snippet result()}
+        <div class="task-main">
+          {#if session.editor.draft && inputMode !== "tts" && (!showReadiness || (inputMode === "file" ? session.files.status.transcript : session.dictation.status.transcript))}
+            <CurrentResult
+              message={inputMode === "voice"
+                ? (statusMessage(session.dictation.status) ?? "")
+                : ""}
+              failed={inputMode === "voice" &&
+                isFailure(session.dictation.status)}
+              resultKey={`${inputMode}:${inputMode === "file" ? session.files.status.generation : session.dictation.status.generation}`}
+              mode={inputMode === "file" ? "file" : "voice"}
+              text={inputMode === "file"
+                ? (session.files.status.transcript ?? "")
+                : (session.dictation.status.transcript ?? "")}
+              working={inputMode === "file" ? fileWorking : voiceActive}
+              canCopy={inputMode === "file"
+                ? session.files.status.canCopy
+                : Boolean(session.dictation.status.transcript)}
+              recovery={inputMode === "voice" &&
+                session.dictation.status.canCopy}
+              onCopy={() =>
+                inputMode === "file"
+                  ? session.files.copyFileTranscript()
+                  : session.dictation.copyCurrent()}
+              onClear={() => {
+                if (inputMode === "file") void session.files.clearAudioFile();
+                else void session.dictation.clearCurrent();
               }}
-              onOpenSettings={(section) => {
-                if (section === "audio") onOpenAudioSettings();
-                else if (section === "shortcuts") onOpenShortcutSettings();
-                else onOpenServerSettings();
-              }}
+              onListen={inputMode === "file" &&
+              runtimeSettings?.textToSpeech.enabled &&
+              !voiceActive &&
+              !fileWorking
+                ? () => session.speech.listenFileTranscript()
+                : undefined}
             >
-              {#snippet serverControls()}
-                <QuickSettings
-                  showCapture={false}
-                  showCleanup={false}
+              {#snippet quickSettings()}
+                <ResultQuickSettings
                   settings={runtimeSettings!}
-                  devices={session.editor.devices}
-                  processingProfiles={session.editor.processingProfiles}
-                  connection={session.editor.connection}
-                  processingConnection={session.editor.processingConnection}
-                  sttStale={session.editor.sttConnectionStale ||
-                    session.editor.connectionResultStale(
-                      Purpose.Transcription,
-                      runtimeSettings,
-                    )}
-                  processingStale={session.editor.processingConnectionStale ||
-                    session.editor.connectionResultStale(
-                      Purpose.Cleanup,
-                      runtimeSettings,
-                    )}
-                  pending={session.editor.quickSettingsPending}
-                  savedField={session.editor.quickSettingsSaved}
-                  sttTesting={session.editor.sttConnectionTesting}
-                  processingTesting={session.editor.processingConnectionTesting}
-                  onAddConnection={addConnection}
-                  onChangeConnection={(change) =>
-                    session.editor.changeConnection(change)}
-                  onUpdate={(patch, field) =>
-                    session.editor.updateQuickSettings(patch, field)}
-                  onTestConnection={() =>
-                    session.editor.testConnection(session.editor.applied, "")}
-                  onTestProcessingConnection={() =>
-                    session.editor.testPostProcessingConnection(
-                      session.editor.applied,
-                      "",
-                    )}
+                  editor={session.editor}
+                  showCapture={inputMode === "voice"}
                   disabled={quickSettingsDisabled || session.editor.saving}
+                  onAddConnection={addConnection}
                   {onOpenServerSettings}
                   {onOpenProcessingSettings}
                   {onOpenAudioSettings}
-                  onOpenDeliverySettings={onOpenGeneralSettings}
+                  {onOpenGeneralSettings}
                 />
               {/snippet}
-            </ReadinessPanel>
-          {:else if inputMode === "tts"}
-            <section
-              class="rounded-lg border border-hairline bg-layer-fill p-4"
-              aria-label="Text to speech connection"
-            >
-              <div class="flex flex-wrap items-center gap-3">
-                <label for="home-speech-connection" class="text-sm font-medium"
-                  >Text to speech connection</label
-                >
-                <div class="min-w-48 flex-1">
-                  <ConnectionSelect
-                    id="home-speech-connection"
-                    catalog={runtimeSettings!.savedConnections}
-                    purpose={Purpose.Speech}
-                    onAdd={() => addConnection(Purpose.Speech)}
-                    disabled={quickSettingsDisabled || session.editor.saving}
-                    onChange={(change) =>
+            </CurrentResult>
+          {/if}
+
+          {#if session.editor.draft}
+            {#if showReadiness && readiness}
+              <ReadinessPanel
+                {readiness}
+                testing={session.editor.sttConnectionTesting}
+                completing={session.editor.setupCompleting}
+                onTestConnection={() =>
+                  session.editor.testConnection(session.editor.applied, "")}
+                onComplete={() => session.editor.completeSetup()}
+                onDismiss={() => {
+                  dismissedRecoveryKey = readiness.recoveryKey;
+                }}
+                onOpenSettings={(section) => {
+                  if (section === "audio") onOpenAudioSettings();
+                  else if (section === "shortcuts") onOpenShortcutSettings();
+                  else onOpenServerSettings();
+                }}
+              >
+                {#snippet serverControls()}
+                  <QuickSettings
+                    showCapture={false}
+                    showCleanup={false}
+                    settings={runtimeSettings!}
+                    devices={session.editor.devices}
+                    processingProfiles={session.editor.processingProfiles}
+                    connection={session.editor.connection}
+                    processingConnection={session.editor.processingConnection}
+                    sttStale={session.editor.sttConnectionStale ||
+                      session.editor.connectionResultStale(
+                        Purpose.Transcription,
+                        runtimeSettings,
+                      )}
+                    processingStale={session.editor.processingConnectionStale ||
+                      session.editor.connectionResultStale(
+                        Purpose.Cleanup,
+                        runtimeSettings,
+                      )}
+                    pending={session.editor.quickSettingsPending}
+                    savedField={session.editor.quickSettingsSaved}
+                    sttTesting={session.editor.sttConnectionTesting}
+                    processingTesting={session.editor
+                      .processingConnectionTesting}
+                    onAddConnection={addConnection}
+                    onChangeConnection={(change) =>
                       session.editor.changeConnection(change)}
+                    onUpdate={(patch, field) =>
+                      session.editor.updateQuickSettings(patch, field)}
+                    onTestConnection={() =>
+                      session.editor.testConnection(session.editor.applied, "")}
+                    onTestProcessingConnection={() =>
+                      session.editor.testPostProcessingConnection(
+                        session.editor.applied,
+                        "",
+                      )}
+                    disabled={quickSettingsDisabled || session.editor.saving}
+                    {onOpenServerSettings}
+                    {onOpenProcessingSettings}
+                    {onOpenAudioSettings}
+                    onOpenDeliverySettings={onOpenGeneralSettings}
                   />
+                {/snippet}
+              </ReadinessPanel>
+            {:else if inputMode === "tts"}
+              <section
+                class="rounded-lg border border-hairline bg-layer-fill p-4"
+                aria-label="Text to speech connection"
+              >
+                <div class="flex flex-wrap items-center gap-3">
+                  <label
+                    for="home-speech-connection"
+                    class="text-sm font-medium">Text to speech connection</label
+                  >
+                  <div class="min-w-48 flex-1">
+                    <ConnectionSelect
+                      id="home-speech-connection"
+                      catalog={runtimeSettings!.savedConnections}
+                      purpose={Purpose.Speech}
+                      onAdd={() => addConnection(Purpose.Speech)}
+                      disabled={quickSettingsDisabled || session.editor.saving}
+                      onChange={(change) =>
+                        session.editor.changeConnection(change)}
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onclick={onOpenSpeechSettings}
+                    >Model and voice settings</Button
+                  >
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onclick={onOpenSpeechSettings}
-                  >Model and voice settings</Button
-                >
-              </div>
-              <p class="mt-2 text-xs text-muted-foreground">
-                Connection selection applies immediately. Your unsent text stays
-                here while you change settings.
-              </p>
-            </section>
-          {:else}
-            <details
-              class="overflow-hidden rounded-lg border border-hairline bg-layer-fill"
-            >
-              <summary class="cursor-pointer px-4 py-3 text-sm font-medium"
-                >Transcription settings
-                <span class="ml-2 text-xs font-normal text-muted-foreground"
-                  >{runtimeSettings?.model || "Choose a connection and model"} ·
-                  quick changes apply immediately</span
-                >
-              </summary>
-              <div class="p-3">
-                <QuickSettings
-                  showCapture={inputMode === "voice"}
-                  settings={runtimeSettings!}
-                  devices={session.editor.devices}
-                  processingProfiles={session.editor.processingProfiles}
-                  connection={session.editor.connection}
-                  processingConnection={session.editor.processingConnection}
-                  sttStale={session.editor.sttConnectionStale ||
-                    session.editor.connectionResultStale(
-                      Purpose.Transcription,
-                      runtimeSettings,
-                    )}
-                  processingStale={session.editor.processingConnectionStale ||
-                    session.editor.connectionResultStale(
-                      Purpose.Cleanup,
-                      runtimeSettings,
-                    )}
-                  pending={session.editor.quickSettingsPending}
-                  savedField={session.editor.quickSettingsSaved}
-                  sttTesting={session.editor.sttConnectionTesting}
-                  processingTesting={session.editor.processingConnectionTesting}
-                  onAddConnection={addConnection}
-                  onChangeConnection={(change) =>
-                    session.editor.changeConnection(change)}
-                  onUpdate={(patch, field) =>
-                    session.editor.updateQuickSettings(patch, field)}
-                  onTestConnection={() =>
-                    session.editor.testConnection(session.editor.applied, "")}
-                  onTestProcessingConnection={() =>
-                    session.editor.testPostProcessingConnection(
-                      session.editor.applied,
-                      "",
-                    )}
-                  disabled={quickSettingsDisabled || session.editor.saving}
-                  {onOpenServerSettings}
-                  {onOpenProcessingSettings}
-                  {onOpenAudioSettings}
-                  onOpenDeliverySettings={onOpenGeneralSettings}
-                />
-              </div>
-            </details>
-            {#if !runtimeSettings?.historyEnabled}
+                <p class="mt-2 text-xs text-muted-foreground">
+                  Connection selection applies immediately. Your unsent text
+                  stays here while you change settings.
+                </p>
+              </section>
+            {:else if !runtimeSettings?.historyEnabled}
               <div
                 class="flex items-center justify-between gap-3 px-1 text-xs text-muted-foreground"
               >
@@ -433,58 +408,60 @@
                 >
               </div>
             {/if}
-          {/if}
-        {:else}
-          <div class="columns">
-            <Skeleton class="h-full w-[372px] shrink-0 rounded-lg" />
-            <Skeleton class="h-full flex-1 rounded-lg" />
-          </div>
-        {/if}
-      </div>
-      {#if runtimeSettings?.historyEnabled && inputMode !== "tts" && !showReadiness}
-        <aside class="history-sidebar" aria-label="Recent history">
-          <details
-            class="overflow-hidden rounded-lg border border-hairline bg-layer-fill"
-          >
-            <summary class="cursor-pointer px-4 py-3 text-sm font-medium"
-              >Recent history · {session.history.entries.length}
-              <span class="ml-2 text-xs font-normal text-muted-foreground"
-                >In memory until you quit</span
-              >
-            </summary>
-            <div class="history-area">
-              <HistoryPanel
-                enabled={session.editor.applied?.historyEnabled ?? false}
-                entries={session.history.entries}
-                fileStatus={session.files.status}
-                fileHistoryGeneration={session.files.historyGeneration}
-                onOpenSettings={onOpenHistorySettings}
-                onCopy={(id) => session.history.copyHistoryEntry(id)}
-                onCopyVersion={(id, version) =>
-                  session.history.copyHistoryEntryVersion(id, version)}
-                onDelete={(id) => session.history.deleteHistoryEntry(id)}
-                onCopyFile={() => session.files.copyFileTranscript()}
-                ttsEnabled={runtimeSettings?.textToSpeech.enabled ?? false}
-                ttsAvailable={!voiceActive && !fileWorking}
-                ttsStatus={session.speech.status}
-                onListen={(id, version) =>
-                  session.speech.listenHistoryEntry(id, version)}
-                onListenFile={() => session.speech.listenFileTranscript()}
-                onPauseTTS={() => session.speech.pauseTTS()}
-                onResumeTTS={() => session.speech.resumeTTS()}
-                onRestartTTS={() => session.speech.restartTTS()}
-                onStopTTS={() => session.speech.stopTTS()}
-                onSaveTTS={() => session.speech.saveTTSAudio()}
-                onClearTTS={() => session.speech.clearTTSAudio()}
-                ttsWorkspaceVisible={inputMode === "tts"}
-                collapsible={false}
-                playbackVisibleElsewhere
-              />
+          {:else}
+            <div class="columns">
+              <Skeleton class="h-full w-[372px] shrink-0 rounded-lg" />
+              <Skeleton class="h-full flex-1 rounded-lg" />
             </div>
-          </details>
+          {/if}
+        </div>
+      {/snippet}
+      {#snippet history()}
+        <aside class="history-sidebar" aria-label="Recent history">
+          <div
+            class="flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-hairline px-4 py-3"
+          >
+            <h2 class="text-sm font-semibold">
+              Recent history <span class="ml-1 text-muted-foreground"
+                >{session.history.entries.length}</span
+              >
+            </h2>
+            <span class="text-xs text-muted-foreground"
+              >In memory until you quit</span
+            >
+          </div>
+          <div class="history-area">
+            <HistoryPanel
+              enabled={session.editor.applied?.historyEnabled ?? false}
+              entries={session.history.entries}
+              fileStatus={session.files.status}
+              fileHistoryGeneration={session.files.historyGeneration}
+              onOpenSettings={onOpenHistorySettings}
+              onCopy={(id) => session.history.copyHistoryEntry(id)}
+              onCopyVersion={(id, version) =>
+                session.history.copyHistoryEntryVersion(id, version)}
+              onDelete={(id) => session.history.deleteHistoryEntry(id)}
+              onCopyFile={() => session.files.copyFileTranscript()}
+              ttsEnabled={runtimeSettings?.textToSpeech.enabled ?? false}
+              ttsAvailable={!voiceActive && !fileWorking}
+              ttsStatus={session.speech.status}
+              onListen={(id, version) =>
+                session.speech.listenHistoryEntry(id, version)}
+              onListenFile={() => session.speech.listenFileTranscript()}
+              onPauseTTS={() => session.speech.pauseTTS()}
+              onResumeTTS={() => session.speech.resumeTTS()}
+              onRestartTTS={() => session.speech.restartTTS()}
+              onStopTTS={() => session.speech.stopTTS()}
+              onSaveTTS={() => session.speech.saveTTSAudio()}
+              onClearTTS={() => session.speech.clearTTSAudio()}
+              ttsWorkspaceVisible={inputMode === "tts"}
+              collapsible={false}
+              playbackVisibleElsewhere
+            />
+          </div>
         </aside>
-      {/if}
-    </div>
+      {/snippet}
+    </WorkspaceSplit>
   </div>
 </main>
 
@@ -502,15 +479,14 @@
   .home {
     container-type: inline-size;
     width: 100%;
-    max-width: 80rem;
-    margin-inline: auto;
     display: flex;
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .transport-frame {
+    flex-shrink: 0;
     padding: 1rem 1rem 0;
   }
   .transport-frame :global(.transport) {
@@ -518,44 +494,51 @@
     border-radius: var(--radius-lg);
     overflow: hidden;
   }
-  .task-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.875rem;
-    align-items: start;
-  }
-  .task-main {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: 0.875rem;
-  }
-  .history-sidebar {
-    --history-max-height: 24rem;
-    min-width: 0;
-  }
-  .home.with-history {
-    max-width: 96rem;
-  }
-  @container (min-width: 1120px) {
-    .history-sidebar {
-      --history-max-height: max(24rem, calc(var(--task-height) - 2.875rem));
-    }
-    .with-history .task-grid {
-      grid-template-columns: minmax(0, 1.45fr) minmax(24rem, 1fr);
-    }
-  }
   .body {
     display: flex;
-    flex: 0 0 auto;
+    min-height: 0;
+    flex: 1;
     flex-direction: column;
-    gap: 0.875rem;
-    padding: 0.875rem 1rem 1rem;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem 1rem;
+  }
+  .task-main {
+    height: 100%;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .history-sidebar {
+    height: 100%;
+    --history-max-height: none;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg);
+    background: var(--layer-fill);
   }
   .history-area {
-    display: flex;
-    flex-direction: column;
     min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .onboarding .task-main {
+    overflow-y: auto;
+  }
+  .speech-workspace .transport-frame {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .speech-workspace .body {
+    flex: 0 0 auto;
   }
   .columns {
     display: flex;
