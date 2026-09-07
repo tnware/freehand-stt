@@ -1,0 +1,57 @@
+name: Site validation
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Source commit to build
+        type: string
+        required: true
+      upload:
+        description: Upload a main-branch deployment artifact
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: ./.github/actions/setup-go
+        with:
+          scope: site
+      - name: Verify app and public backend catalog agree
+        run: go test ./internal/compatibility
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci --prefix site
+      - name: Verify shared branding
+        run: |
+          cmp branding/freehand-mark.svg site/src/assets/freehand-mark.svg
+          cmp branding/freehand-mark.svg site/public/favicon.svg
+      - run: npm --prefix site run build
+      - name: Verify GitHub Pages base paths
+        shell: bash
+        run: |
+          grep -q 'href="/freehand-stt/backends/"' site/dist/index.html
+          grep -q 'href="/freehand-stt/docs/backends/speaches/"' site/dist/backends/index.html
+          grep -q 'href="/freehand-stt/favicon.svg"' site/dist/docs/getting-started/index.html
+          grep -q 'url=/freehand-stt/docs/getting-started' site/dist/docs/index.html
+          if grep -R -q '/freehand-stt/freehand-stt/' site/dist; then
+            echo 'GitHub Pages base path was applied more than once.' >&2
+            exit 1
+          fi
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: inputs.upload && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.event.repository.visibility == 'public'
+        with:
+          path: site/dist

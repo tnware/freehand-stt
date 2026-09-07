@@ -23,6 +23,14 @@ the version in `build/config.yml` to that release PR rather than editing them in
 fix branches. Merging a fix is not publication: merging the refreshed release PR
 starts the draft/tag and Windows packaging flow described below.
 
+The release workflow validates the tag through the same CI workflow used by PRs,
+with every workload enabled and the expected version checked before packaging.
+Only after validation succeeds does publication download the Windows artifacts
+from that same release run, create checksums and attestations, and make the draft
+public. It does not reuse PR artifacts or rebuild different bytes after tests.
+A failed validation leaves publication blocked; rerun the failed jobs after
+diagnosing the failure rather than making the draft public manually.
+
 `build/config.yml` is the release identity source. The release build derives
 Windows' required four-part numeric version from that SemVer value before it
 generates the executable resources and installer metadata. About reads the same

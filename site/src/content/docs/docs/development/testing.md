@@ -3,6 +3,32 @@ title: Testing contract
 description: Deterministic, integration, and native acceptance responsibilities.
 ---
 
+## CI workflow acceptance
+
+Run the dependency-free selection/gate regressions and workflow wiring checks:
+
+```sh
+node --test .github/workflows/scripts/validation.test.mjs
+go test ./build/scripts/cicontract
+go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -shellcheck= -pyflakes=
+```
+
+The Node fixtures use temporary Git repositories to cover prose, site, shared
+inputs, unknown paths, renames, unavailable baselines, and full release/manual
+validation. Gate cases cover selected successes, intentional skips, failures,
+cancellation, and missing outputs. Go fixtures check trigger/gate wiring,
+same-run release artifacts, site reuse, and CI's frozen dependency installation.
+Actionlint checks workflow syntax and expressions; the flags above disable its
+optional external ShellCheck/Pyflakes integrations, not its own analysis.
+
+Verify actual GitHub runs before enabling the required **Validation** check.
+Exercise an application-changing PR and a documentation-only PR; confirm the
+latter skips application jobs but still reports the gate and relevant site
+result. Compare cold and warm cache timings separately. A task dry run confirms
+`npm ci` selection but is not a package build. Release gating and same-run artifact
+publication also require a real release run; local tests do not establish those
+GitHub effects. See [GitHub Actions](../github-actions/) for the rollout contract.
+
 ## Product site and onboarding acceptance
 
 Run `npm --prefix site run build` after site or documentation edits. Check the
