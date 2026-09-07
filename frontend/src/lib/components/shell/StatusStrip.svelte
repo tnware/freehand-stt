@@ -19,7 +19,7 @@
 <!-- Endpoint reachability is different from dictation state. Keep it quiet,
      persistent, and truthful about whether a probe has actually run. -->
 <footer
-  class="flex h-8 shrink-0 items-center justify-between gap-3 border-t border-hairline bg-layer-fill px-4 text-[11px]"
+  class="flex min-h-9 shrink-0 items-center justify-between gap-3 border-t border-hairline bg-layer-fill px-4 text-xs"
 >
   <div class="flex min-w-0 items-center gap-2.5" title={connectionState.title}>
     <span class="size-1.5 shrink-0 rounded-full {connectionState.dot}"></span>
@@ -37,7 +37,7 @@
     <Button
       variant="ghost"
       size="xs"
-      class="-mr-1.5 h-6 text-[11px] text-secondary-foreground hover:text-foreground"
+      class="-mr-1.5 h-6 text-xs text-secondary-foreground hover:text-foreground"
       onclick={onAbout}
       aria-label={aboutOpen ? "Focus About" : "Open About"}
       title={aboutOpen ? "Focus About" : "Open About"}

@@ -21,7 +21,7 @@
 </script>
 
 <div
-  class="px-5 py-[15px]"
+  class="px-5 py-4"
   role="group"
   aria-labelledby={titleID}
   aria-describedby={description ? descriptionID : undefined}
@@ -30,7 +30,12 @@
     <div class="min-w-0">
       <p id={titleID} class="text-sm font-medium">{title}</p>
       {#if description}
-        <p id={descriptionID} class="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{description}</p>
+        <p
+          id={descriptionID}
+          class="mt-1 text-[13px] leading-relaxed text-muted-foreground"
+        >
+          {description}
+        </p>
       {/if}
     </div>
     {#if control}

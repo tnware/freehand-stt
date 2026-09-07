@@ -1,4 +1,12 @@
 import { mount } from "svelte";
 import SettingsFixture from "./SettingsFixture.svelte";
+import WorkspaceFixture from "./WorkspaceFixture.svelte";
 import "../../../src/app.css";
-mount(SettingsFixture, { target: document.getElementById("app")! });
+const params = new URLSearchParams(location.search);
+document.documentElement.classList.toggle(
+  "dark",
+  params.get("theme") === "dark",
+);
+mount(params.get("view") === "workspace" ? WorkspaceFixture : SettingsFixture, {
+  target: document.getElementById("app")!,
+});

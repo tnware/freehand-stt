@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { type Catalog, type Change, type Purpose } from "$bindings/savedconnection";
+  import {
+    type Catalog,
+    type Change,
+    type Purpose,
+  } from "$bindings/savedconnection";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Button } from "$lib/components/ui/button";
   let {
@@ -19,35 +23,54 @@
     onManage: () => void;
     onAdd: () => void;
   } = $props();
-  const entries = $derived((catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)));
-  const selected = $derived(entries.find((c) => c.id === catalog.selected?.[purpose]));
+  const entries = $derived(
+    (catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)),
+  );
+  const selected = $derived(
+    entries.find((c) => c.id === catalog.selected?.[purpose]),
+  );
 </script>
 
-<div class="space-y-3 rounded-xl border border-hairline bg-layer-fill p-4">
-  <div class="flex items-center justify-between gap-2">
-    <label for={`saved-connection-${purpose}`} class="text-xs font-medium">Active connection</label
-    ><Button variant="link" size="sm" disabled={busy} onclick={selected ? onManage : onAdd}
+<section
+  class="rounded-xl border border-hairline bg-layer-fill px-5 py-4"
+  aria-label="Active connection"
+>
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <label for={`saved-connection-${purpose}`} class="text-sm font-medium"
+      >Connection</label
+    >
+    <div class="min-w-44 flex-1">
+      <ConnectionSelect
+        id={`saved-connection-${purpose}`}
+        {catalog}
+        {purpose}
+        disabled={busy}
+        {onChange}
+        {onAdd}
+      />
+    </div>
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={busy}
+      onclick={selected ? onManage : onAdd}
       >{selected ? "Edit connection" : "Add connection"}</Button
     >
   </div>
-  <ConnectionSelect
-    id={`saved-connection-${purpose}`}
-    {catalog}
-    {purpose}
-    disabled={busy}
-    {onChange}
-    {onAdd}
-  />
-  {#if selected}<p class="break-all text-xs text-muted-foreground">
+  {#if selected}<p
+      class="mt-2 truncate text-xs text-muted-foreground"
+      title={selected.details.baseURL}
+    >
       {selected.details.baseURL}
-    </p>{:else}<p class="text-xs text-muted-foreground">
+    </p>
+  {:else}<p class="mt-2 text-[13px] text-muted-foreground">
       {entries.length
         ? "Choose a saved connection to configure this feature."
-        : "Add a server to get started. You’ll return here to choose its model."}
+        : "Add a server, then choose its model here."}
     </p>{/if}
-  <p class="text-[11px] leading-relaxed text-muted-foreground">
+  <p class="mt-2 text-xs leading-relaxed text-muted-foreground">
     {dirty
-      ? "You’ll be asked to save or discard these edits before changing connections."
-      : "Connection selection applies immediately. Model and task options below apply when you press Save settings."}
+      ? "Save or discard your edits before changing connections."
+      : "Connection changes apply immediately. Save settings applies the options below."}
   </p>
-</div>
+</section>

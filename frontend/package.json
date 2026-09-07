@@ -29,6 +29,7 @@
     "@types/node": "^26.4.0",
     "bits-ui": "^2.19.0",
     "clsx": "^2.1.1",
+    "paneforge": "1.0.2",
     "shadcn-svelte": "^1.5.1",
     "svelte": "^5.46.4",
     "svelte-check": "^4.4.8",

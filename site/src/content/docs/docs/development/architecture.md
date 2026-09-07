@@ -477,6 +477,15 @@ Durable settings contain ordinary STT, VAD, shortcut, window, appearance, histor
 
 `internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation immediately and serializes native output teardown within the service wait budget described below.
 
+`WorkspaceSplit` owns the main renderer's result/history presentation. PaneForge
+provides pointer and keyboard resizing at desktop widths; its local-storage
+layout preference is independent of Go-owned settings and contains no content.
+Narrow windows select one pane at a time. `ResultQuickSettings` opens anchored
+Bits UI popovers containing the shared audio, delivery, transcription, and
+cleanup controls. Every edit still passes through `SettingsEditor` and the
+existing coherent settings transaction; opening a popover performs no probe or
+inference request. Transcript and history scrolling do not resize the workspace.
+
 The main, Settings, and About windows use the opaque product palette by default.
 Dark surfaces adapt the website’s navy to a tighter desktop ladder (`#111722`,
 `#171f2c`, `#1c2635`) with its cobalt accent (`#4d8dff`). Inputs use `#121925`

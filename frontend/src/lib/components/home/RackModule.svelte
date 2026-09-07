@@ -5,6 +5,7 @@
 
   let {
     label,
+    embedded = false,
     /** Tailwind background class for the state LED, or "" for no lamp. */
     dot = "",
     /** One right-aligned fact: latency, profile name, count. */
@@ -20,6 +21,7 @@
     children,
   }: {
     label: string;
+    embedded?: boolean;
     dot?: string;
     meta?: string;
     metaTone?: "quiet" | "ok" | "warn" | "bad";
@@ -33,7 +35,9 @@
     children: Snippet;
   } = $props();
 
-  const collapsible = $derived(open !== undefined && Boolean(controls) && Boolean(onToggle));
+  const collapsible = $derived(
+    open !== undefined && Boolean(controls) && Boolean(onToggle),
+  );
 
   const metaClass = $derived(
     metaTone === "ok"
@@ -51,7 +55,7 @@
   The rack replaced a single collapsing panel of seven unlabelled icon toggles,
   so every module here says what it is in words.
 -->
-<section class="module-card shrink-0 rounded-lg border border-hairline bg-layer-fill p-3">
+<section class="module-card shrink-0" class:framed={!embedded}>
   <div class="flex items-center gap-2">
     {#if collapsible}
       <button
@@ -62,24 +66,32 @@
         onclick={onToggle}
       >
         {#if dot}
-          <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"></span>
+          <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"
+          ></span>
         {/if}
         {@render icon?.()}
         <h2 class="caption shrink-0">{label}</h2>
         <span class="flex-1"></span>
         {#if meta}
-          <span class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}">{meta}</span>
+          <span
+            class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}"
+            >{meta}</span
+          >
         {/if}
       </button>
     {:else}
       {#if dot}
-        <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"></span>
+        <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"
+        ></span>
       {/if}
       {@render icon?.()}
       <h2 class="caption">{label}</h2>
       <span class="flex-1"></span>
       {#if meta}
-        <span class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}">{meta}</span>
+        <span
+          class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}"
+          >{meta}</span
+        >
       {/if}
     {/if}
     {@render actions?.()}
@@ -104,7 +116,9 @@
         onclick={onToggle}
       >
         <ChevronRightIcon
-          class="size-[14px] transition-transform duration-200 {open ? 'rotate-90' : ''}"
+          class="size-[14px] transition-transform duration-200 {open
+            ? 'rotate-90'
+            : ''}"
         />
       </button>
     {/if}
@@ -122,6 +136,12 @@
 </section>
 
 <style>
+  .framed {
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg);
+    background: var(--layer-fill);
+    padding: 0.75rem;
+  }
   .module-card {
     display: flex;
     flex-direction: column;
@@ -149,8 +169,8 @@
   .door {
     display: grid;
     place-items: center;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 2rem;
+    height: 2rem;
     flex-shrink: 0;
     border-radius: var(--radius-sm);
     color: var(--ink-quiet);

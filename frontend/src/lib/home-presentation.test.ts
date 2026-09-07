@@ -21,11 +21,11 @@ describe("home task presentation", () => {
     expect(read("components/home/QuickSettings.svelte")).toContain(
       'label="Transcription"',
     );
-    expect(read("components/home/HomeScreen.svelte")).toContain(
+    expect(read("components/home/ResultQuickSettings.svelte")).toContain(
       "Transcription settings",
     );
     expect(read("components/home/QuickControls.svelte")).toContain(
-      'directInputEnabled ? "Direct input" : "Manual copy"',
+      "Direct input off uses manual copy.",
     );
     expect(read("components/home/TextToSpeech.svelte")).toContain(
       "Text to speech settings",

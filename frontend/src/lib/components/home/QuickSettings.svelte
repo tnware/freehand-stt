@@ -35,10 +35,11 @@
     readDisclosurePreference,
     writeDisclosurePreference,
   } from "$lib/utils/viewPreferences";
-  import { cn } from "$lib/utils";
 
   let {
     showCapture = true,
+    showTranscription = true,
+    embedded = false,
     showCleanup = true,
     onAddConnection,
     settings,
@@ -64,6 +65,8 @@
   }: {
     /** Applied settings: every edit in this rack is persisted immediately. */
     showCapture?: boolean;
+    showTranscription?: boolean;
+    embedded?: boolean;
     showCleanup?: boolean;
     onAddConnection?: (purpose: Purpose) => void;
     settings: Settings;
@@ -349,137 +352,148 @@
     />
   {/if}
 
-  <RackModule
-    label="Transcription"
-    dot={healthDot(connection, true, sttHealthStale)}
-    meta={sttOpen
-      ? latency(connection, true, sttHealthStale)
-      : collapsedConnectionSummary(
-          serverLoadedModel ? "Server-loaded model" : settings.model,
-          connection,
-          true,
-          sttHealthStale,
-        )}
-    metaTone={latencyTone(connection, true, sttHealthStale)}
-    onSettings={onOpenServerSettings}
-    settingsLabel="Open transcription settings"
-    open={sttOpen}
-    controls="quick-stt-details"
-    onToggle={toggleSTT}
-  >
-    {#snippet icon()}<ProviderIcon
-        profile={settings.compatibilityProfile}
-        size={20}
-      />{/snippet}
-    <div class="contents">
-      {#snippet sttEndpointMeta()}{/snippet}
-      {#snippet sttEndpointControl()}
-        <ConnectionSelect
-          id="quick-stt-endpoint"
-          catalog={settings.savedConnections}
-          purpose={Purpose.Transcription}
-          onAdd={onAddConnection
-            ? () => onAddConnection(Purpose.Transcription)
-            : undefined}
-          compact
-          disabled={disabled || pending.length > 0 || modelTouched}
-          onChange={onChangeConnection}
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          class="h-[30px] shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
-          disabled={sttTesting ||
-            !settings.savedConnections.selected?.stt ||
-            isPending("stt-model")}
-          onclick={() => void testSTTConnection()}
-        >
-          {#if sttTesting}<LoaderCircleIcon class="animate-spin" />{/if}
-          {sttTesting ? "Testing" : "Test"}
-        </Button>
-      {/snippet}
-      {@render field(
-        "Connection",
-        "quick-stt-endpoint",
-        sttEndpointMeta,
-        sttEndpointControl,
-      )}
-
-      {#snippet sttModelMeta()}
-        {#if isPending("stt-model")}
-          <LoaderCircleIcon class="inline size-3 animate-spin" />
-        {:else if modelTouched}
-          edited
-        {:else if savedField === "stt-model"}
-          <CheckIcon class="inline size-3 text-success" />
-        {:else}
-          {serverLoadedModel
-            ? "Server selected"
-            : modelMetadata(connection, settings.model)}
-        {/if}
-      {/snippet}
-      {#snippet sttModelControl()}
-        {#if serverLoadedModel}
-          <span id="quick-stt-model" class="text-xs text-muted-foreground"
-            >Server-loaded model</span
-          >
-        {:else if discoveredModels.length > 0}
-          <Select.Root
-            type="single"
-            value={settings.model}
-            disabled={isPending("stt-model")}
-            onValueChange={chooseModel}
-          >
-            <Select.Trigger
-              id="quick-stt-model"
-              size="sm"
-              class="h-[30px] w-full min-w-0 bg-well"
-            >
-              <span
-                class="figure min-w-0 flex-1 truncate text-left text-[11.5px]"
-              >
-                {settings.model || "Choose a discovered model"}
-              </span>
-            </Select.Trigger>
-            <Select.Content class="max-h-72">
-              <Select.Group>
-                <Select.Label>Remembered and discovered models</Select.Label>
-                {#each discoveredModels as model (model)}
-                  <Select.Item value={model} label={model}>{model}</Select.Item>
-                {/each}
-              </Select.Group>
-            </Select.Content>
-          </Select.Root>
-        {:else}
-          <ValueInput
-            id="quick-stt-model"
-            class="figure h-[30px] min-w-0 flex-1 bg-well text-[11.5px]"
-            bind:value={modelDraft}
-            disabled={isPending("stt-model")}
-            spellcheck={false}
-            oninput={() => (modelTouched = true)}
-            onblur={() => void commitModel()}
-            onkeydown={(event) =>
-              handleDraftKey(event, () => {
-                modelDraft = settings.model;
-                modelTouched = false;
-              })}
+  {#if showTranscription}
+    <RackModule
+      {embedded}
+      label="Transcription"
+      dot={healthDot(connection, true, sttHealthStale)}
+      meta={embedded || sttOpen
+        ? latency(connection, true, sttHealthStale)
+        : collapsedConnectionSummary(
+            serverLoadedModel ? "Server-loaded model" : settings.model,
+            connection,
+            true,
+            sttHealthStale,
+          )}
+      metaTone={latencyTone(connection, true, sttHealthStale)}
+      onSettings={onOpenServerSettings}
+      settingsLabel="Open transcription settings"
+      open={embedded ? undefined : sttOpen}
+      controls="quick-stt-details"
+      onToggle={toggleSTT}
+    >
+      {#snippet icon()}<ProviderIcon
+          profile={settings.compatibilityProfile}
+          size={20}
+        />{/snippet}
+      <div class="flex min-w-0 flex-col gap-3">
+        {#snippet sttEndpointMeta()}{/snippet}
+        {#snippet sttEndpointControl()}
+          <ConnectionSelect
+            id="quick-stt-endpoint"
+            catalog={settings.savedConnections}
+            purpose={Purpose.Transcription}
+            onAdd={onAddConnection
+              ? () => onAddConnection(Purpose.Transcription)
+              : undefined}
+            compact
+            disabled={disabled || pending.length > 0 || modelTouched}
+            onChange={onChangeConnection}
           />
-        {/if}
-      {/snippet}
-      {@render field("Model", "quick-stt-model", sttModelMeta, sttModelControl)}
-    </div>
-  </RackModule>
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-9 shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
+            disabled={sttTesting ||
+              !settings.savedConnections.selected?.stt ||
+              isPending("stt-model")}
+            onclick={() => void testSTTConnection()}
+          >
+            {#if sttTesting}<LoaderCircleIcon class="animate-spin" />{/if}
+            {sttTesting ? "Testing" : "Test"}
+          </Button>
+        {/snippet}
+        {@render field(
+          "Connection",
+          "quick-stt-endpoint",
+          sttEndpointMeta,
+          sttEndpointControl,
+        )}
+
+        {#snippet sttModelMeta()}
+          {#if isPending("stt-model")}
+            <LoaderCircleIcon class="inline size-3 animate-spin" />
+          {:else if modelTouched}
+            edited
+          {:else if savedField === "stt-model"}
+            <CheckIcon class="inline size-3 text-success" />
+          {:else}
+            {serverLoadedModel
+              ? "Server selected"
+              : modelMetadata(connection, settings.model)}
+          {/if}
+        {/snippet}
+        {#snippet sttModelControl()}
+          {#if serverLoadedModel}
+            <span id="quick-stt-model" class="text-xs text-muted-foreground"
+              >Server-loaded model</span
+            >
+          {:else if discoveredModels.length > 0}
+            <Select.Root
+              type="single"
+              value={settings.model}
+              disabled={isPending("stt-model")}
+              onValueChange={chooseModel}
+            >
+              <Select.Trigger
+                id="quick-stt-model"
+                size="sm"
+                class="h-9 w-full min-w-0 bg-well"
+              >
+                <span
+                  class="figure min-w-0 flex-1 truncate text-left text-[13px]"
+                >
+                  {settings.model || "Choose a discovered model"}
+                </span>
+              </Select.Trigger>
+              <Select.Content class="max-h-72">
+                <Select.Group>
+                  <Select.Label>Remembered and discovered models</Select.Label>
+                  {#each discoveredModels as model (model)}
+                    <Select.Item value={model} label={model}
+                      >{model}</Select.Item
+                    >
+                  {/each}
+                </Select.Group>
+              </Select.Content>
+            </Select.Root>
+          {:else}
+            <ValueInput
+              id="quick-stt-model"
+              class="figure h-9 min-w-0 flex-1 bg-well text-[13px]"
+              bind:value={modelDraft}
+              disabled={isPending("stt-model")}
+              spellcheck={false}
+              oninput={() => (modelTouched = true)}
+              onblur={() => void commitModel()}
+              onkeydown={(event) =>
+                handleDraftKey(event, () => {
+                  modelDraft = settings.model;
+                  modelTouched = false;
+                })}
+            />
+          {/if}
+        {/snippet}
+        {@render field(
+          "Model",
+          "quick-stt-model",
+          sttModelMeta,
+          sttModelControl,
+        )}
+      </div>
+    </RackModule>
+  {/if}
 
   {#if showCleanup}
     <RackModule
+      {embedded}
       label="Cleanup"
       dot={healthDot(
         processingConnection,
         processingEnabled,
         processingHealthStale,
       )}
-      meta={cleanupOpen
+      meta={embedded || cleanupOpen
         ? latency(
             processingConnection,
             processingEnabled,
@@ -498,7 +512,7 @@
       )}
       onSettings={onOpenProcessingSettings}
       settingsLabel="Open cleanup settings"
-      open={cleanupOpen}
+      open={embedded ? undefined : cleanupOpen}
       controls="quick-cleanup-details"
       onToggle={toggleCleanup}
     >
@@ -531,12 +545,7 @@
         </span>
       {/snippet}
 
-      <div
-        class={cn(
-          "flex min-w-0 flex-col gap-2.5",
-          !processingEnabled && "opacity-60",
-        )}
-      >
+      <div class="flex min-w-0 flex-col gap-2.5">
         {#snippet cleanupEndpointMeta()}{/snippet}
         {#snippet cleanupEndpointControl()}
           <ConnectionSelect
@@ -553,7 +562,7 @@
           <Button
             variant="ghost"
             size="sm"
-            class="h-[30px] shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
+            class="h-9 shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
             disabled={processingTesting ||
               !settings.savedConnections.selected?.cleanup ||
               isPending("processing-model")}
@@ -594,10 +603,10 @@
               <Select.Trigger
                 id="quick-processing-model"
                 size="sm"
-                class="h-[30px] w-full min-w-0 bg-well"
+                class="h-9 w-full min-w-0 bg-well"
               >
                 <span
-                  class="figure min-w-0 flex-1 truncate text-left text-[11.5px]"
+                  class="figure min-w-0 flex-1 truncate text-left text-[13px]"
                 >
                   {settings.postProcessing.model || "Choose a discovered model"}
                 </span>
@@ -616,7 +625,7 @@
           {:else}
             <ValueInput
               id="quick-processing-model"
-              class="figure h-[30px] min-w-0 flex-1 bg-well text-[11.5px]"
+              class="figure h-9 min-w-0 flex-1 bg-well text-[13px]"
               bind:value={processingModelDraft}
               disabled={isPending("processing-model")}
               spellcheck={false}
@@ -656,9 +665,9 @@
             <Select.Trigger
               id="quick-processing-profile"
               size="sm"
-              class="h-[30px] w-full min-w-0 bg-well"
+              class="h-9 w-full min-w-0 bg-well"
             >
-              <span class="min-w-0 flex-1 truncate text-left text-[11.5px]">
+              <span class="min-w-0 flex-1 truncate text-left text-[13px]">
                 {processingProfileName(
                   processingProfiles,
                   settings.postProcessing.preset,
@@ -688,7 +697,7 @@
           <div class="min-w-0 border-t border-hairline pt-2.5">
             {#if isPending("processing-controls") || savedField === "processing-controls"}
               <div
-                class="figure mb-1.5 flex h-4 items-center justify-end text-[10px] text-ink-quiet"
+                class="figure mb-1.5 flex h-4 items-center justify-end text-xs text-ink-quiet"
                 aria-live="polite"
               >
                 {#if isPending("processing-controls")}
@@ -739,7 +748,7 @@
     flex: 0 0 auto;
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     line-height: 1.2;
     color: var(--ink-quiet);
     white-space: nowrap;

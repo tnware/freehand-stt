@@ -35,12 +35,6 @@
       Use S1-mini's built-in instruction with the supported style, structure,
       and context choices.
     </Card.Description>
-    <Card.Action>
-      <div class="flex flex-wrap justify-end gap-1.5">
-        <Badge variant="secondary">English only</Badge>
-        <Badge variant="secondary">Reasoning off</Badge>
-      </div>
-    </Card.Action>
   </Card.Header>
   <Card.Content class="flex flex-col gap-4">
     <S1MiniControls

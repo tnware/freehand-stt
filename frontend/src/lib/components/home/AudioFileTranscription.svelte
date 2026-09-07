@@ -9,7 +9,10 @@
   import TransportShell from "$lib/components/home/TransportShell.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Switch } from "$lib/components/ui/switch";
-  import { FileTranscriptionPhase, type FileTranscriptionStatus } from "$lib/state";
+  import {
+    FileTranscriptionPhase,
+    type FileTranscriptionStatus,
+  } from "$lib/state";
   import { cn } from "$lib/utils";
 
   let {
@@ -37,16 +40,24 @@
     if (status.streamingUnavailable) stream = false;
   });
 
-  const hasFile = $derived(status.phase !== FileTranscriptionPhase.FileTranscriptionEmpty);
-  const uploading = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionUploading);
+  const hasFile = $derived(
+    status.phase !== FileTranscriptionPhase.FileTranscriptionEmpty,
+  );
+  const uploading = $derived(
+    status.phase === FileTranscriptionPhase.FileTranscriptionUploading,
+  );
   const working = $derived(
     uploading ||
       status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
       status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
       status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
   );
-  const completed = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionCompleted);
-  const failed = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionFailed);
+  const completed = $derived(
+    status.phase === FileTranscriptionPhase.FileTranscriptionCompleted,
+  );
+  const failed = $derived(
+    status.phase === FileTranscriptionPhase.FileTranscriptionFailed,
+  );
   const uploaded = $derived(status.bytesUploaded ?? 0);
   const fileSize = $derived(status.fileSize ?? 0);
   const uploadPercent = $derived(
@@ -93,7 +104,9 @@
       case FileTranscriptionPhase.FileTranscriptionProcessing:
         return status.message || "Waiting for the completed transcript…";
       case FileTranscriptionPhase.FileTranscriptionStreaming:
-        return status.transcript ? "Receiving transcript…" : "Waiting for transcript…";
+        return status.transcript
+          ? "Receiving transcript…"
+          : "Waiting for transcript…";
       case FileTranscriptionPhase.FileTranscriptionCancelling:
         return "Discarding this upload…";
       case FileTranscriptionPhase.FileTranscriptionCompleted:
@@ -110,7 +123,10 @@
   const fileDescription = $derived.by(() => {
     if (!hasFile) return "FLAC, MP3, MP4, M4A, OGG, WAV, or WebM";
     if (working) return "Follow the current result below";
-    if (completed) return status.transcript ? "Transcript ready to copy" : "No speech detected";
+    if (completed)
+      return status.transcript
+        ? "Transcript ready to copy"
+        : "No speech detected";
     if (failed) return "Ready to retry or choose another file";
     return stream && !status.streamingUnavailable
       ? "Transcript will appear progressively"
@@ -138,7 +154,9 @@
     }
   });
 
-  const rail = $derived(failed ? "error" : completed ? "done" : working ? "working" : "hidden");
+  const rail = $derived(
+    failed ? "error" : completed ? "done" : working ? "working" : "hidden",
+  );
   // Only the upload leg has a known length. Everything after it waits on the
   // endpoint, which reports no progress, so the rail stops claiming a share.
   const railPercent = $derived(uploading ? uploadPercent : undefined);
@@ -172,7 +190,10 @@
         : "Audio file transcription complete. No speech detected.";
     } else if (phase === FileTranscriptionPhase.FileTranscriptionFailed) {
       phaseAnnouncement = status.message || "Audio file transcription failed.";
-    } else if (phase === FileTranscriptionPhase.FileTranscriptionEmpty && previousPhase !== phase) {
+    } else if (
+      phase === FileTranscriptionPhase.FileTranscriptionEmpty &&
+      previousPhase !== phase
+    ) {
       phaseAnnouncement = "Audio file cleared.";
     }
 
@@ -195,7 +216,9 @@
       aria-hidden="true"
     >
       {#if working}
-        <LoaderCircleIcon class="size-[24px] animate-spin motion-reduce:animate-none" />
+        <LoaderCircleIcon
+          class="size-[24px] animate-spin motion-reduce:animate-none"
+        />
       {:else if completed}
         <CheckIcon class="size-[24px]" />
       {:else if hasFile}
@@ -215,13 +238,15 @@
         {status.fileName || "Choose an audio recording"}
       </span>
       {#if hasFile && fileSize}
-        <span class="figure shrink-0 text-[10px] text-ink-quiet">{formatBytes(fileSize)}</span>
+        <span class="figure shrink-0 text-[10px] text-ink-quiet"
+          >{formatBytes(fileSize)}</span
+        >
       {/if}
     </div>
 
     <p
       class={cn(
-        "mt-1.5 min-h-4 text-[11.5px]",
+        "mt-1.5 min-h-4 text-[13px]",
         failed ? "text-destructive" : "text-secondary-foreground",
       )}
     >
@@ -232,12 +257,14 @@
       class="mt-2 flex min-h-5 items-center justify-between gap-3 border-t border-hairline pt-1.5"
     >
       {#if !hasFile}
-        <span class="figure min-w-0 truncate text-[10.5px] text-muted-foreground">
+        <span
+          class="figure min-w-0 truncate text-[10.5px] text-muted-foreground"
+        >
           FLAC, MP3, MP4, M4A, OGG, WAV, or WebM
         </span>
       {:else if !working && !completed && !failed}
         <label
-          class="flex min-w-0 items-center gap-2.5 text-[11.5px] text-secondary-foreground"
+          class="flex min-w-0 items-center gap-2.5 text-[13px] text-secondary-foreground"
           for="file-stream-toggle"
         >
           <Switch
@@ -250,11 +277,15 @@
           Stream the transcript as it arrives
         </label>
       {:else}
-        <span class="figure min-w-0 truncate text-[10.5px] text-muted-foreground">
+        <span
+          class="figure min-w-0 truncate text-[10.5px] text-muted-foreground"
+        >
           {fileDescription}
         </span>
       {/if}
-      <span class="figure shrink-0 text-[9.5px] text-ink-quiet">{footerStatus}</span>
+      <span class="figure shrink-0 text-[9.5px] text-ink-quiet"
+        >{footerStatus}</span
+      >
     </div>
   {/snippet}
 
@@ -292,12 +323,12 @@
       <span class="caption text-secondary-foreground">{stateLabel}</span>
     </div>
 
-    <div class="flex min-h-[26px] items-center gap-1.5">
+    <div class="flex min-h-8 items-center gap-1.5">
       {#if completed}
         <Button
           variant="outline"
           size="sm"
-          class="h-[26px] flex-1 px-2.5 text-[11.5px]"
+          class="h-8 flex-1 px-2.5 text-[13px]"
           disabled={!status.canStart || voiceActive}
           onclick={() => onStart(stream)}
         >
@@ -307,7 +338,7 @@
         <Button
           variant="outline"
           size="sm"
-          class="h-[26px] flex-1 px-2.5 text-[11.5px]"
+          class="h-8 flex-1 px-2.5 text-[13px]"
           onclick={onClear}
         >
           <XIcon class="size-3" />
@@ -317,14 +348,16 @@
         <Button
           variant="outline"
           size="sm"
-          class="h-[26px] w-full px-2.5 text-[11.5px]"
+          class="h-8 w-full px-2.5 text-[13px]"
           disabled={!status.canCancel}
           onclick={onCancel}
         >
           {#if status.canCancel}
             <XIcon class="size-3" />
           {:else}
-            <LoaderCircleIcon class="size-3 animate-spin motion-reduce:animate-none" />
+            <LoaderCircleIcon
+              class="size-3 animate-spin motion-reduce:animate-none"
+            />
           {/if}
           Cancel
         </Button>
@@ -332,7 +365,7 @@
         <Button
           variant="outline"
           size="sm"
-          class="h-[26px] flex-1 px-2.5 text-[11.5px]"
+          class="h-8 flex-1 px-2.5 text-[13px]"
           disabled={!status.canStart || voiceActive}
           onclick={() => onStart(stream)}
         >
@@ -343,7 +376,7 @@
           <Button
             variant="outline"
             size="sm"
-            class="h-[26px] flex-1 px-2.5 text-[11.5px]"
+            class="h-8 flex-1 px-2.5 text-[13px]"
             onclick={onTryStreamingAgain}
           >
             Stream
@@ -352,7 +385,7 @@
           <Button
             variant="outline"
             size="sm"
-            class="h-[26px] flex-1 px-2.5 text-[11.5px]"
+            class="h-8 flex-1 px-2.5 text-[13px]"
             onclick={onClear}
           >
             Clear
@@ -361,7 +394,7 @@
       {:else if hasFile}
         <Button
           size="sm"
-          class="h-[26px] flex-1 px-2.5 text-[11.5px]"
+          class="h-8 flex-1 px-2.5 text-[13px]"
           disabled={!status.canStart || voiceActive}
           onclick={() => onStart(stream)}
         >
@@ -370,7 +403,7 @@
         <Button
           variant="outline"
           size="sm"
-          class="h-[26px] shrink-0 px-2 text-[11.5px]"
+          class="h-8 shrink-0 px-2 text-[13px]"
           aria-label="Clear selected audio file"
           onclick={onClear}
         >
@@ -379,12 +412,14 @@
       {:else}
         <Button
           size="sm"
-          class="h-[26px] w-full px-2.5 text-[11.5px]"
+          class="h-8 w-full px-2.5 text-[13px]"
           disabled={choosing || voiceActive}
           onclick={onChoose}
         >
           {#if choosing}
-            <LoaderCircleIcon class="size-3 animate-spin motion-reduce:animate-none" />
+            <LoaderCircleIcon
+              class="size-3 animate-spin motion-reduce:animate-none"
+            />
           {:else}
             <FolderOpenIcon class="size-3" />
           {/if}
