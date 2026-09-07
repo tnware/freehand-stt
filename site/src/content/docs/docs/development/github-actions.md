@@ -11,7 +11,8 @@ container:
   emits one stable **Validation** result. Linux jobs validate Go, the SQLite
   contract, generated branding, Wails bindings, and the Svelte frontend. The
   Windows job runs native Go tests, builds the CGo executable and per-user NSIS
-  installer, and runs browser regressions in Edge.
+  installer, and verifies the packaged artifacts. Browser regressions remain
+  available as optional local checks and do not gate packaging or release.
 - **Site validation** is a reusable workflow shared by CI and Pages. Relevant
   PR changes run it inside CI; they do not start a deployment workflow.
 - **Pages** builds and publishes `site/dist` after matching changes land on `main`

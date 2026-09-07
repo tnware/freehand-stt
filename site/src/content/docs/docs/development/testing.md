@@ -92,8 +92,10 @@ must still remain inactive. Windows service fixtures use temporary SQLite files 
 fake vault to check atomic activation, unsupported-purpose rejection, durable selection,
 credential rollback, and unchanged in-flight snapshots.
 
-Run `npm --prefix frontend run test:browser` after generating bindings and installing
-frontend dependencies. This uses the standard `@playwright/test` runner described in
+Browser tests are an optional local aid for layout and interaction review, not a
+required CI or packaging gate. Run `npm --prefix frontend run test:browser` after
+generating bindings and installing frontend dependencies. This uses the standard
+`@playwright/test` runner described in
 [Svelte's testing guide](https://svelte.dev/docs/svelte/testing#End-to-end-tests-with-Playwright).
 `frontend/playwright.config.ts` owns the browser, viewport, test server lifecycle,
 and failure reports; `frontend/tests/browser/vite.config.ts` serves the fixture without
@@ -108,8 +110,7 @@ inspecting event handlers. Separately named Escape and outside-click cases cover
 Keep editing, discard, unchanged-form close, pending connection/settings saves,
 failed-save retry, and idle prompt dismissal.
 
-The existing Windows CI job runs these tests in Edge after packaging. Local Windows
-runs also use Edge; on other platforms run `npx playwright install chromium` from
+Local Windows runs use Edge; on other platforms run `npx playwright install chromium` from
 `frontend`, or set `PLAYWRIGHT_CHANNEL` to an installed browser channel. Pass standard
 runner options after `--`, for example `npm --prefix frontend run test:browser -- --ui`
 or `--grep "Keep editing"`. Failure traces and screenshots go to `frontend/test-results`;

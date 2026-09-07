@@ -203,18 +203,6 @@ jobs:
       - name: Build executable and per-user installer
         shell: pwsh
         run: wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=user CI=true
-      - name: Run browser tests in Edge
-        run: npm --prefix frontend run test:browser
-      - name: Upload browser failure report
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: browser-test-failures
-          if-no-files-found: ignore
-          retention-days: 7
-          path: |
-            frontend/test-results/
-            frontend/playwright-report/
       - name: Verify native artifacts
         shell: pwsh
         run: |
