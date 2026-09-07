@@ -66,19 +66,34 @@ func ErrorKind(err error) string {
 func knownErrorKind(kind string) string {
 	switch kind {
 	case "cancelled",
+		"backup_failed",
+		"commit_uncertain",
+		"corrupt",
 		"credential_reflection",
+		"empty_response",
+		"foreign_database",
 		"http",
 		"incomplete_response",
 		"unsupported_language",
 		"invalid_file",
+		"invalid_settings",
+		"invalid_values",
+		"legacy_invalid",
+		"legacy_newer",
+		"locked",
 		"malformed_response",
+		"migration_failed",
 		"network",
+		"newer_schema",
 		"request",
 		"request_too_large",
 		"response",
 		"response_too_large",
 		"stream_unsupported",
-		"timeout":
+		"timeout",
+		"unexpected_response",
+		"unreadable",
+		"write_failed":
 		return kind
 	default:
 		return ""

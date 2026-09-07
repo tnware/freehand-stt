@@ -1,9 +1,12 @@
 package dictation
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"testing"
@@ -122,8 +125,9 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				recorder.profiles = settings.ProfileSource(func() (settings.RequestProfile, error) {
 					return settings.RequestProfile{Settings: cfg, PostProcessingCredential: "[REDACTED]"}, nil
 				})
+				var processingLogs bytes.Buffer
 				if mode != "unavailable" {
-					recorder.SetPostProcessor(postprocess.New(client, nil))
+					recorder.SetPostProcessor(postprocess.New(client, slog.New(slog.NewTextHandler(&processingLogs, nil))))
 				}
 				if err := recorder.Start(); err != nil {
 					t.Fatal(err)
@@ -131,6 +135,13 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				generation := recorder.Status().Generation
 				if err := recorder.Stop(); err != nil {
 					t.Fatal(err)
+				}
+				if mode == "success" {
+					for _, field := range []string{"workflow=dictation", fmt.Sprintf("generation=%d", generation)} {
+						if strings.Count(processingLogs.String(), field) != 2 {
+							t.Fatalf("cleanup start/end lost %s: %s", field, processingLogs.String())
+						}
+					}
 				}
 				cancelled := strings.Contains(mode, "late-success")
 				wantText, wantStatus := "raw transcript", history.HistoryProcessingFailed

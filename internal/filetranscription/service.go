@@ -797,6 +797,7 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 	details.UploadMilliseconds = uploadMilliseconds.Load()
 	details.TranscriptionMilliseconds = max(0, totalTranscriptionMilliseconds-details.UploadMilliseconds)
 	if s.closed.Load() {
+		s.log().Info("audio file transcription cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 		return
 	}
 	s.fileMu.Lock()
@@ -839,7 +840,7 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 			if s.processor == nil {
 				processingErr = errors.New("post-processing is unavailable")
 			} else {
-				processingResult, processingErr = s.processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, processingKey)
+				processingResult, processingErr = s.processor.ProcessWithCredential(diagnostics.WithOperation(ctx, diagnostics.File, generation), cfg.PostProcessing, text, processingKey)
 			}
 		}
 		processing := postprocess.Resolve(ctx, text, processingResult, processingErr, processingStarted)
@@ -860,6 +861,7 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 	s.fileMu.Lock()
 	if s.closed.Load() || s.fileStatus.Generation != generation {
 		s.fileMu.Unlock()
+		s.log().Info("audio file transcription cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 		return
 	}
 	s.fileCancel = nil
@@ -929,7 +931,7 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 	s.publishFileStatus(changed, status)
 	if err != nil {
 		if errors.Is(ctx.Err(), context.Canceled) {
-			s.log().Info("audio file transcription cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled")
+			s.log().Info("audio file transcription cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 		} else {
 			s.log().Error("audio file transcription failed", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "error_kind", diagnostics.ErrorKind(err))
 		}

@@ -454,6 +454,9 @@ type storageError struct {
 
 func (e *storageError) Error() string { return e.ConfigurationFailure().Message }
 func (e *storageError) Unwrap() error { return e.cause }
+
+// DiagnosticKind exposes the category, never the driver error or database path.
+func (e *storageError) DiagnosticKind() string { return e.kind }
 func (e *storageError) ConfigurationFailure() config.LoadFailure {
 	messages := map[string]string{
 		"commit_uncertain": "The save outcome could not be confirmed. Reload saved settings before continuing.",

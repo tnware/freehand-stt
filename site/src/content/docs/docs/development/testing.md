@@ -75,6 +75,36 @@ the HTML report is in `frontend/playwright-report`. No app settings, credentials
 or inference are accessed. Browser coverage does not establish native Wails acceptance.
 
 
+## Diagnostic logging acceptance
+
+Run the affected backend packages on Windows:
+
+```sh
+go test ./internal/diagnostics ./internal/storage ./internal/connection ./internal/postprocess ./internal/dictation ./internal/filetranscription ./internal/tts
+```
+
+Captured structured-record fixtures cover bounded storage/inference categories,
+unknown-category fallback, isolated operation contexts, dictation/file cleanup
+correlation, metadata admission/provider/cancellation outcomes, and cleanup
+cancellation with raw text preserved. Speech fixtures check one generation
+start/terminal pair, separate playback pairs, inference/decode/load/play
+failures, explicit cancellation, replacement, Clear, shutdown, and restart
+without another inference generation. File shutdown coverage also checks the
+late worker's cancellation record without late history or renderer publication.
+Fixtures use fake transports/players or local `httptest` servers; no model
+inventory, inference server, microphone, or playback device is exercised.
+Sentinel credentials, request text, model/voice identifiers, URLs, paths, native
+device labels, and provider errors must not appear in captured records.
+
+For interactive review, use `wails3 task dev` and inspect its terminal, not a
+production-tagged release executable: the existing Wails production sink
+discards output. With only the operator-selected model, observe a successful
+operation, cancellation, a recoverable failure, and quit during active work.
+Check workflow/generation correlation, timing and terminal levels against the
+[logging contract](../../safety/logging/). No per-frame/progress spam or content
+should appear. Terminal records do not prove process exit, audible playback, or
+focus-safe delivery; retain the separate native acceptance below.
+
 ## Shutdown and cancellation acceptance
 
 Run `go test -race ./internal/dictation ./internal/filetranscription ./internal/tts

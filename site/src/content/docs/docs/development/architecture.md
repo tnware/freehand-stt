@@ -412,6 +412,17 @@ ID is permitted only for whisper.cpp's explicit server-loaded slot.
 
 Wails stays at `Info` because the pinned bridge's debug tracing serializes binding arguments and results. Root `main.go` has the only direct standard-library log call: a content-free bootstrap category for failures outside the Wails logger lifetime. The complete versioned policy and field vocabulary live in [the logging contract](../../safety/logging/).
 
+`internal/diagnostics` owns the bounded error classifier and an immutable
+workflow/generation context value. Dictation and file transcription attach that
+value only when invoking the shared post-processor; it derives a child from its
+injected logger without replacing its component identity or mutating a global
+logger. Storage supplies `DiagnosticKind()` for wrapped configuration failures.
+Connection metadata calls and asynchronous speech stages record explicit
+terminal outcomes, distinguishing normal cancellation from failure. These are
+diagnostic observations, not another state machine or proof of native teardown.
+The production-tagged Wails default logger still discards output: there is no
+new sink, persistence, export binding, or renderer logging facility.
+
 ## Configuration boundaries
 
 Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS retain independent runtime models and selections. Selecting the same reusable connection explicitly shares its endpoint, HTTP policy, backend profile, and credential reference; selecting separate connections keeps those identities independent. Stored credentials remain in Windows Credential Manager; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.

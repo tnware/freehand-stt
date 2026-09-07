@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -22,9 +23,11 @@ type VoiceListRequest struct {
 // The renderer supplies only its selected connection/model, never a key or URL.
 func (s *Service) ListSpeechVoices(request VoiceListRequest) (result inference.VoicesResult) {
 	started := time.Now()
+	var operationErr error
 	s.log().Info("voice discovery started")
 	defer func() {
-		s.log().Info("voice discovery completed", "duration_ms", time.Since(started).Milliseconds(), "error_kind", result.ErrorKind, "http_status", result.HTTPStatus, "voice_count", len(result.Voices))
+		level, outcome, errorKind := metadataLogOutcome(result.ErrorKind, operationErr)
+		s.log().Log(context.Background(), level, "voice discovery "+outcome, "outcome", outcome, "duration_ms", time.Since(started).Milliseconds(), "error_kind", errorKind, "http_status", result.HTTPStatus, "voice_count", len(result.Voices))
 	}()
 	if s.savedConnections == nil || request.ConnectionID == "" || len(request.ConnectionID) > 200 || len(request.Model) > 200 || !utf8.ValidString(request.Model) || strings.TrimSpace(request.Model) != request.Model {
 		result.ErrorKind = "invalid_settings"
@@ -54,5 +57,7 @@ func (s *Service) ListSpeechVoices(request VoiceListRequest) (result inference.V
 	}
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
-	return s.client.ListVoices(ctx, c.Details.CompatibilityProfile, c.Details.BaseURL, key, request.Model)
+	result = s.client.ListVoices(ctx, c.Details.CompatibilityProfile, c.Details.BaseURL, key, request.Model)
+	operationErr = ctx.Err()
+	return
 }

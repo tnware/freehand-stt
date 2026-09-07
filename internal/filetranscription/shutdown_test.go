@@ -1,9 +1,11 @@
 package filetranscription
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -75,7 +77,8 @@ func TestShutdownDiscardsLateFileTranscriptionSuccess(t *testing.T) {
 	cfg.AuthenticationMode = config.AuthenticationModeNone
 	transcripts := history.NewStore(true, nil)
 	var publications atomic.Int32
-	service := NewService(func() config.Settings { return cfg }, func() (settings.RequestProfile, error) { return settings.RequestProfile{Settings: cfg}, nil }, client, nil, transcripts, nil, nil, func(FileTranscriptionStatus) { publications.Add(1) }, nil, nil, nil)
+	var logs bytes.Buffer
+	service := NewService(func() config.Settings { return cfg }, func() (settings.RequestProfile, error) { return settings.RequestProfile{Settings: cfg}, nil }, client, nil, transcripts, nil, nil, func(FileTranscriptionStatus) { publications.Add(1) }, nil, nil, slog.New(slog.NewTextHandler(&logs, nil)))
 	if err := service.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -100,6 +103,12 @@ func TestShutdownDiscardsLateFileTranscriptionSuccess(t *testing.T) {
 	awaitFileShutdown(t, done)
 	unblock()
 	awaitFileBoundary(t, service.shutdownDone)
+	if strings.Count(logs.String(), "audio file transcription started") != 1 || strings.Count(logs.String(), "audio file transcription cancelled") != 1 {
+		t.Fatalf("shutdown lost transcription lifecycle: %s", logs.String())
+	}
+	if strings.Contains(logs.String(), "late file transcript") || strings.Contains(logs.String(), path) {
+		t.Fatal("shutdown diagnostics exposed file content or path")
+	}
 	if publications.Load() != count || len(transcripts.Entries()) != 0 {
 		t.Fatal("late file work was published or retained")
 	}

@@ -718,7 +718,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 			if processor == nil {
 				processingErr = errors.New("post-processing is unavailable")
 			} else {
-				processingResult, processingErr = processor.ProcessWithCredential(ctx, cfg.PostProcessing, text, profile.PostProcessingCredential)
+				processingResult, processingErr = processor.ProcessWithCredential(diagnostics.WithOperation(ctx, diagnostics.Dictation, gen), cfg.PostProcessing, text, profile.PostProcessingCredential)
 			}
 		}
 		processing := postprocess.Resolve(ctx, text, processingResult, processingErr, processingStarted)

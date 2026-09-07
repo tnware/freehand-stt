@@ -272,17 +272,20 @@ func (s *Service) generate(ctx context.Context, generation uint64, profile setti
 	text = ""
 	if err != nil {
 		if errors.Is(ctx.Err(), context.Canceled) {
+			s.logger.Info("speech generation cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 			s.finish(generation, Cancelled, "Speech playback stopped", "")
 			return
 		}
-		s.logger.Warn("speech generation failed", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "error_kind", diagnostics.ErrorKind(err))
+		s.logger.Error("speech generation failed", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "failed", "stage", "inference", "error_kind", diagnostics.ErrorKind(err))
 		s.finish(generation, Failed, err.Error(), diagnostics.ErrorKind(err))
 		return
 	}
 	if ctx.Err() != nil || !s.isCurrent(generation) {
 		clear(audioBytes)
+		s.logger.Info("speech generation cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 		return
 	}
+	stage := "decode"
 	pcm, err := decodeWAV(audioBytes)
 	clear(audioBytes)
 	pcmBytes := len(pcm.Data)
@@ -291,49 +294,61 @@ func (s *Service) generate(ctx context.Context, generation uint64, profile setti
 	if s.closed.Load() || ctx.Err() != nil || !s.isCurrent(generation) {
 		s.control.Unlock()
 		clear(pcm.Data)
+		s.logger.Info("speech generation cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 		return
 	}
 	if err == nil {
+		stage = "load"
 		err = s.player.Load(pcm.Data, pcm.SampleRate, pcm.Channels)
 		if err == nil && !s.closed.Load() && ctx.Err() == nil {
+			stage = "play"
 			err = s.player.Play()
 		}
 	}
 	clear(pcm.Data)
 	if s.closed.Load() || ctx.Err() != nil {
 		s.control.Unlock()
+		s.logger.Info("speech generation cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 		return
 	}
 	if err != nil {
 		_ = s.player.Unload()
+		s.logger.Error("speech generation failed", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "failed", "stage", stage, "error_kind", diagnostics.ErrorKind(err))
 		s.finishLocked(generation, Failed, err.Error(), diagnostics.ErrorKind(err))
 		s.control.Unlock()
 		return
 	}
 	position, duration, _ := s.player.Position()
 	s.update(generation, Status{Generation: generation, Phase: Playing, Source: s.source(generation), HistoryID: s.historyID(generation), HistoryVersion: s.historyVersion(generation), PositionMilliseconds: position, DurationMilliseconds: duration, Message: "Playing speech", CanPause: true, CanRestart: true, CanStop: true, CanSave: true, CanClear: true})
-	s.logger.Info("speech playback started", "generation", generation, "generation_ms", time.Since(started).Milliseconds(), "audio_ms", duration, "sample_rate", pcm.SampleRate, "channels", pcm.Channels, "pcm_bytes", pcmBytes, "output_device", s.player.OutputName())
+	s.logger.Info("speech generation completed", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "completed", "audio_ms", duration, "sample_rate", pcm.SampleRate, "channels", pcm.Channels, "pcm_bytes", pcmBytes)
 	s.control.Unlock()
 	s.monitor(ctx, generation)
 }
 
 func (s *Service) monitor(ctx context.Context, generation uint64) {
+	started := time.Now()
+	// The monitor owns playback diagnostics, including restarted sessions and
+	// stale generations that can no longer publish a status transition.
+	s.logger.Info("speech playback started", "generation", generation)
 	ticker := time.NewTicker(150 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
+			s.logger.Info("speech playback cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 			return
 		case <-ticker.C:
 			s.control.Lock()
 			if s.closed.Load() || ctx.Err() != nil || !s.isCurrent(generation) {
 				s.control.Unlock()
+				s.logger.Info("speech playback cancelled", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "cancelled", "error_kind", "cancelled")
 				return
 			}
 			position, duration, done := s.player.Position()
 			if done {
 				s.finishLocked(generation, Completed, "Playback complete", "")
 				s.control.Unlock()
+				s.logger.Info("speech playback completed", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "played")
 				return
 			}
 			s.mu.Lock()
@@ -683,9 +698,6 @@ func (s *Service) finishLocked(generation uint64, phase Phase, message, errorKin
 	status := s.status
 	s.mu.Unlock()
 	s.publish(status)
-	if phase == Completed {
-		s.logger.Info("speech playback completed", "generation", generation, "audio_ms", duration, "outcome", "played")
-	}
 }
 
 func (s *Service) publish(status Status) {
