@@ -79,15 +79,23 @@
 
   function toggleAutoStop(enabled: boolean) {
     if (enabled) settings.vadEnabled = true;
-    if (enabled && settings.autoStopSilenceMilliseconds < settings.vadActivitySilenceMilliseconds) {
-      settings.autoStopSilenceMilliseconds = settings.vadActivitySilenceMilliseconds;
+    if (
+      enabled &&
+      settings.autoStopSilenceMilliseconds <
+        settings.vadActivitySilenceMilliseconds
+    ) {
+      settings.autoStopSilenceMilliseconds =
+        settings.vadActivitySilenceMilliseconds;
     }
     settings.autoStopEnabled = enabled;
   }
 
   function changeActivitySilence(value: number) {
     settings.vadActivitySilenceMilliseconds = value;
-    if (settings.autoStopEnabled && settings.autoStopSilenceMilliseconds < value) {
+    if (
+      settings.autoStopEnabled &&
+      settings.autoStopSilenceMilliseconds < value
+    ) {
       settings.autoStopSilenceMilliseconds = value;
     }
   }
@@ -95,7 +103,8 @@
   function toggleSilenceSplitting(enabled: boolean) {
     if (enabled) settings.vadEnabled = true;
     settings.silenceSplitting = enabled;
-    if (!enabled && settings.maxDurationSeconds > 262) settings.maxDurationSeconds = 262;
+    if (!enabled && settings.maxDurationSeconds > 262)
+      settings.maxDurationSeconds = 262;
   }
 
   function chooseVADMode(value: string) {
@@ -117,21 +126,29 @@
         : ""}
     >
       {#snippet control()}
-        <Select.Root type="single" value={microphoneChoice} onValueChange={onChooseMicrophone}>
+        <Select.Root
+          type="single"
+          value={microphoneChoice}
+          onValueChange={onChooseMicrophone}
+        >
           <Select.Trigger
             id="microphone-select"
             class="h-auto w-full border-0 bg-transparent p-0 text-[15px] shadow-none focus-visible:ring-0"
           >
             <span class="flex min-w-0 items-center gap-2">
               {#if missing}
-                <TriangleAlertIcon class="size-4 shrink-0 text-muted-foreground" />
+                <TriangleAlertIcon
+                  class="size-4 shrink-0 text-muted-foreground"
+                />
               {/if}
               <span class="truncate">{label}</span>
             </span>
           </Select.Trigger>
           <Select.Content>
             <Select.Group>
-              <Select.Item value={SYSTEM_DEFAULT_MICROPHONE}>{SYSTEM_DEFAULT_LABEL}</Select.Item>
+              <Select.Item value={SYSTEM_DEFAULT_MICROPHONE}
+                >{SYSTEM_DEFAULT_LABEL}</Select.Item
+              >
               {#each devices as device (device.id)}
                 <Select.Item value={device.id}>{device.name}</Select.Item>
               {/each}
@@ -140,8 +157,16 @@
         </Select.Root>
       {/snippet}
       {#snippet action()}
-        <Button variant="secondary" size="sm" disabled={busy} onclick={onRefreshDevices}>
-          <RefreshCwIcon data-icon="inline-start" class={busy ? "animate-spin" : ""} />
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={busy}
+          onclick={onRefreshDevices}
+        >
+          <RefreshCwIcon
+            data-icon="inline-start"
+            class={busy ? "animate-spin" : ""}
+          />
           Refresh
         </Button>
       {/snippet}
@@ -151,8 +176,8 @@
       id="max-duration"
       label="Maximum duration"
       hint={settings.silenceSplitting
-        ? "Total recording limit. Completed segments are transcribed in order while recording continues."
-        : "Recording stops here, and anything said afterwards is not captured. The 262-second ceiling fits in one 16 kHz request."}
+        ? "1–3600 seconds. Recording stops at this limit; completed segments are transcribed while you continue."
+        : "1–262 seconds. Recording stops at this limit; anything said afterwards is not captured."}
     >
       {#snippet control()}
         <div class="flex items-baseline gap-2">
@@ -173,7 +198,7 @@
   <SettingsCard>
     <SettingRow
       title="Voice activity detection"
-      description="Make local WebRTC speech detection available to the features below. The detector runs only while a dependent feature needs it, analyzes fixed 20 ms frames, and sends no audio anywhere itself."
+      description="Detect speech on this device for the features below. Detection itself sends no audio over the network."
     >
       {#snippet control()}
         <Switch
@@ -186,16 +211,6 @@
     </SettingRow>
 
     {#if settings.vadEnabled}
-      <ValueRow
-        id="vad-engine"
-        label="Detector engine"
-        hint="Pinned native libfvad engine. It needs no model download, background service, or network request."
-      >
-        {#snippet control()}
-          <span id="vad-engine" class="text-[15px]">WebRTC VAD (libfvad)</span>
-        {/snippet}
-      </ValueRow>
-
       <SettingRow
         title="Detection mode"
         description="Choose how readily background sound is rejected. Aggressive is the practical default."
@@ -217,8 +232,12 @@
                 class="mt-0.5"
               />
               <span class="min-w-0">
-                <span class="block text-xs font-medium text-foreground">{mode.label}</span>
-                <span class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
+                <span class="block text-xs font-medium text-foreground"
+                  >{mode.label}</span
+                >
+                <span
+                  class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground"
+                >
                   {mode.description}
                 </span>
               </span>
@@ -232,7 +251,9 @@
         description="Require a continuous quiet gap before the live microphone indicator changes to silence. More delay reduces flicker between words."
       >
         {#snippet control()}
-          <Badge variant="secondary">{settings.vadActivitySilenceMilliseconds} ms</Badge>
+          <Badge variant="secondary"
+            >{settings.vadActivitySilenceMilliseconds} ms</Badge
+          >
         {/snippet}
         <Slider.Root
           id="vad-activity-silence"
@@ -244,7 +265,9 @@
           onValueChange={changeActivitySilence}
           aria-label="Silence indicator delay"
         />
-        <div class="mt-2 flex justify-between text-[10px] text-muted-foreground">
+        <div
+          class="mt-2 flex justify-between text-[10px] text-muted-foreground"
+        >
           <span>Responsive</span>
           <span>Steady</span>
         </div>
@@ -256,7 +279,7 @@
     <SettingsCard>
       <SettingRow
         title="Trim silence"
-        description="Remove quiet audio before the first detected phrase and after the last one before the request is created."
+        description="Remove quiet audio before the first phrase and after the last one."
       >
         {#snippet control()}
           <Switch
@@ -274,7 +297,9 @@
           description="Keep this much context on both sides of detected speech so breaths and word edges are not clipped."
         >
           {#snippet control()}
-            <Badge variant="secondary">{settings.speechPaddingMilliseconds} ms</Badge>
+            <Badge variant="secondary"
+              >{settings.speechPaddingMilliseconds} ms</Badge
+            >
           {/snippet}
           <Slider.Root
             id="speech-padding"
@@ -283,10 +308,13 @@
             max={1000}
             step={50}
             value={settings.speechPaddingMilliseconds}
-            onValueChange={(value) => (settings.speechPaddingMilliseconds = value)}
+            onValueChange={(value) =>
+              (settings.speechPaddingMilliseconds = value)}
             aria-label="Speech padding"
           />
-          <div class="mt-2 flex justify-between text-[10px] text-muted-foreground">
+          <div
+            class="mt-2 flex justify-between text-[10px] text-muted-foreground"
+          >
             <span>Tighter</span>
             <span>More context</span>
           </div>
@@ -313,7 +341,9 @@
           description="How long silence must continue after speech before recording ends. Speaking again cancels the countdown immediately."
         >
           {#snippet control()}
-            <Badge variant="secondary">{seconds(settings.autoStopSilenceMilliseconds)}</Badge>
+            <Badge variant="secondary"
+              >{seconds(settings.autoStopSilenceMilliseconds)}</Badge
+            >
           {/snippet}
           <Slider.Root
             id="automatic-stop-silence"
@@ -322,10 +352,13 @@
             max={10000}
             step={250}
             value={settings.autoStopSilenceMilliseconds}
-            onValueChange={(value) => (settings.autoStopSilenceMilliseconds = value)}
+            onValueChange={(value) =>
+              (settings.autoStopSilenceMilliseconds = value)}
             aria-label="Pause before automatic stop"
           />
-          <div class="mt-2 flex justify-between text-[10px] text-muted-foreground">
+          <div
+            class="mt-2 flex justify-between text-[10px] text-muted-foreground"
+          >
             <span>0.5 s</span>
             <span>10 s</span>
           </div>
@@ -336,7 +369,9 @@
           description="Require this much cumulative detected speech first. This prevents a tap, cough, or brief noise from starting an automatic-stop countdown."
         >
           {#snippet control()}
-            <Badge variant="secondary">{settings.autoStopMinimumSpeechMilliseconds} ms</Badge>
+            <Badge variant="secondary"
+              >{settings.autoStopMinimumSpeechMilliseconds} ms</Badge
+            >
           {/snippet}
           <Slider.Root
             id="automatic-stop-minimum-speech"
@@ -345,10 +380,13 @@
             max={5000}
             step={100}
             value={settings.autoStopMinimumSpeechMilliseconds}
-            onValueChange={(value) => (settings.autoStopMinimumSpeechMilliseconds = value)}
+            onValueChange={(value) =>
+              (settings.autoStopMinimumSpeechMilliseconds = value)}
             aria-label="Speech required to arm automatic stop"
           />
-          <div class="mt-2 flex justify-between text-[10px] text-muted-foreground">
+          <div
+            class="mt-2 flex justify-between text-[10px] text-muted-foreground"
+          >
             <span>100 ms</span>
             <span>5 s</span>
           </div>
@@ -359,7 +397,7 @@
     <SettingsCard>
       <SettingRow
         title="Split long dictation on silence"
-        description="After the preferred length, the next sustained pause closes and transcribes a segment. Requests stay ordered and insertion still happens once."
+        description="Transcribe long recordings in parts at natural pauses. Text stays in order and is inserted once at the end."
       >
         {#snippet control()}
           <Switch
@@ -393,10 +431,12 @@
 
         <SettingRow
           title="Pause required to split"
-          description="This boundary is independent of automatic stop. Shorter pauses checkpoint more eagerly; 700 ms is the practical default."
+          description="Shorter pauses split the recording more often. This does not change when recording stops."
         >
           {#snippet control()}
-            <Badge variant="secondary">{settings.segmentSilenceMilliseconds} ms</Badge>
+            <Badge variant="secondary"
+              >{settings.segmentSilenceMilliseconds} ms</Badge
+            >
           {/snippet}
           <Slider.Root
             id="segment-silence"
@@ -405,7 +445,8 @@
             max={3000}
             step={100}
             value={settings.segmentSilenceMilliseconds}
-            onValueChange={(value) => (settings.segmentSilenceMilliseconds = value)}
+            onValueChange={(value) =>
+              (settings.segmentSilenceMilliseconds = value)}
             aria-label="Pause required to split"
           />
         </SettingRow>
@@ -413,10 +454,23 @@
     </SettingsCard>
 
     <SettingsCard>
-      <SettingRow
-        title="How the speech policy works"
-        description="The detector runs locally on fixed 20 ms frames. Two speech frames confirm a phrase; the selected indicator delay smooths the visual state. Trimming keeps your chosen padding, automatic stop waits for both the minimum speech and full pause, and segment splitting uses its own later boundary. Manual stop and the maximum duration always remain available."
-      />
+      <p class="px-5 pt-4 text-xs leading-relaxed text-muted-foreground">
+        You can always stop manually. The maximum duration still applies.
+      </p>
+      <details class="px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+        <summary class="cursor-pointer font-medium text-foreground"
+          >Speech detection details</summary
+        >
+        <p class="mt-3">
+          The pinned native WebRTC VAD (libfvad) engine needs no model download
+          or background service. It runs only when a dependent feature needs it,
+          using fixed 20 ms frames. Two speech frames confirm a phrase; the
+          indicator delay smooths the visual state. Trimming keeps your chosen
+          padding, automatic stop waits for both the minimum speech and full
+          pause, and splitting uses its own pause boundary. Without splitting,
+          the 262-second limit fits one 16 kHz request.
+        </p>
+      </details>
     </SettingsCard>
   {/if}
 </div>

@@ -3,7 +3,10 @@ import type { SaveSettingsRequest, SettingsDTO } from "$bindings/settings";
 
 export interface SaveControl {
   waitForStart: (after: number) => Promise<number>;
-  complete: (id: number, outcome: "success" | "failure") => void;
+  complete: (
+    id: number,
+    outcome: "success" | "failure" | "invalid-duration",
+  ) => void;
 }
 
 declare global {
@@ -13,7 +16,9 @@ declare global {
 }
 
 // The only test controls are at the asynchronous SaveSettings service boundary.
-export function controlledSaves(result: (request: SaveSettingsRequest) => SettingsDTO) {
+export function controlledSaves(
+  result: (request: SaveSettingsRequest) => SettingsDTO,
+) {
   let sequence = 0;
   let pending:
     | {
@@ -30,10 +35,23 @@ export function controlledSaves(result: (request: SaveSettingsRequest) => Settin
         ? Promise.resolve(pending.id)
         : new Promise((resolve) => started.push(resolve)),
     complete: (id, outcome) => {
-      if (!pending || pending.id !== id) throw new Error("No matching pending save");
+      if (!pending || pending.id !== id)
+        throw new Error("No matching pending save");
       const save = pending;
       pending = undefined;
-      if (outcome === "failure") save.reject(new Error("Fixture save failed. Try again."));
+      if (outcome === "invalid-duration") {
+        const message = "Enter a recording limit from 1 to 262 seconds.";
+        const error = new Error(message, {
+          cause: {
+            kind: "settings_validation",
+            field: "maxDurationSeconds",
+            message,
+          },
+        });
+        error.name = "RuntimeError";
+        save.reject(error);
+      } else if (outcome === "failure")
+        save.reject(new Error("Fixture save failed. Try again."));
       else save.resolve(result(save.request));
     },
   };

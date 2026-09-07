@@ -1,15 +1,21 @@
 <script lang="ts">
-  import { GROUP_LABELS, SETTINGS_SECTIONS, sectionsInGroup } from "$lib/navigation";
+  import {
+    GROUP_LABELS,
+    SETTINGS_SECTIONS,
+    sectionsInGroup,
+  } from "$lib/navigation";
   import type { SettingsSectionID } from "$lib/navigation";
   import { cn } from "$lib/utils";
 
   let {
     active,
     onSelect,
+    invalidSection,
     navigationRef = $bindable(null),
   }: {
     active: SettingsSectionID;
     onSelect: (id: SettingsSectionID) => void;
+    invalidSection?: SettingsSectionID;
     navigationRef?: HTMLElement | null;
   } = $props();
 
@@ -28,24 +34,37 @@
     );
 
   function moveSelection(event: KeyboardEvent, current: SettingsSectionID) {
-    const keys = ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"];
+    const keys = [
+      "ArrowDown",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowLeft",
+      "Home",
+      "End",
+    ];
     if (!keys.includes(event.key)) return;
 
     event.preventDefault();
-    const currentIndex = SETTINGS_SECTIONS.findIndex((section) => section.id === current);
+    const currentIndex = SETTINGS_SECTIONS.findIndex(
+      (section) => section.id === current,
+    );
     const nextIndex =
       event.key === "Home"
         ? 0
         : event.key === "End"
           ? SETTINGS_SECTIONS.length - 1
           : (currentIndex +
-              (event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1) +
+              (event.key === "ArrowDown" || event.key === "ArrowRight"
+                ? 1
+                : -1) +
               SETTINGS_SECTIONS.length) %
             SETTINGS_SECTIONS.length;
     const next = SETTINGS_SECTIONS[nextIndex];
     onSelect(next.id);
     queueMicrotask(() => {
-      navigationRef?.querySelector<HTMLElement>(`[data-settings-section="${next.id}"]`)?.focus();
+      navigationRef
+        ?.querySelector<HTMLElement>(`[data-settings-section="${next.id}"]`)
+        ?.focus();
     });
   }
 </script>
@@ -56,8 +75,8 @@
   class="flex w-14 shrink-0 flex-col gap-4 border-r border-hairline bg-layer-fill px-2 py-4 sm:w-[200px] sm:px-2.5"
 >
   <p id="settings-nav-help" class="sr-only">
-    Use the arrow keys to move between settings sections. Press Home or End to jump to the first or
-    last section.
+    Use the arrow keys to move between settings sections. Press Home or End to
+    jump to the first or last section.
   </p>
   {#each groups as group (group)}
     <div class="flex flex-col gap-[3px]">
@@ -67,16 +86,22 @@
           type="button"
           class={itemClass(section.id)}
           aria-current={section.id === active ? "page" : undefined}
-          aria-describedby={section.id === active ? "settings-nav-help" : undefined}
+          aria-describedby={section.id === active
+            ? "settings-nav-help"
+            : undefined}
           tabindex={section.id === active ? 0 : -1}
           data-settings-section={section.id}
-          aria-label={`${section.label}. ${section.blurb}`}
+          aria-label={`${section.label}. ${section.blurb}${invalidSection === section.id ? " Needs attention." : ""}`}
           title={section.label}
           onclick={() => onSelect(section.id)}
           onkeydown={(event) => moveSelection(event, section.id)}
         >
           <section.icon class="size-[15px] shrink-0" />
           <span class="hidden truncate sm:inline">{section.label}</span>
+          {#if invalidSection === section.id}<span
+              class="font-semibold text-destructive"
+              aria-hidden="true">!</span
+            >{/if}
         </button>
       {/each}
     </div>

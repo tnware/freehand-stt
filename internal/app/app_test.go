@@ -79,8 +79,8 @@ func TestMainWindowUsesNativeChrome(t *testing.T) {
 	if options.Frameless {
 		t.Fatal("main window replaces the native frame")
 	}
-	if options.Title != "Freehand STT" {
-		t.Fatalf("main window caption = %q, want Freehand STT", options.Title)
+	if options.Title != "Freehand" {
+		t.Fatalf("main window caption = %q, want Freehand", options.Title)
 	}
 	if !options.Windows.DisableIcon {
 		t.Fatal("main window leaves the app icon in the native title bar")
@@ -195,7 +195,7 @@ func TestSettingsWindowIsAHiddenReusableRenderer(t *testing.T) {
 	if options.Name != "settings" || options.URL != settingsWindowURL {
 		t.Fatalf("settings identity = name %q URL %q", options.Name, options.URL)
 	}
-	if options.Title != "Freehand STT — Settings" {
+	if options.Title != "Freehand — Settings" {
 		t.Fatalf("settings caption = %q", options.Title)
 	}
 	if !options.Hidden {
@@ -217,7 +217,7 @@ func TestAboutWindowIsACompactHiddenReusableRenderer(t *testing.T) {
 	if options.Name != "about" || options.URL != aboutWindowURL {
 		t.Fatalf("About identity = name %q URL %q", options.Name, options.URL)
 	}
-	if options.Title != "Freehand STT — About" || !options.Hidden {
+	if options.Title != "Freehand — About" || !options.Hidden {
 		t.Fatalf("About caption/visibility = %q hidden=%v", options.Title, options.Hidden)
 	}
 	if options.Width != 620 || options.Height != 440 {

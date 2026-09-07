@@ -1,9 +1,14 @@
 <script lang="ts">
-  import { tick } from "svelte";
+  import { setContext, tick } from "svelte";
+  import {
+    SETTINGS_VALIDATION,
+    type SettingsValidationContext,
+  } from "$lib/utils/settingsValidation";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import * as Dialog from "$lib/components/ui/dialog";
   import ConnectionsSection from "$lib/components/settings/sections/ConnectionsSection.svelte";
   import ConnectionSetupDialog from "$lib/components/settings/ConnectionSetupDialog.svelte";
+  import ConnectionSaveActions from "$lib/components/settings/ConnectionSaveActions.svelte";
   import SavedConnectionPicker from "$lib/components/settings/SavedConnectionPicker.svelte";
   import { Purpose } from "$bindings/savedconnection";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
@@ -49,6 +54,54 @@
 
   const section = $derived(sectionByID(active));
   const dirty = $derived(session.editor.dirty);
+  setContext<SettingsValidationContext>(SETTINGS_VALIDATION, {
+    get issue() {
+      return session.editor.validationIssue;
+    },
+    clear: () => {
+      session.editor.validationIssue = null;
+    },
+  });
+
+  async function revealValidationIssue() {
+    const issue = session.editor.validationIssue;
+    if (!issue || !visible || session.editor.connectionDraft) return;
+    pendingConnectionAction = null;
+    active = issue.section;
+    await tick();
+    const control = issue.control
+      ? contentPane?.querySelector<HTMLElement>(`#${CSS.escape(issue.control)}`)
+      : null;
+    for (
+      let parent = control?.parentElement;
+      parent;
+      parent = parent.parentElement
+    ) {
+      if (parent instanceof HTMLDetailsElement) parent.open = true;
+    }
+    const target = control?.matches(
+      "input, button, textarea, select, [tabindex]",
+    )
+      ? control
+      : control?.querySelector<HTMLElement>(
+          "input, button, textarea, select, [tabindex]",
+        );
+    const focus =
+      target && !target.matches(":disabled, [aria-disabled=true]")
+        ? target
+        : contentPane?.querySelector<HTMLElement>("#settings-page-heading");
+    focus?.focus({ preventScroll: true });
+    focus?.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }
+
+  let contentPane = $state<HTMLDivElement | null>(null);
+  const contentKey = $derived(
+    `${active}/${active === "connections" ? (session.editor.connectionDraft?.id ?? "list") : "section"}`,
+  );
+  $effect(() => {
+    if (visible && contentKey)
+      contentPane?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  });
 
   let setupPurpose = $state<Purpose | null>(null);
   let pendingConnectionAction = $state<(() => void) | null>(null);
@@ -69,7 +122,10 @@
   }
   async function continueConnection(save: boolean) {
     if (save) {
-      if (!(await session.editor.save())) return;
+      if (!(await session.editor.save())) {
+        await revealValidationIssue();
+        return;
+      }
       shortcutCapture.markSaved();
     }
     if (!save) session.editor.discardSettingsDraft();
@@ -81,7 +137,9 @@
   let discardConnectionOpen = $state(false);
   let pendingSection = $state<SettingsSectionID>("connections");
   const backSection = $derived(connectionOrigin ?? "connections");
-  const connectionBusy = $derived(session.editor.saving || session.editor.managedConnectionTesting);
+  const connectionBusy = $derived(
+    session.editor.saving || session.editor.managedConnectionTesting,
+  );
 
   $effect(() => {
     if (!visible) {
@@ -98,7 +156,9 @@
     active = id;
     if (id === "audio") void session.editor.refreshDevices();
     await tick();
-    navigationRef?.querySelector<HTMLElement>(`[data-settings-section="${id}"]`)?.focus();
+    navigationRef
+      ?.querySelector<HTMLElement>(`[data-settings-section="${id}"]`)
+      ?.focus();
   }
 
   function requestConnectionBack(id = backSection) {
@@ -128,6 +188,7 @@
 
   async function saveSettings() {
     if (await session.editor.save()) shortcutCapture.markSaved();
+    else await revealValidationIssue();
   }
 
   // Settings has no transport to state its own progress, so the channel carries
@@ -139,7 +200,8 @@
     if (preservedFields.length > 0) {
       const remaining = Math.max(
         0,
-        (configuration?.preservedFieldCount ?? preservedFields.length) - preservedFields.length,
+        (configuration?.preservedFieldCount ?? preservedFields.length) -
+          preservedFields.length,
       );
       out.push({
         id: "configuration-compatibility",
@@ -180,11 +242,22 @@
 </script>
 
 <div class="flex min-h-0 flex-1">
-  <SettingsNav {active} onSelect={selectSection} bind:navigationRef />
+  <SettingsNav
+    {active}
+    onSelect={selectSection}
+    bind:navigationRef
+    invalidSection={session.editor.validationIssue?.section}
+  />
 
   <div class="flex min-w-0 flex-1 flex-col">
-    <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-      <section aria-labelledby="settings-section-title" class="flex max-w-[620px] flex-col gap-3.5">
+    <div
+      bind:this={contentPane}
+      class="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+    >
+      <section
+        aria-labelledby="settings-section-title"
+        class="flex max-w-[620px] flex-col gap-3.5"
+      >
         {#if active === "connections" && (session.editor.connectionDraft || connectionOrigin)}
           <Button
             variant="ghost"
@@ -193,21 +266,51 @@
             disabled={connectionBusy}
             onclick={() => requestConnectionBack()}
           >
-            <ArrowLeftIcon class="size-4" />Back to {sectionByID(backSection).label}
+            <ArrowLeftIcon class="size-4" />Back to {sectionByID(backSection)
+              .label}
           </Button>
         {/if}
         <div class="flex items-baseline gap-2.5">
-          <h3 class="text-base font-semibold tracking-[-0.01em]">
+          <h3
+            id="settings-page-heading"
+            tabindex="-1"
+            class="text-base font-semibold tracking-[-0.01em]"
+          >
             {section.label}
           </h3>
           <p class="min-w-0 text-[12px] text-muted-foreground">
             {section.blurb}
           </p>
         </div>
-        <h2 id="settings-section-title" class="sr-only" aria-live="polite" aria-atomic="true">
+        <h2
+          id="settings-section-title"
+          class="sr-only"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           {section.label} settings
         </h2>
         <Notifications {messages} />
+        {#if session.editor.validationIssue}
+          <div
+            class="flex flex-wrap items-center gap-2 border-l-2 border-destructive pl-3 text-sm"
+          >
+            <p
+              id="settings-validation-message"
+              role="alert"
+              class="text-destructive"
+            >
+              {sectionByID(session.editor.validationIssue.section).label}: {session
+                .editor.validationIssue.message}
+            </p>
+            {#if active !== session.editor.validationIssue.section}
+              <Button variant="link" size="sm" onclick={revealValidationIssue}>
+                Review {sectionByID(session.editor.validationIssue.section)
+                  .label}
+              </Button>
+            {/if}
+          </div>
+        {/if}
 
         {#if session.editor.draft}
           {#if active === "server" || active === "processing" || active === "speech"}
@@ -219,9 +322,11 @@
                   ? Purpose.Cleanup
                   : Purpose.Speech}
               dirty={session.editor.dirty}
-              busy={session.editor.saving || session.editor.quickSettingsPending.length > 0}
+              busy={session.editor.saving ||
+                session.editor.quickSettingsPending.length > 0}
               onChange={async (change) => {
-                if (!session.editor.runtimeDirty) return session.editor.changeConnection(change);
+                if (!session.editor.runtimeDirty)
+                  return session.editor.changeConnection(change);
                 withSavedSettings(() => {
                   void session.editor.changeConnection(change);
                 });
@@ -243,9 +348,14 @@
                       : active === "processing"
                         ? Purpose.Cleanup
                         : Purpose.Speech;
-                  const c = session.editor.applied?.savedConnections.entries?.find(
-                    (c) => c.id === session.editor.applied?.savedConnections.selected?.[purpose],
-                  );
+                  const c =
+                    session.editor.applied?.savedConnections.entries?.find(
+                      (c) =>
+                        c.id ===
+                        session.editor.applied?.savedConnections.selected?.[
+                          purpose
+                        ],
+                    );
                   connectionOrigin = active;
                   active = "connections";
                   if (c) session.editor.beginConnection(c);
@@ -255,6 +365,8 @@
           {#if active === "connections"}
             <ConnectionsSection
               editor={session.editor}
+              formID="settings-connection-form"
+              externalActions
               error={session.messages.error}
               onBack={() => requestConnectionBack()}
               onSaved={connectionSaved}
@@ -282,7 +394,8 @@
               devices={session.editor.devices}
               microphoneChoice={session.editor.microphoneChoice}
               busy={session.editor.devicesBusy}
-              onChooseMicrophone={(choice) => session.editor.chooseMicrophone(choice)}
+              onChooseMicrophone={(choice) =>
+                session.editor.chooseMicrophone(choice)}
               onRefreshDevices={() => session.editor.refreshDevices()}
             />
           {:else if active === "overlay"}
@@ -297,10 +410,16 @@
           {:else if active === "server"}
             {#if session.editor.draft.savedConnections.selected?.stt}
               <ServerSection
-                connectionStale={session.editor.connectionResultStale(Purpose.Transcription)}
-                draftModels={session.editor.modelDraftIDs(Purpose.Transcription)}
-                onChooseModel={(model) => session.editor.chooseModel(Purpose.Transcription, model)}
-                onForgetModel={() => session.editor.forgetModel(Purpose.Transcription)}
+                connectionStale={session.editor.connectionResultStale(
+                  Purpose.Transcription,
+                )}
+                draftModels={session.editor.modelDraftIDs(
+                  Purpose.Transcription,
+                )}
+                onChooseModel={(model) =>
+                  session.editor.chooseModel(Purpose.Transcription, model)}
+                onForgetModel={() =>
+                  session.editor.forgetModel(Purpose.Transcription)}
                 bind:settings={session.editor.draft}
                 connection={session.editor.connection}
                 busy={session.editor.sttConnectionTesting}
@@ -310,15 +429,20 @@
           {:else if active === "processing"}
             {#if session.editor.draft.savedConnections.selected?.cleanup}
               <ProcessingSection
-                connectionStale={session.editor.connectionResultStale(Purpose.Cleanup)}
+                connectionStale={session.editor.connectionResultStale(
+                  Purpose.Cleanup,
+                )}
                 draftModels={session.editor.modelDraftIDs(Purpose.Cleanup)}
-                onChooseModel={(model) => session.editor.chooseModel(Purpose.Cleanup, model)}
-                onForgetModel={() => session.editor.forgetModel(Purpose.Cleanup)}
+                onChooseModel={(model) =>
+                  session.editor.chooseModel(Purpose.Cleanup, model)}
+                onForgetModel={() =>
+                  session.editor.forgetModel(Purpose.Cleanup)}
                 bind:settings={session.editor.draft}
                 profiles={session.editor.processingProfiles}
                 connection={session.editor.processingConnection}
                 busy={session.editor.processingConnectionTesting}
-                onTestConnection={() => session.editor.testPostProcessingConnection()}
+                onTestConnection={() =>
+                  session.editor.testPostProcessingConnection()}
               />
             {/if}
           {:else if active === "speech"}
@@ -327,9 +451,12 @@
                 voices={session.editor.voices}
                 voicesBusy={session.editor.voicesBusy}
                 onDiscoverVoices={() => session.editor.discoverVoices()}
-                connectionStale={session.editor.connectionResultStale(Purpose.Speech)}
+                connectionStale={session.editor.connectionResultStale(
+                  Purpose.Speech,
+                )}
                 draftModels={session.editor.modelDraftIDs(Purpose.Speech)}
-                onChooseModel={(model) => session.editor.chooseModel(Purpose.Speech, model)}
+                onChooseModel={(model) =>
+                  session.editor.chooseModel(Purpose.Speech, model)}
                 onForgetModel={() => session.editor.forgetModel(Purpose.Speech)}
                 bind:settings={session.editor.draft}
                 status={session.speech.status}
@@ -342,7 +469,8 @@
                 onStop={() => session.speech.stopTTS()}
                 onSave={() => session.speech.saveTTSAudio()}
                 onClear={() => session.speech.clearTTSAudio()}
-                onTestConnection={() => session.editor.testTextToSpeechConnection()}
+                onTestConnection={() =>
+                  session.editor.testTextToSpeechConnection()}
               />
             {/if}
           {:else if active === "history"}
@@ -351,7 +479,8 @@
               enabled={session.editor.applied?.historyEnabled ?? false}
               entries={session.history.entries}
               onCopy={(id) => session.history.copyHistoryEntry(id)}
-              onCopyVersion={(id, version) => session.history.copyHistoryEntryVersion(id, version)}
+              onCopyVersion={(id, version) =>
+                session.history.copyHistoryEntryVersion(id, version)}
               onDelete={(id) => session.history.deleteHistoryEntry(id)}
               onClear={() => session.history.clearHistory()}
             />
@@ -365,9 +494,15 @@
     </div>
 
     <div
-      class="flex h-[58px] shrink-0 items-center justify-end gap-2.5 border-t border-hairline bg-layer-fill px-5"
+      class="flex min-h-[58px] shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline bg-layer-fill px-5 py-3"
     >
-      {#if session.editor.draft}
+      {#if active === "connections" && session.editor.connectionDraft}
+        <ConnectionSaveActions
+          editor={session.editor}
+          formID="settings-connection-form"
+          onBack={() => requestConnectionBack()}
+        />
+      {:else if session.editor.draft}
         <span
           class="figure mr-auto flex items-center gap-2 text-[10.5px] text-muted-foreground"
           aria-live="polite"
@@ -390,10 +525,15 @@
           <Button
             variant="ghost"
             disabled={session.editor.saving}
-            onclick={() => session.editor.discardSettingsDraft()}>Discard changes</Button
+            onclick={() => session.editor.discardSettingsDraft()}
+            >Discard changes</Button
           >
         {/if}
-        <Button variant="outline" disabled={session.editor.saving} onclick={onClose}>Close</Button>
+        <Button
+          variant="outline"
+          disabled={session.editor.saving}
+          onclick={onClose}>Close</Button
+        >
         {#if active !== "connections"}<Button
             disabled={session.busy || shortcutCapture.capturing || !dirty}
             onclick={saveSettings}
@@ -404,7 +544,11 @@
             {session.editor.saving ? "Saving…" : "Save settings"}
           </Button>{/if}
       {:else}
-        <Button variant="outline" disabled={session.editor.saving} onclick={onClose}>Close</Button>
+        <Button
+          variant="outline"
+          disabled={session.editor.saving}
+          onclick={onClose}>Close</Button
+        >
       {/if}
     </div>
   </div>
@@ -415,12 +559,13 @@
     <Dialog.Header>
       <Dialog.Title>Discard connection changes?</Dialog.Title>
       <Dialog.Description
-        >Your connection edits have not been saved. Going back will discard these edits, including
-        any new API key.</Dialog.Description
+        >Your connection edits have not been saved. Going back will discard
+        these edits, including any new API key.</Dialog.Description
       >
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (discardConnectionOpen = false)}>Keep editing</Button
+      <Button variant="outline" onclick={() => (discardConnectionOpen = false)}
+        >Keep editing</Button
       >
       <Button
         variant="destructive"
@@ -455,8 +600,8 @@
     <Dialog.Header>
       <Dialog.Title>Save settings before changing connections?</Dialog.Title>
       <Dialog.Description
-        >Your model and task edits have not been applied. Save them for the current connection, or
-        discard them before continuing.</Dialog.Description
+        >Your model and task edits have not been applied. Save them for the
+        current connection, or discard them before continuing.</Dialog.Description
       >
     </Dialog.Header>
     {#if session.messages.error}<p role="alert" class="text-destructive">
@@ -473,8 +618,9 @@
         disabled={session.editor.saving}
         onclick={() => continueConnection(false)}>Discard and continue</Button
       >
-      <Button disabled={session.editor.saving} onclick={() => continueConnection(true)}
-        >Save and continue</Button
+      <Button
+        disabled={session.editor.saving}
+        onclick={() => continueConnection(true)}>Save and continue</Button
       >
     </Dialog.Footer>
   </Dialog.Content>

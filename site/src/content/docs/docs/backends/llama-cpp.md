@@ -60,10 +60,10 @@ explains raw fallback and the trained S1-mini controls.
 
 ## Configure Freehand
 
-1. Create a **Post-processing** connection in **Settings → Connections**, using the **llama.cpp** profile.
+1. Create a **Cleanup** connection in **Settings → Connections**, using the **llama.cpp** profile.
 2. Name it and enter the chat API base URL, normally ending in `/v1`.
-3. Configure authentication and HTTP permission, then **Save connection**. In **Settings → Post-processing**, select that connection, enable cleanup, and list models or enter the served model ID.
-4. Choose the prompt preset separately: **Custom instruction** or **S1-mini**.
+3. Configure authentication and HTTP permission, then **Save connection**. In **Settings → Cleanup**, select that connection, enable cleanup, and list models or enter the served model ID.
+4. Choose **Model profile → Generic** for your own instruction, or **S1-mini by Superwhisper** for its built-in instruction.
 5. Save, then explicitly review cleanup of a short transcript.
 
 The [post-processing guide](../../guides/post-processing/) covers setup and

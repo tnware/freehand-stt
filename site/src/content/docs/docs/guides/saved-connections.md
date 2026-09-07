@@ -40,6 +40,11 @@ Open **Settings → Connections → New connection**, enter the server details a
 uses, then choose **Save connection**. This creates an inactive entry. Select it later
 from any task it supports. The library remains the place to edit, duplicate, or delete servers.
 
+While editing a library entry, **Save connection** and **Cancel** stay in the
+bottom action bar, including in narrow windows. A disabled save explains what
+the form still needs. Only available backend profiles appear as new choices;
+an unavailable saved profile remains visible until you explicitly replace it.
+
 ## What goes where?
 
 | Settings → Connections | Feature settings pages |
@@ -56,6 +61,11 @@ that server** in one save. Renames and key changes retain model preferences;
 changing the URL or backend profile clears them and the active model choices. **Save settings** does not edit the saved
 connection. The home screen has the same active connection selectors. Its separate settings
 links open feature settings; model and other quick controls save runtime settings.
+
+Changing Settings sections opens the destination at the top without discarding
+your edits. Rejected settings saves take you to the relevant section and, where
+available, the invalid control. Correct the value and save again; other drafts
+and the previously applied settings remain intact.
 
 ## Reuse a server
 

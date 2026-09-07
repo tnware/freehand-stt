@@ -384,6 +384,27 @@ discarding changed connection fields and clears the transient key on exit. Setti
 groups separate Capture, Features, and Application; visual and keyboard section order
 match.
 
+The content scroll offset resets on section/editor transitions and Settings
+re-entry without changing sidebar focus or draft ownership. Library connection
+actions live in the persistent footer, with the submit button associated with
+the connection form; task-local dialogs reuse the same actions inside their form.
+Connection saves remain independent of runtime settings saves.
+
+Go configuration validation returns a `FieldError` containing bounded guidance
+and a Settings JSON property path, never the rejected value or underlying error.
+Wails' existing error marshalling delivers it in `RuntimeError.cause`; no extra
+validation RPC or renderer copy of validation rules is needed. `SettingsEditor`
+owns the presentation issue until editing, discard, successful save, or snapshot
+adoption clears it. `SettingsScreen` maps known fields to sections/controls,
+reveals the destination, and focuses the control or section heading. Shared
+value inputs/rows associate guidance and invalid state through a settings-local
+context. Unknown errors remain ordinary plain-message failures.
+
+The home footer selects transcription or speech metadata according to the active
+task and compares completed checks with the applied settings, not an unsaved
+draft. Local TTS readiness is explicitly separate from metadata reachability;
+no new automatic check or inference request is introduced by presentation.
+
 ## Model behavior contracts
 
 `internal/modelprofile` owns explicit role-specific model IDs, requirements, and

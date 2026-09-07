@@ -19,7 +19,12 @@
   import SquareIcon from "@lucide/svelte/icons/square";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
-  import { TTSPhase, type Settings, type ConnectionResult, type TTSStatus } from "$lib/state";
+  import {
+    TTSPhase,
+    type Settings,
+    type ConnectionResult,
+    type TTSStatus,
+  } from "$lib/state";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   let {
     settings = $bindable(),
@@ -67,7 +72,9 @@
       status.phase === TTSPhase.Paused,
   );
   const compatibility = $derived(
-    settings.modelProfiles.speech?.find((p) => p.id === (speech.modelProfile || ID.Generic)),
+    settings.modelProfiles.speech?.find(
+      (p) => p.id === (speech.modelProfile || ID.Generic),
+    ),
   );
   $effect(() => {
     if (settings.textToSpeech.enabled && settings.textToSpeech.speed === 0)
@@ -91,7 +98,9 @@
       {draftModels}
       onChoose={onChooseModel}
       onForget={onForgetModel}
-      savedModels={rememberedModels(settings, Purpose.Speech).map((e) => e.model)}
+      savedModels={rememberedModels(settings, Purpose.Speech).map(
+        (e) => e.model,
+      )}
       models={connection?.modelIDs ?? []}
       busy={connectionBusy}
       onDiscover={onTestConnection}
@@ -120,18 +129,6 @@
       busy={voicesBusy}
       onDiscover={onDiscoverVoices}
     />
-
-    <ValueRow
-      id="tts-format"
-      label="Audio format"
-      hint="Freehand requests uncompressed audio for deterministic native Windows playback."
-    >
-      {#snippet control()}<Badge
-          id="tts-format"
-          variant="outline"
-          class="justify-self-start font-mono">WAV · PCM16</Badge
-        >{/snippet}
-    </ValueRow>
 
     <ValueRow
       id="tts-speed"
@@ -182,8 +179,8 @@
       <div class="min-w-0">
         <p class="text-sm font-medium">Voice preview</p>
         <p class="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Save these settings, then explicitly synthesize one short phrase to verify the complete
-          endpoint and native playback path.
+          Save these settings, then generate a short phrase to check the voice
+          and playback.
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -206,7 +203,8 @@
           <Button
             size="sm"
             disabled={busy || !canPreview || !settings.textToSpeech.enabled}
-            onclick={onPreview}><Volume2Icon data-icon="inline-start" />Preview again</Button
+            onclick={onPreview}
+            ><Volume2Icon data-icon="inline-start" />Preview again</Button
           >
         {:else}
           <Button
@@ -226,9 +224,18 @@
   </SettingsCard>
 
   <p class="px-1 text-xs leading-relaxed text-muted-foreground">
-    WAV audio is kept only in memory for the active playback session. Save writes a user-selected
-    WAV directly; Clear, replacement, recording, or app shutdown releases the retained audio.
-    Connection checks stop after 15 seconds. Speech input is limited to 4,096 characters and
-    generated WAV audio to 32 MiB.
+    Generated audio stays in memory unless you choose Save. Clear, new speech,
+    recording, or quitting Freehand releases it.
   </p>
+  <details class="px-1 text-xs leading-relaxed text-muted-foreground">
+    <summary class="cursor-pointer font-medium text-foreground"
+      >Speech request details</summary
+    >
+    <p class="mt-3">
+      Freehand requests uncompressed WAV · PCM16 audio for native Windows
+      playback. Save writes a WAV file to the location you choose. Connection
+      checks stop after 15 seconds. Speech input is limited to 4,096 characters
+      and generated WAV audio to 32 MiB.
+    </p>
+  </details>
 </div>

@@ -273,7 +273,7 @@ func (a *App) configureUpdater() error {
 		Window: &updater.BuiltinWindow{
 			CSS: updaterWindowCSS,
 			Options: updater.WindowOptions{
-				Title: "Freehand STT — Software Update",
+				Title: "Freehand — Software Update",
 			},
 		},
 	}); err != nil {

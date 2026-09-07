@@ -41,6 +41,12 @@ For transcription setup:
 
 ## Understand connection-check results
 
+The home footer names the capability it describes: **Transcription** for Voice
+and Audio file, or **Text to speech** for the speech composer. A successful check
+of one does not check the other. **Ready to generate** on the composer describes
+local configuration, not server reachability. **Not checked** and **Settings
+changed** are not successful connection checks; refresh metadata explicitly.
+
 On a feature page, **Refresh models** (or **Check server** for whisper.cpp) runs
 one metadata request and shows a **Connection check** panel. **Check again**
 repeats it explicitly. The panel distinguishes four things:
@@ -68,6 +74,18 @@ its model and options. Actual audio or text requests happen only through your
 explicit transcription, cleanup, or speech workflow.
 
 ## Saved settings need attention
+
+### An edited value was rejected
+
+On **Save settings**, Freehand marks the relevant section and opens the invalid
+control when it can identify one. Correct the value using the nearby guidance,
+then save again. Other draft edits are retained and rejected values never replace
+the applied settings. For example, **Audio → Maximum duration** shows the limit
+for the current recording mode: 1–262 seconds without splitting, or 1–3,600 seconds
+with splitting. Request mechanics are available in the settings' details
+disclosures without hiding raw-fallback, language, or retention warnings.
+
+### Saved configuration cannot be loaded
 
 Freehand pauses new transcription and settings changes when saved configuration
 cannot be loaded or a save's outcome cannot be confirmed. It does not silently

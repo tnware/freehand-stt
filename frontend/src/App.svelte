@@ -14,7 +14,10 @@
   import { session } from "$lib/stores/session.svelte";
   import { subscribeSessionEvents } from "$lib/stores/session-events";
   import { activeAppearanceMode } from "$lib/appearance";
-  import { shouldAutomaticallyTestConnection } from "$lib/utils/connection";
+  import {
+    shouldAutomaticallyTestConnection,
+    taskConnectionStatus,
+  } from "$lib/utils/connection";
 
   let settingsOpen = $state(false);
   let aboutOpen = $state(false);
@@ -22,6 +25,14 @@
   // The status strip carries the same release identity About shows, read from
   // the one build-info source rather than restated here.
   let version = $state("");
+  let now = $state(Date.now());
+  const footerStatus = $derived(
+    taskConnectionStatus(inputMode, session.editor, now),
+  );
+  $effect(() => {
+    const timer = setInterval(() => (now = Date.now()), 30_000);
+    return () => clearInterval(timer);
+  });
 
   const fileWorking = $derived(
     session.files.status.phase ===
@@ -171,8 +182,7 @@
   />
 
   <StatusStrip
-    settings={session.editor.applied}
-    connection={session.editor.connection}
+    connectionState={footerStatus}
     {version}
     {aboutOpen}
     onAbout={openAbout}

@@ -29,17 +29,17 @@ history.
 
 ## Custom-instruction processor
 
-First create a **Post-processing** connection under **Settings → Connections**:
+First create a **Cleanup** connection under **Settings → Connections**:
 
 <Steps>
 
-1. Choose **New connection**, name it, select **Post-processing**, and choose the server profile.
+1. Choose **New connection**, name it, select **Cleanup**, and choose the server profile.
 2. Enter the processor's OpenAI-compatible base URL, normally ending in `/v1`.
 3. Enable **Allow insecure HTTP** only for a trusted local or LAN server using `http://`.
 4. Add the processor's API key when that endpoint requires one.
-5. Choose **Save connection**. Open **Settings → Post-processing**, select that active connection, enable cleanup, and list models or enter the exact model ID. Model listing reads metadata; it does not test cleanup quality.
+5. Choose **Save connection**. Open **Settings → Cleanup**, select that active connection, enable cleanup, and list models or enter the exact model ID. Model listing reads metadata; it does not test cleanup quality.
 6. Choose **Generic** and write the system instruction for the selected model. Freehand shows the UTF-8 storage limit, validates empty or oversized instructions, and can restore the recommended instruction.
-7. Choose **Save feature settings**. Dictate a short example and review the result before using cleanup for longer text.
+7. Choose **Save settings**. Dictate a short example and review the result before using cleanup for longer text.
 
 </Steps>
 
