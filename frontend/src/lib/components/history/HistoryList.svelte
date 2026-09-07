@@ -10,7 +10,7 @@
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
-  import HistoryDetailsDialog from "$lib/components/history/HistoryDetailsDialog.svelte";
+  import * as HistoryService from "$bindings/history/service";
   import {
     HistoryOutcome,
     HistoryProcessingStatus,
@@ -104,7 +104,10 @@
     const completed = new Date(completedAt);
     const now = new Date();
     if (completed.toDateString() === now.toDateString()) {
-      return completed.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      return completed.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
     }
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
@@ -193,12 +196,14 @@
   const detailsAvailable = (entry: HistoryEntry): boolean =>
     entry.processingStatus !== HistoryProcessingStatus.HistoryProcessingPending &&
     Boolean(entry.details.completedAt);
-  let detailsEntry = $state<HistoryEntry>();
-  let detailsReturnFocus = $state<HTMLElement | null>(null);
-
-  function openDetails(entry: HistoryEntry, trigger: HTMLElement) {
-    detailsReturnFocus = trigger;
-    detailsEntry = entry;
+  let detailsError = $state("");
+  async function openDetails(entry: HistoryEntry) {
+    detailsError = "";
+    try {
+      await HistoryService.OpenDetails(entry.id);
+    } catch (cause) {
+      detailsError = String(cause);
+    }
   }
 
   let scrollContainer: HTMLDivElement;
@@ -556,7 +561,7 @@
                   size="icon-xs"
                   disabled={!detailsAvailable(entry)}
                   aria-label="View transcription run details"
-                  onclick={(event) => openDetails(entry, event.currentTarget)}
+                  onclick={() => void openDetails(entry)}
                 >
                   <InfoIcon />
                 </Button>
@@ -579,11 +584,9 @@
   {/if}
 </div>
 
-<HistoryDetailsDialog
-  entry={detailsEntry}
-  returnFocus={detailsReturnFocus}
-  onClose={() => (detailsEntry = undefined)}
-/>
+{#if detailsError}
+  <p role="alert" class="px-4 py-2 text-xs text-destructive">{detailsError}</p>
+{/if}
 
 <style>
   article {
