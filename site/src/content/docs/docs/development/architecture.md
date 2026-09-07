@@ -511,6 +511,13 @@ Windows resource task runs its read-only check before compilation, preventing a
 package whose embedded About version disagrees with its executable or installer
 metadata.
 
+The reusable CI workflow owns source selection and the final validation gate.
+Release Please supplies the tag and expected version; CI resolves that tag once,
+validates the same commit across all jobs, and packages it on Windows. The release
+publisher consumes only that run's validated artifacts before attestation and
+publication. PR validation and Pages deployment share site build checks but not
+deployment concurrency or write permissions. See [GitHub Actions](../github-actions/).
+
 An active operation observes one coherent request profile. The transactional settings owner captures endpoint, model, headers, authentication mode, post-processing configuration, and both credentials under its save lock before microphone capture or stored-file upload begins. Renderer-safe settings reads use that same lock, so no window can combine an old saved configuration with credential or native state already changed by an in-progress save. Every failed native or credential stage attempts its own restoration plus all earlier restorations in reverse order; rollback failures remain inspectable by Go while their renderer-visible messages omit provider and credential-store details. The profile remains private to Go and fixed for the operation; settings edits save normally but affect only later operations. Segmented dictation therefore does not read a credential at its first checkpoint, and stored-file post-processing does not reread one after upload.
 
 `postprocess.Processor` accepts the captured configuration and credential explicitly through `ProcessWithCredential`; it has no credential-store dependency or alternate store-reading entry point. Credential acquisition remains with the transactional settings/profile owner.

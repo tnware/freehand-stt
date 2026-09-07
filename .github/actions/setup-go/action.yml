@@ -1,0 +1,108 @@
+name: Set up Go with scoped caches
+description: Install the repository toolchain and isolate dependency/tool and compiled caches by workload.
+
+inputs:
+  scope:
+    description: 'Workload cache namespace: go, storage, frontend, windows, or site.'
+    required: true
+
+outputs:
+  bin-dir:
+    description: Go executable install directory, also added to PATH.
+    value: ${{ steps.go-env.outputs.bin-dir }}
+  toolchain:
+    description: Actual Go toolchain version reported by go env GOVERSION.
+    value: ${{ steps.go-env.outputs.toolchain }}
+  dependencies-cache-hit:
+    description: Whether the exact immutable module/tool cache was restored.
+    value: ${{ steps.dependencies.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Validate cache scope and event
+      shell: bash
+      env:
+        CACHE_SCOPE: ${{ inputs.scope }}
+        EVENT_NAME: ${{ github.event_name }}
+      run: |
+        case "$CACHE_SCOPE" in
+          go|storage|frontend|windows|site) ;;
+          *) printf '%s\n' '::error::scope must be go, storage, frontend, windows, or site'; exit 1 ;;
+        esac
+        # Never execute fork-controlled Go/tools in a base-branch cache context.
+        if [[ "$EVENT_NAME" == pull_request_target ]]; then
+          printf '%s\n' '::error::Use pull_request, not pull_request_target, with this action'
+          exit 1
+        fi
+
+    - name: Install Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+      with:
+        go-version-file: go.mod
+        cache: false
+
+    - name: Resolve Go cache paths and identity
+      id: go-env
+      shell: bash
+      env:
+        CACHE_SCOPE: ${{ inputs.scope }}
+        RUNNER_PLATFORM: ${{ runner.os }}-${{ runner.arch }}
+        RUNNER_SYSTEM: ${{ runner.os }}
+
+      run: |
+        set -euo pipefail
+        module_dir="$(go env GOMODCACHE)"
+        build_dir="$(go env GOCACHE)"
+        bin_dir="$(go env GOBIN)"
+        if [[ -z "$bin_dir" ]]; then
+          go_path="$(go env GOPATH)"
+          if [[ "$RUNNER_SYSTEM" == Windows ]]; then
+            go_path="${go_path%%;*}"
+          else
+            go_path="${go_path%%:*}"
+          fi
+          bin_dir="$go_path/bin"
+        fi
+        toolchain="$(go env GOVERSION)"
+        target="$(go env GOOS)-$(go env GOARCH)"
+        # Forward slashes work for both cache paths and GITHUB_PATH on Windows.
+        module_dir="${module_dir//\\//}"
+        build_dir="${build_dir//\\//}"
+        bin_dir="${bin_dir//\\//}"
+        {
+          printf 'module-dir=%s\n' "$module_dir"
+          printf 'build-dir=%s\n' "$build_dir"
+          printf 'bin-dir=%s\n' "$bin_dir"
+          printf 'toolchain=%s\n' "$toolchain"
+          printf 'prefix=freehand-go-v1-%s-%s-%s-%s\n' "$CACHE_SCOPE" "$RUNNER_PLATFORM" "$target" "$toolchain"
+        } >> "$GITHUB_OUTPUT"
+        printf '%s\n' "$bin_dir" >> "$GITHUB_PATH"
+
+    # Keep modules and installed CLIs together, separate from compiled packages.
+    # No partial restores: a changed Wails/sqlc pin must not expose an old CLI.
+    # Successful jobs save these paths in the action's post step, after installs.
+    - name: Restore immutable Go dependencies and tools
+      id: dependencies
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ steps.go-env.outputs.module-dir }}
+          ${{ steps.go-env.outputs.bin-dir }}
+        key: ${{ steps.go-env.outputs.prefix }}-deps-${{ hashFiles('go.mod', 'go.sum', 'build/scripts/storage/main.go', '.github/workflows/ci.yml') }}
+        enableCrossOsArchive: false
+
+    # Source hashes refresh compiled packages without a new archive on every
+    # rerun or docs-only commit. Prefix restores never cross workload, platform,
+    # or toolchain. Go validates reused entries itself. GitHub isolates PR writes
+    # while allowing PRs to restore main's warm caches. Source revisions consume
+    # quota until eviction; measure Windows restore costs rather than assuming a win.
+    - name: Restore refreshable Go compiled packages
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.go-env.outputs.build-dir }}
+        key: ${{ steps.go-env.outputs.prefix }}-build-${{ hashFiles('go.mod', 'go.sum', 'build/scripts/storage/main.go', '.github/workflows/ci.yml') }}-${{ hashFiles('*.go', 'internal/**/*.go', 'internal/**/*.sql', 'build/scripts/**/*.go', 'sqlc.yaml', 'sqlc.yml', 'Taskfile.yml', 'build/**/*.yml', 'frontend/src/**', 'frontend/package.json', 'frontend/package-lock.json', '.github/workflows/*.yml', '.github/actions/setup-go/action.yml') }}
+        restore-keys: |
+          ${{ steps.go-env.outputs.prefix }}-build-${{ hashFiles('go.mod', 'go.sum', 'build/scripts/storage/main.go', '.github/workflows/ci.yml') }}-
+          ${{ steps.go-env.outputs.prefix }}-build-
+        enableCrossOsArchive: false

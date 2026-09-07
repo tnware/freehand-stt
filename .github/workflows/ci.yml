@@ -2,35 +2,69 @@ name: CI
 
 on:
   pull_request:
-    paths-ignore:
-      - site/**
-      - .github/workflows/pages.yml
   push:
     branches: [main]
-    paths-ignore:
-      - site/**
-      - .github/workflows/pages.yml
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Exact release source to validate; nonempty forces all workloads
+        type: string
+        required: true
+      expected-version:
+        description: Release Please version to verify before packaging
+        type: string
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.ref || 'default' }}
+  cancel-in-progress: ${{ inputs.ref == '' }}
 
 jobs:
-  storage:
-    name: Storage contract
+  changes:
+    name: Select validation
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      app: ${{ steps.select.outputs.app }}
+      site: ${{ steps.select.outputs.site }}
+      ref: ${{ steps.select.outputs.ref }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
+          node-version: 22
+      - name: Test selection and fail-closed gate
+        run: node --test .github/workflows/scripts/validation.test.mjs
+      - id: select
+        name: Select workloads and pin source commit
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          CI_FORCE_FULL: ${{ inputs.ref != '' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          node .github/workflows/scripts/validation.mjs changes
+          echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  storage:
+    name: Storage contract
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.changes.outputs.ref }}
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-go
+        with:
+          scope: storage
       - name: Check migration immutability and generated queries
         env:
           MIGRATION_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -47,13 +81,17 @@ jobs:
 
   go:
     name: Go
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
+          ref: ${{ needs.changes.outputs.ref }}
+      - uses: ./.github/actions/setup-go
+        with:
+          scope: go
       - name: Install Wails Linux build dependencies
         run: |
           sudo apt-get update
@@ -66,16 +104,22 @@ jobs:
           go run ./build/scripts/releaseinfo -root . sync
       - run: go test ./...
       - run: go vet ./...
+      - name: Lint GitHub Actions workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -shellcheck= -pyflakes=
 
   frontend:
     name: Frontend
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
+          ref: ${{ needs.changes.outputs.ref }}
+      - uses: ./.github/actions/setup-go
+        with:
+          scope: frontend
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
@@ -89,7 +133,9 @@ jobs:
         shell: bash
         run: |
           version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
-          go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
+          if ! command -v wails3 >/dev/null 2>&1; then
+            go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
+          fi
       - run: npm ci --prefix frontend
       - run: wails3 generate bindings -clean=true -ts -i
       - run: npm --prefix frontend test
@@ -98,14 +144,17 @@ jobs:
 
   windows:
     name: Windows package
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
+          ref: ${{ needs.changes.outputs.ref }}
+      - uses: ./.github/actions/setup-go
+        with:
+          scope: windows
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
@@ -121,7 +170,10 @@ jobs:
         shell: pwsh
         run: |
           $version = (go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3).Trim()
-          go install "github.com/wailsapp/wails/v3/cmd/wails3@$version"
+          if (-not (Get-Command wails3 -ErrorAction SilentlyContinue)) {
+            go install "github.com/wailsapp/wails/v3/cmd/wails3@$version"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
           $goBin = if ($env:GOBIN) { $env:GOBIN } else { Join-Path (go env GOPATH) "bin" }
           $goBin | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Install NSIS 3.12 when unavailable
@@ -134,9 +186,23 @@ jobs:
           Set-Content frontend/dist/index.html "<!doctype html><title>CI compile placeholder</title>"
       - name: Test Windows safety and application packages
         run: go test ./...
+      - name: Verify release version
+        if: inputs.expected-version != ''
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ inputs.expected-version }}
+        run: |
+          $configured = (Select-String -Path build/config.yml -Pattern '^\s*version:\s*"([^\"]+)"' | Select-Object -First 1).Matches.Groups[1].Value
+          if ($configured -ne $env:RELEASE_VERSION) {
+            throw "build/config.yml version does not match the requested release"
+          }
+          go run ./build/scripts/releaseinfo -root . sync
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go run ./build/scripts/releaseinfo -root . check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build executable and per-user installer
         shell: pwsh
-        run: wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=user
+        run: wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=user CI=true
       - name: Run browser tests in Edge
         run: npm --prefix frontend run test:browser
       - name: Upload browser failure report
@@ -170,3 +236,29 @@ jobs:
             bin/freehand.exe.sha256
             bin/freehand-amd64-installer.exe
             bin/freehand-amd64-installer.exe.sha256
+
+  site:
+    name: Site
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    uses: ./.github/workflows/site.yml
+    with:
+      ref: ${{ needs.changes.outputs.ref }}
+
+  validation:
+    name: Validation
+    if: always()
+    needs: [changes, storage, go, frontend, windows, site]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.changes.outputs.ref || inputs.ref || github.sha }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Require successful selected jobs
+        env:
+          CI_NEEDS: ${{ toJSON(needs) }}
+        run: node .github/workflows/scripts/validation.mjs gate
