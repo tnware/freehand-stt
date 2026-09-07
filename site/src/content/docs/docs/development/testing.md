@@ -546,6 +546,10 @@ Browser workspace fixtures cover desktop pointer/keyboard resizing, restored
 pane widths, narrow view switching, and quick-settings popovers with nested
 device/model selectors and asynchronous save outcomes. They use the actual home
 components with mocked Wails services and no inference traffic.
+The split-restoration test waits for the persisted percentage to match the
+separator's final value before reloading, then checks the restored pixel width.
+A storage change alone is insufficient because a debounced earlier drag write
+can precede the keyboard adjustment.
 Renderer coverage checks that speech commands preserve the composer draft and
 that file readiness excludes microphone and shortcut prerequisites while retaining
 endpoint and authentication checks. Interactive acceptance should switch between

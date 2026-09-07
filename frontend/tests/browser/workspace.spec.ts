@@ -142,21 +142,29 @@ test("desktop split resizes with pointer and keyboard and restores the chosen wi
     .toBeLessThan(initial.width - 40);
   await handle.focus();
   const beforeKeyboard = (await result.boundingBox())!.width;
-  const storedBeforeKeyboard = await page.evaluate(() =>
-    localStorage.getItem("paneforge:freehand-workspace-v1"),
-  );
   await page.keyboard.press("ArrowRight");
   await expect
     .poll(async () => (await result.boundingBox())!.width)
     .toBeGreaterThan(beforeKeyboard + 10);
   const adjusted = (await result.boundingBox())!.width;
+  const adjustedPercent = Number(await handle.getAttribute("aria-valuenow"));
+  // PaneForge debounces persistence. An earlier drag write can change storage
+  // before the keyboard resize is saved, so wait for the actual final size.
+  // The separator exposes rounded percentages; retain the pixel-level reload
+  // assertion below to verify restoration of the complete layout.
   await expect
     .poll(() =>
-      page.evaluate(() =>
-        localStorage.getItem("paneforge:freehand-workspace-v1"),
-      ),
+      page.evaluate(() => {
+        const stored = localStorage.getItem("paneforge:freehand-workspace-v1");
+        if (!stored) return null;
+        const layouts = Object.values(JSON.parse(stored)) as {
+          layout: number[];
+        }[];
+        const resultPercent = layouts[0]?.layout[0];
+        return resultPercent === undefined ? null : Math.round(resultPercent);
+      }),
     )
-    .not.toBe(storedBeforeKeyboard);
+    .toBe(adjustedPercent);
   await page.reload();
   await expect
     .poll(async () => Math.abs((await result.boundingBox())!.width - adjusted))
