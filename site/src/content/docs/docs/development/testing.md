@@ -67,7 +67,7 @@ cards share a single hairline border and subtle fill in light/dark themes with
 solid and Mica materials, preserving internal row dividers. Check switch thumb
 spacing in both sizes and states, disabled appearance, keyboard focus/Space,
 and right-to-left placement. Check each Settings selector, keyboard access,
-planned entry descriptions and disabled state, save/reopen persistence, and
+available-only choices and the explanation for an unavailable saved selection, save/reopen persistence, and
 independent STT/processing/TTS choices. Confirm that S1-mini controls remain a
 separate preset. Using only a model explicitly chosen by the operator, compare
 Generic and the applicable dedicated profile for normal transcription, file
@@ -115,6 +115,28 @@ runner options after `--`, for example `npm --prefix frontend run test:browser -
 or `--grep "Keep editing"`. Failure traces and screenshots go to `frontend/test-results`;
 the HTML report is in `frontend/playwright-report`. No app settings, credentials,
 or inference are accessed. Browser coverage does not establish native Wails acceptance.
+
+## Settings navigation and validation acceptance
+
+The settings browser suite covers normal/narrow content scrolling, keyboard
+section changes, persistent connection actions, and an invalid Audio save made
+from History. Controlled save failures carry the Go validation cause shape;
+assertions cover the destination, focus, associated message, section marker,
+retained unrelated edits, and retry. Go config/settings fixtures separately
+verify both recording-limit modes, nested validation causes, safe error JSON,
+and rejection before applied settings, credentials, native adapters, or events
+can change. Frontend metadata fixtures distinguish independent STT/TTS outcomes
+and prevent unsaved-draft checks from being attributed to applied settings.
+
+Repeat the audit interactively on Windows before native acceptance: scroll long
+pages and navigate by mouse/keyboard, use connection-editor Back/Cancel, save an
+invalid Audio draft from another section, and correct it without losing other
+edits. Check standard/narrow layouts, local errors and focus announcements,
+Generic cleanup guidance, details disclosures, stable product/delivery names,
+and the file-specific empty state. With independently configured endpoints,
+verify capability labels and metadata outcomes without invoking model inventories.
+These UI checks do not establish microphone, inference, insertion, or playback
+acceptance.
 
 
 ## Diagnostic logging acceptance

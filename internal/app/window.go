@@ -132,7 +132,7 @@ func baseWindowOptions(name, title, url string, width, height, minWidth, minHeig
 
 func mainWindowOptions(startupLaunch, showWindowOnLaunch, useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
 	return baseWindowOptions(
-		mainWindowName, "Freehand STT", mainWindowURL,
+		mainWindowName, "Freehand", mainWindowURL,
 		mainWindowWidth, mainWindowHeight, mainWindowMinWidth, mainWindowMinHeight,
 		windowStartsHidden(startupLaunch, showWindowOnLaunch), useMica, appearanceMode, systemDark,
 	)
@@ -140,7 +140,7 @@ func mainWindowOptions(startupLaunch, showWindowOnLaunch, useMica bool, appearan
 
 func settingsWindowOptions(useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
 	return baseWindowOptions(
-		settingsWindowName, "Freehand STT — Settings", settingsWindowURL,
+		settingsWindowName, "Freehand — Settings", settingsWindowURL,
 		settingsWindowWidth, settingsWindowHeight, settingsWindowMinWidth, settingsWindowMinHeight,
 		true, useMica, appearanceMode, systemDark,
 	)
@@ -148,7 +148,7 @@ func settingsWindowOptions(useMica bool, appearanceMode config.AppearanceMode, s
 
 func aboutWindowOptions(useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
 	return baseWindowOptions(
-		aboutWindowName, "Freehand STT — About", aboutWindowURL,
+		aboutWindowName, "Freehand — About", aboutWindowURL,
 		aboutWindowWidth, aboutWindowHeight, aboutWindowMinWidth, aboutWindowMinHeight,
 		true, useMica, appearanceMode, systemDark,
 	)

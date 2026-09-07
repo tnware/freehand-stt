@@ -63,7 +63,7 @@ export class SessionMessages {
 
   /** Records a caught value as the visible error. */
   fail(cause: unknown) {
-    this.error = String(cause);
+    this.error = cause instanceof Error ? cause.message : String(cause);
   }
 
   dispose() {

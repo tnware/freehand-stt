@@ -36,7 +36,9 @@
   class="flex h-52 shrink-0 flex-col overflow-hidden rounded-lg border border-hairline bg-layer-fill"
   aria-label="Current result"
 >
-  <div class="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-4 py-3">
+  <div
+    class="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-4 py-3"
+  >
     <h2 class="text-sm font-medium">Current result</h2>
     <span class="mr-auto text-xs text-muted-foreground"
       >{working
@@ -47,7 +49,9 @@
             ? "Needs attention"
             : text
               ? "Ready"
-              : "Nothing recorded yet"}</span
+              : mode === "file"
+                ? "No transcript yet"
+                : "Nothing recorded yet"}</span
     >
     {#if text}
       {#if onListen}<Button
@@ -56,9 +60,14 @@
           disabled={working || !canCopy}
           onclick={onListen}>Listen</Button
         >{/if}
-      <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
-      <Button variant="outline" size="sm" disabled={working || !canCopy} onclick={copy}
-        >{copiedKey === resultKey ? "Copied" : "Copy"}</Button
+      <Button variant="ghost" size="sm" disabled={working} onclick={onClear}
+        >Clear</Button
+      >
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={working || !canCopy}
+        onclick={copy}>{copiedKey === resultKey ? "Copied" : "Copy"}</Button
       >
     {/if}
   </div>
@@ -86,7 +95,9 @@
         {text}
       </div>
     {:else if !message}
-      <div class="flex h-full flex-col items-center justify-center gap-2 px-6 py-4 text-center">
+      <div
+        class="flex h-full flex-col items-center justify-center gap-2 px-6 py-4 text-center"
+      >
         <p class="text-sm font-medium">
           {working
             ? "Your result will appear here"

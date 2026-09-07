@@ -8,7 +8,12 @@
   import TransportShell from "$lib/components/home/TransportShell.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Textarea } from "$lib/components/ui/textarea";
-  import { TTSPhase, TTSSource, type Settings, type TTSStatus } from "$lib/state";
+  import {
+    TTSPhase,
+    TTSSource,
+    type Settings,
+    type TTSStatus,
+  } from "$lib/state";
   import { cn } from "$lib/utils";
 
   const maximumCharacters = 4096;
@@ -50,11 +55,17 @@
         status.phase === TTSPhase.Paused),
   );
   const showPlayback = $derived(
-    isOwnSession && status.phase !== TTSPhase.Idle && status.phase !== TTSPhase.Cancelled,
+    isOwnSession &&
+      status.phase !== TTSPhase.Idle &&
+      status.phase !== TTSPhase.Cancelled,
   );
   const configured = $derived(
     settings.enabled &&
-      Boolean(settings.baseURL.trim() && settings.model.trim() && settings.voice.trim()),
+      Boolean(
+        settings.baseURL.trim() &&
+          settings.model.trim() &&
+          settings.voice.trim(),
+      ),
   );
   const canSpeak = $derived(
     configured &&
@@ -65,13 +76,13 @@
   );
   const stateLabel = $derived.by(() => {
     if (!configured) return "Setup needed";
-    if (!isOwnSession) return "Ready";
+    if (!isOwnSession) return "Ready to generate";
     if (status.phase === TTSPhase.Generating) return "Generating";
     if (status.phase === TTSPhase.Playing) return "Speaking";
     if (status.phase === TTSPhase.Paused) return "Paused";
     if (status.phase === TTSPhase.Completed) return "Complete";
     if (status.phase === TTSPhase.Failed) return "Failed";
-    return "Ready";
+    return "Ready to generate";
   });
 
   function compactLabel(value: string, fallback: string): string {
@@ -92,7 +103,13 @@
 </script>
 
 <div class="flex shrink-0 flex-col">
-  <TransportShell {rail} tall stageGrid={false} busy={working} state={status.phase}>
+  <TransportShell
+    {rail}
+    tall
+    stageGrid={false}
+    busy={working}
+    state={status.phase}
+  >
     {#snippet control()}
       <span
         class={cn(
@@ -105,7 +122,9 @@
         aria-hidden="true"
       >
         {#if working && status.phase === TTSPhase.Generating}
-          <LoaderCircleIcon class="size-[24px] animate-spin motion-reduce:animate-none" />
+          <LoaderCircleIcon
+            class="size-[24px] animate-spin motion-reduce:animate-none"
+          />
         {:else}
           <Volume2Icon class="size-[24px]" />
         {/if}
@@ -121,7 +140,10 @@
             class="figure shrink-0 truncate text-[10px] text-ink-quiet"
             title={`${settings.model || "No model"} · ${settings.voice || "No voice"}`}
           >
-            {compactLabel(settings.model, "model")} · {compactLabel(settings.voice, "voice")}
+            {compactLabel(settings.model, "model")} · {compactLabel(
+              settings.voice,
+              "voice",
+            )}
           </span>
         </div>
 
@@ -143,7 +165,10 @@
             <ProviderIcon profile={settings.compatibilityProfile} size={20} />
             <h2 class="caption">Endpoint</h2>
           </div>
-          <span class="figure truncate text-[11px] text-card-foreground" title={settings.baseURL}>
+          <span
+            class="figure truncate text-[11px] text-card-foreground"
+            title={settings.baseURL}
+          >
             {settings.baseURL || "Not configured"}
           </span>
         </div>
@@ -160,11 +185,17 @@
                     : "bg-border",
             )}
           ></span>
-          <span class="caption text-secondary-foreground">{stateLabel}</span>
+          <span
+            class="caption text-secondary-foreground"
+            title="Local configuration only; connection checks appear in the footer."
+            >{stateLabel}</span
+          >
         </div>
-        <p class="tts-note figure mt-auto text-[10px] leading-relaxed text-ink-quiet">
+        <p
+          class="tts-note figure mt-auto text-[10px] leading-relaxed text-ink-quiet"
+        >
           {configured
-            ? "Audio is generated only when you press Speak."
+            ? "Local configuration only. Audio is generated when you press Speak."
             : "Configure a speech endpoint, model, and voice first."}
         </p>
         <div class="tts-actions flex items-center gap-2">
@@ -179,7 +210,7 @@
               onclick={onOpenSettings}
             >
               <SettingsIcon class="size-3" />
-              Speech settings
+              Text to speech settings
             </Button>
           {:else}
             <Button
@@ -207,7 +238,15 @@
   </TransportShell>
 
   {#if showPlayback}
-    <PlaybackBar {status} {onPause} {onResume} {onRestart} {onStop} {onSave} {onClear} />
+    <PlaybackBar
+      {status}
+      {onPause}
+      {onResume}
+      {onRestart}
+      {onStop}
+      {onSave}
+      {onClear}
+    />
   {/if}
 </div>
 

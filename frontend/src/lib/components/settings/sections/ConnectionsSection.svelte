@@ -15,12 +15,14 @@
   import * as Select from "$lib/components/ui/select";
   import * as Dialog from "$lib/components/ui/dialog";
   import PlusIcon from "@lucide/svelte/icons/plus";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import ConnectionSaveActions from "$lib/components/settings/ConnectionSaveActions.svelte";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
 
   let {
     editor,
     activateFor,
+    formID,
+    externalActions = false,
     error,
     onOpenFeature,
     onBack,
@@ -28,6 +30,8 @@
   }: {
     editor: SettingsEditor;
     activateFor?: Purpose;
+    formID?: string;
+    externalActions?: boolean;
     error: string;
     onBack: () => void;
     onSaved: () => void;
@@ -42,7 +46,8 @@
     { id: Purpose.Cleanup, label: "Cleanup" },
     { id: Purpose.Speech, label: "Text to speech" },
   ];
-  const roleLabel = (p: Purpose) => roles.find((r) => r.id === p)?.label ?? "Connection";
+  const roleLabel = (p: Purpose) =>
+    roles.find((r) => r.id === p)?.label ?? "Connection";
   const profiles = $derived.by(() => {
     const catalog = editor.applied?.compatibilityProfiles;
     const all = activateFor
@@ -66,7 +71,10 @@
         : p.description,
     }));
   });
-  function supports(purpose: Purpose, profile = form?.details.compatibilityProfile) {
+  function supports(
+    purpose: Purpose,
+    profile = form?.details.compatibilityProfile,
+  ) {
     const catalog = editor.applied?.compatibilityProfiles;
     const list =
       purpose === Purpose.Transcription
@@ -93,18 +101,21 @@
       form.details.headers = {};
     }
   }
-  const activeUses = (id: string) => roles.filter((role) => catalog?.selected?.[role.id] === id);
+  const activeUses = (id: string) =>
+    roles.filter((role) => catalog?.selected?.[role.id] === id);
   let deleting = $state<Connection | null>(null);
   let deleteOpen = $state(false);
   let testedID = $state("");
   function changeAuth(value: string) {
     if (!form) return;
     form.details.authenticationMode = value as AuthenticationMode;
-    if (value === AuthenticationMode.AuthenticationModeNone) form.credentialDraft = "";
+    if (value === AuthenticationMode.AuthenticationModeNone)
+      form.credentialDraft = "";
   }
   function duplicate(c: Connection) {
     let prefix = c.name;
-    while (new TextEncoder().encode(prefix).length > 60) prefix = [...prefix].slice(0, -1).join("");
+    while (new TextEncoder().encode(prefix).length > 60)
+      prefix = [...prefix].slice(0, -1).join("");
     let n = 1,
       name = `${prefix} copy`;
     while (entries.some((e) => e.name.toLowerCase() === name.toLowerCase()))
@@ -153,23 +164,29 @@
 
 {#if !activateFor}
   <p class="text-xs leading-relaxed text-muted-foreground">
-    Save servers here, then select them in a task. Creating or duplicating a connection in this
-    library does not activate it.
+    Save servers here, then select them in a task. Creating or duplicating a
+    connection in this library does not activate it.
   </p>
 {/if}
 {#if form}
   <form
+    id={formID}
     onsubmit={async (event) => {
       event.preventDefault();
       if (await editor.saveConnection(activateFor)) onSaved();
     }}
     class="flex min-h-0 flex-col gap-3.5"
   >
-    <div class="flex min-h-0 flex-col gap-3.5" class:overflow-y-auto={activateFor !== undefined}>
+    <div
+      class="flex min-h-0 flex-col gap-3.5"
+      class:overflow-y-auto={activateFor !== undefined}
+    >
       {#if !activateFor}
         <div class="flex items-center justify-between">
           <h4 class="text-sm font-semibold">
-            {form.creating ? "New connection" : `Edit ${form.name || "connection"}`}
+            {form.creating
+              ? "New connection"
+              : `Edit ${form.name || "connection"}`}
           </h4>
           <Badge variant="outline">Connection settings</Badge>
         </div>
@@ -177,23 +194,28 @@
       {#if !form.creating && activeUses(form.id).length > 0}<p
           class="text-xs text-muted-foreground"
         >
-          This connection is in use. Saving updates its connection details for new requests; model
-          and feature options stay on their own feature pages. This updates every feature using this
-          server.
+          This connection is in use. Saving updates its connection details for
+          new requests; model and feature options stay on their own feature
+          pages. This updates every feature using this server.
         </p>{/if}
       {#snippet supportedUses()}
         {#if form}
           <div class="space-y-3 px-5 py-4">
             <h4 class="text-sm font-medium">Used for</h4>
             <p class="text-xs text-muted-foreground">
-              Enable only the operations your deployed server provides. Each use becomes selectable
-              independently; enabling it here does not activate it or verify inference support.
+              Enable only the operations your deployed server provides. Each use
+              becomes selectable independently; enabling it here does not
+              activate it or verify inference support.
             </p>
             {#each roles as role (role.id)}
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <label for={`connection-use-${role.id}`} class="text-sm">{role.label}</label>
-                  {#if !supports(role.id)}<p class="text-xs text-muted-foreground">
+                  <label for={`connection-use-${role.id}`} class="text-sm"
+                    >{role.label}</label
+                  >
+                  {#if !supports(role.id)}<p
+                      class="text-xs text-muted-foreground"
+                    >
                       Not implemented for this profile.
                     </p>{/if}
                   {#if catalog?.selected?.[role.id] === form.id}<p
@@ -257,9 +279,12 @@
               spellcheck={false}
             />{/snippet}
         </ValueRow>
-        {#if !form.creating}<p class="px-5 pb-3 text-xs leading-relaxed text-muted-foreground">
-            Changing the base URL or backend profile clears this connection’s remembered models and
-            active model choices. Renames and authentication changes keep them.
+        {#if !form.creating}<p
+            class="px-5 pb-3 text-xs leading-relaxed text-muted-foreground"
+          >
+            Changing the base URL or backend profile clears this connection’s
+            remembered models and active model choices. Renames and
+            authentication changes keep them.
           </p>{/if}
         <SettingRow
           title="Allow insecure HTTP"
@@ -283,12 +308,15 @@
               onValueChange={changeAuth}
               disabled={busy}
               ><Select.Trigger id="connection-auth" class="w-full"
-                >{form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey
+                >{form.details.authenticationMode ===
+                AuthenticationMode.AuthenticationModeAPIKey
                   ? "API key"
                   : "None"}</Select.Trigger
               ><Select.Content
-                ><Select.Item value={AuthenticationMode.AuthenticationModeNone}>None</Select.Item
-                ><Select.Item value={AuthenticationMode.AuthenticationModeAPIKey}
+                ><Select.Item value={AuthenticationMode.AuthenticationModeNone}
+                  >None</Select.Item
+                ><Select.Item
+                  value={AuthenticationMode.AuthenticationModeAPIKey}
                   >API key</Select.Item
                 ></Select.Content
               ></Select.Root
@@ -344,7 +372,8 @@
           >
           <div class="mt-4 space-y-4">
             <div class="space-y-2">
-              <label for="connection-health" class="text-xs font-medium">Custom health path</label
+              <label for="connection-health" class="text-xs font-medium"
+                >Custom health path</label
               ><ValueInput
                 id="connection-health"
                 bind:value={form.details.healthPath}
@@ -352,7 +381,8 @@
                 disabled={busy}
               />
               <p class="text-xs text-muted-foreground">
-                Appended to the base URL. Leave blank for the profile’s default metadata route.
+                Appended to the base URL. Leave blank for the profile’s default
+                metadata route.
               </p>
             </div>
             <div class="space-y-2">
@@ -388,7 +418,8 @@
                 variant="outline"
                 size="sm"
                 onclick={addHeader}
-                disabled={busy || Object.keys(form.details.headers ?? {}).length >= 32}
+                disabled={busy ||
+                  Object.keys(form.details.headers ?? {}).length >= 32}
                 >Add header</Button
               >
             </div>
@@ -396,25 +427,18 @@
         </details>
       {/if}
     </div>
-    {#if error}<p role="alert" class="shrink-0 text-sm text-destructive">{error}</p>{/if}
-    <div class="flex shrink-0 justify-end gap-2">
-      <Button type="button" variant="outline" disabled={busy} onclick={onBack}>Cancel</Button
-      ><Button
-        type="submit"
-        disabled={busy ||
-          !form.name.trim() ||
-          !form.details.baseURL.trim() ||
-          form.uses.length === 0 ||
-          (activateFor !== undefined && !form.uses.includes(activateFor))}
-        >{#if editor.saving}<LoaderCircleIcon class="animate-spin" />{/if}{activateFor
-          ? "Save and use connection"
-          : "Save connection"}</Button
-      >
-    </div>
+    {#if error}<p role="alert" class="shrink-0 text-sm text-destructive">
+        {error}
+      </p>{/if}
+    {#if !externalActions}
+      <ConnectionSaveActions {editor} {activateFor} {onBack} />
+    {/if}
   </form>
 {:else}
   <div class="flex justify-end">
-    <Button disabled={busy || editor.runtimeDirty} onclick={() => editor.beginConnection()}
+    <Button
+      disabled={busy || editor.runtimeDirty}
+      onclick={() => editor.beginConnection()}
       ><PlusIcon />New connection</Button
     >
   </div>
@@ -422,8 +446,9 @@
       ><div class="space-y-2 px-5 py-6">
         <h4 class="text-sm font-semibold">No connections yet</h4>
         <p class="text-xs text-muted-foreground">
-          Create your first connection with a name, server URL, and compatibility profile. Model and
-          language choices come next, on the feature page.
+          Create your first connection with a name, server URL, and
+          compatibility profile. Model and language choices come next, on the
+          feature page.
         </p>
       </div></SettingsCard
     >{/if}
@@ -434,13 +459,19 @@
           <ProviderIcon profile={c.details.compatibilityProfile} />
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-semibold">{c.name}</p>
-            <p class="break-all text-xs text-muted-foreground">{c.details.baseURL}</p>
+            <p class="break-all text-xs text-muted-foreground">
+              {c.details.baseURL}
+            </p>
           </div>
         </div>
         <div class="flex flex-wrap gap-2">
           {#each c.uses as p (p)}<Badge
-              variant={catalog?.selected?.[p] === c.id ? "secondary" : "outline"}
-              >{roleLabel(p)}{catalog?.selected?.[p] === c.id ? " · In use" : ""}</Badge
+              variant={catalog?.selected?.[p] === c.id
+                ? "secondary"
+                : "outline"}
+              >{roleLabel(p)}{catalog?.selected?.[p] === c.id
+                ? " · In use"
+                : ""}</Badge
             >{/each}
         </div>
         <div class="flex flex-wrap gap-1.5">
@@ -468,7 +499,9 @@
           <Button
             variant="ghost"
             size="sm"
-            disabled={busy || editor.runtimeDirty || activeUses(c.id).length > 0}
+            disabled={busy ||
+              editor.runtimeDirty ||
+              activeUses(c.id).length > 0}
             onclick={() => {
               deleting = c;
               deleteOpen = true;
@@ -476,12 +509,17 @@
           >
         </div>
         <div class="flex flex-wrap gap-1">
-          {#each c.uses as p (p)}<Button variant="link" size="sm" onclick={() => onOpenFeature(p)}
-              >Open {roleLabel(p)}</Button
+          {#each c.uses as p (p)}<Button
+              variant="link"
+              size="sm"
+              onclick={() => onOpenFeature(p)}>Open {roleLabel(p)}</Button
             >{/each}
         </div>
-        {#if activeUses(c.id).length}<p class="text-[11px] text-muted-foreground">
-            To delete, choose another connection or None in every feature using this server.
+        {#if activeUses(c.id).length}<p
+            class="text-[11px] text-muted-foreground"
+          >
+            To delete, choose another connection or None in every feature using
+            this server.
           </p>{/if}
         {#if testedID === c.id && editor.managedConnectionTesting}<p
             role="status"
@@ -498,19 +536,24 @@
     >
   {/each}
   <p class="text-xs text-muted-foreground">
-    Tests read health or model-list metadata only. No model is started or invoked.
+    Tests read health or model-list metadata only. No model is started or
+    invoked.
   </p>
 {/if}
 <Dialog.Root bind:open={deleteOpen}
   ><Dialog.Content
     ><Dialog.Header
       ><Dialog.Title>Delete connection</Dialog.Title><Dialog.Description
-        >Delete “{deleting?.name}”? It is not selected by a feature. A key is removed only when no
-        saved connection uses it.</Dialog.Description
+        >Delete “{deleting?.name}”? It is not selected by a feature. A key is
+        removed only when no saved connection uses it.</Dialog.Description
       ></Dialog.Header
-    >{#if error}<p role="alert" class="text-sm text-destructive">{error}</p>{/if}<Dialog.Footer
-      ><Button variant="outline" disabled={editor.saving} onclick={() => (deleteOpen = false)}
-        >Cancel</Button
+    >{#if error}<p role="alert" class="text-sm text-destructive">
+        {error}
+      </p>{/if}<Dialog.Footer
+      ><Button
+        variant="outline"
+        disabled={editor.saving}
+        onclick={() => (deleteOpen = false)}>Cancel</Button
       ><Button variant="destructive" disabled={editor.saving} onclick={remove}
         >Delete connection</Button
       ></Dialog.Footer

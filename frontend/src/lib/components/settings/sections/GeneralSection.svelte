@@ -86,7 +86,6 @@
       />
     {/snippet}
   </SettingRow>
-
 </SettingsCard>
 
 <SettingsCard>
@@ -117,10 +116,17 @@
               ? "flex cursor-not-allowed items-center gap-2.5 rounded-lg border border-hairline bg-background/35 px-3 py-2.5 has-data-checked:border-primary/30 has-data-checked:bg-primary/5"
               : "flex cursor-pointer items-center gap-2.5 rounded-lg border border-hairline bg-background/35 px-3 py-2.5 transition-colors has-data-checked:border-primary/30 has-data-checked:bg-primary/5 hover:bg-accent/55"}
           >
-            <RadioGroup.Item id={`appearance-${mode.value}`} value={mode.value} />
+            <RadioGroup.Item
+              id={`appearance-${mode.value}`}
+              value={mode.value}
+            />
             <span class="min-w-0">
-              <span class="block text-xs font-medium text-foreground">{mode.label}</span>
-              <span class="block text-[10.5px] leading-relaxed text-muted-foreground">
+              <span class="block text-xs font-medium text-foreground"
+                >{mode.label}</span
+              >
+              <span
+                class="block text-[10.5px] leading-relaxed text-muted-foreground"
+              >
                 {mode.description}
               </span>
             </span>
@@ -171,9 +177,15 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-xs font-medium text-foreground">Direct input</span>
-          <span class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
-            Type Unicode directly into the application that was focused when recording started. This is the default and does not touch the clipboard.
+          <span class="block text-xs font-medium text-foreground"
+            >Direct input</span
+          >
+          <span
+            class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground"
+          >
+            Type Unicode directly into the application that was focused when
+            recording started. This is the default and does not touch the
+            clipboard.
           </span>
         </span>
       </Label>
@@ -188,31 +200,14 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-xs font-medium text-foreground">Manual copy</span>
-          <span class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
-            Keep every completed transcript in Freehand until you explicitly choose Copy transcript. Nothing is inserted or copied automatically.
-          </span>
-        </span>
-      </Label>
-
-      <Label
-        for="delivery-clipboard-paste"
-        aria-disabled="true"
-        class="flex cursor-not-allowed items-start gap-3 rounded-lg border border-hairline bg-muted/25 px-3 py-3 opacity-65"
-      >
-        <RadioGroup.Item
-          id="delivery-clipboard-paste"
-          value={InsertionMode.ClipboardPaste}
-          class="mt-0.5"
-          disabled
-        />
-        <span class="min-w-0 flex-1">
-          <span class="flex flex-wrap items-center gap-2 text-xs font-medium text-foreground">
-            Clipboard paste
-            <Badge variant="secondary">Deferred</Badge>
-          </span>
-          <span class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
-            A future compatibility mode for applications that reject direct input. It remains unavailable until complete clipboard preservation and conditional restoration are implemented.
+          <span class="block text-xs font-medium text-foreground"
+            >Manual copy</span
+          >
+          <span
+            class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground"
+          >
+            Keep every completed transcript in Freehand until you explicitly
+            choose Copy transcript. Nothing is inserted or copied automatically.
           </span>
         </span>
       </Label>
