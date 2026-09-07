@@ -154,6 +154,14 @@ func aboutWindowOptions(useMica bool, appearanceMode config.AppearanceMode, syst
 	)
 }
 
+func historyDetailsWindowOptions(useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
+	return baseWindowOptions(
+		"transcription-details", "Freehand — Transcription details", "/index.html#transcription-details",
+		640, 720, 480, 400,
+		true, useMica, appearanceMode, systemDark,
+	)
+}
+
 // chooseAudioFile is the only path from the interactive window to a stored
 // audio capability. The full path stays inside Go; Service returns only the
 // selected file's bounded metadata to the renderer.
@@ -474,6 +482,25 @@ func (a *App) showAbout() {
 	if a.wails != nil {
 		a.wails.Event.Emit(aboutVisibilityEvent, true)
 	}
+}
+
+func (a *App) newHistoryDetailsWindow() {
+	window := a.wails.Window.NewWithOptions(historyDetailsWindowOptions(
+		a.settings.UseMica, a.settings.AppearanceMode, a.wails.Env.IsDarkMode(),
+	))
+	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
+		event.Cancel()
+		a.history.CloseDetails()
+	})
+	a.detailsWindow.attach(window)
+}
+
+func (a *App) showHistoryDetails() {
+	window := a.detailsWindow.current()
+	if window != nil && !window.IsVisible() {
+		a.centerAuxiliaryWindow(window)
+	}
+	a.detailsWindow.Reveal()
 }
 
 func (a *App) applyMainWindowPlacement(options *application.WebviewWindowOptions) {

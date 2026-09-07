@@ -54,6 +54,12 @@ bounded to 20 entries and 2 MiB, and cleared when Freehand exits. It stores
 raw and cleaned transcript text and limited non-secret run details—not audio,
 credentials, request headers, full file paths, or destination-window identity.
 
+The information button on a completed history entry opens **Transcription details**
+in a separate, resizable window. You can keep it open while using Freehand; opening
+another entry updates the same window. Removing the entry, clearing or disabling
+history, or reaching its retention limit also removes those details. Closing the
+details window leaves Freehand running.
+
 Stored-audio results require an explicit Copy action. Voice dictation can use
 focus-safe direct insertion or manual copy, according to your settings.
 

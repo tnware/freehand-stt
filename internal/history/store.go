@@ -42,6 +42,21 @@ func (s *Store) Entries() []HistoryEntry {
 	return s.buffer.newestFirst()
 }
 
+func (s *Store) completedEntry(id uint64) *HistoryEntry {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || !s.enabled || id == 0 {
+		return nil
+	}
+	for _, entry := range s.buffer.entries {
+		if entry.ID == id && entry.ProcessingStatus != HistoryProcessingPending && !entry.Details.CompletedAt.IsZero() {
+			copy := cloneHistoryEntry(entry)
+			return &copy
+		}
+	}
+	return nil
+}
+
 // Begin retains a raw transcript before optional post-processing starts. A
 // later processing failure can therefore never erase a successful transcript.
 func (s *Store) Begin(text string, outcome HistoryOutcome, processing bool, completedAt time.Time, details HistoryRunDetails) uint64 {

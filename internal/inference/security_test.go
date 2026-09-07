@@ -211,7 +211,7 @@ func TestInferenceSanitizesSuccessfulMetadataBeforeHistoryDTO(t *testing.T) {
 				if store.Begin(text, history.HistoryTranscribed, false, time.Unix(1, 0), details) == 0 {
 					t.Fatal("history did not retain valid result")
 				}
-				dto := history.NewService(store).TranscriptHistory()
+				dto := history.NewService(store, history.DetailsWindow{}).TranscriptHistory()
 				if len(dto) != 1 || dto[0].RawText != text {
 					t.Fatal("history renderer DTO lost useful transcript")
 				}

@@ -88,6 +88,7 @@ type App struct {
 	mainWindow      *windowController
 	settingsWindow  *settingsWindowController
 	aboutWindow     *windowController
+	detailsWindow   *windowController
 	windowState     *windowstate.Store
 	mainPlacement   *windowstate.Placement
 	levels          *levelPump
@@ -136,6 +137,7 @@ func New(opts Options) (*App, error) {
 		mainWindow:     &windowController{},
 		settingsWindow: &settingsWindowController{},
 		aboutWindow:    &windowController{},
+		detailsWindow:  &windowController{},
 		windowState:    windowState,
 		mainPlacement:  mainPlacement,
 		logger:         logger,
@@ -201,7 +203,15 @@ func New(opts Options) (*App, error) {
 		a.publishTTSStatus,
 		rootLogger,
 	)
-	a.history = history.NewService(transcripts)
+	a.history = history.NewService(transcripts, history.DetailsWindow{
+		Open: a.showHistoryDetails,
+		Hide: a.detailsWindow.Hide,
+		Changed: func() {
+			if a.wails != nil {
+				a.wails.Event.Emit(history.DetailsChangedEvent)
+			}
+		},
+	})
 	a.connection = connection.NewService(keys, processingKeys, ttsKeys, client, rootLogger, store)
 	a.inputService = inputservice.NewService(a.audio, a.capture, a, admission, settingsSource, a.publishShortcutCapture, rootLogger)
 	a.buildInfo = buildinfo.NewService(
@@ -391,6 +401,7 @@ func (a *App) onStarted(*application.ApplicationEvent) {
 	a.newMainWindow()
 	a.newSettingsWindow()
 	a.newAboutWindow()
+	a.newHistoryDetailsWindow()
 	a.tray.ApplyDictation(dictation.Snapshot(a.dictation))
 	a.tray.ApplyFile(a.files.CurrentFileTranscription())
 	overlayservice.Start(a.overlay)
