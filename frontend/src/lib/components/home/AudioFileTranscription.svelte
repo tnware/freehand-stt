@@ -1,7 +1,6 @@
 <script lang="ts">
-  import * as Popover from "$lib/components/ui/popover";
+  import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import TooltipButton from "$lib/components/ui/button/TooltipButton.svelte";
-  import { buttonVariants } from "$lib/components/ui/button";
   import CheckIcon from "@lucide/svelte/icons/check";
   import FileAudioIcon from "@lucide/svelte/icons/file-audio";
   import FileTextIcon from "@lucide/svelte/icons/file-text";
@@ -23,6 +22,7 @@
     onTryStreamingAgain,
     onCancel,
     onClear,
+    onOpenSettings,
   }: {
     status: FileTranscriptionStatus;
     choosing?: boolean;
@@ -32,6 +32,7 @@
     onTryStreamingAgain: () => void;
     onCancel: () => void;
     onClear: () => void;
+    onOpenSettings?: () => void;
   } = $props();
 
   let stream = $state(true);
@@ -193,19 +194,13 @@
     {#if failed}
       <div class="flex h-5 min-w-0 items-center justify-between gap-2">
         <span class="truncate text-xs text-destructive">Transcription failed</span>
-        <Popover.Root>
-          <Popover.Trigger
-            aria-label="File transcription error details"
-            class={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "h-5 shrink-0 px-1 text-xs",
-            )}>Details</Popover.Trigger
-          >
-          <Popover.Content role="dialog" aria-label="File transcription error details">
-            <p class="text-sm font-medium">Transcription failed</p>
-            <p class="mt-2 text-sm leading-relaxed break-words whitespace-pre-wrap">{phaseLabel}</p>
-          </Popover.Content>
-        </Popover.Root>
+        <FeedbackDetails
+          title="Transcription failed"
+          label="File transcription error details"
+          message={phaseLabel}
+          actionLabel="Transcription settings"
+          onAction={onOpenSettings}
+        />
       </div>
     {:else}
       <p class="min-h-5 truncate text-xs text-muted-foreground" title={phaseLabel}>{phaseLabel}</p>

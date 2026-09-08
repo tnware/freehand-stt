@@ -6,6 +6,7 @@
   import { modelOptions } from "$lib/utils/modelSettings";
   import {
     TTSPhase,
+    State,
     TTSSource,
     FileTranscriptionPhase,
     HistoryProcessingStatus,
@@ -28,6 +29,9 @@
   const setupScenario = new URLSearchParams(location.search).get("setup");
   let openedSettings = $state("");
   let connectionChecks = 0;
+  const feedbackScenario = new URLSearchParams(location.search).has("feedback");
+  let speechRequests = 0;
+  let audioSaves = 0;
   let current = structuredClone(settings);
   current.setupCompleted = true;
   current.historyEnabled = new URLSearchParams(location.search).get("history") !== "off";
@@ -170,6 +174,47 @@
         },
       },
       speech: {
+        SpeakText: () => {
+          speechRequests++;
+          session.speech.applyStatus({
+            ...session.speech.status,
+            generation: speechRequests,
+            source: TTSSource.SourceCompose,
+            phase: speechRequests === 1 && feedbackScenario ? TTSPhase.Failed : TTSPhase.Completed,
+            message:
+              speechRequests === 1 && feedbackScenario
+                ? "The speech service could not complete this request. Check the connection and selected voice, then try again. ".repeat(
+                    5,
+                  )
+                : "",
+            canClear: true,
+            canSave: speechRequests > 1,
+            canRestart: speechRequests > 1,
+          });
+          return CancellablePromise.resolve();
+        },
+        SaveAudio: () => {
+          audioSaves++;
+          return feedbackScenario && audioSaves === 1
+            ? CancellablePromise.reject(
+                new Error(
+                  "The audio file could not be saved. Choose another folder and try again. ".repeat(
+                    8,
+                  ),
+                ),
+              )
+            : CancellablePromise.resolve(true);
+        },
+        ClearAudio: () => {
+          session.speech.applyStatus({
+            ...session.speech.status,
+            phase: TTSPhase.Idle,
+            canClear: false,
+            canSave: false,
+            canRestart: false,
+          });
+          return CancellablePromise.resolve();
+        },
         PlayVoiceTranscript: (generation) => {
           if (generation !== 7)
             return CancellablePromise.reject(new Error("Wrong result generation"));
@@ -233,6 +278,18 @@
     if (setupScenario === "loading") session.editor.devicesBusy = true;
     if (setupScenario === "connection") void session.editor.testVoiceConnection();
   }
+  if (new URLSearchParams(location.search).get("feedback") === "voice") {
+    session.dictation.status = {
+      ...idle,
+      generation: 8,
+      state: State.Failed,
+      canCopy: false,
+      message:
+        "The transcription request timed out. Review the connection before recording again. ".repeat(
+          6,
+        ),
+    };
+  }
   window.testSaves = saves.control;
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
@@ -245,11 +302,11 @@
     {session}
     bind:inputMode
     onOpenHistorySettings={noop}
-    onOpenServerSettings={noop}
+    onOpenServerSettings={() => (openedSettings = "File transcription settings")}
     onOpenProcessingSettings={noop}
     onOpenAudioSettings={() => (openedSettings = "Audio settings")}
     onOpenShortcutSettings={() => (openedSettings = "Shortcut settings")}
-    onOpenSpeechSettings={noop}
+    onOpenSpeechSettings={() => (openedSettings = "Speech settings")}
     onOpenGeneralSettings={noop}
   />
   <footer

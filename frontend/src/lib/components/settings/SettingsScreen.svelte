@@ -258,7 +258,7 @@
         <h2 id="settings-section-title" class="sr-only" aria-live="polite" aria-atomic="true">
           {section.label} settings
         </h2>
-        {#if messages.length}<Notifications {messages} />{/if}
+        {#if messages.length && pendingConnectionAction === null}<Notifications {messages} />{/if}
         {#if session.editor.validationIssue}
           <div class="flex flex-wrap items-center gap-2 border-l-2 border-destructive pl-3 text-sm">
             <p id="settings-validation-message" role="alert" class="text-destructive">

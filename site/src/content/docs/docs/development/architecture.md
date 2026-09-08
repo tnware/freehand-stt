@@ -196,6 +196,16 @@ frontend/src/lib           testable settings/status state
 frontend/src               thin Svelte components
 ```
 
+Action feedback remains renderer presentation. `SessionMessages` distinguishes a
+speech-status failure by operation generation from an unrelated command error.
+The workspace suppresses its shared copy only while the matching failed speech
+session has visible local feedback; other tasks and Settings retain the shared
+fallback. New speech status clears only its own stale failure, and replaying an
+unchanged failure event does not resurrect a dismissed notice. This does not
+change backend admission, retry capabilities, or request state. Shared notices
+float without participating in workspace layout; task details use bounded,
+keyboard-accessible popovers.
+
 The renderer sees small Wails services registered from the package that owns each capability. Wails is the bridge boundary, not the application's package hierarchy:
 
 | Bound package       | Renderer responsibility                                                                                                                                                     | Backend authority                                                    |

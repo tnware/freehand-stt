@@ -71,6 +71,23 @@ saving, unplugging the selected microphone, retrying a failed connection check,
 and persisting setup completion across restart. Browser fixtures and executable
 compilation do not establish those native interactions or invoke inference.
 
+### Action feedback
+
+`frontend/tests/browser/feedback.spec.ts` uses synthetic speech and file services
+to verify one visible speech error, full keyboard-accessible details, preserved
+composer text across retry, settings shortcuts, and shared fallback when leaving
+the failed composer. It compares editor/control bounds before and after failure
+and success notices at desktop and compact widths. Playback controls must remain
+clickable while a confirmation is visible. Unit tests cover operation-generation
+ownership, stale failure clearing, and preservation of unrelated command errors.
+
+Native review should include a speech-generation failure, a cancelled or failed
+audio save, failed Settings save before switching connections, and a dictation
+failure with a long explanation. Check that notices leave task controls reachable,
+Escape returns focus from Details, and opening the relevant settings window
+preserves the current work. These fixtures do not invoke inference or establish
+native file-dialog or window-focus acceptance.
+
 ## Compatibility profile acceptance
 
 The published catalog fixture compares the website export with the app-owned

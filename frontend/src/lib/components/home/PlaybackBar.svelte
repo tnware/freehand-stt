@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import PauseIcon from "@lucide/svelte/icons/pause";
   import PlayIcon from "@lucide/svelte/icons/play";
@@ -20,6 +21,7 @@
     onStop,
     onSave,
     onClear,
+    onOpenSettings,
   }: {
     embedded?: boolean;
     status: TTSStatus;
@@ -29,8 +31,10 @@
     onStop: () => void;
     onSave: () => void;
     onClear: () => void;
+    onOpenSettings?: () => void;
   } = $props();
 
+  const failed = $derived(status.phase === TTSPhase.Failed);
   const percent = $derived(
     status.durationMilliseconds > 0
       ? Math.min(100, (status.positionMilliseconds / status.durationMilliseconds) * 100)
@@ -80,11 +84,31 @@
     <div class="min-w-0 flex-1">
       <div class="mb-1 flex items-center justify-between gap-3 text-xs">
         <span class="truncate font-medium">{label} · {phaseLabel}</span>
-        <span class="shrink-0 font-mono text-muted-foreground tabular-nums">
-          {formatTime(status.positionMilliseconds)} / {formatTime(status.durationMilliseconds)}
-        </span>
+        {#if failed}
+          <FeedbackDetails
+            title="Speech could not be completed"
+            label="Speech error details"
+            message={status.message || "Speech could not be generated or played."}
+            actionLabel="Speech settings"
+            onAction={onOpenSettings}
+          />
+        {:else}
+          <span class="shrink-0 font-mono text-muted-foreground tabular-nums"
+            >{formatTime(status.positionMilliseconds)} / {formatTime(
+              status.durationMilliseconds,
+            )}</span
+          >
+        {/if}
       </div>
-      <Progress value={percent} max={100} class="h-1" aria-label="Speech playback progress" />
+      {#if failed}<p class="truncate text-xs text-destructive" role="alert">
+          {status.message || "Speech could not be generated or played."}
+        </p>
+      {:else}<Progress
+          value={percent}
+          max={100}
+          class="h-1"
+          aria-label="Speech playback progress"
+        />{/if}
     </div>
     <div class="flex shrink-0 items-center">
       {#if status.canPause}
@@ -102,13 +126,13 @@
           onclick={onResume}><PlayIcon /></TooltipButton
         >
       {/if}
-      <TooltipButton
-        variant="ghost"
-        size="icon-sm"
-        disabled={!status.canRestart}
-        label="Restart speech playback"
-        onclick={onRestart}><RotateCcwIcon /></TooltipButton
-      >
+      {#if status.canRestart}<TooltipButton
+          variant="ghost"
+          size="icon-sm"
+          disabled={!status.canRestart}
+          label="Restart speech playback"
+          onclick={onRestart}><RotateCcwIcon /></TooltipButton
+        >{/if}
       {#if status.canSave}
         <TooltipButton variant="ghost" size="icon-sm" label="Save generated speech" onclick={onSave}
           ><DownloadIcon /></TooltipButton

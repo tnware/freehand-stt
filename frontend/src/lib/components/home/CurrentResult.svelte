@@ -133,18 +133,24 @@
         {:else if !message}
           <div class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-4 text-center">
             <p class="text-sm font-medium">
-              {working
-                ? "Your result will appear here"
-                : mode === "file"
-                  ? "Turn an audio file into text"
-                  : "Speak into the application you’re using"}
+              {failed
+                ? "No transcript to show"
+                : working
+                  ? "Your result will appear here"
+                  : mode === "file"
+                    ? "Turn an audio file into text"
+                    : "Speak into the application you’re using"}
             </p>
             <p class="max-w-lg text-[13px] leading-relaxed text-muted-foreground">
-              {working
-                ? "You can keep working while Freehand finishes."
-                : mode === "file"
-                  ? "Choose a file above. The transcript stays available here for inspection and copying."
-                  : "Use your recording shortcut from any application. Your latest transcript will also appear here."}
+              {failed
+                ? mode === "file"
+                  ? "Use Retry above, or choose another file."
+                  : "Use Record again above when you’re ready."
+                : working
+                  ? "You can keep working while Freehand finishes."
+                  : mode === "file"
+                    ? "Choose a file above. The transcript stays available here for inspection and copying."
+                    : "Use your recording shortcut from any application. Your latest transcript will also appear here."}
             </p>
           </div>
         {/if}

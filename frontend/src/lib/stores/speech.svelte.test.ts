@@ -70,7 +70,7 @@ describe("SpeechState", () => {
       await speech.saveTTSAudio();
       expect(messages.notice).toBe("Generated speech saved as a WAV file.");
       await speech.clearTTSAudio();
-      expect(messages.notice).toBe("Generated speech cleared from memory.");
+      expect(messages.notice).toBe("");
       expect(PlayHistoryEntry).toHaveBeenCalledExactlyOnceWith(
         7,
         HistoryTextVersion.HistoryTextRaw,
@@ -141,4 +141,29 @@ it("previews a snapshot of unsaved speech options without forwarding transport o
     options: { language: "ja", instructions: "Warm delivery" },
   });
   messages.dispose();
+});
+
+it("owns only the matching speech failure and does not resurrect dismissed errors", () => {
+  const messages = new SessionMessages();
+  const speech = new SpeechState(bindings(), messages);
+  const failed = {
+    ...speech.status,
+    generation: 3,
+    phase: TTSPhase.Failed,
+    message: "Playback failed",
+  };
+  speech.applyStatus(failed);
+  expect(messages.isSpeechFailure(3)).toBe(true);
+  messages.dismissError();
+  speech.applyStatus(failed);
+  expect(messages.error).toBe("");
+  speech.applyStatus({ ...failed, generation: 4 });
+  expect(messages.isSpeechFailure(4)).toBe(true);
+  speech.applyStatus({ ...failed, generation: 5, phase: TTSPhase.Generating });
+  expect(messages.error).toBe("");
+  speech.applyStatus({ ...failed, generation: 5 });
+  messages.fail(new Error("Save failed"));
+  speech.applyStatus({ ...failed, generation: 6, phase: TTSPhase.Generating });
+  expect(messages.error).toBe("Save failed");
+  expect(messages.isSpeechFailure(5)).toBe(false);
 });

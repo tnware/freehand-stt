@@ -10,11 +10,12 @@ export class SessionMessages {
   info = $state("");
   notice = $state("");
   error = $state("");
+  #speechFailureGeneration = $state<number | null>(null);
   #infoTimer: ReturnType<typeof setTimeout> | undefined;
   #noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
   clear() {
-    this.error = "";
+    this.dismissError();
     this.dismissInfo();
     this.dismissNotice();
   }
@@ -33,12 +34,24 @@ export class SessionMessages {
 
   dismissError() {
     this.error = "";
+    this.#speechFailureGeneration = null;
   }
 
   /** Shows an actionable renderer failure in the existing visible channel. */
   reportFailure(message: string) {
     this.dismissNotice();
     this.error = message;
+    this.#speechFailureGeneration = null;
+  }
+
+  /** Lets a visible playback surface own this exact failure without hiding other action errors. */
+  reportSpeechFailure(message: string, generation: number) {
+    this.reportFailure(message);
+    this.#speechFailureGeneration = generation;
+  }
+
+  isSpeechFailure(generation: number): boolean {
+    return !!this.error && this.#speechFailureGeneration === generation;
   }
 
   /** Shows a transient explanation of system behaviour, separate from success. */
@@ -63,7 +76,7 @@ export class SessionMessages {
 
   /** Records a caught value as the visible error. */
   fail(cause: unknown) {
-    this.error = cause instanceof Error ? cause.message : String(cause);
+    this.reportFailure(cause instanceof Error ? cause.message : String(cause));
   }
 
   dispose() {

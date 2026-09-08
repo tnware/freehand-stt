@@ -144,7 +144,11 @@
           {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
               class="animate-spin motion-reduce:animate-none"
             />{:else}<Volume2Icon />{/if}
-          {working && status.phase === TTSPhase.Generating ? "Generating…" : "Speak"}
+          {working && status.phase === TTSPhase.Generating
+            ? "Generating…"
+            : failed
+              ? "Try again"
+              : "Speak"}
         </Button>
       {/if}
     </div>
@@ -154,10 +158,17 @@
     aria-label="Generated audio"
   >
     {#if showPlayback}
-      {#if failed && status.message}<p class="px-4 pt-2 text-xs text-destructive" role="alert">
-          {status.message}
-        </p>{/if}
-      <PlaybackBar {status} {onPause} {onResume} {onRestart} {onStop} {onSave} {onClear} embedded />
+      <PlaybackBar
+        {status}
+        {onPause}
+        {onResume}
+        {onRestart}
+        {onStop}
+        {onSave}
+        {onClear}
+        {onOpenSettings}
+        embedded
+      />
     {:else}
       <div class="flex items-center gap-3 px-4 py-3">
         <Volume2Icon class="size-4 shrink-0 text-muted-foreground" />

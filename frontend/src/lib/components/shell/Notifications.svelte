@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
   import InfoIcon from "@lucide/svelte/icons/info";
@@ -6,7 +7,8 @@
 
   import { orderMessages, type Message, type MessageTone } from "$lib/utils/messages";
 
-  let { messages = [] }: { messages?: Message[] } = $props();
+  let { messages = [], abovePlayback = false }: { messages?: Message[]; abovePlayback?: boolean } =
+    $props();
   const orderedMessages = $derived(orderMessages(messages));
 
   const icons = {
@@ -28,29 +30,38 @@
   };
 </script>
 
-<!--
-  The messages channel. It carries only what the surrounding UI cannot say for
-  itself: the transport states its own progress, so nothing routine belongs
-  here.
-
-  It collapses to zero height rather than unmounting and sits between the
-  transport and the columns, so a message arriving pushes the rack and the
-  transcript list down together rather than resizing either of them.
--->
-<div class="channel" class:open={messages.length > 0}>
-  <div class="channel-inner">
-    <div class="flex flex-col gap-1.5 pb-2.5">
-      {#each orderedMessages as message (message.id)}
-        {@const Icon = icons[message.tone]}
+<!-- Shared notices float above the workspace footer; task errors stay with their controls. -->
+<aside
+  aria-label="Notifications"
+  class="pointer-events-none fixed z-40 {abovePlayback
+    ? 'inset-x-4 bottom-52'
+    : 'right-4 bottom-20 w-[420px] max-w-[calc(100vw-32px)]'}"
+>
+  <div
+    class="pointer-events-auto max-h-[min(40vh,24rem)] space-y-2 overflow-y-auto overscroll-contain rounded-md"
+  >
+    {#each orderedMessages as message (message.id)}
+      {@const Icon = icons[message.tone]}
+      <div class="rounded-md bg-popover shadow-lg">
         <div
-          class="flex items-start gap-2.5 rounded-md border px-2.5 py-2 text-[11.5px] leading-relaxed {tones[
+          class="flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-xs leading-relaxed {tones[
             message.tone
           ]}"
           role={message.tone === "error" ? "alert" : "status"}
           aria-atomic="true"
         >
           <Icon class="mt-px size-[14px] shrink-0 {marks[message.tone]}" />
-          <p class="min-w-0 flex-1 text-card-foreground">{message.text}</p>
+          <p
+            class="min-w-0 flex-1 break-words text-card-foreground"
+            class:line-clamp-2={message.tone === "error"}
+          >
+            {message.text}
+          </p>
+          {#if message.tone === "error"}<FeedbackDetails
+              title="Action could not be completed"
+              label="Error details"
+              message={message.text}
+            />{/if}
           {#if message.onDismiss}
             <button
               type="button"
@@ -62,29 +73,12 @@
             </button>
           {/if}
         </div>
-      {/each}
-    </div>
+      </div>
+    {/each}
   </div>
-</div>
+</aside>
 
 <style>
-  .channel {
-    display: grid;
-    grid-template-rows: 0fr;
-    opacity: 0;
-    transition:
-      grid-template-rows 260ms ease,
-      opacity 200ms ease;
-  }
-  .channel.open {
-    grid-template-rows: 1fr;
-    opacity: 1;
-  }
-  .channel-inner {
-    overflow: hidden;
-    min-height: 0;
-  }
-
   .dismiss {
     display: grid;
     place-items: center;
@@ -101,11 +95,5 @@
   .dismiss:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 1px;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .channel {
-      transition: none;
-    }
   }
 </style>
