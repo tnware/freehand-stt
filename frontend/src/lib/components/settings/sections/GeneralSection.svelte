@@ -49,6 +49,7 @@
 
 <SettingsCard>
   <SettingRow
+    controlID="start-with-windows"
     title="Start with Windows"
     description="Launch quietly in the tray when you sign in."
   >
@@ -62,6 +63,7 @@
   </SettingRow>
 
   <SettingRow
+    controlID="show-window-on-launch"
     title="Show window when launched"
     description="Open this window on a normal manual launch. Windows sign-in launches always remain tray-only."
   >
@@ -75,6 +77,7 @@
   </SettingRow>
 
   <SettingRow
+    controlID="check-for-updates"
     title="Check for updates automatically"
     description="Check GitHub Releases in the background. Freehand never applies an update without asking you."
   >
@@ -116,17 +119,10 @@
               ? "flex cursor-not-allowed items-center gap-2.5 rounded-lg border border-hairline bg-background/35 px-3 py-2.5 has-data-checked:border-primary/30 has-data-checked:bg-primary/5"
               : "flex cursor-pointer items-center gap-2.5 rounded-lg border border-hairline bg-background/35 px-3 py-2.5 transition-colors has-data-checked:border-primary/30 has-data-checked:bg-primary/5 hover:bg-accent/55"}
           >
-            <RadioGroup.Item
-              id={`appearance-${mode.value}`}
-              value={mode.value}
-            />
+            <RadioGroup.Item id={`appearance-${mode.value}`} value={mode.value} />
             <span class="min-w-0">
-              <span class="block text-xs font-medium text-foreground"
-                >{mode.label}</span
-              >
-              <span
-                class="block text-[10.5px] leading-relaxed text-muted-foreground"
-              >
+              <span class="block text-xs font-medium text-foreground">{mode.label}</span>
+              <span class="block text-[10.5px] leading-relaxed text-muted-foreground">
                 {mode.description}
               </span>
             </span>
@@ -137,6 +133,7 @@
   </SettingRow>
 
   <SettingRow
+    controlID="use-mica"
     title="Use Windows Mica backdrop"
     description="Show the Windows system material through the app shell where supported. Mica always follows the Windows light or dark setting and applies after restarting the app."
   >
@@ -177,15 +174,10 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-xs font-medium text-foreground"
-            >Direct input</span
-          >
-          <span
-            class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground"
-          >
-            Type Unicode directly into the application that was focused when
-            recording started. This is the default and does not touch the
-            clipboard.
+          <span class="block text-xs font-medium text-foreground">Direct input</span>
+          <span class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
+            Type Unicode directly into the application that was focused when recording started. This
+            is the default and does not touch the clipboard.
           </span>
         </span>
       </Label>
@@ -200,14 +192,10 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-xs font-medium text-foreground"
-            >Manual copy</span
-          >
-          <span
-            class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground"
-          >
-            Keep every completed transcript in Freehand until you explicitly
-            choose Copy transcript. Nothing is inserted or copied automatically.
+          <span class="block text-xs font-medium text-foreground">Manual copy</span>
+          <span class="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">
+            Keep every completed transcript in Freehand until you explicitly choose Copy transcript.
+            Nothing is inserted or copied automatically.
           </span>
         </span>
       </Label>

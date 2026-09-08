@@ -718,3 +718,12 @@ Native acceptance, with one explicitly selected model at a time:
    restart, and verify saved options remain independent per connection/model.
 5. Metadata refreshes must never generate speech or transcribe a sample. Record
    actual inference acceptance separately from fixture and Windows build results.
+
+### Settings presentation and discovery
+
+The settings streamlining browser fixture exercises keyword navigation with an
+unsaved draft, clickable switch labels, collapsed Audio/Overlay tuning, keyboard
+slider changes, and draft preservation after navigation. A synthetic validation
+failure on speech padding must reopen its disclosure and focus the slider at
+both desktop and narrow widths. Minimal overlay surfaces must disable glow
+adjustment without resetting its value. Fixtures use no capture or inference.

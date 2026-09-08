@@ -5,7 +5,7 @@ export interface SaveControl {
   waitForStart: (after: number) => Promise<number>;
   complete: (
     id: number,
-    outcome: "success" | "failure" | "invalid-duration",
+    outcome: "success" | "failure" | "invalid-duration" | "invalid-speech-padding",
   ) => void;
 }
 
@@ -16,9 +16,7 @@ declare global {
 }
 
 // The only test controls are at the asynchronous SaveSettings service boundary.
-export function controlledSaves(
-  result: (request: SaveSettingsRequest) => SettingsDTO,
-) {
+export function controlledSaves(result: (request: SaveSettingsRequest) => SettingsDTO) {
   let sequence = 0;
   let pending:
     | {
@@ -35,23 +33,25 @@ export function controlledSaves(
         ? Promise.resolve(pending.id)
         : new Promise((resolve) => started.push(resolve)),
     complete: (id, outcome) => {
-      if (!pending || pending.id !== id)
-        throw new Error("No matching pending save");
+      if (!pending || pending.id !== id) throw new Error("No matching pending save");
       const save = pending;
       pending = undefined;
-      if (outcome === "invalid-duration") {
-        const message = "Enter a recording limit from 1 to 262 seconds.";
+      if (outcome === "invalid-duration" || outcome === "invalid-speech-padding") {
+        const message =
+          outcome === "invalid-duration"
+            ? "Enter a recording limit from 1 to 262 seconds."
+            : "Review the speech padding.";
         const error = new Error(message, {
           cause: {
             kind: "settings_validation",
-            field: "maxDurationSeconds",
+            field:
+              outcome === "invalid-duration" ? "maxDurationSeconds" : "speechPaddingMilliseconds",
             message,
           },
         });
         error.name = "RuntimeError";
         save.reject(error);
-      } else if (outcome === "failure")
-        save.reject(new Error("Fixture save failed. Try again."));
+      } else if (outcome === "failure") save.reject(new Error("Fixture save failed. Try again."));
       else save.resolve(result(save.request));
     },
   };

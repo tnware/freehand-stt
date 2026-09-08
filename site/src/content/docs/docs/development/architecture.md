@@ -923,3 +923,11 @@ the ordinary request and validates before reading credentials. Previews remain
 unsaved; running jobs retain their immutable settings and credential snapshot.
 The speech adapter explicitly requests buffered WAV from Kokoro-FastAPI and
 vLLM-Omni. Qwen CustomVoice never submits reference audio or uploaded-voice tasks.
+
+The settings sidebar filters the central section catalog with presentation-only
+search terms. Search and native `details` disclosures do not own settings values:
+the existing editor draft and save transaction remain authoritative. Audio and
+Overlay keep common controls visible and group fine tuning in `SettingsDisclosure`.
+Validation opens ancestor disclosures before focusing a rejected field. Shared
+setting rows associate switch labels with their controls; sliders forward their
+accessible labels to the focusable thumb.
