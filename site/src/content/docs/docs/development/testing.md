@@ -602,3 +602,17 @@ Select Audio file independently. Confirm shared vocabulary applies to completed
 audio only and remains saved when realtime is active. Check the Qwen model mark
 and restricted language menus in quick settings and Settings. Successful builds
 and synthetic transport checks do not substitute for native microphone acceptance.
+
+
+## Audio file and speech workspace layout
+
+Check Audio file and Text to speech at normal and compact desktop sizes, including
+1156×760 and 650×550. Use synthetic renderer fixtures for selected, busy, completed,
+and error states without invoking inference. File summary, response-mode switch,
+actions, and result pane keep their positions across these transitions. Long file
+names truncate without displacing actions; errors remain readable in the result.
+The speech editor and its bottom playback area retain their heights across idle,
+generating, playing, paused, completed, and failed states. Check the Speech settings
+popover, nested connection menu, Escape focus return, draft retention across tabs,
+and visible keyboard focus in both themes. The application Settings button must
+remain on screen when the shortcut hint is hidden at compact widths.

@@ -80,7 +80,9 @@
 
   <div class="ml-auto flex shrink-0 items-center gap-2">
     {#if toggleShortcut}
-      <div class="hidden items-center gap-2 rounded-lg border border-border bg-control-fill px-2 py-1 sm:flex">
+      <div
+        class="hidden items-center gap-2 rounded-lg border border-border bg-control-fill px-2 py-1 min-[760px]:flex"
+      >
         <MicIcon class="size-3 text-muted-foreground" aria-hidden="true" />
         <ShortcutKeys value={toggleShortcut} label="Recording shortcut" />
       </div>

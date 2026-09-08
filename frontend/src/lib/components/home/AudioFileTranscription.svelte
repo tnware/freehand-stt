@@ -4,15 +4,11 @@
   import FileTextIcon from "@lucide/svelte/icons/file-text";
   import FolderOpenIcon from "@lucide/svelte/icons/folder-open";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
-  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
   import XIcon from "@lucide/svelte/icons/x";
   import TransportShell from "$lib/components/home/TransportShell.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Switch } from "$lib/components/ui/switch";
-  import {
-    FileTranscriptionPhase,
-    type FileTranscriptionStatus,
-  } from "$lib/state";
+  import { FileTranscriptionPhase, type FileTranscriptionStatus } from "$lib/state";
   import { cn } from "$lib/utils";
 
   let {
@@ -40,24 +36,16 @@
     if (status.streamingUnavailable) stream = false;
   });
 
-  const hasFile = $derived(
-    status.phase !== FileTranscriptionPhase.FileTranscriptionEmpty,
-  );
-  const uploading = $derived(
-    status.phase === FileTranscriptionPhase.FileTranscriptionUploading,
-  );
+  const hasFile = $derived(status.phase !== FileTranscriptionPhase.FileTranscriptionEmpty);
+  const uploading = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionUploading);
   const working = $derived(
     uploading ||
       status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
       status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
       status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
   );
-  const completed = $derived(
-    status.phase === FileTranscriptionPhase.FileTranscriptionCompleted,
-  );
-  const failed = $derived(
-    status.phase === FileTranscriptionPhase.FileTranscriptionFailed,
-  );
+  const completed = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionCompleted);
+  const failed = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionFailed);
   const uploaded = $derived(status.bytesUploaded ?? 0);
   const fileSize = $derived(status.fileSize ?? 0);
   const uploadPercent = $derived(
@@ -104,9 +92,7 @@
       case FileTranscriptionPhase.FileTranscriptionProcessing:
         return status.message || "Waiting for the completed transcript…";
       case FileTranscriptionPhase.FileTranscriptionStreaming:
-        return status.transcript
-          ? "Receiving transcript…"
-          : "Waiting for transcript…";
+        return status.transcript ? "Receiving transcript…" : "Waiting for transcript…";
       case FileTranscriptionPhase.FileTranscriptionCancelling:
         return "Discarding this upload…";
       case FileTranscriptionPhase.FileTranscriptionCompleted:
@@ -116,47 +102,11 @@
       case FileTranscriptionPhase.FileTranscriptionFailed:
         return status.message || "The file could not be transcribed.";
       default:
-        return "";
+        return hasFile ? "Ready to transcribe" : "FLAC, MP3, MP4, M4A, OGG, WAV, or WebM";
     }
   });
 
-  const fileDescription = $derived.by(() => {
-    if (!hasFile) return "FLAC, MP3, MP4, M4A, OGG, WAV, or WebM";
-    if (working) return "Follow the current result below";
-    if (completed)
-      return status.transcript
-        ? "Transcript ready to copy"
-        : "No speech detected";
-    if (failed) return "Ready to retry or choose another file";
-    return stream && !status.streamingUnavailable
-      ? "Transcript will appear progressively"
-      : "Wait for one completed result";
-  });
-
-  const footerStatus = $derived.by(() => {
-    switch (status.phase) {
-      case FileTranscriptionPhase.FileTranscriptionUploading:
-        return `${uploadPercent}% sent`;
-      case FileTranscriptionPhase.FileTranscriptionProcessing:
-        return "audio sent ✓";
-      case FileTranscriptionPhase.FileTranscriptionStreaming:
-        return "result updates live";
-      case FileTranscriptionPhase.FileTranscriptionCancelling:
-        return "discarding";
-      case FileTranscriptionPhase.FileTranscriptionCompleted:
-        return "result ready ✓";
-      case FileTranscriptionPhase.FileTranscriptionFailed:
-        return "nothing added";
-      case FileTranscriptionPhase.FileTranscriptionSelected:
-        return "file ready";
-      default:
-        return "stored locally";
-    }
-  });
-
-  const rail = $derived(
-    failed ? "error" : completed ? "done" : working ? "working" : "hidden",
-  );
+  const rail = $derived(failed ? "error" : completed ? "done" : working ? "working" : "hidden");
   // Only the upload leg has a known length. Everything after it waits on the
   // endpoint, which reports no progress, so the rail stops claiming a share.
   const railPercent = $derived(uploading ? uploadPercent : undefined);
@@ -181,7 +131,7 @@
     } else if (phase === FileTranscriptionPhase.FileTranscriptionProcessing) {
       phaseAnnouncement = "Upload complete. Transcribing audio file.";
     } else if (phase === FileTranscriptionPhase.FileTranscriptionStreaming) {
-      phaseAnnouncement = "Receiving transcript.";
+      phaseAnnouncement = "Receiving transcript…";
     } else if (phase === FileTranscriptionPhase.FileTranscriptionCancelling) {
       phaseAnnouncement = "Cancelling audio file transcription.";
     } else if (phase === FileTranscriptionPhase.FileTranscriptionCompleted) {
@@ -190,10 +140,7 @@
         : "Audio file transcription complete. No speech detected.";
     } else if (phase === FileTranscriptionPhase.FileTranscriptionFailed) {
       phaseAnnouncement = status.message || "Audio file transcription failed.";
-    } else if (
-      phase === FileTranscriptionPhase.FileTranscriptionEmpty &&
-      previousPhase !== phase
-    ) {
+    } else if (phase === FileTranscriptionPhase.FileTranscriptionEmpty && previousPhase !== phase) {
       phaseAnnouncement = "Audio file cleared.";
     }
 
@@ -202,7 +149,7 @@
   });
 </script>
 
-<TransportShell {rail} {railPercent} busy={working} state={status.phase}>
+<TransportShell {rail} {railPercent} busy={working} state={status.phase} stageGrid={false}>
   {#snippet control()}
     <span
       class={cn(
@@ -215,221 +162,123 @@
       )}
       aria-hidden="true"
     >
-      {#if working}
-        <LoaderCircleIcon
-          class="size-[24px] animate-spin motion-reduce:animate-none"
-        />
-      {:else if completed}
-        <CheckIcon class="size-[24px]" />
-      {:else if hasFile}
-        <FileTextIcon class="size-[24px]" />
-      {:else}
-        <FileAudioIcon class="size-[24px]" />
-      {/if}
+      {#if working}<LoaderCircleIcon class="size-6 animate-spin motion-reduce:animate-none" />
+      {:else if completed}<CheckIcon class="size-6" />
+      {:else if hasFile}<FileTextIcon class="size-6" />
+      {:else}<FileAudioIcon class="size-6" />{/if}
     </span>
   {/snippet}
-
   {#snippet stage()}
-    <div class="flex min-w-0 items-center gap-2.5">
+    <div class="flex h-8 min-w-0 items-center gap-2">
       <span
-        class="min-w-0 truncate text-[13.5px] font-semibold"
+        class="min-w-0 flex-1 truncate text-sm font-semibold"
         title={status.fileName || undefined}
       >
-        {status.fileName || "Choose an audio recording"}
+        {status.fileName || "Choose an audio file"}
       </span>
-      {#if hasFile && fileSize}
-        <span class="figure shrink-0 text-[10px] text-ink-quiet"
+      {#if hasFile}<span class="shrink-0 text-xs tabular-nums text-muted-foreground"
           >{formatBytes(fileSize)}</span
-        >
-      {/if}
+        >{/if}
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Clear selected audio file"
+        title="Clear selected audio file"
+        disabled={!hasFile || working || choosing}
+        onclick={onClear}><XIcon /></Button
+      >
     </div>
-
     <p
-      class={cn(
-        "mt-1.5 min-h-4 text-[13px]",
-        failed ? "text-destructive" : "text-secondary-foreground",
-      )}
+      class={cn("min-h-5 truncate text-xs", failed ? "text-destructive" : "text-muted-foreground")}
+      title={phaseLabel}
     >
       {phaseLabel}
     </p>
-
-    <div
-      class="mt-2 flex min-h-5 items-center justify-between gap-3 border-t border-hairline pt-1.5"
-    >
-      {#if !hasFile}
-        <span
-          class="figure min-w-0 truncate text-[10.5px] text-muted-foreground"
-        >
-          FLAC, MP3, MP4, M4A, OGG, WAV, or WebM
-        </span>
-      {:else if !working && !completed && !failed}
-        <label
-          class="flex min-w-0 items-center gap-2.5 text-[13px] text-secondary-foreground"
-          for="file-stream-toggle"
-        >
-          <Switch
-            id="file-stream-toggle"
-            size="sm"
-            checked={stream && !status.streamingUnavailable}
-            disabled={status.streamingUnavailable}
-            onCheckedChange={(next) => (stream = next)}
-          />
-          Stream the transcript as it arrives
-        </label>
-      {:else}
-        <span
-          class="figure min-w-0 truncate text-[10.5px] text-muted-foreground"
-        >
-          {fileDescription}
-        </span>
-      {/if}
-      <span class="figure shrink-0 text-[9.5px] text-ink-quiet"
-        >{footerStatus}</span
+    <div class="mt-2 flex h-6 min-w-0 items-center gap-2 border-t border-hairline pt-2">
+      <Switch
+        id="file-stream-toggle"
+        size="sm"
+        checked={stream && !status.streamingUnavailable}
+        disabled={working || status.streamingUnavailable}
+        onCheckedChange={(next) => (stream = next)}
+      />
+      <label
+        class="truncate text-xs text-secondary-foreground"
+        for="file-stream-toggle"
+        title={status.streamingUnavailable
+          ? "This connection currently returns completed transcripts"
+          : "Show transcript updates as the server sends them"}
       >
+        {status.streamingUnavailable ? "Completed transcript" : "Show text as it arrives"}
+      </label>
+      {#if !working && status.streamingUnavailable && !status.streamingProfileUnavailable}
+        <Button
+          variant="ghost"
+          size="sm"
+          class="ml-auto h-6 px-1 text-xs"
+          onclick={onTryStreamingAgain}>Try streaming</Button
+        >
+      {/if}
     </div>
   {/snippet}
-
   {#snippet readout()}
-    <span
-      class={cn(
-        "figure text-[34px] leading-none font-medium tracking-[-0.02em]",
-        working ? "text-foreground" : "text-ink-disabled",
-      )}
-    >
-      {#if uploading}
-        {uploadPercent}<span class="text-[20px] text-muted-foreground">%</span>
-      {:else if hasFile}
-        {formatBytes(fileSize)}
-      {:else}
-        0 <span class="text-[20px] text-muted-foreground">MB</span>
-      {/if}
-    </span>
-
-    <div class="flex min-h-5 items-center gap-2">
+    <div class="flex min-w-0 items-center gap-2 text-sm">
       <span
         class={cn(
-          "size-[7px] rounded-full",
+          "size-1.5 shrink-0 rounded-full",
           failed
             ? "bg-destructive"
             : completed
               ? "bg-success"
               : working
-                ? "bg-primary shadow-[0_0_8px_var(--primary)]"
-                : hasFile
-                  ? "bg-primary"
-                  : "bg-border",
+                ? "bg-primary"
+                : "bg-border",
         )}
       ></span>
-      <span class="caption text-secondary-foreground">{stateLabel}</span>
+      <span class="font-medium">{stateLabel}</span>
+      {#if uploading}<span class="ml-auto text-xs tabular-nums text-muted-foreground"
+          >{uploadPercent}%</span
+        >{/if}
     </div>
-
-    <div class="flex min-h-8 items-center gap-1.5">
-      {#if completed}
+    <div class="flex shrink-0 items-center gap-2">
+      <Button
+        variant={hasFile ? "outline" : "default"}
+        size="sm"
+        class="h-8 flex-1 px-2.5"
+        disabled={choosing || voiceActive || working}
+        aria-label={hasFile ? "Change audio file" : "Choose audio"}
+        onclick={onChoose}
+      >
+        {#if choosing}<LoaderCircleIcon
+            class="size-3.5 animate-spin motion-reduce:animate-none"
+          />{:else}<FolderOpenIcon class="size-3.5" />{/if}
+        {hasFile ? "Change" : "Choose"}
+      </Button>
+      {#if working}
         <Button
           variant="outline"
           size="sm"
-          class="h-8 flex-1 px-2.5 text-[13px]"
-          disabled={!status.canStart || voiceActive}
-          onclick={() => onStart(stream)}
-        >
-          <RotateCcwIcon class="size-3" />
-          Again
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="h-8 flex-1 px-2.5 text-[13px]"
-          onclick={onClear}
-        >
-          <XIcon class="size-3" />
-          Clear
-        </Button>
-      {:else if working}
-        <Button
-          variant="outline"
-          size="sm"
-          class="h-8 w-full px-2.5 text-[13px]"
+          class="h-8 min-w-24 flex-1 px-2.5"
           disabled={!status.canCancel}
           onclick={onCancel}
         >
-          {#if status.canCancel}
-            <XIcon class="size-3" />
-          {:else}
-            <LoaderCircleIcon
-              class="size-3 animate-spin motion-reduce:animate-none"
-            />
-          {/if}
-          Cancel
-        </Button>
-      {:else if failed}
-        <Button
-          variant="outline"
-          size="sm"
-          class="h-8 flex-1 px-2.5 text-[13px]"
-          disabled={!status.canStart || voiceActive}
-          onclick={() => onStart(stream)}
-        >
-          <RotateCcwIcon class="size-3" />
-          Retry
-        </Button>
-        {#if status.streamingUnavailable && !status.streamingProfileUnavailable}
-          <Button
-            variant="outline"
-            size="sm"
-            class="h-8 flex-1 px-2.5 text-[13px]"
-            onclick={onTryStreamingAgain}
-          >
-            Stream
-          </Button>
-        {:else}
-          <Button
-            variant="outline"
-            size="sm"
-            class="h-8 flex-1 px-2.5 text-[13px]"
-            onclick={onClear}
-          >
-            Clear
-          </Button>
-        {/if}
-      {:else if hasFile}
-        <Button
-          size="sm"
-          class="h-8 flex-1 px-2.5 text-[13px]"
-          disabled={!status.canStart || voiceActive}
-          onclick={() => onStart(stream)}
-        >
-          Transcribe
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="h-8 shrink-0 px-2 text-[13px]"
-          aria-label="Clear selected audio file"
-          onclick={onClear}
-        >
-          <XIcon class="size-3" />
+          {status.phase === FileTranscriptionPhase.FileTranscriptionCancelling
+            ? "Cancelling…"
+            : "Cancel"}
         </Button>
       {:else}
         <Button
           size="sm"
-          class="h-8 w-full px-2.5 text-[13px]"
-          disabled={choosing || voiceActive}
-          onclick={onChoose}
+          class="h-8 min-w-24 flex-1 px-2.5"
+          disabled={!status.canStart || voiceActive || choosing}
+          onclick={() => onStart(stream)}
         >
-          {#if choosing}
-            <LoaderCircleIcon
-              class="size-3 animate-spin motion-reduce:animate-none"
-            />
-          {:else}
-            <FolderOpenIcon class="size-3" />
-          {/if}
-          Choose audio
+          {failed ? "Retry" : completed ? "Again" : "Transcribe"}
         </Button>
       {/if}
     </div>
-
-    <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-      {phaseAnnouncement}
-    </span>
+    <span class="sr-only" role="status" aria-live="polite" aria-atomic="true"
+      >{phaseAnnouncement}</span
+    >
   {/snippet}
 </TransportShell>

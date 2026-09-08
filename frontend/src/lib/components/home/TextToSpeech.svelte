@@ -1,22 +1,19 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Textarea } from "$lib/components/ui/textarea";
-  import {
-    TTSPhase,
-    TTSSource,
-    type Settings,
-    type TTSStatus,
-  } from "$lib/state";
+  import { TTSPhase, TTSSource, type Settings, type TTSStatus } from "$lib/state";
   import { cn } from "$lib/utils";
 
   const maximumCharacters = 4096;
 
   let {
     text = $bindable(""),
+    quickSettings,
     settings,
     status,
     unavailable = false,
@@ -30,6 +27,7 @@
     onOpenSettings,
   }: {
     text?: string;
+    quickSettings?: Snippet;
     settings: Settings["textToSpeech"];
     status: TTSStatus;
     unavailable?: boolean;
@@ -52,17 +50,11 @@
         status.phase === TTSPhase.Paused),
   );
   const showPlayback = $derived(
-    isOwnSession &&
-      status.phase !== TTSPhase.Idle &&
-      status.phase !== TTSPhase.Cancelled,
+    isOwnSession && status.phase !== TTSPhase.Idle && status.phase !== TTSPhase.Cancelled,
   );
   const configured = $derived(
     settings.enabled &&
-      Boolean(
-        settings.baseURL.trim() &&
-          settings.model.trim() &&
-          settings.voice.trim(),
-      ),
+      Boolean(settings.baseURL.trim() && settings.model.trim() && settings.voice.trim()),
   );
   const canSpeak = $derived(
     configured &&
@@ -82,116 +74,93 @@
     return "Ready to generate";
   });
 
-  function compactLabel(value: string, fallback: string): string {
-    const trimmed = value.trim();
-    return trimmed ? (trimmed.split("/").at(-1) ?? trimmed) : fallback;
-  }
-
   const failed = $derived(isOwnSession && status.phase === TTSPhase.Failed);
 </script>
 
-<div class="flex min-h-[360px] flex-1 flex-col gap-3">
-  <section
-    class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-hairline bg-layer-fill"
-    aria-label="Speech composer"
-  >
-    <div class="flex flex-wrap items-start justify-between gap-3 px-5 pt-5">
-      <div class="space-y-1">
-        <h2 class="text-lg font-semibold tracking-tight">
-          Write something to speak
-        </h2>
-        <p class="text-[13px] text-muted-foreground">
-          Turn your text into audio with your selected voice.
-        </p>
-      </div>
-      <span
-        class="flex items-center gap-2 text-xs text-secondary-foreground"
-        title="Local configuration only; connection checks appear in the footer."
-      >
-        <span
-          class={cn(
-            "size-1.5 rounded-full",
-            failed
-              ? "bg-destructive"
-              : working
-                ? "bg-primary"
-                : configured
-                  ? "bg-success"
-                  : "bg-border",
-          )}
-        ></span>{stateLabel}
-      </span>
+<section
+  class="@container flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-hairline bg-layer-fill"
+  aria-label="Speech composer"
+>
+  <div class="flex h-12 shrink-0 items-center gap-3 border-b border-hairline px-3">
+    <h2 class="sr-only">Text to speech</h2>
+    <div class="min-w-0 flex-1">
+      {#if quickSettings}{@render quickSettings()}{:else}<span class="text-sm font-medium"
+          >Text to speech</span
+        >{/if}
     </div>
-    <div class="flex min-h-0 flex-1 flex-col p-5">
-      <Textarea
-        bind:value={text}
-        maxlength={maximumCharacters}
-        disabled={working}
-        class="field-sizing-fixed min-h-32 w-full flex-1 resize-none bg-well text-sm leading-relaxed"
-        placeholder="Enter text for Freehand to read aloud…"
-        aria-label="Text to speak"
-      />
-      <div
-        class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"
-      >
-        <span
-          class="min-w-0 truncate"
-          title={`${settings.model || "No model"} · ${settings.voice || "No voice"}`}
-          >{compactLabel(settings.model, "No model")} · {compactLabel(
-            settings.voice,
-            "No voice",
-          )}</span
-        >
-        <span class="shrink-0 tabular-nums"
-          >{characterCount.toLocaleString()} / {maximumCharacters.toLocaleString()}</span
-        >
-      </div>
-    </div>
-    <div
-      class="flex flex-wrap items-center justify-between gap-3 border-t border-hairline px-5 py-4"
+    <span
+      class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground"
+      role="status"
+      title="Local configuration only; connection checks appear in the footer."
     >
-      <p class="max-w-sm flex-1 text-xs leading-relaxed text-muted-foreground">
-        {configured
-          ? "Audio is generated when you press Speak."
-          : "Choose a speech connection, model, and voice to get started."}
-      </p>
-      <div class="flex items-center gap-2">
-        {#if !configured}<Button variant="outline" onclick={onOpenSettings}
-            ><SettingsIcon />Text to speech settings</Button
-          >
-        {:else}
-          <Button
-            variant="ghost"
-            disabled={!text || working}
-            onclick={() => (text = "")}>Clear</Button
-          >
-          <Button
-            size="lg"
-            class="min-w-28"
-            disabled={!canSpeak}
-            onclick={() => onSpeak(text)}
-          >
-            {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
-                class="animate-spin motion-reduce:animate-none"
-              />{:else}<Volume2Icon />{/if}
-            {working && status.phase === TTSPhase.Generating
-              ? "Generating…"
-              : "Speak"}
-          </Button>
-        {/if}
-      </div>
-    </div>
-  </section>
-
-  {#if showPlayback}
-    <PlaybackBar
-      {status}
-      {onPause}
-      {onResume}
-      {onRestart}
-      {onStop}
-      {onSave}
-      {onClear}
+      <span
+        class={cn(
+          "size-1.5 rounded-full",
+          failed ? "bg-destructive" : working ? "bg-primary" : "bg-border",
+        )}
+      ></span>
+      {stateLabel}
+    </span>
+  </div>
+  <div class="flex min-h-24 flex-1 flex-col overflow-y-auto">
+    <label for="speech-composer-text" class="sr-only">Text to speak</label>
+    <Textarea
+      id="speech-composer-text"
+      bind:value={text}
+      maxlength={maximumCharacters}
+      disabled={working}
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-4 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-inset disabled:opacity-100"
+      placeholder="Write or paste text to speak…"
     />
-  {/if}
-</div>
+  </div>
+  <div class="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-hairline px-4">
+    <span class="text-xs tabular-nums text-muted-foreground" aria-label="Character count">
+      {characterCount.toLocaleString()} / {maximumCharacters.toLocaleString()}
+    </span>
+    <div class="flex items-center gap-2">
+      <Button variant="ghost" size="sm" disabled={!text || working} onclick={() => (text = "")}
+        >Clear</Button
+      >
+      {#if !configured}
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label="Text to speech settings"
+          onclick={onOpenSettings}><SettingsIcon />Set up speech</Button
+        >
+      {:else}
+        <Button size="sm" class="min-w-28" disabled={!canSpeak} onclick={() => onSpeak(text)}>
+          {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
+              class="animate-spin motion-reduce:animate-none"
+            />{:else}<Volume2Icon />{/if}
+          {working && status.phase === TTSPhase.Generating ? "Generating…" : "Speak"}
+        </Button>
+      {/if}
+    </div>
+  </div>
+  <div
+    class="flex h-24 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-secondary"
+    aria-label="Generated audio"
+  >
+    {#if showPlayback}
+      {#if failed && status.message}<p class="px-4 pt-2 text-xs text-destructive" role="alert">
+          {status.message}
+        </p>{/if}
+      <PlaybackBar {status} {onPause} {onResume} {onRestart} {onStop} {onSave} {onClear} embedded />
+    {:else}
+      <div class="flex items-center gap-3 px-4 py-3">
+        <Volume2Icon class="size-4 shrink-0 text-muted-foreground" />
+        <div class="min-w-0 space-y-1">
+          <p class="text-sm font-medium">
+            {configured ? "Ready when you are" : "Choose a connection and voice"}
+          </p>
+          <p class="text-xs text-muted-foreground">
+            {configured
+              ? "Press Speak to generate audio. Playback and save controls appear here."
+              : "Open Speech settings above to get started. You can write your text now."}
+          </p>
+        </div>
+      </div>
+    {/if}
+  </div>
+</section>

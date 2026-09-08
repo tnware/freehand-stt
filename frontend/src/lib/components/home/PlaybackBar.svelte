@@ -11,7 +11,17 @@
   import { Progress } from "$lib/components/ui/progress";
   import { TTSPhase, TTSSource, type TTSStatus } from "$lib/state";
 
-  let { status, onPause, onResume, onRestart, onStop, onSave, onClear }: {
+  let {
+    embedded = false,
+    status,
+    onPause,
+    onResume,
+    onRestart,
+    onStop,
+    onSave,
+    onClear,
+  }: {
+    embedded?: boolean;
     status: TTSStatus;
     onPause: () => void;
     onResume: () => void;
@@ -30,10 +40,10 @@
     status.source === TTSSource.SourceCompose
       ? "Text to speech"
       : status.source === TTSSource.SourcePreview
-      ? "Voice preview"
-      : status.source === TTSSource.SourceFile
-        ? "Audio file transcript"
-        : "Transcript playback",
+        ? "Voice preview"
+        : status.source === TTSSource.SourceFile
+          ? "Audio file transcript"
+          : "Transcript playback",
   );
   const phaseLabel = $derived.by(() => {
     if (status.phase === TTSPhase.Generating) return "Generating";
@@ -48,9 +58,17 @@
   };
 </script>
 
-<div class="shrink-0 border-t border-hairline bg-secondary px-3 py-2" aria-label="Speech playback" aria-live="polite">
+<div
+  class="shrink-0 border-hairline bg-secondary px-3 py-2"
+  class:border-t={!embedded}
+  aria-label="Speech playback"
+  aria-live="polite"
+>
   <div class="flex items-center gap-2.5">
-    <span class="grid size-7 shrink-0 place-items-center rounded-full border border-accent-edge bg-accent-wash text-accent-text" aria-hidden="true">
+    <span
+      class="grid size-7 shrink-0 place-items-center rounded-full border border-accent-edge bg-accent-wash text-accent-text"
+      aria-hidden="true"
+    >
       {#if status.phase === TTSPhase.Generating}
         <LoaderCircleIcon class="size-3.5 animate-spin motion-reduce:animate-none" />
       {:else}
@@ -58,7 +76,7 @@
       {/if}
     </span>
     <div class="min-w-0 flex-1">
-      <div class="mb-1 flex items-center justify-between gap-3 text-[10px]">
+      <div class="mb-1 flex items-center justify-between gap-3 text-xs">
         <span class="truncate font-medium">{label} · {phaseLabel}</span>
         <span class="shrink-0 font-mono text-muted-foreground tabular-nums">
           {formatTime(status.positionMilliseconds)} / {formatTime(status.durationMilliseconds)}
@@ -68,18 +86,43 @@
     </div>
     <div class="flex shrink-0 items-center">
       {#if status.canPause}
-        <Button variant="ghost" size="icon-xs" aria-label="Pause speech playback" onclick={onPause}><PauseIcon /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label="Pause speech playback" onclick={onPause}
+          ><PauseIcon /></Button
+        >
       {:else if status.canResume}
-        <Button variant="ghost" size="icon-xs" aria-label="Resume speech playback" onclick={onResume}><PlayIcon /></Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Resume speech playback"
+          onclick={onResume}><PlayIcon /></Button
+        >
       {/if}
-      <Button variant="ghost" size="icon-xs" disabled={!status.canRestart} aria-label="Restart speech playback" onclick={onRestart}><RotateCcwIcon /></Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        disabled={!status.canRestart}
+        aria-label="Restart speech playback"
+        onclick={onRestart}><RotateCcwIcon /></Button
+      >
       {#if status.canSave}
-        <Button variant="ghost" size="icon-xs" aria-label="Save generated speech" onclick={onSave}><DownloadIcon /></Button>
+        <Button variant="ghost" size="icon-sm" aria-label="Save generated speech" onclick={onSave}
+          ><DownloadIcon /></Button
+        >
       {/if}
       {#if status.canStop}
-        <Button variant="ghost" size="icon-xs" aria-label="Stop and release speech playback" onclick={onStop}><SquareIcon /></Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Stop and release speech playback"
+          onclick={onStop}><SquareIcon /></Button
+        >
       {:else if status.canClear}
-        <Button variant="ghost" size="icon-xs" aria-label="Clear generated speech from memory" onclick={onClear}><Trash2Icon /></Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Clear generated speech from memory"
+          onclick={onClear}><Trash2Icon /></Button
+        >
       {/if}
     </div>
   </div>

@@ -23,9 +23,11 @@ test("file and speech workspaces retain usable controls and the speech draft", a
   await expect(
     page.getByRole("button", { name: "Speak", exact: true }),
   ).toBeInViewport();
+  await page.getByRole("button", { name: "Speech settings", exact: true }).click();
   await expect(
-    page.getByRole("region", { name: "Text to speech connection" }),
+    page.getByRole("dialog", { name: "Speech settings", exact: true }),
   ).toBeInViewport();
+  await page.keyboard.press("Escape");
   await page.screenshot({
     path: testInfo.outputPath("speech-workspace-light.png"),
   });

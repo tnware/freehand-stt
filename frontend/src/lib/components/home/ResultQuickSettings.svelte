@@ -37,7 +37,7 @@
   type Panel = "audio" | "stt" | "cleanup" | "delivery";
   let activePanel = $state<Panel | null>(null);
   const panels = $derived<Panel[]>(
-    showCapture ? ["audio", "stt", "cleanup", "delivery"] : ["stt", "cleanup", "delivery"],
+    showCapture ? ["audio", "stt", "cleanup", "delivery"] : ["stt", "cleanup"],
   );
   const labels = {
     audio: "Audio settings",

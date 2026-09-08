@@ -850,3 +850,14 @@ in model rows are not restored over the current task.
 ### Shared vocabulary
 
 Following [ADR 0010](../../decisions/0010-shared-vocabulary/), `config.VocabularySettings` owns task-level terminology and Voice/file opt-ins. `modelprofile.VocabularyMode` resolves qualified hint fields; the renderer preview and request projection share Go validation. `settings.captureProfile` projects only into immutable workflow snapshots. Completed NeMo speech contexts use request-only transcription fields, excluded from JSON/model preferences. SQLite migration 00010 and sqlc queries persist the shared settings in the existing transaction. Historical model terms cannot replace the shared list on selection.
+
+
+## File and speech workspace presentation
+
+`HomeScreen` gives the speech composer the same flexible content area as transcript
+results. `SpeechQuickSettings` places the existing connection selection and native
+model/voice settings navigation in its header. `TextToSpeech` owns the draft editor
+and reserves a fixed playback area; `PlaybackBar` supports embedding in that area.
+Audio-file transport keeps its summary, response-mode option, and actions in stable
+slots. These components consume existing backend status and capability flags;
+window geometry and visual transitions do not alter inference or persistence.
