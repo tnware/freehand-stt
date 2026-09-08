@@ -18,6 +18,23 @@ surface, bottom-center position, 85% opacity, and 70% glow. Adjust these under
 **Settings → Overlay**. The optional **Show Freehand** shortcut starts unassigned;
 open the app from its tray icon or assign a shortcut in Settings.
 
+## Check the active connection
+
+Select the connection status at the bottom of the window to see the active
+connection and model for the current task. **Check connection** or **Check again**
+reads server metadata using your applied settings. It does not record, upload
+audio, or run a model. The panel explains failed checks; **Technical details**
+expands the individual checks and HTTP status.
+
+**Edit connection** opens that saved connection in the connection manager. If
+none is selected, **Choose connection** opens the manager for the current task.
+Voice, Audio file, and Text to speech show their own connections and check
+results. A check of unsaved Settings edits is not presented as a check of the
+active connection. When text to speech is off, the panel links to **Speech
+settings** instead of offering a check.
+
+Escape closes the panel and returns keyboard focus to the footer status.
+
 ## Voice dictation
 
 You need a usable microphone, a recording shortcut, and a configured STT service.
@@ -93,6 +110,10 @@ microphone, recording shortcut, or completed dictation setup.
 
 </Steps>
 
+If transcription fails, choose **Details** beside the error to read the full
+explanation. Escape closes the popover and returns focus to Details; **Retry**
+starts another attempt with the selected file.
+
 Selecting a file does not upload it until you start transcription. File
 results never insert automatically because no destination was captured.
 
@@ -120,7 +141,8 @@ does not expose the full path to page content.
 ## Current result and task settings
 
 Home centers on the selected task and its **Current result**. Dictation keeps the
-latest delivered transcript here too; Copy and Clear work with history off. A new
+latest delivered transcript here too; Copy, Clear, and Listen work with history off.
+Listen appears when text to speech is enabled. A new
 recording replaces that result. File results stay available until cleared or
 replaced. If insertion could not complete, the result explains that copying is
 needed; enabling history is not required for recovery.
@@ -130,6 +152,9 @@ The microphone icon opens audio controls; the **Transcription** and **Cleanup**
 provider buttons open connection, model, and processing options. In Voice, the delivery
 icon opens direct-input and history controls. Audio file shows only its transcription
 and cleanup controls. These changes apply immediately.
+Copy briefly confirms success, then returns to its normal label. Hover over or
+focus the history and playback action icons to see what they do.
+
 Each popover links to its full Settings page. Press Escape to close it and return
 to its toolbar button. Text to speech uses the same compact header: its **Speech** provider button opens
 connection, model, voice, and supported speaking-speed controls. These changes apply
@@ -170,14 +195,59 @@ History is off by default, stays in memory, holds at most 20 entries and 2 MiB,
 and is cleared when Freehand exits. Copy anything you want to keep before quitting.
 :::
 
-Retained entries contain transcript text and limited run details.
+The newest transcript opens in full in both recent history and Settings > History.
+Older entries start as single-line previews; select their header or preview to
+expand them. When a new transcript arrives, it opens and older entries collapse.
+Cleanup updates to the same transcript keep your current reading view. An audio-file
+result shown above retained history is also displayed in full.
+
+Retained entries keep **Listen** and **Copy** directly available. Open the
+ellipsis **Transcript actions** menu for **Transcription details** or **Remove
+from history**. **Compare** opens raw and cleaned text together, with separate
+copy controls. If cleanup fails, its explanation appears below the raw transcript.
 
 History never retains audio, credentials, full file paths, or destination
 details. Each copy action is explicit.
 
+## Finding and adjusting settings
+
+In a full-width Settings window, **Find settings** filters the sidebar by page
+name or terms such as “padding,” “glow,” and “hotkey.” Enter opens the first match;
+Escape clears the filter. Searching and changing pages keep your unsaved edits.
+
+**Audio** keeps microphone selection, the recording limit, and the main silence
+switches together. Open **Speech detection tuning** for sensitivity, padding,
+minimum speech, and segment timing. Enabled automatic stop keeps its pause
+control beside the switch.
+
+**Overlay** keeps preview, layout, position, and size up front. Open **Appearance
+and behavior** for surface, visualizer, visible phases, motion, spacing, opacity,
+and glow. Minimal surfaces disable glow adjustment while keeping its saved value.
+Preview uses your unsaved choices; **Save settings** applies them.
+
+Model and model-profile fields have help buttons for their detailed explanations.
+Profile menus show each profile's description before you select it. Voice uses
+the same profile and language pickers in quick settings and the full Settings page.
+Language pickers search by name or code; unrestricted lists keep **Custom server
+value** available even when your search has no match. Restricted profiles offer
+only their supported languages. Required restrictions and unavailable options
+remain explained beside the affected controls.
+
+The four workflow pages keep model selection and everyday options up front.
+Open **Request settings** for timeouts and connection diagnostics; connection
+warnings remain visible in its summary. **Transcription controls** groups context
+and temperature for audio files, and **Generation controls** groups cleanup's
+output and reasoning options. Voice transcription keeps context hints visible
+and places its completed-recording timeout and temperature in **Request settings**.
+Text to speech keeps **Preview** beside the voice selector, using your current
+edits without saving them.
+
+You can click a switch’s label to change it. Collapsing a tuning section keeps
+its values, and a rejected save opens the section containing the affected field.
+
 ## Text to speech
 
-In **Settings → Text to speech**, **Voice preview** uses your current model,
+In **Settings → Text to speech**, **Preview** beside the voice selector uses your current model,
 model profile, voice, speed, and timeout edits before you click **Save settings**.
 Turn on the draft **Enable text to speech** switch to preview even when the saved
 feature is disabled. Preview generates only the fixed sample phrase; it does not
@@ -206,11 +276,30 @@ a microphone, recording shortcut, STT connection, or completed dictation setup.
 
 </Steps>
 
-You can also choose **Listen** on a completed file result or a retained history
-entry. Generated audio remains in memory until you clear or replace it, start a
+Text to speech accepts up to 4,096 Unicode characters. Longer drafts remain
+editable; shorten the text to enable Speak.
+
+You can also choose **Listen** on a completed Voice or Audio-file result, even
+with history off, or on a retained history entry. Generated audio remains in memory until you clear or replace it, start a
 recording, or exit Freehand.
 
 Playback starts on demand. Freehand does not automatically read every transcript aloud or provide a voice conversation mode.
+
+## Action feedback
+
+Speech failures appear beside the playback controls. Open **Details** for the
+full explanation and a shortcut to **Speech settings**. In the speech composer,
+**Try again** generates speech from the text currently in the editor; a failed
+request does not erase your draft. File and dictation errors also provide
+**Details** with a shortcut to their transcription settings. A discarded
+microphone recording cannot be retried; **Record again** starts a new recording
+after you correct the problem.
+
+Shared errors and confirmations appear above the footer without moving the
+workspace. Speech-composer notices span the panel above its action and playback controls.
+Long errors have expandable details. Confirmations disappear automatically;
+errors can be dismissed. Copy confirmation stays on the copy control, and
+clearing generated audio simply returns the player to its empty state.
 
 ## Status overlay and tray
 

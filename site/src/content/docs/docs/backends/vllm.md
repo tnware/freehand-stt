@@ -1,5 +1,4 @@
 ---
-provider: vllm
 title: vLLM
 description: Configure vLLM for completed transcription, Qwen realtime, and text cleanup.
 ---

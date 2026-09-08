@@ -32,29 +32,54 @@ type TaskConnectionSource = Pick<
   | "connectionResultStale"
 >;
 
+export function taskConnectionDetails(mode: string, source: TaskConnectionSource) {
+  const speech = mode === "tts";
+  const voice = mode === "voice";
+  const purpose = speech ? Purpose.Speech : voice ? Purpose.Voice : Purpose.Transcription;
+  const settings = source.applied;
+  const endpoint = speech
+    ? settings?.textToSpeech
+    : voice
+      ? settings?.voiceTranscription
+      : settings;
+  return {
+    purpose,
+    task: speech ? "Text to speech" : voice ? "Voice transcription" : "Audio-file transcription",
+    loading: !settings,
+    enabled: !speech || !!settings?.textToSpeech.enabled,
+    selected: settings?.savedConnections.entries?.find(
+      (c) => c.id === settings.savedConnections.selected?.[purpose],
+    ),
+    host: endpoint ? endpointHost(endpoint.baseURL) : "",
+    model: endpoint?.model ?? "",
+    result: speech
+      ? source.ttsConnection
+      : voice
+        ? source.currentVoiceConnection
+        : source.connection,
+    busy: speech
+      ? source.ttsConnectionTesting
+      : voice
+        ? source.voiceConnectionTesting
+        : source.sttConnectionTesting,
+    stale:
+      !!settings &&
+      ((speech ? source.ttsConnectionStale : voice ? false : source.sttConnectionStale) ||
+        source.connectionResultStale(purpose, settings)),
+  };
+}
+
+export type TaskConnectionDetails = ReturnType<typeof taskConnectionDetails>;
+
 export function taskConnectionStatus(
   mode: string,
   source: TaskConnectionSource,
   now: number,
 ): TaskConnectionStatus {
-  const speech = mode === "tts";
-  const voice = mode === "voice";
-  const scope = speech ? "Text to speech" : "Transcription";
-  const settings = source.applied;
-  const connection = speech
-    ? source.ttsConnection
-    : voice
-      ? source.currentVoiceConnection
-      : source.connection;
-  const host = settings
-    ? endpointHost(
-        speech
-          ? settings.textToSpeech.baseURL
-          : voice
-            ? settings.voiceTranscription.baseURL
-            : settings.baseURL,
-      )
-    : "";
+  const detail = taskConnectionDetails(mode, source);
+  const scope = mode === "tts" ? "Text to speech" : "Transcription";
+  const connection = detail.result;
+  const host = detail.host;
   const summary = (
     label: string,
     detail: string,
@@ -67,25 +92,11 @@ export function taskConnectionStatus(
     dot,
     title: `${scope}: ${title}`,
   });
-  if (!settings) return summary("Loading", "reading settings");
-  if (speech && !settings.textToSpeech.enabled) return summary("Off", "generation disabled");
-  // A settings window may be checking an unsaved draft. Never attach that
-  // pending check or its result to the applied endpoint used by the home task.
-  if (
-    speech
-      ? source.ttsConnectionTesting
-      : voice
-        ? source.voiceConnectionTesting
-        : source.sttConnectionTesting
-  )
-    return summary("Checking", "metadata only");
-  if (
-    (speech ? source.ttsConnectionStale : voice ? false : source.sttConnectionStale) ||
-    source.connectionResultStale(
-      speech ? Purpose.Speech : voice ? Purpose.Voice : Purpose.Transcription,
-      settings,
-    )
-  )
+  if (detail.loading) return summary("Loading", "reading settings");
+  if (!detail.enabled) return summary("Off", "generation disabled");
+  // A draft check must never be attributed to the applied task.
+  if (detail.busy) return summary("Checking", "metadata only");
+  if (detail.stale)
     return summary(
       "Settings changed",
       [host, "check again"].filter(Boolean).join(" · "),

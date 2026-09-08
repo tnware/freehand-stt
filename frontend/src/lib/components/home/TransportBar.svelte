@@ -1,9 +1,9 @@
 <script lang="ts">
+  import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ClipboardIcon from "@lucide/svelte/icons/clipboard";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import MicIcon from "@lucide/svelte/icons/mic";
-  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import WandSparklesIcon from "@lucide/svelte/icons/wand-sparkles";
@@ -56,9 +56,7 @@
   } = $props();
 
   const recording = $derived(isRecording(status));
-  const holdRecording = $derived(
-    recording && status.recordingMode === RecordingMode.RecordingHold,
-  );
+  const holdRecording = $derived(recording && status.recordingMode === RecordingMode.RecordingHold);
   const vadSilence = $derived(recording && status.vadState === VADState.VADSilence);
   const vadSpeech = $derived(recording && status.vadState === VADState.VADSpeech);
   const autoStopCountdown = $derived(
@@ -238,7 +236,7 @@
   }
 </script>
 
-<TransportShell rail={rail} busy={held} state={status.state}>
+<TransportShell {rail} busy={held} state={status.state}>
   {#snippet control()}
     {#if waiting}
       <span
@@ -292,7 +290,16 @@
         The transcript is held in memory · the audio has been discarded
       </p>
     {:else if failed}
-      <p class="text-[13.5px] font-semibold">Dictation could not be completed</p>
+      <div class="flex min-w-0 items-center justify-between gap-2">
+        <p class="truncate text-[13.5px] font-semibold">Dictation could not be completed</p>
+        <FeedbackDetails
+          title="Dictation could not be completed"
+          label="Dictation error details"
+          message={status.message || "The endpoint did not return a transcript."}
+          actionLabel="Transcription settings"
+          onAction={onOpenSettings}
+        />
+      </div>
       <p class="figure mt-1 truncate text-[11px] text-destructive" title={status.message}>
         {status.message || "The endpoint did not return a transcript."}
       </p>
@@ -300,12 +307,7 @@
         Nothing was inserted. The audio has been discarded.
       </p>
     {:else}
-      <Waveform
-        active={recording}
-        quiet={vadSilence}
-        {held}
-        history={levels.history}
-      />
+      <Waveform active={recording} quiet={vadSilence} {held} history={levels.history} />
       <div
         class="mt-2 flex min-h-5 items-center justify-between gap-3 border-t border-hairline pt-1.5"
       >
@@ -437,8 +439,8 @@
         </button>
       {:else if failed}
         <button type="button" class="act quiet flex-1" onclick={onToggle} disabled={!canToggle}>
-          <RotateCcwIcon class="size-3" />
-          Retry
+          <MicIcon class="size-3 shrink-0" />
+          Record again
         </button>
         <button type="button" class="act quiet flex-1" onclick={onOpenSettings}>
           <SlidersIcon class="size-3" />

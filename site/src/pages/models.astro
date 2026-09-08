@@ -1,5 +1,5 @@
 ---
-import ProviderIcon from "../components/ProviderIcon.astro";
+import ModelIcon from "../components/ModelIcon.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import CustomPageMetadata from "../components/CustomPageMetadata.astro";
@@ -48,7 +48,7 @@ const href = (path: string) => `${base}${path}`;
         <div class="model-grid">
           {modelProfiles.map((model) => <article class="model-card" aria-labelledby={`${model.id}-title`}>
             <div class="model-card-heading">
-              {model.icon ? <ProviderIcon profile={model.icon} size={40} /> : <span class="model-initial" aria-hidden="true">S1</span>}
+              <ModelIcon profile={model.icon} size={40} />
               <p>{model.family}</p>
             </div>
             <h3 id={`${model.id}-title`}>{model.name}</h3>

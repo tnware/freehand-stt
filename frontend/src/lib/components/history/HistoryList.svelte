@@ -4,12 +4,17 @@
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import ClipboardIcon from "@lucide/svelte/icons/clipboard";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import * as Menu from "$lib/components/ui/dropdown-menu";
   import InfoIcon from "@lucide/svelte/icons/info";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import TrashIcon from "@lucide/svelte/icons/trash-2";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
+  import { onDestroy } from "svelte";
+  import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
+  import TooltipButton from "$lib/components/ui/button/TooltipButton.svelte";
   import { Badge } from "$lib/components/ui/badge";
-  import { Button } from "$lib/components/ui/button";
+  import { Button, buttonVariants } from "$lib/components/ui/button";
   import * as HistoryService from "$bindings/history/service";
   import {
     HistoryOutcome,
@@ -29,7 +34,6 @@
     entries,
     emptyTitle = "Nothing kept yet",
     emptyDescription = "The next finalized transcript will appear here.",
-    clamp = true,
     scrollable = true,
     maxHeight,
     live,
@@ -46,8 +50,6 @@
     entries: HistoryEntry[];
     emptyTitle?: string;
     emptyDescription?: string;
-    /** Clamp long transcripts so the list scans. Off where reading is the job. */
-    clamp?: boolean;
     /** Home owns an independent history scroller; settings scrolls as one page. */
     scrollable?: boolean;
     maxHeight?: string;
@@ -148,49 +150,48 @@
     return "raw only";
   };
 
-  // Home starts compact; the dedicated history settings view starts open.
-  // Each ID in overrides flips that local default without touching history.
-  let expansionOverrides = $state<number[]>([]);
-  let comparisonEntries = $state<number[]>([]);
-  const expanded = (id: number): boolean => !clamp !== expansionOverrides.includes(id);
+  // A new leading result resets presentation in both history views. Updates to
+  // the same result (including cleanup) preserve the reader's manual choices.
+  const newestID = $derived(live ? undefined : entries[0]?.id);
+  let disclosure = $derived<{ open: number[]; comparing: number[] }>({
+    open: newestID === undefined ? [] : [newestID],
+    comparing: [],
+  });
+  const expanded = (id: number): boolean => disclosure.open.includes(id);
   function toggleExpanded(id: number) {
     const wasExpanded = expanded(id);
-    expansionOverrides = expansionOverrides.includes(id)
-      ? expansionOverrides.filter((entryID) => entryID !== id)
-      : [...expansionOverrides, id];
-    if (wasExpanded) {
-      comparisonEntries = comparisonEntries.filter((entryID) => entryID !== id);
-    }
+    disclosure = {
+      open: wasExpanded
+        ? disclosure.open.filter((entryID) => entryID !== id)
+        : [...disclosure.open, id],
+      comparing: wasExpanded
+        ? disclosure.comparing.filter((entryID) => entryID !== id)
+        : disclosure.comparing,
+    };
   }
 
   function toggleComparison(id: number) {
-    if (comparisonEntries.includes(id)) {
-      comparisonEntries = comparisonEntries.filter((entryID) => entryID !== id);
-      return;
-    }
-    if (!expanded(id)) toggleExpanded(id);
-    comparisonEntries = [...comparisonEntries, id];
+    disclosure = {
+      open: expanded(id) ? disclosure.open : [...disclosure.open, id],
+      comparing: disclosure.comparing.includes(id)
+        ? disclosure.comparing.filter((entryID) => entryID !== id)
+        : [...disclosure.comparing, id],
+    };
   }
 
-  let copiedKey = $state("");
-  let liveCopied = $state(false);
+  const feedback = new CopyFeedback();
+  onDestroy(() => feedback.dispose());
 
   async function copyText(entry: HistoryEntry, version: HistoryTextVersion) {
-    const copied =
+    await feedback.copy(`${entry.id}:${version}`, () =>
       version === HistoryTextVersion.HistoryTextFinal || !onCopyVersion
-        ? await onCopy(entry.id)
-        : await onCopyVersion(entry.id, version);
-    if (!copied) return;
-    copiedKey = `${entry.id}:${version}`;
-    setTimeout(() => {
-      if (copiedKey === `${entry.id}:${version}`) copiedKey = "";
-    }, 1600);
+        ? onCopy(entry.id)
+        : onCopyVersion(entry.id, version),
+    );
   }
 
   async function copyLive() {
-    if (!onCopyLive || !(await onCopyLive())) return;
-    liveCopied = true;
-    setTimeout(() => (liveCopied = false), 1600);
+    if (onCopyLive) await feedback.copy("live", onCopyLive);
   }
 
   const detailsAvailable = (entry: HistoryEntry): boolean =>
@@ -265,10 +266,7 @@
           </div>
 
           <p
-            class={cn(
-              "mt-2.5 min-h-5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap",
-              !live.working && "line-clamp-3",
-            )}
+            class="mt-2.5 min-h-5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
           >
             {#if live.text}
               {live.text}
@@ -285,11 +283,11 @@
             <span class="font-mono text-[10px] text-primary">audio file · {live.status}</span>
             <div class="flex items-center">
               {#if ttsEnabled && onListenLive && !live.working}
-                <Button
+                <TooltipButton
                   variant="ghost"
                   size="icon-xs"
                   disabled={!ttsAvailable}
-                  aria-label="Listen to audio file transcript"
+                  label="Listen to audio file transcript"
                   onclick={onListenLive}
                 >
                   {#if ttsStatus?.source === TTSSource.SourceFile && ttsStatus.phase === TTSPhase.Generating}
@@ -297,23 +295,23 @@
                   {:else}
                     <Volume2Icon />
                   {/if}
-                </Button>
+                </TooltipButton>
               {/if}
-              <Button
+              <TooltipButton
                 variant="ghost"
                 size="icon-xs"
                 disabled={!live.canCopy}
-                aria-label={live.canCopy
+                label={live.canCopy
                   ? "Copy audio file transcript"
                   : "Copy is available when transcription finishes"}
                 onclick={() => void copyLive()}
               >
-                {#if liveCopied}
+                {#if feedback.key === "live"}
                   <CheckIcon class="text-success" />
                 {:else}
                   <ClipboardIcon />
                 {/if}
-              </Button>
+              </TooltipButton>
             </div>
           </div>
         </article>
@@ -322,7 +320,7 @@
       {#each entries as entry (entry.id)}
         {@const isExpanded = expanded(entry.id)}
         {@const hasCleaned = hasProcessedTranscript(entry)}
-        {@const isComparing = isExpanded && hasCleaned && comparisonEntries.includes(entry.id)}
+        {@const isComparing = isExpanded && hasCleaned && disclosure.comparing.includes(entry.id)}
         {@const finalVersion = hasCleaned
           ? HistoryTextVersion.HistoryTextProcessed
           : HistoryTextVersion.HistoryTextFinal}
@@ -348,6 +346,9 @@
             >
               <span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                 <span class={cn("size-2 shrink-0 rounded-full", outcomeDot(entry.outcome))}></span>
+                {#if entry.id === newestID}<span class="text-xs font-medium text-muted-foreground"
+                    >Latest</span
+                  >{/if}
                 <time
                   datetime={entry.completedAt}
                   title={completedDateTime(entry.completedAt)}
@@ -412,20 +413,20 @@
                       >
                         Raw · {compactModel(entry.details.model)}
                       </span>
-                      <Button
+                      <TooltipButton
                         variant="ghost"
                         size="icon-xs"
-                        aria-label={copiedKey === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`
+                        label={feedback.key === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`
                           ? "Raw transcript copied"
                           : "Copy raw transcript"}
                         onclick={() => void copyText(entry, HistoryTextVersion.HistoryTextRaw)}
                       >
-                        {#if copiedKey === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`}
+                        {#if feedback.key === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`}
                           <CheckIcon class="text-success" />
                         {:else}
                           <ClipboardIcon />
                         {/if}
-                      </Button>
+                      </TooltipButton>
                     </div>
                     <p
                       class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
@@ -451,22 +452,22 @@
                           · {processingProfileName([], entry.details.processing.preset)}
                         {/if}
                       </span>
-                      <Button
+                      <TooltipButton
                         variant="ghost"
                         size="icon-xs"
-                        aria-label={copiedKey ===
+                        label={feedback.key ===
                         `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`
                           ? "Cleaned transcript copied"
                           : "Copy cleaned transcript"}
                         onclick={() =>
                           void copyText(entry, HistoryTextVersion.HistoryTextProcessed)}
                       >
-                        {#if copiedKey === `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`}
+                        {#if feedback.key === `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`}
                           <CheckIcon class="text-success" />
                         {:else}
                           <ClipboardIcon />
                         {/if}
-                      </Button>
+                      </TooltipButton>
                     </div>
                     <p
                       class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
@@ -493,44 +494,51 @@
                 aria-controls={`history-entry-${entry.id}-content`}
                 onclick={() => toggleExpanded(entry.id)}
               >
-                <span class="line-clamp-2 text-sm leading-7 break-words">{entry.text}</span>
+                <span class="line-clamp-1 text-sm leading-7 break-words">{entry.text}</span>
               </button>
             {/if}
           </div>
+
+          {#if hasProcessing(entry) && !hasCleaned}
+            <p
+              class="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"
+              role="status"
+            >
+              {#if entry.processingStatus === HistoryProcessingStatus.HistoryProcessingPending}
+                <LoaderCircleIcon
+                  class="mt-0.5 size-3.5 shrink-0 animate-spin motion-reduce:animate-none"
+                />
+                <span>Cleaning up transcript…</span>
+              {:else}
+                <CircleAlertIcon class="mt-0.5 size-3.5 shrink-0 text-warning" />
+                <span class="min-w-0 break-words"
+                  >{entry.processingMessage || "The raw transcript was kept."}</span
+                >
+              {/if}
+            </p>
+          {/if}
 
           <div
             class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
           >
             <div
-              class="flex min-w-0 items-center gap-1.5 font-mono text-[10px] text-muted-foreground"
+              class="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[10px] text-muted-foreground"
             >
               <span class="shrink-0">{characterLabel(entry.characterCount)}</span>
               <span class="shrink-0" aria-hidden="true">·</span>
-              <span class="max-w-48 truncate">{sourceMetadata(entry)}</span>
-              {#if hasProcessing(entry) && !hasCleaned}
-                <span class="shrink-0" aria-hidden="true">·</span>
-                {#if entry.processingStatus === HistoryProcessingStatus.HistoryProcessingPending}
-                  <LoaderCircleIcon
-                    class="size-3 shrink-0 animate-spin motion-reduce:animate-none"
-                  />
-                  <span class="min-w-0 truncate">Waiting for the processor.</span>
-                {:else}
-                  <CircleAlertIcon class="size-3 shrink-0" />
-                  <span class="min-w-0 truncate">
-                    {entry.processingMessage || "The raw transcript was kept."}
-                  </span>
-                {/if}
-              {/if}
+              <span class="max-w-48 truncate" title={sourceMetadata(entry)}
+                >{sourceMetadata(entry)}</span
+              >
             </div>
 
             <div class="history-actions flex shrink-0 items-center">
               <div class="history-utilities flex items-center">
                 {#if ttsEnabled && onListen}
-                  <Button
+                  <TooltipButton
                     variant="ghost"
                     size="icon-xs"
                     disabled={!ttsAvailable}
-                    aria-label={ttsStatus?.historyID === entry.id &&
+                    label={ttsStatus?.historyID === entry.id &&
                     ttsStatus.phase === TTSPhase.Generating
                       ? "Generating speech for this transcript"
                       : "Listen to transcript"}
@@ -541,44 +549,49 @@
                     {:else}
                       <Volume2Icon />
                     {/if}
-                  </Button>
+                  </TooltipButton>
                 {/if}
-                <Button
+                <TooltipButton
                   variant="ghost"
                   size="icon-xs"
                   class="text-primary"
-                  aria-label={copiedKey === `${entry.id}:${finalVersion}`
+                  label={feedback.key === `${entry.id}:${finalVersion}`
                     ? "Transcript copied"
                     : hasCleaned
                       ? "Copy cleaned transcript"
                       : "Copy transcript"}
                   onclick={() => void copyText(entry, finalVersion)}
                 >
-                  {#if copiedKey === `${entry.id}:${finalVersion}`}
+                  {#if feedback.key === `${entry.id}:${finalVersion}`}
                     <CheckIcon class="text-success" />
                   {:else}
                     <ClipboardIcon />
                   {/if}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={!detailsAvailable(entry)}
-                  aria-label="View transcription run details"
-                  onclick={() => void openDetails(entry)}
-                >
-                  <InfoIcon />
-                </Button>
-                <span class="mx-0.5 h-4 w-px shrink-0 bg-hairline" aria-hidden="true"></span>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  class="hover:text-destructive"
-                  aria-label="Remove transcript from history"
-                  onclick={() => void onDelete(entry.id)}
-                >
-                  <TrashIcon />
-                </Button>
+                </TooltipButton>
+                <Menu.Root>
+                  <Menu.Trigger
+                    aria-label="Transcript actions"
+                    class={buttonVariants({ variant: "ghost", size: "icon-xs" })}
+                    ><EllipsisIcon /></Menu.Trigger
+                  >
+                  <Menu.Content align="end" class="w-64 max-w-[calc(100vw-24px)]">
+                    <Menu.Item
+                      disabled={!detailsAvailable(entry)}
+                      onclick={() => void openDetails(entry)}
+                      class="gap-2.5 px-3 py-2.5"
+                    >
+                      <InfoIcon />Transcription details
+                    </Menu.Item>
+                    <Menu.Separator />
+                    <Menu.Item
+                      variant="destructive"
+                      onclick={() => void onDelete(entry.id)}
+                      class="gap-2.5 px-3 py-2.5"
+                    >
+                      <TrashIcon />Remove from history
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Root>
               </div>
             </div>
           </div>
@@ -647,7 +660,7 @@
       border-left: 1px solid var(--hairline);
     }
   }
-  @container (max-width: 520px) {
+  @container (max-width: 319px) {
     .history-footer {
       align-items: flex-start;
       flex-direction: column;

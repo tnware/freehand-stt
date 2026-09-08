@@ -29,6 +29,7 @@
 <div class="flex flex-col gap-4">
   <SettingsCard>
     <SettingRow
+      controlID="history-enabled"
       title="Keep transcript history"
       description="Off by default. Keeps up to 20 finalized transcripts or 2 MiB in memory, whichever limit is reached first. Raw and processed versions share that limit."
     >
@@ -54,6 +55,6 @@
   </div>
 
   <div class="min-h-44 overflow-hidden rounded-xl border border-hairline bg-layer-fill">
-    <HistoryList {entries} clamp={false} scrollable={false} {onCopy} {onCopyVersion} {onDelete} />
+    <HistoryList {entries} scrollable={false} {onCopy} {onCopyVersion} {onDelete} />
   </div>
 </div>

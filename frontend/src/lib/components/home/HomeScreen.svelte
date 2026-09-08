@@ -132,7 +132,11 @@
         onDismiss: () => session.messages.dismissInfo(),
       });
     }
-    if (session.messages.error) {
+    const speechFailureVisible =
+      session.speech.status.phase === TTSPhase.Failed &&
+      (session.speech.status.source !== TTSSource.SourceCompose || inputMode === "tts") &&
+      session.messages.isSpeechFailure(session.speech.status.generation);
+    if (session.messages.error && !speechFailureVisible) {
       out.push({
         id: "error",
         tone: "error",
@@ -183,6 +187,7 @@
               status={session.files.status}
               choosing={session.files.choosing}
               voiceActive={voiceActive || ttsWorking}
+              onOpenSettings={onOpenServerSettings}
               onChoose={() => session.files.chooseAudioFile()}
               onStart={(stream) => session.files.startFileTranscription(stream)}
               onTryStreamingAgain={() => session.files.tryFileStreamingAgain()}
@@ -197,7 +202,7 @@
     </div>
   {/if}
   <div class="body">
-    {#if messages.length}<Notifications {messages} />{/if}
+    {#if messages.length}<Notifications {messages} abovePlayback={inputMode === "tts"} />{/if}
     {#if session.speech.status.source !== TTSSource.SourceCompose && session.speech.status.phase !== TTSPhase.Idle && session.speech.status.phase !== TTSPhase.Cancelled}
       <PlaybackBar
         status={session.speech.status}
@@ -207,6 +212,7 @@
         onStop={() => session.speech.stopTTS()}
         onSave={() => session.speech.saveTTSAudio()}
         onClear={() => session.speech.clearTTSAudio()}
+        onOpenSettings={onOpenSpeechSettings}
       />
     {/if}
     {#if inputMode === "tts" && session.editor.draft}
@@ -251,10 +257,13 @@
                 liveFinal={session.dictation.status.liveFinal ?? ""}
                 livePartial={session.dictation.status.livePartial ?? ""}
                 message={inputMode === "voice"
-                  ? (statusMessage(session.dictation.status) ?? "")
+                  ? isFailure(session.dictation.status)
+                    ? ""
+                    : (statusMessage(session.dictation.status) ?? "")
                   : session.files.status.phase === FileTranscriptionPhase.FileTranscriptionFailed
-                    ? session.files.status.message ||
-                      "The file could not be transcribed. Retry or choose another file."
+                    ? session.files.status.transcript
+                      ? "Transcription did not finish. Any text received is kept below."
+                      : ""
                     : session.files.status.phase ===
                           FileTranscriptionPhase.FileTranscriptionCompleted &&
                         !session.files.status.transcript
@@ -281,11 +290,11 @@
                   if (inputMode === "file") void session.files.clearAudioFile();
                   else void session.dictation.clearCurrent();
                 }}
-                onListen={inputMode === "file" &&
-                runtimeSettings?.textToSpeech.enabled &&
-                !voiceActive &&
-                !fileWorking
-                  ? () => session.speech.listenFileTranscript()
+                onListen={runtimeSettings?.textToSpeech.enabled && !voiceActive && !fileWorking
+                  ? () =>
+                      inputMode === "file"
+                        ? session.speech.listenFileTranscript()
+                        : session.speech.listenVoiceTranscript(session.dictation.status.generation)
                   : undefined}
               >
                 {#snippet quickSettings()}
@@ -308,6 +317,8 @@
               {#if showReadiness && readiness}
                 <ReadinessPanel
                   {readiness}
+                  task={inputMode === "file" ? "file" : "voice"}
+                  saving={session.editor.saving || session.editor.quickSettingsPending.length > 0}
                   testing={inputMode === "file"
                     ? session.editor.sttConnectionTesting
                     : session.editor.voiceConnectionTesting}
@@ -331,6 +342,7 @@
                   {#snippet serverControls()}
                     {#if inputMode === "voice"}
                       <VoiceTranscriptionSettings
+                        setup
                         editor={session.editor}
                         settings={runtimeSettings!}
                         disabled={quickSettingsDisabled || session.editor.saving}

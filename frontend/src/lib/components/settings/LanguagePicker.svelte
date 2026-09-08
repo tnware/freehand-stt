@@ -11,12 +11,14 @@
     languages,
     restricted = false,
     disabled = false,
+    unavailableReason = "",
   }: {
     id: string;
     value?: string;
     languages: Option[];
     restricted?: boolean;
     disabled?: boolean;
+    unavailableReason?: string;
   } = $props();
   let query = $state("");
   let open = $state(false);
@@ -48,7 +50,11 @@
       : (known?.label ?? (restricted ? "Choose language" : "Server default")),
   );
   const filtered = $derived(
-    choices.filter((choice) => choice.label.toLowerCase().includes(query.toLowerCase().trim())),
+    choices.filter(
+      (choice) =>
+        choice.value === "__custom" ||
+        `${choice.label} ${choice.code}`.toLowerCase().includes(query.toLowerCase().trim()),
+    ),
   );
 
   function choose(next: string) {
@@ -106,11 +112,10 @@
             <Combobox.Item
               value={choice.value}
               label={choice.label}
-              class="flex cursor-default items-center justify-between gap-2 rounded-sm px-2 py-2 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+              class="flex cursor-default items-center justify-between gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
             >
-              {choice.label}{#if selected === choice.value}<CheckIcon
-                  class="size-4 shrink-0"
-                />{/if}
+              <span class="min-w-0 flex-1 break-words">{choice.label}</span>
+              {#if selected === choice.value}<CheckIcon class="size-3.5 shrink-0" />{/if}
             </Combobox.Item>
           {:else}
             <p class="px-2 py-3 text-xs text-muted-foreground" role="status">
@@ -120,6 +125,13 @@
             </p>
           {/each}
         {/key}
+        <p
+          class="mt-1 border-t border-hairline px-3 py-2 text-xs leading-relaxed text-muted-foreground"
+        >
+          {restricted
+            ? "Languages supported by this model profile."
+            : "Choose a spoken language, or a custom value from your server. This does not translate audio."}
+        </p>
       </Combobox.Content>
     </Combobox.Portal>
   </Combobox.Root>
@@ -134,12 +146,16 @@
       spellcheck={false}
     />
   {/if}
-  <p id={`${id}-help`} class="text-xs leading-relaxed text-muted-foreground">
-    {#if restricted}
-      Language choices follow the selected model profile.
-    {:else}
-      Search by language name or code. Your model must support the language. Custom values are sent
-      unchanged.
-    {/if}
+  <p
+    id={`${id}-help`}
+    class={unavailableReason || customVisible
+      ? "text-xs leading-relaxed text-muted-foreground"
+      : "sr-only"}
+  >
+    {#if unavailableReason}{unavailableReason}
+    {:else if customVisible}Custom values are sent to the server unchanged.
+    {:else}Search by language name or code. {restricted
+        ? "Choose from this model profile’s supported languages."
+        : "Your model must support the selected language."}{/if}
   </p>
 </div>

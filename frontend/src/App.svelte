@@ -14,7 +14,11 @@
   import { session } from "$lib/stores/session.svelte";
   import { subscribeSessionEvents } from "$lib/stores/session-events";
   import { activeAppearanceMode } from "$lib/appearance";
-  import { shouldAutomaticallyTestConnection, taskConnectionStatus } from "$lib/utils/connection";
+  import {
+    shouldAutomaticallyTestConnection,
+    taskConnectionStatus,
+    taskConnectionDetails,
+  } from "$lib/utils/connection";
 
   let settingsOpen = $state(false);
   let aboutOpen = $state(false);
@@ -23,6 +27,7 @@
   // the one build-info source rather than restated here.
   let version = $state("");
   let now = $state(Date.now());
+  const footerConnection = $derived(taskConnectionDetails(inputMode, session.editor));
   const footerStatus = $derived(taskConnectionStatus(inputMode, session.editor, now));
   $effect(() => {
     const timer = setInterval(() => (now = Date.now()), 30_000);
@@ -169,5 +174,26 @@
     quickSettingsDisabled={settingsOpen}
   />
 
-  <StatusStrip connectionState={footerStatus} {version} {aboutOpen} onAbout={openAbout} />
+  <StatusStrip
+    connectionState={footerStatus}
+    connectionDetails={footerConnection}
+    disabled={session.editor.saving ||
+      session.editor.quickSettingsPending.length > 0 ||
+      !!session.editor.applied?.configuration.recoveryRequired}
+    onCheck={() => session.editor.testAppliedConnection(footerConnection.purpose)}
+    onEdit={() => {
+      void WindowingService.OpenConnectionManager({
+        id: footerConnection.selected?.id ?? "",
+        purpose: footerConnection.purpose,
+        create: false,
+      }).catch((cause) => session.messages.fail(cause));
+    }}
+    onSettings={() =>
+      openSettings(
+        inputMode === "tts" ? "speech" : inputMode === "file" ? "server" : "voice-transcription",
+      )}
+    {version}
+    {aboutOpen}
+    onAbout={openAbout}
+  />
 </div>

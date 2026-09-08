@@ -10,6 +10,7 @@ vi.mock("$bindings/tts/service", () => ({
   CurrentStatus: vi.fn(),
   PlayHistoryEntry: vi.fn(),
   PlayFileTranscript: vi.fn(),
+  PlayVoiceTranscript: vi.fn(),
   PreviewVoice: vi.fn(),
   SpeakText: vi.fn(),
   Pause: vi.fn(),

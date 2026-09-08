@@ -1,4 +1,6 @@
 <script lang="ts">
+  import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
+  import TooltipButton from "$lib/components/ui/button/TooltipButton.svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
   import FileAudioIcon from "@lucide/svelte/icons/file-audio";
   import FileTextIcon from "@lucide/svelte/icons/file-text";
@@ -20,6 +22,7 @@
     onTryStreamingAgain,
     onCancel,
     onClear,
+    onOpenSettings,
   }: {
     status: FileTranscriptionStatus;
     choosing?: boolean;
@@ -29,6 +32,7 @@
     onTryStreamingAgain: () => void;
     onCancel: () => void;
     onClear: () => void;
+    onOpenSettings?: () => void;
   } = $props();
 
   let stream = $state(true);
@@ -179,21 +183,28 @@
       {#if hasFile}<span class="shrink-0 text-xs tabular-nums text-muted-foreground"
           >{formatBytes(fileSize)}</span
         >{/if}
-      <Button
+      <TooltipButton
         variant="ghost"
         size="icon-xs"
-        aria-label="Clear selected audio file"
-        title="Clear selected audio file"
+        label="Clear selected audio file"
         disabled={!hasFile || working || choosing}
-        onclick={onClear}><XIcon /></Button
+        onclick={onClear}><XIcon /></TooltipButton
       >
     </div>
-    <p
-      class={cn("min-h-5 truncate text-xs", failed ? "text-destructive" : "text-muted-foreground")}
-      title={phaseLabel}
-    >
-      {phaseLabel}
-    </p>
+    {#if failed}
+      <div class="flex h-5 min-w-0 items-center justify-between gap-2">
+        <span class="truncate text-xs text-destructive">Transcription failed</span>
+        <FeedbackDetails
+          title="Transcription failed"
+          label="File transcription error details"
+          message={phaseLabel}
+          actionLabel="Transcription settings"
+          onAction={onOpenSettings}
+        />
+      </div>
+    {:else}
+      <p class="min-h-5 truncate text-xs text-muted-foreground" title={phaseLabel}>{phaseLabel}</p>
+    {/if}
     <div class="mt-2 flex h-6 min-w-0 items-center gap-2 border-t border-hairline pt-2">
       <Switch
         id="file-stream-toggle"

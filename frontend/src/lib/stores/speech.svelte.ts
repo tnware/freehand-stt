@@ -7,6 +7,7 @@ export type SpeechStateService = Pick<
   | "CurrentStatus"
   | "PlayHistoryEntry"
   | "PlayFileTranscript"
+  | "PlayVoiceTranscript"
   | "PreviewVoice"
   | "SpeakText"
   | "Pause"
@@ -46,10 +47,19 @@ export class SpeechState {
 
   applyStatus(status: TTSStatus) {
     if (status.generation < this.status.generation) return;
+    const previous = this.status;
     this.#ttsStatusRevision++;
     this.status = status;
-    if (status.phase === TTSPhase.Failed && status.message)
-      this.#messages.reportFailure(status.message);
+    if (status.phase === TTSPhase.Failed && status.message) {
+      if (
+        previous.generation !== status.generation ||
+        previous.phase !== status.phase ||
+        previous.message !== status.message
+      )
+        this.#messages.reportSpeechFailure(status.message, status.generation);
+    } else if (this.#messages.isSpeechFailure(previous.generation)) {
+      this.#messages.dismissError();
+    }
   }
 
   async listenHistoryEntry(id: number, version: HistoryTextVersion) {
@@ -65,6 +75,15 @@ export class SpeechState {
     this.#messages.clear();
     try {
       await this.#service.PlayFileTranscript();
+    } catch (cause) {
+      this.#messages.fail(cause);
+    }
+  }
+
+  async listenVoiceTranscript(generation: number) {
+    this.#messages.clear();
+    try {
+      await this.#service.PlayVoiceTranscript(generation);
     } catch (cause) {
       this.#messages.fail(cause);
     }
@@ -149,7 +168,6 @@ export class SpeechState {
     this.#messages.clear();
     try {
       await this.#service.ClearAudio();
-      this.#messages.announce("Generated speech cleared from memory.");
     } catch (cause) {
       this.#messages.fail(cause);
     }
@@ -158,6 +176,6 @@ export class SpeechState {
   async load() {
     const revision = this.#ttsStatusRevision;
     const status = await this.#service.CurrentStatus();
-    if (revision === this.#ttsStatusRevision) this.status = status;
+    if (revision === this.#ttsStatusRevision) this.applyStatus(status);
   }
 }

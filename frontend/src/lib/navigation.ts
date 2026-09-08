@@ -131,3 +131,29 @@ export const sectionsInGroup = (group: SettingsSection["group"]): SettingsSectio
 
 export const sectionByID = (id: SettingsSectionID): SettingsSection =>
   SETTINGS_SECTIONS.find((section) => section.id === id) ?? SETTINGS_SECTIONS[0];
+
+/** Search terms mirror settings people look for, including controls below disclosures. */
+const SETTINGS_KEYWORDS: Record<SettingsSectionID, string> = {
+  "voice-transcription": "realtime live language context prompt model profile",
+  server: "file upload language context prompt streaming timeout",
+  processing: "post processing s1 mini instructions reasoning temperature timeout",
+  speech: "tts voice preview speed language style instructions timeout",
+  connections: "backend provider endpoint url api key authentication headers server",
+  vocabulary: "names phrases terminology hotwords boosting",
+  shortcuts: "hotkey keyboard hold toggle cancel record",
+  audio:
+    "microphone duration speech detection vad silence trim padding automatic stop segment split sensitivity",
+  overlay: "layout position size surface glass glow opacity visualizer motion animation preview",
+  general:
+    "startup login tray updates theme light dark system mica clipboard direct input manual copy",
+  history: "retention recent transcripts clear delete memory",
+};
+
+export function matchingSettingsSections(query: string): SettingsSection[] {
+  const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  return SETTINGS_SECTIONS.filter((section) => {
+    const text =
+      `${section.label} ${section.blurb} ${SETTINGS_KEYWORDS[section.id]}`.toLocaleLowerCase();
+    return words.every((word) => text.includes(word));
+  });
+}

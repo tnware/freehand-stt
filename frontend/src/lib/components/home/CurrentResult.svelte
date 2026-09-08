@@ -1,6 +1,7 @@
 <script lang="ts">
   import { followTranscript } from "$lib/utils/transcriptScroll";
-  import type { Snippet } from "svelte";
+  import { onDestroy, type Snippet } from "svelte";
+  import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
   import { Button } from "$lib/components/ui/button";
   let {
     live = false,
@@ -35,12 +36,13 @@
     onClear: () => void;
     onListen?: () => void;
   } = $props();
-  let copiedKey = $state("");
+  const feedback = new CopyFeedback();
+  onDestroy(() => feedback.dispose());
   let following = $state(true);
   let jump = $state(0);
   async function copy() {
     const snapshot = resultKey;
-    if (await onCopy()) copiedKey = snapshot;
+    await feedback.copy(snapshot, onCopy);
   }
 </script>
 
@@ -75,7 +77,7 @@
         >{/if}
       <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
       <Button variant="outline" size="sm" disabled={working || !canCopy} onclick={copy}
-        >{copiedKey === resultKey ? "Copied" : "Copy"}</Button
+        >{feedback.key === resultKey ? "Copied" : "Copy"}</Button
       >
     {/if}
   </div>
@@ -131,18 +133,24 @@
         {:else if !message}
           <div class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-4 text-center">
             <p class="text-sm font-medium">
-              {working
-                ? "Your result will appear here"
-                : mode === "file"
-                  ? "Turn an audio file into text"
-                  : "Speak into the application you’re using"}
+              {failed
+                ? "No transcript to show"
+                : working
+                  ? "Your result will appear here"
+                  : mode === "file"
+                    ? "Turn an audio file into text"
+                    : "Speak into the application you’re using"}
             </p>
             <p class="max-w-lg text-[13px] leading-relaxed text-muted-foreground">
-              {working
-                ? "You can keep working while Freehand finishes."
-                : mode === "file"
-                  ? "Choose a file above. The transcript stays available here for inspection and copying."
-                  : "Use your recording shortcut from any application. Your latest transcript will also appear here."}
+              {failed
+                ? mode === "file"
+                  ? "Use Retry above, or choose another file."
+                  : "Use Record again above when you’re ready."
+                : working
+                  ? "You can keep working while Freehand finishes."
+                  : mode === "file"
+                    ? "Choose a file above. The transcript stays available here for inspection and copying."
+                    : "Use your recording shortcut from any application. Your latest transcript will also appear here."}
             </p>
           </div>
         {/if}

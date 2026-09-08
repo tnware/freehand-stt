@@ -567,7 +567,7 @@ func (a *App) hideAbout() {
 }
 
 func (a *App) newConnectionManagerWindow() {
-	window := a.wails.Window.NewWithOptions(baseWindowOptions("connections", "Freehand — Connection Manager", "/index.html#connections", 760, 740, 560, 520, true, a.settings.UseMica, a.settings.AppearanceMode, a.wails.Env.IsDarkMode()))
+	window := a.wails.Window.NewWithOptions(baseWindowOptions("connections", "Freehand — Connection Manager", "/index.html#connections", 960, 740, 560, 520, true, a.settings.UseMica, a.settings.AppearanceMode, a.wails.Env.IsDarkMode()))
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		event.Cancel()
 		window.EmitEvent("connections:close-requested")

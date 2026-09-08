@@ -16,7 +16,7 @@
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
   import { TTSPhase, type Settings, type ConnectionResult, type TTSStatus } from "$lib/state";
-  import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
+  import RequestSettings from "$lib/components/settings/RequestSettings.svelte";
   let {
     settings = $bindable(),
     status,
@@ -72,8 +72,11 @@
   <SettingsCard>
     <SettingRow
       title="Enable text to speech"
-      description="Add on-demand Listen controls to completed transcripts. Nothing is read automatically."
+      controlID="tts-enabled"
+      compact
+      description="Listen to completed transcripts on demand."
       >{#snippet control()}<Switch
+          id="tts-enabled"
           bind:checked={settings.textToSpeech.enabled}
           aria-label="Enable text to speech"
         />{/snippet}</SettingRow
@@ -84,7 +87,7 @@
       {voices}
       {voicesBusy}
       {busy}
-      models={connection?.modelIDs ?? []}
+      models={connectionStale ? [] : (connection?.modelIDs ?? [])}
       modelsBusy={connectionBusy}
       {onChooseModel}
       {onForgetModel}
@@ -103,58 +106,7 @@
         return true;
       }}
     >
-      {#snippet modelDetails()}
-        {#if connection}
-          <div class="p-5">
-            <ConnectionDiagnostics
-              result={connection}
-              stale={connectionStale}
-              {busy}
-              onCheck={onTestConnection}
-            />
-          </div>
-        {/if}
-        <ModelProfilePicker
-          id="speech-model-profile"
-          value={speech.modelProfile}
-          profiles={settings.modelProfiles.speech ?? []}
-          onChange={(id) => {
-            settings.textToSpeech.modelProfile = id;
-            settings.textToSpeech.options = { language: "", instructions: "" };
-            if (id === ID.Qwen3TTS) settings.textToSpeech.voice = "ryan";
-          }}
-        />
-      {/snippet}
-    </SpeechModelControls>
-
-    <ValueRow
-      id="tts-timeout"
-      label="Generation timeout"
-      hint="Maximum time to wait for the endpoint to produce playable speech."
-    >
-      {#snippet control()}
-        <ValueInput
-          id="tts-timeout"
-          type="number"
-          min={10}
-          max={3600}
-          step={10}
-          bind:value={settings.textToSpeech.timeoutSeconds}
-        />
-      {/snippet}
-      {#snippet action()}<Badge variant="outline">seconds</Badge>{/snippet}
-    </ValueRow>
-  </SettingsCard>
-
-  <SettingsCard>
-    <div class="flex items-center justify-between gap-4 px-5 py-4">
-      <div class="min-w-0">
-        <p class="text-sm font-medium">Voice preview</p>
-        <p class="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Try a short phrase with your current edits. Preview does not save your settings.
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
+      {#snippet voiceActions()}
         {#if status.canSave}
           <Button variant="outline" size="sm" onclick={onSave}
             ><DownloadIcon data-icon="inline-start" />Save</Button
@@ -174,12 +126,14 @@
           <Button
             size="sm"
             disabled={busy || !canPreview || !settings.textToSpeech.enabled}
+            title="Preview your current edits without saving them"
             onclick={onPreview}><Volume2Icon data-icon="inline-start" />Preview again</Button
           >
         {:else}
           <Button
             size="sm"
             disabled={busy || !canPreview || !settings.textToSpeech.enabled}
+            title="Preview your current edits without saving them"
             onclick={onPreview}
           >
             {#if busy}<LoaderCircleIcon
@@ -189,20 +143,50 @@
             Preview
           </Button>
         {/if}
-      </div>
-    </div>
+      {/snippet}
+      {#snippet modelDetails()}
+        <ModelProfilePicker
+          id="speech-model-profile"
+          value={speech.modelProfile}
+          profiles={settings.modelProfiles.speech ?? []}
+          onChange={(id) => {
+            settings.textToSpeech.modelProfile = id;
+            settings.textToSpeech.options = { language: "", instructions: "" };
+            if (id === ID.Qwen3TTS) settings.textToSpeech.voice = "ryan";
+          }}
+        />
+      {/snippet}
+    </SpeechModelControls>
   </SettingsCard>
 
-  <p class="px-1 text-xs leading-relaxed text-muted-foreground">
-    Generated audio stays in memory unless you choose Save. Clear, new speech, recording, or
-    quitting Freehand releases it.
-  </p>
-  <details class="px-1 text-xs leading-relaxed text-muted-foreground">
-    <summary class="cursor-pointer font-medium text-foreground">Speech request details</summary>
-    <p class="mt-3">
-      Freehand requests uncompressed WAV · PCM16 audio for native Windows playback. Save writes a
-      WAV file to the location you choose. Connection checks stop after 15 seconds. Speech input is
-      limited to 4,096 characters and generated WAV audio to 32 MiB.
+  <RequestSettings
+    {connection}
+    stale={connectionStale}
+    busy={connectionBusy}
+    onCheck={onTestConnection}
+  >
+    <ValueRow
+      id="tts-timeout"
+      label="Generation timeout"
+      hint="Maximum time to wait for the endpoint to produce playable speech."
+    >
+      {#snippet control()}
+        <ValueInput
+          id="tts-timeout"
+          type="number"
+          min={10}
+          max={3600}
+          step={10}
+          bind:value={settings.textToSpeech.timeoutSeconds}
+        />
+      {/snippet}
+      {#snippet action()}<Badge variant="outline">seconds</Badge>{/snippet}
+    </ValueRow>
+    <p class="px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+      Generated audio stays in memory unless you choose Save. Clear, new speech, recording, or
+      quitting releases it. Freehand requests WAV · PCM16 audio for native playback. Speech input is
+      limited to 4,096 characters and generated audio to 32 MiB. Connection checks stop after 15
+      seconds.
     </p>
-  </details>
+  </RequestSettings>
 </div>

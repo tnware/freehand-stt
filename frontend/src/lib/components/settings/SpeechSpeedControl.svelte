@@ -50,7 +50,7 @@
   </div>
   <p
     id={`${id}-help`}
-    class={compact && supported ? "sr-only" : "text-xs leading-relaxed text-muted-foreground"}
+    class={supported ? "sr-only" : "text-xs leading-relaxed text-muted-foreground"}
   >
     {supported
       ? "Applies to the next generation, from 0.25× to 4×."

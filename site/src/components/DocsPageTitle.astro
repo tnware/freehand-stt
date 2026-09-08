@@ -1,9 +1,20 @@
 ---
 import DefaultPageTitle from "@astrojs/starlight/components/PageTitle.astro";
 import ProviderIcon from "./ProviderIcon.astro";
-const provider = Astro.locals.starlightRoute.entry.data.provider;
+import ModelIcon from "./ModelIcon.astro";
+import { backends } from "../data/backends";
+import { modelProfiles } from "../data/models";
+
+// Directory cards and their guides share the same identity. Overview pages
+// intentionally have no single provider/model mark.
+const guide = `/${Astro.locals.starlightRoute.entry.id.replace(/\/$/, "")}/`;
+const backend = backends.find((entry) => entry.guide === guide);
+const model = modelProfiles.find((entry) => entry.guide === guide);
 ---
-{provider ? <div class="provider-page-title"><ProviderIcon profile={provider} size={44} /><DefaultPageTitle /></div> : <DefaultPageTitle />}
+{backend || model ? <div class="provider-page-title">
+  {model ? <ModelIcon profile={model.icon} size={44} /> : <ProviderIcon profile={backend?.id} size={44} />}
+  <DefaultPageTitle />
+</div> : <DefaultPageTitle />}
 <style>
   .provider-page-title { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
   .provider-page-title :global(h1) { margin-top: 0; min-width: 0; }

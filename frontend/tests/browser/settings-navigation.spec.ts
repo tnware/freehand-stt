@@ -58,7 +58,8 @@ for (const width of [1100, 520]) {
       page,
       saves,
     }) => {
-      await page.locator("#transcription-timeout").fill("75");
+      await page.locator("summary", { hasText: "Request settings" }).click();
+      await page.locator("#file-transcription-timeout").fill("75");
       await section(page, "audio").click();
       await page.locator("#max-duration").fill("0");
       await section(page, "history").click();
@@ -71,7 +72,7 @@ for (const width of [1100, 520]) {
       await expect(
         page
           .getByText("Enter a recording limit from 1 to 262 seconds.", {
-            exact: true,
+            exact: false,
           })
           .last(),
       ).toBeVisible();
@@ -84,12 +85,12 @@ for (const width of [1100, 520]) {
       await page.locator("#max-duration").fill("120");
       await expect(page.locator("#max-duration")).not.toHaveAttribute("aria-invalid", "true");
       await section(page, "server").click();
-      await expect(page.locator("#transcription-timeout")).toHaveValue("75");
+      await expect(page.locator("#file-transcription-timeout")).toHaveValue("75");
       await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
       await page.getByRole("button", { name: "Save settings", exact: true }).click();
       await saves.complete(await saves.waitForStart(), "success");
       await expect(page.getByRole("button", { name: "Save settings", exact: true })).toBeDisabled();
-      await expect(page.locator("#transcription-timeout")).toHaveValue("75");
+      await expect(page.locator("#file-transcription-timeout")).toHaveValue("75");
     });
 
     test("a rejected Save and continue reveals the field rather than trapping it behind a dialog", async ({
@@ -99,8 +100,7 @@ for (const width of [1100, 520]) {
       await section(page, "audio").click();
       await page.locator("#max-duration").fill("0");
       await section(page, "server").click();
-      await page.locator("#saved-connection-stt").click();
-      await page.getByRole("option", { name: "Add connection…", exact: true }).click();
+      await section(page, "connections").click();
       await page.getByRole("button", { name: "Save and continue", exact: true }).click();
       await saves.complete(await saves.waitForStart(), "invalid-duration");
       await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -108,17 +108,19 @@ for (const width of [1100, 520]) {
       await expect(page.locator("#max-duration")).toBeFocused();
       await expect(page.locator("#max-duration")).toHaveValue("0");
       await section(page, "server").click();
-      await expect(page.locator("#saved-connection-stt")).toContainText("Original server");
+      await expect(page.locator("#saved-connection-stt")).toHaveValue("Original server");
     });
 
     test("everyday controls keep mechanics in disclosures and omit deferred delivery", async ({
       page,
     }) => {
       await section(page, "audio").click();
-      const details = page.locator("details").filter({ hasText: "Speech detection details" });
+      const details = page.locator("details").filter({ hasText: "Speech detection tuning" });
       await expect(details).not.toHaveAttribute("open", "");
       await details.locator("summary").click();
-      await expect(details.getByText(/libfvad/)).toBeVisible();
+      await expect(
+        details.getByRole("radiogroup", { name: "Voice activity detection mode" }),
+      ).toBeVisible();
       await section(page, "general").click();
       await expect(page.getByText("Direct input", { exact: true })).toBeVisible();
       await expect(page.getByText("Manual copy", { exact: true })).toBeVisible();

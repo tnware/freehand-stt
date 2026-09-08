@@ -1,22 +1,22 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
-  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
-  import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
-  import ClockIcon from "@lucide/svelte/icons/clock";
+  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
-  import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+  import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import ShortcutKeys from "$lib/components/common/ShortcutKeys.svelte";
   import { Button } from "$lib/components/ui/button";
   import type { SettingsSectionID } from "$lib/navigation";
-  import type { Readiness } from "$lib/utils/readiness";
-  import { cn } from "$lib/utils";
+  import type { Readiness, ReadinessStep } from "$lib/utils/readiness";
+  import { nextReadinessAction } from "$lib/utils/readinessPresentation";
 
   let {
     readiness,
     serverControls,
+    task = "voice",
     testing = false,
     completing = false,
+    saving = false,
     onTestConnection,
     onComplete,
     onDismiss,
@@ -24,156 +24,217 @@
   }: {
     readiness: Readiness;
     serverControls?: Snippet;
+    task?: "voice" | "file";
     testing?: boolean;
     completing?: boolean;
+    saving?: boolean;
     onTestConnection: () => void;
     onComplete: () => void;
     onDismiss: () => void;
     onOpenSettings: (section: SettingsSectionID) => void;
   } = $props();
-
-  const total = $derived(readiness.steps.length);
+  const action = $derived(nextReadinessAction(readiness));
+  const remaining = $derived(
+    readiness.steps.filter(
+      (step) => step.status !== "complete" && (readiness.initialSetup || step.blocking),
+    ),
+  );
+  const complete = $derived(readiness.steps.filter((step) => step.status === "complete"));
+  const busy = $derived(testing || completing || saving);
+  const connectionNeedsAttention = $derived(
+    remaining.some((step) => ["server", "credential", "connection"].includes(step.id)),
+  );
+  const recoveryTitle = $derived(
+    action.kind === "settings"
+      ? {
+          server: "Choose a transcription connection",
+          credential: "Check your authentication",
+          microphone: "Check your microphone",
+          shortcut: "Choose a recording shortcut",
+          connection: "Check your connection",
+        }[action.step]
+      : "Connection needs attention",
+  );
+  function proceed() {
+    if (busy) return;
+    if (action.kind === "complete") onComplete();
+    else if (action.kind === "check") onTestConnection();
+    else if (action.kind === "settings") onOpenSettings(action.section);
+  }
 </script>
 
-<!--
-  First run and recovery are an exclusive shell state: there is nothing to
-  dictate into yet, so the rack and the feed are replaced rather than stacked
-  behind a banner. Only the outstanding step carries the accent.
--->
-<div class="flex min-h-0 flex-1 items-center justify-center overflow-y-auto py-2">
-  <div class="flex w-full max-w-[720px] flex-col gap-5">
-    <div class="flex flex-col gap-2">
-      <span class="caption">{readiness.initialSetup ? "First run" : "Needs attention"}</span>
-      <h2 class="text-[26px] leading-tight font-semibold tracking-[-0.015em]">
-        {readiness.initialSetup ? "Set up dictation" : "Set up this task to continue."}
-      </h2>
-      <p class="max-w-[60ch] text-[13.5px] leading-relaxed text-secondary-foreground">
+<section
+  class="readiness min-h-0 flex-1 overflow-y-auto"
+  aria-label={readiness.initialSetup ? "First-run setup" : "Task recovery"}
+>
+  <div class="mx-auto flex w-full max-w-[960px] flex-col gap-5 py-3">
+    <header class="space-y-2">
+      <p class="text-xs font-medium text-muted-foreground">
         {readiness.initialSetup
-          ? "Choose a connection and model, then test access. Review your microphone and recording shortcut below."
-          : "Review the requirements below. Other tasks remain available from the navigation above."}
+          ? "Welcome to Freehand"
+          : task === "file"
+            ? "Audio-file transcription"
+            : "Voice transcription"}
       </p>
-    </div>
+      <h2 class="text-2xl font-semibold tracking-tight">
+        {readiness.initialSetup ? "Set up voice transcription" : recoveryTitle}
+      </h2>
+      <p class="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+        {readiness.initialSetup
+          ? "Choose a connection and model, then check that you’re ready to record."
+          : "Review what needs attention below. Other tasks are still available from the tabs above."}
+      </p>
+    </header>
 
-    {#if serverControls}{@render serverControls()}{/if}
-
-    <div class="overflow-hidden rounded-lg border border-hairline bg-layer-fill">
-      {#each readiness.steps as step (step.id)}
-        <div
-          class={cn(
-            "flex items-center gap-3.5 border-t border-hairline px-4 py-3 first:border-t-0",
-            step.status === "attention" && "bg-accent-wash shadow-[inset_2px_0_0_var(--primary)]",
-          )}
+    <div
+      class:initial={readiness.initialSetup}
+      class="setup-columns grid min-w-0 items-start gap-4"
+    >
+      <div class="flex min-w-0 flex-col gap-3">
+        <section
+          class="overflow-hidden rounded-xl border border-hairline bg-layer-fill"
+          aria-label="Next setup step"
         >
-          <span
-            class={cn(
-              "grid size-6 shrink-0 place-items-center rounded-full",
-              step.status === "complete" && "bg-success/12 text-success",
-              step.status === "pending" && "bg-muted text-muted-foreground",
-              step.status === "attention" &&
-                "border border-accent-edge bg-accent-wash text-accent-text",
-            )}
-            aria-hidden="true"
-          >
-            {#if step.status === "complete"}
-              <CheckIcon class="size-[13px]" />
-            {:else if step.status === "attention"}
-              <CircleAlertIcon class="size-[13px]" />
+          <div class="space-y-3 p-5">
+            <h3 class="text-sm font-semibold" aria-live="polite">
+              {readiness.canComplete
+                ? "Ready to record"
+                : readiness.initialSetup
+                  ? "Next step"
+                  : "Needs attention"}
+            </h3>
+            {#if readiness.canComplete}
+              <p class="text-sm leading-relaxed text-muted-foreground">
+                Your connection check passed, and your microphone and shortcut are ready.
+              </p>
             {:else}
-              <ClockIcon class="size-3" />
-            {/if}
-          </span>
-
-          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span class="text-[13.5px] font-medium">{step.label}</span>
-            {#if step.id === "shortcut" && step.status === "complete"}
-              <span class="mt-0.5 flex"
-                ><ShortcutKeys value={step.detail} label="Toggle recording shortcut" /></span
-              >
-            {:else}
-              <span
-                class={cn(
-                  "text-[11.5px] leading-relaxed break-words",
-                  step.id === "server" && "figure text-[10.5px]",
-                  step.status === "attention"
-                    ? "text-secondary-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                {step.detail}
-              </span>
+              <div class="space-y-4">
+                {#each remaining as step (step.id)}
+                  <div class="flex items-start gap-2.5">
+                    {#if step.status === "attention"}<CircleAlertIcon
+                        class="mt-0.5 size-4 shrink-0 text-warning"
+                      />
+                    {:else if step.id === "microphone"}<LoaderCircleIcon
+                        class="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none"
+                      />{/if}
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-medium">{step.label}</p>
+                      <p class="mt-1 text-xs leading-relaxed break-words text-muted-foreground">
+                        {step.detail}
+                      </p>
+                    </div>
+                    {#if step.settingsSection && !(action.kind === "settings" && action.step === step.id) && step.status === "attention"}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy}
+                        aria-label={`Review ${step.label} settings`}
+                        onclick={() => onOpenSettings(step.settingsSection!)}>Review</Button
+                      >
+                    {/if}
+                  </div>
+                {/each}
+              </div>
             {/if}
           </div>
-
-          {#if step.status === "attention" && step.settingsSection}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Review ${step.label} settings`}
-              onclick={() => onOpenSettings(step.settingsSection!)}
-            >
-              <ChevronRightIcon />
+          <div class="flex flex-wrap items-center gap-2 border-t border-hairline px-5 py-3">
+            <Button disabled={busy || action.kind === "wait"} onclick={proceed} class="min-w-0">
+              {#if busy || action.kind === "wait"}<LoaderCircleIcon
+                  class="size-4 animate-spin motion-reduce:animate-none"
+                />{/if}
+              {testing
+                ? "Checking connection…"
+                : completing
+                  ? "Finishing…"
+                  : saving
+                    ? "Saving settings…"
+                    : action.label}
             </Button>
-          {/if}
-        </div>
-      {/each}
+            {#if !readiness.initialSetup}<Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onclick={onDismiss}>Back to workspace</Button
+              >{/if}
+          </div>
+        </section>
 
-      <div class="flex items-center gap-3 border-t border-hairline bg-secondary px-4 py-3.5">
-        <span class="mr-auto flex items-center gap-2.5" aria-live="polite">
-          <span class="flex items-center gap-1" aria-hidden="true">
-            {#each readiness.steps as step (step.id)}
-              <span
-                class={cn(
-                  "h-[3px] w-[18px] rounded-full",
-                  step.status === "complete" ? "bg-success" : "bg-border",
-                )}
-              ></span>
-            {/each}
-          </span>
-          <span class="figure text-[10.5px] text-muted-foreground">
-            {readiness.completedCount} of {total} ready
-          </span>
-        </span>
-
-        {#if readiness.initialSetup}
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!readiness.canComplete || testing || completing}
-            onclick={onComplete}
-          >
-            {#if completing}
-              <LoaderCircleIcon
-                data-icon="inline-start"
-                class="animate-spin motion-reduce:animate-none"
-              />
-            {/if}
-            {completing ? "Finishing…" : "Finish setup"}
-          </Button>
-        {:else}
-          <Button variant="ghost" size="sm" onclick={onDismiss}>Continue anyway</Button>
+        {#if complete.length}
+          <details class="group rounded-xl border border-hairline bg-layer-fill">
+            <summary
+              class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
+            >
+              <CheckIcon class="size-4 text-success" /><span class="flex-1"
+                >{complete.length} {complete.length === 1 ? "check ready" : "checks ready"}</span
+              >
+              <ChevronDownIcon class="size-4 text-muted-foreground group-open:rotate-180" />
+            </summary>
+            <div class="divide-y divide-hairline border-t border-hairline">
+              {#each complete as step (step.id)}{@render readyStep(step)}{/each}
+            </div>
+          </details>
         {/if}
-        <Button
-          size="sm"
-          disabled={!readiness.canTestConnection || testing || completing}
-          onclick={onTestConnection}
-        >
-          {#if testing}
-            <LoaderCircleIcon
-              data-icon="inline-start"
-              class="animate-spin motion-reduce:animate-none"
-            />
-          {:else}
-            <ArrowRightIcon data-icon="inline-start" />
-          {/if}
-          {testing ? "Checking…" : "Test connection"}
-        </Button>
+        {#if !readiness.initialSetup && connectionNeedsAttention && serverControls}
+          <details class="group rounded-xl border border-hairline bg-layer-fill">
+            <summary
+              class="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
+            >
+              Connection and model<ChevronDownIcon
+                class="size-4 text-muted-foreground group-open:rotate-180"
+              />
+            </summary>
+            <div class="border-t border-hairline p-5">{@render serverControls()}</div>
+          </details>
+        {/if}
       </div>
+      {#if readiness.initialSetup && serverControls}
+        <section
+          class="setup-controls min-w-0 rounded-xl border border-hairline bg-layer-fill p-5"
+          aria-label="Transcription connection"
+        >
+          {@render serverControls()}
+        </section>
+      {/if}
     </div>
-
-    {#if readiness.initialSetup}
-      <p class="text-[11.5px] text-muted-foreground">
-        Finish setup unlocks once the check passes. You can change any of this later in Settings.
-      </p>
-    {/if}
   </div>
-</div>
+</section>
+
+{#snippet readyStep(step: ReadinessStep)}
+  <div class="flex items-start gap-3 px-4 py-3">
+    <div class="min-w-0 flex-1">
+      <p class="text-xs font-medium">{step.label}</p>
+      {#if step.id === "shortcut"}<div class="mt-1">
+          <ShortcutKeys value={step.detail} label="Toggle recording shortcut" />
+        </div>
+      {:else}<p class="mt-1 text-xs leading-relaxed break-words text-muted-foreground">
+          {step.detail}
+        </p>{/if}
+    </div>
+    {#if step.settingsSection}<Button
+        variant="ghost"
+        size="sm"
+        disabled={busy}
+        aria-label={`Review ${step.label} settings`}
+        onclick={() => onOpenSettings(step.settingsSection!)}>Review</Button
+      >{/if}
+  </div>
+{/snippet}
+
+<style>
+  @container (min-width: 800px) {
+    .setup-columns.initial {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    }
+    .setup-columns.initial > .setup-controls {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .setup-columns.initial > :first-child {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
+  .setup-columns:not(.initial) {
+    max-width: 40rem;
+  }
+</style>

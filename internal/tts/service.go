@@ -38,6 +38,7 @@ const (
 const (
 	SourceHistory Source = "history"
 	SourceFile    Source = "audio-file"
+	SourceVoice   Source = "voice"
 	SourcePreview Source = "preview"
 	SourceCompose Source = "compose"
 )
@@ -78,6 +79,12 @@ type SpeechClient interface {
 	SynthesizeSpeech(context.Context, string, string, inference.SpeechRequest) ([]byte, error)
 }
 
+// TranscriptSources reads current results from their feature owners, independently of history.
+type TranscriptSources struct {
+	File  func() (string, error)
+	Voice func(uint64) (string, error)
+}
+
 type Service struct {
 	control      sync.Mutex
 	mu           sync.Mutex
@@ -85,7 +92,7 @@ type Service struct {
 	client       SpeechClient
 	player       Player
 	history      *history.Store
-	fileText     func() (string, error)
+	texts        TranscriptSources
 	saveFile     func() (string, error)
 	activity     *activity.Coordinator
 	changed      func(Status)
@@ -105,15 +112,19 @@ type Service struct {
 	shutdownErr  error
 }
 
-func NewService(profiles settings.TextToSpeechProfileSource, client SpeechClient, player Player, transcripts *history.Store, fileText func() (string, error), saveFile func() (string, error), admission *activity.Coordinator, changed func(Status), logger *slog.Logger) *Service {
+func NewService(profiles settings.TextToSpeechProfileSource, client SpeechClient, player Player, transcripts *history.Store, texts *TranscriptSources, saveFile func() (string, error), admission *activity.Coordinator, changed func(Status), logger *slog.Logger) *Service {
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
 	if admission == nil {
 		admission = activity.New(activity.Sources{})
 	}
+	sources := TranscriptSources{}
+	if texts != nil {
+		sources = *texts
+	}
 	root, cancel := context.WithCancel(context.Background())
-	return &Service{rootContext: root, rootCancel: cancel, shutdownDone: make(chan struct{}), writeAudio: writeAudioFile, profiles: profiles, client: client, player: player, history: transcripts, fileText: fileText, saveFile: saveFile, activity: admission, changed: changed, logger: logger.With("component", "tts"), status: Status{Phase: Idle}}
+	return &Service{rootContext: root, rootCancel: cancel, shutdownDone: make(chan struct{}), writeAudio: writeAudioFile, profiles: profiles, client: client, player: player, history: transcripts, texts: sources, saveFile: saveFile, activity: admission, changed: changed, logger: logger.With("component", "tts"), status: Status{Phase: Idle}}
 }
 
 func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
@@ -192,14 +203,26 @@ func (s *Service) PlayHistoryEntry(id uint64, version history.HistoryTextVersion
 }
 
 func (s *Service) PlayFileTranscript() error {
-	if s.fileText == nil {
+	if s.texts.File == nil {
 		return errors.New("audio file transcript playback is unavailable")
 	}
-	text, err := s.fileText()
+	text, err := s.texts.File()
 	if err != nil {
 		return err
 	}
 	return s.start(text, SourceFile, 0, history.HistoryTextFinal)
+}
+
+// PlayVoiceTranscript plays the completed result the user selected, never a newer recording.
+func (s *Service) PlayVoiceTranscript(generation uint64) error {
+	if s.texts.Voice == nil {
+		return errors.New("voice transcript playback is unavailable")
+	}
+	text, err := s.texts.Voice(generation)
+	if err != nil {
+		return err
+	}
+	return s.start(text, SourceVoice, 0, history.HistoryTextFinal)
 }
 
 func (s *Service) PreviewVoice(draft *settings.TextToSpeechPreview) error {

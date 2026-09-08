@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FieldHelp from "./FieldHelp.svelte";
   import { modelSources } from "$lib/utils/modelSources";
   import { Combobox } from "bits-ui";
   import { Button } from "$lib/components/ui/button";
@@ -23,6 +24,7 @@
     immediate = false,
     disabled = false,
     profileName = "",
+    showProfileName = true,
   }: {
     id: string;
     value: string;
@@ -35,10 +37,18 @@
     onChoose: (model: string) => boolean | Promise<boolean>;
     disabled?: boolean;
     profileName?: string;
+    showProfileName?: boolean;
     compact?: boolean;
     immediate?: boolean;
     onForget?: () => void;
   } = $props();
+  const help = $derived(
+    serverLoaded
+      ? "Options apply to the model loaded by this server."
+      : immediate
+        ? "Each model keeps its own options. Changes apply immediately."
+        : "Each model keeps its own options. Save applies all your edits.",
+  );
   let open = $state(false),
     query = $state("");
   const allModels = $derived([
@@ -69,7 +79,12 @@
 
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
   <div class="flex items-center justify-between gap-3">
-    <label for={id} class="text-sm font-medium">Model</label>
+    <div class="flex items-center gap-1">
+      <label for={id} class="text-sm font-medium">Model</label><FieldHelp
+        label="About model settings"
+        text={help}
+      />
+    </div>
     <div class="flex items-center gap-1">
       <Button variant="ghost" size="sm" disabled={locked} onclick={onDiscover}
         ><RefreshCwIcon class={busy ? "size-3.5 animate-spin" : "size-3.5"} />{serverLoaded
@@ -110,7 +125,7 @@
           aria-label="Choose model"
           aria-describedby={`${id}-help`}
           placeholder="Search or enter a model ID…"
-          class="h-10 w-full rounded-md border border-input bg-background px-3 pr-10 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          class="h-9 w-full rounded-md border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           spellcheck={false}
           oninput={(e) => {
             query = e.currentTarget.value;
@@ -131,14 +146,15 @@
         </Combobox.Input>
         <Combobox.Trigger
           aria-label="Show models"
-          class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground"
+          class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
           ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
         >
       </div>
       <Combobox.Portal
         ><Combobox.Content
           sideOffset={4}
-          class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          collisionPadding={12}
+          class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
         >
           {#key query}{#each choices as choice (choice.value)}
               <Combobox.Item
@@ -160,9 +176,9 @@
         </Combobox.Content></Combobox.Portal
       >
     </Combobox.Root>{/if}
-  {#if profileName || (value && !serverLoaded)}
+  {#if (showProfileName && profileName) || (value && !serverLoaded)}
     <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-      {#if profileName}<span
+      {#if showProfileName && profileName}<span
           >Profile <span class="font-medium text-foreground">{profileName}</span></span
         >{/if}
       {#if value && !serverLoaded}<span
@@ -170,14 +186,5 @@
         >{/if}
     </p>
   {/if}
-  <p
-    id={`${id}-help`}
-    class={compact ? "sr-only" : "text-xs leading-relaxed text-muted-foreground"}
-  >
-    {serverLoaded
-      ? "Options apply to the model loaded by this server."
-      : immediate
-        ? "Each model keeps its own options. Changes apply immediately."
-        : "Each model keeps its own options. Save applies all your edits."}
-  </p>
+  <p id={`${id}-help`} class="sr-only">{help}</p>
 </div>

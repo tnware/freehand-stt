@@ -12,7 +12,7 @@
   import { Badge } from "$lib/components/ui/badge";
   import { PostProcessingPreset, type Settings, type ConnectionResult } from "$lib/state";
   import { ID } from "$bindings/modelprofile";
-  import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
+  import RequestSettings from "$lib/components/settings/RequestSettings.svelte";
   let {
     settings = $bindable(),
     connection,
@@ -45,6 +45,7 @@
 
 <SettingsCard>
   <RuntimeModelPicker
+    showProfileName={false}
     profileName={compatibility?.name ?? settings.modelProfile}
     id="model"
     value={settings.model}
@@ -60,16 +61,7 @@
     {busy}
     onDiscover={onTestConnection}
   />
-  {#if connection}
-    <div class="p-5">
-      <ConnectionDiagnostics
-        result={connection}
-        stale={connectionStale}
-        {busy}
-        onCheck={onTestConnection}
-      />
-    </div>
-  {/if}
+
   <ModelProfilePicker
     id="transcription-model-profile"
     value={settings.modelProfile}
@@ -88,14 +80,14 @@
       }
     }}
   />
-  <ValueRow
-    id="language"
-    label="Language"
-    hint="Used for audio-file transcription. Server default leaves the language unset; Automatic detection uses the selected provider’s detection contract. This does not request translation."
-  >
+  <ValueRow id="language" label="Spoken language">
     {#snippet control()}
       <LanguagePicker
         id="language"
+        unavailableReason={!compatibility?.capabilities.languageHint &&
+        !compatibility?.languages?.length
+          ? "This model profile does not support choosing a language."
+          : ""}
         restricted={!!compatibility?.languages?.length}
         languages={compatibility?.languages?.length
           ? compatibility.languages
@@ -113,10 +105,18 @@
       turn cleanup off for other languages.
     </p>
   {/if}
+</SettingsCard>
 
+<VocabularyLink {settings} />
+<TranscriptionControls
+  bind:options={settings.transcriptionOptions}
+  capabilities={compatibility?.capabilities}
+/>
+
+<RequestSettings {connection} stale={connectionStale} {busy} onCheck={onTestConnection}>
   <ValueRow
     id="file-transcription-timeout"
-    label="Stored audio timeout"
+    label="Request timeout"
     hint="Maximum time for one stored-file upload and transcription, including a streamed response."
   >
     {#snippet control()}
@@ -132,10 +132,4 @@
     {/snippet}
     {#snippet action()}<Badge variant="outline">minutes</Badge>{/snippet}
   </ValueRow>
-</SettingsCard>
-
-<VocabularyLink {settings} />
-<TranscriptionControls
-  bind:options={settings.transcriptionOptions}
-  capabilities={compatibility?.capabilities}
-/>
+</RequestSettings>

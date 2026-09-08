@@ -37,6 +37,13 @@ task links must reach the intended section, text must remain readable without
 horizontal scrolling, and headings/keyboard navigation must retain their order.
 Also build with `CI=true` when checking GitHub Pages base-path links.
 
+The documentation sidebar follows the reader's path: Get started, Use Freehand,
+Backend profiles, Model profiles, Reference, then Contribute. Installation,
+connections, and choosing a model profile precede specialized guides. Keep
+provider/model directories with their corresponding guide groups, and sort peer
+backend/model guides by name after their overview material. Verify that sidebar
+links and previous/next links retain this order on desktop and mobile.
+
 Keep the README, homepage metadata, and user prerequisites aligned: dictation
 leads, file transcription needs no microphone or shortcut, and optional
 text-to-speech needs no STT connection. Cleanup is subordinate to transcription.
@@ -44,6 +51,60 @@ Existing readiness fixtures cover task gating; a documentation build alone does
 not establish native behavior or live-server compatibility. Keep generated
 artwork descriptions faithful to the artwork rather than changing alt text to
 advertise capabilities it does not depict.
+
+### Desktop setup and recovery
+
+`frontend/tests/browser/readiness.spec.ts` exercises the real workspace with
+synthetic settings and metadata services. It checks prerequisite gating, model
+discovery before selection, failed-check retry, failed completion save and
+retry, completed-check disclosure, optional controls, and focused microphone and
+connection recovery. First-run completion has no dismiss action; established
+recovery retains its existing dismissal behavior. File readiness remains
+independent of microphone readiness. The presentation-priority unit tests
+supplement the existing readiness policy tests.
+
+Review setup at normal and narrow window sizes, including a short window: the
+next action must remain reachable, expandable sections must work by keyboard,
+and controls must not introduce horizontal scrolling. On Windows, separately
+verify opening Audio/Shortcuts/connection settings, returning to setup after
+saving, unplugging the selected microphone, retrying a failed connection check,
+and persisting setup completion across restart. Browser fixtures and executable
+compilation do not establish those native interactions or invoke inference.
+
+### Action feedback
+
+`frontend/tests/browser/feedback.spec.ts` uses synthetic speech and file services
+to verify one visible speech error, full keyboard-accessible details, preserved
+composer text across retry, settings shortcuts, and shared fallback when leaving
+the failed composer. It compares editor/control bounds before and after failure
+and success notices at desktop and compact widths. Playback controls must remain
+clickable while a confirmation is visible. Unit tests cover operation-generation
+ownership, stale failure clearing, and preservation of unrelated command errors.
+
+Native review should include a speech-generation failure, a cancelled or failed
+audio save, failed Settings save before switching connections, and a dictation
+failure with a long explanation. Check that notices leave task controls reachable,
+Escape returns focus from Details, and opening the relevant settings window
+preserves the current work. These fixtures do not invoke inference or establish
+native file-dialog or window-focus acceptance.
+
+### Footer connection panel
+
+`frontend/tests/browser/connection-status.spec.ts` covers task-specific names,
+models and check results, retry after failure, stale draft checks, missing
+connections, disabled speech, keyboard activation/Escape, and expandable
+technical details at compact and desktop widths. The fixtures use synthetic
+metadata services and the production footer/panel components. Editor tests
+verify that explicit workspace checks use applied endpoints and empty credential
+drafts, route to the correct service, and respect disabled/pending states.
+
+On Windows, separately verify that **Edit connection** opens the correct saved
+connection, **Choose connection** opens the manager for the current task, and
+**Speech settings** focuses that settings section. Switch tasks and connections
+while checks complete; an earlier result must never appear to belong to a newer
+selection. Opening the footer panel must not record, run inference, or trigger
+another automatic metadata probe. Native focus/window behavior is separate from
+these renderer fixtures and compilation.
 
 ## Compatibility profile acceptance
 
@@ -436,13 +497,25 @@ confirm its selectors match Settings and its cards use the same single border
 and fill. Browser fixtures and native builds do not replace interactive Windows acceptance.
 Use only operator-selected models for deliberate live inference acceptance.
 
-For connection navigation, open Edit connection from each feature and confirm Back and
-save return to that feature. Editing from Connections returns to the library. Unchanged
-forms leave without a prompt; changed fields or a replacement/removal key require
-discard confirmation on Back, Cancel, or another sidebar section. Keep editing and
-Escape retain the draft; discard clears the key without saving. Check keyboard section
-order against the visible Capture, Features, and Application groups, including narrow
-layouts.
+For connection navigation, open Settings → Connections and Manage connections from
+each workflow picker: both open the list. Edit connection opens the selected row.
+At wider widths, keep the searchable list visible beside the editor; below 760px,
+All connections must return to the list. Verify all seven representative entries
+fit comfortably in a normal window, list and form scroll independently, and Save
+and Cancel remain visible at compact heights. Check both action menus for readable
+single-line labels, workflow icons/checkmarks, and compact disabled Delete state.
+
+Change a field, then switch rows, use All connections, or close: Keep editing and
+Escape retain the draft, Discard clears it without saving, and Save and continue
+completes the pending navigation only after a successful save. A failed save keeps
+the draft and shows the error. Repeat with a transient replacement key. Add from a
+workflow, save and set up, and confirm the matching model settings open. Creating
+with Save for later must leave active selections unchanged. Use for selects only
+its chosen workflow, while existing model settings and unsaved Settings drafts
+retain their protections. Check keyboard navigation, searchable pickers, and list
+empty/no-match states. Metadata discovery must target only the opened workflow,
+reuse results, require explicit retries after failure, and reject old completions
+when the selected connection changes.
 
 For dark-palette review, check the main window, Settings, About, connection/model
 menus, dialogs, inputs, focused controls, disabled controls, and recording overlay.
@@ -540,11 +613,18 @@ cover stale completion, Stop fencing, and native save-dialog interleavings with 
 and shutdown. Windows CI runs the complete Go suite, including platform-specific
 input, playback, storage, and settings tests; these do not invoke inference servers.
 
-Current-result tests cover copy/clear generation admission without history.
+Current-result tests cover copy/clear and Voice playback generation admission without
+history, including stale, active, cleared, and closed results. Fake speech clients
+verify backend-owned Voice text selection without retaining history and the 4,096
+Unicode code-point boundary, including supplementary characters.
 Browser workspace fixtures cover desktop pointer/keyboard resizing, restored
 pane widths, narrow view switching, and quick-settings popovers with nested
 device/model selectors and asynchronous save outcomes. They use the actual home
-components with mocked Wails services and no inference traffic.
+components with mocked Wails services and no inference traffic. Workspace checks
+also cover Voice Listen with history off, hover/keyboard action tooltips, expiring
+copy confirmation, and preservation of supplementary Unicode in the composer.
+Copy-feedback unit tests cover repeated clicks, out-of-order completion, failure,
+and teardown.
 The split-restoration test waits for the persisted percentage to match the
 separator's final value before reloading, then checks the restored pixel width.
 A storage change alone is insufficient because a debounced earlier drag write
@@ -619,15 +699,15 @@ remain on screen when the shortcut hint is hidden at compact widths.
 
 ## Speech controls, vocabulary feedback, and transcript reading
 
-Connection-card tests retain separate results, reject missing IDs, preserve active
+Connection-manager tests retain separate results, reject missing IDs, preserve active
 selections, and invalidate cached/in-flight checks on confirmed settings snapshots,
 even when public endpoint fields are unchanged. Model-source tests cover combined
 saved/server/draft labels and manually entered IDs. Navigation tests keep keyboard
 order aligned with the displayed groups.
 
-Review Connections at normal and compact window sizes: direct Check connection,
-per-card status and expandable details, active-use badges, and independent sidebar
-scrolling. Review the shared model picker in every workflow and quick panel,
+Review Connections at normal and compact window sizes: list-first navigation,
+collapsed diagnostics for the selected entry, active-use summaries, and independent
+list/form scrolling. Review the shared model picker in every workflow and quick panel,
 including a failed save, retry, manual ID, and long list. Sticky Settings headings
 must leave focused validation controls visible. These checks use metadata or
 synthetic fixtures and require no inference inventory probes.
@@ -692,3 +772,55 @@ Native acceptance, with one explicitly selected model at a time:
    restart, and verify saved options remain independent per connection/model.
 5. Metadata refreshes must never generate speech or transcribe a sample. Record
    actual inference acceptance separately from fixture and Windows build results.
+
+### Settings presentation and discovery
+
+The settings streamlining browser fixture exercises keyword navigation with an
+unsaved draft, clickable switch labels, collapsed Audio/Overlay tuning, keyboard
+slider changes, and draft preservation after navigation. A synthetic validation
+failure on speech padding must reopen its disclosure and focus the slider at
+both desktop and narrow widths. Minimal overlay surfaces must disable glow
+adjustment without resetting its value. Fixtures use no capture or inference.
+
+The workflow streamlining fixture checks all four workflow pages at 860px and
+520px: request controls start collapsed, edits survive collapsing and navigation,
+and save validation reveals hidden request limits. Voice workflow validation
+also exposes its temperature and timeout controls. Speech preview stays beside
+voice selection. All workflow fixtures use synthetic profiles and service
+responses; they do not contact inference servers.
+
+### Workspace history and error presentation
+
+History expansion checks cover a fully readable newest result, single-line older
+previews, keyboard disclosure, new arrivals resetting manual expansion/comparison,
+cleanup updates preserving it, deleting the newest entry, clearing/repopulating,
+and a full unretained file result. These are shared list behaviors in Home and
+Settings. Native acceptance should confirm the same transitions after real
+recordings and cleanup completion.
+
+Synthetic workspace checks exercise history action menus with keyboard opening,
+Escape focus restoration, deletion of the selected entry, and raw/cleaned copy.
+At 560px and 1156px they verify compact history footers and visible cleanup
+fallback explanations. File error details must remain inside the viewport,
+preserve transport geometry, and disappear when retry starts. Retained history
+and file status are fixture data; these checks invoke no native inference.
+
+### Shared settings pickers
+
+Synthetic picker tests cover keyboard access to help, nested-popover Escape
+focus restoration, profile descriptions at desktop and narrow widths, and
+restricted-language search by code with navigation to the end of a scrollable
+list. They verify that draft selections survive page navigation, custom language
+values remain reachable after an unmatched search, and failed immediate Voice
+saves restore the previous language. Fixture profiles are renderer data only;
+no model inventory or inference call is involved.
+
+### Vocabulary presentation
+
+Synthetic component checks at 520px and 1000px cover visible editor/workflow
+controls, collapsed tuning and feedback, keyboard help and focus return, edits
+surviving disclosure, independent opt-ins, source-line selection, unsupported
+selection explanations, retry without draft loss, stale preview rejection, and
+UTF-8 byte overflow. Preview responses are fixtures; Go vocabulary tests remain
+the authority for actual model/backend restrictions. Native review should confirm
+these controls against the selected profiles and saved settings.

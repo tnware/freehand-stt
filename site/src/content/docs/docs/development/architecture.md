@@ -19,7 +19,7 @@ bounded user-authored text -> explicit Speak -> TTS -> native playback
 ```
 
 Separately, speech playback can synthesize backend-retained history text or a
-completed file transcript. It does not replay captured/source audio, and the
+completed voice or file transcript. It does not replay captured/source audio, and the
 composer does not require transcript history. Restart reuses generated PCM in
 the memory-only playback session without another inference request.
 
@@ -73,9 +73,14 @@ Named connections represent reusable servers, with explicit supported uses and
 independent active selections for Voice transcription, audio-file transcription, cleanup, and playback. One ID
 can be selected by multiple features; their models and runtime options remain
 independent while URL, profile, authentication, and credential reference are shared. The shared connection editor owns endpoint/authentication/profile fields.
-The Connections page provides library creation, editing, duplication, deletion,
-and saved metadata tests. Library creation is inactive; task pickers reuse that
-editor in a separate, purpose-scoped native Connection Manager window. Its explicit Save and use action sends
+Settings and workflow pickers open the same native Connection Manager: a compact
+searchable list, a persistent list beside the editor at desktop widths, and an
+explicit All connections route at every size. It owns library creation, editing,
+duplication, deletion, and saved metadata tests. Its renderer guards list, row,
+workflow, and close navigation with save/discard/keep-editing handling; credential
+drafts never cross windows. Workflow pickers search the same catalog and retain
+Add and Manage actions outside the scrolling results. Library creation offers
+Save for later or a workflow setup destination. Its explicit Save and set up action sends
 `Change.ActivateFor` with Create so catalog, selection, settings, and key references
 commit together. Storage rejects invalid or unsupported activation purposes and
 activation on other actions. New selections still require model configuration;
@@ -190,6 +195,16 @@ internal/updates           persisted polling policy and Wails updater lifecycle
 frontend/src/lib           testable settings/status state
 frontend/src               thin Svelte components
 ```
+
+Action feedback remains renderer presentation. `SessionMessages` distinguishes a
+speech-status failure by operation generation from an unrelated command error.
+The workspace suppresses its shared copy only while the matching failed speech
+session has visible local feedback; other tasks and Settings retain the shared
+fallback. New speech status clears only its own stale failure, and replaying an
+unchanged failure event does not resurrect a dismissed notice. This does not
+change backend admission, retry capabilities, or request state. Shared notices
+float without participating in workspace layout; task details use bounded,
+keyboard-accessible popovers.
 
 The renderer sees small Wails services registered from the package that owns each capability. Wails is the bridge boundary, not the application's package hierarchy:
 
@@ -371,6 +386,12 @@ command facade or a container for feature state.
   in separate service namespaces.
 - `HistoryState` owns history refresh/mutation ordering. Successful refresh
   acknowledges the completed file generation through an injected callback.
+  `HistoryList` owns only local disclosure/comparison state: the leading result
+  opens fully, older entries start collapsed, and a different leading result resets
+  manual expansion. Updates to the same entry preserve those choices. The shared
+  behavior applies to Home and Settings; an ephemeral file result takes the leading
+  position without changing retained history or persistence.
+
 - `SessionMessages` owns shared presentation notices and their timers, not
   workflow state.
 
@@ -434,6 +455,15 @@ The home footer selects transcription or speech metadata according to the active
 task and compares completed checks with the applied settings, not an unsaved
 draft. Local TTS readiness is explicitly separate from metadata reachability;
 no new automatic check or inference request is introduced by presentation.
+`taskConnectionDetails` supplies the same applied task projection to the footer
+and its popover, including the selected saved connection, model, result, pending
+check, and stale state. Explicit footer checks use
+`SettingsEditor.testAppliedConnection`: Voice delegates to its saved-connection
+check, and file/speech checks pass the applied snapshot with an empty credential
+draft. Disabled speech, missing selections, configuration recovery, pending
+saves, and duplicate checks cannot issue requests through that action. Editing
+opens the existing connection manager with the active saved ID and purpose;
+it does not select another connection or modify task settings.
 
 ## Model behavior contracts
 
@@ -505,7 +535,7 @@ new sink, persistence, export binding, or renderer logging facility.
 
 Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS retain independent runtime models and selections. Selecting the same reusable connection explicitly shares its endpoint, HTTP policy, backend profile, and credential reference; selecting separate connections keeps those identities independent. Stored credentials remain in Windows Credential Manager; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
 
-`internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation immediately and serializes native output teardown within the service wait budget described below.
+`internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. Current Voice playback passes only the displayed dictation generation. The dictation owner rejects stale, active, cleared, and closed results, then supplies an immutable text snapshot through the injected `tts.TranscriptSources` collaboration boundary; history retention is not required. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation immediately and serializes native output teardown within the service wait budget described below.
 
 `WorkspaceSplit` owns the main renderer's result/history presentation. PaneForge
 provides pointer and keyboard resizing at desktop widths; its local-storage
@@ -552,7 +582,7 @@ Quick controls remain disabled while the Settings window owns an editable draft.
 saved/server/draft provenance across Voice, files, cleanup, and speech. Its profile
 summary is descriptive; model IDs never select behavior. `QuickSaveStatus` reads
 field-scoped pending, saved, and failed state from the existing editor owner.
-Saved-connection cards keep metadata results by catalog ID in that same editor;
+The connection manager keeps metadata results by catalog ID in that same editor;
 every confirmed settings adoption or credential-draft teardown invalidates the
 cache and in-flight revisions, including credential-only changes invisible to the
 renderer. No diagnostic result is persisted.
@@ -884,7 +914,13 @@ window geometry and visual transitions do not alter inference or persistence.
 existing admission results: source line numbers, duplicate references, and per-use
 restriction messages. Counts use the same trimming and exact deduplication as
 request projection. The UI selects the corresponding local textarea range; it
-neither normalizes stored vocabulary nor invents adapter restrictions.
+neither normalizes stored vocabulary nor invents adapter restrictions. The shared
+Vocabulary editor groups task opt-ins with the phrase list, keeps support summaries
+visible, and discloses provider explanation, line feedback, and tuning on demand.
+Its debounced preview retains the open feedback panel while checking newer input,
+disables stale line selection, and ignores completions for superseded drafts.
+A local retry repeats only the Go preview; it neither saves settings nor invokes
+inference.
 
 The `followTranscript` DOM action owns only result scrolling. New recording keys
 reset following; scrolling away from the end pauses it until the reader returns
@@ -918,3 +954,25 @@ the ordinary request and validates before reading credentials. Previews remain
 unsaved; running jobs retain their immutable settings and credential snapshot.
 The speech adapter explicitly requests buffered WAV from Kokoro-FastAPI and
 vLLM-Omni. Qwen CustomVoice never submits reference audio or uploaded-voice tasks.
+
+The settings sidebar filters the central section catalog with presentation-only
+search terms. Search and native `details` disclosures do not own settings values:
+the existing editor draft and save transaction remain authoritative. Audio and
+Overlay keep common controls visible and group fine tuning in `SettingsDisclosure`.
+Validation opens ancestor disclosures before focusing a rejected field. Shared
+setting rows associate switch labels with their controls; sliders forward their
+accessible labels to the focusable thumb.
+
+Workflow pages use the same disclosures for request timeouts and metadata
+checks. `RequestSettings` preserves visible warning/stale summaries while
+keeping detailed diagnostics below everyday controls. Speech preview actions
+are composed into the voice picker; they retain the draft-preview service path.
+Voice's workflow-level validation opens its disclosures because the backend does
+not currently identify individual voice fields. Disclosures never own option
+values or change capability admission, persistence, or request snapshots.
+
+Voice reuses `ModelProfilePicker` and `LanguagePicker` in draft and immediate
+settings. Shared pickers present the provided model contracts and delegate edits
+to their existing callbacks; they do not infer capabilities or own save policy.
+`FieldHelp` presents supporting copy without moving the surrounding controls.
+Restrictions and unavailable states stay inline rather than depending on help.

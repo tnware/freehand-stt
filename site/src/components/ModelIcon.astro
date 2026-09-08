@@ -1,0 +1,25 @@
+---
+import ProviderIcon from "./ProviderIcon.astro";
+
+interface Props { profile: string; size?: number }
+const { profile, size = 40 } = Astro.props;
+---
+{profile === "s1-mini" ? (
+  <span class="model-monogram" style={`--model-icon-size: ${size}px`} aria-hidden="true" data-model={profile}>S1</span>
+) : <ProviderIcon {profile} {size} />}
+<style>
+  /* Neutral model initials, not a Superwhisper brand mark. */
+  .model-monogram {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: var(--model-icon-size);
+    height: var(--model-icon-size);
+    border-radius: 22%;
+    background: #203252;
+    color: #e6edff;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: calc(var(--model-icon-size) * .425);
+    line-height: 1;
+  }
+</style>

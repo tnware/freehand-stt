@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { CancellablePromise } from "@wailsio/runtime";
 import { Purpose } from "$bindings/savedconnection";
-import { taskConnectionStatus } from "$lib/utils/connection";
+import { taskConnectionDetails, taskConnectionStatus } from "$lib/utils/connection";
 import {
   createEditor,
   settings,
@@ -87,5 +87,85 @@ describe("connection assessment snapshots", () => {
     expect(editor.connectionResultStale(Purpose.Speech)).toBe(false);
     editor.draft!.textToSpeech.voice = "another-voice";
     expect(editor.connectionResultStale(Purpose.Speech)).toBe(true);
+  });
+});
+
+describe("explicit workspace connection checks", () => {
+  it.each([Purpose.Voice, Purpose.Transcription, Purpose.Speech])(
+    "checks the applied %s profile without credential drafts",
+    async (purpose) => {
+      const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
+      services.connection.TestSavedConnection = vi.fn(() =>
+        CancellablePromise.resolve(connectionResult),
+      );
+      services.connection.TestConnection = vi.fn(() =>
+        CancellablePromise.resolve(connectionResult),
+      );
+      services.connection.TestTextToSpeechConnection = vi.fn(() =>
+        CancellablePromise.resolve(connectionResult),
+      );
+      const { editor } = createEditor(services);
+      const applied = structuredClone(settings);
+      applied.savedConnections.selected = {
+        voice: "voice-active",
+        [Purpose.Transcription]: "file-active",
+        speech: "speech-active",
+      };
+      applied.textToSpeech = {
+        ...applied.textToSpeech,
+        enabled: true,
+        baseURL: "https://active-speech.test/v1",
+      };
+      editor.applySettingsSnapshot(applied);
+      editor.draft!.baseURL = "https://draft-file.test/v1";
+      editor.draft!.textToSpeech.baseURL = "https://draft-speech.test/v1";
+      editor.apiKey = "fixture-draft-key";
+      editor.ttsAPIKey = "fixture-draft-key";
+      await editor.testAppliedConnection(purpose);
+      if (purpose === Purpose.Voice) {
+        expect(services.connection.TestSavedConnection).toHaveBeenCalledExactlyOnceWith(
+          "voice-active",
+        );
+      } else if (purpose === Purpose.Transcription) {
+        expect(services.connection.TestConnection).toHaveBeenCalledWith(
+          expect.objectContaining({ baseURL: applied.baseURL, credentialDraft: "" }),
+        );
+      } else {
+        expect(services.connection.TestTextToSpeechConnection).toHaveBeenCalledWith(
+          expect.objectContaining({
+            baseURL: "https://active-speech.test/v1",
+            credentialDraft: "",
+          }),
+        );
+      }
+      expect(
+        vi.mocked(services.connection.TestSavedConnection).mock.calls.length +
+          vi.mocked(services.connection.TestConnection).mock.calls.length +
+          vi.mocked(services.connection.TestTextToSpeechConnection).mock.calls.length,
+      ).toBe(1);
+      const mode =
+        purpose === Purpose.Voice ? "voice" : purpose === Purpose.Speech ? "tts" : "file";
+      expect(taskConnectionDetails(mode, editor).stale).toBe(false);
+    },
+  );
+
+  it("does not check disabled speech, missing selections, or pending saves", async () => {
+    const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
+    services.connection.TestTextToSpeechConnection = vi.fn(() =>
+      CancellablePromise.resolve(connectionResult),
+    );
+    services.connection.TestConnection = vi.fn(() => CancellablePromise.resolve(connectionResult));
+    const { editor } = createEditor(services);
+    const applied = structuredClone(settings);
+    applied.savedConnections.selected = { speech: "speech-active" };
+    applied.textToSpeech.enabled = false;
+    editor.applySettingsSnapshot(applied);
+    await editor.testAppliedConnection(Purpose.Speech);
+    await editor.testAppliedConnection(Purpose.Transcription);
+    editor.applied!.textToSpeech.enabled = true;
+    editor.saving = true;
+    await editor.testAppliedConnection(Purpose.Speech);
+    expect(services.connection.TestTextToSpeechConnection).not.toHaveBeenCalled();
+    expect(services.connection.TestConnection).not.toHaveBeenCalled();
   });
 });

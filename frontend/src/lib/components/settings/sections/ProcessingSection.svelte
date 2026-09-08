@@ -19,7 +19,7 @@
     type ConnectionResult,
   } from "$lib/state";
   import { processingProfile } from "$lib/utils/processingProfiles";
-  import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
+  import RequestSettings from "$lib/components/settings/RequestSettings.svelte";
   let {
     settings = $bindable(),
     profiles,
@@ -59,13 +59,17 @@
   <SettingsCard>
     <SettingRow
       title="Post-process completed transcripts"
+      controlID="cleanup-enabled"
+      compact
       description="Clean raw transcripts with the selected connection and model. Failures preserve the raw transcript."
       >{#snippet control()}<Switch
+          id="cleanup-enabled"
           bind:checked={settings.postProcessing.enabled}
           aria-label="Post-process completed transcripts"
         />{/snippet}</SettingRow
     >
     <RuntimeModelPicker
+      showProfileName={false}
       profileName={compatibility?.name ?? processor.preset}
       id="cleanup-model"
       value={settings.postProcessing.model}
@@ -77,16 +81,7 @@
       {busy}
       onDiscover={onTestConnection}
     />
-    {#if connection}
-      <div class="p-5">
-        <ConnectionDiagnostics
-          result={connection}
-          stale={connectionStale}
-          {busy}
-          onCheck={onTestConnection}
-        />
-      </div>
-    {/if}
+
     <ModelProfilePicker
       id="cleanup-model-profile"
       value={processor.preset}
@@ -96,19 +91,6 @@
         if (profile) settings.postProcessing.preset = profile.id;
       }}
     />
-    <ValueRow
-      id="cleanup-timeout"
-      label="Request timeout"
-      hint="Maximum seconds for cleanup before falling back to the raw transcript."
-      >{#snippet control()}<ValueInput
-          id="cleanup-timeout"
-          type="number"
-          min={10}
-          max={3600}
-          step={10}
-          bind:value={settings.postProcessing.timeoutSeconds}
-        />{/snippet}</ValueRow
-    >
   </SettingsCard>
 
   {#if selectedProfile?.id === PostProcessingPreset.PostProcessingPresetS1Mini}
@@ -131,17 +113,24 @@
     s1Mini={!!compatibility?.reasoningOffRequired}
   />
 
-  <p class="px-1 text-xs leading-relaxed text-muted-foreground">
-    If cleanup fails, your raw transcript is still available. With history enabled, raw and cleaned
-    text are saved together.
-  </p>
-  <details class="px-1 text-xs leading-relaxed text-muted-foreground">
-    <summary class="cursor-pointer font-medium text-foreground">Cleanup request details</summary>
-    <p class="mt-3">
-      Raw transcription completes before cleanup starts. The Model profile controls model
-      instructions and options; the connection's Compatibility profile controls the server API.
-      S1-mini is an explicit specialized choice, not the default for other models. Connection checks
-      stop after 15 seconds. Cleanup requests are capped at 2 MiB and responses at 1 MiB.
+  <RequestSettings {connection} stale={connectionStale} {busy} onCheck={onTestConnection}>
+    <ValueRow
+      id="cleanup-timeout"
+      label="Request timeout"
+      hint="Maximum seconds for cleanup before falling back to the raw transcript."
+      >{#snippet control()}<ValueInput
+          id="cleanup-timeout"
+          type="number"
+          min={10}
+          max={3600}
+          step={10}
+          bind:value={settings.postProcessing.timeoutSeconds}
+        />{/snippet}</ValueRow
+    >
+    <p class="px-5 py-4 text-xs leading-relaxed text-muted-foreground">
+      Raw transcription completes before cleanup starts. With history enabled, raw and cleaned text
+      are saved together. Connection checks stop after 15 seconds. Cleanup requests are capped at 2
+      MiB and responses at 1 MiB.
     </p>
-  </details>
+  </RequestSettings>
 </div>

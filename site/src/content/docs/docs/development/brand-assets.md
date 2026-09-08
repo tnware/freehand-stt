@@ -96,3 +96,15 @@ The app and site import those exact files through shared presentation helpers;
 they are not copies produced by the Freehand product-mark generator. See its
 README and the [backend maintenance guide](../backend-compatibility/#provider-identity-assets)
 for provenance, neutral fallbacks, licensing, and visual checks.
+
+
+Backend and model guide headings resolve their identity from the same guide paths
+and icon IDs as the public directories in `site/src/data/backends.ts` and
+`site/src/data/models.ts`. Do not add per-page provider frontmatter: it creates a
+second mapping that can drift. Overview and comparison pages have no single
+provider mark. `ModelIcon.astro` shares the S1-mini neutral monogram between its
+directory card and guide; it is not licensed Superwhisper artwork.
+
+After changing either directory, build the site and check each linked guide's
+heading against its directory card. Verify both themes and a narrow viewport,
+including long model names, and confirm overview headings remain unbranded.

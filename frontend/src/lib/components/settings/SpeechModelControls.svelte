@@ -28,6 +28,7 @@
     onSpeed,
     onOptions,
     modelDetails,
+    voiceActions,
   }: {
     settings: Settings;
     models?: string[];
@@ -46,6 +47,7 @@
     onSpeed: (speed: number) => boolean | Promise<boolean>;
     onOptions: (options: Settings["textToSpeech"]["options"]) => boolean | Promise<boolean>;
     modelDetails?: Snippet;
+    voiceActions?: Snippet;
   } = $props();
   const speech = $derived(settings.textToSpeech);
   const profile = $derived(
@@ -54,6 +56,7 @@
 </script>
 
 <RuntimeModelPicker
+  showProfileName={!modelDetails}
   id={compact ? "quick-speech-model" : "tts-model"}
   value={speech.model}
   profileName={profile?.name ?? speech.modelProfile}
@@ -78,6 +81,7 @@
   busy={voicesBusy}
   disabled={busy}
   {compact}
+  actions={voiceActions}
   onChoose={onVoice}
   onDiscover={onDiscoverVoices}
 />
