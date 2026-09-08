@@ -268,16 +268,25 @@ a microphone, recording shortcut, STT connection, or completed dictation setup.
 2. **Return to Text to speech** and enter the text you want to hear. Your unsent text
    survives switching tasks or visiting Settings, and is cleared when the window
    reloads or Freehand exits.
-3. **Choose Speak** to generate and play the audio. Playback and save controls
+3. **Choose Speak** or press **Ctrl+Enter** in the editor to generate and play the audio.
+   **Enter** on its own adds a new line. Playback and save controls
    occupy a permanent area below the editor, so the editor stays the same size
-   as generation and playback progress.
-4. **Use the playback controls** to pause, resume, restart, stop, or explicitly
+   as generation and playback progress. **Creating audio** appears until audio is ready;
+   elapsed time and duration appear when playback begins.
+4. **Use the playback controls** to pause, resume, seek, restart, stop, or explicitly
    **Save generated speech** to a file.
 
 </Steps>
 
 Text to speech accepts up to 4,096 Unicode characters. Longer drafts remain
 editable; shorten the text to enable Speak.
+
+Drag the playback slider to choose a position; playback moves there when you release it.
+With the slider focused, use the arrow keys to adjust the position, **Home** for the
+start, or **End** for the end. Seeking during playback continues playing. Seeking
+while paused or after completion leaves the audio paused until you choose **Resume**.
+Seeking uses the audio already in memory, and **Save generated speech** always saves
+the full audio.
 
 You can also choose **Listen** on a completed Voice or Audio-file result, even
 with history off, or on a retained history entry. Generated audio remains in memory until you clear or replace it, start a

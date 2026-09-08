@@ -4,9 +4,10 @@ package platform
 
 import (
 	"bytes"
-	"github.com/tnware/freehand-stt/internal/audio"
 	"testing"
 	"time"
+
+	"github.com/tnware/freehand-stt/internal/audio"
 )
 
 func TestPlaybackPositionWaitsForAudibleDurationAfterBufferSubmission(t *testing.T) {
@@ -49,4 +50,44 @@ func TestPlaybackSnapshotIsIndependentOfUnload(t *testing.T) {
 		t.Fatal("unloaded player retained exportable audio")
 	}
 	clear(wav)
+}
+
+func TestPlaybackSeekAlignsPCMAndRetainsFullExport(t *testing.T) {
+	device := &restartDevice{}
+	pcm := make([]byte, 44100*4*2)
+	for i := range pcm {
+		pcm[i] = byte(i % 251)
+	}
+	player := &Playback{dev: device, data: pcm, rate: 44100, channels: 2, playing: true}
+	before, err := player.Snapshot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := player.Seek(123); err != nil {
+		t.Fatal(err)
+	}
+	wantFrame := 123 * 44100 / 1000
+	if player.position != wantFrame*4 || player.playing || device.starts.Load() != 0 {
+		t.Fatal("seek did not stop at a whole stereo frame")
+	}
+	output := make([]byte, 40)
+	player.render(output, nil, 10)
+	if !bytes.Equal(output, pcm[wantFrame*4:wantFrame*4+40]) {
+		t.Fatal("render did not read the sought PCM")
+	}
+	after, _ := player.Snapshot()
+	if !bytes.Equal(before, after) {
+		t.Fatal("seek changed retained export")
+	}
+	if err := player.Seek(2000); err != nil || player.position != len(pcm) {
+		t.Fatal("end seek did not reach the last frame")
+	}
+	if _, _, done := player.Position(); done {
+		t.Fatal("paused seek claimed an audible drain")
+	}
+	for _, invalid := range []int64{-1, 2001, 1 << 62} {
+		if err := player.Seek(invalid); err == nil {
+			t.Fatal("invalid native seek accepted")
+		}
+	}
 }

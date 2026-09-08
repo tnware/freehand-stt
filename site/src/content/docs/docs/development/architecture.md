@@ -906,6 +906,19 @@ and rejects stale results. Model changes restore remembered voice/profile option
 while preserving task-owned speed. Speed commits on release rather than saving
 every intermediate slider value. `TextToSpeech` owns the draft editor
 and reserves a fixed playback area; `PlaybackBar` supports embedding in that area.
+Its seek slider keeps a local preview during dragging and commits a generated
+request only for user input. Native progress is projected onto valid slider steps,
+including the exact audio endpoint, before rendering so slider normalization cannot
+start a false drag. The full-width track sits below the playback controls. The generated
+`tts.SeekRequest` carries the retained session generation and position. Go validates
+the generation, capability, and bounds before the Windows adapter stops output
+and aligns the PCM cursor to a whole frame. The service preserves playback intent,
+rechecks cancellation before resuming, and replaces the progress monitor under
+the same control lock used by recording preemption and shutdown. Seeking retains
+the audio generation identity and full export snapshot; replacement audio invalidates
+an unfinished drag. No synthesized bytes cross the bridge. The composer handles
+Ctrl+Enter locally, preserves ordinary Enter, and guards duplicate submissions.
+Generation shows an indeterminate message; playback time starts with decoded audio.
 Audio-file transport keeps its summary, response-mode option, and actions in stable
 slots. These components consume existing backend status and capability flags;
 window geometry and visual transitions do not alter inference or persistence.

@@ -13,6 +13,7 @@ export type SpeechStateService = Pick<
   | "Pause"
   | "Resume"
   | "Restart"
+  | "Seek"
   | "Stop"
   | "SaveAudio"
   | "ClearAudio"
@@ -26,6 +27,7 @@ const IDLE_TTS: TTSStatus = {
   canPause: false,
   canResume: false,
   canRestart: false,
+  canSeek: false,
   canStop: false,
   canSave: false,
   canClear: false,
@@ -41,6 +43,8 @@ export class SpeechState {
   }
   status = $state<TTSStatus>(IDLE_TTS);
   previewing = $state(false);
+  submitting = $state(false);
+  seeking = $state(false);
   // Unsent work belongs to the WebView session, never browser or disk storage.
   draft = $state("");
   #ttsStatusRevision = 0;
@@ -113,11 +117,15 @@ export class SpeechState {
   }
 
   async speakText(text: string) {
+    if (this.submitting) return;
+    this.submitting = true;
     this.#messages.clear();
     try {
       await this.#service.SpeakText(text);
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.submitting = false;
     }
   }
 
@@ -142,6 +150,21 @@ export class SpeechState {
       await this.#service.Restart();
     } catch (cause) {
       this.#messages.fail(cause);
+    }
+  }
+
+  async seekTTS(request: Parameters<SpeechStateService["Seek"]>[0]) {
+    if (this.seeking || request.generation !== this.status.generation || !this.status.canSeek)
+      return;
+    this.seeking = true;
+    const revision = this.#ttsStatusRevision;
+    try {
+      const status = await this.#service.Seek(request);
+      if (revision === this.#ttsStatusRevision) this.applyStatus(status);
+    } catch (cause) {
+      if (request.generation === this.status.generation) this.#messages.fail(cause);
+    } finally {
+      this.seeking = false;
     }
   }
 

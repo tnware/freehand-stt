@@ -697,6 +697,32 @@ popover, nested connection menu, Escape focus return, draft retention across tab
 and visible keyboard focus in both themes. The application Settings button must
 remain on screen when the shortcut hint is hidden at compact widths.
 
+### Speech seeking and composer shortcut
+
+`speech-playback.spec.ts` uses synthetic renderer fixtures to check stable generation
+and playback geometry at 560px and 1000px, keyboard seeking and retained focus,
+drag previews, one commit on release, and rejection of a drag after audio replacement.
+Irregular native progress fixtures exercise updates between slider steps before and
+after seeking. Geometry assertions check visible fill height, full track width, and
+alignment between the filled range and thumb. This catches a frozen display even
+when the underlying seek request succeeds. Light/dark fixtures compare standalone
+playback surfaces and rounded borders with the adjacent result card; embedded
+playback uses its parent's frame.
+It also checks Enter/newline and Ctrl+Enter submission, including empty, oversized,
+composing, and repeated input. Frontend state tests cover delayed responses and
+duplicate submissions. These checks do not invoke inference.
+
+Go seek tests cover playing, paused, and completed intent, stale generations,
+out-of-range values, native errors, resume failure, and shutdown during a blocked
+seek. Windows adapter tests check whole-frame alignment and unchanged full WAV export.
+For an opt-in real Windows output check, set `FREEHAND_NATIVE_PLAYBACK_ACCEPTANCE=1`
+and run `go test ./internal/platform -run '^TestNativePlaybackSeek$' -count=1 -v`.
+This plays synthetic silence only and checks seek, paused position, resumed clock,
+buffer drain, and resource closure. It does not exercise a microphone or inference
+server and does not establish audible speech quality. For interactive acceptance,
+use explicitly generated speech to review seeking while playing and paused, replay
+after completion, full-audio export, and recording preemption.
+
 ## Speech controls, vocabulary feedback, and transcript reading
 
 Connection-manager tests retain separate results, reject missing IDs, preserve active

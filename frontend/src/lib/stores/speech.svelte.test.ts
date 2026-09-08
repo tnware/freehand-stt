@@ -167,3 +167,37 @@ it("owns only the matching speech failure and does not resurrect dismissed error
   expect(messages.error).toBe("Save failed");
   expect(messages.isSpeechFailure(5)).toBe(false);
 });
+
+it("prevents duplicate composer submissions while a command is pending", async () => {
+  const pending = CancellablePromise.withResolvers<void>();
+  const SpeakText = vi.fn(() => pending.promise);
+  const messages = new SessionMessages();
+  const speech = new SpeechState({ ...bindings(), SpeakText }, messages);
+  const first = speech.speakText("Draft");
+  await speech.speakText("Draft");
+  expect(SpeakText).toHaveBeenCalledTimes(1);
+  expect(speech.submitting).toBe(true);
+  pending.resolve();
+  await first;
+  expect(speech.submitting).toBe(false);
+});
+
+it("does not apply a seek acknowledgement to replacement audio", async () => {
+  const pending = CancellablePromise.withResolvers<TTSStatus>();
+  const Seek = vi.fn(() => pending.promise);
+  const speech = new SpeechState({ ...bindings(), Seek }, new SessionMessages());
+  const original = { ...speech.status, generation: 8, canSeek: true, durationMilliseconds: 10000 };
+  speech.applyStatus(original);
+  const request = { generation: 8, positionMilliseconds: 5000 };
+  const seeking = speech.seekTTS(request);
+  await speech.seekTTS(request);
+  expect(Seek).toHaveBeenCalledTimes(1);
+  speech.applyStatus({ ...original, generation: 9, positionMilliseconds: 0 });
+  pending.resolve({ ...original, positionMilliseconds: 5000 });
+  await seeking;
+  expect(speech.status.generation).toBe(9);
+  expect(speech.status.positionMilliseconds).toBe(0);
+  await speech.seekTTS(request);
+  expect(Seek).toHaveBeenCalledTimes(1);
+  expect(speech.seeking).toBe(false);
+});

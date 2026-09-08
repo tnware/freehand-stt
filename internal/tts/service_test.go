@@ -57,6 +57,13 @@ func (p *playerFake) Rewind() error {
 	p.mu.Unlock()
 	return nil
 }
+func (p *playerFake) Seek(position int64) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.position = position
+	p.playing = false
+	return nil
+}
 func (p *playerFake) Position() (int64, int64, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

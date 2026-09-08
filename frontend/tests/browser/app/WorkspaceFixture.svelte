@@ -28,13 +28,15 @@
   import AppHeader from "$lib/components/shell/AppHeader.svelte";
   import { controlledSaves } from "./save-control";
 
+  const playbackScenario = new URLSearchParams(location.search).has("playback");
+  let seekCalls = $state(0);
   const historyExpansion = new URLSearchParams(location.search).get("history") === "expansion";
   const diagnosticsScenario = new URLSearchParams(location.search).get("diagnostics");
   const setupScenario = new URLSearchParams(location.search).get("setup");
   let openedSettings = $state("");
   let connectionChecks = 0;
   const feedbackScenario = new URLSearchParams(location.search).has("feedback");
-  let speechRequests = 0;
+  let speechRequests = $state(0);
   let audioSaves = 0;
   let current = structuredClone(settings);
   current.setupCompleted = true;
@@ -169,7 +171,7 @@
     current = structuredClone({ ...current, ...request.settings });
     return structuredClone(current);
   });
-  const session = new Session(
+  const session: Session = new Session(
     serviceWithStatus(() => CancellablePromise.resolve(idle), {
       connection: {
         TestSavedConnection: () => {
@@ -200,8 +202,62 @@
         },
       },
       speech: {
+        Seek: (request) => {
+          seekCalls++;
+          const status = session.speech.status;
+          if (request.generation !== status.generation)
+            return CancellablePromise.reject(new Error("stale seek"));
+          const atEnd = request.positionMilliseconds === status.durationMilliseconds;
+          const playing = status.phase === TTSPhase.Playing && !atEnd;
+          const next = {
+            ...status,
+            positionMilliseconds: request.positionMilliseconds,
+            phase: atEnd ? TTSPhase.Completed : playing ? TTSPhase.Playing : TTSPhase.Paused,
+            canPause: playing,
+            canResume: !playing && !atEnd,
+            canStop: !atEnd,
+          };
+          session.speech.applyStatus(next);
+          return CancellablePromise.resolve(next);
+        },
+        Pause: () => {
+          session.speech.applyStatus({
+            ...session.speech.status,
+            phase: TTSPhase.Paused,
+            canPause: false,
+            canResume: true,
+          });
+          return CancellablePromise.resolve();
+        },
+        Resume: () => {
+          session.speech.applyStatus({
+            ...session.speech.status,
+            phase: TTSPhase.Playing,
+            canPause: true,
+            canResume: false,
+          });
+          return CancellablePromise.resolve();
+        },
         SpeakText: () => {
           speechRequests++;
+          if (playbackScenario) {
+            session.speech.applyStatus({
+              ...session.speech.status,
+              generation: session.speech.status.generation + 1,
+              source: TTSSource.SourceCompose,
+              phase: TTSPhase.Generating,
+              durationMilliseconds: 0,
+              positionMilliseconds: 0,
+              canSeek: false,
+              canPause: false,
+              canResume: false,
+              canRestart: false,
+              canSave: false,
+              canStop: true,
+              canClear: false,
+            });
+            return CancellablePromise.resolve();
+          }
           session.speech.applyStatus({
             ...session.speech.status,
             generation: speechRequests,
@@ -370,6 +426,21 @@
       void session.editor.testTextToSpeechConnection();
     }
   }
+  function finishGeneration() {
+    session.speech.applyStatus({
+      ...session.speech.status,
+      phase: TTSPhase.Playing,
+      durationMilliseconds: 60000,
+      positionMilliseconds: 10000,
+      canSeek: true,
+      canPause: true,
+      canResume: false,
+      canRestart: true,
+      canSave: true,
+      canClear: true,
+      canStop: true,
+    });
+  }
   window.testSaves = saves.control;
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
@@ -407,7 +478,34 @@
     <footer
       class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
     >
-      {#if historyExpansion}
+      {#if playbackScenario}
+        <div class="flex flex-wrap gap-3">
+          <button onclick={finishGeneration}>Finish generation</button>
+          <button
+            onclick={() =>
+              session.speech.applyStatus({
+                ...session.speech.status,
+                source: TTSSource.SourceVoice,
+              })}>Show transcript playback</button
+          >
+          <button
+            onclick={() =>
+              session.speech.applyStatus({
+                ...session.speech.status,
+                positionMilliseconds: session.speech.status.positionMilliseconds + 137,
+              })}>Advance playback</button
+          >
+          <button
+            onclick={() =>
+              session.speech.applyStatus({
+                ...session.speech.status,
+                generation: session.speech.status.generation + 1,
+                positionMilliseconds: 5000,
+              })}>Replace audio</button
+          >
+          <span role="status">Speech requests: {speechRequests}; seek requests: {seekCalls}</span>
+        </div>
+      {:else if historyExpansion}
         <div class="flex gap-3">
           <button onclick={addHistoryTranscript}>Add transcript</button>
           <button onclick={updateHistoryTranscript}>Update latest</button>

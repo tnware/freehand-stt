@@ -55,6 +55,7 @@ type Status struct {
 	ErrorKind            string                     `json:"errorKind,omitempty"`
 	CanPause             bool                       `json:"canPause"`
 	CanResume            bool                       `json:"canResume"`
+	CanSeek              bool                       `json:"canSeek"`
 	CanRestart           bool                       `json:"canRestart"`
 	CanStop              bool                       `json:"canStop"`
 	CanSave              bool                       `json:"canSave"`
@@ -67,6 +68,8 @@ type Player interface {
 	Pause() error
 	// Rewind stops and resets the retained session without starting playback.
 	Rewind() error
+	// Seek stops and positions retained PCM without starting playback.
+	Seek(int64) error
 	Position() (int64, int64, bool)
 	OutputName() string
 	Snapshot() ([]byte, error)
@@ -346,7 +349,7 @@ func (s *Service) generate(ctx context.Context, generation uint64, profile setti
 		return
 	}
 	position, duration, _ := s.player.Position()
-	s.update(generation, Status{Generation: generation, Phase: Playing, Source: s.source(generation), HistoryID: s.historyID(generation), HistoryVersion: s.historyVersion(generation), PositionMilliseconds: position, DurationMilliseconds: duration, Message: "Playing speech", CanPause: true, CanRestart: true, CanStop: true, CanSave: true, CanClear: true})
+	s.update(generation, Status{Generation: generation, Phase: Playing, Source: s.source(generation), HistoryID: s.historyID(generation), HistoryVersion: s.historyVersion(generation), PositionMilliseconds: position, DurationMilliseconds: duration, Message: "Playing speech", CanPause: true, CanSeek: duration > 0, CanRestart: true, CanStop: true, CanSave: true, CanClear: true})
 	s.logger.Info("speech generation completed", "generation", generation, "duration_ms", time.Since(started).Milliseconds(), "outcome", "completed", "audio_ms", duration, "sample_rate", pcm.SampleRate, "channels", pcm.Channels, "pcm_bytes", pcmBytes)
 	s.control.Unlock()
 	s.monitor(ctx, generation)
@@ -719,6 +722,7 @@ func (s *Service) finishLocked(generation uint64, phase Phase, message, errorKin
 	s.status.Phase, s.status.Message, s.status.ErrorKind = phase, message, errorKind
 	s.status.PositionMilliseconds, s.status.DurationMilliseconds = position, duration
 	s.status.CanPause, s.status.CanResume, s.status.CanStop = false, false, false
+	s.status.CanSeek = phase == Completed && duration > 0
 	s.status.CanRestart = phase == Completed
 	s.status.CanSave = phase == Completed
 	s.status.CanClear = phase == Completed

@@ -148,6 +148,42 @@ func (p *Playback) Rewind() error {
 	return nil
 }
 
+// Seek moves to a whole PCM frame and leaves the device stopped. Only the
+// service may resume it after rechecking lifecycle and operation cancellation.
+func (p *Playback) Seek(milliseconds int64) error {
+	p.mu.Lock()
+	dev := p.dev
+	frameBytes := int64(p.channels) * 2
+	if p.closed || dev == nil || frameBytes == 0 || p.rate == 0 || len(p.data) == 0 {
+		p.mu.Unlock()
+		return errors.New("no speech audio is loaded")
+	}
+	frames := int64(len(p.data)) / frameBytes
+	duration := frames * 1000 / int64(p.rate)
+	if milliseconds < 0 || milliseconds > duration {
+		p.mu.Unlock()
+		return errors.New("seek position is outside the generated audio")
+	}
+	frame := milliseconds * int64(p.rate) / 1000
+	if milliseconds == duration {
+		frame = frames
+	}
+	p.mu.Unlock()
+	if err := dev.Stop(); err != nil {
+		return err
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.closed || p.dev != dev {
+		return errors.New("speech audio changed while seeking")
+	}
+	p.position = int(frame * frameBytes)
+	p.elapsed = time.Duration(frame) * time.Second / time.Duration(p.rate)
+	p.started = time.Time{}
+	p.playing = false
+	return nil
+}
+
 func (p *Playback) Position() (int64, int64, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

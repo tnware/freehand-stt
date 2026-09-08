@@ -209,6 +209,8 @@
         onPause={() => session.speech.pauseTTS()}
         onResume={() => session.speech.resumeTTS()}
         onRestart={() => session.speech.restartTTS()}
+        onSeek={(request) => session.speech.seekTTS(request)}
+        seeking={session.speech.seeking}
         onStop={() => session.speech.stopTTS()}
         onSave={() => session.speech.saveTTSAudio()}
         onClear={() => session.speech.clearTTSAudio()}
@@ -221,10 +223,13 @@
         settings={runtimeSettings?.textToSpeech ?? session.editor.draft.textToSpeech}
         status={session.speech.status}
         unavailable={voiceActive || fileWorking}
+        submitting={session.speech.submitting}
         onSpeak={(text) => session.speech.speakText(text)}
         onPause={() => session.speech.pauseTTS()}
         onResume={() => session.speech.resumeTTS()}
         onRestart={() => session.speech.restartTTS()}
+        onSeek={(request) => session.speech.seekTTS(request)}
+        seeking={session.speech.seeking}
         onStop={() => session.speech.stopTTS()}
         onSave={() => session.speech.saveTTSAudio()}
         onClear={() => session.speech.clearTTSAudio()}
@@ -439,6 +444,8 @@
                 onPauseTTS={() => session.speech.pauseTTS()}
                 onResumeTTS={() => session.speech.resumeTTS()}
                 onRestartTTS={() => session.speech.restartTTS()}
+                onSeekTTS={(request) => session.speech.seekTTS(request)}
+                seeking={session.speech.seeking}
                 onStopTTS={() => session.speech.stopTTS()}
                 onSaveTTS={() => session.speech.saveTTSAudio()}
                 onClearTTS={() => session.speech.clearTTSAudio()}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { SeekRequest } from "$bindings/tts";
   import type { Snippet } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
@@ -17,6 +18,9 @@
     settings,
     status,
     unavailable = false,
+    submitting = false,
+    seeking = false,
+    onSeek,
     onSpeak,
     onPause,
     onResume,
@@ -31,6 +35,9 @@
     settings: Settings["textToSpeech"];
     status: TTSStatus;
     unavailable?: boolean;
+    submitting?: boolean;
+    seeking?: boolean;
+    onSeek?: (request: SeekRequest) => Promise<void>;
     onSpeak: (text: string) => void;
     onPause: () => void;
     onResume: () => void;
@@ -59,6 +66,7 @@
   const canSpeak = $derived(
     configured &&
       !unavailable &&
+      !submitting &&
       !working &&
       characterCount > 0 &&
       characterCount <= maximumCharacters,
@@ -73,6 +81,20 @@
     if (status.phase === TTSPhase.Failed) return "Failed";
     return "Ready to generate";
   });
+
+  function composerKey(event: KeyboardEvent) {
+    if (
+      event.key !== "Enter" ||
+      !event.ctrlKey ||
+      event.altKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.isComposing
+    )
+      return;
+    event.preventDefault();
+    if (!event.repeat && canSpeak) onSpeak(text);
+  }
 
   const failed = $derived(isOwnSession && status.phase === TTSPhase.Failed);
 </script>
@@ -108,12 +130,17 @@
       id="speech-composer-text"
       bind:value={text}
       aria-invalid={characterCount > maximumCharacters}
-      aria-describedby="speech-character-count"
+      aria-describedby="speech-character-count speech-compose-shortcut"
+      aria-keyshortcuts="Control+Enter"
+      onkeydown={composerKey}
       disabled={working}
       class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-4 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-inset disabled:opacity-100"
       placeholder="Write or paste text to speak…"
     />
   </div>
+  <p id="speech-compose-shortcut" class="sr-only">
+    Press Ctrl+Enter to speak. Enter adds a new line.
+  </p>
   <div class="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-hairline px-4">
     <span
       id="speech-character-count"
@@ -149,12 +176,16 @@
             : failed
               ? "Try again"
               : "Speak"}
+          {#if !working}<kbd
+              aria-hidden="true"
+              class="ml-1 hidden text-[10px] opacity-70 @sm:inline">Ctrl+Enter</kbd
+            >{/if}
         </Button>
       {/if}
     </div>
   </div>
   <div
-    class="flex h-24 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-secondary"
+    class="flex h-24 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-layer-fill"
     aria-label="Generated audio"
   >
     {#if showPlayback}
@@ -163,6 +194,8 @@
         {onPause}
         {onResume}
         {onRestart}
+        {onSeek}
+        {seeking}
         {onStop}
         {onSave}
         {onClear}

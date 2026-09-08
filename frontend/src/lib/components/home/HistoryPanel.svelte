@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { SeekRequest } from "$bindings/tts";
   import HistoryIcon from "@lucide/svelte/icons/history";
   import DisclosureHeader from "$lib/components/shell/DisclosureHeader.svelte";
   import HistoryList from "$lib/components/history/HistoryList.svelte";
@@ -33,6 +34,8 @@
     onPauseTTS,
     onResumeTTS,
     onRestartTTS,
+    onSeekTTS,
+    seeking = false,
     onStopTTS,
     onSaveTTS,
     onClearTTS,
@@ -57,6 +60,8 @@
     onPauseTTS: () => void;
     onResumeTTS: () => void;
     onRestartTTS: () => void;
+    onSeekTTS?: (request: SeekRequest) => Promise<void>;
+    seeking?: boolean;
     onStopTTS: () => void;
     onSaveTTS: () => void;
     onClearTTS: () => void;
@@ -197,15 +202,20 @@
       </div>
     {/if}
     {#if showPlayback}
-      <PlaybackBar
-        status={ttsStatus}
-        onPause={onPauseTTS}
-        onResume={onResumeTTS}
-        onRestart={onRestartTTS}
-        onStop={onStopTTS}
-        onSave={onSaveTTS}
-        onClear={onClearTTS}
-      />
+      <div class="border-t border-hairline">
+        <PlaybackBar
+          embedded
+          status={ttsStatus}
+          onPause={onPauseTTS}
+          onResume={onResumeTTS}
+          onRestart={onRestartTTS}
+          onSeek={onSeekTTS}
+          {seeking}
+          onStop={onStopTTS}
+          onSave={onSaveTTS}
+          onClear={onClearTTS}
+        />
+      </div>
     {/if}
   </div>
 </section>
