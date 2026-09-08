@@ -1,4 +1,6 @@
 <script lang="ts">
+  import RuntimeModelPicker from "../settings/RuntimeModelPicker.svelte";
+  import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import VocabularyLink from "$lib/components/settings/VocabularyLink.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { onDestroy } from "svelte";
@@ -10,7 +12,6 @@
   import type { Settings } from "$lib/state";
   import type { SettingsEditor } from "$lib/stores/editor.svelte";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
-  import { Button } from "$lib/components/ui/button";
   import { Switch } from "$lib/components/ui/switch";
   import * as Select from "$lib/components/ui/select";
 
@@ -28,7 +29,6 @@
     onAddConnection: (purpose: Purpose) => void;
   } = $props();
   const cfg = $derived(settings.voiceTranscription);
-  let manualModel = $state(false);
   let profileNotice = $state("");
   const backend = $derived(
     settings.compatibilityProfiles.transcription?.find((p) => p.id === cfg.compatibilityProfile),
@@ -79,15 +79,14 @@
   onDestroy(() => {
     revision++;
   });
-  const availableModels = $derived([
-    ...new Set(
-      [
-        cfg.model,
-        ...rememberedModels(settings, Purpose.Voice).map((m) => m.model),
-        ...(testedID === connectionID ? models : (editor.currentVoiceConnection?.modelIDs ?? [])),
-      ].filter(Boolean),
-    ),
-  ]);
+  const availableModels = $derived(
+    testedID === connectionID ? models : (editor.currentVoiceConnection?.modelIDs ?? []),
+  );
+  function chooseModel(model: string) {
+    return draft
+      ? editor.chooseModel(Purpose.Voice, model)
+      : editor.updateQuickSettings({ voiceTranscription: { model } }, "voice-transcription");
+  }
   function update(patch: Partial<Settings["voiceTranscription"]>) {
     if (draft) {
       if (patch.model !== undefined) editor.chooseModel(Purpose.Voice, patch.model);
@@ -124,71 +123,45 @@
 </script>
 
 <div class="space-y-4">
-  <h3 class="text-sm font-semibold">Transcription</h3>
-  <div class="space-y-1.5">
-    <label for="voice-connection" class="text-xs font-medium">Connection</label>
-    <div class="flex gap-2">
-      <ConnectionSelect
-        id="voice-connection"
-        catalog={settings.savedConnections}
-        purpose={Purpose.Voice}
-        disabled={busy || testing}
-        onChange={(change) => editor.changeConnection(change)}
-        onAdd={() => onAddConnection(Purpose.Voice)}
-      />
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={busy || testing || !connectionID}
-        onclick={test}
-      >
-        {testing ? "Checking…" : "Check"}
-      </Button>
+  {#if !draft}
+    <h3 class="text-sm font-semibold">Transcription</h3>
+    <div class="space-y-1.5">
+      <label for="voice-connection" class="text-xs font-medium">Connection</label>
+      <div class="flex gap-2">
+        <ConnectionSelect
+          id="voice-connection"
+          catalog={settings.savedConnections}
+          purpose={Purpose.Voice}
+          disabled={busy || testing}
+          onChange={(change) => editor.changeConnection(change)}
+          onAdd={() => onAddConnection(Purpose.Voice)}
+        />
+      </div>
     </div>
-  </div>
+  {/if}
   {#if message && testedID === connectionID}<p class="text-xs text-muted-foreground" role="status">
       {message}
     </p>{/if}
-  <div class="space-y-1.5">
-    <label for="voice-model" class="text-xs font-medium">Model</label>
-    {#if serverLoaded}<p id="voice-model" class="text-sm text-muted-foreground">
-        Server-loaded model
-      </p>
-    {:else if availableModels.length && !manualModel}
-      <Select.Root
-        type="single"
-        value={cfg.model}
-        disabled={busy || !connectionID}
-        onValueChange={(model) =>
-          model === "__enter_model" ? (manualModel = true) : update({ model })}
-      >
-        <Select.Trigger id="voice-model" class="w-full"
-          ><span class="truncate">{cfg.model || "Check the connection to find its model"}</span
-          ></Select.Trigger
-        >
-        <Select.Content
-          >{#each availableModels as model (model)}<Select.Item value={model} label={model}
-              >{model}</Select.Item
-            >{/each}<Select.Item value="__enter_model" label="Enter model ID…"
-            >Enter model ID…</Select.Item
-          ></Select.Content
-        >
-      </Select.Root>
-    {:else}
-      <input
-        id="voice-model"
-        aria-label="Model ID"
-        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-        placeholder="Or enter a model ID"
-        value={cfg.model}
-        disabled={busy || !connectionID}
-        onchange={(event) => {
-          update({ model: event.currentTarget.value.trim() });
-          manualModel = false;
-        }}
-      />
-    {/if}
-  </div>
+  <RuntimeModelPicker
+    id="voice-model"
+    value={cfg.model}
+    compact
+    immediate={!draft}
+    profileName={profile?.name ?? cfg.modelProfile}
+    models={availableModels}
+    savedModels={rememberedModels(settings, Purpose.Voice).map((m) => m.model)}
+    draftModels={draft ? editor.modelDraftIDs(Purpose.Voice) : []}
+    serverLoaded={!!serverLoaded}
+    disabled={busy || !connectionID}
+    busy={testing}
+    onChoose={chooseModel}
+    onDiscover={test}
+    onForget={draft
+      ? () => {
+          void editor.forgetModel(Purpose.Voice);
+        }
+      : undefined}
+  />
   {#if (settings.modelProfiles.voiceTranscription?.length ?? 0) > 1 || cfg.modelProfile !== ID.Generic}
     <div class="space-y-1.5">
       <label for="voice-profile" class="text-xs font-medium">Model profile</label>
@@ -358,4 +331,10 @@
       transcription.
     </p>
   {/if}
+  {#if !draft}<QuickSaveStatus
+      fields={["voice-transcription"]}
+      pending={editor.quickSettingsPending}
+      saved={editor.quickSettingsSaved}
+      failed={editor.quickSettingsFailed}
+    />{/if}
 </div>

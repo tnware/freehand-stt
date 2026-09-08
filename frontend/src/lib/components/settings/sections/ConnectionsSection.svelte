@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { connectionStatusLabel, connectionSucceeded } from "$lib/utils/connection";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import { Action, Purpose, type Connection } from "$bindings/savedconnection";
   import { ID } from "$bindings/compatibility";
   import { AuthenticationMode } from "$lib/state";
@@ -110,7 +112,6 @@
   const activeUses = (id: string) => roles.filter((role) => catalog?.selected?.[role.id] === id);
   let deleting = $state<Connection | null>(null);
   let deleteOpen = $state(false);
-  let testedID = $state("");
   function changeAuth(value: string) {
     if (!form) return;
     form.details.authenticationMode = value as AuthenticationMode;
@@ -410,7 +411,10 @@
     {/if}
   </form>
 {:else}
-  <div class="flex justify-end">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-muted-foreground">
+      {entries.length} saved {entries.length === 1 ? "connection" : "connections"}
+    </p>
     <Button
       disabled={busy || editor.runtimeDirty}
       onclick={() => (onEdit ? onEdit() : editor.beginConnection())}
@@ -427,23 +431,42 @@
       </div></SettingsCard
     >{/if}
   {#each entries as c (c.id)}
+    {@const result = editor.savedConnectionChecks[c.id]}
+    {@const checking = editor.savedConnectionCheckingID === c.id}
+    {@const checkError = editor.savedConnectionCheckErrors[c.id]}
+    {@const active = activeUses(c.id)}
     <SettingsCard
       ><div class="space-y-3 px-5 py-4">
-        <div class="flex items-start gap-3">
+        <div class="flex flex-wrap items-start gap-3">
           <ProviderIcon profile={c.details.compatibilityProfile} />
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-semibold">{c.name}</p>
-            <p class="break-all text-xs text-muted-foreground">
-              {c.details.baseURL}
-            </p>
+          <div class="min-w-40 flex-1">
+            <h4 class="break-words text-sm font-semibold">{c.name}</h4>
+            <p class="mt-1 break-all text-xs text-muted-foreground">{c.details.baseURL}</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            aria-label={`Check connection ${c.name}`}
+            onclick={() => editor.testSavedConnection(c.id)}
+          >
+            <RefreshCwIcon
+              class={checking ? "size-3.5 animate-spin motion-reduce:animate-none" : "size-3.5"}
+            />
+            {checking ? "Checking…" : "Check connection"}
+          </Button>
         </div>
-        <div class="flex flex-wrap gap-2">
-          {#each c.uses as p (p)}<Badge
-              variant={catalog?.selected?.[p] === c.id ? "secondary" : "outline"}
-              >{roleLabel(p)}{catalog?.selected?.[p] === c.id ? " · In use" : ""}</Badge
-            >{/each}
+        <div class="space-y-2">
+          <p class="text-xs font-medium">
+            {active.length ? "Active in" : "Not selected by a workflow"}
+          </p>
+          {#if active.length}<div class="flex flex-wrap gap-1.5">
+              {#each active as role (role.id)}<Badge variant="secondary">{role.label}</Badge>{/each}
+            </div>{/if}
         </div>
+        <p class="text-xs leading-relaxed text-muted-foreground">
+          Available for {(c.uses ?? []).map(roleLabel).join(" · ")}
+        </p>
         <div
           class="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-3"
         >
@@ -473,13 +496,6 @@
               </DropdownMenu.Trigger>
               <DropdownMenu.Content align="end" class="w-64">
                 <DropdownMenu.Item
-                  disabled={busy}
-                  onSelect={() => {
-                    testedID = c.id;
-                    void editor.testSavedConnection(c.id);
-                  }}>Test connection</DropdownMenu.Item
-                >
-                <DropdownMenu.Item
                   disabled={busy || editor.runtimeDirty || entries.length >= 96}
                   onSelect={() => duplicate(c)}>Duplicate</DropdownMenu.Item
                 >
@@ -500,17 +516,29 @@
             </DropdownMenu.Root>
           </div>
         </div>
-        {#if testedID === c.id && editor.managedConnectionTesting}<p
+        <div class="border-t border-hairline pt-3">
+          <p
             role="status"
-            class="text-xs text-muted-foreground"
+            class="flex items-center gap-2 text-xs"
+            class:text-destructive={!!checkError || (!!result && !connectionSucceeded(result))}
+            class:text-muted-foreground={!checkError && (!result || connectionSucceeded(result))}
           >
-            Checking metadata…
+            <span
+              class="size-1.5 shrink-0 rounded-full"
+              class:bg-success={!!result && connectionSucceeded(result)}
+              class:bg-destructive={!!checkError || (!!result && !connectionSucceeded(result))}
+              class:bg-muted-foreground={!result && !checkError}
+            ></span>
+            {checking ? "Checking metadata…" : checkError || connectionStatusLabel(result ?? null)}
           </p>
-        {:else if testedID === c.id && editor.managedConnectionResult}<div
-            class="border-t border-hairline pt-4"
-          >
-            <ConnectionDiagnostics result={editor.managedConnectionResult} />
-          </div>{/if}
+          {#if result}<details class="mt-2 text-xs">
+              <summary
+                class="cursor-pointer rounded-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >Check details</summary
+              >
+              <div class="pt-3"><ConnectionDiagnostics {result} /></div>
+            </details>{/if}
+        </div>
       </div></SettingsCard
     >
   {/each}

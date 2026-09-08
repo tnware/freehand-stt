@@ -1,4 +1,6 @@
 <script lang="ts">
+  import RuntimeModelPicker from "../settings/RuntimeModelPicker.svelte";
+  import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import { rememberedModels } from "$lib/utils/modelSettings";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Purpose, type Change } from "$bindings/savedconnection";
@@ -9,32 +11,19 @@
   import RackModule from "$lib/components/home/RackModule.svelte";
   import QuickControls from "$lib/components/home/QuickControls.svelte";
   import S1MiniControls from "$lib/components/settings/S1MiniControls.svelte";
-  import ValueInput from "$lib/components/settings/ValueInput.svelte";
-  import { Button } from "$lib/components/ui/button";
   import * as Select from "$lib/components/ui/select";
   import { Switch } from "$lib/components/ui/switch";
   import {
-    ConnectionProbe,
     PostProcessingPreset,
     type ConnectionResult,
     type Device,
     type ProfileDescriptor,
     type Settings,
   } from "$lib/state";
-  import type {
-    QuickSettingsField,
-    QuickSettingsPatch,
-  } from "$lib/stores/editor.svelte";
-  import {
-    connectionStatusLabel,
-    connectionSucceeded,
-    modelPresenceLabel,
-  } from "$lib/utils/connection";
+  import type { QuickSettingsField, QuickSettingsPatch } from "$lib/stores/editor.svelte";
+  import { connectionStatusLabel, connectionSucceeded } from "$lib/utils/connection";
   import { processingProfileName } from "$lib/utils/processingProfiles";
-  import {
-    readDisclosurePreference,
-    writeDisclosurePreference,
-  } from "$lib/utils/viewPreferences";
+  import { readDisclosurePreference, writeDisclosurePreference } from "$lib/utils/viewPreferences";
 
   let {
     showCapture = true,
@@ -51,6 +40,7 @@
     processingStale = false,
     pending = [],
     savedField = null,
+    failedField = null,
     sttTesting = false,
     processingTesting = false,
     onUpdate,
@@ -78,13 +68,11 @@
     processingStale?: boolean;
     pending?: QuickSettingsField[];
     savedField?: QuickSettingsField | null;
+    failedField?: QuickSettingsField | null;
     sttTesting?: boolean;
     processingTesting?: boolean;
     onChangeConnection: (change: Change) => Promise<boolean>;
-    onUpdate: (
-      patch: QuickSettingsPatch,
-      field: QuickSettingsField,
-    ) => Promise<boolean>;
+    onUpdate: (patch: QuickSettingsPatch, field: QuickSettingsField) => Promise<boolean>;
     onTestConnection: () => Promise<void>;
     onTestProcessingConnection: () => Promise<void>;
     onOpenServerSettings: () => void;
@@ -94,80 +82,23 @@
     disabled?: boolean;
   } = $props();
 
-  let modelDraft = $state("");
-  let processingModelDraft = $state("");
-  let modelTouched = $state(false);
-  let processingModelTouched = $state(false);
   let sttOpen = $state(readDisclosurePreference("quick-stt", true));
   let cleanupOpen = $state(readDisclosurePreference("quick-cleanup", true));
 
-  let modelSave: Promise<boolean> | undefined;
-  let processingModelSave: Promise<boolean> | undefined;
-
-  $effect(() => {
-    if (!modelTouched) modelDraft = settings.model;
-    if (!processingModelTouched)
-      processingModelDraft = settings.postProcessing.model;
-  });
-
-  // The native Settings window owns configuration while visible. Drop any
-  // uncommitted field-local text so it cannot overwrite a newer backend
-  // snapshot when the rack becomes interactive again.
-  $effect(() => {
-    if (!disabled) return;
-    modelDraft = settings.model;
-    processingModelDraft = settings.postProcessing.model;
-    modelTouched = false;
-    processingModelTouched = false;
-  });
-
   const serverLoadedModel = $derived(usesServerLoadedModel(settings));
   const processingEnabled = $derived(settings.postProcessing.enabled);
-  const discoveredModels = $derived([
-    ...new Set([
-      ...rememberedModels(settings, Purpose.Transcription).map((e) => e.model),
-      ...(connection?.modelIDs ?? []),
-    ]),
-  ]);
-  const processingDiscoveredModels = $derived([
-    ...new Set([
-      ...rememberedModels(settings, Purpose.Cleanup).map((e) => e.model),
-      ...(processingConnection?.modelIDs ?? []),
-    ]),
-  ]);
   const selectedProcessingProfile = $derived(
-    processingProfiles.find(
-      (profile) => profile.id === settings.postProcessing.preset,
-    ),
+    processingProfiles.find((profile) => profile.id === settings.postProcessing.preset),
   );
 
-  function modelMetadata(
-    result: ConnectionResult | null,
-    model: string,
-  ): string {
-    if (!result || result.probe !== ConnectionProbe.ConnectionProbeModels)
-      return "Manual";
-    if (result.modelIDs?.length)
-      return `${result.modelIDs.length.toLocaleString()} found`;
-    return modelPresenceLabel(result) || (model ? "Manual" : "Choose");
-  }
-
-  function healthDot(
-    result: ConnectionResult | null,
-    enabled = true,
-    stale = false,
-  ): string {
+  function healthDot(result: ConnectionResult | null, enabled = true, stale = false): string {
     if (!enabled) return "bg-border";
     if (stale) return "bg-warning";
     if (!result) return "bg-muted-foreground";
     return connectionSucceeded(result) ? "bg-success" : "bg-destructive";
   }
 
-  function latency(
-    result: ConnectionResult | null,
-    enabled = true,
-    stale = false,
-  ): string {
+  function latency(result: ConnectionResult | null, enabled = true, stale = false): string {
     if (!enabled) return "off";
     if (stale) return "stale";
     if (!result) return "not checked";
@@ -208,115 +139,16 @@
     writeDisclosurePreference("quick-cleanup", cleanupOpen);
   }
 
-  function handleDraftKey(event: KeyboardEvent, reset: () => void) {
-    if (event.key === "Enter") (event.currentTarget as HTMLInputElement).blur();
-    if (event.key === "Escape") {
-      reset();
-      (event.currentTarget as HTMLInputElement).blur();
-    }
-  }
-
-  const isPending = (field: QuickSettingsField): boolean =>
-    pending.includes(field);
-  const sttHealthStale = $derived(
-    sttStale || modelTouched || isPending("stt-model"),
-  );
-  const processingHealthStale = $derived(
-    processingStale || processingModelTouched || isPending("processing-model"),
-  );
-  const panelFields: QuickSettingsField[] = [
-    "stt-model",
-    "processing-enabled",
-    "processing-model",
-    "processing-profile",
-    "processing-controls",
-  ];
-
-  function commitModel(): Promise<boolean> {
-    const value = modelDraft.trim();
-    if (value === settings.model) {
-      modelTouched = false;
-      return Promise.resolve(true);
-    }
-    if (modelSave) return modelSave;
-    modelSave = onUpdate({ model: value }, "stt-model")
-      .then((saved) => {
-        if (saved) modelTouched = false;
-        return saved;
-      })
-      .finally(() => (modelSave = undefined));
-    return modelSave;
-  }
-
-  function chooseModel(value: string) {
-    if (value && value !== settings.model)
-      void onUpdate({ model: value }, "stt-model");
-  }
-
-  function commitProcessingModel(): Promise<boolean> {
-    const value = processingModelDraft.trim();
-    if (value === settings.postProcessing.model) {
-      processingModelTouched = false;
-      return Promise.resolve(true);
-    }
-    if (processingModelSave) return processingModelSave;
-    processingModelSave = onUpdate(
-      { postProcessing: { model: value } },
-      "processing-model",
-    )
-      .then((saved) => {
-        if (saved) processingModelTouched = false;
-        return saved;
-      })
-      .finally(() => (processingModelSave = undefined));
-    return processingModelSave;
-  }
-
-  function chooseProcessingModel(value: string) {
-    if (value && value !== settings.postProcessing.model) {
-      void onUpdate({ postProcessing: { model: value } }, "processing-model");
-    }
-  }
-
+  const isPending = (field: QuickSettingsField) => pending.includes(field);
+  const sttHealthStale = $derived(sttStale || isPending("stt-model"));
+  const processingHealthStale = $derived(processingStale || isPending("processing-model"));
   function chooseProcessingProfile(value: string) {
     if (
-      value !== PostProcessingPreset.PostProcessingPresetGeneric &&
-      value !== PostProcessingPreset.PostProcessingPresetS1Mini
-    ) {
-      return;
-    }
-    if (value !== settings.postProcessing.preset) {
-      void onUpdate(
-        { postProcessing: { preset: value } },
-        "processing-profile",
-      );
-    }
+      value === PostProcessingPreset.PostProcessingPresetGeneric ||
+      value === PostProcessingPreset.PostProcessingPresetS1Mini
+    )
+      void onUpdate({ postProcessing: { preset: value } }, "processing-profile");
   }
-
-  async function testSTTConnection() {
-    if (await commitModel()) await onTestConnection();
-  }
-
-  async function testProcessingConnection() {
-    if (await commitProcessingModel()) {
-      await onTestProcessingConnection();
-    }
-  }
-
-  const rackAnnouncement = $derived.by(() => {
-    if (sttTesting) return "Testing transcription connection.";
-    if (processingTesting) return "Testing cleanup connection.";
-    if (pending.some((field) => panelFields.includes(field)))
-      return "Saving quick settings.";
-    if (!savedField || !panelFields.includes(savedField)) return "";
-    if (savedField === "stt-model") return "Transcription model saved.";
-    if (savedField === "processing-model") return "Cleanup model saved.";
-    if (savedField === "processing-profile")
-      return "Cleanup model profile saved.";
-    if (savedField === "processing-enabled") return "Cleanup preference saved.";
-    if (savedField === "processing-controls") return "Cleanup controls saved.";
-    return "";
-  });
 </script>
 
 {#snippet field(
@@ -335,10 +167,6 @@
 {/snippet}
 
 <fieldset class="m-0 flex min-w-0 flex-col gap-2.5 border-0 p-0" {disabled}>
-  <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-    {rackAnnouncement}
-  </span>
-
   {#if showCapture}
     <QuickControls
       {settings}
@@ -372,10 +200,7 @@
       controls="quick-stt-details"
       onToggle={toggleSTT}
     >
-      {#snippet icon()}<ProviderIcon
-          profile={settings.compatibilityProfile}
-          size={20}
-        />{/snippet}
+      {#snippet icon()}<ProviderIcon profile={settings.compatibilityProfile} size={20} />{/snippet}
       <div class="flex min-w-0 flex-col gap-3">
         {#snippet sttEndpointMeta()}{/snippet}
         {#snippet sttEndpointControl()}
@@ -383,103 +208,31 @@
             id="quick-stt-endpoint"
             catalog={settings.savedConnections}
             purpose={Purpose.Transcription}
-            onAdd={onAddConnection
-              ? () => onAddConnection(Purpose.Transcription)
-              : undefined}
+            onAdd={onAddConnection ? () => onAddConnection(Purpose.Transcription) : undefined}
             compact
-            disabled={disabled || pending.length > 0 || modelTouched}
+            disabled={disabled || pending.length > 0}
             onChange={onChangeConnection}
           />
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-9 shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
-            disabled={sttTesting ||
-              !settings.savedConnections.selected?.stt ||
-              isPending("stt-model")}
-            onclick={() => void testSTTConnection()}
-          >
-            {#if sttTesting}<LoaderCircleIcon class="animate-spin" />{/if}
-            {sttTesting ? "Testing" : "Test"}
-          </Button>
         {/snippet}
-        {@render field(
-          "Connection",
-          "quick-stt-endpoint",
-          sttEndpointMeta,
-          sttEndpointControl,
-        )}
+        {@render field("Connection", "quick-stt-endpoint", sttEndpointMeta, sttEndpointControl)}
 
-        {#snippet sttModelMeta()}
-          {#if isPending("stt-model")}
-            <LoaderCircleIcon class="inline size-3 animate-spin" />
-          {:else if modelTouched}
-            edited
-          {:else if savedField === "stt-model"}
-            <CheckIcon class="inline size-3 text-success" />
-          {:else}
-            {serverLoadedModel
-              ? "Server selected"
-              : modelMetadata(connection, settings.model)}
-          {/if}
-        {/snippet}
-        {#snippet sttModelControl()}
-          {#if serverLoadedModel}
-            <span id="quick-stt-model" class="text-xs text-muted-foreground"
-              >Server-loaded model</span
-            >
-          {:else if discoveredModels.length > 0}
-            <Select.Root
-              type="single"
-              value={settings.model}
-              disabled={isPending("stt-model")}
-              onValueChange={chooseModel}
-            >
-              <Select.Trigger
-                id="quick-stt-model"
-                size="sm"
-                class="h-9 w-full min-w-0 bg-well"
-              >
-                <span
-                  class="figure min-w-0 flex-1 truncate text-left text-[13px]"
-                >
-                  {settings.model || "Choose a discovered model"}
-                </span>
-              </Select.Trigger>
-              <Select.Content class="max-h-72">
-                <Select.Group>
-                  <Select.Label>Remembered and discovered models</Select.Label>
-                  {#each discoveredModels as model (model)}
-                    <Select.Item value={model} label={model}
-                      >{model}</Select.Item
-                    >
-                  {/each}
-                </Select.Group>
-              </Select.Content>
-            </Select.Root>
-          {:else}
-            <ValueInput
-              id="quick-stt-model"
-              class="figure h-9 min-w-0 flex-1 bg-well text-[13px]"
-              bind:value={modelDraft}
-              disabled={isPending("stt-model")}
-              spellcheck={false}
-              oninput={() => (modelTouched = true)}
-              onblur={() => void commitModel()}
-              onkeydown={(event) =>
-                handleDraftKey(event, () => {
-                  modelDraft = settings.model;
-                  modelTouched = false;
-                })}
-            />
-          {/if}
-        {/snippet}
-        {@render field(
-          "Model",
-          "quick-stt-model",
-          sttModelMeta,
-          sttModelControl,
-        )}
+        <RuntimeModelPicker
+          id="quick-stt-model"
+          value={settings.model}
+          compact
+          immediate
+          profileName={settings.modelProfiles.transcription?.find(
+            (p) => p.id === settings.modelProfile,
+          )?.name ?? settings.modelProfile}
+          models={sttStale ? [] : (connection?.modelIDs ?? [])}
+          savedModels={rememberedModels(settings, Purpose.Transcription).map((e) => e.model)}
+          serverLoaded={serverLoadedModel}
+          busy={sttTesting}
+          disabled={disabled || pending.length > 0 || !settings.savedConnections.selected?.stt}
+          onChoose={(model) => onUpdate({ model }, "stt-model")}
+          onDiscover={onTestConnection}
+        />
+        <QuickSaveStatus fields={["stt-model"]} {pending} saved={savedField} failed={failedField} />
       </div>
     </RackModule>
   {/if}
@@ -488,28 +241,16 @@
     <RackModule
       {embedded}
       label="Cleanup"
-      dot={healthDot(
-        processingConnection,
-        processingEnabled,
-        processingHealthStale,
-      )}
+      dot={healthDot(processingConnection, processingEnabled, processingHealthStale)}
       meta={embedded || cleanupOpen
-        ? latency(
-            processingConnection,
-            processingEnabled,
-            processingHealthStale,
-          )
+        ? latency(processingConnection, processingEnabled, processingHealthStale)
         : collapsedConnectionSummary(
             settings.postProcessing.model,
             processingConnection,
             processingEnabled,
             processingHealthStale,
           )}
-      metaTone={latencyTone(
-        processingConnection,
-        processingEnabled,
-        processingHealthStale,
-      )}
+      metaTone={latencyTone(processingConnection, processingEnabled, processingHealthStale)}
       onSettings={onOpenProcessingSettings}
       settingsLabel="Open cleanup settings"
       open={embedded ? undefined : cleanupOpen}
@@ -523,10 +264,7 @@
       {#snippet actions()}
         <span class="flex shrink-0 items-center gap-1.5">
           {#if isPending("processing-enabled")}
-            <LoaderCircleIcon
-              class="size-3 animate-spin text-ink-quiet"
-              aria-label="Saving"
-            />
+            <LoaderCircleIcon class="size-3 animate-spin text-ink-quiet" aria-label="Saving" />
           {:else if savedField === "processing-enabled"}
             <CheckIcon class="size-3 text-success" aria-label="Saved" />
           {/if}
@@ -536,10 +274,7 @@
             checked={processingEnabled}
             disabled={isPending("processing-enabled")}
             onCheckedChange={(enabled) =>
-              void onUpdate(
-                { postProcessing: { enabled } },
-                "processing-enabled",
-              )}
+              void onUpdate({ postProcessing: { enabled } }, "processing-enabled")}
             aria-label="Post-process transcripts"
           />
         </span>
@@ -552,27 +287,11 @@
             id="quick-processing-endpoint"
             catalog={settings.savedConnections}
             purpose={Purpose.Cleanup}
-            onAdd={onAddConnection
-              ? () => onAddConnection(Purpose.Cleanup)
-              : undefined}
+            onAdd={onAddConnection ? () => onAddConnection(Purpose.Cleanup) : undefined}
             compact
-            disabled={disabled || pending.length > 0 || processingModelTouched}
+            disabled={disabled || pending.length > 0}
             onChange={onChangeConnection}
           />
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-9 shrink-0 border border-accent-edge bg-accent-wash px-2.5 text-accent-text hover:bg-accent-wash-strong"
-            disabled={processingTesting ||
-              !settings.savedConnections.selected?.cleanup ||
-              isPending("processing-model")}
-            onclick={() => void testProcessingConnection()}
-          >
-            {#if processingTesting}<LoaderCircleIcon
-                class="animate-spin"
-              />{/if}
-            {processingTesting ? "Testing" : "Test"}
-          </Button>
         {/snippet}
         {@render field(
           "Connection",
@@ -581,70 +300,19 @@
           cleanupEndpointControl,
         )}
 
-        {#snippet cleanupModelMeta()}
-          {#if isPending("processing-model")}
-            <LoaderCircleIcon class="inline size-3 animate-spin" />
-          {:else if processingModelTouched}
-            edited
-          {:else if savedField === "processing-model"}
-            <CheckIcon class="inline size-3 text-success" />
-          {:else}
-            {modelMetadata(processingConnection, settings.postProcessing.model)}
-          {/if}
-        {/snippet}
-        {#snippet cleanupModelControl()}
-          {#if processingDiscoveredModels.length > 0}
-            <Select.Root
-              type="single"
-              value={settings.postProcessing.model}
-              disabled={isPending("processing-model")}
-              onValueChange={chooseProcessingModel}
-            >
-              <Select.Trigger
-                id="quick-processing-model"
-                size="sm"
-                class="h-9 w-full min-w-0 bg-well"
-              >
-                <span
-                  class="figure min-w-0 flex-1 truncate text-left text-[13px]"
-                >
-                  {settings.postProcessing.model || "Choose a discovered model"}
-                </span>
-              </Select.Trigger>
-              <Select.Content class="max-h-72">
-                <Select.Group>
-                  <Select.Label>Remembered and discovered models</Select.Label>
-                  {#each processingDiscoveredModels as model (model)}
-                    <Select.Item value={model} label={model}
-                      >{model}</Select.Item
-                    >
-                  {/each}
-                </Select.Group>
-              </Select.Content>
-            </Select.Root>
-          {:else}
-            <ValueInput
-              id="quick-processing-model"
-              class="figure h-9 min-w-0 flex-1 bg-well text-[13px]"
-              bind:value={processingModelDraft}
-              disabled={isPending("processing-model")}
-              spellcheck={false}
-              oninput={() => (processingModelTouched = true)}
-              onblur={() => void commitProcessingModel()}
-              onkeydown={(event) =>
-                handleDraftKey(event, () => {
-                  processingModelDraft = settings.postProcessing.model;
-                  processingModelTouched = false;
-                })}
-            />
-          {/if}
-        {/snippet}
-        {@render field(
-          "Model",
-          "quick-processing-model",
-          cleanupModelMeta,
-          cleanupModelControl,
-        )}
+        <RuntimeModelPicker
+          id="quick-processing-model"
+          value={settings.postProcessing.model}
+          compact
+          immediate
+          profileName={processingProfileName(processingProfiles, settings.postProcessing.preset)}
+          models={processingStale ? [] : (processingConnection?.modelIDs ?? [])}
+          savedModels={rememberedModels(settings, Purpose.Cleanup).map((e) => e.model)}
+          busy={processingTesting}
+          disabled={disabled || pending.length > 0 || !settings.savedConnections.selected?.cleanup}
+          onChoose={(model) => onUpdate({ postProcessing: { model } }, "processing-model")}
+          onDiscover={onTestProcessingConnection}
+        />
 
         {#snippet profileMeta()}
           {#if isPending("processing-profile")}
@@ -668,56 +336,44 @@
               class="h-9 w-full min-w-0 bg-well"
             >
               <span class="min-w-0 flex-1 truncate text-left text-[13px]">
-                {processingProfileName(
-                  processingProfiles,
-                  settings.postProcessing.preset,
-                )}
+                {processingProfileName(processingProfiles, settings.postProcessing.preset)}
               </span>
             </Select.Trigger>
             <Select.Content>
               <Select.Group>
                 <Select.Label>Request behavior</Select.Label>
                 {#each processingProfiles as profile (profile.id)}
-                  <Select.Item value={profile.id} label={profile.name}
-                    >{profile.name}</Select.Item
-                  >
+                  <Select.Item value={profile.id} label={profile.name}>{profile.name}</Select.Item>
                 {/each}
               </Select.Group>
             </Select.Content>
           </Select.Root>
         {/snippet}
-        {@render field(
-          "Model profile",
-          "quick-processing-profile",
-          profileMeta,
-          profileControl,
-        )}
+        {@render field("Model profile", "quick-processing-profile", profileMeta, profileControl)}
 
         {#if settings.postProcessing.preset === PostProcessingPreset.PostProcessingPresetS1Mini && selectedProcessingProfile}
           <div class="min-w-0 border-t border-hairline pt-2.5">
-            {#if isPending("processing-controls") || savedField === "processing-controls"}
-              <div
-                class="figure mb-1.5 flex h-4 items-center justify-end text-xs text-ink-quiet"
-                aria-live="polite"
-              >
-                {#if isPending("processing-controls")}
-                  <LoaderCircleIcon class="mr-1.5 size-3 animate-spin" />saving
-                {:else}
-                  <CheckIcon class="mr-1.5 size-3 text-success" />saved
-                {/if}
-              </div>
-            {/if}
             <S1MiniControls
               processor={settings.postProcessing}
               profile={selectedProcessingProfile}
               idPrefix="quick-s1-mini"
               disabled={isPending("processing-controls") || !processingEnabled}
               compact
-              onChange={(patch) =>
-                onUpdate({ postProcessing: patch }, "processing-controls")}
+              onChange={(patch) => onUpdate({ postProcessing: patch }, "processing-controls")}
             />
           </div>
         {/if}
+        <QuickSaveStatus
+          fields={[
+            "processing-model",
+            "processing-profile",
+            "processing-controls",
+            "processing-enabled",
+          ]}
+          {pending}
+          saved={savedField}
+          failed={failedField}
+        />
       </div>
     </RackModule>
   {/if}

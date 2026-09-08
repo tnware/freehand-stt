@@ -1,4 +1,5 @@
 <script lang="ts">
+  import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import SpeechModelControls from "../settings/SpeechModelControls.svelte";
   import type { QuickSettingsPatch } from "$lib/stores/editor.svelte";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
@@ -27,12 +28,8 @@
   let open = $state(false);
   const speech = $derived(settings.textToSpeech);
   const busy = $derived(disabled || editor.isQuickSettingsPending("speech-controls"));
-  let saveFailed = $state(false);
-  async function update(textToSpeech: QuickSettingsPatch["textToSpeech"]) {
-    saveFailed = false;
-    const saved = await editor.updateQuickSettings({ textToSpeech }, "speech-controls");
-    saveFailed = !saved;
-    return saved;
+  function update(textToSpeech: QuickSettingsPatch["textToSpeech"]) {
+    return editor.updateQuickSettings({ textToSpeech }, "speech-controls");
   }
 </script>
 
@@ -81,15 +78,12 @@
         onDiscoverModels={() => editor.testTextToSpeechConnection(settings, "")}
         onDiscoverVoices={() => editor.discoverVoices(true)}
       />
-      <p class="text-xs text-muted-foreground" role="status">
-        {busy
-          ? "Saving…"
-          : saveFailed
-            ? "Could not save. Your previous settings are still active. Try the change again."
-            : editor.quickSettingsSaved === "speech-controls"
-              ? "Saved"
-              : "Changes apply immediately. Your composer draft stays here."}
-      </p>
+      <QuickSaveStatus
+        fields={["speech-controls"]}
+        pending={editor.quickSettingsPending}
+        saved={editor.quickSettingsSaved}
+        failed={editor.quickSettingsFailed}
+      />
       <Button
         variant="outline"
         size="sm"

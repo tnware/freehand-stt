@@ -53,12 +53,14 @@
 <RuntimeModelPicker
   id={compact ? "quick-speech-model" : "tts-model"}
   value={speech.model}
+  profileName={profile?.name ?? speech.modelProfile}
   {models}
   {draftModels}
   {compact}
   {immediate}
   savedModels={rememberedModels(settings, Purpose.Speech).map((e) => e.model)}
-  busy={busy || modelsBusy}
+  disabled={busy}
+  busy={modelsBusy}
   onChoose={onChooseModel}
   onForget={onForgetModel}
   onDiscover={onDiscoverModels}

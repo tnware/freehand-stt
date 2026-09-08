@@ -140,6 +140,9 @@ export class SettingsEditor {
   #connectionBaseline = "";
   managedConnectionResult = $state<ConnectionResult | null>(null);
   managedConnectionTesting = $state(false);
+  savedConnectionCheckingID = $state("");
+  savedConnectionChecks = $state<Record<string, ConnectionResult>>({});
+  savedConnectionCheckErrors = $state<Record<string, string>>({});
   #managedConnectionRevision = 0;
   readonly #service: SettingsEditorServices;
   readonly #messages: SessionMessages;
@@ -182,6 +185,7 @@ export class SettingsEditor {
   configurationResetting = $state(false);
   quickSettingsPending = $state<QuickSettingsField[]>([]);
   quickSettingsSaved = $state<QuickSettingsField | null>(null);
+  quickSettingsFailed = $state<QuickSettingsField | null>(null);
   devicesBusy = $state(false);
   voicesBusy = $state(false);
   #voices = $state<VoicesResult | null>(null);
@@ -264,6 +268,10 @@ export class SettingsEditor {
 
   /** Applies a settings payload confirmed by Go and starts a fresh draft. */
   #adopt(settings: Settings) {
+    // A confirmed snapshot may include a credential rotation invisible to the renderer.
+    // Keep check results only until that boundary; late responses cannot repopulate them.
+    this.#clearSavedConnectionChecks();
+    this.quickSettingsFailed = null;
     this.validationIssue = null;
     this.#pendingExternalSettings = null;
     this.#modelDrafts = [];
@@ -305,6 +313,7 @@ export class SettingsEditor {
       return true;
     }
     if ((this.dirty || this.connectionDraft !== null) && !this.saving) {
+      this.#clearSavedConnectionChecks();
       this.#pendingExternalSettings = copySettings(settings);
       this.#messages.reportInfo(
         "Settings changed in another window. Your edits are preserved; discard them to load the latest settings.",
@@ -351,12 +360,19 @@ export class SettingsEditor {
     return true;
   }
 
+  #clearSavedConnectionChecks() {
+    this.#managedConnectionRevision++;
+    this.managedConnectionTesting = false;
+    this.managedConnectionResult = null;
+    this.savedConnectionCheckingID = "";
+    this.savedConnectionChecks = {};
+    this.savedConnectionCheckErrors = {};
+  }
+
   clearCredentialDraft() {
+    this.#clearSavedConnectionChecks();
     this.connectionDraft = null;
     this.#connectionBaseline = "";
-    this.#managedConnectionRevision++;
-    this.managedConnectionResult = null;
-    this.managedConnectionTesting = false;
     this.apiKey = "";
     this.clearKey = false;
     this.processingAPIKey = "";
@@ -589,16 +605,33 @@ export class SettingsEditor {
     );
   }
   async testSavedConnection(id: string): Promise<void> {
+    if (
+      this.managedConnectionTesting ||
+      !this.applied?.savedConnections.entries?.some((c) => c.id === id)
+    )
+      return;
     const revision = ++this.#managedConnectionRevision;
     this.managedConnectionTesting = true;
+    this.savedConnectionCheckingID = id;
     this.managedConnectionResult = null;
+    delete this.savedConnectionCheckErrors[id];
+    delete this.savedConnectionChecks[id];
     try {
       const result = await this.#service.connection.TestSavedConnection(id);
-      if (revision === this.#managedConnectionRevision) this.managedConnectionResult = result;
+      if (revision === this.#managedConnectionRevision) {
+        this.managedConnectionResult = result;
+        this.savedConnectionChecks[id] = result;
+      }
     } catch (cause) {
-      if (revision === this.#managedConnectionRevision) this.#messages.fail(cause);
+      if (revision === this.#managedConnectionRevision) {
+        this.savedConnectionCheckErrors[id] = "Could not check this connection. Try again.";
+        this.#messages.fail(cause);
+      }
     } finally {
-      if (revision === this.#managedConnectionRevision) this.managedConnectionTesting = false;
+      if (revision === this.#managedConnectionRevision) {
+        this.managedConnectionTesting = false;
+        this.savedConnectionCheckingID = "";
+      }
     }
   }
   async changeConnection(
@@ -833,6 +866,7 @@ export class SettingsEditor {
     if (!this.applied || this.isQuickSettingsPending(field)) return false;
     this.quickSettingsPending = [...this.quickSettingsPending, field];
     if (this.quickSettingsSaved === field) this.quickSettingsSaved = null;
+    if (this.quickSettingsFailed === field) this.quickSettingsFailed = null;
     this.#messages.dismissError();
 
     let operationResult = false;
@@ -913,6 +947,7 @@ export class SettingsEditor {
       await operation;
       return operationResult;
     } catch (cause) {
+      this.quickSettingsFailed = field;
       this.#messages.fail(cause);
       return false;
     } finally {

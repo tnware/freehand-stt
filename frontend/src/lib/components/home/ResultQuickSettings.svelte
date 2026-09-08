@@ -125,6 +125,7 @@
               editor.connectionResultStale(Purpose.Cleanup, settings)}
             pending={editor.quickSettingsPending}
             savedField={editor.quickSettingsSaved}
+            failedField={editor.quickSettingsFailed}
             sttTesting={editor.sttConnectionTesting}
             processingTesting={editor.processingConnectionTesting}
             onAddConnection={(purpose) => {
@@ -143,9 +144,11 @@
             onOpenDeliverySettings={() => openSettings(onOpenGeneralSettings)}
           />
         {/if}
-        <p class="mt-3 border-t border-hairline pt-3 text-xs text-muted-foreground">
-          Changes apply immediately.
-        </p>
+        {#if panel === "audio" || panel === "delivery"}<p
+            class="mt-3 border-t border-hairline pt-3 text-xs text-muted-foreground"
+          >
+            Changes apply immediately.
+          </p>{/if}
       </Popover.Content>
     </Popover.Root>
   {/each}

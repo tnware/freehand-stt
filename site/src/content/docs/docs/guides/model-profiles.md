@@ -16,11 +16,11 @@ Choose an active connection, choose or enter the model, and review **Model
 profile** directly beneath it. Choose a specialized profile only when you know
 that is the model your server is running, then **Save feature settings**.
 
-| Feature            | Available model profiles                               | Behavior                                                                                                                                                                          |
-| ------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Feature            | Available model profiles                                | Behavior                                                                                                                                                                                     |
+| ------------------ | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Voice / Audio file | Generic; Nemotron on NeMo-Speech.cpp; Qwen3-ASR on vLLM | Generic offers the selected backend’s completed transcription options. Nemotron and Qwen restrict controls to their qualified server/model contracts and enable optional realtime for Voice. |
-| Cleanup            | Generic; S1-mini by Superwhisper                       | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                   |
-| Text to speech     | Generic                                                | Standard WAV speech generation with a provider voice ID.                                                                                                                          |
+| Cleanup            | Generic; S1-mini by Superwhisper                        | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                              |
+| Text to speech     | Generic                                                 | Standard WAV speech generation with a provider voice ID.                                                                                                                                     |
 
 Where only Generic is available, the redundant profile row is hidden. The standard
 backend contract still applies; there is no extra choice to make.
@@ -54,6 +54,18 @@ See [post-processing](../post-processing/) and [languages](../languages/).
 
 ## Remember settings for each model
 
+Voice, Audio file, Cleanup, and Text to speech use the same searchable **Model**
+picker in quick controls and Settings. **Saved** identifies remembered options,
+**Server** identifies an advertised model, and **Edited** identifies a model with
+draft options in this Settings session. An ID can have more than one label;
+**Manual ID** means it came from neither the saved list nor current discovery.
+The selected model's profile appears below the picker. You can enter an exact ID
+without refreshing models; discovery never chooses a profile for you.
+
+Quick panels show **Saving…**, **Saved**, or a failed-save message beside their
+controls. A failed save keeps the previously applied settings active; retry the
+change to save it. Full Settings pages continue to use **Save settings**.
+
 Freehand remembers your choices separately for each **connection, feature, and
 model ID**. Choose a saved model from the searchable **Model** picker to restore those options
 without listing models on the server. A new model ID starts with Generic and
@@ -86,7 +98,7 @@ needs a model chosen. Enable switches, recording behavior, shortcuts, and reques
 timeouts remain feature or application settings rather than model preferences.
 Running jobs continue with the settings captured when they started.
 
-The model actions menu’s **Forget saved settings for this model** removes its saved preferences and clears the current model
+The model actions menu’s **Forget saved settings** removes its saved preferences and clears the current model
 selection. Save or discard edits first. You can enter the same ID again to start
 from defaults. Freehand remembers up to 32 models per connection and feature;
 forget an unused model if you reach that limit.

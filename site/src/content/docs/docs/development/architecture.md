@@ -548,6 +548,19 @@ appear only for dictation. TTS shows its own connection and model/voice settings
 Each quick update starts from backend-confirmed settings, restores only engine options
 when a model changes, and calls the same transactional owner without credential mutation.
 Quick controls remain disabled while the Settings window owns an editable draft.
+`RuntimeModelPicker` supplies model search, manual IDs, discovery actions, and
+saved/server/draft provenance across Voice, files, cleanup, and speech. Its profile
+summary is descriptive; model IDs never select behavior. `QuickSaveStatus` reads
+field-scoped pending, saved, and failed state from the existing editor owner.
+Saved-connection cards keep metadata results by catalog ID in that same editor;
+every confirmed settings adoption or credential-draft teardown invalidates the
+cache and in-flight revisions, including credential-only changes invisible to the
+renderer. No diagnostic result is persisted.
+
+Settings navigation groups workflows, shared connections/vocabulary, capture,
+and application preferences in the same visual and keyboard order. Navigation
+and content scroll independently. The section heading stays visible; the content
+scroll padding follows its measured height so validation targets remain exposed.
 Current results and playback controls stay accessible independently of recent history.
 Optional history is a secondary disclosure. These disclosures do not alter retention.
 

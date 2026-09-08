@@ -354,6 +354,7 @@
                           session.editor.connectionResultStale(Purpose.Cleanup, runtimeSettings)}
                         pending={session.editor.quickSettingsPending}
                         savedField={session.editor.quickSettingsSaved}
+                        failedField={session.editor.quickSettingsFailed}
                         sttTesting={session.editor.sttConnectionTesting}
                         processingTesting={session.editor.processingConnectionTesting}
                         onAddConnection={addConnection}

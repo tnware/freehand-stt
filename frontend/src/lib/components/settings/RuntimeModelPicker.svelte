@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { modelSources } from "$lib/utils/modelSources";
   import { Combobox } from "bits-ui";
   import { Button } from "$lib/components/ui/button";
   import * as Menu from "$lib/components/ui/dropdown-menu";
@@ -6,6 +7,7 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import EraserIcon from "@lucide/svelte/icons/eraser";
   let {
     id,
     value,
@@ -19,6 +21,8 @@
     onForget,
     compact = false,
     immediate = false,
+    disabled = false,
+    profileName = "",
   }: {
     id: string;
     value: string;
@@ -29,6 +33,8 @@
     busy?: boolean;
     onDiscover: () => void;
     onChoose: (model: string) => boolean | Promise<boolean>;
+    disabled?: boolean;
+    profileName?: string;
     compact?: boolean;
     immediate?: boolean;
     onForget?: () => void;
@@ -45,10 +51,18 @@
   const choices = $derived(
     [...matches, ...(custom ? [custom] : [])].map((model) => ({ value: model, label: model })),
   );
+  let choosing = $state(false);
+  const locked = $derived(disabled || busy || choosing);
   async function choose(model: string) {
-    if (model && (await onChoose(model))) {
-      open = false;
-      query = "";
+    if (!model || locked) return;
+    choosing = true;
+    try {
+      if (await onChoose(model)) {
+        open = false;
+        query = "";
+      }
+    } finally {
+      choosing = false;
     }
   }
 </script>
@@ -57,7 +71,7 @@
   <div class="flex items-center justify-between gap-3">
     <label for={id} class="text-sm font-medium">Model</label>
     <div class="flex items-center gap-1">
-      <Button variant="ghost" size="sm" disabled={busy} onclick={onDiscover}
+      <Button variant="ghost" size="sm" disabled={locked} onclick={onDiscover}
         ><RefreshCwIcon class={busy ? "size-3.5 animate-spin" : "size-3.5"} />{serverLoaded
           ? "Check server"
           : "Refresh models"}</Button
@@ -66,10 +80,12 @@
           ><Menu.Trigger
             aria-label="Model actions"
             class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            disabled={busy}><EllipsisIcon class="size-4" /></Menu.Trigger
-          ><Menu.Content align="end"
-            ><Menu.Item onclick={onForget}>Forget saved settings for this model</Menu.Item
-            ></Menu.Content
+            disabled={locked}><EllipsisIcon class="size-4" /></Menu.Trigger
+          ><Menu.Content align="end" class="w-60 max-w-[calc(100vw-24px)]"
+            ><Menu.Item onclick={onForget} class="gap-2.5 px-3 py-2.5">
+              <EraserIcon class="size-4 text-muted-foreground" />
+              <span>Forget saved settings</span>
+            </Menu.Item></Menu.Content
           ></Menu.Root
         >{/if}
     </div>
@@ -86,7 +102,7 @@
         if (!next) query = "";
       }}
       allowDeselect={false}
-      disabled={busy}
+      disabled={locked}
     >
       <div class="relative">
         <Combobox.Input
@@ -133,14 +149,8 @@
                 <span class="min-w-0 flex-1 break-all font-mono"
                   >{custom === choice.value ? `Use “${choice.value}”` : choice.value}</span
                 >
-                <span class="shrink-0 text-[11px] text-muted-foreground"
-                  >{draftModels.includes(choice.value)
-                    ? "Edited"
-                    : savedModels.includes(choice.value)
-                      ? "Saved"
-                      : custom === choice.value
-                        ? "New"
-                        : "Server"}</span
+                <span class="shrink-0 text-[11px] text-muted-foreground">
+                  {modelSources(choice.value, models, savedModels, draftModels)}</span
                 >
                 {#if value === choice.value}<CheckIcon class="size-3.5 shrink-0" />{/if}
               </Combobox.Item>
@@ -150,6 +160,16 @@
         </Combobox.Content></Combobox.Portal
       >
     </Combobox.Root>{/if}
+  {#if profileName || (value && !serverLoaded)}
+    <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      {#if profileName}<span
+          >Profile <span class="font-medium text-foreground">{profileName}</span></span
+        >{/if}
+      {#if value && !serverLoaded}<span
+          >{modelSources(value, models, savedModels, draftModels)}</span
+        >{/if}
+    </p>
+  {/if}
   <p
     id={`${id}-help`}
     class={compact ? "sr-only" : "text-xs leading-relaxed text-muted-foreground"}
