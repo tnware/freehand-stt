@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { State, type Status } from "$lib/state";
-import {
-  railPhase,
-  showIdleShortcutGuidance,
-  statusMessage,
-} from "$lib/utils/status";
+import { railPhase, showIdleShortcutGuidance, statusMessage } from "$lib/utils/status";
 
 const status = (state: State, canCopy = false, message?: string): Status => ({
+  live: false,
+  liveCaptions: false,
   state,
   generation: 1,
   message,
@@ -20,12 +18,8 @@ describe("status guidance", () => {
 
     expect(showIdleShortcutGuidance(status(State.Idle), shortcut)).toBe(true);
     expect(showIdleShortcutGuidance(status(State.Idle), "")).toBe(false);
-    expect(showIdleShortcutGuidance(status(State.Failed), shortcut)).toBe(
-      false,
-    );
-    expect(showIdleShortcutGuidance(status(State.Failed, true), shortcut)).toBe(
-      false,
-    );
+    expect(showIdleShortcutGuidance(status(State.Failed), shortcut)).toBe(false);
+    expect(showIdleShortcutGuidance(status(State.Failed, true), shortcut)).toBe(false);
   });
 
   // The transport's stage has room for a clause, not a sentence, so the reason

@@ -15,6 +15,7 @@ import (
 type Purpose string
 
 const (
+	Realtime      Purpose = "realtime"
 	Transcription Purpose = "stt"
 	Cleanup       Purpose = "cleanup"
 	Speech        Purpose = "speech"
@@ -65,7 +66,9 @@ type Catalog struct {
 	Selected map[Purpose]string `json:"selected"`
 }
 
-func ValidPurpose(p Purpose) bool { return p == Transcription || p == Cleanup || p == Speech }
+func ValidPurpose(p Purpose) bool {
+	return p == Transcription || p == Cleanup || p == Speech || p == Realtime
+}
 func ValidateName(name string) error {
 	if strings.TrimSpace(name) != name || name == "" || len(name) > 80 || !utf8.ValidString(name) {
 		return errors.New("connection name must be 1 to 80 UTF-8 bytes without surrounding whitespace")
@@ -88,6 +91,11 @@ func CloneDetails(v Details) Details {
 func Extract(v config.Settings, p Purpose) Details {
 	d := Details{Headers: map[string]string{}, AuthenticationMode: config.AuthenticationModeNone}
 	switch p {
+	case Realtime:
+		d.CompatibilityProfile = v.Realtime.CompatibilityProfile
+		d.BaseURL = v.Realtime.BaseURL
+		d.AllowInsecureHTTP = v.Realtime.AllowInsecureHTTP
+		d.AuthenticationMode = v.Realtime.AuthenticationMode
 	case Transcription:
 		d.CompatibilityProfile = v.CompatibilityProfile
 		d.BaseURL = v.BaseURL
@@ -113,6 +121,11 @@ func Extract(v config.Settings, p Purpose) Details {
 // Apply selects endpoint details. The settings owner validates model options before committing.
 func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 	switch p {
+	case Realtime:
+		v.Realtime.CompatibilityProfile = d.CompatibilityProfile
+		v.Realtime.BaseURL = d.BaseURL
+		v.Realtime.AllowInsecureHTTP = d.AllowInsecureHTTP
+		v.Realtime.AuthenticationMode = d.AuthenticationMode
 	case Transcription:
 		v.CompatibilityProfile = d.CompatibilityProfile
 		v.BaseURL = d.BaseURL
@@ -137,6 +150,8 @@ func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 func Validate(p Purpose, d Details) error {
 	var operation compatibility.Role
 	switch p {
+	case Realtime:
+		operation = compatibility.Realtime
 	case Transcription:
 		operation = compatibility.Transcription
 	case Cleanup:
@@ -165,6 +180,9 @@ func Validate(p Purpose, d Details) error {
 // ClearModel requires an explicit model choice after switching servers.
 func ClearModel(v config.Settings, p Purpose) config.Settings {
 	switch p {
+	case Realtime:
+		v.Realtime.Model = ""
+		v.Realtime.Enabled = false
 	case Transcription:
 		v.Model = ""
 		v.SetupCompleted = false
@@ -181,7 +199,7 @@ func ClearModel(v config.Settings, p Purpose) config.Settings {
 // Supports is the user's explicit declaration of an implemented use, not inferred server evidence.
 func (c Connection) Supports(p Purpose) bool { return slices.Contains(c.Uses, p) }
 func ValidateUses(uses []Purpose, d Details) error {
-	if len(uses) == 0 || len(uses) > 3 {
+	if len(uses) == 0 || len(uses) > 4 {
 		return errors.New("choose at least one supported use")
 	}
 	seen := map[Purpose]bool{}

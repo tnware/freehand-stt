@@ -14,11 +14,11 @@ INSERT INTO selected_connections(purpose,connection_id) SELECT purpose,connectio
 INSERT INTO saved_connection_headers(connection_id,name,value) SELECT 'initial-stt',name,value FROM request_headers WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT(connection_id,name) DO NOTHING;
 
 -- name: ListSavedConnections :many
-SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account FROM saved_connections ORDER BY name,id LIMIT 97;
+SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account FROM saved_connections ORDER BY name,id LIMIT 129;
 -- name: ListSelectedConnections :many
 SELECT purpose,connection_id FROM selected_connections ORDER BY purpose;
 -- name: ListConnectionHeaders :many
-SELECT connection_id,name,value FROM saved_connection_headers ORDER BY connection_id,name LIMIT 3073;
+SELECT connection_id,name,value FROM saved_connection_headers ORDER BY connection_id,name LIMIT 4097;
 -- name: PutSavedConnection :exec
 INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) VALUES(?,?,?,?,?,?,?,?)
 ON CONFLICT(id) DO UPDATE SET name=excluded.name,compatibility_profile=excluded.compatibility_profile,base_url=excluded.base_url,allow_insecure_http=excluded.allow_insecure_http,authentication_mode=excluded.authentication_mode,health_path=excluded.health_path,credential_account=excluded.credential_account;
@@ -37,7 +37,7 @@ DELETE FROM selected_connections;
 -- name: SeedConnectionUses :exec
 INSERT INTO saved_connection_uses(connection_id,purpose) SELECT id,CASE id WHEN 'initial-stt' THEN 'stt' WHEN 'initial-cleanup' THEN 'cleanup' ELSE 'speech' END FROM saved_connections WHERE id IN ('initial-stt','initial-cleanup','initial-speech') ON CONFLICT DO NOTHING;
 -- name: ListConnectionUses :many
-SELECT connection_id,purpose FROM saved_connection_uses ORDER BY connection_id,purpose LIMIT 289;
+SELECT connection_id,purpose FROM saved_connection_uses ORDER BY connection_id,purpose LIMIT 513;
 -- name: ClearConnectionUses :exec
 DELETE FROM saved_connection_uses;
 -- name: PutConnectionUse :exec

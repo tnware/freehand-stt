@@ -8,6 +8,9 @@ description: Preserve realtime transcription as a separate versioned transport c
 - Speaches authority: [v0.8.2 realtime guide](https://github.com/speaches-ai/speaches/blob/v0.8.2/docs/usage/realtime-api.md), [WebSocket router](https://github.com/speaches-ai/speaches/blob/v0.8.2/src/speaches/routers/realtime/ws.py), and [example transcription client](https://github.com/speaches-ai/speaches/blob/v0.8.2/scripts/realtime_transcription_client.py)
 - Protocol authority: [OpenAI Realtime transcription](https://developers.openai.com/api/docs/guides/realtime-transcription)
 
+
+> Update (2026-09-07): [ADR 0008](../0008-qualified-realtime-dictation/) admits optional qualified Nemotron realtime dictation. The historical decision below remains preserved; conversation mode and bundled inference remain outside scope.
+
 ## Decision
 
 Implement realtime transcription after basic dictation and optional transcript post-processing are stable:

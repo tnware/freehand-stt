@@ -32,11 +32,24 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     temperature: 0,
   },
   compatibilityProfile: ID.Generic,
-  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
+  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
   rememberedModels: { entries: [], defaults: {} },
-  modelProfiles: { transcription: [], postProcessing: [], speech: [] },
+  modelProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
   modelProfile: ModelProfileID.Generic,
   transcriptionLanguages: [],
+  realtimeLanguages: [],
+  realtime: {
+    enabled: false,
+    compatibilityProfile: ID.NeMoSpeechV1,
+    modelProfile: ModelProfileID.Nemotron35,
+    baseURL: "",
+    allowInsecureHTTP: false,
+    authenticationMode: AuthenticationMode.AuthenticationModeNone,
+    model: "",
+    language: "auto",
+    captions: true,
+    options: { vocabulary: "", boost: 3 },
+  },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
   authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
@@ -278,22 +291,27 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
   ).toBe("attention");
 });
 
-
 describe("task-specific prerequisites", () => {
   it("allows file transcription before dictation setup without microphone or shortcut", () => {
     const v = settings({ setupCompleted: false, toggleShortcut: "", credentialConfigured: true });
     const file = appReadiness(v, null, [], false, "file");
     expect(file.initialSetup).toBe(false);
-    expect(file.steps.map(s => s.id)).not.toContain("microphone");
-    expect(file.steps.map(s => s.id)).not.toContain("shortcut");
+    expect(file.steps.map((s) => s.id)).not.toContain("microphone");
+    expect(file.steps.map((s) => s.id)).not.toContain("shortcut");
     expect(file.recoveryNeeded).toBe(false);
     const voice = appReadiness(v, null, [], false);
     expect(voice.initialSetup).toBe(true);
     expect(voice.recoveryNeeded).toBe(true);
   });
   it("still requires file transcription endpoint and credentials", () => {
-    const file = appReadiness(settings({ baseURL: "", credentialConfigured: false }), null, [], false, "file");
+    const file = appReadiness(
+      settings({ baseURL: "", credentialConfigured: false }),
+      null,
+      [],
+      false,
+      "file",
+    );
     expect(file.recoveryNeeded).toBe(true);
-    expect(file.steps.filter(s => s.blocking).map(s => s.id)).toEqual(["server", "credential"]);
+    expect(file.steps.filter((s) => s.blocking).map((s) => s.id)).toEqual(["server", "credential"]);
   });
 });

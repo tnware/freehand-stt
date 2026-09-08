@@ -39,3 +39,21 @@ a repaired import, explicitly reset, and restore a backup with the app fully
 closed. Inspect only synthetic credential accounts and confirm no secret reaches
 the database, backups, renderer snapshots, or logs. Native temporary-database
 tests and a successful executable build do not replace these interactive checks.
+
+## Qualified live dictation and connection windows
+
+- Configure completed STT and realtime on different connections; files continue
+  using completed STT while live microphone dictation uses its selected server.
+- Speak with captions on: latest words appear in a single row at normal DPI and
+  125/150/200% scaling. Long text stays within the fixed strip; Unicode remains
+  readable. The overlay never takes focus or intercepts input.
+- Stop: authoritative final text replaces the preview before cleanup/insertion.
+  Change focus before stopping: insertion must fail closed and offer final copy.
+- Cancel, disconnect the server, remove the microphone, and quit during capture
+  or finalization: no partial insertion/history, no replay, bounded shutdown.
+- Turn captions off and turn live mode off separately. Ordinary overlay layouts
+  and the saved completed-transcription VAD/checkpoint behavior return.
+- Open Add/Edit from Settings and quick controls: each reveals the separate
+  Connection Manager. Reopen/minimize/restore without losing an unfinished draft.
+  Native close and Escape protect unsaved edits; hide/save clears credential input.
+  Saving updates the other windows, and conflicting stale edits are rejected.

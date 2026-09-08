@@ -204,6 +204,7 @@ const (
 )
 
 type Settings struct {
+	Realtime                        RealtimeSettings       `json:"realtime"`
 	ModelProfile                    modelprofile.ID        `json:"modelProfile"`
 	CompatibilityProfile            compatibility.ID       `json:"compatibilityProfile"`
 	BaseURL                         string                 `json:"baseURL"`
@@ -258,6 +259,7 @@ type Settings struct {
 
 func Default() Settings {
 	return Settings{
+		Realtime:             DefaultRealtime(),
 		CompatibilityProfile: compatibility.Generic,
 		// First launch and settings recovery must not select a network peer or a
 		// credential-bearing authentication mode on the user's behalf. The setup
@@ -311,6 +313,9 @@ func (s Settings) EffectiveAppearanceMode() AppearanceMode {
 var headerNameRE = regexp.MustCompile(`^[!#$%&'*+\-.^_` + "`" + `|~0-9A-Za-z]+$`)
 
 func Validate(s Settings) error {
+	if err := ValidateRealtime(s.Realtime); err != nil {
+		return fieldError("realtime", "Check the live transcription connection, model profile, language, and vocabulary.", err)
+	}
 	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Transcription); err != nil {
 		return fieldError("compatibilityProfile", "Choose a supported transcription server profile.", err)
 	}

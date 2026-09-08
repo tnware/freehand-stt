@@ -28,6 +28,7 @@ type Profile struct {
 }
 
 type Catalog struct {
+	Realtime       []Profile `json:"realtime"`
 	Transcription  []Profile `json:"transcription"`
 	PostProcessing []Profile `json:"postProcessing"`
 	Speech         []Profile `json:"speech"`
@@ -49,6 +50,12 @@ func Effective(id ID) ID {
 
 func definition(id ID, role compatibility.Role) (Profile, error) {
 	id = Effective(id)
+	if role == compatibility.Realtime {
+		if id != Nemotron35 {
+			return Profile{}, errors.New("choose the qualified Nemotron 3.5 streaming model profile")
+		}
+		return Profile{ID: id, Name: "Nemotron 3.5 ASR streaming", Description: "32 base-model locales and vocabulary boosting. Live text is provisional until finalized.", Capabilities: compatibility.Capabilities{LanguageHint: true}}, nil
+	}
 	p := Profile{ID: id, Name: "Generic"}
 	switch role {
 	case compatibility.Transcription:
@@ -107,6 +114,9 @@ func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract
 
 func options(backend compatibility.ID, role compatibility.Role) []Profile {
 	ids := []ID{Generic}
+	if role == compatibility.Realtime {
+		ids = []ID{Nemotron35}
+	}
 	if role == compatibility.PostProcessing {
 		ids = append(ids, S1Mini)
 	}
@@ -120,7 +130,7 @@ func options(backend compatibility.ID, role compatibility.Role) []Profile {
 }
 
 func Profiles(transcription, cleanup, speech compatibility.ID) Catalog {
-	return Catalog{Transcription: options(transcription, compatibility.Transcription), PostProcessing: options(cleanup, compatibility.PostProcessing), Speech: options(speech, compatibility.Speech)}
+	return Catalog{Realtime: options(compatibility.NeMoSpeechV1, compatibility.Realtime), Transcription: options(transcription, compatibility.Transcription), PostProcessing: options(cleanup, compatibility.PostProcessing), Speech: options(speech, compatibility.Speech)}
 }
 
 // ValidateLanguage preserves the accepted S1-mini policy for explicit and

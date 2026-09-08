@@ -1,4 +1,27 @@
 {
+  "realtime": [
+    {
+      "id": "nemo-speech-v1",
+      "label": "NeMo-Speech.cpp",
+      "available": true,
+      "description": "Live PCM16 transcription using the v0.1.0 WebSocket contract. Uses the server's loaded model.",
+      "capabilities": {
+        "serverLoadedModel": true,
+        "vllmTranscriptionEvents": false,
+        "cleanupOutputLimit": false,
+        "cleanupDisableReasoning": false,
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": true,
+        "voiceDiscovery": false,
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
+      }
+    }
+  ],
   "transcription": [
     {
       "id": "generic",

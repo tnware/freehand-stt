@@ -143,7 +143,7 @@ func (s *Service) StartRecording(mode RecordingMode) error {
 	if s.closed.Load() {
 		return errors.New("application is shutting down")
 	}
-	if s.settings == nil || !s.settings.Current().SetupCompleted {
+	if s.settings == nil || (!s.settings.Current().SetupCompleted && !s.settings.Current().Realtime.Enabled) {
 		return errors.New("complete setup before starting a recording")
 	}
 	release, err := s.activity.BeginRecording()

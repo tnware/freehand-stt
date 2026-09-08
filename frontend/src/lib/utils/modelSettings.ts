@@ -5,11 +5,13 @@ import type { Options } from "$bindings/modelsettings";
 import type { Settings } from "$lib/state";
 
 export function modelFor(settings: Settings, purpose: Purpose): string {
-  return purpose === Purpose.Transcription
-    ? settings.model
-    : purpose === Purpose.Cleanup
-      ? settings.postProcessing.model
-      : settings.textToSpeech.model;
+  return purpose === Purpose.Realtime
+    ? settings.realtime.model
+    : purpose === Purpose.Transcription
+      ? settings.model
+      : purpose === Purpose.Cleanup
+        ? settings.postProcessing.model
+        : settings.textToSpeech.model;
 }
 export function rememberedModels(settings: Settings, purpose: Purpose) {
   const connection = settings.savedConnections.selected?.[purpose];
@@ -19,6 +21,7 @@ export function rememberedModels(settings: Settings, purpose: Purpose) {
 }
 export function modelOptions(settings: Settings, purpose: Purpose): Options {
   const base: Options = {
+    realtime: { vocabulary: "", boost: 0 },
     profile: ID.Generic,
     language: "",
     transcription: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
@@ -30,6 +33,13 @@ export function modelOptions(settings: Settings, purpose: Purpose): Options {
     voice: "",
     speed: 0,
   };
+  if (purpose === Purpose.Realtime)
+    return {
+      ...base,
+      profile: settings.realtime.modelProfile,
+      language: settings.realtime.language,
+      realtime: { ...settings.realtime.options },
+    };
   if (purpose === Purpose.Transcription)
     return {
       ...base,
@@ -86,7 +96,13 @@ export function applyModelOptions(
     transcription: { ...options.transcription },
     cleanup: { ...options.cleanup },
   };
-  if (purpose === Purpose.Transcription) {
+  if (purpose === Purpose.Realtime) {
+    Object.assign(settings.realtime, {
+      model,
+      modelProfile: o.profile,
+      options: { ...o.realtime },
+    });
+  } else if (purpose === Purpose.Transcription) {
     settings.model = model;
     settings.modelProfile = o.profile;
     settings.transcriptionOptions = o.transcription;

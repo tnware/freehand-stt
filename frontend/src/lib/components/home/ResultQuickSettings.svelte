@@ -1,4 +1,6 @@
 <script lang="ts">
+  import RadioIcon from "@lucide/svelte/icons/radio";
+  import RealtimeSettings from "./RealtimeSettings.svelte";
   import MicIcon from "@lucide/svelte/icons/mic";
   import TextCursorInputIcon from "@lucide/svelte/icons/text-cursor-input";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
@@ -33,14 +35,15 @@
     onOpenAudioSettings: () => void;
     onOpenGeneralSettings: () => void;
   } = $props();
-  type Panel = "audio" | "stt" | "cleanup" | "delivery";
+  type Panel = "audio" | "stt" | "cleanup" | "delivery" | "realtime";
   let activePanel = $state<Panel | null>(null);
   const panels = $derived<Panel[]>(
     showCapture
-      ? ["audio", "stt", "cleanup", "delivery"]
+      ? ["audio", "stt", "realtime", "cleanup", "delivery"]
       : ["stt", "cleanup", "delivery"],
   );
   const labels = {
+    realtime: "Live transcription settings",
     audio: "Audio settings",
     stt: "Transcription settings",
     cleanup: "Cleanup settings",
@@ -52,11 +55,7 @@
   }
 </script>
 
-<div
-  class="flex h-12 min-w-0 items-center gap-1"
-  role="group"
-  aria-label="Quick settings"
->
+<div class="flex h-12 min-w-0 items-center gap-1" role="group" aria-label="Quick settings">
   {#each panels as panel (panel)}
     <Popover.Root
       open={!disabled && activePanel === panel}
@@ -66,12 +65,12 @@
         {disabled}
         aria-label={labels[panel]}
         title={labels[panel]}
-        class={cn(
-          buttonVariants({ variant: "ghost", size: "sm" }),
-          "h-9 min-w-0 gap-2 px-2",
-        )}
+        class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9 min-w-0 gap-2 px-2")}
       >
         {#if panel === "audio"}<MicIcon class="size-4" />
+        {:else if panel === "realtime"}<RadioIcon
+            class={settings.realtime.enabled ? "size-4 text-primary" : "size-4"}
+          /><span class="hidden text-[13px] @min-[540px]:inline">Live</span>
         {:else if panel === "delivery"}<TextCursorInputIcon class="size-4" />
         {:else}<ProviderIcon
             profile={panel === "stt"
@@ -86,15 +85,23 @@
               class={settings.postProcessing.enabled
                 ? "size-1.5 rounded-full bg-success"
                 : "size-1.5 rounded-full bg-muted-foreground"}
-              aria-label={settings.postProcessing.enabled
-                ? "Enabled"
-                : "Disabled"}
+              aria-label={settings.postProcessing.enabled ? "Enabled" : "Disabled"}
             ></span>{/if}
         {/if}
         <ChevronDownIcon class="size-3 text-muted-foreground" />
       </Popover.Trigger>
       <Popover.Content role="dialog" aria-label={labels[panel]}>
-        {#if panel === "audio" || panel === "delivery"}
+        {#if panel === "realtime"}
+          <RealtimeSettings
+            {editor}
+            {settings}
+            {disabled}
+            onAddConnection={(purpose) => {
+              activePanel = null;
+              onAddConnection(purpose);
+            }}
+          />
+        {:else if panel === "audio" || panel === "delivery"}
           <QuickControls
             {settings}
             devices={editor.devices}
@@ -102,8 +109,7 @@
             savedField={editor.quickSettingsSaved}
             {disabled}
             section={panel}
-            onUpdate={(patch, field) =>
-              editor.updateQuickSettings(patch, field)}
+            onUpdate={(patch, field) => editor.updateQuickSettings(patch, field)}
             onOpenAudioSettings={() => openSettings(onOpenAudioSettings)}
             onOpenDeliverySettings={() => openSettings(onOpenGeneralSettings)}
           />
@@ -131,22 +137,18 @@
               onAddConnection(purpose);
             }}
             onChangeConnection={(change) => editor.changeConnection(change)}
-            onUpdate={(patch, field) =>
-              editor.updateQuickSettings(patch, field)}
+            onUpdate={(patch, field) => editor.updateQuickSettings(patch, field)}
             onTestConnection={() => editor.testConnection(editor.applied, "")}
             onTestProcessingConnection={() =>
               editor.testPostProcessingConnection(editor.applied, "")}
             disabled={disabled || editor.saving}
             onOpenServerSettings={() => openSettings(onOpenServerSettings)}
-            onOpenProcessingSettings={() =>
-              openSettings(onOpenProcessingSettings)}
+            onOpenProcessingSettings={() => openSettings(onOpenProcessingSettings)}
             onOpenAudioSettings={() => openSettings(onOpenAudioSettings)}
             onOpenDeliverySettings={() => openSettings(onOpenGeneralSettings)}
           />
         {/if}
-        <p
-          class="mt-3 border-t border-hairline pt-3 text-xs text-muted-foreground"
-        >
+        <p class="mt-3 border-t border-hairline pt-3 text-xs text-muted-foreground">
           Changes apply immediately.
         </p>
       </Popover.Content>

@@ -19,18 +19,42 @@ func (q *Queries) ClearRememberedModels(ctx context.Context) error {
 }
 
 const listRememberedModels = `-- name: ListRememberedModels :many
-SELECT connection_id,purpose,model,selected,profile,language,prompt,hotwords,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,system_prompt,styling,structure,context,voice,speed FROM remembered_models ORDER BY connection_id,purpose,model LIMIT 9217
+SELECT connection_id,purpose,model,selected,profile,language,prompt,hotwords,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,system_prompt,styling,structure,context,voice,speed,vocabulary,boost FROM remembered_models ORDER BY connection_id,purpose,model LIMIT 16385
 `
 
-func (q *Queries) ListRememberedModels(ctx context.Context) ([]RememberedModel, error) {
+type ListRememberedModelsRow struct {
+	ConnectionID        string
+	Purpose             string
+	Model               string
+	Selected            int64
+	Profile             string
+	Language            string
+	Prompt              string
+	Hotwords            string
+	TemperatureOverride int64
+	Temperature         float64
+	LimitOutputTokens   int64
+	MaxOutputTokens     int64
+	DisableReasoning    int64
+	SystemPrompt        string
+	Styling             string
+	Structure           string
+	Context             string
+	Voice               string
+	Speed               float64
+	Vocabulary          string
+	Boost               float64
+}
+
+func (q *Queries) ListRememberedModels(ctx context.Context) ([]ListRememberedModelsRow, error) {
 	rows, err := q.db.QueryContext(ctx, listRememberedModels)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []RememberedModel{}
+	items := []ListRememberedModelsRow{}
 	for rows.Next() {
-		var i RememberedModel
+		var i ListRememberedModelsRow
 		if err := rows.Scan(
 			&i.ConnectionID,
 			&i.Purpose,
@@ -51,6 +75,8 @@ func (q *Queries) ListRememberedModels(ctx context.Context) ([]RememberedModel, 
 			&i.Context,
 			&i.Voice,
 			&i.Speed,
+			&i.Vocabulary,
+			&i.Boost,
 		); err != nil {
 			return nil, err
 		}
@@ -66,7 +92,7 @@ func (q *Queries) ListRememberedModels(ctx context.Context) ([]RememberedModel, 
 }
 
 const putRememberedModel = `-- name: PutRememberedModel :exec
-INSERT INTO remembered_models (connection_id,purpose,model,selected,profile,language,prompt,hotwords,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,system_prompt,styling,structure,context,voice,speed) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+INSERT INTO remembered_models (connection_id,purpose,model,selected,profile,language,prompt,hotwords,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,system_prompt,styling,structure,context,voice,speed,vocabulary,boost) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type PutRememberedModelParams struct {
@@ -89,6 +115,8 @@ type PutRememberedModelParams struct {
 	Context             string
 	Voice               string
 	Speed               float64
+	Vocabulary          string
+	Boost               float64
 }
 
 func (q *Queries) PutRememberedModel(ctx context.Context, arg PutRememberedModelParams) error {
@@ -112,6 +140,8 @@ func (q *Queries) PutRememberedModel(ctx context.Context, arg PutRememberedModel
 		arg.Context,
 		arg.Voice,
 		arg.Speed,
+		arg.Vocabulary,
+		arg.Boost,
 	)
 	return err
 }

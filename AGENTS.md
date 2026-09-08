@@ -22,7 +22,8 @@ native file selection -> /v1/audio/transcriptions -> optional streamed response
 
 Optional S1-mini by Superwhisper processing is implemented as a separate stage after raw STT. It is never part of Speaches and is never bundled into the executable. Follow `site/src/content/docs/docs/decisions/0001-s1-mini-post-processing.md` exactly; preserve raw mode, fall back durably to raw text, and do not invent untrained control values.
 
-Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are shelved research, not active roadmap commitments. The existing pause-aware checkpoint flow is the default latency strategy. If product evidence revives realtime work, keep completed/file STT and realtime STT independently configurable, implement semantic delta/final events behind a versioned transport adapter, and follow `site/src/content/docs/docs/decisions/0002-realtime-transcription.md` before adding code.
+Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 and the explicit Nemotron 3.5 streaming profile. Follow `site/src/content/docs/docs/decisions/0008-qualified-realtime-dictation.md`; retain ADR 0002's applicable transport and safety research. Completed/file STT and realtime STT remain independently configurable. Partial text is presentation-only; authoritative finals use the existing cleanup and focus-safe delivery path. The pause-aware completed flow remains the default. Conversation mode remains shelved, and inference runtimes remain user-managed.
+
 
 ## Non-negotiable safety rules
 

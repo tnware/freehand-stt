@@ -464,7 +464,14 @@ func overlayForStatus(status dictation.Status) platform.OverlayStatus {
 			kind = platform.OverlayFailed
 		}
 	}
+	captionEnabled := status.Live && status.LiveCaptions && (status.State == dictation.Recording || status.State == dictation.Transcribing)
+	caption := ""
+	if captionEnabled {
+		caption = platform.BoundedOverlayCaption(status.LiveFinal + " " + status.LivePartial)
+	}
 	return platform.OverlayStatus{
+		CaptionEnabled:    captionEnabled,
+		Caption:           caption,
 		Kind:              kind,
 		Generation:        status.Generation,
 		CountdownDeadline: status.AutoStopDeadline,

@@ -1,15 +1,7 @@
 import { usesServerLoadedModel } from "$lib/utils/compatibility";
 import type { SettingsSectionID } from "$lib/navigation";
-import {
-  AuthenticationMode,
-  type ConnectionResult,
-  type Device,
-  type Settings,
-} from "$lib/state";
-import {
-  connectionStatusLabel,
-  connectionSucceeded,
-} from "$lib/utils/connection";
+import { AuthenticationMode, type ConnectionResult, type Device, type Settings } from "$lib/state";
+import { connectionStatusLabel, connectionSucceeded } from "$lib/utils/connection";
 import { endpointLabel } from "$lib/utils/endpoint";
 import {
   microphoneLabel,
@@ -39,8 +31,7 @@ export type Readiness = {
   steps: ReadinessStep[];
 };
 
-const compactModel = (model: string): string =>
-  model.split("/").at(-1) ?? model;
+const compactModel = (model: string): string => model.split("/").at(-1) ?? model;
 
 export function appReadiness(
   settings: Settings,
@@ -49,48 +40,52 @@ export function appReadiness(
   devicesLoading: boolean,
   task: "voice" | "file" = "voice",
 ): Readiness {
-  const initialSetup = task === "voice" && !settings.setupCompleted;
-  const serverLoadedModel = usesServerLoadedModel(settings);
+  const live = task === "voice" && settings.realtime.enabled;
+  const endpoint = live ? settings.realtime : settings;
+  const hasCredential = live
+    ? !!settings.savedConnections.entries?.find(
+        (c) => c.id === settings.savedConnections.selected?.realtime,
+      )?.hasCredential
+    : settings.credentialConfigured;
+  const initialSetup = task === "voice" && !settings.setupCompleted && !live;
+  if (live) connection = null;
+  const serverLoadedModel = !live && usesServerLoadedModel(settings);
   const serverConfigured = Boolean(
-    settings.baseURL.trim() && (serverLoadedModel || settings.model.trim()),
+    endpoint.baseURL.trim() && (serverLoadedModel || endpoint.model.trim()),
   );
   const credentialConfigured =
-    settings.authenticationMode === AuthenticationMode.AuthenticationModeNone ||
-    settings.credentialConfigured;
+    endpoint.authenticationMode === AuthenticationMode.AuthenticationModeNone || hasCredential;
   const microphoneChoice = settings.microphoneID || SYSTEM_DEFAULT_MICROPHONE;
-  const selectedMicrophoneMissing = microphoneMissing(
-    microphoneChoice,
-    devices,
-  );
+  const selectedMicrophoneMissing = microphoneMissing(microphoneChoice, devices);
   const microphoneConfigured = devices.length > 0 && !selectedMicrophoneMissing;
   const shortcutConfigured = Boolean(settings.toggleShortcut.trim());
-  const connectionVerified =
-    connection !== null && connectionSucceeded(connection);
+  const connectionVerified = connection !== null && connectionSucceeded(connection);
 
   const allSteps: ReadinessStep[] = [
     {
       id: "server",
       label: "Speech-to-text server",
       detail: serverConfigured
-        ? `${endpointLabel(settings.baseURL)} · ${serverLoadedModel ? "Server-loaded model" : compactModel(settings.model)}`
-        : serverLoadedModel ? "Add a server endpoint." : "Add an endpoint and model.",
+        ? `${endpointLabel(endpoint.baseURL)} · ${serverLoadedModel ? "Server-loaded model" : compactModel(endpoint.model)}`
+        : serverLoadedModel
+          ? "Add a server endpoint."
+          : "Add an endpoint and model.",
       status: serverConfigured ? "complete" : "attention",
       blocking: !serverConfigured,
-      settingsSection: "server",
+      settingsSection: live ? "realtime" : "server",
     },
     {
       id: "credential",
       label: "Authentication",
       detail:
-        settings.authenticationMode ===
-        AuthenticationMode.AuthenticationModeNone
+        endpoint.authenticationMode === AuthenticationMode.AuthenticationModeNone
           ? "This endpoint does not require a credential."
-          : settings.credentialConfigured
+          : hasCredential
             ? "API key stored in Windows Credential Manager."
             : "Add the API key required by this endpoint.",
       status: credentialConfigured ? "complete" : "attention",
       blocking: !credentialConfigured,
-      settingsSection: "server",
+      settingsSection: live ? "realtime" : "server",
     },
     {
       id: "microphone",
@@ -102,22 +97,14 @@ export function appReadiness(
           : selectedMicrophoneMissing
             ? "The selected microphone is not currently available."
             : microphoneLabel(microphoneChoice, devices),
-      status: devicesLoading
-        ? "pending"
-        : microphoneConfigured
-          ? "complete"
-          : "attention",
-      blocking: initialSetup
-        ? !microphoneConfigured
-        : !devicesLoading && !microphoneConfigured,
+      status: devicesLoading ? "pending" : microphoneConfigured ? "complete" : "attention",
+      blocking: initialSetup ? !microphoneConfigured : !devicesLoading && !microphoneConfigured,
       settingsSection: "audio",
     },
     {
       id: "shortcut",
       label: "Recording shortcut",
-      detail: shortcutConfigured
-        ? settings.toggleShortcut
-        : "Choose a global recording shortcut.",
+      detail: shortcutConfigured ? settings.toggleShortcut : "Choose a global recording shortcut.",
       status: shortcutConfigured ? "complete" : "attention",
       blocking: !shortcutConfigured,
       settingsSection: "shortcuts",
@@ -134,31 +121,26 @@ export function appReadiness(
           : initialSetup
             ? "Run one metadata-only check before finishing setup."
             : "Not checked during this session.",
-      status: connectionVerified
-        ? "complete"
-        : connection
-          ? "attention"
-          : "pending",
+      status: connectionVerified ? "complete" : connection ? "attention" : "pending",
       blocking: connection ? !connectionVerified : initialSetup,
-      settingsSection: "server",
+      settingsSection: live ? "realtime" : "server",
     },
   ];
 
-  const steps = task === "file" ? allSteps.filter((step) => step.id !== "microphone" && step.id !== "shortcut") : allSteps;
-  const blockers = steps.filter(
-    (step) => step.blocking && step.status !== "complete",
-  );
-  const recoveryNeeded = steps.some(
-    (step) => step.status === "attention" && step.blocking,
-  );
+  const steps =
+    task === "file"
+      ? allSteps.filter((step) => step.id !== "microphone" && step.id !== "shortcut")
+      : allSteps;
+  const blockers = steps.filter((step) => step.blocking && step.status !== "complete");
+  const recoveryNeeded = steps.some((step) => step.status === "attention" && step.blocking);
   const recoveryKey = JSON.stringify({
     attention: steps
       .filter((step) => step.status === "attention" && step.blocking)
       .map((step) => step.id),
-    server: settings.baseURL,
+    server: endpoint.baseURL,
     model: serverLoadedModel ? "" : settings.model,
     profile: settings.compatibilityProfile,
-    authentication: settings.authenticationMode,
+    authentication: endpoint.authenticationMode,
     credentialConfigured: settings.credentialConfigured,
     microphone: microphoneChoice,
     connection: connection
@@ -185,9 +167,6 @@ export function appReadiness(
 }
 
 /** First-run setup cannot be bypassed; an established user's repeated recovery state can. */
-export const readinessVisible = (
-  readiness: Readiness,
-  dismissedRecoveryKey: string,
-): boolean =>
+export const readinessVisible = (readiness: Readiness, dismissedRecoveryKey: string): boolean =>
   readiness.initialSetup ||
   (readiness.recoveryNeeded && readiness.recoveryKey !== dismissedRecoveryKey);

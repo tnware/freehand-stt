@@ -74,7 +74,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	if err != nil {
 		return state, err
 	}
-	if len(rows) > savedconnection.MaxPerPurpose*3 {
+	if len(rows) > savedconnection.MaxPerPurpose*4 {
 		return state, errors.New("too many saved connections")
 	}
 	for _, row := range rows {
@@ -107,7 +107,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	if err != nil {
 		return state, err
 	}
-	if len(headers) > savedconnection.MaxPerPurpose*3*config.MaxHeaderCount {
+	if len(headers) > savedconnection.MaxPerPurpose*4*config.MaxHeaderCount {
 		return state, errors.New("too many saved headers")
 	}
 	for _, h := range headers {
@@ -125,7 +125,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	if err != nil {
 		return state, err
 	}
-	if len(selected) > 3 {
+	if len(selected) > 4 {
 		return state, errors.New("missing connection selections")
 	}
 	for _, row := range selected {
@@ -182,7 +182,7 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	target := ""
 	switch change.Action {
 	case savedconnection.Create, savedconnection.Duplicate:
-		if len(state.entries) >= savedconnection.MaxPerPurpose*3 {
+		if len(state.entries) >= savedconnection.MaxPerPurpose*4 {
 			return v, errors.New("connection limit reached")
 		}
 		var id [16]byte
@@ -261,6 +261,8 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 					v.SetupCompleted = previous.SetupCompleted
 				case savedconnection.Cleanup:
 					v.PostProcessing.Enabled = previous.PostProcessing.Enabled
+				case savedconnection.Realtime:
+					v.Realtime.Enabled = previous.Realtime.Enabled
 				case savedconnection.Speech:
 					v.TextToSpeech.Enabled = previous.TextToSpeech.Enabled
 				}
@@ -383,7 +385,7 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 func (s *Store) ApplySelectedConnections(v config.Settings) config.Settings {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech} {
+	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech, savedconnection.Realtime} {
 		if c, ok := s.connections.entries[s.connections.selected[p]]; ok {
 			v = savedconnection.Apply(v, p, c.Details)
 		} else {

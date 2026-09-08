@@ -30,6 +30,23 @@ configuration but neither STT nor a microphone. These are client workflows, not
 bundled inference or conversation mode. The remote-first boundary and non-goals
 in [ADR 0005](../../decisions/0005-remote-first-product-direction/) remain unchanged.
 
+## Optional realtime dictation
+
+[ADR 0008](../../decisions/0008-qualified-realtime-dictation/) qualifies Nemotron
+3.5 on NeMo-Speech.cpp v0.1.0. `internal/realtime` owns the versioned WebSocket
+adapter and bounded audio/text transport; `internal/dictation` owns capture,
+generation fencing, immutable profiles, finalization, cleanup, and safe delivery.
+Files continue to capture completed-STT profiles. Realtime credentials are fetched
+only for enabled live dictation. Native captions carry a bounded transient tail
+in one fixed row; they never become a delivery source or take focus.
+
+The Connection Manager is a reusable native window composed in `internal/app`.
+`internal/windowing` owns validated navigation and whether an edit session is open,
+including startup and minimization. No credential draft crosses windows. The
+manager loads a fresh snapshot, preserves its draft when revealed again, handles
+native close through the discard guard, and clears keys when hidden or unmounted.
+Settings events update other renderers through the existing stale-draft handling.
+
 ## Durable settings storage
 
 [ADR 0006](../../decisions/0006-sqlite-storage-contract/) governs the implemented
@@ -40,12 +57,12 @@ retains coherent saves and immutable request profiles. See the
 Transcript history remains optional and memory-only.
 
 Named connections represent reusable servers, with explicit supported uses and
-independent active selections for transcription, cleanup, and playback. One ID
+independent active selections for completed transcription, realtime, cleanup, and playback. One ID
 can be selected by multiple features; their models and runtime options remain
 independent while URL, profile, authentication, and credential reference are shared. The shared connection editor owns endpoint/authentication/profile fields.
 The Connections page provides library creation, editing, duplication, deletion,
 and saved metadata tests. Library creation is inactive; task pickers reuse that
-editor in a purpose-scoped dialog. Its explicit Save and use action sends
+editor in a separate, purpose-scoped native Connection Manager window. Its explicit Save and use action sends
 `Change.ActivateFor` with Create so catalog, selection, settings, and key references
 commit together. Storage rejects invalid or unsupported activation purposes and
 activation on other actions. New selections still require model configuration;

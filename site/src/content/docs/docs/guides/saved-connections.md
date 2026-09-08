@@ -5,11 +5,14 @@ description: Create server connections in one place, then choose which connectio
 
 Start from the task you want to use. Its connection picker offers **Add connection…**;
 feature Settings pages also have an **Add connection** button when none is selected.
-The same editor is available in **Settings → Connections** for managing your library.
+Add and Edit open a separate, reusable **Connection Manager** window.
+The library is also available in **Settings → Connections**. Reopening the manager
+while it is open preserves an unfinished edit. Closing with unsaved changes offers
+Keep editing or Discard; closing clears the transient credential draft.
 New installations start with an empty list; upgrading retains existing connections.
 
 A connection represents one reusable server: its URL, backend profile, authentication,
-and HTTP permission. Transcription, Cleanup, and Text to speech select connections
+and HTTP permission. Transcription, Live transcription, Cleanup, and Text to speech select connections
 independently and can share the same server.
 
 ## Add a connection while setting up a task
@@ -40,8 +43,7 @@ Open **Settings → Connections → New connection**, enter the server details a
 uses, then choose **Save connection**. This creates an inactive entry. Select it later
 from any task it supports. The library remains the place to edit, duplicate, or delete servers.
 
-While editing a library entry, **Save connection** and **Cancel** stay in the
-bottom action bar, including in narrow windows. A disabled save explains what
+While editing an entry in the Connection Manager, use **Save connection** or **Cancel**. A disabled save explains what
 the form still needs. Only available backend profiles appear as new choices;
 an unavailable saved profile remains visible until you explicitly replace it.
 
@@ -70,7 +72,8 @@ and the previously applied settings remain intact.
 ## Reuse a server
 
 A Speaches connection can enable both Transcription and Text to speech, while
-vLLM can enable Transcription and Cleanup. Generic offers all three uses;
+vLLM can enable Transcription and Cleanup. Generic offers those three completed operations;
+NeMo-Speech.cpp offers the qualified [live transcription](../live-transcription/) use;
 llama.cpp currently offers Cleanup, and whisper.cpp offers Transcription.
 These choices describe Freehand's implemented contracts, not detected server
 capabilities. A particular vLLM deployment may expose only one operation.

@@ -560,3 +560,19 @@ results can be copied and cleared with history disabled.
 ### Transcription details window
 
 Open details from both recent history and Settings > History. Verify one independently resizable native window opens without blocking either source window. Open a different completed entry while details is visible or minimized: the same window must update and focus. Check long model names and response metadata at the minimum 480 x 400 size, light/dark appearance, and Mica after restart. Native close, Alt+F4, Escape, and the Close button must hide details without quitting Freehand; reopening and renderer reload must recover the selected run correctly. Delete the selected entry, clear history, disable retention, and evict the entry with later runs: stale details must disappear. Automated history service tests cover invalid/pending IDs, selection switching, deep-copy isolation, removal, and close/shutdown behavior. Native runtime acceptance remains separate from the Windows compile.
+
+## Realtime and Connection Manager acceptance
+
+Run `go test ./internal/realtime ./internal/dictation ./internal/settings ./internal/storage ./internal/overlay ./internal/platform ./internal/windowing`
+and the frontend checks/tests. Fixtures cover exact session configuration,
+binary PCM frames, authoritative final replacement, missing final failure,
+cancellation, stale preview fencing, independent credentials, transactional
+realtime preferences after restart, and reusable window navigation. Caption tests
+cover bounded Unicode text, one-row whitespace normalization, and fit-cache invalidation.
+These fixtures use fake transports and do not invoke inference.
+
+Qualify a chosen Nemotron model manually against NeMo-Speech.cpp v0.1.0. Record
+the server/runtime/model revision and distinguish transport inference evidence
+from interactive Windows acceptance. Exercise the native checklist below; a
+successful compilation or synthetic socket probe does not establish focus safety
+or window behavior. Never load inventories or add automatic inference to CI.

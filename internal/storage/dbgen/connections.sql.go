@@ -46,7 +46,7 @@ func (q *Queries) DeleteSavedConnection(ctx context.Context, id string) error {
 }
 
 const listConnectionHeaders = `-- name: ListConnectionHeaders :many
-SELECT connection_id,name,value FROM saved_connection_headers ORDER BY connection_id,name LIMIT 3073
+SELECT connection_id,name,value FROM saved_connection_headers ORDER BY connection_id,name LIMIT 4097
 `
 
 func (q *Queries) ListConnectionHeaders(ctx context.Context) ([]SavedConnectionHeader, error) {
@@ -73,7 +73,7 @@ func (q *Queries) ListConnectionHeaders(ctx context.Context) ([]SavedConnectionH
 }
 
 const listConnectionUses = `-- name: ListConnectionUses :many
-SELECT connection_id,purpose FROM saved_connection_uses ORDER BY connection_id,purpose LIMIT 289
+SELECT connection_id,purpose FROM saved_connection_uses ORDER BY connection_id,purpose LIMIT 513
 `
 
 func (q *Queries) ListConnectionUses(ctx context.Context) ([]SavedConnectionUse, error) {
@@ -100,7 +100,7 @@ func (q *Queries) ListConnectionUses(ctx context.Context) ([]SavedConnectionUse,
 }
 
 const listSavedConnections = `-- name: ListSavedConnections :many
-SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account FROM saved_connections ORDER BY name,id LIMIT 97
+SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account FROM saved_connections ORDER BY name,id LIMIT 129
 `
 
 func (q *Queries) ListSavedConnections(ctx context.Context) ([]SavedConnection, error) {

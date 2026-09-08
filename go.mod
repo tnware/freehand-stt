@@ -3,6 +3,7 @@ module github.com/tnware/freehand-stt
 go 1.27.0
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/gen2brain/malgo v0.11.26
 	github.com/pressly/goose/v3 v3.28.0
 	github.com/wailsapp/wails/v3 v3.0.0-beta.16
@@ -14,7 +15,6 @@ require (
 
 require (
 	github.com/adrg/xdg v0.5.3 // indirect
-	github.com/coder/websocket v1.8.15 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect

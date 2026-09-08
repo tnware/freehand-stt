@@ -57,6 +57,7 @@ type Profile struct {
 }
 
 type Catalog struct {
+	Realtime       []Profile `json:"realtime"`
 	Transcription  []Profile `json:"transcription"`
 	PostProcessing []Profile `json:"postProcessing"`
 	Speech         []Profile `json:"speech"`
@@ -77,10 +78,13 @@ func Effective(id ID) ID {
 }
 
 func Profiles() Catalog {
-	return Catalog{Transcription: options(Transcription), PostProcessing: options(PostProcessing), Speech: options(Speech)}
+	return Catalog{Realtime: realtimeProfiles(), Transcription: options(Transcription), PostProcessing: options(PostProcessing), Speech: options(Speech)}
 }
 
 func options(role Role) []Profile {
+	if role == Realtime {
+		return realtimeProfiles()
+	}
 	caps := Capabilities{}
 	genericDescription := ""
 	switch role {
@@ -138,6 +142,9 @@ func Resolve(id ID, role Role) (Contract, error) {
 			return Contract{}, errors.New("dedicated compatibility profile is not implemented")
 		}
 		route := "chat/completions"
+		if role == Realtime {
+			route = "realtime"
+		}
 		if role == Transcription {
 			route = "audio/transcriptions"
 			if profile.ID == WhisperCPP {

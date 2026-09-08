@@ -75,11 +75,28 @@ type PreferencesSetting struct {
 	SegmentSilenceMs        int64
 }
 
+type RealtimeSetting struct {
+	ID                   int64
+	Enabled              int64
+	CompatibilityProfile string
+	ModelProfile         string
+	BaseUrl              string
+	AllowInsecureHttp    int64
+	AuthenticationMode   string
+	Model                string
+	Language             string
+	Captions             int64
+	Vocabulary           string
+	Boost                float64
+}
+
 type RememberedModel struct {
 	ConnectionID        string
 	Purpose             string
 	Model               string
 	Selected            int64
+	Vocabulary          string
+	Boost               float64
 	Profile             string
 	Language            string
 	Prompt              string

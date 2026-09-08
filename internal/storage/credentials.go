@@ -32,7 +32,7 @@ func (nativeVault) Delete(account string) error {
 
 const maxPendingCredentials = 128
 
-var purposes = []string{"stt", "cleanup", "speech"}
+var purposes = []string{"stt", "cleanup", "speech", "realtime"}
 
 func legacyAccount(purpose string) string {
 	switch purpose {
@@ -45,9 +45,10 @@ func legacyAccount(purpose string) string {
 	}
 	return ""
 }
-func (s *Store) STTCredentials() credential.Store     { return &credentialView{s, "stt"} }
-func (s *Store) CleanupCredentials() credential.Store { return &credentialView{s, "cleanup"} }
-func (s *Store) SpeechCredentials() credential.Store  { return &credentialView{s, "speech"} }
+func (s *Store) STTCredentials() credential.Store      { return &credentialView{s, "stt"} }
+func (s *Store) CleanupCredentials() credential.Store  { return &credentialView{s, "cleanup"} }
+func (s *Store) RealtimeCredentials() credential.Store { return &credentialView{s, "realtime"} }
+func (s *Store) SpeechCredentials() credential.Store   { return &credentialView{s, "speech"} }
 
 type credentialView struct {
 	s       *Store
@@ -159,7 +160,7 @@ func readReferences(ctx context.Context, q *dbgen.Queries) (map[string]string, e
 	}
 	refs := map[string]string{}
 	for _, r := range rows {
-		if legacyAccount(r.Purpose) == "" || (r.Account != "" && !connectionAccount(r.Account)) {
+		if !savedconnection.ValidPurpose(savedconnection.Purpose(r.Purpose)) || (r.Account != "" && !connectionAccount(r.Account)) {
 			return nil, errors.New("invalid credential reference")
 		}
 		refs[r.Purpose] = r.Account

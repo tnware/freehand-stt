@@ -37,7 +37,7 @@ import { Session, type SessionServices } from "$lib/stores/session.svelte";
 const settings: Settings = {
   modelProfile: ModelProfileID.Generic,
   rememberedModels: { entries: [], defaults: {} },
-  modelProfiles: { transcription: [], postProcessing: [], speech: [] },
+  modelProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
   transcriptionOptions: {
     prompt: "",
     hotwords: "",
@@ -45,8 +45,21 @@ const settings: Settings = {
     temperature: 0,
   },
   compatibilityProfile: ID.Generic,
-  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
+  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
   transcriptionLanguages: [],
+  realtimeLanguages: [],
+  realtime: {
+    enabled: false,
+    compatibilityProfile: ID.NeMoSpeechV1,
+    modelProfile: ModelProfileID.Nemotron35,
+    baseURL: "",
+    allowInsecureHTTP: false,
+    authenticationMode: AuthenticationMode.AuthenticationModeNone,
+    model: "",
+    language: "auto",
+    captions: true,
+    options: { vocabulary: "", boost: 3 },
+  },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
   authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
@@ -160,6 +173,8 @@ const processingProfiles: ProfileDescriptor[] = [
 ];
 
 const idle: Status = {
+  live: false,
+  liveCaptions: false,
   state: State.Idle,
   generation: 0,
   canCancel: false,
@@ -167,6 +182,8 @@ const idle: Status = {
 };
 
 const recording: Status = {
+  live: false,
+  liveCaptions: false,
   state: State.Recording,
   generation: 1,
   canCancel: true,
@@ -252,7 +269,15 @@ const serviceWithStatus = (
     ...overrides.input,
   },
   connection: {
-    ListSpeechVoices: () => CancellablePromise.resolve({ voices: [], scope: VoiceScope.VoiceScopeServer, errorKind: "", httpStatus: 200, latencyMilliseconds: 1, truncated: false }),
+    ListSpeechVoices: () =>
+      CancellablePromise.resolve({
+        voices: [],
+        scope: VoiceScope.VoiceScopeServer,
+        errorKind: "",
+        httpStatus: 200,
+        latencyMilliseconds: 1,
+        truncated: false,
+      }),
     TestSavedConnection: () => CancellablePromise.resolve(connectionResult),
     TestConnection: () => CancellablePromise.resolve(connectionResult),
     TestPostProcessingConnection: () => CancellablePromise.resolve(connectionResult),
