@@ -3,7 +3,7 @@
   import { CancellablePromise } from "@wailsio/runtime";
   import { ID as ModelProfileID } from "$bindings/modelprofile";
   import { modelOptions } from "$lib/utils/modelSettings";
-  import { TTSPhase, TTSSource } from "$lib/state";
+  import { TTSPhase, TTSSource, FileTranscriptionPhase, HistoryProcessingStatus } from "$lib/state";
   import { Purpose } from "$bindings/savedconnection";
   import { AuthenticationMode } from "$bindings/config";
   import { Session } from "$lib/stores/session.svelte";
@@ -125,6 +125,17 @@
   });
   const session = new Session(
     serviceWithStatus(() => CancellablePromise.resolve(idle), {
+      files: {
+        StartFileTranscription: () => {
+          session.files.applyStatus({
+            ...session.files.status,
+            phase: FileTranscriptionPhase.FileTranscriptionUploading,
+            canStart: false,
+            canCancel: true,
+          });
+          return CancellablePromise.resolve();
+        },
+      },
       speech: {
         PlayVoiceTranscript: (generation) => {
           if (generation !== 7)
@@ -155,6 +166,33 @@
     text: "Testing, testing.",
     rawText: "Testing, testing.",
   }));
+  if (new URLSearchParams(location.search).get("history") === "review") {
+    session.history.entries[0] = {
+      ...session.history.entries[0],
+      processingStatus: HistoryProcessingStatus.HistoryProcessingCompleted,
+      text: "Testing, testing.",
+      rawText: "um testing testing",
+      processedText: "Testing, testing.",
+    };
+    session.history.entries[1] = {
+      ...session.history.entries[1],
+      processingStatus: HistoryProcessingStatus.HistoryProcessingFailed,
+      processingMessage:
+        "Cleanup could not finish because the server was unavailable. The raw transcript was kept and is ready to copy.",
+    };
+  }
+  if (new URLSearchParams(location.search).has("file-error")) {
+    session.files.applyStatus({
+      ...session.files.status,
+      generation: 8,
+      phase: FileTranscriptionPhase.FileTranscriptionFailed,
+      fileName: "Example recording.wav",
+      fileSize: 10240,
+      canStart: true,
+      message:
+        "The transcription server did not respond before the request timeout. Check the connection or increase the request timeout in Audio-file transcription settings, then retry this file.",
+    });
+  }
   window.testSaves = saves.control;
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");

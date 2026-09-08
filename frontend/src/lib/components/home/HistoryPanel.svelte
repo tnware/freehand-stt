@@ -189,8 +189,8 @@
         <div class="max-w-sm">
           <p class="text-[13px] font-medium">Nothing is being kept</p>
           <p class="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
-            Recent history is optional. Current results and failed-insertion recovery work with
-            history off. Entries stay in memory and are cleared when Freehand quits.
+            Keep recent transcripts until you quit. Current results and recovery are available with
+            history off.
           </p>
         </div>
         <Button variant="outline" size="sm" onclick={onOpenSettings}>Turn history on</Button>

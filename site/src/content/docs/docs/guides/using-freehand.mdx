@@ -93,6 +93,11 @@ microphone, recording shortcut, or completed dictation setup.
 
 </Steps>
 
+If transcription fails, choose **Details** beside the error to read the full
+explanation. Escape closes the popover and returns focus to Details; **Retry**
+starts another attempt with the selected file.
+
+
 Selecting a file does not upload it until you start transcription. File
 results never insert automatically because no destination was captured.
 
@@ -174,7 +179,10 @@ History is off by default, stays in memory, holds at most 20 entries and 2 MiB,
 and is cleared when Freehand exits. Copy anything you want to keep before quitting.
 :::
 
-Retained entries contain transcript text and limited run details.
+Retained entries keep **Listen** and **Copy** directly available. Open the
+ellipsis **Transcript actions** menu for **Transcription details** or **Remove
+from history**. **Compare** opens raw and cleaned text together, with separate
+copy controls. If cleanup fails, its explanation appears below the raw transcript.
 
 History never retains audio, credentials, full file paths, or destination
 details. Each copy action is explicit.

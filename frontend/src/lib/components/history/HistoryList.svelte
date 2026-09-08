@@ -4,6 +4,8 @@
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import ClipboardIcon from "@lucide/svelte/icons/clipboard";
+  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import * as Menu from "$lib/components/ui/dropdown-menu";
   import InfoIcon from "@lucide/svelte/icons/info";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import TrashIcon from "@lucide/svelte/icons/trash-2";
@@ -12,7 +14,7 @@
   import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
   import TooltipButton from "$lib/components/ui/button/TooltipButton.svelte";
   import { Badge } from "$lib/components/ui/badge";
-  import { Button } from "$lib/components/ui/button";
+  import { Button, buttonVariants } from "$lib/components/ui/button";
   import * as HistoryService from "$bindings/history/service";
   import {
     HistoryOutcome,
@@ -495,29 +497,36 @@
             {/if}
           </div>
 
+          {#if hasProcessing(entry) && !hasCleaned}
+            <p
+              class="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"
+              role="status"
+            >
+              {#if entry.processingStatus === HistoryProcessingStatus.HistoryProcessingPending}
+                <LoaderCircleIcon
+                  class="mt-0.5 size-3.5 shrink-0 animate-spin motion-reduce:animate-none"
+                />
+                <span>Cleaning up transcript…</span>
+              {:else}
+                <CircleAlertIcon class="mt-0.5 size-3.5 shrink-0 text-warning" />
+                <span class="min-w-0 break-words"
+                  >{entry.processingMessage || "The raw transcript was kept."}</span
+                >
+              {/if}
+            </p>
+          {/if}
+
           <div
             class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
           >
             <div
-              class="flex min-w-0 items-center gap-1.5 font-mono text-[10px] text-muted-foreground"
+              class="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[10px] text-muted-foreground"
             >
               <span class="shrink-0">{characterLabel(entry.characterCount)}</span>
               <span class="shrink-0" aria-hidden="true">·</span>
-              <span class="max-w-48 truncate">{sourceMetadata(entry)}</span>
-              {#if hasProcessing(entry) && !hasCleaned}
-                <span class="shrink-0" aria-hidden="true">·</span>
-                {#if entry.processingStatus === HistoryProcessingStatus.HistoryProcessingPending}
-                  <LoaderCircleIcon
-                    class="size-3 shrink-0 animate-spin motion-reduce:animate-none"
-                  />
-                  <span class="min-w-0 truncate">Waiting for the processor.</span>
-                {:else}
-                  <CircleAlertIcon class="size-3 shrink-0" />
-                  <span class="min-w-0 truncate">
-                    {entry.processingMessage || "The raw transcript was kept."}
-                  </span>
-                {/if}
-              {/if}
+              <span class="max-w-48 truncate" title={sourceMetadata(entry)}
+                >{sourceMetadata(entry)}</span
+              >
             </div>
 
             <div class="history-actions flex shrink-0 items-center">
@@ -557,25 +566,30 @@
                     <ClipboardIcon />
                   {/if}
                 </TooltipButton>
-                <TooltipButton
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={!detailsAvailable(entry)}
-                  label="View transcription run details"
-                  onclick={() => void openDetails(entry)}
-                >
-                  <InfoIcon />
-                </TooltipButton>
-                <span class="mx-0.5 h-4 w-px shrink-0 bg-hairline" aria-hidden="true"></span>
-                <TooltipButton
-                  variant="ghost"
-                  size="icon-xs"
-                  class="hover:text-destructive"
-                  label="Remove transcript from history"
-                  onclick={() => void onDelete(entry.id)}
-                >
-                  <TrashIcon />
-                </TooltipButton>
+                <Menu.Root>
+                  <Menu.Trigger
+                    aria-label="Transcript actions"
+                    class={buttonVariants({ variant: "ghost", size: "icon-xs" })}
+                    ><EllipsisIcon /></Menu.Trigger
+                  >
+                  <Menu.Content align="end" class="w-64 max-w-[calc(100vw-24px)]">
+                    <Menu.Item
+                      disabled={!detailsAvailable(entry)}
+                      onclick={() => void openDetails(entry)}
+                      class="gap-2.5 px-3 py-2.5"
+                    >
+                      <InfoIcon />Transcription details
+                    </Menu.Item>
+                    <Menu.Separator />
+                    <Menu.Item
+                      variant="destructive"
+                      onclick={() => void onDelete(entry.id)}
+                      class="gap-2.5 px-3 py-2.5"
+                    >
+                      <TrashIcon />Remove from history
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Root>
               </div>
             </div>
           </div>
@@ -644,7 +658,7 @@
       border-left: 1px solid var(--hairline);
     }
   }
-  @container (max-width: 520px) {
+  @container (max-width: 319px) {
     .history-footer {
       align-items: flex-start;
       flex-direction: column;

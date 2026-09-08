@@ -734,3 +734,12 @@ and save validation reveals hidden request limits. Voice workflow validation
 also exposes its temperature and timeout controls. Speech preview stays beside
 voice selection. All workflow fixtures use synthetic profiles and service
 responses; they do not contact inference servers.
+
+### Workspace history and error presentation
+
+Synthetic workspace checks exercise history action menus with keyboard opening,
+Escape focus restoration, deletion of the selected entry, and raw/cleaned copy.
+At 560px and 1156px they verify compact history footers and visible cleanup
+fallback explanations. File error details must remain inside the viewport,
+preserve transport geometry, and disappear when retry starts. Retained history
+and file status are fixture data; these checks invoke no native inference.
