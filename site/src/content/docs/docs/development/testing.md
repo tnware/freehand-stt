@@ -88,6 +88,24 @@ Escape returns focus from Details, and opening the relevant settings window
 preserves the current work. These fixtures do not invoke inference or establish
 native file-dialog or window-focus acceptance.
 
+### Footer connection panel
+
+`frontend/tests/browser/connection-status.spec.ts` covers task-specific names,
+models and check results, retry after failure, stale draft checks, missing
+connections, disabled speech, keyboard activation/Escape, and expandable
+technical details at compact and desktop widths. The fixtures use synthetic
+metadata services and the production footer/panel components. Editor tests
+verify that explicit workspace checks use applied endpoints and empty credential
+drafts, route to the correct service, and respect disabled/pending states.
+
+On Windows, separately verify that **Edit connection** opens the correct saved
+connection, **Choose connection** opens the manager for the current task, and
+**Speech settings** focuses that settings section. Switch tasks and connections
+while checks complete; an earlier result must never appear to belong to a newer
+selection. Opening the footer panel must not record, run inference, or trigger
+another automatic metadata probe. Native focus/window behavior is separate from
+these renderer fixtures and compilation.
+
 ## Compatibility profile acceptance
 
 The published catalog fixture compares the website export with the app-owned

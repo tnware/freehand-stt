@@ -449,6 +449,15 @@ The home footer selects transcription or speech metadata according to the active
 task and compares completed checks with the applied settings, not an unsaved
 draft. Local TTS readiness is explicitly separate from metadata reachability;
 no new automatic check or inference request is introduced by presentation.
+`taskConnectionDetails` supplies the same applied task projection to the footer
+and its popover, including the selected saved connection, model, result, pending
+check, and stale state. Explicit footer checks use
+`SettingsEditor.testAppliedConnection`: Voice delegates to its saved-connection
+check, and file/speech checks pass the applied snapshot with an empty credential
+draft. Disabled speech, missing selections, configuration recovery, pending
+saves, and duplicate checks cannot issue requests through that action. Editing
+opens the existing connection manager with the active saved ID and purpose;
+it does not select another connection or modify task settings.
 
 ## Model behavior contracts
 

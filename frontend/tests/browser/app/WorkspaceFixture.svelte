@@ -1,4 +1,6 @@
 <script lang="ts">
+  import StatusStrip from "$lib/components/shell/StatusStrip.svelte";
+  import { taskConnectionDetails, taskConnectionStatus } from "$lib/utils/connection";
   import { configurePickerFixture } from "./picker-data";
   import { onDestroy } from "svelte";
   import { CancellablePromise } from "@wailsio/runtime";
@@ -26,6 +28,7 @@
   import AppHeader from "$lib/components/shell/AppHeader.svelte";
   import { controlledSaves } from "./save-control";
 
+  const diagnosticsScenario = new URLSearchParams(location.search).get("diagnostics");
   const setupScenario = new URLSearchParams(location.search).get("setup");
   let openedSettings = $state("");
   let connectionChecks = 0;
@@ -141,6 +144,26 @@
     current.historyEnabled = false;
     if (setupScenario === "missing-model") current.voiceTranscription.model = "";
   }
+  if (diagnosticsScenario) {
+    current.baseURL = "https://files.test/v1";
+    current.savedConnections.selected[Purpose.Transcription] = "file-fixture";
+    current.savedConnections.entries!.push({
+      id: "file-fixture",
+      name: "Example file server",
+      uses: [Purpose.Transcription],
+      hasCredential: false,
+      details: {
+        compatibilityProfile: current.compatibilityProfile,
+        baseURL: current.baseURL,
+        allowInsecureHTTP: false,
+        authenticationMode: AuthenticationMode.AuthenticationModeNone,
+        healthPath: "",
+        headers: {},
+      },
+    });
+  }
+  if (diagnosticsScenario === "off") current.textToSpeech.enabled = false;
+  if (diagnosticsScenario === "missing") current.savedConnections.selected.voice = "";
   const saves = controlledSaves((request) => {
     current = structuredClone({ ...current, ...request.settings });
     return structuredClone(current);
@@ -152,7 +175,9 @@
           connectionChecks++;
           return CancellablePromise.resolve({
             ...structuredClone(connectionResult),
-            ...(connectionChecks === 1 && ["retry", "connection"].includes(setupScenario ?? "")
+            ...(connectionChecks === 1 &&
+            (["retry", "connection"].includes(setupScenario ?? "") ||
+              diagnosticsScenario === "failure")
               ? {
                   reachable: false,
                   errorKind: ConnectionErrorKind.ConnectionErrorNetwork,
@@ -290,10 +315,19 @@
         ),
     };
   }
+  if (diagnosticsScenario) {
+    session.editor.connection = null;
+    if (diagnosticsScenario === "stale") {
+      session.editor.draft!.textToSpeech.baseURL = "https://unsaved-draft.test/v1";
+      void session.editor.testTextToSpeechConnection();
+    }
+  }
   window.testSaves = saves.control;
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
   const noop = () => {};
+  const footerStatus = $derived(taskConnectionStatus(inputMode, session.editor, Date.now()));
+  const footerConnection = $derived(taskConnectionDetails(inputMode, session.editor));
 </script>
 
 <div class="flex h-screen flex-col overflow-hidden bg-background text-foreground">
@@ -309,9 +343,23 @@
     onOpenSpeechSettings={() => (openedSettings = "Speech settings")}
     onOpenGeneralSettings={noop}
   />
-  <footer
-    class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
-  >
-    {openedSettings || "Transcription: Reachable · Example connection"}
-  </footer>
+  {#if diagnosticsScenario}
+    <StatusStrip
+      connectionState={footerStatus}
+      connectionDetails={footerConnection}
+      onCheck={() => session.editor.testAppliedConnection(footerConnection.purpose)}
+      onEdit={() =>
+        (openedSettings = `Edit ${footerConnection.selected?.id || "connections"} for ${footerConnection.purpose}`)}
+      onSettings={() => (openedSettings = "Speech settings")}
+      onAbout={noop}
+      version="Review"
+    />
+    {#if openedSettings}<p class="sr-only" role="status">{openedSettings}</p>{/if}
+  {:else}
+    <footer
+      class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
+    >
+      {openedSettings || "Transcription: Reachable · Example connection"}
+    </footer>
+  {/if}
 </div>

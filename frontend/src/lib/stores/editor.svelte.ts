@@ -1007,6 +1007,31 @@ export class SettingsEditor {
           ? this.processingConnectionTesting
           : this.ttsConnectionTesting;
   }
+  /** An explicit workspace check always uses the applied profile and no renderer credential draft. */
+  async testAppliedConnection(purpose: Purpose): Promise<void> {
+    const settings = this.applied;
+    if (
+      !settings ||
+      settings.configuration.recoveryRequired ||
+      this.saving ||
+      this.quickSettingsPending.length ||
+      !settings.savedConnections.selected?.[purpose] ||
+      this.connectionMetadataBusy(purpose)
+    )
+      return;
+    switch (purpose) {
+      case Purpose.Voice:
+        await this.testVoiceConnection();
+        break;
+      case Purpose.Transcription:
+        await this.testConnection(settings, "", false);
+        break;
+      case Purpose.Speech:
+        if (settings.textToSpeech.enabled) await this.testTextToSpeechConnection(settings, "");
+        break;
+    }
+  }
+
   async ensureConnectionMetadata(purpose: Purpose): Promise<void> {
     const settings = this.applied;
     if (!settings?.savedConnections.selected?.[purpose] || this.runtimeDirty) return;
