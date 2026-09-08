@@ -29,9 +29,7 @@ describe("SettingsEditor configuration recovery", () => {
   };
 
   it("adopts required recovery even when another window has an unsaved draft", () => {
-    const { editor } = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     editor.applySettingsSnapshot(settings);
     editor.draft!.model = "unsaved-model";
     editor.apiKey = "transient-fixture-key";
@@ -42,16 +40,15 @@ describe("SettingsEditor configuration recovery", () => {
   });
 
   it("keeps the recovery state visible when retry still cannot load the file", async () => {
-    const RetryConfiguration: SessionServices["settings"]["RetryConfiguration"] =
-      vi.fn(() =>
-        CancellablePromise.resolve({
-          ...invalidSettings,
-          configuration: {
-            ...invalidSettings.configuration,
-            message: "The saved value for appearanceMode has the wrong type.",
-          },
-        }),
-      );
+    const RetryConfiguration: SessionServices["settings"]["RetryConfiguration"] = vi.fn(() =>
+      CancellablePromise.resolve({
+        ...invalidSettings,
+        configuration: {
+          ...invalidSettings.configuration,
+          message: "The saved value for appearanceMode has the wrong type.",
+        },
+      }),
+    );
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: {
@@ -64,29 +61,27 @@ describe("SettingsEditor configuration recovery", () => {
     await session.editor.load();
     expect(await session.editor.retryConfiguration()).toBe(false);
     expect(session.editor.applied?.configuration.recoveryRequired).toBe(true);
-    expect(session.editor.applied?.configuration.message).toContain(
-      "appearanceMode",
-    );
+    expect(session.editor.applied?.configuration.message).toContain("appearanceMode");
     expect(session.editor.configurationRetrying).toBe(false);
   });
 
   it("adopts a recovered profile and refreshes dependent snapshots", async () => {
-    const RetryConfiguration: SessionServices["settings"]["RetryConfiguration"] =
-      vi.fn(() =>
-        CancellablePromise.resolve({
-          ...settings,
-          model: "restored-model",
-          configuration: {
-            recoveryRequired: false,
-            preservedFields: ["realtime"],
-          },
-        }),
-      );
-    const ListMicrophones: SessionServices["input"]["ListMicrophones"] = vi.fn(
-      () => CancellablePromise.resolve([]),
+    const RetryConfiguration: SessionServices["settings"]["RetryConfiguration"] = vi.fn(() =>
+      CancellablePromise.resolve({
+        ...settings,
+        model: "restored-model",
+        configuration: {
+          recoveryRequired: false,
+          preservedFields: ["realtime"],
+        },
+      }),
     );
-    const TranscriptHistory: SessionServices["history"]["TranscriptHistory"] =
-      vi.fn(() => CancellablePromise.resolve([]));
+    const ListMicrophones: SessionServices["input"]["ListMicrophones"] = vi.fn(() =>
+      CancellablePromise.resolve([]),
+    );
+    const TranscriptHistory: SessionServices["history"]["TranscriptHistory"] = vi.fn(() =>
+      CancellablePromise.resolve([]),
+    );
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: {
@@ -101,16 +96,15 @@ describe("SettingsEditor configuration recovery", () => {
     await session.editor.load();
     expect(await session.editor.retryConfiguration()).toBe(true);
     expect(session.editor.applied?.model).toBe("restored-model");
-    expect(session.editor.applied?.configuration.preservedFields).toEqual([
-      "realtime",
-    ]);
+    expect(session.editor.applied?.configuration.preservedFields).toEqual(["realtime"]);
     expect(ListMicrophones).toHaveBeenCalledOnce();
     expect(TranscriptHistory).toHaveBeenCalledOnce();
   });
 
   it("adopts explicit defaults and clears credential drafts after reset", async () => {
-    const ResetConfiguration: SessionServices["settings"]["ResetConfiguration"] =
-      vi.fn(() => CancellablePromise.resolve(settings));
+    const ResetConfiguration: SessionServices["settings"]["ResetConfiguration"] = vi.fn(() =>
+      CancellablePromise.resolve(settings),
+    );
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: {
@@ -133,9 +127,7 @@ describe("SettingsEditor configuration recovery", () => {
 
 describe("SettingsEditor credential draft", () => {
   it("clears the key and pending deletion choice together", () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     session.editor.apiKey = "temporary-secret";
     session.editor.clearKey = true;
 
@@ -148,9 +140,7 @@ describe("SettingsEditor credential draft", () => {
 
 describe("SettingsEditor settings snapshots", () => {
   it("adopts a backend settings event when this renderer has no draft", async () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     await session.editor.load();
     await session.editor.refreshDevices();
 
@@ -166,9 +156,7 @@ describe("SettingsEditor settings snapshots", () => {
   });
 
   it("does not overwrite an active settings-window draft", async () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     await session.editor.load();
     await session.editor.refreshDevices();
     if (!session.editor.draft) throw new Error("expected settings");
@@ -186,9 +174,7 @@ describe("SettingsEditor settings snapshots", () => {
   });
 
   it("tracks and discards unsaved settings and credential drafts", async () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
 
     expect(session.editor.dirty).toBe(false);
     await session.editor.load();
@@ -207,14 +193,11 @@ describe("SettingsEditor settings snapshots", () => {
   });
 
   it("keeps draft fields and nested headers independent from applied settings", async () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
 
     await session.editor.load();
     await session.editor.refreshDevices();
-    if (!session.editor.draft?.headers)
-      throw new Error("expected settings headers");
+    if (!session.editor.draft?.headers) throw new Error("expected settings headers");
     session.editor.draft.baseURL = "https://draft.example/v1";
     session.editor.draft.holdShortcut = "Ctrl+Alt+Space";
     session.editor.draft.headers["X-Test"] = "draft";
@@ -227,9 +210,7 @@ describe("SettingsEditor settings snapshots", () => {
   });
 
   it("replaces both snapshots after Go confirms a successful save", async () => {
-    const SaveSettings: SessionServices["settings"]["SaveSettings"] = ({
-      settings: draft,
-    }) =>
+    const SaveSettings: SessionServices["settings"]["SaveSettings"] = ({ settings: draft }) =>
       CancellablePromise.resolve({
         ...settings,
         ...draft,
@@ -244,8 +225,7 @@ describe("SettingsEditor settings snapshots", () => {
 
     await session.editor.load();
     await session.editor.refreshDevices();
-    if (!session.editor.draft?.headers)
-      throw new Error("expected settings headers");
+    if (!session.editor.draft?.headers) throw new Error("expected settings headers");
     session.editor.draft.baseURL = "https://draft.example/v1";
     session.editor.draft.overlayEnabled = false;
     session.editor.draft.overlaySizePercent = 125;
@@ -256,24 +236,19 @@ describe("SettingsEditor settings snapshots", () => {
     await session.editor.save();
 
     expect(session.editor.draft?.baseURL).toBe("https://confirmed.example/v1");
-    expect(session.editor.applied?.baseURL).toBe(
-      "https://confirmed.example/v1",
-    );
+    expect(session.editor.applied?.baseURL).toBe("https://confirmed.example/v1");
     expect(session.editor.applied?.headers).toEqual({ "X-Test": "saved" });
     expect(session.editor.applied?.overlayEnabled).toBe(false);
     expect(session.editor.applied?.overlaySizePercent).toBe(125);
     expect(session.editor.applied?.overlayOpacityPercent).toBe(80);
     expect(session.editor.applied?.overlayTopOffset).toBe(42);
     expect(session.editor.applied?.overlayGlowPercent).toBe(50);
-    expect(session.editor.draft?.headers).not.toBe(
-      session.editor.applied?.headers,
-    );
+    expect(session.editor.draft?.headers).not.toBe(session.editor.applied?.headers);
   });
 
   it("persists completion of the one-time setup without sending credential drafts", async () => {
-    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(
-      ({ settings: draft }) =>
-        CancellablePromise.resolve({ ...draft, setupCompleted: true }),
+    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(({ settings: draft }) =>
+      CancellablePromise.resolve({ ...draft, setupCompleted: true }),
     );
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
@@ -285,7 +260,7 @@ describe("SettingsEditor settings snapshots", () => {
 
     expect(await session.editor.completeSetup()).toBe(true);
     expect(SaveSettings).toHaveBeenCalledWith({
-      clearConnectionCredential:false,
+      clearConnectionCredential: false,
       settings: expect.objectContaining({ setupCompleted: true }),
       sttCredentialDraft: "",
       clearSTTCredential: false,
@@ -300,9 +275,7 @@ describe("SettingsEditor settings snapshots", () => {
   });
 
   it("keeps the launch material active and requests a restart after changing Mica", async () => {
-    const SaveSettings: SessionServices["settings"]["SaveSettings"] = ({
-      settings: draft,
-    }) =>
+    const SaveSettings: SessionServices["settings"]["SaveSettings"] = ({ settings: draft }) =>
       CancellablePromise.resolve({
         ...settings,
         ...draft,
@@ -347,14 +320,11 @@ describe("SettingsEditor settings snapshots", () => {
   });
 
   it("applies quick settings from the confirmed snapshot instead of an unrelated draft", async () => {
-    let received:
-      Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
-    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(
-      (request) => {
-        received = request;
-        return CancellablePromise.resolve({ ...settings, ...request.settings });
-      },
-    );
+    let received: Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
+    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn((request) => {
+      received = request;
+      return CancellablePromise.resolve({ ...settings, ...request.settings });
+    });
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: { SaveSettings },
@@ -382,7 +352,7 @@ describe("SettingsEditor settings snapshots", () => {
     expect(received?.settings.postProcessing.model).toBe("processor/faster");
     expect(received?.settings.postProcessing.styling).toBe("formal");
     expect(SaveSettings).toHaveBeenCalledWith({
-      clearConnectionCredential:false,
+      clearConnectionCredential: false,
       settings: expect.any(Object),
       sttCredentialDraft: "",
       clearSTTCredential: false,
@@ -408,8 +378,7 @@ describe("SettingsEditor settings snapshots", () => {
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: {
-          SaveSettings: () =>
-            CancellablePromise.reject(new Error("quick save failed")),
+          SaveSettings: () => CancellablePromise.reject(new Error("quick save failed")),
         },
       }),
     );
@@ -427,14 +396,11 @@ describe("SettingsEditor settings snapshots", () => {
   });
 
   it("persists the compact quick controls through the confirmed settings snapshot", async () => {
-    let received:
-      Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
-    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(
-      (request) => {
-        received = request;
-        return CancellablePromise.resolve(request.settings);
-      },
-    );
+    let received: Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
+    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn((request) => {
+      received = request;
+      return CancellablePromise.resolve(request.settings);
+    });
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: { SaveSettings },
@@ -478,14 +444,11 @@ describe("SettingsEditor settings snapshots", () => {
   });
 
   it("persists a processing behavior without changing its stored profile-specific values", async () => {
-    let received:
-      Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
-    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(
-      (request) => {
-        received = request;
-        return CancellablePromise.resolve({ ...settings, ...request.settings });
-      },
-    );
+    let received: Parameters<SessionServices["settings"]["SaveSettings"]>[0] | undefined;
+    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn((request) => {
+      received = request;
+      return CancellablePromise.resolve({ ...settings, ...request.settings });
+    });
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: { SaveSettings },
@@ -518,13 +481,11 @@ describe("SettingsEditor settings snapshots", () => {
   it("serializes quick changes so each save starts from the latest confirmed snapshot", async () => {
     const requests: Settings[] = [];
     const first = CancellablePromise.withResolvers<Settings>();
-    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn(
-      (request) => {
-        requests.push(request.settings);
-        if (requests.length === 1) return first.promise;
-        return CancellablePromise.resolve(request.settings);
-      },
-    );
+    const SaveSettings: SessionServices["settings"]["SaveSettings"] = vi.fn((request) => {
+      requests.push(request.settings);
+      if (requests.length === 1) return first.promise;
+      return CancellablePromise.resolve(request.settings);
+    });
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: { SaveSettings },
@@ -533,14 +494,8 @@ describe("SettingsEditor settings snapshots", () => {
     await session.editor.load();
     await session.editor.refreshDevices();
 
-    const delivery = session.editor.updateQuickSettings(
-      { autoInsert: false },
-      "delivery",
-    );
-    const model = session.editor.updateQuickSettings(
-      { model: "speech/new" },
-      "stt-model",
-    );
+    const delivery = session.editor.updateQuickSettings({ autoInsert: false }, "delivery");
+    const model = session.editor.updateQuickSettings({ model: "speech/new" }, "stt-model");
     await Promise.resolve();
     first.resolve({ ...settings, autoInsert: false });
 
@@ -557,16 +512,15 @@ describe("SettingsEditor settings snapshots", () => {
 describe("SettingsEditor microphone inventory", () => {
   it("refreshes devices without rewriting the selected microphone", async () => {
     let request = 0;
-    const ListMicrophones: SessionServices["input"]["ListMicrophones"] = vi.fn(
-      () =>
-        CancellablePromise.resolve(
-          request++ === 0
-            ? [
-                { id: "", name: "System default microphone", default: true },
-                { id: "usb-mic", name: "USB microphone", default: false },
-              ]
-            : [{ id: "webcam-mic", name: "Webcam microphone", default: true }],
-        ),
+    const ListMicrophones: SessionServices["input"]["ListMicrophones"] = vi.fn(() =>
+      CancellablePromise.resolve(
+        request++ === 0
+          ? [
+              { id: "", name: "System default microphone", default: true },
+              { id: "usb-mic", name: "USB microphone", default: false },
+            ]
+          : [{ id: "webcam-mic", name: "Webcam microphone", default: true }],
+      ),
     );
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
@@ -601,9 +555,7 @@ describe("SettingsEditor microphone inventory", () => {
 
     const first = session.editor.refreshDevices();
     await session.editor.refreshDevices();
-    response.resolve([
-      { id: "usb-mic", name: "USB microphone", default: true },
-    ]);
+    response.resolve([{ id: "usb-mic", name: "USB microphone", default: true }]);
     await first;
 
     expect(ListMicrophones).toHaveBeenCalledOnce();
@@ -614,8 +566,9 @@ describe("SettingsEditor microphone inventory", () => {
 
 describe("SettingsEditor connection metadata", () => {
   it("keeps the structured result for the settings-window lifetime", async () => {
-    const TestConnection: SessionServices["connection"]["TestConnection"] =
-      vi.fn(() => CancellablePromise.resolve(connectionResult));
+    const TestConnection: SessionServices["connection"]["TestConnection"] = vi.fn(() =>
+      CancellablePromise.resolve(connectionResult),
+    );
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         connection: { TestConnection },
@@ -643,8 +596,9 @@ describe("SettingsEditor connection metadata", () => {
 
   it("debounces a repeated check while one is in flight", async () => {
     const response = CancellablePromise.withResolvers<ConnectionResult>();
-    const TestConnection: SessionServices["connection"]["TestConnection"] =
-      vi.fn(() => response.promise);
+    const TestConnection: SessionServices["connection"]["TestConnection"] = vi.fn(
+      () => response.promise,
+    );
     const session = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         connection: { TestConnection },
@@ -663,9 +617,7 @@ describe("SettingsEditor connection metadata", () => {
   });
 
   it("does not clear an existing confirmation during an automatic check", async () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     await session.editor.load();
     await session.editor.refreshDevices();
     session.messages.notice = "Settings saved and active.";
@@ -688,8 +640,7 @@ describe("SettingsEditor connection metadata", () => {
     await session.editor.refreshDevices();
     if (!session.editor.draft) throw new Error("expected settings");
     session.editor.draft.postProcessing.model = "processor/s1-mini";
-    session.editor.draft.postProcessing.systemPrompt =
-      "unrelated unsaved prompt";
+    session.editor.draft.postProcessing.systemPrompt = "unrelated unsaved prompt";
 
     await session.editor.testPostProcessingConnection();
 
@@ -738,9 +689,7 @@ describe("SettingsEditor connection metadata", () => {
 
 describe("compatibility profile snapshots", () => {
   it("invalidates connection observations when only compatibility selections change", async () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     await session.editor.load();
     session.editor.connection = connectionResult;
     session.editor.processingConnection = connectionResult;
@@ -759,9 +708,7 @@ describe("compatibility profile snapshots", () => {
     };
     expect(session.editor.applySettingsSnapshot(changed)).toBe(true);
     expect(session.editor.applied?.compatibilityProfile).toBe(ID.Speaches);
-    expect(session.editor.draft?.postProcessing.compatibilityProfile).toBe(
-      ID.LlamaCPP,
-    );
+    expect(session.editor.draft?.postProcessing.compatibilityProfile).toBe(ID.LlamaCPP);
     expect(session.editor.connection).toBeNull();
     expect(session.editor.processingConnection).toBeNull();
     expect(session.editor.ttsConnection).toBeNull();
@@ -773,33 +720,69 @@ describe("compatibility profile snapshots", () => {
 
 describe("Transcription control drafts", () => {
   it("keeps unsaved nested controls separate from applied settings", async () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     await session.editor.load();
-    if (!session.editor.draft || !session.editor.applied)
-      throw new Error("settings missing");
+    if (!session.editor.draft || !session.editor.applied) throw new Error("settings missing");
     session.editor.draft.transcriptionOptions.prompt = "unsaved context";
     session.editor.draft.transcriptionOptions.hotwords = "unsaved terms";
     session.editor.draft.transcriptionOptions.temperatureOverride = true;
-    expect(session.editor.applied.transcriptionOptions).toEqual(
-      settings.transcriptionOptions,
-    );
+    expect(session.editor.applied.transcriptionOptions).toEqual(settings.transcriptionOptions);
   });
 });
 
 describe("Cleanup generation control drafts", () => {
   it("keeps unsaved nested options separate from applied settings", async () => {
-    const session = createEditor(
-      serviceWithStatus(() => CancellablePromise.resolve(idle)),
-    );
+    const session = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
     await session.editor.load();
-    if (!session.editor.draft || !session.editor.applied)
-      throw new Error("settings missing");
+    if (!session.editor.draft || !session.editor.applied) throw new Error("settings missing");
     session.editor.draft.postProcessing.generationOptions.maxOutputTokens = 8192;
     session.editor.draft.postProcessing.generationOptions.disableReasoning = true;
     expect(session.editor.applied.postProcessing.generationOptions).toEqual(
       settings.postProcessing.generationOptions,
     );
+  });
+});
+
+it("changes Voice mode without changing the selected connection/model or Audio file", async () => {
+  const initial = structuredClone(settings);
+  const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
+  services.settings.SaveSettings = vi.fn((request) =>
+    CancellablePromise.resolve({ ...initial, ...request.settings }),
+  );
+  const { editor } = createEditor(services);
+  editor.applySettingsSnapshot(initial);
+  const before = structuredClone(editor.applied!);
+  expect(
+    await editor.updateQuickSettings(
+      { voiceTranscription: { realtime: true } },
+      "voice-transcription",
+    ),
+  ).toBe(true);
+  expect(editor.applied?.voiceTranscription.realtime).toBe(true);
+  expect(editor.applied?.voiceTranscription.model).toBe(before.voiceTranscription.model);
+  expect(editor.applied?.voiceTranscription.baseURL).toBe(before.voiceTranscription.baseURL);
+  expect(editor.applied?.savedConnections.selected).toEqual(before.savedConnections.selected);
+  expect(editor.applied?.model).toBe(before.model);
+  expect(editor.applied?.baseURL).toBe(before.baseURL);
+  expect(editor.applied?.transcriptionOptions).toEqual(before.transcriptionOptions);
+  expect(await editor.updateQuickSettings({ model: "file-new-model" }, "stt-model")).toBe(true);
+  expect(editor.applied?.voiceTranscription).toEqual({
+    ...before.voiceTranscription,
+    realtime: true,
+  });
+});
+
+describe("shared vocabulary draft", () => {
+  it("keeps edits separate from applied settings and restores them on discard", () => {
+    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    editor.applySettingsSnapshot(settings);
+    editor.draft!.vocabulary.terms = "Freehand\nNew York";
+    editor.draft!.vocabulary.voice = true;
+    expect(editor.applied!.vocabulary.terms).toBe("");
+    expect(editor.applied!.vocabulary.voice).toBe(false);
+    expect(editor.dirty).toBe(true);
+    editor.discardSettingsDraft();
+    expect(editor.draft!.vocabulary).toEqual(settings.vocabulary);
+    expect(editor.dirty).toBe(false);
   });
 });

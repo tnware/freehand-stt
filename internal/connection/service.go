@@ -517,7 +517,7 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 		key = ""
 	}
 	health := ""
-	if c.Supports(savedconnection.Transcription) {
+	if c.Supports(savedconnection.Transcription) || c.Supports(savedconnection.Voice) {
 		health = compatibility.TranscriptionHealthPath(c.Details.CompatibilityProfile, c.Details.HealthPath)
 	}
 	ctx, cancel := s.operationContext(15 * time.Second)

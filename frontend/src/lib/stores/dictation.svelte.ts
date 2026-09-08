@@ -13,6 +13,8 @@ export type DictationStateService = Pick<
 >;
 
 const IDLE: Status = {
+  live: false,
+  liveCaptions: false,
   state: State.Idle,
   generation: 0,
   canCancel: false,
@@ -38,8 +40,7 @@ export class DictationState {
   async toggleRecording() {
     this.#messages.clear();
     try {
-      if (this.status.state === State.Recording)
-        await this.#service.StopRecording();
+      if (this.status.state === State.Recording) await this.#service.StopRecording();
       else await this.#service.StartRecording(RecordingMode.RecordingToggle);
     } catch (cause) {
       this.#messages.fail(cause);
@@ -71,12 +72,18 @@ export class DictationState {
       if (this.status.canCopy) await this.#service.CopyPending();
       else await this.#service.CopyCurrent(this.status.generation);
       return true;
-    } catch (cause) { this.#messages.fail(cause); return false; }
+    } catch (cause) {
+      this.#messages.fail(cause);
+      return false;
+    }
   }
 
   async clearCurrent() {
-    try { await this.#service.ClearCurrent(this.status.generation); }
-    catch (cause) { this.#messages.fail(cause); }
+    try {
+      await this.#service.ClearCurrent(this.status.generation);
+    } catch (cause) {
+      this.#messages.fail(cause);
+    }
   }
 
   async load() {

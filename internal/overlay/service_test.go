@@ -176,3 +176,18 @@ func TestVisibilityPolicyIsBounded(t *testing.T) {
 		t.Fatal("all-phase visibility hid a terminal outcome")
 	}
 }
+
+func TestCaptionsAppearOnlyDuringEnabledLiveCaptureAndFinalization(t *testing.T) {
+	for _, state := range []dictation.State{dictation.Recording, dictation.Transcribing, dictation.Ready, dictation.Idle, dictation.Failed, dictation.PostProcessing} {
+		status := dictation.Status{State: state, Live: true, LiveCaptions: true, LiveFinal: "final", LivePartial: "preview"}
+		got := overlayForStatus(status)
+		want := state == dictation.Recording || state == dictation.Transcribing
+		if got.CaptionEnabled != want || (want && got.Caption != "final preview") || (!want && got.Caption != "") {
+			t.Fatal("caption outlived its active phase")
+		}
+		status.LiveCaptions = false
+		if overlayForStatus(status).CaptionEnabled {
+			t.Fatal("disabled captions shown")
+		}
+	}
+}

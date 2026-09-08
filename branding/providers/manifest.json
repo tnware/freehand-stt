@@ -1,4 +1,12 @@
 {
+  "qwen3-asr": {
+    "asset": "qwen.svg",
+    "kind": "brand",
+    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/packages/static-svg/icons/qwen-color.svg",
+    "revision": "a94750e3f5f8fc33757b839d85030e742284e43a",
+    "license": "MIT",
+    "notice": "licenses/lobe.txt"
+  },
   "generic": {
     "asset": "generic.svg",
     "kind": "neutral",
@@ -84,5 +92,14 @@
     "revision": "1",
     "license": "MIT",
     "notice": "../../LICENSE"
+  },
+  "nemo-speech-v1": {
+    "asset": "nvidia.svg",
+    "kind": "family",
+    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/packages/static-svg/icons/nvidia-color.svg",
+    "revision": "a94750e3f5f8fc33757b839d85030e742284e43a",
+    "license": "MIT",
+    "notice": "licenses/lobe.txt",
+    "note": "Uses NVIDIA's family mark to identify its NeMo-Speech.cpp runtime; not a separate NeMo logo."
   }
 }

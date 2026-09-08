@@ -565,3 +565,26 @@ func (a *App) hideAbout() {
 		a.wails.Event.Emit(aboutVisibilityEvent, false)
 	}
 }
+
+func (a *App) newConnectionManagerWindow() {
+	window := a.wails.Window.NewWithOptions(baseWindowOptions("connections", "Freehand — Connection Manager", "/index.html#connections", 760, 740, 560, 520, true, a.settings.UseMica, a.settings.AppearanceMode, a.wails.Env.IsDarkMode()))
+	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
+		event.Cancel()
+		window.EmitEvent("connections:close-requested")
+	})
+	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
+		window.EmitEvent("connections:open")
+	})
+	a.connectionsWindow.attach(window)
+}
+
+func (a *App) showConnectionManager() {
+	window := a.connectionsWindow.current()
+	if window != nil && !window.IsVisible() {
+		a.centerAuxiliaryWindow(window)
+	}
+	a.connectionsWindow.Reveal()
+	if window != nil {
+		window.EmitEvent("connections:open")
+	}
+}

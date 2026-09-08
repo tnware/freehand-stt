@@ -25,12 +25,16 @@ type Profile struct {
 	AssumeUnknownLanguage string                     `json:"assumeUnknownLanguage,omitempty"`
 	ReasoningOffRequired  bool                       `json:"reasoningOffRequired"`
 	Capabilities          compatibility.Capabilities `json:"capabilities"`
+	Languages             []speechlanguage.Option    `json:"languages,omitempty"`
+	RealtimeLanguageHint  bool                       `json:"realtimeLanguageHint,omitempty"`
 }
 
 type Catalog struct {
-	Transcription  []Profile `json:"transcription"`
-	PostProcessing []Profile `json:"postProcessing"`
-	Speech         []Profile `json:"speech"`
+	VoiceTranscription []Profile `json:"voiceTranscription"`
+	Realtime           []Profile `json:"realtime"`
+	Transcription      []Profile `json:"transcription"`
+	PostProcessing     []Profile `json:"postProcessing"`
+	Speech             []Profile `json:"speech"`
 }
 
 // Contract retains the backend path/response encoding, but narrows request
@@ -49,6 +53,15 @@ func Effective(id ID) ID {
 
 func definition(id ID, role compatibility.Role) (Profile, error) {
 	id = Effective(id)
+	if id == Qwen3ASR && (role == compatibility.Transcription || role == compatibility.Realtime) {
+		return qwenProfile(role), nil
+	}
+	if role == compatibility.Realtime || (role == compatibility.Transcription && id == Nemotron35) {
+		if id != Nemotron35 {
+			return Profile{}, errors.New("choose the qualified Nemotron 3.5 streaming model profile")
+		}
+		return Profile{ID: id, Name: "Nemotron 3.5 ASR streaming", Description: "32 base-model locales and vocabulary boosting. Live text is provisional until finalized.", Languages: NemotronLanguages(), RealtimeLanguageHint: true, Capabilities: compatibility.Capabilities{LanguageHint: true, Realtime: true}}, nil
+	}
 	p := Profile{ID: id, Name: "Generic"}
 	switch role {
 	case compatibility.Transcription:
@@ -80,6 +93,7 @@ func definition(id ID, role compatibility.Role) (Profile, error) {
 // constrain preserves transport facts (routes/event encoding/server-loaded
 // models). Only user-facing model capabilities participate in the intersection.
 func constrain(backend, model compatibility.Capabilities) compatibility.Capabilities {
+	backend.Realtime = backend.Realtime && model.Realtime
 	backend.LanguageHint = backend.LanguageHint && model.LanguageHint
 	backend.FileStreaming = backend.FileStreaming && model.FileStreaming
 	backend.TranscriptionPrompt = backend.TranscriptionPrompt && model.TranscriptionPrompt
@@ -92,6 +106,12 @@ func constrain(backend, model compatibility.Capabilities) compatibility.Capabili
 }
 
 func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract, error) {
+	if id == Qwen3ASR && backend != compatibility.VLLM {
+		return Contract{}, errors.New("Qwen3-ASR profile requires the qualified vLLM backend")
+	}
+	if id == Nemotron35 && backend != compatibility.NeMoSpeechV1 {
+		return Contract{}, errors.New("Nemotron profile requires the qualified NeMo-Speech.cpp backend")
+	}
 	p, err := definition(id, role)
 	if err != nil {
 		return Contract{}, err
@@ -107,6 +127,15 @@ func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract
 
 func options(backend compatibility.ID, role compatibility.Role) []Profile {
 	ids := []ID{Generic}
+	if role == compatibility.Transcription && backend == compatibility.VLLM {
+		ids = append(ids, Qwen3ASR)
+	}
+	if role == compatibility.Transcription && backend == compatibility.NeMoSpeechV1 {
+		ids = append(ids, Nemotron35)
+	}
+	if role == compatibility.Realtime {
+		ids = []ID{Nemotron35, Qwen3ASR}
+	}
 	if role == compatibility.PostProcessing {
 		ids = append(ids, S1Mini)
 	}
@@ -120,15 +149,25 @@ func options(backend compatibility.ID, role compatibility.Role) []Profile {
 }
 
 func Profiles(transcription, cleanup, speech compatibility.ID) Catalog {
-	return Catalog{Transcription: options(transcription, compatibility.Transcription), PostProcessing: options(cleanup, compatibility.PostProcessing), Speech: options(speech, compatibility.Speech)}
+	return Catalog{Realtime: append(options(compatibility.NeMoSpeechV1, compatibility.Realtime), options(compatibility.VLLM, compatibility.Realtime)...), Transcription: options(transcription, compatibility.Transcription), PostProcessing: options(cleanup, compatibility.PostProcessing), Speech: options(speech, compatibility.Speech)}
 }
 
 // ValidateLanguage preserves the accepted S1-mini policy for explicit and
 // reported input. It does not invent a language hint or rewrite a prompt.
 func ValidateLanguage(id ID, role compatibility.Role, selected string, detected []string) error {
+	if id == Qwen3ASR && role == compatibility.Transcription {
+		return validateQwenLanguage(selected)
+	}
 	p, err := definition(id, role)
 	if err != nil {
 		return err
+	}
+	if id == Nemotron35 {
+		// An omitted language delegates automatic detection to the server.
+		if selected == "" {
+			return nil
+		}
+		return ValidateNemotron(selected, NemotronOptions{})
 	}
 	if p.Language == "" {
 		return nil
@@ -151,6 +190,14 @@ func ValidateLanguage(id ID, role compatibility.Role, selected string, detected 
 }
 
 func ValidateTranscription(id ID, backend compatibility.ID, language string, options compatibility.TranscriptionOptions) error {
+	if options.Vocabulary != "" || options.VocabularyBoost != 0 {
+		if VocabularyMode(id, backend, false) != "speech-contexts" {
+			return errors.New("speech contexts require the qualified Nemotron and NeMo profiles")
+		}
+		if err := ValidateNemotron("auto", NemotronOptions{Vocabulary: options.Vocabulary, Boost: options.VocabularyBoost}); err != nil {
+			return err
+		}
+	}
 	c, err := Resolve(id, backend, compatibility.Transcription)
 	if err != nil {
 		return err
@@ -190,4 +237,8 @@ func ValidateSpeech(id ID, backend compatibility.ID, speed float64) error {
 		return errors.New("speech speed is unavailable for this model profile")
 	}
 	return nil
+}
+
+func VoiceProfiles(backend compatibility.ID) []Profile {
+	return options(backend, compatibility.Transcription)
 }

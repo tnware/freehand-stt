@@ -46,7 +46,7 @@ func (q *Queries) DeleteSavedConnection(ctx context.Context, id string) error {
 }
 
 const listConnectionHeaders = `-- name: ListConnectionHeaders :many
-SELECT connection_id,name,value FROM saved_connection_headers ORDER BY connection_id,name LIMIT 3073
+SELECT connection_id,name,value FROM saved_connection_headers ORDER BY connection_id,name LIMIT 4097
 `
 
 func (q *Queries) ListConnectionHeaders(ctx context.Context) ([]SavedConnectionHeader, error) {
@@ -73,7 +73,7 @@ func (q *Queries) ListConnectionHeaders(ctx context.Context) ([]SavedConnectionH
 }
 
 const listConnectionUses = `-- name: ListConnectionUses :many
-SELECT connection_id,purpose FROM saved_connection_uses ORDER BY connection_id,purpose LIMIT 289
+SELECT connection_id,purpose FROM saved_connection_uses ORDER BY connection_id,purpose LIMIT 513
 `
 
 func (q *Queries) ListConnectionUses(ctx context.Context) ([]SavedConnectionUse, error) {
@@ -100,7 +100,7 @@ func (q *Queries) ListConnectionUses(ctx context.Context) ([]SavedConnectionUse,
 }
 
 const listSavedConnections = `-- name: ListSavedConnections :many
-SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account FROM saved_connections ORDER BY name,id LIMIT 97
+SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account FROM saved_connections ORDER BY name,id LIMIT 129
 `
 
 func (q *Queries) ListSavedConnections(ctx context.Context) ([]SavedConnection, error) {
@@ -272,6 +272,24 @@ INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insec
 
 func (q *Queries) SeedTranscriptionConnection(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, seedTranscriptionConnection)
+	return err
+}
+
+const seedVoiceSelection = `-- name: SeedVoiceSelection :exec
+INSERT INTO selected_connections(purpose,connection_id) SELECT 'voice','initial-stt' WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) SeedVoiceSelection(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, seedVoiceSelection)
+	return err
+}
+
+const seedVoiceUse = `-- name: SeedVoiceUse :exec
+INSERT INTO saved_connection_uses(connection_id,purpose) SELECT 'initial-stt','voice' WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) SeedVoiceUse(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, seedVoiceUse)
 	return err
 }
 

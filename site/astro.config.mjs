@@ -50,6 +50,7 @@ export default defineConfig({
                   { slug: 'docs/backends/llama-cpp' },
                   { slug: 'docs/backends/whisper-cpp' },
                   { slug: 'docs/backends/vllm' },
+                  { slug: 'docs/backends/qwen3-asr' },
                   { slug: 'docs/backends/planned' },
                 ] },
 				{
@@ -60,6 +61,7 @@ export default defineConfig({
 						{ slug: 'docs/guides/connect-a-server' },
                         { slug: 'docs/guides/saved-connections' },
                         { slug: 'docs/guides/model-profiles' },
+                        { slug: 'docs/guides/vocabulary' },
 					],
 				},
 				{

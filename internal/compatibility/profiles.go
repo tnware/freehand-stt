@@ -33,6 +33,7 @@ const (
 // Capabilities are the implemented wire contract. Model-specific advanced
 // parameters must acquire their own qualified rules before being exposed.
 type Capabilities struct {
+	Realtime                    bool `json:"realtime"`
 	ServerLoadedModel           bool `json:"serverLoadedModel"`
 	VLLMTranscriptionEvents     bool `json:"vllmTranscriptionEvents"`
 	CleanupOutputLimit          bool `json:"cleanupOutputLimit"`
@@ -57,6 +58,7 @@ type Profile struct {
 }
 
 type Catalog struct {
+	Realtime       []Profile `json:"realtime"`
 	Transcription  []Profile `json:"transcription"`
 	PostProcessing []Profile `json:"postProcessing"`
 	Speech         []Profile `json:"speech"`
@@ -77,10 +79,13 @@ func Effective(id ID) ID {
 }
 
 func Profiles() Catalog {
-	return Catalog{Transcription: options(Transcription), PostProcessing: options(PostProcessing), Speech: options(Speech)}
+	return Catalog{Realtime: realtimeProfiles(), Transcription: options(Transcription), PostProcessing: options(PostProcessing), Speech: options(Speech)}
 }
 
 func options(role Role) []Profile {
+	if role == Realtime {
+		return realtimeProfiles()
+	}
 	caps := Capabilities{}
 	genericDescription := ""
 	switch role {
@@ -115,8 +120,9 @@ func options(role Role) []Profile {
 	switch role {
 	case Transcription:
 		result = append(result,
+			Profile{ID: NeMoSpeechV1, Label: "NeMo-Speech.cpp", Available: true, Description: "Completed transcription and qualified realtime dictation with the server-loaded speech model; v0.1.0.", Capabilities: Capabilities{ServerLoadedModel: true, LanguageHint: true, Realtime: true}},
 			Profile{ID: WhisperCPP, Label: "whisper.cpp", Available: true, Description: "Completed transcription through the native /inference route. Uses the model already loaded by the server; connection checks use /health. File streaming is unavailable.", Capabilities: Capabilities{ServerLoadedModel: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}},
-			Profile{ID: VLLM, Label: "vLLM", Available: true, Description: "Completed transcription and vLLM file streams. Context, language, and temperature depend on the selected speech model; qualified against v0.28.0.", Capabilities: Capabilities{FileStreaming: true, VLLMTranscriptionEvents: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}},
+			Profile{ID: VLLM, Label: "vLLM", Available: true, Description: "Completed transcription, file streams, and qualified Qwen3-ASR realtime. Context, language, and temperature depend on the model and mode; v0.28.0.", Capabilities: Capabilities{Realtime: true, FileStreaming: true, VLLMTranscriptionEvents: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}},
 		)
 	case PostProcessing:
 		result = append(result, Profile{ID: VLLM, Label: "vLLM", Available: true, Description: "Text cleanup with output-token and reasoning-off controls, qualified against v0.28.0. Reasoning control requires a compatible model template.", Capabilities: Capabilities{CleanupOutputLimit: true, CleanupDisableReasoning: true}})
@@ -138,6 +144,9 @@ func Resolve(id ID, role Role) (Contract, error) {
 			return Contract{}, errors.New("dedicated compatibility profile is not implemented")
 		}
 		route := "chat/completions"
+		if role == Realtime {
+			route = "realtime"
+		}
 		if role == Transcription {
 			route = "audio/transcriptions"
 			if profile.ID == WhisperCPP {

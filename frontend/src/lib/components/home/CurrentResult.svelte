@@ -2,6 +2,9 @@
   import type { Snippet } from "svelte";
   import { Button } from "$lib/components/ui/button";
   let {
+    live = false,
+    liveFinal = "",
+    livePartial = "",
     resultKey,
     mode,
     text,
@@ -15,6 +18,9 @@
     onListen,
     quickSettings,
   }: {
+    live?: boolean;
+    liveFinal?: string;
+    livePartial?: string;
     quickSettings?: Snippet;
     resultKey: string;
     mode: "voice" | "file";
@@ -39,16 +45,9 @@
   class="@container flex min-h-40 flex-1 flex-col overflow-hidden rounded-lg border border-hairline bg-layer-fill"
   aria-label="Current result"
 >
-  <div
-    class="flex h-12 shrink-0 items-center gap-1 border-b border-hairline px-3"
-  >
-    <h2 class={quickSettings ? "sr-only" : "text-sm font-medium"}>
-      Current result
-    </h2>
-    <span
-      class={quickSettings
-        ? "sr-only"
-        : "mr-auto text-xs text-muted-foreground"}
+  <div class="flex h-12 shrink-0 items-center gap-1 border-b border-hairline px-3">
+    <h2 class={quickSettings ? "sr-only" : "text-sm font-medium"}>Current result</h2>
+    <span class={quickSettings ? "sr-only" : "mr-auto text-xs text-muted-foreground"}
       >{working
         ? "In progress"
         : recovery
@@ -71,14 +70,9 @@
           disabled={working || !canCopy}
           onclick={onListen}>Listen</Button
         >{/if}
-      <Button variant="ghost" size="sm" disabled={working} onclick={onClear}
-        >Clear</Button
-      >
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={working || !canCopy}
-        onclick={copy}>{copiedKey === resultKey ? "Copied" : "Copy"}</Button
+      <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
+      <Button variant="outline" size="sm" disabled={working || !canCopy} onclick={copy}
+        >{copiedKey === resultKey ? "Copied" : "Copy"}</Button
       >
     {/if}
   </div>
@@ -94,7 +88,22 @@
           "Freehand kept this result because it could not insert it. Copy it when you’re ready."}
       </p>
     {/if}
-    {#if text}
+    {#if live}
+      <div class="p-4">
+        <p class="mb-3 text-xs text-muted-foreground" role="status">
+          Live preview · text may change
+        </p>
+        <div
+          class="whitespace-pre-wrap break-words text-sm leading-relaxed"
+          aria-label="Live transcript"
+        >
+          {liveFinal}<span class="text-muted-foreground"
+            >{liveFinal && livePartial ? " " : ""}{livePartial ||
+              (!liveFinal ? "Listening…" : "")}</span
+          >
+        </div>
+      </div>
+    {:else if text}
       <div
         class="whitespace-pre-wrap break-words p-4 text-sm leading-relaxed"
         tabindex="0"
@@ -106,9 +115,7 @@
         {text}
       </div>
     {:else if !message}
-      <div
-        class="flex h-full flex-col items-center justify-center gap-2 px-6 py-4 text-center"
-      >
+      <div class="flex h-full flex-col items-center justify-center gap-2 px-6 py-4 text-center">
         <p class="text-sm font-medium">
           {working
             ? "Your result will appear here"

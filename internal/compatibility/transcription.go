@@ -15,6 +15,9 @@ const (
 // TranscriptionOptions is a value-only snapshot of optional request controls.
 // TemperatureOverride distinguishes an explicit zero from the server default.
 type TranscriptionOptions struct {
+	// Request-only projections of shared vocabulary; never model preferences.
+	Vocabulary          string  `json:"-"`
+	VocabularyBoost     float64 `json:"-"`
 	Prompt              string  `json:"prompt"`
 	Hotwords            string  `json:"hotwords"`
 	TemperatureOverride bool    `json:"temperatureOverride"`

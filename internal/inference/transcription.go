@@ -20,6 +20,9 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 	if err != nil {
 		return TranscriptionResult{}, err
 	}
+	if !contract.Capabilities.ServerLoadedModel && strings.TrimSpace(model) == "" {
+		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "choose a transcription model"}
+	}
 	if err := c.validateTranscriptionOptions(); err != nil {
 		return TranscriptionResult{}, err
 	}
@@ -46,6 +49,10 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 		_ = mw.WriteField("model", model)
 	}
 	_ = mw.WriteField("response_format", "json")
+	if contract.ID == compatibility.NeMoSpeechV1 {
+		_ = mw.WriteField("automatic_punctuation", "true")
+		_ = mw.WriteField("verbatim", "true")
+	}
 	if language != "" {
 		_ = mw.WriteField("language", language)
 	}
@@ -109,6 +116,9 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 		return TranscriptionResult{}, &Error{Kind: "malformed_response", Message: "expected JSON object with text"}
 	}
 	text := strings.TrimSpace(*out.Text)
+	if c.modelProfile == modelprofile.Nemotron35 {
+		text, _ = modelprofile.StripNemotronLanguageTag(text)
+	}
 	if key != "" && strings.Contains(text, key) {
 		return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
 	}

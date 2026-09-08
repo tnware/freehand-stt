@@ -2,7 +2,9 @@ package platform
 
 import (
 	"math"
+	"strings"
 	"time"
+	"unicode"
 )
 
 // OverlayKind is presentation-only state. It never owns coordinator or
@@ -27,6 +29,8 @@ const (
 // by the coordinator so the native overlay and renderer describe the same VAD
 // deadline without either becoming a second recording authority.
 type OverlayStatus struct {
+	CaptionEnabled    bool
+	Caption           string
 	Kind              OverlayKind
 	CountdownDeadline time.Time
 	CountdownDuration time.Duration
@@ -100,7 +104,7 @@ const (
 
 // Every coordinator state has a glyph and distinct stage treatment. Detailed
 // may add fixed product/phase copy plus the bounded operational fields carried
-// by OverlayStatus; transcript and provider/user content never enter this type.
+// by OverlayStatus. Live captions are bounded transient text, never logged or retained.
 type overlayIcon uint8
 
 const (
@@ -224,6 +228,8 @@ func overlayNeedsContinuousFrames(view overlayView, animationsEnabled bool) bool
 }
 
 type overlayView struct {
+	CaptionEnabled    bool
+	Caption           string
 	Kind              OverlayKind
 	Visible           bool
 	Background        uint32
@@ -271,6 +277,8 @@ const (
 
 func resolveOverlayView(status OverlayStatus) overlayView {
 	view := overlayView{
+		CaptionEnabled:    status.CaptionEnabled,
+		Caption:           BoundedOverlayCaption(status.Caption),
 		Kind:              status.Kind,
 		Visible:           true,
 		CountdownDeadline: status.CountdownDeadline,
@@ -528,4 +536,20 @@ func shadeRGB(rgb uint32, amount float64) uint32 {
 // GDI+ expects.
 func argbColor(rgb uint32, alpha float64) uint32 {
 	return uint32(math.Round(clamp01(alpha)*255))<<24 | rgb&0xFFFFFF
+}
+
+// BoundedOverlayCaption keeps only the recent tail, removing control characters
+// before native rendering. It carries no delivery or retention authority.
+func BoundedOverlayCaption(text string) string {
+	text = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || unicode.IsSpace(r) {
+			return ' '
+		}
+		return r
+	}, text)
+	runes := []rune(text)
+	if len(runes) > 180 {
+		runes = runes[len(runes)-180:]
+	}
+	return strings.TrimSpace(string(runes))
 }

@@ -1,4 +1,6 @@
 import manifest from "./manifest.json";
+import qwen from "./qwen.svg?url";
+import nvidia from "./nvidia.svg?url";
 import generic from "./generic.svg?url";
 import speaches from "./speaches.svg?url";
 import whisper from "./whisper-cpp.svg?url";
@@ -9,13 +11,21 @@ import localai from "./localai.svg?url";
 import speech from "./speech.svg?url";
 
 const assets: Record<string, string> = {
-  "generic.svg": generic, "speaches.svg": speaches, "whisper-cpp.svg": whisper,
-  "llama-cpp.svg": llama, "vllm.svg": vllm, "openai.svg": openai,
-  "localai.svg": localai, "speech.svg": speech,
+  "qwen.svg": qwen,
+  "nvidia.svg": nvidia,
+  "generic.svg": generic,
+  "speaches.svg": speaches,
+  "whisper-cpp.svg": whisper,
+  "llama-cpp.svg": llama,
+  "vllm.svg": vllm,
+  "openai.svg": openai,
+  "localai.svg": localai,
+  "speech.svg": speech,
 };
 
 /** Presentation only. Capability and availability decisions belong to the Go catalog. */
 export function providerIdentity(id: string | null | undefined) {
-  const entry = manifest[Object.hasOwn(manifest, id ?? "") ? id as keyof typeof manifest : "generic"];
+  const entry =
+    manifest[Object.hasOwn(manifest, id ?? "") ? (id as keyof typeof manifest) : "generic"];
   return { ...entry, src: assets[entry.asset] ?? generic };
 }

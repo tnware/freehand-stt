@@ -7,27 +7,34 @@ package windowing
 import (
 	"errors"
 	"strings"
+	"sync"
 )
 
 var settingsSections = map[string]struct{}{
-	"general":     {},
-	"shortcuts":   {},
-	"audio":       {},
-	"overlay":     {},
-	"server":      {},
-	"connections": {},
-	"processing":  {},
-	"speech":      {},
-	"history":     {},
+	"vocabulary":          {},
+	"general":             {},
+	"shortcuts":           {},
+	"audio":               {},
+	"overlay":             {},
+	"server":              {},
+	"voice-transcription": {},
+	"connections":         {},
+	"processing":          {},
+	"speech":              {},
+	"history":             {},
 }
 
 type Service struct {
-	openSettings    func(string)
-	hideSettings    func()
-	settingsVisible func() bool
-	openAbout       func()
-	hideAbout       func()
-	aboutVisible    func() bool
+	connectionMu      sync.Mutex
+	connections       ConnectionManagerWindow
+	connectionRequest ConnectionManagerRequest
+	connectionOpen    bool
+	openSettings      func(string)
+	hideSettings      func()
+	settingsVisible   func() bool
+	openAbout         func()
+	hideAbout         func()
+	aboutVisible      func() bool
 }
 
 func NewService(

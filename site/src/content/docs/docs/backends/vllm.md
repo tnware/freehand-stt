@@ -1,13 +1,17 @@
 ---
 provider: vllm
 title: vLLM
-description: Configure vLLM for completed or streamed transcription and text cleanup.
+description: Configure vLLM for completed transcription, Qwen realtime, and text cleanup.
 ---
 
 The **vLLM** profiles cover speech transcription and text cleanup independently.
 Choose a speech model for transcription and a text model for cleanup; each
 operation has its own endpoint, model ID, and credential settings. Your servers
 can run locally, on another machine, or behind a compatible hosted deployment.
+
+For **Qwen3-ASR-1.7B**, including optional realtime microphone results and
+captions, use the [Qwen3-ASR setup guide](../qwen3-asr/). Select its explicit
+model profile in feature settings; the connection remains vLLM.
 
 ## Run vLLM with Docker
 
@@ -234,8 +238,9 @@ optional custom-model reasoning switch off: the S1-mini preset still enforced
 `reasoning_effort: "none"`. A one-token output limit produced the expected
 incomplete-response error rather than accepting truncated cleanup text.
 
-vLLM-Omni speech playback is a separate, still-planned profile. These profiles
-do not add realtime microphone transcription or model management.
+vLLM-Omni speech playback is a separate, still-planned profile. Realtime microphone
+transcription requires the explicit Qwen3-ASR profile and the qualified realtime
+server architecture. Model management remains outside Freehand.
 
 ## Language selection
 

@@ -464,6 +464,12 @@ func gpDeleteStringFormat(format uintptr) {
 }
 
 func gpDrawText(graphics uintptr, text string, font uintptr, rect gpRectF, color uint32, horizontal, vertical int) {
+	gpDrawFormattedText(graphics, text, font, rect, color, horizontal, vertical, false)
+}
+func gpDrawSingleLineText(graphics uintptr, text string, font uintptr, rect gpRectF, color uint32, horizontal, vertical int) {
+	gpDrawFormattedText(graphics, text, font, rect, color, horizontal, vertical, true)
+}
+func gpDrawFormattedText(graphics uintptr, text string, font uintptr, rect gpRectF, color uint32, horizontal, vertical int, singleLine bool) {
 	if graphics == 0 || font == 0 || text == "" {
 		return
 	}
@@ -472,6 +478,10 @@ func gpDrawText(graphics uintptr, text string, font uintptr, rect gpRectF, color
 		return
 	}
 	format := gpStringFormat(horizontal, vertical)
+	if singleLine && format != 0 {
+		// StringFormatFlagsNoWrap. Clip overflow within this fixed row.
+		gdiplusDLL.NewProc("GdipSetStringFormatFlags").Call(format, 0x1000)
+	}
 	brush := gpSolidBrush(color)
 	if format != 0 && brush != 0 {
 		gdipDrawString.Call(

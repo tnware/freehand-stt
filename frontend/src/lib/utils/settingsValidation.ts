@@ -8,10 +8,9 @@ export interface SettingsValidationIssue {
   message: string;
 }
 
-const targets: Record<
-  string,
-  Pick<SettingsValidationIssue, "section" | "control">
-> = {
+const targets: Record<string, Pick<SettingsValidationIssue, "section" | "control">> = {
+  vocabulary: { section: "vocabulary", control: "vocabulary-terms" },
+  "voice-transcription": { section: "voice-transcription", control: "voice-connection" },
   maxDurationSeconds: { section: "audio", control: "max-duration" },
   microphoneID: { section: "audio", control: "microphone-select" },
   vadMode: { section: "audio", control: null },
@@ -88,9 +87,7 @@ const targets: Record<
   toggleShortcut: { section: "shortcuts", control: null },
 };
 
-export function settingsValidationIssue(
-  failure: unknown,
-): SettingsValidationIssue | null {
+export function settingsValidationIssue(failure: unknown): SettingsValidationIssue | null {
   if (!(failure instanceof Error)) return null;
   const detail = failure.cause;
   if (

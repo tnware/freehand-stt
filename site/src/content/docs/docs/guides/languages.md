@@ -3,10 +3,7 @@ title: Choose a transcription language
 description: Select input languages, understand automatic detection, and use English-only S1-mini cleanup safely.
 ---
 
-Under **Settings → Transcription → Language**, search by language name or code,
-then select the language of the recording. Microphone dictation and stored-file
-transcription use the same saved selection. This setting requests transcription
-in the source language; it does not request translation.
+Under **Settings → Voice transcription** or **Audio-file transcription**, choose the spoken language. The two tasks keep independent selections. Searchable pickers accept language names or codes. Long lists fit the available window space and scroll; use the mouse wheel or arrow keys to reach additional options. This setting requests transcription in the source language; it does not request translation.
 
 ## Choose a mode
 

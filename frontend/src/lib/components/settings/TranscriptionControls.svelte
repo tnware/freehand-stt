@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { Capabilities, TranscriptionOptions } from "$bindings/compatibility";
-  import { Button } from "$lib/components/ui/button";
   import { Switch } from "$lib/components/ui/switch";
   import { Textarea } from "$lib/components/ui/textarea";
   import SettingRow from "$lib/components/settings/SettingRow.svelte";
@@ -28,10 +27,6 @@
     }
   }
   const promptBytes = $derived(new TextEncoder().encode(options.prompt).length);
-  const hotwordBytes = $derived(new TextEncoder().encode(options.hotwords).length);
-  const unsupportedHotwords = $derived(
-    Boolean(options.hotwords) && !capabilities?.transcriptionHotwords,
-  );
 </script>
 
 <details class="rounded-xl border border-hairline bg-layer-fill">
@@ -42,8 +37,8 @@
   </summary>
   <div class="border-t border-hairline px-5 py-4">
     <p class="text-xs leading-relaxed text-muted-foreground">
-      Optional hints for recordings, checkpoints, and audio files. Model support varies. Context and
-      hotwords are saved in your local settings and sent with each transcription.
+      Optional context for audio files. Model support varies. Manage shared names and terminology in
+      Vocabulary.
     </p>
     <div class="mt-4 space-y-2">
       <label for="transcription-prompt" class="text-sm font-medium">Transcription context</label>
@@ -63,40 +58,6 @@
       </p>
       {#if promptBytes > 8192}<p role="alert" class="text-xs text-destructive">
           Shorten the context before saving.
-        </p>{/if}
-    </div>
-    <div class="mt-4 space-y-2">
-      <label for="transcription-hotwords" class="text-sm font-medium">Hotwords</label>
-      <Textarea
-        id="transcription-hotwords"
-        bind:value={options.hotwords}
-        rows={2}
-        disabled={!capabilities?.transcriptionHotwords}
-        maxlength={2048}
-        aria-describedby="transcription-hotwords-help"
-        aria-invalid={hotwordBytes > 2048 || unsupportedHotwords}
-        placeholder="Freehand, Speaches, project names"
-      />
-      <p id="transcription-hotwords-help" class="text-xs text-muted-foreground">
-        {capabilities?.transcriptionHotwords
-          ? "Optional terms to favor during recognition; not guaranteed replacements."
-          : "Available with the Speaches profile."}
-        {hotwordBytes.toLocaleString()} / 2,048 UTF-8 bytes.
-      </p>
-      {#if unsupportedHotwords}
-        <p role="alert" class="text-xs text-destructive">
-          Clear hotwords before saving this profile, or switch back to Speaches.
-        </p>
-        <Button
-          variant="secondary"
-          size="sm"
-          onclick={() => {
-            options.hotwords = "";
-          }}>Clear hotwords</Button
-        >
-      {/if}
-      {#if hotwordBytes > 2048}<p role="alert" class="text-xs text-destructive">
-          Shorten the hotwords before saving.
         </p>{/if}
     </div>
   </div>

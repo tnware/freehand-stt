@@ -5,11 +5,13 @@ import type { Options } from "$bindings/modelsettings";
 import type { Settings } from "$lib/state";
 
 export function modelFor(settings: Settings, purpose: Purpose): string {
-  return purpose === Purpose.Transcription
-    ? settings.model
-    : purpose === Purpose.Cleanup
-      ? settings.postProcessing.model
-      : settings.textToSpeech.model;
+  return purpose === Purpose.Voice
+    ? settings.voiceTranscription.model
+    : purpose === Purpose.Transcription
+      ? settings.model
+      : purpose === Purpose.Cleanup
+        ? settings.postProcessing.model
+        : settings.textToSpeech.model;
 }
 export function rememberedModels(settings: Settings, purpose: Purpose) {
   const connection = settings.savedConnections.selected?.[purpose];
@@ -19,6 +21,7 @@ export function rememberedModels(settings: Settings, purpose: Purpose) {
 }
 export function modelOptions(settings: Settings, purpose: Purpose): Options {
   const base: Options = {
+    realtime: { vocabulary: "", boost: 0 },
     profile: ID.Generic,
     language: "",
     transcription: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
@@ -30,6 +33,14 @@ export function modelOptions(settings: Settings, purpose: Purpose): Options {
     voice: "",
     speed: 0,
   };
+  if (purpose === Purpose.Voice)
+    return {
+      ...base,
+      profile: settings.voiceTranscription.modelProfile,
+      language: settings.voiceTranscription.language,
+      realtime: { ...settings.voiceTranscription.options },
+      transcription: { ...settings.voiceTranscription.transcriptionOptions },
+    };
   if (purpose === Purpose.Transcription)
     return {
       ...base,
@@ -86,10 +97,21 @@ export function applyModelOptions(
     transcription: { ...options.transcription },
     cleanup: { ...options.cleanup },
   };
-  if (purpose === Purpose.Transcription) {
+  if (purpose === Purpose.Voice) {
+    Object.assign(settings.voiceTranscription, {
+      model,
+      modelProfile: o.profile,
+      options: { ...o.realtime, vocabulary: "" },
+      transcriptionOptions: { ...o.transcription, hotwords: "" },
+      realtime:
+        settings.voiceTranscription.realtime &&
+        !!settings.modelProfiles.voiceTranscription?.find((p) => p.id === o.profile)?.capabilities
+          .realtime,
+    });
+  } else if (purpose === Purpose.Transcription) {
     settings.model = model;
     settings.modelProfile = o.profile;
-    settings.transcriptionOptions = o.transcription;
+    settings.transcriptionOptions = { ...o.transcription, hotwords: "" };
   } else if (purpose === Purpose.Cleanup) {
     Object.assign(settings.postProcessing, {
       model,

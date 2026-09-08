@@ -311,6 +311,7 @@ type StatusOverlay struct {
 	highContrast      bool
 	fontFamily        uintptr
 	fonts             map[overlayFontKey]uintptr
+	captionCache      overlayCaptionCache
 
 	// Live capture amplitude. The source is set once during composition; the
 	// ring, envelope and scratch buffer belong to the message-loop thread.
@@ -839,10 +840,14 @@ type overlayGeometry struct {
 	windowHigh  int32
 }
 
+const overlayLayoutCaptions OverlayLayout = 255
+
 func overlayLayout(layout OverlayLayout, scale, offsetY float64) overlayGeometry {
 	pillWidth, pillHeight, radius := overlayPillWidth, overlayPillHeight, overlayPillHeight/2
 	iconX, stageLeft, stageRight, stageHigh := overlayIconX, overlayStageLeft, overlayStageRight, overlayStageHigh
 	switch layout {
+	case overlayLayoutCaptions:
+		pillWidth, pillHeight, radius = 640, 52, 16
 	case OverlayLayoutMinimal:
 		pillWidth, pillHeight, radius = 56, 56, 28
 		iconX, stageLeft, stageRight, stageHigh = 28, 28, 28, 0
@@ -937,6 +942,11 @@ func (o *StatusOverlay) render(hwnd uintptr) {
 		offsetY = exit * overlayRise * 0.5 * scale
 	}
 
+	if view.CaptionEnabled {
+		options.Layout = overlayLayoutCaptions
+		options.Surface = OverlaySurfaceSolid
+		options.Opacity = max(options.Opacity, 0.9)
+	}
 	geometry := overlayLayout(options.Layout, scale, offsetY)
 	if !o.surface.ensure(geometry.windowWidth, geometry.windowHigh) {
 		return
@@ -951,6 +961,18 @@ func (o *StatusOverlay) render(hwnd uintptr) {
 	recording := view.Stage == overlayStageWaveform && view.Animated && !view.Preview
 	o.sampleLevels(now, recording)
 	levels := o.liveLevels(recording)
+	if view.CaptionEnabled {
+		caption := view.Caption
+		if caption == "" {
+			caption = "Listening…"
+		}
+		view.Caption = o.captionCache.fit(caption, geometry.pillWidth-100*scale, scale, func(text string) float64 {
+			width, _ := gpMeasureText(graphics, text, o.font(16*scale, fontStyleRegular))
+			return width
+		})
+	} else {
+		o.captionCache = overlayCaptionCache{}
+	}
 	drawOverlay(graphics, view, geometry, elapsed, levels, options, o.highContrast, o.font)
 	gdipFlush.Call(graphics, 1)
 
@@ -991,6 +1013,8 @@ func drawOverlay(graphics uintptr, view overlayView, geometry overlayGeometry, e
 	drawOverlayBody(graphics, view, geometry, breath, glow, options.Surface)
 
 	switch geometry.layout {
+	case overlayLayoutCaptions:
+		drawCaptionOverlay(graphics, view, geometry, font)
 	case OverlayLayoutMinimal:
 		drawMinimalOverlay(graphics, view, geometry, elapsed, levels, glowScale)
 	case OverlayLayoutDetailed:
@@ -1613,4 +1637,16 @@ func callFailure(prefix string, err error) error {
 		return errors.New(prefix)
 	}
 	return fmt.Errorf("%s: %w", prefix, err)
+}
+
+func drawCaptionOverlay(graphics uintptr, view overlayView, geometry overlayGeometry, font func(float64, int) uintptr) {
+	scale := geometry.scale
+	left, top := geometry.pillX+16*scale, geometry.pillY
+	label := "Live"
+	if view.Kind == OverlayTranscribing {
+		label = "Finishing"
+	}
+	gpDrawText(graphics, label, font(11*scale, fontStyleBold), gpRectF{X: float32(left), Y: float32(top), Width: float32(62 * scale), Height: float32(geometry.pillHeight)}, argbColor(view.AccentSoft, 0.65), stringAlignmentNear, stringAlignmentCenter)
+	width := geometry.pillWidth - 100*scale
+	gpDrawSingleLineText(graphics, view.Caption, font(16*scale, fontStyleRegular), gpRectF{X: float32(left + 68*scale), Y: float32(top), Width: float32(width), Height: float32(geometry.pillHeight)}, argbColor(view.AccentSoft, 1), stringAlignmentNear, stringAlignmentCenter)
 }

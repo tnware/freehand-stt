@@ -90,16 +90,19 @@ func TestUnconfiguredDefaultsDoNotSelectAnEndpointOrCredentialMode(t *testing.T)
 	}
 }
 
-func TestCompletedSetupRequiresAnExplicitConnection(t *testing.T) {
-	settings := Default()
-	settings.SetupCompleted = true
-	if err := Validate(settings); err == nil {
-		t.Fatal("completed setup accepted an empty STT connection")
+func TestVoiceSetupDoesNotRequireAudioFileConnection(t *testing.T) {
+	s := Default()
+	s.SetupCompleted = true
+	s.VoiceTranscription.BaseURL = "https://voice.example.test/v1"
+	s.VoiceTranscription.Model = "voice-model"
+	if err := Validate(s); err != nil {
+		t.Fatal(err)
 	}
-	settings.BaseURL = "https://example.test/v1"
-	settings.Model = "speech/stt"
-	if err := Validate(settings); err != nil {
-		t.Fatalf("explicit STT connection was rejected: %v", err)
+	if err := ValidateVoiceRecording(DefaultVoiceTranscription()); err == nil {
+		t.Fatal("recording accepted an empty Voice selection")
+	}
+	if err := ValidateVoiceRecording(s.VoiceTranscription); err != nil {
+		t.Fatal(err)
 	}
 }
 

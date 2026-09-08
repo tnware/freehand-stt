@@ -17,6 +17,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/inference"
 	"github.com/tnware/freehand-stt/internal/insertion"
 	"github.com/tnware/freehand-stt/internal/postprocess"
+	"github.com/tnware/freehand-stt/internal/realtime"
 	"github.com/tnware/freehand-stt/internal/settings"
 	"github.com/tnware/freehand-stt/internal/webrtcvad"
 )
@@ -63,6 +64,10 @@ const (
 )
 
 type Status struct {
+	Live                         bool          `json:"live"`
+	LiveCaptions                 bool          `json:"liveCaptions"`
+	LiveFinal                    string        `json:"liveFinal,omitempty"`
+	LivePartial                  string        `json:"livePartial,omitempty"`
 	Transcript                   string        `json:"transcript,omitempty"` // Current result only; cleared by the next recording, Clear, or shutdown.
 	State                        State         `json:"state"`
 	RecordingMode                RecordingMode `json:"recordingMode,omitempty"`
@@ -79,6 +84,7 @@ type Status struct {
 	AutoStopDurationMilliseconds int           `json:"autoStopDurationMilliseconds,omitempty"`
 }
 type recorder struct {
+	realtime           *realtime.Session
 	mu                 sync.Mutex
 	transition         sync.Mutex
 	status             Status
@@ -108,6 +114,7 @@ type recorder struct {
 }
 
 type stoppedRecording struct {
+	realtime   *realtime.Session
 	generation uint64
 	context    context.Context
 	result     audio.Result
@@ -121,10 +128,14 @@ type stoppedRecording struct {
 
 func (w *stoppedRecording) clearCredentials() {
 	w.profile.STTCredential = ""
+	w.profile.VoiceCredential = ""
 	w.profile.PostProcessingCredential = ""
 }
 
 func (w *stoppedRecording) discard() {
+	if w.realtime != nil {
+		_ = w.realtime.Wait()
+	}
 	w.clearCredentials()
 	for index := range w.result.PCM {
 		w.result.PCM[index] = 0
@@ -233,6 +244,7 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 	}
 	defer func() {
 		profile.STTCredential = ""
+		profile.VoiceCredential = ""
 		profile.PostProcessingCredential = ""
 	}()
 	target, _ := c.targetPlatform.CaptureTarget()
@@ -253,6 +265,12 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 	c.cancelWorkLocked()
 	c.pending = ""
 	cfg := profile.Settings
+	if cfg.VoiceTranscription.Realtime {
+		cfg.VADEnabled = false
+		cfg.SilenceTrimming = false
+		cfg.AutoStopEnabled = false
+		cfg.SilenceSplitting = false
+	}
 	autoStopActive := cfg.AutoStopEnabled && mode == RecordingToggle
 	runCfg := cfg
 	runCfg.AutoStopEnabled = autoStopActive
@@ -298,6 +316,18 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 			TimeoutSeconds: cfg.PostProcessing.TimeoutSeconds,
 		},
 	}
+	if cfg.VoiceTranscription.Realtime {
+		c.status.Live = true
+		c.status.LiveCaptions = cfg.VoiceTranscription.Captions
+		details := c.runDetails[gen]
+		details.Server = history.SanitizedServer(cfg.VoiceTranscription.BaseURL)
+		details.Route = "/realtime"
+		details.AuthenticationMode = string(cfg.VoiceTranscription.AuthenticationMode)
+		details.Model = cfg.VoiceTranscription.Model
+		details.Language = cfg.VoiceTranscription.Language
+		details.RequestTimeoutSeconds = 30
+		c.runDetails[gen] = details
+	}
 	c.mu.Unlock()
 	c.logger.Info("dictation recording requested",
 		"generation", gen,
@@ -321,9 +351,23 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 	)
 	var interruptions <-chan error
 	var segmented *segmentedRun
+	var live *realtime.Session
 	var e error
 	captureStarted := time.Now()
-	if cfg.VADEnabled && (cfg.SilenceTrimming || cfg.AutoStopEnabled || cfg.SilenceSplitting) {
+	if cfg.VoiceTranscription.Realtime {
+		streamCapture, ok := c.capture.(audio.StreamCapture)
+		if !ok {
+			e = errors.New("streaming capture is unavailable on this platform")
+		} else {
+			live, e = realtime.Open(c.ctx, cfg.VoiceTranscription, profile.VoiceCredential, func(update realtime.Update) { c.publishLive(gen, update) })
+			if e == nil {
+				c.mu.Lock()
+				c.realtime = live
+				c.mu.Unlock()
+				interruptions, e = streamCapture.StartStream(c.ctx, cfg.MicrophoneID, cfg.MaxDurationSeconds, live.Pipe)
+			}
+		}
+	} else if cfg.VADEnabled && (cfg.SilenceTrimming || cfg.AutoStopEnabled || cfg.SilenceSplitting) {
 		streamCapture, ok := c.capture.(audio.StreamCapture)
 		if !ok {
 			e = errors.New("voice activity detection is unavailable on this platform")
@@ -350,6 +394,12 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 		interruptions, e = c.capture.Start(c.ctx, cfg.MicrophoneID, cfg.MaxDurationSeconds)
 	}
 	if e != nil {
+		if live != nil {
+			live.AbortBeforeCapture()
+			c.mu.Lock()
+			c.realtime = nil
+			c.mu.Unlock()
+		}
 		if segmented != nil {
 			_ = segmented.abortBeforeCapture()
 			c.mu.Lock()
@@ -386,7 +436,7 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 		"capture_start_ms", time.Since(captureStarted).Milliseconds(),
 	)
 	c.publish(s)
-	go c.watchRecording(gen, recordingCtx, time.Duration(cfg.MaxDurationSeconds)*time.Second, interruptions, segmented)
+	go c.watchRecording(gen, recordingCtx, time.Duration(cfg.MaxDurationSeconds)*time.Second, interruptions, segmented, live)
 	return nil
 }
 
@@ -442,7 +492,7 @@ func (c *recorder) publishSegmentProgress(gen uint64, segment int, phase Segment
 	c.publish(s)
 }
 
-func (c *recorder) watchRecording(gen uint64, ctx context.Context, limit time.Duration, interruptions <-chan error, segmented *segmentedRun) {
+func (c *recorder) watchRecording(gen uint64, ctx context.Context, limit time.Duration, interruptions <-chan error, segmented *segmentedRun, live *realtime.Session) {
 	timer := time.NewTimer(limit)
 	defer timer.Stop()
 	select {
@@ -456,6 +506,8 @@ func (c *recorder) watchRecording(gen uint64, ctx context.Context, limit time.Du
 			cause = audio.ErrDeviceInterrupted
 		}
 		c.captureInterrupted(gen, cause)
+	case <-realtimeFailed(live):
+		c.captureInterrupted(gen, errors.New("live transcription connection failed"))
 	case <-segmentedReady(segmented):
 		result := segmented.wait()
 		if result.err == nil {
@@ -491,9 +543,14 @@ func (c *recorder) captureInterrupted(gen uint64, cause error) {
 	c.cancelWorkLocked()
 	segmented := c.segmented
 	c.segmented = nil
+	live := c.realtime
+	c.realtime = nil
 	c.mu.Unlock()
 
 	cleanupErr := c.capture.Cancel(context.Background())
+	if live != nil {
+		_ = live.Wait()
+	}
 	if segmented != nil {
 		result := segmented.wait()
 		if cause == nil || errors.Is(cause, context.Canceled) {
@@ -558,15 +615,20 @@ func (c *recorder) stopCapture(gen uint64, limit, automatic bool) (*stoppedRecor
 		return nil, nil
 	}
 	c.cancelRecordingWatchLocked()
-	c.status = Status{State: Transcribing, Generation: gen, StartedAt: c.status.StartedAt, Message: "Transcribing", CanCancel: true}
+	previous := c.status
+	c.status = Status{State: Transcribing, Generation: gen, Message: "Transcribing", CanCancel: true,
+		Live: previous.Live, LiveCaptions: previous.LiveCaptions, LiveFinal: previous.LiveFinal, LivePartial: previous.LivePartial}
+
 	s := c.status
 	ctx := c.ctx
 	segmented := c.segmented
 	c.segmented = nil
+	live := c.realtime
+	c.realtime = nil
 	profile, hasProfile := c.runProfiles[gen]
 	details := c.runDetails[gen]
-	if !c.status.StartedAt.IsZero() {
-		details.CaptureDurationMilliseconds = time.Since(c.status.StartedAt).Milliseconds()
+	if !previous.StartedAt.IsZero() {
+		details.CaptureDurationMilliseconds = time.Since(previous.StartedAt).Milliseconds()
 	}
 	details.AutoStopped = automatic
 	delete(c.runProfiles, gen)
@@ -577,9 +639,13 @@ func (c *recorder) stopCapture(gen uint64, limit, automatic bool) (*stoppedRecor
 	c.publish(s)
 	if err != nil {
 		profile.STTCredential = ""
+		profile.VoiceCredential = ""
 		profile.PostProcessingCredential = ""
 		c.logger.Error("dictation capture stop failed", "generation", gen, "error_kind", diagnostics.ErrorKind(err))
 		c.fail(gen, "Microphone: "+err.Error())
+		if live != nil {
+			_ = live.Wait()
+		}
 		return nil, err
 	}
 	return &stoppedRecording{
@@ -587,6 +653,7 @@ func (c *recorder) stopCapture(gen uint64, limit, automatic bool) (*stoppedRecor
 		context:    ctx,
 		result:     res,
 		segmented:  segmented,
+		realtime:   live,
 		profile:    profile,
 		hasProfile: hasProfile,
 		details:    details,
@@ -606,6 +673,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	automatic := work.automatic
 	defer func() {
 		profile.STTCredential = ""
+		profile.VoiceCredential = ""
 		profile.PostProcessingCredential = ""
 		work.clearCredentials()
 	}()
@@ -624,7 +692,15 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	}
 	cfg := profile.Settings
 	text := ""
-	if segmented != nil {
+	if work.realtime != nil {
+		result := work.realtime.Wait()
+		text, e = result.Text, result.Err
+		details.AudioDurationMilliseconds = result.AudioMilliseconds
+		cfg.Language = cfg.VoiceTranscription.Language
+		if result.Language != "" {
+			cfg.Language = result.Language
+		}
+	} else if segmented != nil {
 		result := segmented.wait()
 		if result.err != nil {
 			e = result.err
@@ -862,12 +938,17 @@ func (c *recorder) cancelRecording() error {
 	c.cancelWorkLocked()
 	segmented := c.segmented
 	c.segmented = nil
+	live := c.realtime
+	c.realtime = nil
 	c.status = Status{State: Cancelling, Generation: c.generation, Message: "Cancelling"}
 	s := c.status
 	c.mu.Unlock()
 	c.logger.Info("dictation cancellation requested", "generation", activeGeneration)
 	c.publish(s)
 	cancelErr := c.capture.Cancel(context.Background())
+	if live != nil {
+		_ = live.Wait()
+	}
 	if segmented != nil {
 		_ = segmented.wait()
 	}

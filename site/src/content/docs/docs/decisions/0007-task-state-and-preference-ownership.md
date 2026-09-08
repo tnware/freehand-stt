@@ -44,3 +44,5 @@ Freehand does not translate arbitrary instructions into trained controls.
 Quick changes on Home and active connection selection apply immediately. Feature
 settings use explicit Save/Discard. In-flight requests remain immutable, and
 simplifying presentation never weakens backend validation or insertion safety.
+
+Vocabulary/hotword text ownership is superseded by [ADR 0010](../0010-shared-vocabulary/); model selection no longer restores those historical phrase fields.

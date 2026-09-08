@@ -80,6 +80,8 @@ type RememberedModel struct {
 	Purpose             string
 	Model               string
 	Selected            int64
+	Vocabulary          string
+	Boost               float64
 	Profile             string
 	Language            string
 	Prompt              string
@@ -160,4 +162,38 @@ type TranscriptionSetting struct {
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
 	ModelProfile                            string
+}
+
+type VocabularySetting struct {
+	ID    int64
+	Terms string
+	Voice int64
+	Files int64
+	Boost float64
+}
+
+type VoiceRequestHeader struct {
+	Name  string
+	Value string
+}
+
+type VoiceTranscriptionSetting struct {
+	ID                   int64
+	Realtime             int64
+	CompatibilityProfile string
+	ModelProfile         string
+	BaseUrl              string
+	AllowInsecureHttp    int64
+	AuthenticationMode   string
+	Model                string
+	Language             string
+	HealthPath           string
+	TimeoutSeconds       int64
+	Prompt               string
+	Hotwords             string
+	TemperatureOverride  int64
+	Temperature          float64
+	Captions             int64
+	Vocabulary           string
+	Boost                float64
 }

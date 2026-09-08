@@ -28,6 +28,7 @@ type SettingsDTO struct {
 	RememberedModels       modelsettings.Catalog   `json:"rememberedModels"`
 	ModelProfiles          modelprofile.Catalog    `json:"modelProfiles"`
 	SavedConnections       savedconnection.Catalog `json:"savedConnections"`
+	RealtimeLanguages      []speechlanguage.Option `json:"realtimeLanguages"`
 	TranscriptionLanguages []speechlanguage.Option `json:"transcriptionLanguages"`
 	CompatibilityProfiles  compatibility.Catalog   `json:"compatibilityProfiles"`
 	config.Settings
@@ -101,6 +102,10 @@ func WithConfigurationLoad(loader ConfigLoader, failure *config.LoadFailure, rep
 	}
 }
 
+func WithVoiceCredential(store credential.Store) Option {
+	return func(service *Service) { service.voiceKeys = store }
+}
+
 func WithTextToSpeechCredential(store credential.Store) Option {
 	return func(service *Service) { service.ttsKeys = store }
 }
@@ -123,6 +128,7 @@ type Service struct {
 	keys                   credential.Store
 	processKeys            credential.Store
 	ttsKeys                credential.Store
+	voiceKeys              credential.Store
 	startup                Startup
 	hold                   HoldInfo
 	shortcutChanged        func(config.Settings) error
@@ -168,6 +174,7 @@ func (source Source) Current() config.Settings { return source() }
 type RequestProfile struct {
 	Settings                 config.Settings
 	STTCredential            string
+	VoiceCredential          string
 	PostProcessingCredential string
 }
 
@@ -176,6 +183,10 @@ type ProfileSource func() (RequestProfile, error)
 func (source ProfileSource) Capture() (RequestProfile, error) { return source() }
 
 func CurrentSource(service *Service) Source { return service.current }
+
+func DictationProfiles(service *Service) ProfileSource {
+	return func() (RequestProfile, error) { return service.captureProfile(true) }
+}
 
 func RequestProfiles(service *Service) ProfileSource {
 	return service.captureRequestProfile
@@ -199,6 +210,7 @@ func (s *Service) current() config.Settings {
 	defer s.mu.RUnlock()
 	v := s.cfg
 	v.Headers = clone(v.Headers)
+	v.VoiceTranscription.Headers = clone(v.VoiceTranscription.Headers)
 	return v
 }
 func clone(m map[string]string) map[string]string {
@@ -209,7 +221,9 @@ func clone(m map[string]string) map[string]string {
 	return o
 }
 
-func (s *Service) captureRequestProfile() (RequestProfile, error) {
+func (s *Service) captureRequestProfile() (RequestProfile, error) { return s.captureProfile(false) }
+
+func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 	s.saveMu.Lock()
 	defer s.saveMu.Unlock()
 	if s.closed.Load() {
@@ -219,7 +233,7 @@ func (s *Service) captureRequestProfile() (RequestProfile, error) {
 		return RequestProfile{}, errors.New("saved settings must be recovered before transcription can start")
 	}
 	profile := RequestProfile{Settings: s.current()}
-	if profile.Settings.AuthenticationMode == config.AuthenticationModeAPIKey {
+	if !dictation && profile.Settings.AuthenticationMode == config.AuthenticationModeAPIKey {
 		if s.keys == nil {
 			return RequestProfile{}, errors.New("API credential is not configured")
 		}
@@ -227,6 +241,17 @@ func (s *Service) captureRequestProfile() (RequestProfile, error) {
 		if err != nil {
 			return RequestProfile{}, errors.New("API credential is not configured")
 		}
+		profile.STTCredential = key
+	}
+	if dictation && profile.Settings.VoiceTranscription.AuthenticationMode == config.AuthenticationModeAPIKey {
+		if s.voiceKeys == nil {
+			return RequestProfile{}, errors.New("voice transcription credential is not configured")
+		}
+		key, err := s.voiceKeys.Get()
+		if err != nil {
+			return RequestProfile{}, errors.New("voice transcription credential is not configured")
+		}
+		profile.VoiceCredential = key
 		profile.STTCredential = key
 	}
 	if profile.Settings.PostProcessing.Enabled && s.processKeys != nil {
@@ -238,6 +263,20 @@ func (s *Service) captureRequestProfile() (RequestProfile, error) {
 		case err != nil:
 			profile.STTCredential = ""
 			return RequestProfile{}, errors.New("post-processing credential could not be read")
+		}
+	}
+	if dictation {
+		var err error
+		profile.Settings, err = config.WithVocabulary(profile.Settings, true)
+		if err != nil {
+			return RequestProfile{}, err
+		}
+		profile.Settings = config.WithVoiceTranscription(profile.Settings)
+	} else {
+		var err error
+		profile.Settings, err = config.WithVocabulary(profile.Settings, false)
+		if err != nil {
+			return RequestProfile{}, err
 		}
 	}
 	return profile, nil
@@ -326,7 +365,8 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 		RememberedModels:                   models,
 		SavedConnections:                   catalog,
 		CompatibilityProfiles:              compatibility.Profiles(),
-		ModelProfiles:                      modelprofile.Profiles(v.CompatibilityProfile, v.PostProcessing.CompatibilityProfile, v.TextToSpeech.CompatibilityProfile),
+		RealtimeLanguages:                  modelprofile.NemotronLanguages(),
+		ModelProfiles:                      modelCatalog(v),
 		TranscriptionLanguages:             speechlanguage.Options(),
 		Settings:                           v,
 		Configuration:                      cloneConfigurationStatus(s.configuration),
@@ -345,6 +385,11 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 // path without duplicating model-specific protocol text.
 func (s *Service) GetPostProcessingProfiles() []postprocess.ProfileDescriptor {
 	return postprocess.Profiles()
+}
+
+// PreviewVocabulary evaluates a bounded renderer draft without saving or inference.
+func (s *Service) PreviewVocabulary(request config.VocabularyPreviewRequest) config.VocabularyPreview {
+	return config.VocabularyPreview{Voice: config.PreviewVocabulary(request.Vocabulary, request.Voice), Files: config.PreviewVocabulary(request.Vocabulary, request.Files)}
 }
 
 // SaveSettings atomically applies one complete settings and credential change
@@ -498,6 +543,7 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 		v.Model = strings.TrimSpace(v.Model)
 		v.PostProcessing.Model = strings.TrimSpace(v.PostProcessing.Model)
 		v.TextToSpeech.Model = strings.TrimSpace(v.TextToSpeech.Model)
+		v.VoiceTranscription.Model = strings.TrimSpace(v.VoiceTranscription.Model)
 		if validateErr := config.Validate(v); validateErr != nil {
 			return SettingsDTO{}, validateErr
 		}
@@ -860,4 +906,10 @@ func (s *Service) ServiceShutdown() error {
 		return closer.Close()
 	}
 	return nil
+}
+
+func modelCatalog(v config.Settings) modelprofile.Catalog {
+	c := modelprofile.Profiles(v.CompatibilityProfile, v.PostProcessing.CompatibilityProfile, v.TextToSpeech.CompatibilityProfile)
+	c.VoiceTranscription = modelprofile.VoiceProfiles(v.VoiceTranscription.CompatibilityProfile)
+	return c
 }

@@ -9,31 +9,39 @@
     id,
     value = $bindable(""),
     languages,
+    restricted = false,
     disabled = false,
   }: {
     id: string;
     value?: string;
     languages: Option[];
+    restricted?: boolean;
     disabled?: boolean;
   } = $props();
   let query = $state("");
   let open = $state(false);
   let custom = $state(false);
-  const choices = $derived([
-    { value: "__default", label: "Server default", code: "" },
-    { value: "auto", label: "Automatic detection", code: "auto" },
-    ...languages.map((language) => ({
-      value: language.code,
-      label: `${language.label} (${language.code})`,
-      code: language.code,
-    })),
-    { value: "__custom", label: "Custom server value…", code: "" },
-  ]);
+  const choices = $derived(
+    restricted
+      ? languages.map((l) => ({ value: l.code, label: l.label, code: l.code }))
+      : [
+          { value: "__default", label: "Server default", code: "" },
+          { value: "auto", label: "Automatic detection", code: "auto" },
+          ...languages.map((language) => ({
+            value: language.code,
+            label: `${language.label} (${language.code})`,
+            code: language.code,
+          })),
+          { value: "__custom", label: "Custom server value…", code: "" },
+        ],
+  );
   const known = $derived(choices.find((choice) => choice.value === (value || "__default")));
-  const customVisible = $derived(custom || !known);
+  const customVisible = $derived(!restricted && (custom || !known));
   const selected = $derived(customVisible ? "__custom" : value || "__default");
   const selectedLabel = $derived(
-    customVisible ? "Custom server value…" : (known?.label ?? "Server default"),
+    customVisible
+      ? "Custom server value…"
+      : (known?.label ?? (restricted ? "Choose language" : "Server default")),
   );
   const filtered = $derived(
     choices.filter((choice) => choice.label.toLowerCase().includes(query.toLowerCase().trim())),
@@ -84,8 +92,9 @@
     </div>
     <Combobox.Portal>
       <Combobox.Content
-        class="z-50 max-h-72 w-[var(--bits-combobox-anchor-width)] min-w-56 max-w-[calc(100vw-24px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+        class="z-50 max-h-[min(18rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-56 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
         sideOffset={4}
+        collisionPadding={12}
       >
         <!-- Recreate filtered options so keyboard highlighting cannot retain a reused DOM node. -->
         {#key query}

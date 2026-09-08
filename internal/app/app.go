@@ -65,37 +65,38 @@ type Options struct {
 // App holds the assembled application. Construction is ordered so that nothing
 // observable exists before the thing that publishes to it.
 type App struct {
-	storage         *storage.Store
-	opts            Options
-	settings        config.Settings
-	settingsService *settingsservice.Service
-	buildInfo       *buildinfo.Service
-	connection      *connection.Service
-	inputService    *inputservice.Service
-	dictation       *dictation.Service
-	history         *history.Service
-	files           *filetranscription.Service
-	tts             *tts.Service
-	updates         *updates.Service
-	windowing       *windowing.Service
-	services        []application.Service
-	audio           *platform.Capture
-	playback        *platform.Playback
-	hold            *platform.HoldHook
-	shortcuts       *shortcut.Controller
-	capture         *platform.ShortcutCapturer
-	wails           *application.App
-	mainWindow      *windowController
-	settingsWindow  *settingsWindowController
-	aboutWindow     *windowController
-	detailsWindow   *windowController
-	windowState     *windowstate.Store
-	mainPlacement   *windowstate.Placement
-	levels          *levelPump
-	overlay         *overlayservice.Service
-	tray            *traycontroller.Controller
-	logger          *slog.Logger
-	wailsLog        *slog.Logger
+	storage           *storage.Store
+	opts              Options
+	settings          config.Settings
+	settingsService   *settingsservice.Service
+	buildInfo         *buildinfo.Service
+	connection        *connection.Service
+	inputService      *inputservice.Service
+	dictation         *dictation.Service
+	history           *history.Service
+	files             *filetranscription.Service
+	tts               *tts.Service
+	updates           *updates.Service
+	windowing         *windowing.Service
+	services          []application.Service
+	audio             *platform.Capture
+	playback          *platform.Playback
+	hold              *platform.HoldHook
+	shortcuts         *shortcut.Controller
+	capture           *platform.ShortcutCapturer
+	wails             *application.App
+	mainWindow        *windowController
+	settingsWindow    *settingsWindowController
+	aboutWindow       *windowController
+	detailsWindow     *windowController
+	connectionsWindow *windowController
+	windowState       *windowstate.Store
+	mainPlacement     *windowstate.Placement
+	levels            *levelPump
+	overlay           *overlayservice.Service
+	tray              *traycontroller.Controller
+	logger            *slog.Logger
+	wailsLog          *slog.Logger
 }
 
 // New assembles the application without starting it.
@@ -131,17 +132,18 @@ func New(opts Options) (*App, error) {
 	}
 
 	a := &App{
-		opts:           opts,
-		storage:        store,
-		settings:       settings,
-		mainWindow:     &windowController{},
-		settingsWindow: &settingsWindowController{},
-		aboutWindow:    &windowController{},
-		detailsWindow:  &windowController{},
-		windowState:    windowState,
-		mainPlacement:  mainPlacement,
-		logger:         logger,
-		wailsLog:       rootLogger.With("component", "wails"),
+		opts:              opts,
+		storage:           store,
+		settings:          settings,
+		mainWindow:        &windowController{},
+		settingsWindow:    &settingsWindowController{},
+		aboutWindow:       &windowController{},
+		detailsWindow:     &windowController{},
+		connectionsWindow: &windowController{},
+		windowState:       windowState,
+		mainPlacement:     mainPlacement,
+		logger:            logger,
+		wailsLog:          rootLogger.With("component", "wails"),
 	}
 
 	// The hold hook is referenced by the service before it exists, so
@@ -185,11 +187,12 @@ func New(opts Options) (*App, error) {
 		rootLogger,
 		settingsservice.WithConfigurationLoad(store, settingsFailure, store.LoadReport()),
 		settingsservice.WithTextToSpeechCredential(ttsKeys),
+		settingsservice.WithVoiceCredential(store.VoiceCredentials()),
 		settingsservice.WithUpdateChecks(func(enabled bool) { updates.ApplyEnabled(a.updates, enabled) }),
 	)
 	settingsSource := settingsservice.CurrentSource(a.settingsService)
 	profileSource := settingsservice.RequestProfiles(a.settingsService)
-	a.dictation = dictation.NewService(a.audio, nativeInput, client, processor, settingsSource, profileSource, transcripts, admission, a.publishStatus, rootLogger.With("component", "dictation"))
+	a.dictation = dictation.NewService(a.audio, nativeInput, client, processor, settingsSource, settingsservice.DictationProfiles(a.settingsService), transcripts, admission, a.publishStatus, rootLogger.With("component", "dictation"))
 	a.files = filetranscription.NewService(settingsSource, profileSource, client, processor, transcripts, nativeInput, a.chooseAudioFile, a.publishFileStatus, a.publishFileDelta, admission, rootLogger)
 	a.playback = &platform.Playback{}
 	a.tts = tts.NewService(
@@ -228,6 +231,17 @@ func New(opts Options) (*App, error) {
 		a.hideAbout,
 		a.aboutWindow.open,
 	)
+	windowing.ConfigureConnections(a.windowing, windowing.ConnectionManagerWindow{
+		Open: a.showConnectionManager, Hide: a.connectionsWindow.Hide,
+		Exists: func(id string) bool {
+			for _, c := range store.ConnectionCatalog().Entries {
+				if c.ID == id {
+					return true
+				}
+			}
+			return false
+		},
+	})
 	a.services = []application.Service{
 		application.NewService(a.buildInfo),
 		application.NewService(a.history),
@@ -402,6 +416,7 @@ func (a *App) onStarted(*application.ApplicationEvent) {
 	a.newSettingsWindow()
 	a.newAboutWindow()
 	a.newHistoryDetailsWindow()
+	a.newConnectionManagerWindow()
 	a.tray.ApplyDictation(dictation.Snapshot(a.dictation))
 	a.tray.ApplyFile(a.files.CurrentFileTranscription())
 	overlayservice.Start(a.overlay)

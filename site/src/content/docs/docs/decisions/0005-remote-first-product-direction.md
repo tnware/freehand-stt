@@ -7,6 +7,9 @@ description: Keep Freehand focused on native access to user-selected speech infr
 - Date: 2026-09-03
 - Supersedes: ADR 0002 as an active roadmap commitment; retains its protocol and safety research
 
+
+> Update (2026-09-07): [ADR 0008](../0008-qualified-realtime-dictation/) admits optional qualified Nemotron realtime dictation. The historical decision below remains preserved; conversation mode and bundled inference remain outside scope.
+
 ## Context
 
 Freehand began because the desired speech models and gateways did not need to

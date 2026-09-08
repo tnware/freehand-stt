@@ -413,6 +413,7 @@ func TestAutomaticStopTrimsSilenceAndCompletesDictation(t *testing.T) {
 	platform := &platFake{}
 	cfg := config.Default()
 	cfg.BaseURL = server.URL
+	cfg.Model = "fixture-model"
 	cfg.HistoryEnabled = true
 	cfg.SilenceTrimming = true
 	cfg.SpeechPaddingMS = 100
@@ -487,6 +488,7 @@ func TestHoldRecordingWaitsForReleaseWhenAutomaticStopIsConfigured(t *testing.T)
 	platform := &platFake{}
 	cfg := config.Default()
 	cfg.BaseURL = server.URL
+	cfg.Model = "fixture-model"
 	cfg.HistoryEnabled = true
 	cfg.SilenceTrimming = true
 	cfg.SpeechPaddingMS = 100

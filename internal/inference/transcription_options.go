@@ -1,8 +1,10 @@
 package inference
 
 import (
+	"encoding/json"
 	"mime/multipart"
 	"strconv"
+	"strings"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
@@ -24,6 +26,18 @@ func (c *Client) validateTranscriptionOptions() error {
 }
 
 func writeTranscriptionOptions(mw *multipart.Writer, options compatibility.TranscriptionOptions) error {
+	if options.Vocabulary != "" {
+		value, err := json.Marshal([]struct {
+			Phrases []string `json:"phrases"`
+			Boost   float64  `json:"boost"`
+		}{{Phrases: strings.Split(options.Vocabulary, "\n"), Boost: options.VocabularyBoost}})
+		if err != nil {
+			return err
+		}
+		if err = mw.WriteField("speech_contexts", string(value)); err != nil {
+			return err
+		}
+	}
 	if options.Prompt != "" {
 		if err := mw.WriteField("prompt", options.Prompt); err != nil {
 			return err

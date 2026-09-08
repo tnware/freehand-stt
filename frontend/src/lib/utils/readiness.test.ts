@@ -24,7 +24,26 @@ import { appReadiness, readinessVisible } from "$lib/utils/readiness";
 const devices: Device[] = [{ id: "mic-1", name: "Desk microphone", default: true }];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
-  savedConnections: { entries: [], selected: {} },
+  vocabulary: { terms: "", voice: false, files: false, boost: 3 },
+  savedConnections: {
+    entries: [
+      {
+        id: "voice",
+        name: "Voice",
+        uses: [],
+        hasCredential: overrides.credentialConfigured ?? true,
+        details: {
+          compatibilityProfile: ID.Generic,
+          baseURL: "https://example.test/v1",
+          allowInsecureHTTP: false,
+          authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
+          healthPath: "",
+          headers: {},
+        },
+      },
+    ],
+    selected: { voice: "voice" },
+  },
   transcriptionOptions: {
     prompt: "",
     hotwords: "",
@@ -32,11 +51,34 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     temperature: 0,
   },
   compatibilityProfile: ID.Generic,
-  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [] },
+  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
   rememberedModels: { entries: [], defaults: {} },
-  modelProfiles: { transcription: [], postProcessing: [], speech: [] },
+  modelProfiles: {
+    voiceTranscription: [],
+    transcription: [],
+    postProcessing: [],
+    speech: [],
+    realtime: [],
+  },
   modelProfile: ModelProfileID.Generic,
   transcriptionLanguages: [],
+  realtimeLanguages: [],
+  voiceTranscription: {
+    realtime: false,
+    healthPath: "",
+    headers: {},
+    timeoutSeconds: 120,
+    transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
+    compatibilityProfile: overrides.compatibilityProfile ?? ID.Generic,
+    modelProfile: ModelProfileID.Generic,
+    baseURL: overrides.baseURL ?? "https://example.test/v1",
+    allowInsecureHTTP: false,
+    authenticationMode: overrides.authenticationMode ?? AuthenticationMode.AuthenticationModeAPIKey,
+    model: overrides.model ?? "speech/stt",
+    language: "auto",
+    captions: true,
+    options: { vocabulary: "", boost: 0 },
+  },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
   authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
@@ -254,6 +296,7 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
       description: "Native server",
       available: true,
       capabilities: {
+        realtime: false,
         voiceDiscovery: false,
         serverLoadedModel: true,
         vllmTranscriptionEvents: false,
@@ -272,28 +315,33 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
   ];
   const native = appReadiness(cfg, null, devices, false);
   expect(native.steps.find((step) => step.id === "server")?.status).toBe("complete");
-  cfg.compatibilityProfile = ID.Generic;
+  cfg.voiceTranscription.compatibilityProfile = ID.Generic;
   expect(
     appReadiness(cfg, null, devices, false).steps.find((step) => step.id === "server")?.status,
   ).toBe("attention");
 });
-
 
 describe("task-specific prerequisites", () => {
   it("allows file transcription before dictation setup without microphone or shortcut", () => {
     const v = settings({ setupCompleted: false, toggleShortcut: "", credentialConfigured: true });
     const file = appReadiness(v, null, [], false, "file");
     expect(file.initialSetup).toBe(false);
-    expect(file.steps.map(s => s.id)).not.toContain("microphone");
-    expect(file.steps.map(s => s.id)).not.toContain("shortcut");
+    expect(file.steps.map((s) => s.id)).not.toContain("microphone");
+    expect(file.steps.map((s) => s.id)).not.toContain("shortcut");
     expect(file.recoveryNeeded).toBe(false);
     const voice = appReadiness(v, null, [], false);
     expect(voice.initialSetup).toBe(true);
     expect(voice.recoveryNeeded).toBe(true);
   });
   it("still requires file transcription endpoint and credentials", () => {
-    const file = appReadiness(settings({ baseURL: "", credentialConfigured: false }), null, [], false, "file");
+    const file = appReadiness(
+      settings({ baseURL: "", credentialConfigured: false }),
+      null,
+      [],
+      false,
+      "file",
+    );
     expect(file.recoveryNeeded).toBe(true);
-    expect(file.steps.filter(s => s.blocking).map(s => s.id)).toEqual(["server", "credential"]);
+    expect(file.steps.filter((s) => s.blocking).map((s) => s.id)).toEqual(["server", "credential"]);
   });
 });

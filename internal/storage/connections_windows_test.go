@@ -18,7 +18,7 @@ func connectionService(t *testing.T) (*Store, *settings.Service) {
 	t.Helper()
 	s := testStore(t)
 	v := loadStore(t, s)
-	svc := settings.NewService(s, v, s.STTCredentials(), s.CleanupCredentials(), &fixtureStartup{}, func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil, config.LoadReport{}))
+	svc := settings.NewService(s, v, s.STTCredentials(), s.CleanupCredentials(), &fixtureStartup{}, func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithVoiceCredential(s.VoiceCredentials()), settings.WithConfigurationLoad(s, nil, config.LoadReport{}))
 	t.Cleanup(func() { svc.ServiceShutdown() })
 	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech} {
 		d := savedconnection.Details{CompatibilityProfile: compatibility.Generic, BaseURL: "https://" + string(p) + ".example.test/v1", AuthenticationMode: config.AuthenticationModeAPIKey, Headers: map[string]string{}}
@@ -77,7 +77,7 @@ func TestNewConnectionIsInactiveAndRuntimeSettingsDoNotEditIt(t *testing.T) {
 	}
 	id := connectionID(t, added, "Second")
 	selected := changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: id})
-	if selected.Model != "" || selected.SetupCompleted {
+	if selected.Model != "" || selected.SetupCompleted != original.SetupCompleted {
 		t.Fatal("switch did not require a new model choice")
 	}
 	v := selected.Settings
@@ -208,7 +208,8 @@ func TestConnectionSwitchRestoresOptionsForEachBackend(t *testing.T) {
 	next := selected.Settings
 	next.Model = "whisper"
 	next.Language = "ja"
-	next.TranscriptionOptions.Hotwords = "Freehand"
+	next.Vocabulary.Terms = "Freehand"
+	next.Vocabulary.Files = true
 	saved, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: next})
 	if err != nil {
 		t.Fatal(err)
@@ -221,7 +222,7 @@ func TestConnectionSwitchRestoresOptionsForEachBackend(t *testing.T) {
 		t.Fatal("hotwords leaked to another backend")
 	}
 	got = changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: saved.SavedConnections.Selected[savedconnection.Transcription]})
-	if got.TranscriptionOptions.Hotwords != "Freehand" || got.Model != "whisper" {
+	if got.Vocabulary.Terms != "Freehand" || !got.Vocabulary.Files || got.TranscriptionOptions.Hotwords != "" || got.Model != "whisper" {
 		t.Fatal("returning to the connection lost model options")
 	}
 
@@ -373,7 +374,7 @@ func TestCreateAndActivateConnectionIsOneCoherentSave(t *testing.T) {
 			}
 			switch purpose {
 			case savedconnection.Transcription:
-				if profile.STTCredential != "new-task-canary" || saved.Model != "" || saved.SetupCompleted {
+				if profile.STTCredential != "new-task-canary" || saved.Model != "" || saved.SetupCompleted != before.SetupCompleted {
 					t.Fatal("incoherent STT activation")
 				}
 			case savedconnection.Cleanup:
@@ -474,5 +475,62 @@ func TestFreshTaskSetupNeedsNoOtherConfiguredFeature(t *testing.T) {
 				t.Fatal("companion setup invented STT endpoint")
 			}
 		})
+	}
+}
+
+func TestRealtimeConnectionAndModelOptionsSurviveRestart(t *testing.T) {
+	s, svc := connectionService(t)
+	original := svc.GetSettings()
+	d := savedconnection.Details{CompatibilityProfile: compatibility.NeMoSpeechV1, BaseURL: "https://live.example.test/v1", AuthenticationMode: config.AuthenticationModeAPIKey}
+	out, err := svc.SaveSettings(settings.SaveSettingsRequest{ConnectionChange: &savedconnection.Change{Action: savedconnection.Create, Purpose: savedconnection.Voice, Uses: []savedconnection.Purpose{savedconnection.Voice}, Name: "Live", Details: &d}, ConnectionCredentialDraft: "live-canary"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := connectionID(t, out, "Live")
+	out = changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Voice, ID: id})
+	v := out.Settings
+	v.VoiceTranscription.Realtime = true
+	v.VoiceTranscription.CompatibilityProfile = "nemo-speech-v1"
+	v.VoiceTranscription.ModelProfile = "nemotron-3.5-streaming"
+	v.VoiceTranscription.Model = "nemotron-fixture"
+	v.VoiceTranscription.Language = "fr-FR"
+	v.VoiceTranscription.Options.Vocabulary = "Freehand\nNemotron"
+	v.VoiceTranscription.Options.Boost = 2.5
+	if _, err = svc.SaveSettings(settings.SaveSettingsRequest{Settings: v}); err != nil {
+		t.Fatal(err)
+	}
+	captured, err := settings.DictationProfiles(svc).Capture()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if captured.VoiceCredential != "live-canary" || captured.STTCredential != "live-canary" {
+		t.Fatal("wrong live credential snapshot")
+	}
+	if svc.GetSettings().BaseURL != original.BaseURL || svc.GetSettings().Model != original.Model {
+		t.Fatal("live selection changed completed STT")
+	}
+	path, legacy, vault := s.path, s.legacy, s.vault
+	s.Close()
+	reopened := newStore(path, legacy, vault)
+	defer reopened.Close()
+	got := loadStore(t, reopened)
+	if !reflect.DeepEqual(got.VoiceTranscription, v.VoiceTranscription) {
+		t.Fatal("realtime settings did not survive restart")
+	}
+	key, err := reopened.VoiceCredentials().Get()
+	if err != nil || key != "live-canary" {
+		t.Fatal("realtime credential reference did not survive restart")
+	}
+	found := false
+	for _, e := range reopened.RememberedModels().Entries {
+		if e.Purpose == savedconnection.Voice && e.Model == v.VoiceTranscription.Model {
+			found = true
+			if e.Options.Realtime != v.VoiceTranscription.Options {
+				t.Fatal("vocabulary options lost")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("realtime model preferences were not persisted")
 	}
 }

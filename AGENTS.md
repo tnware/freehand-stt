@@ -22,7 +22,7 @@ native file selection -> /v1/audio/transcriptions -> optional streamed response
 
 Optional S1-mini by Superwhisper processing is implemented as a separate stage after raw STT. It is never part of Speaches and is never bundled into the executable. Follow `site/src/content/docs/docs/decisions/0001-s1-mini-post-processing.md` exactly; preserve raw mode, fall back durably to raw text, and do not invent untrained control values.
 
-Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are shelved research, not active roadmap commitments. The existing pause-aware checkpoint flow is the default latency strategy. If product evidence revives realtime work, keep completed/file STT and realtime STT independently configurable, implement semantic delta/final events behind a versioned transport adapter, and follow `site/src/content/docs/docs/decisions/0002-realtime-transcription.md` before adding code.
+Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 with Nemotron 3.5 streaming, and vLLM v0.28.0 with the explicit Qwen3-ASR profile. Follow `site/src/content/docs/docs/decisions/0008-qualified-realtime-dictation.md` and ADR 0011's distinct vLLM protocol; retain ADR 0002's applicable transport and safety research. Follow ADR 0009 for unified Voice selection: completed and realtime microphone transcription use one connection/model/profile with a capability-gated mode switch. Audio-file transcription remains independently configurable. Partial text is presentation-only; authoritative finals use the existing cleanup and focus-safe delivery path. The pause-aware completed flow remains the default. Conversation mode remains shelved, and inference runtimes remain user-managed.
 
 ## Non-negotiable safety rules
 
@@ -40,7 +40,7 @@ Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are 
 - Keep domain code under `internal/<domain>` and keep root `main.go` as composition/lifecycle wiring.
 - Keep shared workflow code free of accidental Windows dependencies. Windows remains the only supported runtime today, but future platforms should add native adapters for capture, hotkeys, credentials, windows, overlays, insertion, packaging, and updates rather than weakening the desktop contract to a lowest-common-denominator implementation.
 - `internal/dictation` owns the live recording state machine. `internal/history` owns transcript retention, and `internal/settings` owns coherent settings/credential snapshots. Platform callbacks and HTTP completions report into their owning feature; they do not mutate UI or insertion state independently.
-- OpenAI compatibility is represented as separate STT, post-processing/chat, realtime, and on-demand TTS capabilities. Do not overload one endpoint or credential setting to mean all of them. TTS remains explicit and dormant when disabled. History/file playback selects transcript text through backend-owned capabilities; the first-class TTS composer accepts only bounded user-authored text. Synthesized audio never crosses Wails.
+- OpenAI compatibility is represented as separate STT, post-processing/chat, realtime, and on-demand TTS capabilities. Keep capability contracts distinct. Voice selects one completed/realtime transcription combination; audio files, cleanup, and speech retain independent selections and coherent credential snapshots. TTS remains explicit and dormant when disabled. History/file playback selects transcript text through backend-owned capabilities; the first-class TTS composer accepts only bounded user-authored text. Synthesized audio never crosses Wails.
 
 ## Model behavior contracts
 
@@ -52,6 +52,7 @@ Realtime microphone transcription and conversation mode (STT -> LLM -> TTS) are 
   cleanup intent, and speaking speed; historical task fields in saved model snapshots
   are not selection authority. Persist it with active settings through the existing settings transaction
   and sqlc queries; never store transport or credentials in model preferences.
+- Shared vocabulary follows ADR 0010: task-owned phrases and Voice/file opt-ins, qualified adapter projection into immutable requests, and no restoration of historical per-model phrase fields. Cleanup instructions and prose context remain separate.
 - Model profiles belong to feature settings, independently of reusable server
   connections. Do not infer them from model IDs, URLs, or model inventories.
 - Add specialized profiles only with a justified, qualified per-role contract,

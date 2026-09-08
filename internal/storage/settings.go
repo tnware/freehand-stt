@@ -17,6 +17,23 @@ func boolean(v bool) int64 {
 	return 0
 }
 func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) error {
+	if err := q.PutVocabulary(ctx, dbgen.PutVocabularyParams{Terms: v.Vocabulary.Terms, Voice: boolean(v.Vocabulary.Voice), Files: boolean(v.Vocabulary.Files), Boost: v.Vocabulary.Boost}); err != nil {
+		return err
+	}
+	r := v.VoiceTranscription
+	if err := q.PutVoiceTranscription(ctx, dbgen.PutVoiceTranscriptionParams{Realtime: boolean(r.Realtime), CompatibilityProfile: string(r.CompatibilityProfile), ModelProfile: string(r.ModelProfile), BaseUrl: r.BaseURL, AllowInsecureHttp: boolean(r.AllowInsecureHTTP), AuthenticationMode: string(r.AuthenticationMode), Model: r.Model, Language: r.Language, Captions: boolean(r.Captions), Vocabulary: r.Options.Vocabulary, Boost: r.Options.Boost, HealthPath: r.HealthPath, TimeoutSeconds: int64(r.TimeoutSeconds), Prompt: r.TranscriptionOptions.Prompt, Hotwords: r.TranscriptionOptions.Hotwords, TemperatureOverride: boolean(r.TranscriptionOptions.TemperatureOverride), Temperature: r.TranscriptionOptions.Temperature}); err != nil {
+		return err
+	}
+
+	if err := q.ClearVoiceHeaders(ctx); err != nil {
+		return err
+	}
+	for name, value := range r.Headers {
+		if err := q.PutVoiceHeader(ctx, dbgen.PutVoiceHeaderParams{Name: name, Value: value}); err != nil {
+			return err
+		}
+	}
+
 	if err := q.PutPreferences(ctx, dbgen.PutPreferencesParams{
 		ToggleShortcut:          v.ToggleShortcut,
 		ShowShortcut:            v.ShowShortcut,
@@ -123,6 +140,11 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 }
 func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error) {
 	v := config.Default()
+	vocabulary, err := q.GetVocabulary(ctx)
+	if err != nil {
+		return v, err
+	}
+	v.Vocabulary = config.VocabularySettings{Terms: config.VocabularyTerms(vocabulary.Terms), Voice: vocabulary.Voice != 0, Files: vocabulary.Files != 0, Boost: vocabulary.Boost}
 	if _, err := q.GetInitialization(ctx); err != nil {
 		return v, err
 	}
@@ -223,5 +245,18 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	for _, h := range headers {
 		v.Headers[h.Name] = h.Value
 	}
+	r, err := q.GetVoiceTranscription(ctx)
+	if err != nil {
+		return v, err
+	}
+	v.VoiceTranscription = config.VoiceTranscriptionSettings{Realtime: r.Realtime != 0, CompatibilityProfile: compatibility.ID(r.CompatibilityProfile), ModelProfile: modelprofile.ID(r.ModelProfile), BaseURL: r.BaseUrl, AllowInsecureHTTP: r.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(r.AuthenticationMode), Model: r.Model, Language: r.Language, Captions: r.Captions != 0, Options: modelprofile.NemotronOptions{Vocabulary: r.Vocabulary, Boost: r.Boost}, HealthPath: r.HealthPath, Headers: map[string]string{}, TimeoutSeconds: int(r.TimeoutSeconds), TranscriptionOptions: compatibility.TranscriptionOptions{Prompt: r.Prompt, Hotwords: r.Hotwords, TemperatureOverride: r.TemperatureOverride != 0, Temperature: r.Temperature}}
+	voiceHeaders, err := q.GetVoiceHeaders(ctx)
+	if err != nil {
+		return v, err
+	}
+	for _, h := range voiceHeaders {
+		v.VoiceTranscription.Headers[h.Name] = h.Value
+	}
+
 	return v, nil
 }
