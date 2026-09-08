@@ -1,0 +1,75 @@
+---
+import ProviderIcon from "../components/ProviderIcon.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import CustomPageMetadata from "../components/CustomPageMetadata.astro";
+import ParticleBackground from "../components/ParticleBackground.astro";
+import { modelProfiles } from "../data/models";
+import "../styles/home.css";
+import "../styles/backends.css";
+import "../styles/models.css";
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const href = (path: string) => `${base}${path}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <CustomPageMetadata title="Models & model profiles — Freehand" description="Explore first-class support for S1-mini, Nemotron, and Qwen3-ASR. See their compatible backends and the controls each model profile adds in Freehand." path="models/" />
+    <meta name="theme-color" content="#070a12" />
+    <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
+  </head>
+  <body>
+    <ParticleBackground />
+    <a class="skip-link" href="#main">Skip to content</a>
+    <SiteHeader current="models" />
+    <main id="main" class="backends-page models-page">
+      <section class="backends-hero" aria-labelledby="models-title">
+        <div>
+          <p class="kicker"><span></span> Model directory</p>
+          <h1 id="models-title">Your model.<br /><em>The right controls.</em></h1>
+          <p class="backends-lede">Live captions, vocabulary hints, or a specific writing style. Model profiles bring the model's supported features into Freehand's settings.</p>
+          <div class="backend-jump-links"><a class="button button-dark" href="#profiles">Explore model profiles <span aria-hidden="true">↓</span></a><a class="text-action" href={href("/backends/")}>Compare backends <span aria-hidden="true">→</span></a></div>
+        </div>
+        <aside class="connection-map" aria-label="How connections, models, and profiles fit together">
+          <div class="map-label">Example / Live dictation with Qwen</div>
+          <ol>
+            <li><span class="map-step">01</span><div><strong>Connection: vLLM</strong><small>The server address and API</small></div></li>
+            <li><span class="map-step">02</span><div><strong>Model: Qwen3-ASR-1.7B</strong><small>The model loaded on that server</small></div></li>
+            <li><span class="map-step">03</span><div><strong>Model profile: Qwen3-ASR</strong><small>The recognition options Freehand shows</small></div></li>
+          </ol>
+          <a class="text-action" href={href("/docs/models/")}>Choosing a model profile <span aria-hidden="true">→</span></a>
+        </aside>
+      </section>
+      <div class="catalog-note"><span>Current development</span><p>These profiles are in Freehand's main branch. Your installed release may have fewer options.</p></div>
+      <section id="profiles" class="backend-section" aria-labelledby="profiles-title">
+        <div class="backend-section-head"><div><p class="section-index">01 / Dedicated support</p><h2 id="profiles-title">What each profile adds</h2></div><p>Choose the profile alongside your model. Each one connects model behavior to the controls and results you see in the app.</p></div>
+        <div class="model-grid">
+          {modelProfiles.map((model) => <article class="model-card" aria-labelledby={`${model.id}-title`}>
+            <div class="model-card-heading">
+              {model.icon ? <ProviderIcon profile={model.icon} size={40} /> : <span class="model-initial" aria-hidden="true">S1</span>}
+              <p>{model.family}</p>
+            </div>
+            <h3 id={`${model.id}-title`}>{model.name}</h3>
+            <p class="model-summary">{model.summary}</p>
+            <dl class="model-controls">{model.controls.map((control) => <div><dt>{control.name}</dt><dd>{control.detail}</dd></div>)}</dl>
+            <div class="model-in-app"><h4>In Freehand</h4><p>{model.inApp}</p><p class="model-note">{model.note}</p></div>
+            <div class="model-backends"><h4>Connect through</h4><ul>{model.backends.map((backend) => <li><a href={href(backend.guide)}>{backend.name} <span aria-hidden="true">↗</span></a></li>)}</ul></div>
+            <a class="backend-guide-link" href={href(model.guide)}>Set up {model.name} <span aria-hidden="true">→</span></a>
+          </article>)}
+        </div>
+      </section>
+      <section class="backend-section setup-section" aria-labelledby="generic-title">
+        <div><p class="section-index">02 / Standard model behavior</p><h2 id="generic-title">More models.<br />The same app.</h2><p>Generic model behavior uses the standard options offered by your backend. Use it when your model doesn't need a dedicated profile.</p><a class="text-action" href={href("/docs/models/")}>How model selection works <span aria-hidden="true">→</span></a></div>
+        <dl class="setup-list">
+          <div><dt>Whisper-family transcription</dt><dd>Use Generic model behavior with <a href={href("/docs/backends/speaches/")}>Speaches</a>, <a href={href("/docs/backends/whisper-cpp/")}>whisper.cpp</a>, or another compatible transcription backend. Language and recognition options follow the selected server and model.</dd></div>
+          <div><dt>Kokoro speech</dt><dd>Use Generic model behavior with <a href={href("/docs/backends/kokoro-fastapi/")}>Kokoro-FastAPI</a> or <a href={href("/docs/backends/speaches/")}>Speaches</a>. Browse voices, adjust speaking speed, and preview the result in Text to speech.</dd></div>
+          <div><dt>Cleanup with your own instructions</dt><dd>Use a compatible chat model with Generic. Write your instruction in Cleanup and keep the output controls available through your backend.</dd></div>
+        </dl>
+      </section>
+      <section class="backend-next" aria-label="Choose your setup"><div><h2>Connect the two.</h2><p>Pick the backend that runs your model, then select the model profile in Freehand.</p></div><a class="button button-light" href={href("/backends/")}>Explore backends <span aria-hidden="true">→</span></a></section>
+    </main>
+    <SiteFooter />
+  </body>
+</html>

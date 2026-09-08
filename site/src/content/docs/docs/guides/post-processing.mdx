@@ -3,7 +3,7 @@ title: Transcript post-processing
 description: Choose custom cleanup or S1-mini by Superwhisper, with raw fallback and optional session history.
 ---
 
-import { Steps } from '@astrojs/starlight/components';
+import { Steps } from "@astrojs/starlight/components";
 
 The app can optionally pass each successful raw speech-to-text result to a separate OpenAI-compatible `POST /chat/completions` endpoint before delivery. Speech recognition and cleanup have independent endpoints, models, and credentials. The raw transcript is retained first when history is enabled.
 
@@ -13,11 +13,11 @@ checks or explicit-copy setting; cancellation prevents automatic insertion.
 
 ## Choose a workflow
 
-| Choice | Configuration |
-| --- | --- |
-| Leave transcription unchanged | Keep **Cleanup** off; no chat endpoint is needed. |
-| Use your own cleanup model | Enable processing, select **Generic**, and supply a compatible chat endpoint and model. |
-| Use S1-mini by Superwhisper | Enable processing, select its dedicated profile, and connect a server hosting that English cleanup model. |
+| Choice                        | Configuration                                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Leave transcription unchanged | Keep **Cleanup** off; no chat endpoint is needed.                                                         |
+| Use your own cleanup model    | Enable processing, select **Generic**, and supply a compatible chat endpoint and model.                   |
+| Use S1-mini by Superwhisper   | Enable processing, select its dedicated profile, and connect a server hosting that English cleanup model. |
 
 :::tip[Compare both versions]
 Cleanup changes text and can make mistakes. Enable **History** before a run if
@@ -49,50 +49,14 @@ Endpoint model IDs and request behavior are deliberately independent. A local or
 
 ## S1-mini by Superwhisper with llama.cpp
 
-[S1-mini by Superwhisper](https://huggingface.co/superwhisper/s1-mini) is an English transcript normalizer rather than a general chat model. Its prompt format and non-thinking template are exact requirements. A normal transcript repeatedly producing an empty response usually means the inference runtime did not disable Qwen thinking mode.
-
-Follow [Run llama.cpp on Windows](../../backends/llama-cpp/#run-llamacpp-on-windows)
-for installation, the S1-mini launch command with reasoning disabled, GPU/CPU
-options, metadata checks, and stop/restart instructions. That recipe explicitly
-uses port 8080, giving the base URL `http://127.0.0.1:8080/v1`.
-For vLLM, use its separate [S1-mini launch recipe](../../backends/vllm/#start-s1-mini-cleanup).
-
-Create and save a **Post-processing** connection in **Settings → Connections**
-using the endpoint, HTTP permission, and compatibility profile below. Then select
-it on **Settings → Post-processing** and set the model and model profile:
-
-```text title="Connection and feature settings"
-Enabled:             On
-Endpoint:            http://127.0.0.1:8080/v1
-Allow insecure HTTP: On
-Model:               select the model returned by Test
-Compatibility:       llama.cpp
-Prompt preset:       S1-mini
-Authentication:      None
-```
-
-Choose **Save feature settings** after configuring the model and preset. Try a short English dictation with history enabled so you can compare both versions.
-
-The S1-mini profile sends the model's exact system prompt and control line and sets temperature `0`. Full Processing settings display the effective instruction and generated control line without allowing the fixed S1 contract to be edited. Thinking must be disabled. With the **llama.cpp or vLLM compatibility profile**, Freehand automatically sends the qualified disable-reasoning request for S1-mini and shows it as required. With **Generic**, configure the server to enforce it; current llama.cpp releases support `--reasoning off`. A model-list test does not verify reasoning behavior.
-
-### Input length and alpha limits
-
-:::caution[Review long cleanup results]
-The S1-mini v1 model card recommends inputs below roughly 1,000 tokens.
-Freehand currently sends each cleanup input in one request; it does not split
-long transcripts into sentence chunks or enforce an output length relative to
-the input. If the server reports that generation reached its length limit,
-Freehand discards the partial cleanup and uses the original raw transcript,
-with an output-limit notice. It does not automatically retry cleanup. A server
-can still omit content without reporting a limit. Review cleaned output for omissions,
-especially for long recordings and stored files, or leave cleanup off.
-:::
-
-The styling, structure, and context controls are limited to values on which S1-mini was trained. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) for the request contract and design constraints.
+Choose the **S1-mini by Superwhisper** model profile for English cleanup with
+styling, structure, and context controls. The [S1-mini model guide](../../models/s1-mini/)
+explains these controls and links to launch recipes for llama.cpp and vLLM.
+For an existing Generic endpoint, disable reasoning on the server.
 
 ## Generation controls
 
-Open **Settings → Post-processing → Generation controls**. Save before starting a
+Open **Settings → Cleanup → Generation controls**. Save before starting a
 new recording or stored-file job; an active job keeps the settings captured at
 its start, even if cleanup runs later.
 
@@ -121,9 +85,8 @@ output truncation uses the existing raw-text fallback; Freehand does not silentl
 retry with different controls. Optional controls remain off for older settings,
 while S1-mini through llama.cpp or vLLM gains its required reasoning-off request.
 
-Consult [llama.cpp qualifications](../../backends/llama-cpp/#source-qualification)
+Consult [llama.cpp generation controls](../../backends/llama-cpp/#cleanup-generation-controls)
 for the inspected server revision and model/template limits.
-
 
 ## vLLM cleanup
 
@@ -131,7 +94,7 @@ Select **vLLM** as the post-processing compatibility profile to use a qualified
 v0.28.0 server. Configure its `/v1` endpoint and chosen text model separately from
 transcription. The generation controls above also apply, including mandatory
 reasoning off for the S1-mini preset. See the [vLLM guide](../../backends/vllm/)
-for runtime/template requirements and evidence.
+for connection setup and server options.
 
 ## Language compatibility
 
@@ -141,5 +104,5 @@ English, as stated in its controls. Custom cleanup depends on the selected
 model and instruction. See [language selection](../languages/).
 
 The **Model profile** field uses the same model-behavior contract as transcription
-and speech playback. See [model profiles](../model-profiles/) for how it differs
+and speech playback. See [model profiles](../../models/) for how it differs
 from a connection’s backend profile.

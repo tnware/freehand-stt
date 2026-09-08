@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -197,9 +198,25 @@ type TextToSpeechProfile struct {
 	Credential string
 }
 
-type TextToSpeechProfileSource func() (TextToSpeechProfile, error)
+// TextToSpeechPreview contains only non-secret, request-level draft options.
+// Connection identity is checked against the active saved speech connection.
+type TextToSpeechPreview struct {
+	ConnectionID   string          `json:"connectionID"`
+	Enabled        bool            `json:"enabled"`
+	ModelProfile   modelprofile.ID `json:"modelProfile"`
+	Model          string          `json:"model"`
+	Voice          string          `json:"voice"`
+	Speed          float64         `json:"speed"`
+	TimeoutSeconds int             `json:"timeoutSeconds"`
+}
 
-func (source TextToSpeechProfileSource) Capture() (TextToSpeechProfile, error) { return source() }
+type TextToSpeechProfileSource func(*TextToSpeechPreview) (TextToSpeechProfile, error)
+
+func (source TextToSpeechProfileSource) Capture() (TextToSpeechProfile, error) { return source(nil) }
+
+func (source TextToSpeechProfileSource) CapturePreview(draft *TextToSpeechPreview) (TextToSpeechProfile, error) {
+	return source(draft)
+}
 
 func TextToSpeechProfiles(service *Service) TextToSpeechProfileSource {
 	return service.captureTextToSpeechProfile
@@ -282,7 +299,7 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 	return profile, nil
 }
 
-func (s *Service) captureTextToSpeechProfile() (TextToSpeechProfile, error) {
+func (s *Service) captureTextToSpeechProfile(draft *TextToSpeechPreview) (TextToSpeechProfile, error) {
 	s.saveMu.Lock()
 	defer s.saveMu.Unlock()
 	if s.closed.Load() {
@@ -291,7 +308,28 @@ func (s *Service) captureTextToSpeechProfile() (TextToSpeechProfile, error) {
 	if s.configuration.RecoveryRequired {
 		return TextToSpeechProfile{}, errors.New("saved settings must be recovered before speech playback can start")
 	}
-	profile := TextToSpeechProfile{Settings: s.current().TextToSpeech}
+	current := s.current()
+	profile := TextToSpeechProfile{Settings: current.TextToSpeech}
+	if draft != nil {
+		store, ok := s.store.(interface {
+			ConnectionCatalog() savedconnection.Catalog
+		})
+		if !ok || draft.ConnectionID == "" || draft.ConnectionID != store.ConnectionCatalog().Selected[savedconnection.Speech] {
+			return TextToSpeechProfile{}, errors.New("speech connection changed; reopen settings before previewing")
+		}
+		if math.IsNaN(draft.Speed) || math.IsInf(draft.Speed, 0) {
+			return TextToSpeechProfile{}, errors.New("speech preview speed must be finite")
+		}
+		profile.Settings.Enabled = draft.Enabled
+		profile.Settings.ModelProfile = draft.ModelProfile
+		profile.Settings.Model = strings.TrimSpace(draft.Model)
+		profile.Settings.Voice = strings.TrimSpace(draft.Voice)
+		profile.Settings.Speed = draft.Speed
+		profile.Settings.TimeoutSeconds = draft.TimeoutSeconds
+		if err := config.ValidateTextToSpeech(profile.Settings, true); err != nil {
+			return TextToSpeechProfile{}, err
+		}
+	}
 	if !profile.Settings.Enabled {
 		return TextToSpeechProfile{}, errors.New("speech playback is disabled")
 	}

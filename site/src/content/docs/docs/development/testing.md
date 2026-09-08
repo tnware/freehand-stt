@@ -648,3 +648,17 @@ activate a line link and verify selection/scrolling, then discard the draft. Che
 normal and compact windows, light/dark themes, long transcripts, and popup Escape
 focus return. Builds and synthetic streaming do not establish microphone or model
 inference acceptance.
+
+### Unsaved speech preview
+
+Settings tests cover draft model/profile/voice/speed/timeout capture, draft enable
+while saved speech is disabled, immutable endpoint/credential snapshots, no saves,
+and rejection of invalid options or stale connection IDs before credential access.
+The speech service test checks that synthesis receives captured draft options;
+renderer tests verify that preview forwards only the bounded draft DTO.
+
+For native acceptance, change voice and speed without saving, preview the fixed
+phrase, stop, change them again, and preview again. Discard edits and confirm normal
+Text to speech still uses the saved options. Test draft enable with saved speech
+disabled, invalid settings, a connection changed in another window, cancellation,
+and recording admission. Use only the explicitly chosen model; no inventory probes.

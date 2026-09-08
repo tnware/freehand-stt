@@ -61,7 +61,9 @@ func TestRestartCannotStartDeviceAfterShutdownWhileNativeStopWasBlocked(t *testi
 	cfg.Enabled, cfg.BaseURL, cfg.Model, cfg.Voice = true, "https://fixture.invalid/v1", "speech", "voice"
 	cfg.AuthenticationMode = config.AuthenticationModeNone
 	playing := make(chan struct{}, 1)
-	service := tts.NewService(func() (settings.TextToSpeechProfile, error) { return settings.TextToSpeechProfile{Settings: cfg}, nil }, restartSpeechClient{}, player, nil, nil, nil, nil, func(status tts.Status) {
+	service := tts.NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
+		return settings.TextToSpeechProfile{Settings: cfg}, nil
+	}, restartSpeechClient{}, player, nil, nil, nil, nil, func(status tts.Status) {
 		if status.Phase == tts.Playing {
 			select {
 			case playing <- struct{}{}:

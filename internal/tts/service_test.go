@@ -101,7 +101,7 @@ func TestPlayHistoryEntryUsesBackendOwnedTranscript(t *testing.T) {
 	id := store.Begin("backend transcript", history.HistoryInserted, false, time.Now(), history.HistoryRunDetails{})
 	profile := settings.TextToSpeechProfile{Settings: config.TextToSpeechSettings{Enabled: true, BaseURL: "https://example.test/v1", AuthenticationMode: config.AuthenticationModeNone, Model: "tts-model", Voice: "voice", Speed: 1, TimeoutSeconds: config.DefaultTextToSpeechTimeoutSeconds}}
 	statuses := make(chan Status, 8)
-	service := NewService(func() (settings.TextToSpeechProfile, error) { return profile, nil }, client, player, store, nil, nil, nil, func(status Status) { statuses <- status }, nil)
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) { return profile, nil }, client, player, store, nil, nil, nil, func(status Status) { statuses <- status }, nil)
 	if err := service.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -132,8 +132,10 @@ func TestPlayHistoryEntryUsesBackendOwnedTranscript(t *testing.T) {
 
 func TestDisabledSpeechPlaybackNeverInvokesInference(t *testing.T) {
 	client := &speechClientFake{}
-	service := NewService(func() (settings.TextToSpeechProfile, error) { return settings.TextToSpeechProfile{}, context.Canceled }, client, &playerFake{}, nil, nil, nil, nil, nil, nil)
-	if err := service.PreviewVoice(); err == nil {
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
+		return settings.TextToSpeechProfile{}, context.Canceled
+	}, client, &playerFake{}, nil, nil, nil, nil, nil, nil)
+	if err := service.PreviewVoice(nil); err == nil {
 		t.Fatal("expected disabled profile to fail")
 	}
 	client.mu.Lock()
@@ -156,7 +158,7 @@ func TestSpeakTextUsesBoundedUserInputWithoutWritingHistory(t *testing.T) {
 		Model:              "tts-model", Voice: "voice", Speed: 1,
 		TimeoutSeconds: config.DefaultTextToSpeechTimeoutSeconds,
 	}}
-	service := NewService(func() (settings.TextToSpeechProfile, error) { return profile, nil }, client, &playerFake{}, store, nil, nil, nil, nil, nil)
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) { return profile, nil }, client, &playerFake{}, store, nil, nil, nil, nil, nil)
 	if err := service.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -188,11 +190,11 @@ func TestSpeakTextUsesBoundedUserInputWithoutWritingHistory(t *testing.T) {
 func TestActiveCaptureRejectsPlaybackBeforeProfileOrInference(t *testing.T) {
 	client := &speechClientFake{}
 	profileCalls := 0
-	service := NewService(func() (settings.TextToSpeechProfile, error) {
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
 		profileCalls++
 		return settings.TextToSpeechProfile{}, nil
 	}, client, &playerFake{}, nil, nil, nil, activity.New(activity.Sources{DictationActive: func() bool { return true }}), nil, nil)
-	if err := service.PreviewVoice(); err == nil {
+	if err := service.PreviewVoice(nil); err == nil {
 		t.Fatal("expected active capture to reject playback")
 	}
 	if profileCalls != 0 || client.calls != 0 {
@@ -211,12 +213,12 @@ func TestStopReleasesCompletedSessionAndRemovesRestart(t *testing.T) {
 		Model:              "tts-model", Voice: "voice", Speed: 1,
 		TimeoutSeconds: config.DefaultTextToSpeechTimeoutSeconds,
 	}}
-	service := NewService(func() (settings.TextToSpeechProfile, error) { return profile, nil }, &speechClientFake{wav: wav}, &playerFake{}, nil, nil, nil, nil, nil, nil)
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) { return profile, nil }, &speechClientFake{wav: wav}, &playerFake{}, nil, nil, nil, nil, nil, nil)
 	if err := service.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = service.ServiceShutdown() }()
-	if err := service.PreviewVoice(); err != nil {
+	if err := service.PreviewVoice(nil); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(time.Second)
@@ -247,7 +249,7 @@ func TestCompletedSpeechCanBeSavedThenExplicitlyCleared(t *testing.T) {
 	}}
 	player := &playerFake{}
 	service := NewService(
-		func() (settings.TextToSpeechProfile, error) { return profile, nil },
+		func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) { return profile, nil },
 		&speechClientFake{wav: wav}, player, nil, nil,
 		func() (string, error) { return `C:\chosen\speech.wav`, nil },
 		nil, nil, nil,
@@ -262,7 +264,7 @@ func TestCompletedSpeechCanBeSavedThenExplicitlyCleared(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = service.ServiceShutdown() }()
-	if err := service.PreviewVoice(); err != nil {
+	if err := service.PreviewVoice(nil); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(time.Second)
@@ -397,7 +399,9 @@ func TestShutdownBoundsUncooperativeInferenceWorker(t *testing.T) {
 	cfg := config.Default().TextToSpeech
 	cfg.Enabled, cfg.BaseURL, cfg.Model, cfg.Voice = true, "https://example.test/v1", "speech-model", "voice"
 	cfg.AuthenticationMode = config.AuthenticationModeNone
-	service := NewService(func() (settings.TextToSpeechProfile, error) { return settings.TextToSpeechProfile{Settings: cfg}, nil }, client, &playerFake{}, nil, nil, nil, nil, nil, nil)
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
+		return settings.TextToSpeechProfile{Settings: cfg}, nil
+	}, client, &playerFake{}, nil, nil, nil, nil, nil, nil)
 	if err := service.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -437,5 +441,40 @@ func TestRestartPlaysTheRetainedSessionAfterRewind(t *testing.T) {
 	}
 	if service.CurrentStatus().Generation != 2 {
 		t.Fatal("Restart did not advance the generation")
+	}
+}
+
+func TestPreviewVoiceForwardsDraftIntoTheCapturedPlaybackRequest(t *testing.T) {
+	wav, err := audio.WAV([]byte{1, 0, 2, 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &speechClientFake{wav: wav}
+	draft := &settings.TextToSpeechPreview{Enabled: true, ConnectionID: "speech", Model: "unsaved-model", Voice: "unsaved-voice", Speed: 1.5, TimeoutSeconds: 30}
+	service := NewService(func(options *settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
+		if options == nil || options.ConnectionID != "speech" {
+			t.Fatal("missing preview draft")
+		}
+		cfg := config.Default().TextToSpeech
+		cfg.Enabled, cfg.BaseURL, cfg.AuthenticationMode = options.Enabled, "https://fixture.test/v1", config.AuthenticationModeNone
+		cfg.Model, cfg.Voice, cfg.Speed, cfg.TimeoutSeconds = options.Model, options.Voice, options.Speed, options.TimeoutSeconds
+		return settings.TextToSpeechProfile{Settings: cfg}, nil
+	}, client, &playerFake{}, nil, nil, nil, nil, nil, nil)
+	defer func() { _ = service.ServiceShutdown() }()
+	if err := service.PreviewVoice(draft); err != nil {
+		t.Fatal(err)
+	}
+	draft.Model, draft.Voice, draft.Speed = "later-model", "later-voice", 2
+	deadline := time.Now().Add(time.Second)
+	for service.CurrentStatus().Phase != Completed && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	if client.calls != 1 || client.request.Model != "unsaved-model" || client.request.Voice != "unsaved-voice" || client.request.Speed != 1.5 {
+		t.Fatal("playback did not retain the preview snapshot")
+	}
+	if service.CurrentStatus().Source != SourcePreview {
+		t.Fatal("preview used another workflow")
 	}
 }

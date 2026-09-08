@@ -5,8 +5,6 @@ description: Configure the default Freehand contract for a compatible server.
 ---
 
 **Status:** available for transcription, post-processing, and speech playback.
-**Evidence:** automated client contract fixtures. No universal server or model
-compatibility is implied.
 
 ## Obtain an endpoint
 
@@ -30,19 +28,19 @@ to Generic when no compatibility profile was previously stored.
 
 ## Implemented capabilities
 
-| Operation | Freehand's contract |
-| --- | --- |
+| Operation                               | Freehand's contract                                                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Microphone and audio-file transcription | Multipart `file`, `model`, `response_format=json`, and optional `language`, `prompt`, and `temperature`; completed JSON with string `text`. |
-| Optional file streaming | `stream=true`; typed transcript delta/done events or legacy per-segment text events. A server may return completed JSON instead. |
-| Transcript cleanup | Non-streaming text chat completions with system/user string messages, temperature zero, and optional `max_tokens`. |
-| Speech playback | `model`, `input`, string `voice`, `speed`, and `response_format=wav`; fully buffered PCM16 WAV audio. |
+| Optional file streaming                 | `stream=true`; typed transcript delta/done events or legacy per-segment text events. A server may return completed JSON instead.            |
+| Transcript cleanup                      | Non-streaming text chat completions with system/user string messages, temperature zero, and optional `max_tokens`.                          |
+| Speech playback                         | `model`, `input`, string `voice`, `speed`, and `response_format=wav`; fully buffered PCM16 WAV audio.                                       |
 
 The base URL is a prefix: Freehand appends `audio/transcriptions`,
 `chat/completions`, or `audio/speech`. Entering a complete operation URL would
 append the path again. Generic describes these particular contracts, rather
 than every feature of the OpenAI API or every implementation using that name.
 
-## Limits and model qualifications
+## Available options
 
 - The server must accept the required fields; Freehand does not infer request
   variants from model names or automatically send provider-only parameters.

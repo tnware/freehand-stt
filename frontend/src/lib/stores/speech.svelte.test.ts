@@ -1,12 +1,11 @@
 import { CancellablePromise } from "@wailsio/runtime";
 import { describe, expect, it, vi } from "vitest";
 import { TTSPhase, HistoryTextVersion, type TTSStatus } from "$lib/state";
-import { idle, serviceWithStatus } from "./session-fixtures";
+import { settings, idle, serviceWithStatus } from "./session-fixtures";
 import { SessionMessages } from "./messages.svelte";
 import { SpeechState } from "./speech.svelte";
 
-const bindings = () =>
-  serviceWithStatus(() => CancellablePromise.resolve(idle)).speech;
+const bindings = () => serviceWithStatus(() => CancellablePromise.resolve(idle)).speech;
 
 describe("SpeechState", () => {
   it("keeps live playback status over a pending snapshot and ignores older generations", async () => {
@@ -74,15 +73,7 @@ describe("SpeechState", () => {
         HistoryTextVersion.HistoryTextRaw,
       );
       expect(SpeakText).toHaveBeenCalledExactlyOnceWith("user-authored text");
-      for (const call of [
-        PlayFileTranscript,
-        Pause,
-        Resume,
-        Restart,
-        Stop,
-        SaveAudio,
-        ClearAudio,
-      ])
+      for (const call of [PlayFileTranscript, Pause, Resume, Restart, Stop, SaveAudio, ClearAudio])
         expect(call).toHaveBeenCalledExactlyOnceWith();
     } finally {
       messages.dispose();
@@ -94,8 +85,8 @@ describe("SpeechState", () => {
     const PreviewVoice = vi.fn(() => preview.promise);
     const messages = new SessionMessages();
     const speech = new SpeechState({ ...bindings(), PreviewVoice }, messages);
-    const pending = speech.previewVoice();
-    await speech.previewVoice();
+    const pending = speech.previewVoice(settings);
+    await speech.previewVoice(settings);
     expect(speech.previewing).toBe(true);
     expect(PreviewVoice).toHaveBeenCalledTimes(1);
     preview.reject(new Error("preview failed"));
@@ -105,14 +96,42 @@ describe("SpeechState", () => {
   });
 });
 
-
 it("keeps unsent text through status refresh and playback commands", async () => {
- const messages = new SessionMessages();
- const speech = new SpeechState(bindings(), messages);
- speech.draft = "An unfinished thought.";
- await speech.load();
- await speech.stopTTS();
- await speech.clearTTSAudio();
- expect(speech.draft).toBe("An unfinished thought.");
- messages.dispose();
+  const messages = new SessionMessages();
+  const speech = new SpeechState(bindings(), messages);
+  speech.draft = "An unfinished thought.";
+  await speech.load();
+  await speech.stopTTS();
+  await speech.clearTTSAudio();
+  expect(speech.draft).toBe("An unfinished thought.");
+  messages.dispose();
+});
+
+it("previews a snapshot of unsaved speech options without forwarding transport or saving", async () => {
+  const service = bindings();
+  const PreviewVoice = vi.fn(service.PreviewVoice);
+  const messages = new SessionMessages();
+  const speech = new SpeechState({ ...service, PreviewVoice }, messages);
+  const draft = structuredClone(settings);
+  draft.savedConnections.selected = { speech: "draft-connection" };
+  draft.textToSpeech = {
+    ...draft.textToSpeech,
+    enabled: true,
+    model: "draft-model",
+    voice: "draft-voice",
+    speed: 1.5,
+    timeoutSeconds: 42,
+  };
+  await speech.previewVoice(draft);
+  draft.textToSpeech.voice = "later-edit";
+  expect(PreviewVoice).toHaveBeenCalledExactlyOnceWith({
+    connectionID: "draft-connection",
+    enabled: true,
+    modelProfile: draft.textToSpeech.modelProfile,
+    model: "draft-model",
+    voice: "draft-voice",
+    speed: 1.5,
+    timeoutSeconds: 42,
+  });
+  messages.dispose();
 });

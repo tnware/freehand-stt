@@ -12,6 +12,8 @@ export default defineConfig({
 	base: basePath,
 	redirects: {
 		'/docs': `${base}/docs/getting-started`,
+        '/docs/backends/qwen3-asr': `${base}/docs/models/qwen3-asr/`,
+        '/docs/guides/model-profiles': `${base}/docs/models/`,
 	},
 	integrations: [
 		starlight({
@@ -42,7 +44,8 @@ export default defineConfig({
 				{ label: 'Freehand home', link: '/' },
 				{ label: 'Download Freehand', link: '/download/' },
                 { label: 'Compare backends', link: '/backends/' },
-                { label: 'Backend guides', items: [
+                { label: 'Explore models', link: '/models/' },
+                { label: 'Backend profiles', items: [
                   { slug: 'docs/backends' },
                   { slug: 'docs/backends/generic' },
                   { slug: 'docs/backends/speaches' },
@@ -50,8 +53,14 @@ export default defineConfig({
                   { slug: 'docs/backends/llama-cpp' },
                   { slug: 'docs/backends/whisper-cpp' },
                   { slug: 'docs/backends/vllm' },
-                  { slug: 'docs/backends/qwen3-asr' },
+                  { slug: 'docs/backends/nemo-speech' },
                   { slug: 'docs/backends/planned' },
+                ] },
+                { label: 'Model profiles', items: [
+                  { slug: 'docs/models', label: 'Choosing a model profile' },
+                  { slug: 'docs/models/s1-mini' },
+                  { slug: 'docs/models/nemotron' },
+                  { slug: 'docs/models/qwen3-asr' },
                 ] },
 				{
 					label: 'Get started',
@@ -60,7 +69,6 @@ export default defineConfig({
 						{ slug: 'docs/guides/windows-installer' },
 						{ slug: 'docs/guides/connect-a-server' },
                         { slug: 'docs/guides/saved-connections' },
-                        { slug: 'docs/guides/model-profiles' },
                         { slug: 'docs/guides/vocabulary' },
 					],
 				},
@@ -68,6 +76,7 @@ export default defineConfig({
 					label: 'Use Freehand',
 					items: [
 						{ slug: 'docs/guides/using-freehand' },
+                        { slug: 'docs/guides/live-transcription' },
 						{ slug: 'docs/guides/post-processing' },
                         { slug: 'docs/guides/languages' },
 						{ slug: 'docs/guides/privacy-and-safety' },

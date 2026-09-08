@@ -109,7 +109,7 @@ New names must be unique across the connection library, with up to 32 available
 connections per feature. Upgrades preserve existing names and entries; duplicate
 URLs are not automatically merged because their authentication or uses may differ.
 Voice and provider-specific engine options follow the remembered model. Language,
-cleanup instructions and style, and speaking speed stay with the current task. See [Model profiles](../model-profiles/)
+cleanup instructions and style, and speaking speed stay with the current task. See [Model profiles](../../models/)
 for choosing, saving, and forgetting those preferences.
 
 ## Test and protect credentials

@@ -10,16 +10,13 @@ operation has its own endpoint, model ID, and credential settings. Your servers
 can run locally, on another machine, or behind a compatible hosted deployment.
 
 For **Qwen3-ASR-1.7B**, including optional realtime microphone results and
-captions, use the [Qwen3-ASR setup guide](../qwen3-asr/). Select its explicit
+captions, use the [Qwen3-ASR setup guide](../../models/qwen3-asr/). Select its explicit
 model profile in feature settings; the connection remains vLLM.
 
 ## Run vLLM with Docker
 
 Use PowerShell with Docker Desktop's WSL2 Linux backend and an NVIDIA GPU.
-This recipe reproduces the pinned v0.28.0 environment used for the scoped
-[acceptance evidence](#contract-and-evidence). It favors compatibility on the
-tested Windows/WSL setup; its scheduler and memory settings are not throughput
-tuning recommendations for every machine.
+This recipe uses vLLM v0.28.0 with the audio packages needed for transcription.
 
 Create a directory containing a file named `Dockerfile`:
 
@@ -56,8 +53,7 @@ docker run --detach --name freehand-vllm-stt `
 ```
 
 The server downloads only the selected checkpoint on first startup. Qwen3-ASR
-also has a 1.7B checkpoint; changing model size requires available memory and a
-separate quality check. The 0.6B example has user-confirmed Freehand evidence.
+also has a 1.7B checkpoint, covered in the [Qwen3-ASR guide](../../models/qwen3-asr/).
 The [official vLLM recipe](https://docs.vllm.ai/projects/recipes/en/latest/Qwen/Qwen3-ASR.html)
 documents the same transcription API.
 
@@ -102,7 +98,7 @@ Check `/health` and `/v1/models` at port **8053**. Enable Freehand
 post-processing with profile **vLLM**, base URL **`http://127.0.0.1:8053/v1`**,
 model **`superwhisper/s1-mini`**, authentication **None**, local HTTP allowed,
 and the **S1-mini** prompt preset. The preset forces reasoning off. The
-2,048-token context is a small test configuration; start with short transcripts.
+2,048-token context in this example is intended for short transcripts.
 
 ```powershell
 docker logs --tail 30 freehand-vllm-cleanup
@@ -126,35 +122,19 @@ on its feature page, choose the model, and save feature settings. Connection
 tests read `/models` beneath the base URL without inference.
 An explicit transcription health path retains the existing base-relative rules.
 
-`Qwen/Qwen3-ASR-0.6B` was confirmed working by a user in the native Freehand
-application with vLLM v0.28.0. Use the exact model ID exposed by your deployment.
-The [upstream Qwen3-ASR guide](https://docs.vllm.ai/projects/recipes/en/latest/Qwen/Qwen3-ASR.html)
-documents the transcription API used by this profile.
-
-The initial English-only `openai/whisper-tiny.en` test checkpoint had limitations:
-automatic language detection returned HTTP 500, and some speech returned empty
-text even with explicit English. Its passing fixed sample is limited transport
-evidence, not a recommendation for dictation. Freehand preserves your language
-choice; it does not silently force English for other models.
-
-For Windows-hosted testing, upstream recommends WSL for vLLM's Linux runtime;
+On Windows, upstream recommends WSL for vLLM's Linux runtime;
 Freehand itself remains a native Windows application. See the
 [upstream installation guide](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/).
 
 ## Local runtime setup notes
 
-The tested v0.28.0 base image needed the optional audio packages for
+The pinned v0.28.0 image needs the optional audio packages for
 transcription. Install the matching release's audio extras when building your
 server image; keep its existing CUDA/PyTorch dependencies pinned. A running
 metadata endpoint alone does not establish that audio decoding is installed.
 
-On the tested WSL2/RTX 5060 Ti system, the default V2 runner failed with
-`UVA is not available`. Setting `VLLM_USE_V2_MODEL_RUNNER=0` selected the installed
-older runner. Whisper's encoder also required `--max-num-batched-tokens 2048`
-even with `--max-model-len 448` and one concurrent request. With that older
-runner, the short sample stalled under asynchronous scheduling;
-`--no-async-scheduling` allowed completed and streamed requests to finish. These are scoped
-server setup observations, not settings Freehand sends in its API requests.
+The Docker examples select the V1 runner and synchronous scheduling for WSL2
+compatibility. Keep these options in the server launch configuration.
 
 ## Transcription
 
@@ -166,9 +146,8 @@ transcription.
 Language, context (`prompt`), and optional temperature are supported request
 fields. v0.28.0's Whisper and Qwen3-ASR implementations consume the context;
 model-specific interpretation and language support still vary. Dedicated
-hotwords remain unavailable: accepting a schema field is not evidence that the
-qualified model paths use it. Freehand sends no unqualified model-specific
-sampling, VAD, translation, timestamp, or diarization options.
+hotwords are not available with this profile. Sampling, VAD, translation,
+timestamp, and diarization options are not exposed.
 
 A vLLM stream carries `object: "transcription.chunk"` and
 `choices[].delta.content`. Each server-side audio chunk can finish separately.
@@ -201,42 +180,13 @@ string system/user messages, and temperature zero.
 The fixed S1-mini instruction and trained controls remain unchanged. An output
 limit does not implement long-input chunking or enlarge the context window.
 
-## Contract and evidence
+## Server version
 
-This profile is qualified against **vLLM v0.28.0**:
+This profile uses the APIs in **vLLM v0.28.0**:
 
 - [Transcription request and response schemas](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/entrypoints/speech_to_text/transcription/protocol.py).
 - [Speech stream implementation](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/entrypoints/speech_to_text/base/serving.py), including per-chunk finish reasons and whole-file completion.
 - [Chat request mapping](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/entrypoints/openai/chat_completion/protocol.py), which maps reasoning effort `none` to template thinking disabled.
-
-Client fixtures cover requests, framing, multiple audio chunks, usage, failures,
-cancellation, credential reflection, and required S1-mini reasoning off. Source
-and fixture evidence do not establish interoperability for every earlier
-release or model/template. Record actual server versions and models when doing
-live acceptance.
-
-On September 5, 2026, the native Windows client HTTP adapter passed the public
-11-second whisper.cpp JFK sample against v0.28.0 with
-`openai/whisper-tiny.en`: completed microphone-shaped upload, completed file,
-and streamed file (22 nonempty deltas). A 33-second repetition of that sample
-returned two empty, successfully terminated server chunks; it is recorded as
-an empty model result, not successful long-file recognition. Multiple-chunk
-text assembly and incomplete-stream recovery are covered by fixtures. These
-checks do not establish microphone capture, focus-safe insertion, recognition
-quality, or support for every audio format.
-
-On the same date, the user confirmed successful live transcription in Freehand
-with **vLLM v0.28.0 and `Qwen/Qwen3-ASR-0.6B`**. GPU access and GPU model/cache
-allocation were verified. The observed request was slow under the conservative
-WSL test configuration; latency tuning remains separate. This confirmation does
-not establish Qwen file streaming, all languages/formats, or exhaustive native
-focus-safety acceptance.
-
-The same v0.28.0 runtime also passed a fixed S1-mini cleanup request using
-`superwhisper/s1-mini` and the native Windows processing adapter, with the
-optional custom-model reasoning switch off: the S1-mini preset still enforced
-`reasoning_effort: "none"`. A one-token output limit produced the expected
-incomplete-response error rather than accepting truncated cleanup text.
 
 vLLM-Omni speech playback is a separate, still-planned profile. Realtime microphone
 transcription requires the explicit Qwen3-ASR profile and the qualified realtime

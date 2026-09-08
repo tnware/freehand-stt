@@ -890,3 +890,14 @@ The `followTranscript` DOM action owns only result scrolling. New recording keys
 reset following; scrolling away from the end pauses it until the reader returns
 or chooses Jump to latest. Final text replacement preserves paused reading, and
 teardown disconnects its resize observer, scroll listener, and scheduled frame.
+
+### Speech settings preview
+
+`tts.PreviewVoice` accepts a narrow `settings.TextToSpeechPreview` draft containing
+connection ID and non-secret speech options. The settings owner checks the active
+saved speech connection, overlays draft options onto a copied runtime profile,
+validates them, and reads its credential under the same settings transaction lock.
+The renderer cannot supply a preview endpoint, transport profile, or credential.
+The captured profile feeds the existing playback admission, cancellation, timeout,
+and native audio lifecycle. No preview options enter persistent model preferences
+or active settings; ordinary composition/history/file playback uses saved settings.

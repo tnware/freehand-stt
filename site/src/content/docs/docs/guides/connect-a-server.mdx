@@ -94,11 +94,11 @@ English-only cleanup behavior. Language selection does not request translation.
 
 Each connection has its own **Compatibility profile** under **Settings → Connections**:
 
-| Connection | Available profiles |
-| --- | --- |
+| Connection                            | Available profiles                                     |
+| ------------------------------------- | ------------------------------------------------------ |
 | Speech to text (microphone and files) | Generic OpenAI-compatible, Speaches, whisper.cpp, vLLM |
-| Cleanup (optional stage after STT) | Generic OpenAI-compatible, llama.cpp, vLLM |
-| Text to speech | Generic OpenAI-compatible, Speaches |
+| Cleanup (optional stage after STT)    | Generic OpenAI-compatible, llama.cpp, vLLM             |
+| Text to speech                        | Generic OpenAI-compatible, Speaches                    |
 
 **Generic OpenAI-compatible** is the default and preserves existing behavior.
 Choose the profile matching your server: **Speaches**, **whisper.cpp**, or
@@ -201,22 +201,11 @@ saved STT connection on launch and after relevant saved connection fields change
 waits for an explicit retry or a connection-setting change; it does not poll or
 iterate through discovered models.
 
-## Validated combinations
+## Choose a backend
 
-The following combinations have been exercised end to end in the Windows app:
-
-| Capability | Backend | Route | Evidence |
-| --- | --- | --- | --- |
-| Microphone and stored-file STT | [Speaches](https://github.com/speaches-ai/speaches) | `POST /v1/audio/transcriptions` | Native Windows use |
-| On-demand TTS | [Speaches](https://github.com/speaches-ai/speaches) | `POST /v1/audio/speech` | Native Windows use |
-| S1-mini transcript cleanup | [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` | `POST /v1/chat/completions` | Native Windows use |
-
-The table is intentionally short. It records evidence rather than every server
-that advertises compatible routes. See the [protocol profile](../../reference/protocol/)
-for the exact wire contracts and [Transcript post-processing](../post-processing/)
-for the validated llama.cpp/S1-mini command.
-
-For connection and request failures, see [Troubleshooting](../troubleshooting/).
+Compare transcription, cleanup, and text-to-speech features in the
+[backend directory](../../../backends/), then follow the setup guide for your
+server. For connection or request failures, see [Troubleshooting](../troubleshooting/).
 
 ## Transcription controls
 
@@ -225,11 +214,11 @@ settings apply to microphone recordings, every pause-aware checkpoint, and store
 audio files, including streamed file results. Save before starting a new job.
 An active job keeps the settings it captured at its start.
 
-| Setting | Use | Availability |
-| --- | --- | --- |
-| Transcription context | Short subject matter, names, or examples of expected wording. Sent as `prompt`; blank omits it. | Generic and Speaches; model support varies. |
-| Hotwords | Terms to favor during recognition, such as project names. Sent as `hotwords`; blank omits it. | Speaches, qualified against the inspected Whisper paths. |
-| Override temperature | Send a value from 0 to 1. Turning it off omits the field and uses the server default. Turning it on with 0 sends an explicit zero. | Generic and Speaches; decoder behavior varies. |
+| Setting               | Use                                                                                                                                | Availability                                             |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Transcription context | Short subject matter, names, or examples of expected wording. Sent as `prompt`; blank omits it.                                    | Generic and Speaches; model support varies.              |
+| Hotwords              | Terms to favor during recognition, such as project names. Sent as `hotwords`; blank omits it.                                      | Speaches, qualified against the inspected Whisper paths. |
+| Override temperature  | Send a value from 0 to 1. Turning it off omits the field and uses the server default. Turning it on with 0 sends an explicit zero. | Generic and Speaches; decoder behavior varies.           |
 
 These are recognition hints, separate from the post-processing system instruction.
 They do not guarantee spelling or replace words after transcription. Keep context

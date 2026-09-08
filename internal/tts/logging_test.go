@@ -58,7 +58,7 @@ func newLoggingSpeechService(t *testing.T, client SpeechClient, player Player) (
 	cfg.Enabled, cfg.BaseURL, cfg.Model, cfg.Voice = true, "https://fixture.invalid/private-path", "private-model", "private-voice"
 	cfg.AuthenticationMode = config.AuthenticationModeNone
 	logs := &speechLogBuffer{}
-	service := NewService(func() (settings.TextToSpeechProfile, error) {
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
 		return settings.TextToSpeechProfile{Settings: cfg, Credential: "private-credential"}, nil
 	}, client, player, nil, nil, nil, nil, nil, slog.New(slog.NewJSONHandler(logs, nil)))
 	t.Cleanup(func() {

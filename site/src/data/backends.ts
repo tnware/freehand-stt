@@ -3,17 +3,88 @@ import catalog from "./compatibility.generated.json";
 // Editorial copy and guide destinations live here. Availability and capabilities
 // come only from the generated Go catalog; never duplicate support flags here.
 const editorial = [
-  { id: "nemo-speech-v1", summary: "Completed transcription and optional realtime Voice with Nemotron on a server you manage.", guide: "/docs/backends/nemo-speech/", evidence: "v0.1.0 source + contract fixtures; scoped realtime runtime test", detail: "The explicit Nemotron profile exposes qualified locales and realtime vocabulary hints. Model lifecycle stays on the server." },
-  { id: "generic", summary: "Start with the common contract. Connect an endpoint you choose for transcription, cleanup, or speech playback.", guide: "/docs/backends/generic/", evidence: "Automated contract fixtures", detail: "A protocol baseline, usable with servers that implement the documented request and response shapes." },
-  { id: "speaches", summary: "Use one speech server for dictation, audio files, and on-demand voice playback.", guide: "/docs/backends/speaches/", evidence: "Reported working setup + contract fixtures", detail: "Whisper-family transcription and Kokoro speech are reported working. Support varies by model and server version." },
-  { id: "llama-cpp", summary: "Clean up a completed transcript with a separately hosted text model, including the optional S1-mini preset.", guide: "/docs/backends/llama-cpp/", evidence: "Reported working setup + contract fixtures", detail: "S1-mini cleanup is reported working. Other text models must accept the documented chat contract." },
-  { id: "openai", summary: "A dedicated profile for OpenAI's hosted service and model-specific rules.", guide: "/docs/backends/planned/#openai-hosted", evidence: "Dedicated profile planned", detail: "Qualify model-specific fields, limits, and response formats." },
-  { id: "localai", summary: "An operation-aware profile for LocalAI's different inference backends.", guide: "/docs/backends/planned/#localai", evidence: "Dedicated profile planned", detail: "Qualify the selected backend's request fields, streaming, and audio output." },
-  { id: "whisper-cpp", summary: "A transcription profile for the native whisper.cpp HTTP server.", guide: "/docs/backends/whisper-cpp/", evidence: "Pinned source + contract fixtures", detail: "Native /inference uploads, server-loaded model, and /health checks. Completed microphone and file transcription; no file streaming." },
-  { id: "vllm", summary: "Completed transcription, Qwen3-ASR realtime, and text cleanup on vLLM.", guide: "/docs/backends/vllm/", evidence: "v0.28.0 source + contract fixtures; scoped Qwen3-ASR-1.7B runtime test", detail: "Explicit Qwen model settings support completed context hints and optional realtime. Realtime has automatic language detection and no vocabulary controls. Model lifecycle stays on the server." },
-  { id: "vllm-omni", summary: "A speech playback profile with explicit model and voice requirements.", guide: "/docs/backends/planned/#vllm-omni", evidence: "Dedicated profile planned", detail: "Qualify preset-voice inputs and playable WAV output separately from cloning features." },
-  { id: "kokoro-fastapi", summary: "A dedicated connection contract for Kokoro-FastAPI speech generation.", guide: "/docs/backends/kokoro-fastapi/", evidence: "Live API 0.6.0 sample + contract fixtures", detail: "Voice discovery and one af_heart sample returned PCM16 WAV through the buffered adapter. Other voices and deployments still require testing." },
-  { id: "openedai-speech", summary: "A speech profile for endpoints with server-configured voice aliases.", guide: "/docs/backends/planned/#openedai-speech", evidence: "Dedicated profile planned", detail: "Qualify the voice configuration and the returned audio encoding." },
+  {
+    id: "nemo-speech-v1",
+    summary: "Transcribe recordings or follow live dictation with Nemotron.",
+    guide: "/docs/backends/nemo-speech/",
+    highlight: "Live text and captions",
+    detail:
+      "Choose the Nemotron model profile for realtime transcription, language options, and vocabulary hints.",
+  },
+  {
+    id: "generic",
+    summary: "Connect OpenAI-compatible services for transcription, cleanup, or text to speech.",
+    guide: "/docs/backends/generic/",
+    highlight: "Bring your existing endpoint",
+    detail: "Choose the operations your service offers, then enter its URL and model ID.",
+  },
+  {
+    id: "speaches",
+    summary: "Use one speech server for dictation, audio files, and text to speech.",
+    guide: "/docs/backends/speaches/",
+    highlight: "Speech in both directions",
+    detail:
+      "Connect Whisper-family transcription and Kokoro speech models, with searchable voices and streaming file results.",
+  },
+  {
+    id: "llama-cpp",
+    summary: "Polish completed transcripts with a text model running in llama.cpp.",
+    guide: "/docs/backends/llama-cpp/",
+    highlight: "Cleanup that fits your writing",
+    detail:
+      "Use your own instructions or the S1-mini preset for punctuation, formatting, and style.",
+  },
+  {
+    id: "openai",
+    summary: "A dedicated profile for OpenAI's hosted service and model-specific rules.",
+    guide: "/docs/backends/planned/#openai-hosted",
+    highlight: "Planned integration",
+    detail: "Qualify model-specific fields, limits, and response formats.",
+  },
+  {
+    id: "localai",
+    summary: "An operation-aware profile for LocalAI's different inference backends.",
+    guide: "/docs/backends/planned/#localai",
+    highlight: "Planned integration",
+    detail: "Qualify the selected backend's request fields, streaming, and audio output.",
+  },
+  {
+    id: "whisper-cpp",
+    summary: "Transcribe microphone recordings and audio files with whisper.cpp.",
+    guide: "/docs/backends/whisper-cpp/",
+    highlight: "Use the model already loaded",
+    detail: "Connect to the server and start transcribing. Model selection stays in whisper.cpp.",
+  },
+  {
+    id: "vllm",
+    summary: "Connect speech recognition and text cleanup models through vLLM.",
+    guide: "/docs/backends/vllm/",
+    highlight: "Qwen3-ASR realtime and more",
+    detail:
+      "Use the Qwen3-ASR model profile for live dictation, or choose completed transcription, streaming file results, and optional cleanup.",
+  },
+  {
+    id: "vllm-omni",
+    summary: "A speech playback profile with explicit model and voice requirements.",
+    guide: "/docs/backends/planned/#vllm-omni",
+    highlight: "Planned integration",
+    detail: "Qualify preset-voice inputs and playable WAV output separately from cloning features.",
+  },
+  {
+    id: "kokoro-fastapi",
+    summary: "Generate spoken audio with Kokoro-FastAPI.",
+    guide: "/docs/backends/kokoro-fastapi/",
+    highlight: "Find the voice you want",
+    detail:
+      "Browse available voices, enter custom voice IDs, and adjust speaking speed. Listen in Freehand or save the generated WAV.",
+  },
+  {
+    id: "openedai-speech",
+    summary: "A speech profile for endpoints with server-configured voice aliases.",
+    guide: "/docs/backends/planned/#openedai-speech",
+    highlight: "Planned integration",
+    detail: "Qualify the voice configuration and the returned audio encoding.",
+  },
 ];
 
 export const roles = [
@@ -22,7 +93,11 @@ export const roles = [
   { key: "speech", label: "Speech playback" },
 ] as const;
 export type Support = "available" | "planned" | "none";
-export const supportLabel: Record<Support, string> = { available: "Supported", planned: "Planned", none: "—" };
+export const supportLabel: Record<Support, string> = {
+  available: "Supported",
+  planned: "Planned",
+  none: "—",
+};
 export const features = [
   { key: "microphone", label: "Dictation" },
   { key: "files", label: "Audio files" },
@@ -53,7 +128,8 @@ export const backends = ids.map((id) => {
     const profile = catalog[key].find((entry) => entry.id === id);
     return profile ? [{ ...profile, role: label }] : [];
   });
-  const status = (entry: typeof stt): Support => entry ? (entry.available ? "available" : "planned") : "none";
+  const status = (entry: typeof stt): Support =>
+    entry ? (entry.available ? "available" : "planned") : "none";
   return {
     ...copy,
     name: entries[0].label,
@@ -66,10 +142,12 @@ export const backends = ids.map((id) => {
       language: stt?.available && stt.capabilities.languageHint ? "available" : "none",
       prompt: stt?.available && stt.capabilities.transcriptionPrompt ? "available" : "none",
       hotwords: stt?.available && stt.capabilities.transcriptionHotwords ? "available" : "none",
-      temperature: stt?.available && stt.capabilities.transcriptionTemperature ? "available" : "none",
+      temperature:
+        stt?.available && stt.capabilities.transcriptionTemperature ? "available" : "none",
       cleanup: status(chat),
       cleanupLimit: chat?.available && chat.capabilities.cleanupOutputLimit ? "available" : "none",
-      reasoningOff: chat?.available && chat.capabilities.cleanupDisableReasoning ? "available" : "none",
+      reasoningOff:
+        chat?.available && chat.capabilities.cleanupDisableReasoning ? "available" : "none",
       playback: status(speech),
       voices: speech?.available && speech.capabilities.voiceDiscovery ? "available" : "none",
     } satisfies Record<(typeof features)[number]["key"], Support>,

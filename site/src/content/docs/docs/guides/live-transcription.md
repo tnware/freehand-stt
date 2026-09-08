@@ -1,31 +1,50 @@
 ---
 title: Live transcription
-description: See live results and captions using a qualified transcription server.
+description: See words in the results pane and an optional single-row overlay while you speak.
 ---
 
-Live transcription is an optional microphone mode. Words appear in the results pane while you speak; an optional single-row overlay shows the newest words without taking focus. Stop recording to finalize the transcript, run any enabled cleanup, and insert the result when the original target is still safe.
+Live transcription is an optional microphone mode. Words appear in the results
+pane while you speak; an optional single-row overlay shows the newest words
+without taking focus. Stop recording to finalize the transcript, run any enabled
+cleanup, and insert the result when the original target still owns focus.
 
-For **Qwen3-ASR on vLLM**, follow the [Qwen setup guide](../../backends/qwen3-asr/). The NeMo setup and recognition controls below apply to Nemotron. Both use the same Voice transcription panel, results pane, and overlay.
+## Choose a model and backend
 
-## Connect NeMo-Speech.cpp
+| Model profile                                        | Backend                                        | Recognition controls in live mode                              |
+| ---------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| [Nemotron 3.5 ASR streaming](../../models/nemotron/) | [NeMo-Speech.cpp](../../backends/nemo-speech/) | Automatic or explicit language; shared vocabulary and strength |
+| [Qwen3-ASR](../../models/qwen3-asr/)                 | [vLLM](../../backends/vllm/)                   | Automatic language detection                                   |
 
-1. Run **NeMo-Speech.cpp v0.1.0** with **Nemotron 3.5 ASR streaming 0.6B** loaded on a machine you choose. Freehand does not host the model. Follow the runtime's [installation guide](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/install.md).
-2. In Voice's **Transcription** quick controls, or **Settings → Voice transcription**, add a connection. The separate Connection Manager opens. Choose **NeMo-Speech.cpp** and enter its HTTP API base URL, such as `http://127.0.0.1:8088/v1` for a server listening locally on port 8088. Allow HTTP explicitly when appropriate for your server; HTTPS uses a secure WebSocket.
-3. Save and use the connection. Choose **Check**, then select the exact loaded model ID reported by the server. This only reads metadata. The server must actually host the qualified Nemotron model; a model name alone does not establish compatibility.
-4. Choose **Nemotron 3.5 ASR streaming** under **Model profile**. Choose the spoken language or automatic detection and enable **Realtime transcription** in that same panel. Keep **Live overlay captions** enabled to see the caption strip; the main overlay preference must also be enabled.
+Follow the model guide for setup. Both combinations use the same Voice
+transcription panel, results pane, overlay, and recording shortcuts.
 
-The client connects to `/v1/realtime` beneath the selected API root. Local servers configured without authentication need no key. A remotely authenticated deployment can use a stored API key, sent in the WebSocket upgrade header.
+## Enable live mode
 
-## Recognition controls
+1. Open Voice's **Transcription** quick settings, or **Settings → Voice transcription**.
+2. Select your connection, the loaded model, and its model profile.
+3. Enable **Realtime transcription**, which appears for a compatible combination.
+4. Enable **Live overlay captions** if you want the caption strip. The main **Overlay** preference must also be enabled.
+5. Save if you are using full Settings. Quick settings changes apply immediately.
 
-**[Settings → Vocabulary](/docs/guides/vocabulary/)** holds the shared names and terminology list. Enable it for Voice transcription: one phrase per line, up to 32 phrases, with 128 UTF-8 bytes per phrase and 2048 total. **Vocabulary strength** ranges from 0 to 5; start with 2–3. These are recognition hints, not commands or fine-tuning. Use Cleanup for rewrite instructions. The profile exposes only languages supported by the base model, without requiring adaptation packages.
-
-The server owns GPU selection, loaded models, chunk latency, and optional extra processing models. Freehand preserves the model's native punctuation and requests verbatim output; it does not load optional ITN, punctuation, diarization, or VAD models.
+Language and vocabulary controls follow the selected model profile. Completed
+settings remain saved when a control is unavailable in realtime. Shared terms
+stay in **Settings → Vocabulary**.
 
 ## While recording
 
-The preview can change as speech is recognized. NeMo-Speech.cpp v0.1.0 can emit revised hypotheses without marking replacements, so provisional words may occasionally repeat; the final transcript replaces the preview. The overlay stays one row tall and reveals the latest text as older words leave the visible area.
+The preview can change as speech is recognized. The final transcript replaces
+it when recording stops. The overlay stays one row tall and reveals the latest
+text as older words leave the visible area.
 
-Only finalized text can be cleaned up, retained in optional memory history, copied, or inserted. Cancellation or a disconnected stream discards its preview. Start a new recording after a connection failure; Freehand does not replay captured audio.
+Only finalized text can be cleaned up, kept in optional history, copied, or
+inserted. Cancellation or a disconnected stream discards its preview. Start a
+new recording after a connection failure; Freehand does not replay captured audio.
 
-Live mode uses the existing toggle/hold shortcut and recording duration limit. Silence trimming, checkpoints, and automatic stop are for completed transcription and are bypassed in live mode. Turning realtime off keeps the same connection and model and uses completed recording/checkpoints with your saved capture preferences. For Nemotron, shared vocabulary works in both modes; live captions apply only in realtime mode. Audio-file transcription has its own connection, model, language, and options; changing Voice does not change it.
+Live mode uses the existing toggle/hold shortcut and recording duration limit.
+Silence trimming, checkpoints, and automatic stop apply to completed recording
+and are bypassed in live mode. Turning realtime off keeps the same connection
+and model and restores your completed capture preferences.
+
+Audio-file transcription has its own connection, model, language, and options;
+changing Voice does not change it. Streaming results from an uploaded file is
+a separate feature from live microphone transcription.

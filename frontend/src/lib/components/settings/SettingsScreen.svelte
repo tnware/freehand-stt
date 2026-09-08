@@ -401,7 +401,9 @@
                 connectionBusy={session.editor.ttsConnectionTesting}
                 canPreview={session.dictation.status.state === State.Idle &&
                   !session.files.status.canCancel}
-                onPreview={() => session.speech.previewVoice()}
+                onPreview={() => {
+                  if (session.editor.draft) void session.speech.previewVoice(session.editor.draft);
+                }}
                 onStop={() => session.speech.stopTTS()}
                 onSave={() => session.speech.saveTTSAudio()}
                 onClear={() => session.speech.clearTTSAudio()}

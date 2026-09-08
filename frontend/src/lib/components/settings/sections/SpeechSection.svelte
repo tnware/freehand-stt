@@ -142,7 +142,7 @@
       <div class="min-w-0">
         <p class="text-sm font-medium">Voice preview</p>
         <p class="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Save these settings, then generate a short phrase to check the voice and playback.
+          Try a short phrase with your current edits. Preview does not save your settings.
         </p>
       </div>
       <div class="flex items-center gap-2">

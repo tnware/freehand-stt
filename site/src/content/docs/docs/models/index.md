@@ -5,8 +5,7 @@ description: Choose model behavior independently of your server connection.
 
 A **connection** tells Freehand where your server is and which backend API it
 uses. A **model** is the ID that server should run. A **model profile** tells
-Freehand how to use that model, including any verified restrictions or special
-instructions. These choices stay separate because servers can expose custom
+Freehand how to use that model, including its languages, recognition hints, and output controls. These choices stay separate because servers can expose custom
 model names and the same model can run behind different backends.
 
 ## Choose a model profile
@@ -14,22 +13,21 @@ model names and the same model can run behind different backends.
 Open **Settings → Voice transcription**, **Audio-file transcription**, **Cleanup**, or **Text to speech**.
 Choose an active connection, choose or enter the model, and review **Model
 profile** directly beneath it. Choose a specialized profile only when you know
-that is the model your server is running, then **Save feature settings**.
+that is the model your server is running, then **Save settings**.
 
-| Feature            | Available model profiles                                | Behavior                                                                                                                                                                                     |
-| ------------------ | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Voice / Audio file | Generic; Nemotron on NeMo-Speech.cpp; Qwen3-ASR on vLLM | Generic offers the selected backend’s completed transcription options. Nemotron and Qwen restrict controls to their qualified server/model contracts and enable optional realtime for Voice. |
-| Cleanup            | Generic; S1-mini by Superwhisper                        | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                              |
-| Text to speech     | Generic                                                 | Standard WAV speech generation with a provider voice ID.                                                                                                                                     |
+| Feature            | Available model profiles                                                               | Behavior                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Voice / Audio file | Generic; [Nemotron](./nemotron/) on NeMo-Speech.cpp; [Qwen3-ASR](./qwen3-asr/) on vLLM | Generic offers the selected backend’s completed transcription options. Nemotron and Qwen restrict controls to their supported languages and options and enable optional realtime for Voice. |
+| Cleanup            | Generic; [S1-mini by Superwhisper](./s1-mini/)                                         | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                             |
+| Text to speech     | Generic                                                                                | Standard WAV speech generation with a provider voice ID.                                                                                                                                    |
 
 Where only Generic is available, the redundant profile row is hidden. The standard
 backend contract still applies; there is no extra choice to make.
 
-**Generic is a baseline, not a claim that every model supports every option.**
-Language support, voice IDs, context hints, temperature, and generation controls
-still depend on the deployed model. Freehand exposes only options permitted by
-both its backend contract and its model profile. More specialized transcription
-and speech profiles can be added after their differences have been verified.
+Use **Generic** for standard backend options, including Whisper transcription,
+Kokoro speech, and cleanup with your own instructions. A dedicated model profile
+adds controls for that model and shows the options its backend supports.
+Explore the [model directory](../../models/) for what each profile adds in Freehand.
 
 Model discovery reads metadata only. Freehand does not infer a model profile
 from a name, download a model, or run one to detect its capabilities. For
@@ -37,20 +35,11 @@ whisper.cpp, the model remains the one already loaded by the server.
 
 Voice’s **Transcription** quick controls also expose the model profile. With NeMo-Speech.cpp/Nemotron or vLLM/Qwen3-ASR selected, **Realtime transcription** appears inside that panel. Its caption control appears when enabled; shared terminology is managed in **Settings → Vocabulary**, and turning it off keeps the same connection/model. Audio file remains independent.
 
-## S1-mini
+## Dedicated model guides
 
-Selecting S1-mini keeps its specialized prompt and output controls, regardless
-of the model ID your server exposes. Its requirements are shown near the picker:
-
-- **English only.** Selected or reported non-English input skips cleanup and
-  preserves the raw transcript. When the language is unknown, Freehand runs
-  S1-mini assuming English; it does not change transcription's language setting.
-- **Reasoning off.** Qualified llama.cpp and vLLM adapters enforce this on every
-  cleanup request. With Generic, you must disable reasoning on the server.
-- **Fixed instructions.** The model's trained styling, structure, and context
-  controls replace the custom instruction editor. Temperature remains zero.
-
-See [post-processing](../post-processing/) and [languages](../languages/).
+- [S1-mini by Superwhisper](./s1-mini/): English cleanup with styling, structure, and context controls.
+- [Nemotron 3.5 ASR streaming](./nemotron/): completed and live transcription with language selection and vocabulary boosting.
+- [Qwen3-ASR](./qwen3-asr/): completed transcription with context hints, plus optional live dictation on vLLM.
 
 ## Remember settings for each model
 
@@ -117,6 +106,6 @@ language and options yourself when changing it. The server still owns model load
 Upgrades retain current model selections and seed their remembered preferences.
 No credentials or generated transcripts are included in model preferences.
 
-Shared vocabulary terms and Voice/file opt-ins live in [Vocabulary](../vocabulary/), independently of remembered models.
+Shared vocabulary terms and Voice/file opt-ins live in [Vocabulary](../guides/vocabulary/), independently of remembered models.
 
-For Qwen setup, supported languages, and completed versus realtime controls, see [Qwen3-ASR](../../backends/qwen3-asr/).
+For Qwen setup, supported languages, and completed versus realtime controls, see [Qwen3-ASR](./qwen3-asr/).
