@@ -55,6 +55,6 @@
   </div>
 
   <div class="min-h-44 overflow-hidden rounded-xl border border-hairline bg-layer-fill">
-    <HistoryList {entries} clamp={false} scrollable={false} {onCopy} {onCopyVersion} {onDelete} />
+    <HistoryList {entries} scrollable={false} {onCopy} {onCopyVersion} {onDelete} />
   </div>
 </div>

@@ -28,6 +28,7 @@
   import AppHeader from "$lib/components/shell/AppHeader.svelte";
   import { controlledSaves } from "./save-control";
 
+  const historyExpansion = new URLSearchParams(location.search).get("history") === "expansion";
   const diagnosticsScenario = new URLSearchParams(location.search).get("diagnostics");
   const setupScenario = new URLSearchParams(location.search).get("setup");
   let openedSettings = $state("");
@@ -284,6 +285,53 @@
         "Cleanup could not finish because the server was unavailable. The raw transcript was kept and is ready to copy.",
     };
   }
+  const sampleTranscript =
+    "The first paragraph stays readable in full without opening the latest transcript.\n\nThe second paragraph preserves the original spacing and continues beyond a compact history preview.\n\nThe final paragraph is visible too, while older results take less space.";
+  let nextHistoryID = 3;
+  if (historyExpansion) {
+    session.history.entries = [2, 1].map((id) => ({
+      ...structuredClone(historyEntry),
+      id,
+      text: sampleTranscript,
+      rawText: sampleTranscript,
+      characterCount: sampleTranscript.length,
+    }));
+  }
+  function addHistoryTranscript() {
+    session.history.entries = [
+      {
+        ...structuredClone(historyEntry),
+        id: nextHistoryID++,
+        text: sampleTranscript,
+        rawText: sampleTranscript,
+        characterCount: sampleTranscript.length,
+      },
+      ...session.history.entries,
+    ];
+  }
+  function updateHistoryTranscript() {
+    session.history.entries = session.history.entries.map((entry, index) =>
+      index
+        ? entry
+        : {
+            ...entry,
+            processingStatus: HistoryProcessingStatus.HistoryProcessingCompleted,
+            processedText: "Cleaned. " + sampleTranscript,
+            text: "Cleaned. " + sampleTranscript,
+          },
+    );
+  }
+  function showFileTranscript() {
+    session.files.applyStatus({
+      ...session.files.status,
+      generation: 99,
+      phase: FileTranscriptionPhase.FileTranscriptionFailed,
+      transcript: sampleTranscript,
+      fileName: "Example recording.wav",
+      canCopy: true,
+    });
+    inputMode = "file";
+  }
   if (new URLSearchParams(location.search).has("file-error")) {
     session.files.applyStatus({
       ...session.files.status,
@@ -359,7 +407,16 @@
     <footer
       class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
     >
-      {openedSettings || "Transcription: Reachable · Example connection"}
+      {#if historyExpansion}
+        <div class="flex gap-3">
+          <button onclick={addHistoryTranscript}>Add transcript</button>
+          <button onclick={updateHistoryTranscript}>Update latest</button>
+          <button onclick={showFileTranscript}>Show file result</button>
+          <button onclick={() => void session.history.clearHistory()}>Clear history</button>
+        </div>
+      {:else}
+        {openedSettings || "Transcription: Reachable · Example connection"}
+      {/if}
     </footer>
   {/if}
 </div>

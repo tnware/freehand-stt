@@ -791,6 +791,13 @@ responses; they do not contact inference servers.
 
 ### Workspace history and error presentation
 
+History expansion checks cover a fully readable newest result, single-line older
+previews, keyboard disclosure, new arrivals resetting manual expansion/comparison,
+cleanup updates preserving it, deleting the newest entry, clearing/repopulating,
+and a full unretained file result. These are shared list behaviors in Home and
+Settings. Native acceptance should confirm the same transitions after real
+recordings and cleanup completion.
+
 Synthetic workspace checks exercise history action menus with keyboard opening,
 Escape focus restoration, deletion of the selected entry, and raw/cleaned copy.
 At 560px and 1156px they verify compact history footers and visible cleanup

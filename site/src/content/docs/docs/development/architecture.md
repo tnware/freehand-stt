@@ -386,6 +386,12 @@ command facade or a container for feature state.
   in separate service namespaces.
 - `HistoryState` owns history refresh/mutation ordering. Successful refresh
   acknowledges the completed file generation through an injected callback.
+  `HistoryList` owns only local disclosure/comparison state: the leading result
+  opens fully, older entries start collapsed, and a different leading result resets
+  manual expansion. Updates to the same entry preserve those choices. The shared
+  behavior applies to Home and Settings; an ephemeral file result takes the leading
+  position without changing retained history or persistence.
+
 - `SessionMessages` owns shared presentation notices and their timers, not
   workflow state.
 

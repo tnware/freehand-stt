@@ -34,7 +34,6 @@
     entries,
     emptyTitle = "Nothing kept yet",
     emptyDescription = "The next finalized transcript will appear here.",
-    clamp = true,
     scrollable = true,
     maxHeight,
     live,
@@ -51,8 +50,6 @@
     entries: HistoryEntry[];
     emptyTitle?: string;
     emptyDescription?: string;
-    /** Clamp long transcripts so the list scans. Off where reading is the job. */
-    clamp?: boolean;
     /** Home owns an independent history scroller; settings scrolls as one page. */
     scrollable?: boolean;
     maxHeight?: string;
@@ -153,28 +150,33 @@
     return "raw only";
   };
 
-  // Home starts compact; the dedicated history settings view starts open.
-  // Each ID in overrides flips that local default without touching history.
-  let expansionOverrides = $state<number[]>([]);
-  let comparisonEntries = $state<number[]>([]);
-  const expanded = (id: number): boolean => !clamp !== expansionOverrides.includes(id);
+  // A new leading result resets presentation in both history views. Updates to
+  // the same result (including cleanup) preserve the reader's manual choices.
+  const newestID = $derived(live ? undefined : entries[0]?.id);
+  let disclosure = $derived<{ open: number[]; comparing: number[] }>({
+    open: newestID === undefined ? [] : [newestID],
+    comparing: [],
+  });
+  const expanded = (id: number): boolean => disclosure.open.includes(id);
   function toggleExpanded(id: number) {
     const wasExpanded = expanded(id);
-    expansionOverrides = expansionOverrides.includes(id)
-      ? expansionOverrides.filter((entryID) => entryID !== id)
-      : [...expansionOverrides, id];
-    if (wasExpanded) {
-      comparisonEntries = comparisonEntries.filter((entryID) => entryID !== id);
-    }
+    disclosure = {
+      open: wasExpanded
+        ? disclosure.open.filter((entryID) => entryID !== id)
+        : [...disclosure.open, id],
+      comparing: wasExpanded
+        ? disclosure.comparing.filter((entryID) => entryID !== id)
+        : disclosure.comparing,
+    };
   }
 
   function toggleComparison(id: number) {
-    if (comparisonEntries.includes(id)) {
-      comparisonEntries = comparisonEntries.filter((entryID) => entryID !== id);
-      return;
-    }
-    if (!expanded(id)) toggleExpanded(id);
-    comparisonEntries = [...comparisonEntries, id];
+    disclosure = {
+      open: expanded(id) ? disclosure.open : [...disclosure.open, id],
+      comparing: disclosure.comparing.includes(id)
+        ? disclosure.comparing.filter((entryID) => entryID !== id)
+        : [...disclosure.comparing, id],
+    };
   }
 
   const feedback = new CopyFeedback();
@@ -264,10 +266,7 @@
           </div>
 
           <p
-            class={cn(
-              "mt-2.5 min-h-5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap",
-              !live.working && "line-clamp-3",
-            )}
+            class="mt-2.5 min-h-5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
           >
             {#if live.text}
               {live.text}
@@ -321,7 +320,7 @@
       {#each entries as entry (entry.id)}
         {@const isExpanded = expanded(entry.id)}
         {@const hasCleaned = hasProcessedTranscript(entry)}
-        {@const isComparing = isExpanded && hasCleaned && comparisonEntries.includes(entry.id)}
+        {@const isComparing = isExpanded && hasCleaned && disclosure.comparing.includes(entry.id)}
         {@const finalVersion = hasCleaned
           ? HistoryTextVersion.HistoryTextProcessed
           : HistoryTextVersion.HistoryTextFinal}
@@ -347,6 +346,9 @@
             >
               <span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                 <span class={cn("size-2 shrink-0 rounded-full", outcomeDot(entry.outcome))}></span>
+                {#if entry.id === newestID}<span class="text-xs font-medium text-muted-foreground"
+                    >Latest</span
+                  >{/if}
                 <time
                   datetime={entry.completedAt}
                   title={completedDateTime(entry.completedAt)}
@@ -492,7 +494,7 @@
                 aria-controls={`history-entry-${entry.id}-content`}
                 onclick={() => toggleExpanded(entry.id)}
               >
-                <span class="line-clamp-2 text-sm leading-7 break-words">{entry.text}</span>
+                <span class="line-clamp-1 text-sm leading-7 break-words">{entry.text}</span>
               </button>
             {/if}
           </div>
