@@ -40,7 +40,7 @@ network, and optional cleanup stage.
 Dictation is the default task, not a setup requirement for the others. Microphone
 and file transcription have independent connection/model settings. Optional
 [live dictation](https://tnware.github.io/freehand-stt/docs/guides/live-transcription/)
-is a mode of the Voice transcription selection when using Nemotron / NeMo-Speech.cpp, showing live
+is a mode of the Voice transcription selection with qualified Nemotron / NeMo-Speech.cpp or Qwen3-ASR / vLLM profiles, showing live
 results and single-row overlay captions. Cleanup and text-to-speech
 can each use a separate service and model.
 
