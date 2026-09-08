@@ -901,3 +901,20 @@ The renderer cannot supply a preview endpoint, transport profile, or credential.
 The captured profile feeds the existing playback admission, cancellation, timeout,
 and native audio lifecycle. No preview options enter persistent model preferences
 or active settings; ordinary composition/history/file playback uses saved settings.
+
+## Speech family contracts
+
+[ADR 0012](../../decisions/0012-speech-model-expansion/) adds Parakeet TDT v3 and
+Cohere profiles on existing completed adapters, Voxtral on the existing vLLM
+realtime transport, and vLLM-Omni speech with Qwen3-TTS CustomVoice options.
+`modelprofile` owns languages, preset voices, and option admission; Svelte uses
+that resolved metadata. Only Qwen realtime output passes through the Qwen header
+parser. Voxtral finals remain ordinary text under the same stop/final authority.
+
+Speech language and delivery instructions are value-only model options. SQLite
+migration 11 stores them with active speech settings and remembered models through
+the same transaction. `settings.TextToSpeechPreview` accepts the same options as
+the ordinary request and validates before reading credentials. Previews remain
+unsaved; running jobs retain their immutable settings and credential snapshot.
+The speech adapter explicitly requests buffered WAV from Kokoro-FastAPI and
+vLLM-Omni. Qwen CustomVoice never submits reference audio or uploaded-voice tasks.

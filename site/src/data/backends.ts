@@ -5,7 +5,7 @@ import catalog from "./compatibility.generated.json";
 const editorial = [
   {
     id: "nemo-speech-v1",
-    summary: "Transcribe recordings or follow live dictation with Nemotron.",
+    summary: "Transcribe recordings with Parakeet or follow live dictation with Nemotron.",
     guide: "/docs/backends/nemo-speech/",
     highlight: "Live text and captions",
     detail:
@@ -59,16 +59,17 @@ const editorial = [
     id: "vllm",
     summary: "Connect speech recognition and text cleanup models through vLLM.",
     guide: "/docs/backends/vllm/",
-    highlight: "Qwen3-ASR realtime and more",
+    highlight: "Qwen, Cohere, and Voxtral",
     detail:
       "Use the Qwen3-ASR model profile for live dictation, or choose completed transcription, streaming file results, and optional cleanup.",
   },
   {
     id: "vllm-omni",
     summary: "A speech playback profile with explicit model and voice requirements.",
-    guide: "/docs/backends/planned/#vllm-omni",
-    highlight: "Planned integration",
-    detail: "Qualify preset-voice inputs and playable WAV output separately from cloning features.",
+    guide: "/docs/backends/vllm-omni/",
+    highlight: "Qwen3-TTS voice and style",
+    detail:
+      "Generate speech with preset voices, language selection, delivery instructions, and a preview of your settings edits.",
   },
   {
     id: "kokoro-fastapi",

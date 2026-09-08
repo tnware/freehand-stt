@@ -16,7 +16,7 @@ const href = (path: string) => `${base}${path}`;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <CustomPageMetadata title="Models & model profiles — Freehand" description="Explore first-class support for S1-mini, Nemotron, and Qwen3-ASR. See their compatible backends and the controls each model profile adds in Freehand." path="models/" />
+    <CustomPageMetadata title="Models & model profiles — Freehand" description="Explore model profiles for transcription, realtime captions, transcript cleanup, and expressive speech. See their compatible backends and the controls each model profile adds in Freehand." path="models/" />
     <meta name="theme-color" content="#070a12" />
     <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
   </head>
@@ -67,6 +67,9 @@ const href = (path: string) => `${base}${path}`;
           <div><dt>Kokoro speech</dt><dd>Use Generic model behavior with <a href={href("/docs/backends/kokoro-fastapi/")}>Kokoro-FastAPI</a> or <a href={href("/docs/backends/speaches/")}>Speaches</a>. Browse voices, adjust speaking speed, and preview the result in Text to speech.</dd></div>
           <div><dt>Cleanup with your own instructions</dt><dd>Use a compatible chat model with Generic. Write your instruction in Cleanup and keep the output controls available through your backend.</dd></div>
         </dl>
+      </section>
+      <section class="backend-generic" aria-labelledby="families-title">
+        <div><p class="kicker"><span></span> Beyond the directory</p><h2 id="families-title">Find your model family.</h2><p>Whisper derivatives, multilingual recognition, streaming models, and expressive speech. See how the wider ecosystem relates to Freehand’s backend and model profiles.</p><a class="text-action" href={href("/docs/models/families/")}>Browse speech families <span aria-hidden="true">→</span></a></div>
       </section>
       <section class="backend-next" aria-label="Choose your setup"><div><h2>Connect the two.</h2><p>Pick the backend that runs your model, then select the model profile in Freehand.</p></div><a class="button button-light" href={href("/backends/")}>Explore backends <span aria-hidden="true">→</span></a></section>
     </main>

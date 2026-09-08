@@ -377,7 +377,8 @@ with inference or publish private inputs/configuration.
   and reasoning-off behavior. For S1-mini, reasoning must remain off even with
   the optional custom switch disabled. Preserve trained prompts and raw fallback.
 - Verify Settings, first-run readiness, home quick settings, profile switching,
-  and the public backend matrix. vLLM-Omni remains disabled.
+  and the public backend matrix. Include vLLM-Omni speech using the Qwen3-TTS
+  acceptance steps below.
 
 A Windows compile and fixture tests are separate from interactive acceptance
 against a live deployment. Metadata success does not prove inference behavior.
@@ -662,3 +663,32 @@ phrase, stop, change them again, and preview again. Discard edits and confirm no
 Text to speech still uses the saved options. Test draft enable with saved speech
 disabled, invalid settings, a connection changed in another window, cancellation,
 and recording admission. Use only the explicitly chosen model; no inventory probes.
+
+## Speech family expansion acceptance
+
+Fixtures in `internal/modelprofile`, `internal/inference`, and `internal/realtime`
+cover the Parakeet, Cohere, Voxtral, and Qwen3-TTS contracts. HTTP fixtures assert
+request fields and voice metadata; both Qwen and Voxtral run the vLLM final,
+disconnect, error, cancellation, oversized-text, and premature-final scenarios.
+SQLite fixtures reconstruct alpha.4's schema and test upgrade, Unicode speech
+options, restart, and transaction rollback. Preview tests prove unsaved language
+and instructions are captured without saving or forwarding transport fields.
+
+Native acceptance, with one explicitly selected model at a time:
+
+1. Select Parakeet on NeMo-Speech.cpp. Confirm automatic detection, completed
+   recording/checkpoints, and independent audio-file transcription.
+2. Select Cohere on vLLM. Confirm its 14-language selector labels the default as
+   English, and that context/vocabulary controls are absent. Check a completed
+   microphone recording and a file response.
+3. Select Voxtral Mini Realtime on vLLM. Enable realtime and captions, record,
+   and stop. Confirm provisional text is replaced by the final, captions remain
+   one row, and changing focus prevents insertion. Disconnect mid-recording and
+   confirm provisional text is never inserted.
+4. Select Qwen3-TTS 1.7B CustomVoice on vLLM-Omni. Check the nine preset voices,
+   ten languages, style field, and keyboard navigation in full and quick settings.
+   Edit language/style and Preview before Save. Verify ordinary playback retains
+   applied settings until Save; Discard restores them. Switch models and back,
+   restart, and verify saved options remain independent per connection/model.
+5. Metadata refreshes must never generate speech or transcribe a sample. Record
+   actual inference acceptance separately from fixture and Windows build results.

@@ -18,6 +18,7 @@ const (
 // Profile is renderer-safe metadata for a model/backend combination. Its
 // capabilities are the intersection, never an assertion about an inventory ID.
 type Profile struct {
+	Voices                []string                   `json:"voices,omitempty"`
 	ID                    ID                         `json:"id"`
 	Name                  string                     `json:"name"`
 	Description           string                     `json:"description"`
@@ -53,6 +54,12 @@ func Effective(id ID) ID {
 
 func definition(id ID, role compatibility.Role) (Profile, error) {
 	id = Effective(id)
+	if p, ok := familyProfile(id, role); ok {
+		return p, nil
+	}
+	if id == Qwen3TTS && role == compatibility.Speech {
+		return qwenTTSProfile(), nil
+	}
 	if id == Qwen3ASR && (role == compatibility.Transcription || role == compatibility.Realtime) {
 		return qwenProfile(role), nil
 	}
@@ -102,15 +109,20 @@ func constrain(backend, model compatibility.Capabilities) compatibility.Capabili
 	backend.CleanupOutputLimit = backend.CleanupOutputLimit && model.CleanupOutputLimit
 	backend.CleanupDisableReasoning = backend.CleanupDisableReasoning && model.CleanupDisableReasoning
 	backend.SpeechSpeed = backend.SpeechSpeed && model.SpeechSpeed
+	backend.SpeechInstructions = backend.SpeechInstructions && model.SpeechInstructions
+	backend.SpeechLanguage = backend.SpeechLanguage && model.SpeechLanguage
 	return backend
 }
 
 func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract, error) {
-	if id == Qwen3ASR && backend != compatibility.VLLM {
-		return Contract{}, errors.New("Qwen3-ASR profile requires the qualified vLLM backend")
+	if (id == Qwen3ASR || id == CohereTranscribe || id == VoxtralRealtime) && backend != compatibility.VLLM {
+		return Contract{}, errors.New("this model profile requires the vLLM backend")
 	}
-	if id == Nemotron35 && backend != compatibility.NeMoSpeechV1 {
-		return Contract{}, errors.New("Nemotron profile requires the qualified NeMo-Speech.cpp backend")
+	if (id == Nemotron35 || id == ParakeetTDT) && backend != compatibility.NeMoSpeechV1 {
+		return Contract{}, errors.New("this model profile requires the NeMo-Speech.cpp backend")
+	}
+	if id == Qwen3TTS && backend != compatibility.VLLMOmni {
+		return Contract{}, errors.New("Qwen3-TTS profile requires the vLLM-Omni backend")
 	}
 	p, err := definition(id, role)
 	if err != nil {
@@ -128,13 +140,16 @@ func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract
 func options(backend compatibility.ID, role compatibility.Role) []Profile {
 	ids := []ID{Generic}
 	if role == compatibility.Transcription && backend == compatibility.VLLM {
-		ids = append(ids, Qwen3ASR)
+		ids = append(ids, Qwen3ASR, CohereTranscribe, VoxtralRealtime)
 	}
 	if role == compatibility.Transcription && backend == compatibility.NeMoSpeechV1 {
-		ids = append(ids, Nemotron35)
+		ids = append(ids, Nemotron35, ParakeetTDT)
 	}
 	if role == compatibility.Realtime {
-		ids = []ID{Nemotron35, Qwen3ASR}
+		ids = []ID{Nemotron35, Qwen3ASR, VoxtralRealtime}
+	}
+	if role == compatibility.Speech && backend == compatibility.VLLMOmni {
+		ids = append(ids, Qwen3TTS)
 	}
 	if role == compatibility.PostProcessing {
 		ids = append(ids, S1Mini)
@@ -155,6 +170,9 @@ func Profiles(transcription, cleanup, speech compatibility.ID) Catalog {
 // ValidateLanguage preserves the accepted S1-mini policy for explicit and
 // reported input. It does not invent a language hint or rewrite a prompt.
 func ValidateLanguage(id ID, role compatibility.Role, selected string, detected []string) error {
+	if _, ok := familyProfile(id, role); ok {
+		return validateFamilyLanguage(id, selected)
+	}
 	if id == Qwen3ASR && role == compatibility.Transcription {
 		return validateQwenLanguage(selected)
 	}

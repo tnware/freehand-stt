@@ -14,8 +14,9 @@ cleanup, and insert the result when the original target still owns focus.
 | ---------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
 | [Nemotron 3.5 ASR streaming](../../models/nemotron/) | [NeMo-Speech.cpp](../../backends/nemo-speech/) | Automatic or explicit language; shared vocabulary and strength |
 | [Qwen3-ASR](../../models/qwen3-asr/)                 | [vLLM](../../backends/vllm/)                   | Automatic language detection                                   |
+| [Voxtral Mini Realtime](../../models/voxtral-realtime/) | [vLLM](../../backends/vllm/) | Automatic language detection |
 
-Follow the model guide for setup. Both combinations use the same Voice
+Follow the model guide for setup. These combinations use the same Voice
 transcription panel, results pane, overlay, and recording shortcuts.
 
 ## Enable live mode

@@ -37,14 +37,17 @@
       {:else}
         <Select.Root type="single" value={value || ID.Generic} onValueChange={select} {disabled}>
           <Select.Trigger {id} class="w-full" aria-label="Model profile">
-            {#if selected?.id === ID.Qwen3ASR}<ProviderIcon profile="qwen3-asr" size={18} />{/if}
+            {#if selected && selected.id !== ID.Generic}<ProviderIcon
+                profile={selected.id}
+                size={18}
+              />{/if}
             {selected?.name ?? "Choose model profile"}
           </Select.Trigger>
           <Select.Content>
             {#each profiles as profile (profile.id)}
               <Select.Item value={profile.id} label={profile.name}
-                >{#if profile.id === ID.Qwen3ASR}<ProviderIcon
-                    profile="qwen3-asr"
+                >{#if profile.id !== ID.Generic}<ProviderIcon
+                    profile={profile.id}
                     size={18}
                   />{/if}{profile.name}</Select.Item
               >

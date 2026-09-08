@@ -22,7 +22,7 @@ native file selection -> /v1/audio/transcriptions -> optional streamed response
 
 Optional S1-mini by Superwhisper processing is implemented as a separate stage after raw STT. It is never part of Speaches and is never bundled into the executable. Follow `site/src/content/docs/docs/decisions/0001-s1-mini-post-processing.md` exactly; preserve raw mode, fall back durably to raw text, and do not invent untrained control values.
 
-Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 with Nemotron 3.5 streaming, and vLLM v0.28.0 with the explicit Qwen3-ASR profile. Follow `site/src/content/docs/docs/decisions/0008-qualified-realtime-dictation.md` and ADR 0011's distinct vLLM protocol; retain ADR 0002's applicable transport and safety research. Follow ADR 0009 for unified Voice selection: completed and realtime microphone transcription use one connection/model/profile with a capability-gated mode switch. Audio-file transcription remains independently configurable. Partial text is presentation-only; authoritative finals use the existing cleanup and focus-safe delivery path. The pause-aware completed flow remains the default. Conversation mode remains shelved, and inference runtimes remain user-managed.
+Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 with Nemotron 3.5 streaming, and vLLM v0.28.0 with the explicit Qwen3-ASR or Voxtral Mini Realtime profiles. Follow `site/src/content/docs/docs/decisions/0008-qualified-realtime-dictation.md` and ADR 0011's distinct vLLM protocol; retain ADR 0002's applicable transport and safety research. Follow ADR 0009 for unified Voice selection: completed and realtime microphone transcription use one connection/model/profile with a capability-gated mode switch. Audio-file transcription remains independently configurable. Partial text is presentation-only; authoritative finals use the existing cleanup and focus-safe delivery path. The pause-aware completed flow remains the default. Conversation mode remains shelved, and inference runtimes remain user-managed.
 
 ## Non-negotiable safety rules
 
@@ -46,7 +46,7 @@ Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 w
 
 - `internal/compatibility` owns server APIs; `internal/modelprofile` owns explicit
   model behavior and intersects its capabilities with the selected backend.
-  Generic is a baseline, not proof of support by every deployed model.
+  Generic is a baseline, not proof of support by every deployed model. Follow ADR 0012 for Parakeet, Cohere, Voxtral, and Qwen3-TTS contracts; Qwen speech language and style are remembered model options and preview snapshots.
 - `internal/modelsettings` owns the non-secret per-connection/use/model option
   subset. Follow ADR 0007 for task-versus-model ownership: selection preserves language,
   cleanup intent, and speaking speed; historical task fields in saved model snapshots

@@ -75,7 +75,7 @@ and the previously applied settings remain intact.
 
 ## Reuse a server
 
-A transcription server can be enabled for Voice, Audio file, or both. Each task keeps its own model and options. Speaches also supports Text to speech; vLLM supports Cleanup. Generic offers completed transcription, cleanup, and speech generation. NeMo-Speech.cpp offers completed transcription and qualified [realtime Voice mode](../live-transcription/) with the explicit Nemotron profile. llama.cpp currently offers Cleanup, and whisper.cpp offers completed transcription.
+A transcription server can be enabled for Voice, Audio file, or both. Each task keeps its own model and options. Speaches also supports Text to speech; vLLM supports Cleanup and qualified realtime Voice profiles. vLLM-Omni offers Text to speech, including the Qwen3-TTS CustomVoice profile. Generic offers completed transcription, cleanup, and speech generation. NeMo-Speech.cpp offers completed transcription and qualified [realtime Voice mode](../live-transcription/) with the explicit Nemotron profile. llama.cpp currently offers Cleanup, and whisper.cpp offers completed transcription.
 These choices describe Freehand's implemented contracts, not detected server
 capabilities. A particular vLLM deployment may expose only one operation.
 

@@ -13,6 +13,10 @@ For **Qwen3-ASR-1.7B**, including optional realtime microphone results and
 captions, use the [Qwen3-ASR setup guide](../../models/qwen3-asr/). Select its explicit
 model profile in feature settings; the connection remains vLLM.
 
+For completed recognition, choose [Cohere Transcribe](../../models/cohere-transcribe/).
+For Mistral’s live microphone model, choose [Voxtral Mini Realtime](../../models/voxtral-realtime/).
+The [vLLM-Omni backend](../vllm-omni/) handles Qwen3-TTS speech generation separately.
+
 ## Run vLLM with Docker
 
 Use PowerShell with Docker Desktop's WSL2 Linux backend and an NVIDIA GPU.
@@ -188,9 +192,9 @@ This profile uses the APIs in **vLLM v0.28.0**:
 - [Speech stream implementation](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/entrypoints/speech_to_text/base/serving.py), including per-chunk finish reasons and whole-file completion.
 - [Chat request mapping](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/entrypoints/openai/chat_completion/protocol.py), which maps reasoning effort `none` to template thinking disabled.
 
-vLLM-Omni speech playback is a separate, still-planned profile. Realtime microphone
-transcription requires the explicit Qwen3-ASR profile and the qualified realtime
-server architecture. Model management remains outside Freehand.
+[vLLM-Omni](../vllm-omni/) handles speech generation through a separate backend
+profile. Realtime microphone transcription requires the explicit Qwen3-ASR or
+Voxtral Mini Realtime model profile. Model management remains outside Freehand.
 
 ## Language selection
 

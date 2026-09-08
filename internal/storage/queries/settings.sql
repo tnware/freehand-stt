@@ -23,12 +23,12 @@ VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET generation_options_limit_output_tokens=excluded.generation_options_limit_output_tokens, generation_options_max_output_tokens=excluded.generation_options_max_output_tokens, generation_options_disable_reasoning=excluded.generation_options_disable_reasoning, compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, model=excluded.model, preset=excluded.preset, system_prompt=excluded.system_prompt, styling=excluded.styling, structure=excluded.structure, context=excluded.context, timeout_seconds=excluded.timeout_seconds;
 
 -- name: GetSpeech :one
-SELECT model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds FROM speech_settings WHERE id=1;
+SELECT model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds, speech_language, speech_instructions FROM speech_settings WHERE id=1;
 
 -- name: PutSpeech :exec
-INSERT INTO speech_settings (id, model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, voice=excluded.voice, speed=excluded.speed, timeout_seconds=excluded.timeout_seconds;
+INSERT INTO speech_settings (id, model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds, speech_language, speech_instructions)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, voice=excluded.voice, speed=excluded.speed, timeout_seconds=excluded.timeout_seconds, speech_language=excluded.speech_language, speech_instructions=excluded.speech_instructions;
 
 -- name: GetHeaders :many
 SELECT name, value FROM request_headers ORDER BY name LIMIT 33;

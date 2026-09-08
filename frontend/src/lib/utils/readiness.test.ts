@@ -51,7 +51,12 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     temperature: 0,
   },
   compatibilityProfile: ID.Generic,
-  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
+  compatibilityProfiles: {
+    transcription: [],
+    postProcessing: [],
+    speech: [],
+    realtime: [],
+  },
   rememberedModels: { entries: [], defaults: {} },
   modelProfiles: {
     voiceTranscription: [],
@@ -68,7 +73,12 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     healthPath: "",
     headers: {},
     timeoutSeconds: 120,
-    transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
+    transcriptionOptions: {
+      prompt: "",
+      hotwords: "",
+      temperatureOverride: false,
+      temperature: 0,
+    },
     compatibilityProfile: overrides.compatibilityProfile ?? ID.Generic,
     modelProfile: ModelProfileID.Generic,
     baseURL: overrides.baseURL ?? "https://example.test/v1",
@@ -138,6 +148,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     timeoutSeconds: 120,
   },
   textToSpeech: {
+    options: { language: "", instructions: "" },
     modelProfile: ModelProfileID.Generic,
     compatibilityProfile: ID.Generic,
     enabled: false,
@@ -296,6 +307,8 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
       description: "Native server",
       available: true,
       capabilities: {
+        speechInstructions: false,
+        speechLanguage: false,
         realtime: false,
         voiceDiscovery: false,
         serverLoadedModel: true,
@@ -323,7 +336,11 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
 
 describe("task-specific prerequisites", () => {
   it("allows file transcription before dictation setup without microphone or shortcut", () => {
-    const v = settings({ setupCompleted: false, toggleShortcut: "", credentialConfigured: true });
+    const v = settings({
+      setupCompleted: false,
+      toggleShortcut: "",
+      credentialConfigured: true,
+    });
     const file = appReadiness(v, null, [], false, "file");
     expect(file.initialSetup).toBe(false);
     expect(file.steps.map((s) => s.id)).not.toContain("microphone");

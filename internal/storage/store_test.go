@@ -81,7 +81,7 @@ func TestFreshDatabaseAndRoundTrip(t *testing.T) {
 		t.Fatalf("defaults changed: %#v", got)
 	}
 	want.Language = "ja"
-	want.Headers = map[string]string{"X-Request-Mode": "unicode-日本語"}
+	want.Headers = map[string]string{"X-Request-Mode": "unicode-æ—¥æœ¬èªž"}
 	want.MicrophoneID = "device-id"
 	want.OverlayEnabled = false
 	want.ShowWindowOnLaunch = false
@@ -312,7 +312,7 @@ func withUpgrade(s *Store, sql string) {
 		data, _ := embeddedMigrations.ReadFile("migrations/" + entry.Name())
 		migrations[entry.Name()] = &fstest.MapFile{Data: data}
 	}
-	migrations["00011_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
+	migrations["00012_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
 	s.migrations = migrations
 }
 func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
@@ -344,7 +344,7 @@ func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
 			var current int
 			db.QueryRow("SELECT max(version_id) FROM goose_db_version").Scan(&current)
 			db.Close()
-			if fail && current != 10 {
+			if fail && current != 11 {
 				t.Fatal("failed migration advanced version")
 			}
 			restore := newStore(s.path, s.legacy, s.vault)
@@ -466,7 +466,7 @@ func TestVersionOneUpgradePreservesSettingsAndReferences(t *testing.T) {
 	sql := string(initial)
 	start := strings.Index(sql, "CREATE TABLE speech_settings (")
 	end := strings.Index(sql[start:], ") STRICT;") + len(") STRICT;")
-	_, err = s.db.Exec(`DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models; ALTER TABLE transcription_settings DROP COLUMN model_profile;
+	_, err = s.db.Exec(`ALTER TABLE speech_settings DROP COLUMN speech_language; ALTER TABLE speech_settings DROP COLUMN speech_instructions; ALTER TABLE remembered_models DROP COLUMN speech_language; ALTER TABLE remembered_models DROP COLUMN speech_instructions; DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models; ALTER TABLE transcription_settings DROP COLUMN model_profile;
  ALTER TABLE preferences_settings RENAME COLUMN vad_enabled TO vadenabled;
  ALTER TABLE preferences_settings RENAME COLUMN vad_mode TO vadmode;
  ALTER TABLE preferences_settings RENAME COLUMN vad_activity_silence_ms TO vadactivity_silence_ms;
@@ -529,7 +529,7 @@ func restoreConnectionSchema(t *testing.T, s *Store, version int) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.db.Exec(`DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models; ALTER TABLE transcription_settings DROP COLUMN model_profile; ALTER TABLE speech_settings DROP COLUMN model_profile; DROP TABLE selected_connections; DROP TABLE saved_connection_headers; DROP TABLE saved_connection_uses; DROP TABLE saved_connections;` + string(old)); err != nil {
+	if _, err = s.db.Exec(`ALTER TABLE speech_settings DROP COLUMN speech_language; ALTER TABLE speech_settings DROP COLUMN speech_instructions; ALTER TABLE remembered_models DROP COLUMN speech_language; ALTER TABLE remembered_models DROP COLUMN speech_instructions; DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models; ALTER TABLE transcription_settings DROP COLUMN model_profile; ALTER TABLE speech_settings DROP COLUMN model_profile; DROP TABLE selected_connections; DROP TABLE saved_connection_headers; DROP TABLE saved_connection_uses; DROP TABLE saved_connections;` + string(old)); err != nil {
 		t.Fatal(err)
 	}
 	// Recreate the configured-only catalog used by this fixture, without v3 bootstrap rows.

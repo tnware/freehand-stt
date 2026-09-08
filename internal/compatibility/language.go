@@ -16,11 +16,11 @@ func (c Contract) TranscriptionLanguage(selected string) (string, error) {
 	if err := speechlanguage.Validate(selected); err != nil {
 		return "", err
 	}
-	if selected != "" && !c.Capabilities.LanguageHint {
-		return "", errLanguageUnavailable
-	}
 	if selected == speechlanguage.Automatic && c.ID != WhisperCPP {
 		return "", nil
+	}
+	if selected != "" && !c.Capabilities.LanguageHint {
+		return "", errLanguageUnavailable
 	}
 	return selected, nil
 }

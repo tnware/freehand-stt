@@ -44,11 +44,11 @@
     if (!selected || selected.id === cfg.modelProfile) return;
     const language =
       selected.languages?.length && !selected.languages.some((l) => l.code === cfg.language)
-        ? "auto"
+        ? (selected.languages[0]?.code ?? "auto")
         : cfg.language;
     profileNotice =
       language !== cfg.language
-        ? "The previous language is unavailable for this profile. Automatic detection selected."
+        ? `The previous language is unavailable. ${selected.languages?.find((l) => l.code === language)?.label ?? language} selected.`
         : "";
     update({
       language,
@@ -172,8 +172,8 @@
         onValueChange={(id) => chooseProfile(id)}
       >
         <Select.Trigger id="voice-profile" class="w-full"
-          >{#if profile?.id === ID.Qwen3ASR}<ProviderIcon
-              profile="qwen3-asr"
+          >{#if profile && profile.id !== ID.Generic}<ProviderIcon
+              profile={profile?.id}
               size={18}
             />{/if}{profile?.name ?? cfg.modelProfile}</Select.Trigger
         >
@@ -181,19 +181,21 @@
           >{#each settings.modelProfiles.voiceTranscription ?? [] as option (option.id)}<Select.Item
               value={option.id}
               label={option.name}
-              >{#if option.id === ID.Qwen3ASR}<ProviderIcon
-                  profile="qwen3-asr"
+              >{#if option.id !== ID.Generic}<ProviderIcon
+                  profile={option.id}
                   size={18}
                 />{/if}{option.name}</Select.Item
             >{/each}</Select.Content
         >
       </Select.Root>
       <p class="text-xs text-muted-foreground">
-        Choose the behavior of the model loaded on your server.
+        {profile?.description ?? "Choose the behavior of the model loaded on your server."}
       </p>
     </div>
   {/if}
-  {#if profileNotice}<p class="text-xs text-muted-foreground" role="status">{profileNotice}</p>{/if}
+  {#if profileNotice}<p class="text-xs text-muted-foreground" role="status">
+      {profileNotice}
+    </p>{/if}
   {#if profile?.capabilities.realtime}
     <div class="flex items-center justify-between gap-3 border-t border-hairline pt-3">
       <div>
@@ -216,7 +218,7 @@
       temperature hints apply only with realtime off.
     </p>
   {/if}
-  {#if profile?.capabilities.languageHint && (!cfg.realtime || profile.realtimeLanguageHint)}
+  {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
     <div class="space-y-1.5">
       <label for="voice-language" class="text-xs font-medium">Spoken language</label>
       {#if profile.languages?.length}
@@ -274,7 +276,12 @@
         checked={cfg.transcriptionOptions.temperatureOverride}
         disabled={busy}
         onCheckedChange={(temperatureOverride) =>
-          update({ transcriptionOptions: { ...cfg.transcriptionOptions, temperatureOverride } })}
+          update({
+            transcriptionOptions: {
+              ...cfg.transcriptionOptions,
+              temperatureOverride,
+            },
+          })}
       />
     </div>
     {#if cfg.transcriptionOptions.temperatureOverride}<input

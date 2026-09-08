@@ -35,9 +35,13 @@
           { value: "__custom", label: "Custom server value…", code: "" },
         ],
   );
-  const known = $derived(choices.find((choice) => choice.value === (value || "__default")));
+  const selectedValue = $derived(
+    value ||
+      (restricted && languages.some((language) => language.code === "auto") ? "auto" : "__default"),
+  );
+  const known = $derived(choices.find((choice) => choice.value === selectedValue));
   const customVisible = $derived(!restricted && (custom || !known));
-  const selected = $derived(customVisible ? "__custom" : value || "__default");
+  const selected = $derived(customVisible ? "__custom" : selectedValue);
   const selectedLabel = $derived(
     customVisible
       ? "Custom server value…"
@@ -110,7 +114,9 @@
             </Combobox.Item>
           {:else}
             <p class="px-2 py-3 text-xs text-muted-foreground" role="status">
-              No matching language. Use Custom server value for an unlisted value.
+              {restricted
+                ? "No matching language in this model profile."
+                : "No matching language. Use Custom server value for an unlisted value."}
             </p>
           {/each}
         {/key}
@@ -129,7 +135,11 @@
     />
   {/if}
   <p id={`${id}-help`} class="text-xs leading-relaxed text-muted-foreground">
-    Search by language name or code. Your model must support the language. Custom values are sent
-    unchanged.
+    {#if restricted}
+      Language choices follow the selected model profile.
+    {:else}
+      Search by language name or code. Your model must support the language. Custom values are sent
+      unchanged.
+    {/if}
   </p>
 </div>

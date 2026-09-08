@@ -36,7 +36,7 @@ Unicode true
 ## for the executable version resource.
 ####
 !ifndef INFO_BINARYVERSION
-    !define INFO_BINARYVERSION "0.1.0.3"
+    !define INFO_BINARYVERSION "0.1.0.4"
 !endif
 !ifndef UNINST_KEY_NAME
     !define UNINST_KEY_NAME "io.github.tnware.freehand"

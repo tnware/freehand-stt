@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ID } from "$bindings/modelprofile";
   import SpeechModelControls from "../SpeechModelControls.svelte";
   import type { VoicesResult } from "$bindings/inference";
   import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
@@ -89,6 +90,10 @@
       {onForgetModel}
       onDiscoverModels={onTestConnection}
       {onDiscoverVoices}
+      onOptions={(options) => {
+        settings.textToSpeech.options = options;
+        return true;
+      }}
       onVoice={(voice) => {
         settings.textToSpeech.voice = voice;
         return true;
@@ -113,7 +118,11 @@
           id="speech-model-profile"
           value={speech.modelProfile}
           profiles={settings.modelProfiles.speech ?? []}
-          onChange={(id) => (settings.textToSpeech.modelProfile = id)}
+          onChange={(id) => {
+            settings.textToSpeech.modelProfile = id;
+            settings.textToSpeech.options = { language: "", instructions: "" };
+            if (id === ID.Qwen3TTS) settings.textToSpeech.voice = "ryan";
+          }}
         />
       {/snippet}
     </SpeechModelControls>

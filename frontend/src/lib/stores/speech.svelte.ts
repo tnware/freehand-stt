@@ -84,6 +84,7 @@ export class SpeechState {
         voice: draft.voice,
         speed: draft.speed,
         timeoutSeconds: draft.timeoutSeconds,
+        options: { ...draft.options },
       });
     } catch (cause) {
       this.#messages.fail(cause);

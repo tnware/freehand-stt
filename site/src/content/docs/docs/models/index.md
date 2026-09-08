@@ -17,9 +17,9 @@ that is the model your server is running, then **Save settings**.
 
 | Feature            | Available model profiles                                                               | Behavior                                                                                                                                                                                    |
 | ------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Voice / Audio file | Generic; [Nemotron](./nemotron/) on NeMo-Speech.cpp; [Qwen3-ASR](./qwen3-asr/) on vLLM | Generic offers the selected backend’s completed transcription options. Nemotron and Qwen restrict controls to their supported languages and options and enable optional realtime for Voice. |
+| Voice / Audio file | Generic; [Nemotron](./nemotron/), [Parakeet](./parakeet/), [Qwen3-ASR](./qwen3-asr/), [Cohere Transcribe](./cohere-transcribe/), [Voxtral Mini Realtime](./voxtral-realtime/) | Each profile shows the recognition controls supported by its backend. Nemotron, Qwen3-ASR, and Voxtral enable optional realtime for Voice. |
 | Cleanup            | Generic; [S1-mini by Superwhisper](./s1-mini/)                                         | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                             |
-| Text to speech     | Generic                                                                                | Standard WAV speech generation with a provider voice ID.                                                                                                                                    |
+| Text to speech | Generic; [Qwen3-TTS](./qwen3-tts/) on vLLM-Omni | WAV speech with a voice ID and speed. Qwen3-TTS adds preset voices, language, and style instructions. |
 
 Where only Generic is available, the redundant profile row is hidden. The standard
 backend contract still applies; there is no extra choice to make.
@@ -33,7 +33,7 @@ Model discovery reads metadata only. Freehand does not infer a model profile
 from a name, download a model, or run one to detect its capabilities. For
 whisper.cpp, the model remains the one already loaded by the server.
 
-Voice’s **Transcription** quick controls also expose the model profile. With NeMo-Speech.cpp/Nemotron or vLLM/Qwen3-ASR selected, **Realtime transcription** appears inside that panel. Its caption control appears when enabled; shared terminology is managed in **Settings → Vocabulary**, and turning it off keeps the same connection/model. Audio file remains independent.
+Voice’s **Transcription** quick controls also expose the model profile. With NeMo-Speech.cpp/Nemotron or vLLM/Qwen3-ASR or Voxtral Mini Realtime selected, **Realtime transcription** appears inside that panel. Its caption control appears when enabled; shared terminology is managed in **Settings → Vocabulary**, and turning it off keeps the same connection/model. Audio file remains independent.
 
 ## Dedicated model guides
 
@@ -64,7 +64,7 @@ Freehand's default engine options; its name never selects a specialized profile.
 | -------------- | ----------------------------------------------------------- |
 | Transcription  | Model profile, prose context hint, and temperature override |
 | Cleanup        | Model profile, output limit, and reasoning override         |
-| Text to speech | Model profile and voice                                     |
+| Text to speech | Model profile, voice, speech language, and voice-style instructions |
 
 **Task intent stays in place when you change models or connections:** transcription
 language, the custom cleanup instruction, S1-mini style/structure/context choices,

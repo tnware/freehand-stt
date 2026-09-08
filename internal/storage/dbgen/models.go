@@ -97,6 +97,8 @@ type RememberedModel struct {
 	Context             string
 	Voice               string
 	Speed               float64
+	SpeechLanguage      string
+	SpeechInstructions  string
 }
 
 type RequestHeader struct {
@@ -144,6 +146,8 @@ type SpeechSetting struct {
 	Speed                float64
 	TimeoutSeconds       int64
 	ModelProfile         string
+	SpeechLanguage       string
+	SpeechInstructions   string
 }
 
 type TranscriptionSetting struct {

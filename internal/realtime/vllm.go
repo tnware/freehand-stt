@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"strings"
 
 	"github.com/coder/websocket"
 	"github.com/tnware/freehand-stt/internal/compatibility"
@@ -38,7 +39,7 @@ func (s *Session) readVLLM(publish func(Update)) Result {
 				return Result{Err: errors.New("live transcript exceeded its size limit")}
 			}
 			raw += event.Delta
-			text, _ := modelprofile.QwenRealtimeText(raw, false)
+			text, _ := s.transcriptText(raw, false)
 			if publish != nil {
 				publish(Update{Partial: text, Turn: 1})
 			}
@@ -49,7 +50,7 @@ func (s *Session) readVLLM(publish func(Update)) Result {
 			if len(*event.Text) > MaxTranscriptBytes {
 				return Result{Err: errors.New("live transcript exceeded its size limit")}
 			}
-			text, language := modelprofile.QwenRealtimeText(*event.Text, true)
+			text, language := s.transcriptText(*event.Text, true)
 			if publish != nil {
 				publish(Update{Final: text, Turn: 2})
 			}
@@ -58,4 +59,13 @@ func (s *Session) readVLLM(publish func(Update)) Result {
 			return Result{Err: errors.New("realtime server could not finish this recording")}
 		}
 	}
+}
+
+// Model output parsing is selected explicitly. Voxtral text must never pass
+// through Qwen's structured-header filter, even if it contains the same words.
+func (s *Session) transcriptText(raw string, final bool) (string, string) {
+	if s.modelProfile == modelprofile.Qwen3ASR {
+		return modelprofile.QwenRealtimeText(raw, final)
+	}
+	return strings.TrimSpace(raw), ""
 }
