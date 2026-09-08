@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SpeechModelControls from "../settings/SpeechModelControls.svelte";
+  import type { QuickSettingsPatch } from "$lib/stores/editor.svelte";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
@@ -24,6 +26,14 @@
   } = $props();
   let open = $state(false);
   const speech = $derived(settings.textToSpeech);
+  const busy = $derived(disabled || editor.isQuickSettingsPending("speech-controls"));
+  let saveFailed = $state(false);
+  async function update(textToSpeech: QuickSettingsPatch["textToSpeech"]) {
+    saveFailed = false;
+    const saved = await editor.updateQuickSettings({ textToSpeech }, "speech-controls");
+    saveFailed = !saved;
+    return saved;
+  }
 </script>
 
 <div class="flex min-w-0 items-center gap-2" role="group" aria-label="Speech quick settings">
@@ -46,7 +56,7 @@
           id="home-speech-connection"
           catalog={settings.savedConnections}
           purpose={Purpose.Speech}
-          {disabled}
+          disabled={busy}
           onAdd={() => {
             open = false;
             onAddConnection(Purpose.Speech);
@@ -54,12 +64,32 @@
           onChange={(change) => editor.changeConnection(change)}
         />
       </div>
-      <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-xs">
-        <dt class="text-muted-foreground">Model</dt>
-        <dd class="break-words text-right">{speech.model || "Not selected"}</dd>
-        <dt class="text-muted-foreground">Voice</dt>
-        <dd class="break-words text-right">{speech.voice || "Not selected"}</dd>
-      </dl>
+      <SpeechModelControls
+        {settings}
+        compact
+        immediate
+        busy={busy || !settings.savedConnections.selected?.speech}
+        models={editor.ttsConnectionStale || editor.connectionResultStale(Purpose.Speech, settings)
+          ? []
+          : (editor.ttsConnection?.modelIDs ?? [])}
+        modelsBusy={editor.ttsConnectionTesting}
+        voices={editor.voicesFor(settings)}
+        voicesBusy={editor.voicesBusy}
+        onChooseModel={(model) => update({ model })}
+        onVoice={(voice) => update({ voice })}
+        onSpeed={(speed) => update({ speed })}
+        onDiscoverModels={() => editor.testTextToSpeechConnection(settings, "")}
+        onDiscoverVoices={() => editor.discoverVoices(true)}
+      />
+      <p class="text-xs text-muted-foreground" role="status">
+        {busy
+          ? "Saving…"
+          : saveFailed
+            ? "Could not save. Your previous settings are still active. Try the change again."
+            : editor.quickSettingsSaved === "speech-controls"
+              ? "Saved"
+              : "Changes apply immediately. Your composer draft stays here."}
+      </p>
       <Button
         variant="outline"
         size="sm"
@@ -69,11 +99,8 @@
           onOpenSettings();
         }}
       >
-        Model and voice settings
+        All speech settings
       </Button>
-      <p class="border-t border-hairline pt-3 text-xs text-muted-foreground">
-        Connection changes apply immediately. Your draft stays in the composer.
-      </p>
     </Popover.Content>
   </Popover.Root>
   <span

@@ -266,7 +266,7 @@
 
           <p
             class={cn(
-              "mt-2.5 min-h-5 text-[13px] leading-relaxed break-words whitespace-pre-wrap",
+              "mt-2.5 min-h-5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap",
               !live.working && "line-clamp-3",
             )}
           >
@@ -427,7 +427,9 @@
                         {/if}
                       </Button>
                     </div>
-                    <p class="text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+                    <p
+                      class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                    >
                       {#each comparison.raw as part, index (index)}
                         <span class={cn(part.kind === "removed" && "diff-removed")}
                           >{part.text}</span
@@ -466,7 +468,9 @@
                         {/if}
                       </Button>
                     </div>
-                    <p class="text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+                    <p
+                      class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                    >
                       {#each comparison.processed as part, index (index)}
                         <span class={cn(part.kind === "added" && "diff-added")}>{part.text}</span>
                       {/each}
@@ -474,7 +478,9 @@
                   </section>
                 </div>
               {:else}
-                <p class="mt-2.5 text-[13px] leading-relaxed break-words whitespace-pre-wrap">
+                <p
+                  class="mt-2.5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                >
                   {entry.text}
                 </p>
               {/if}
@@ -487,9 +493,7 @@
                 aria-controls={`history-entry-${entry.id}-content`}
                 onclick={() => toggleExpanded(entry.id)}
               >
-                <span class="line-clamp-2 text-[13px] leading-relaxed break-words"
-                  >{entry.text}</span
-                >
+                <span class="line-clamp-2 text-sm leading-7 break-words">{entry.text}</span>
               </button>
             {/if}
           </div>

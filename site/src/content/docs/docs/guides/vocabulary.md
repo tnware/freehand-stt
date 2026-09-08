@@ -23,3 +23,19 @@ The saved library can hold 16,384 UTF-8 bytes. Each adapter has its own smaller 
 Vocabulary is a recognition hint, not a guaranteed correction or a model training operation. Generic compatibility does not prove that every deployed model uses its prompt. Cleanup instructions, S1-mini's trained context categories, and text-to-speech pronunciation remain separate; Freehand does not inject vocabulary into those controls.
 
 Terms are stored locally in the settings database and sent to the selected transcription server only when enabled and supported. Existing active hotwords and realtime vocabulary are combined into the shared list on upgrade; review the combined phrases before your next transcription. Workflows that previously had terms remain opted in. Historical inactive model snapshots remain in storage but no longer restore their old terms when selected.
+
+## Review your list
+
+The editor counts unique phrases and identifies exact duplicates after trimming
+surrounding whitespace. Repeated phrases are sent once; Freehand does not rewrite
+your saved list. Case differences remain distinct.
+
+**Review these lines** identifies the source lines that exceed the selected Voice
+or Audio file model's phrase count, per-phrase size, or total vocabulary budget.
+For context-based hints, the budget also includes your existing context. Select
+**Line …** to highlight that phrase in the editor. Feedback for a workflow that is
+turned off is labeled **off**; it does not turn the workflow on.
+
+Byte limits count UTF-8 bytes, so some characters use more than one byte. The
+shared list itself must fit within 16,384 bytes before detailed line feedback is
+available. Changes take effect after **Save settings**.

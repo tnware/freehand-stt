@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
   import { CancellablePromise } from "@wailsio/runtime";
+  import { ID as ModelProfileID } from "$bindings/modelprofile";
+  import { modelOptions } from "$lib/utils/modelSettings";
+  import { Purpose } from "$bindings/savedconnection";
   import { AuthenticationMode } from "$bindings/config";
   import { Session } from "$lib/stores/session.svelte";
   import {
@@ -26,6 +29,65 @@
     model: "speech/tts",
     voice: "Default",
   };
+  current.savedConnections.selected = {
+    ...current.savedConnections.selected,
+    speech: "speech-fixture",
+  };
+  current.savedConnections.entries = [
+    ...(current.savedConnections.entries ?? []),
+    {
+      id: "speech-fixture",
+      name: "Example speech server",
+      uses: [Purpose.Speech],
+      hasCredential: false,
+      details: {
+        compatibilityProfile: current.textToSpeech.compatibilityProfile,
+        baseURL: current.textToSpeech.baseURL,
+        allowInsecureHTTP: false,
+        authenticationMode: AuthenticationMode.AuthenticationModeNone,
+        healthPath: "",
+        headers: {},
+      },
+    },
+  ];
+  current.modelProfiles.speech = [
+    {
+      id: ModelProfileID.Generic,
+      name: "Generic",
+      description: "Synthetic speech profile",
+      reasoningOffRequired: false,
+      capabilities: {
+        realtime: false,
+        serverLoadedModel: false,
+        vllmTranscriptionEvents: false,
+        cleanupOutputLimit: false,
+        cleanupDisableReasoning: false,
+        fileStreaming: false,
+        typedTranscriptionEvents: false,
+        legacyTranscriptionSegments: false,
+        languageHint: false,
+        voiceDiscovery: false,
+        speechSpeed: true,
+        transcriptionPrompt: false,
+        transcriptionHotwords: false,
+        transcriptionTemperature: false,
+      },
+    },
+  ];
+  current.rememberedModels.defaults = {
+    ...current.rememberedModels.defaults,
+    speech: modelOptions(current, Purpose.Speech),
+  };
+  current.rememberedModels.entries = [
+    ...(current.rememberedModels.entries ?? []),
+    {
+      connectionID: "speech-fixture",
+      purpose: Purpose.Speech,
+      model: "speech/alternate",
+      selected: false,
+      options: { ...modelOptions(current, Purpose.Speech), voice: "Alternate voice" },
+    },
+  ];
   const saves = controlledSaves((request) => {
     current = structuredClone({ ...current, ...request.settings });
     return structuredClone(current);
@@ -33,15 +95,12 @@
   const session = new Session(
     serviceWithStatus(() => CancellablePromise.resolve(idle), {
       settings: {
-        SaveSettings: (request) =>
-          saves.save(structuredClone($state.snapshot(request))),
+        SaveSettings: (request) => saves.save(structuredClone($state.snapshot(request))),
       },
     }),
   );
   session.editor.applySettingsSnapshot(structuredClone(current));
-  session.editor.devices = [
-    { id: "desk-mic", name: "Desk microphone", default: true },
-  ];
+  session.editor.devices = [{ id: "desk-mic", name: "Desk microphone", default: true }];
   session.editor.connection = structuredClone(connectionResult);
   session.dictation.status = { ...idle, transcript: "Testing, testing." };
   session.history.entries = [1, 2].map((id) => ({
@@ -56,14 +115,8 @@
   const noop = () => {};
 </script>
 
-<div
-  class="flex h-screen flex-col overflow-hidden bg-background text-foreground"
->
-  <AppHeader
-    bind:inputMode
-    settings={session.editor.applied}
-    onSettings={noop}
-  />
+<div class="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+  <AppHeader bind:inputMode settings={session.editor.applied} onSettings={noop} />
   <HomeScreen
     {session}
     bind:inputMode

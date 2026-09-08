@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 	"unicode"
@@ -63,9 +64,21 @@ type VocabularySupport struct {
 	Mode    string `json:"mode"`
 	Problem string `json:"problem"`
 }
+
+// VocabularyLineIssue identifies source lines without returning phrase contents.
+type VocabularyLineIssue struct {
+	Line         int    `json:"line"`
+	DuplicateOf  int    `json:"duplicateOf"`
+	VoiceProblem string `json:"voiceProblem"`
+	FilesProblem string `json:"filesProblem"`
+}
+
 type VocabularyPreview struct {
-	Voice VocabularySupport `json:"voice"`
-	Files VocabularySupport `json:"files"`
+	PhraseCount    int                   `json:"phraseCount"`
+	DuplicateCount int                   `json:"duplicateCount"`
+	Issues         []VocabularyLineIssue `json:"issues"`
+	Voice          VocabularySupport     `json:"voice"`
+	Files          VocabularySupport     `json:"files"`
 }
 
 func PreviewVocabulary(v VocabularySettings, s VocabularySelection) VocabularySupport {
@@ -95,6 +108,81 @@ func PreviewVocabulary(v VocabularySettings, s VocabularySelection) VocabularySu
 		}
 	}
 	return result
+}
+
+// InspectVocabulary gives the editor the same normalized phrase accounting used
+// by request admission. Oversized or invalid drafts stop before line analysis.
+func InspectVocabulary(request VocabularyPreviewRequest) VocabularyPreview {
+	v := request.Vocabulary
+	result := VocabularyPreview{
+		Voice: PreviewVocabulary(v, request.Voice), Files: PreviewVocabulary(v, request.Files),
+		Issues: []VocabularyLineIssue{},
+	}
+	if ValidateVocabulary(v) != nil {
+		return result
+	}
+	seen := map[string]int{}
+	total := 0
+	for index, raw := range strings.Split(v.Terms, "\n") {
+		phrase := strings.TrimSpace(raw)
+		if phrase == "" {
+			continue
+		}
+		line := index + 1
+		issue := VocabularyLineIssue{Line: line}
+		if first, ok := seen[phrase]; ok {
+			result.DuplicateCount++
+			issue.DuplicateOf = first
+		} else {
+			seen[phrase] = line
+			result.PhraseCount++
+			if result.PhraseCount > 1 {
+				total++
+			}
+			total += len(phrase)
+			issue.VoiceProblem = vocabularyLineProblem(result.Voice.Mode, request.Voice.Context, phrase, result.PhraseCount, total)
+			issue.FilesProblem = vocabularyLineProblem(result.Files.Mode, request.Files.Context, phrase, result.PhraseCount, total)
+		}
+		if issue.DuplicateOf != 0 || issue.VoiceProblem != "" || issue.FilesProblem != "" {
+			result.Issues = append(result.Issues, issue)
+		}
+	}
+	return result
+}
+
+func vocabularyLineProblem(mode, context, phrase string, count, total int) string {
+	var problems []string
+	switch mode {
+	case "speech-contexts":
+		if len(phrase) > modelprofile.NemotronPhraseBytes {
+			problems = append(problems, fmt.Sprintf("Phrase is %d bytes; maximum %d", len(phrase), modelprofile.NemotronPhraseBytes))
+		}
+		if count > modelprofile.NemotronPhraseCount {
+			problems = append(problems, fmt.Sprintf("Beyond the %d-phrase limit", modelprofile.NemotronPhraseCount))
+		}
+		if total > modelprofile.NemotronVocabularyBytes {
+			problems = append(problems, fmt.Sprintf("Exceeds the %d-byte vocabulary budget", modelprofile.NemotronVocabularyBytes))
+		}
+		for _, r := range phrase {
+			if unicode.IsControl(r) {
+				problems = append(problems, "Remove control characters from this phrase")
+				break
+			}
+		}
+	case "hotwords":
+		if total > compatibility.MaxTranscriptionHotwordsBytes {
+			problems = append(problems, "Exceeds the 2,048-byte vocabulary budget")
+		}
+	case "prompt":
+		used := total
+		if strings.TrimSpace(context) != "" {
+			used += len(context) + 2
+		}
+		if used > compatibility.MaxTranscriptionPromptBytes {
+			problems = append(problems, "Context and vocabulary exceed the 8,192-byte budget")
+		}
+	}
+	return strings.Join(problems, "; ")
 }
 
 func vocabularyPrompt(context, terms string) string {

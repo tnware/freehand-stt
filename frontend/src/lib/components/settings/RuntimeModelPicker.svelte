@@ -17,6 +17,8 @@
     onDiscover,
     onChoose,
     onForget,
+    compact = false,
+    immediate = false,
   }: {
     id: string;
     value: string;
@@ -26,8 +28,10 @@
     serverLoaded?: boolean;
     busy?: boolean;
     onDiscover: () => void;
-    onChoose: (model: string) => boolean;
-    onForget: () => void;
+    onChoose: (model: string) => boolean | Promise<boolean>;
+    compact?: boolean;
+    immediate?: boolean;
+    onForget?: () => void;
   } = $props();
   let open = $state(false),
     query = $state("");
@@ -41,15 +45,15 @@
   const choices = $derived(
     [...matches, ...(custom ? [custom] : [])].map((model) => ({ value: model, label: model })),
   );
-  function choose(model: string) {
-    if (model && onChoose(model)) {
+  async function choose(model: string) {
+    if (model && (await onChoose(model))) {
       open = false;
       query = "";
     }
   }
 </script>
 
-<div class="space-y-2 px-5 py-4">
+<div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
   <div class="flex items-center justify-between gap-3">
     <label for={id} class="text-sm font-medium">Model</label>
     <div class="flex items-center gap-1">
@@ -58,7 +62,7 @@
           ? "Check server"
           : "Refresh models"}</Button
       >
-      {#if savedModels.includes(value) && !serverLoaded}<Menu.Root
+      {#if onForget && savedModels.includes(value) && !serverLoaded}<Menu.Root
           ><Menu.Trigger
             aria-label="Model actions"
             class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -118,7 +122,7 @@
       <Combobox.Portal
         ><Combobox.Content
           sideOffset={4}
-          class="z-50 max-h-80 w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
         >
           {#key query}{#each choices as choice (choice.value)}
               <Combobox.Item
@@ -146,9 +150,14 @@
         </Combobox.Content></Combobox.Portal
       >
     </Combobox.Root>{/if}
-  <p id={`${id}-help`} class="text-xs leading-relaxed text-muted-foreground">
+  <p
+    id={`${id}-help`}
+    class={compact ? "sr-only" : "text-xs leading-relaxed text-muted-foreground"}
+  >
     {serverLoaded
       ? "Options apply to the model loaded by this server."
-      : "Each model keeps its own options. Save applies all your edits."}
+      : immediate
+        ? "Each model keeps its own options. Changes apply immediately."
+        : "Each model keeps its own options. Save applies all your edits."}
   </p>
 </div>

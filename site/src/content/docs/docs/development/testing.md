@@ -603,7 +603,6 @@ audio only and remains saved when realtime is active. Check the Qwen model mark
 and restricted language menus in quick settings and Settings. Successful builds
 and synthetic transport checks do not substitute for native microphone acceptance.
 
-
 ## Audio file and speech workspace layout
 
 Check Audio file and Text to speech at normal and compact desktop sizes, including
@@ -616,3 +615,23 @@ generating, playing, paused, completed, and failed states. Check the Speech sett
 popover, nested connection menu, Escape focus return, draft retention across tabs,
 and visible keyboard focus in both themes. The application Settings button must
 remain on screen when the shortcut hint is hidden at compact widths.
+
+## Speech controls, vocabulary feedback, and transcript reading
+
+Run the config/modelprofile/settings tests and frontend suite. Vocabulary cases
+cover UTF-8 phrase limits, exact duplicates with source line numbers, the first
+excess phrase and byte budget, context consumption, unsupported workflows, and
+bounded oversized-draft feedback. Speech quick-save tests cover remembered voice
+restoration, task-speed preservation, credential/draft exclusion, and failed saves.
+
+The optional `polish.spec.ts` browser checks exercise speech voice save/failure/retry
+at a short desktop size and live text following, reader scrollback, finalization,
+Jump to latest, and the next recording. Fixtures contain synthetic text and invoke
+no inference. Recheck the shared model/voice menus and speed slider in both the
+popover and full Settings page, including keyboard entry and nested-menu scrolling.
+
+In native Windows, review Vocabulary with duplicate and over-limit draft lines,
+activate a line link and verify selection/scrolling, then discard the draft. Check
+normal and compact windows, light/dark themes, long transcripts, and popup Escape
+focus return. Builds and synthetic streaming do not establish microphone or model
+inference acceptance.

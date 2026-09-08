@@ -3,7 +3,7 @@ title: Use Freehand
 description: Voice dictation, stored audio, transcript history, cleanup, and speech playback.
 ---
 
-import { Steps } from '@astrojs/starlight/components';
+import { Steps } from "@astrojs/starlight/components";
 
 Freehand is a lightweight Windows client for speech-to-text and text-to-speech
 services you choose. Choose **Voice** (the default) to dictate into another
@@ -26,12 +26,12 @@ Complete the **Voice** readiness screen before your first recording; see
 
 Choose a recording style:
 
-| | Toggle recording | Hold to talk |
-| --- | --- | --- |
-| Start | Press the shortcut once | Press and hold the shortcut |
-| Stop | Press it again | Release it |
-| Default shortcut | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd> | Unassigned; configure under **Settings → Shortcuts** |
-| Optional silence stop | Available when voice detection and automatic stop are enabled | Waits for shortcut release |
+|                       | Toggle recording                                              | Hold to talk                                         |
+| --------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
+| Start                 | Press the shortcut once                                       | Press and hold the shortcut                          |
+| Stop                  | Press it again                                                | Release it                                           |
+| Default shortcut      | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd>         | Unassigned; configure under **Settings → Shortcuts** |
+| Optional silence stop | Available when voice detection and automatic stop are enabled | Waits for shortcut release                           |
 
 <Steps>
 
@@ -132,12 +132,16 @@ icon opens direct-input and history controls. Audio file shows only its transcri
 and cleanup controls. These changes apply immediately.
 Each popover links to its full Settings page. Press Escape to close it and return
 to its toolbar button. Text to speech uses the same compact header: its **Speech** provider button opens
-the connection picker and a link to model and voice settings.
+connection, model, voice, and supported speaking-speed controls. These changes apply
+immediately to the next generation; **All speech settings** opens the full page.
 
 With history enabled, wider windows show result and history side by side. Drag
 the divider to change their widths, or focus it with Tab and use the arrow keys.
 Freehand remembers the split. Each pane scrolls independently; opening quick
-settings does not move the transcript. Narrow windows use **Result** and
+settings does not move the transcript. Long transcripts use a comfortable reading width.
+Live text follows new words until you scroll back to read earlier text. Choose
+**Jump to latest**, or scroll to the bottom, to resume following; finalization preserves
+your position when you are reading back. Narrow windows use **Result** and
 **History** view buttons to give each view the full width.
 
 Endpoint and credential changes belong in **Settings → Connections**. Feature
@@ -180,9 +184,10 @@ a microphone, recording shortcut, STT connection, or completed dictation setup.
 <Steps>
 
 1. **Open Text to speech**, then open **Speech** in the composer header to select
-   a saved connection or **Add connection…**. Then open **Model and voice settings**, set
-   the model and voice ID, turn on **Enable text to speech**, and choose **Save
-   settings**. These options also live under **Settings → Text to speech**.
+   a saved connection or **Add connection…**, then choose the model and voice directly.
+   **Refresh models** and supported **Refresh voices** read metadata without generating
+   audio; manual IDs work too. For initial setup, open **All speech settings**, choose
+   the model profile, turn on **Enable text to speech**, and choose **Save settings**.
 2. **Return to Text to speech** and enter the text you want to hear. Your unsent text
    survives switching tasks or visiting Settings, and is cleared when the window
    reloads or Freehand exits.
@@ -202,7 +207,7 @@ Playback starts on demand. Freehand does not automatically read every transcript
 
 ## Status overlay and tray
 
-The native overlay is enabled by default and can be disabled under **Settings → Overlay**. It mirrors bounded operational state such as recording, speech/silence, checkpoints, processing, and copy-required outcomes. It never renders transcript text or changes focus.
+The native overlay is enabled by default and can be disabled under **Settings → Overlay**. It mirrors bounded operational state such as recording, speech/silence, checkpoints, processing, and copy-required outcomes. With qualified realtime transcription, optional live captions show one row of provisional text. The overlay never changes focus.
 
 The tray can show or hide Freehand, open Settings or About, cancel active work,
 copy an available recovery transcript, and quit.
