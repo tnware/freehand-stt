@@ -559,11 +559,18 @@ cover stale completion, Stop fencing, and native save-dialog interleavings with 
 and shutdown. Windows CI runs the complete Go suite, including platform-specific
 input, playback, storage, and settings tests; these do not invoke inference servers.
 
-Current-result tests cover copy/clear generation admission without history.
+Current-result tests cover copy/clear and Voice playback generation admission without
+history, including stale, active, cleared, and closed results. Fake speech clients
+verify backend-owned Voice text selection without retaining history and the 4,096
+Unicode code-point boundary, including supplementary characters.
 Browser workspace fixtures cover desktop pointer/keyboard resizing, restored
 pane widths, narrow view switching, and quick-settings popovers with nested
 device/model selectors and asynchronous save outcomes. They use the actual home
-components with mocked Wails services and no inference traffic.
+components with mocked Wails services and no inference traffic. Workspace checks
+also cover Voice Listen with history off, hover/keyboard action tooltips, expiring
+copy confirmation, and preservation of supplementary Unicode in the composer.
+Copy-feedback unit tests cover repeated clicks, out-of-order completion, failure,
+and teardown.
 The split-restoration test waits for the persisted percentage to match the
 separator's final value before reloading, then checks the restored pixel width.
 A storage change alone is insufficient because a debounced earlier drag write

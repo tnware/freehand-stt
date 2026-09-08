@@ -16,7 +16,7 @@ export const test = base.extend<{ saves: Saves }>({
         : route.abort(),
     );
     await page.goto("/tests/browser/app/");
-    await expect(page.locator("#saved-connection-stt")).toHaveText("Original server");
+    await expect(page.locator("#saved-connection-stt")).toHaveValue("Original server");
     await use(page);
     expect(errors, "uncaught browser errors").toEqual([]);
   },

@@ -200,7 +200,10 @@ func New(opts Options) (*App, error) {
 		client,
 		a.playback,
 		transcripts,
-		func() (string, error) { return filetranscription.PlaybackTranscript(a.files) },
+		&tts.TranscriptSources{
+			File:  func() (string, error) { return filetranscription.PlaybackTranscript(a.files) },
+			Voice: func(generation uint64) (string, error) { return dictation.PlaybackTranscript(a.dictation, generation) },
+		},
 		a.chooseSpeechSaveFile,
 		admission,
 		a.publishTTSStatus,

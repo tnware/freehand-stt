@@ -181,6 +181,23 @@ func TestSpeakTextUsesBoundedUserInputWithoutWritingHistory(t *testing.T) {
 		t.Fatalf("TTS composer wrote transcript history: %#v", entries)
 	}
 
+	unicodeText := strings.Repeat("😀", config.MaxTTSInputCharacters)
+	if err := service.SpeakText(unicodeText); err != nil {
+		t.Fatal(err)
+	}
+	deadline = time.Now().Add(time.Second)
+	for service.CurrentStatus().Phase != Completed && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	client.mu.Lock()
+	received := client.request.Input
+	client.mu.Unlock()
+	if received != unicodeText {
+		t.Fatal("Unicode input was truncated")
+	}
+	if err := service.SpeakText(unicodeText + "😀"); err == nil {
+		t.Fatal("oversized Unicode accepted")
+	}
 	tooLong := strings.Repeat("a", config.MaxTTSInputCharacters+1)
 	if err := service.SpeakText(tooLong); err == nil {
 		t.Fatal("expected oversized speech input to fail")
@@ -476,5 +493,46 @@ func TestPreviewVoiceForwardsDraftIntoTheCapturedPlaybackRequest(t *testing.T) {
 	}
 	if service.CurrentStatus().Source != SourcePreview {
 		t.Fatal("preview used another workflow")
+	}
+}
+
+func TestPlayVoiceTranscriptWithoutHistory(t *testing.T) {
+	wav, _ := audio.WAV([]byte{1, 0, 2, 0})
+	client := &speechClientFake{wav: wav}
+	store := history.NewStore(false, nil)
+	profileCalls := 0
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
+		profileCalls++
+		return settings.TextToSpeechProfile{Settings: config.TextToSpeechSettings{Enabled: true, BaseURL: "https://example.test/v1", AuthenticationMode: config.AuthenticationModeNone, Model: "tts-model", Voice: "voice", Speed: 1, TimeoutSeconds: 30}}, nil
+	}, client, &playerFake{}, store, &TranscriptSources{Voice: func(generation uint64) (string, error) {
+		if generation != 3 {
+			return "", errors.New("stale result")
+		}
+		return "backend voice result", nil
+	}}, nil, nil, nil, nil)
+	defer func() { _ = service.ServiceShutdown() }()
+	if err := service.PlayVoiceTranscript(2); err == nil || profileCalls != 0 {
+		t.Fatal("stale selection reached speech profile")
+	}
+	if err := service.PlayVoiceTranscript(3); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(time.Second)
+	for service.CurrentStatus().Phase != Completed && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	client.mu.Lock()
+	request, calls := client.request, client.calls
+	client.mu.Unlock()
+	status := service.CurrentStatus()
+	if calls != 1 || request.Input != "backend voice result" || status.Source != SourceVoice || status.Phase != Completed {
+		t.Fatalf("calls=%d request=%+v status=%+v", calls, request, status)
+	}
+	if len(store.Entries()) != 0 {
+		t.Fatal("playback retained history")
+	}
+	service.texts.Voice = nil
+	if err := service.PlayVoiceTranscript(3); err == nil {
+		t.Fatal("missing source accepted")
 	}
 }

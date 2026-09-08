@@ -352,6 +352,7 @@ const serviceWithStatus = (
       }),
     PlayHistoryEntry: () => CancellablePromise.resolve(),
     PlayFileTranscript: () => CancellablePromise.resolve(),
+    PlayVoiceTranscript: () => CancellablePromise.resolve(),
     PreviewVoice: () => CancellablePromise.resolve(),
     SpeakText: () => CancellablePromise.resolve(),
     Pause: () => CancellablePromise.resolve(),

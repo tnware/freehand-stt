@@ -8,6 +8,9 @@
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import TrashIcon from "@lucide/svelte/icons/trash-2";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
+  import { onDestroy } from "svelte";
+  import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
+  import TooltipButton from "$lib/components/ui/button/TooltipButton.svelte";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import * as HistoryService from "$bindings/history/service";
@@ -172,25 +175,19 @@
     comparisonEntries = [...comparisonEntries, id];
   }
 
-  let copiedKey = $state("");
-  let liveCopied = $state(false);
+  const feedback = new CopyFeedback();
+  onDestroy(() => feedback.dispose());
 
   async function copyText(entry: HistoryEntry, version: HistoryTextVersion) {
-    const copied =
+    await feedback.copy(`${entry.id}:${version}`, () =>
       version === HistoryTextVersion.HistoryTextFinal || !onCopyVersion
-        ? await onCopy(entry.id)
-        : await onCopyVersion(entry.id, version);
-    if (!copied) return;
-    copiedKey = `${entry.id}:${version}`;
-    setTimeout(() => {
-      if (copiedKey === `${entry.id}:${version}`) copiedKey = "";
-    }, 1600);
+        ? onCopy(entry.id)
+        : onCopyVersion(entry.id, version),
+    );
   }
 
   async function copyLive() {
-    if (!onCopyLive || !(await onCopyLive())) return;
-    liveCopied = true;
-    setTimeout(() => (liveCopied = false), 1600);
+    if (onCopyLive) await feedback.copy("live", onCopyLive);
   }
 
   const detailsAvailable = (entry: HistoryEntry): boolean =>
@@ -285,11 +282,11 @@
             <span class="font-mono text-[10px] text-primary">audio file · {live.status}</span>
             <div class="flex items-center">
               {#if ttsEnabled && onListenLive && !live.working}
-                <Button
+                <TooltipButton
                   variant="ghost"
                   size="icon-xs"
                   disabled={!ttsAvailable}
-                  aria-label="Listen to audio file transcript"
+                  label="Listen to audio file transcript"
                   onclick={onListenLive}
                 >
                   {#if ttsStatus?.source === TTSSource.SourceFile && ttsStatus.phase === TTSPhase.Generating}
@@ -297,23 +294,23 @@
                   {:else}
                     <Volume2Icon />
                   {/if}
-                </Button>
+                </TooltipButton>
               {/if}
-              <Button
+              <TooltipButton
                 variant="ghost"
                 size="icon-xs"
                 disabled={!live.canCopy}
-                aria-label={live.canCopy
+                label={live.canCopy
                   ? "Copy audio file transcript"
                   : "Copy is available when transcription finishes"}
                 onclick={() => void copyLive()}
               >
-                {#if liveCopied}
+                {#if feedback.key === "live"}
                   <CheckIcon class="text-success" />
                 {:else}
                   <ClipboardIcon />
                 {/if}
-              </Button>
+              </TooltipButton>
             </div>
           </div>
         </article>
@@ -412,20 +409,20 @@
                       >
                         Raw · {compactModel(entry.details.model)}
                       </span>
-                      <Button
+                      <TooltipButton
                         variant="ghost"
                         size="icon-xs"
-                        aria-label={copiedKey === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`
+                        label={feedback.key === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`
                           ? "Raw transcript copied"
                           : "Copy raw transcript"}
                         onclick={() => void copyText(entry, HistoryTextVersion.HistoryTextRaw)}
                       >
-                        {#if copiedKey === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`}
+                        {#if feedback.key === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`}
                           <CheckIcon class="text-success" />
                         {:else}
                           <ClipboardIcon />
                         {/if}
-                      </Button>
+                      </TooltipButton>
                     </div>
                     <p
                       class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
@@ -451,22 +448,22 @@
                           · {processingProfileName([], entry.details.processing.preset)}
                         {/if}
                       </span>
-                      <Button
+                      <TooltipButton
                         variant="ghost"
                         size="icon-xs"
-                        aria-label={copiedKey ===
+                        label={feedback.key ===
                         `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`
                           ? "Cleaned transcript copied"
                           : "Copy cleaned transcript"}
                         onclick={() =>
                           void copyText(entry, HistoryTextVersion.HistoryTextProcessed)}
                       >
-                        {#if copiedKey === `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`}
+                        {#if feedback.key === `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`}
                           <CheckIcon class="text-success" />
                         {:else}
                           <ClipboardIcon />
                         {/if}
-                      </Button>
+                      </TooltipButton>
                     </div>
                     <p
                       class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
@@ -526,11 +523,11 @@
             <div class="history-actions flex shrink-0 items-center">
               <div class="history-utilities flex items-center">
                 {#if ttsEnabled && onListen}
-                  <Button
+                  <TooltipButton
                     variant="ghost"
                     size="icon-xs"
                     disabled={!ttsAvailable}
-                    aria-label={ttsStatus?.historyID === entry.id &&
+                    label={ttsStatus?.historyID === entry.id &&
                     ttsStatus.phase === TTSPhase.Generating
                       ? "Generating speech for this transcript"
                       : "Listen to transcript"}
@@ -541,44 +538,44 @@
                     {:else}
                       <Volume2Icon />
                     {/if}
-                  </Button>
+                  </TooltipButton>
                 {/if}
-                <Button
+                <TooltipButton
                   variant="ghost"
                   size="icon-xs"
                   class="text-primary"
-                  aria-label={copiedKey === `${entry.id}:${finalVersion}`
+                  label={feedback.key === `${entry.id}:${finalVersion}`
                     ? "Transcript copied"
                     : hasCleaned
                       ? "Copy cleaned transcript"
                       : "Copy transcript"}
                   onclick={() => void copyText(entry, finalVersion)}
                 >
-                  {#if copiedKey === `${entry.id}:${finalVersion}`}
+                  {#if feedback.key === `${entry.id}:${finalVersion}`}
                     <CheckIcon class="text-success" />
                   {:else}
                     <ClipboardIcon />
                   {/if}
-                </Button>
-                <Button
+                </TooltipButton>
+                <TooltipButton
                   variant="ghost"
                   size="icon-xs"
                   disabled={!detailsAvailable(entry)}
-                  aria-label="View transcription run details"
+                  label="View transcription run details"
                   onclick={() => void openDetails(entry)}
                 >
                   <InfoIcon />
-                </Button>
+                </TooltipButton>
                 <span class="mx-0.5 h-4 w-px shrink-0 bg-hairline" aria-hidden="true"></span>
-                <Button
+                <TooltipButton
                   variant="ghost"
                   size="icon-xs"
                   class="hover:text-destructive"
-                  aria-label="Remove transcript from history"
+                  label="Remove transcript from history"
                   onclick={() => void onDelete(entry.id)}
                 >
                   <TrashIcon />
-                </Button>
+                </TooltipButton>
               </div>
             </div>
           </div>

@@ -7,7 +7,7 @@
   import SquareIcon from "@lucide/svelte/icons/square";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
-  import { Button } from "$lib/components/ui/button";
+  import TooltipButton from "$lib/components/ui/button/TooltipButton.svelte";
   import { Progress } from "$lib/components/ui/progress";
   import { TTSPhase, TTSSource, type TTSStatus } from "$lib/state";
 
@@ -43,7 +43,9 @@
         ? "Voice preview"
         : status.source === TTSSource.SourceFile
           ? "Audio file transcript"
-          : "Transcript playback",
+          : status.source === TTSSource.SourceVoice
+            ? "Voice transcript"
+            : "Transcript playback",
   );
   const phaseLabel = $derived.by(() => {
     if (status.phase === TTSPhase.Generating) return "Generating";
@@ -86,42 +88,45 @@
     </div>
     <div class="flex shrink-0 items-center">
       {#if status.canPause}
-        <Button variant="ghost" size="icon-sm" aria-label="Pause speech playback" onclick={onPause}
-          ><PauseIcon /></Button
-        >
-      {:else if status.canResume}
-        <Button
+        <TooltipButton
           variant="ghost"
           size="icon-sm"
-          aria-label="Resume speech playback"
-          onclick={onResume}><PlayIcon /></Button
+          label="Pause speech playback"
+          onclick={onPause}><PauseIcon /></TooltipButton
+        >
+      {:else if status.canResume}
+        <TooltipButton
+          variant="ghost"
+          size="icon-sm"
+          label="Resume speech playback"
+          onclick={onResume}><PlayIcon /></TooltipButton
         >
       {/if}
-      <Button
+      <TooltipButton
         variant="ghost"
         size="icon-sm"
         disabled={!status.canRestart}
-        aria-label="Restart speech playback"
-        onclick={onRestart}><RotateCcwIcon /></Button
+        label="Restart speech playback"
+        onclick={onRestart}><RotateCcwIcon /></TooltipButton
       >
       {#if status.canSave}
-        <Button variant="ghost" size="icon-sm" aria-label="Save generated speech" onclick={onSave}
-          ><DownloadIcon /></Button
+        <TooltipButton variant="ghost" size="icon-sm" label="Save generated speech" onclick={onSave}
+          ><DownloadIcon /></TooltipButton
         >
       {/if}
       {#if status.canStop}
-        <Button
+        <TooltipButton
           variant="ghost"
           size="icon-sm"
-          aria-label="Stop and release speech playback"
-          onclick={onStop}><SquareIcon /></Button
+          label="Stop and release speech playback"
+          onclick={onStop}><SquareIcon /></TooltipButton
         >
       {:else if status.canClear}
-        <Button
+        <TooltipButton
           variant="ghost"
           size="icon-sm"
-          aria-label="Clear generated speech from memory"
-          onclick={onClear}><Trash2Icon /></Button
+          label="Clear generated speech from memory"
+          onclick={onClear}><Trash2Icon /></TooltipButton
         >
       {/if}
     </div>

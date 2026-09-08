@@ -281,11 +281,11 @@
                   if (inputMode === "file") void session.files.clearAudioFile();
                   else void session.dictation.clearCurrent();
                 }}
-                onListen={inputMode === "file" &&
-                runtimeSettings?.textToSpeech.enabled &&
-                !voiceActive &&
-                !fileWorking
-                  ? () => session.speech.listenFileTranscript()
+                onListen={runtimeSettings?.textToSpeech.enabled && !voiceActive && !fileWorking
+                  ? () =>
+                      inputMode === "file"
+                        ? session.speech.listenFileTranscript()
+                        : session.speech.listenVoiceTranscript(session.dictation.status.generation)
                   : undefined}
               >
                 {#snippet quickSettings()}

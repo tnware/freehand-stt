@@ -138,3 +138,49 @@ test("desktop split resizes with pointer and keyboard and restores the chosen wi
     .toBeLessThan(2);
   await page.screenshot({ path: testInfo.outputPath("workspace-light.png") });
 });
+
+test("voice playback works with history off and exposes keyboard tooltips", async ({ page }) => {
+  await page.goto("/tests/browser/app/?view=workspace&history=off");
+  const result = page.getByRole("region", { name: "Current result", exact: true });
+  await result.getByRole("button", { name: "Listen", exact: true }).click();
+  await expect(page.getByText("Voice transcript · Complete", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Restart speech playback", exact: true }).focus();
+  await expect(page.getByRole("tooltip")).toHaveText("Restart speech playback");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
+
+test("copy confirmation expires consistently and history icons have hover help", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?view=workspace");
+  const result = page.getByRole("region", { name: "Current result", exact: true });
+  await result.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(result.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
+  await expect(result.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
+  const copyHistory = page.getByRole("button", { name: "Copy transcript", exact: true }).first();
+  await copyHistory.hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Copy transcript");
+  await copyHistory.click();
+  await expect(page.getByRole("button", { name: "Transcript copied", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Transcript copied", exact: true })).toHaveCount(0);
+});
+
+test("speech input preserves supplementary Unicode and explains the character limit", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?view=workspace");
+  await page.getByRole("tab", { name: "Text to speech", exact: true }).click();
+  const composer = page.getByRole("textbox", { name: "Text to speak", exact: true });
+  const text = "😀".repeat(4096);
+  await composer.fill(text);
+  await expect(composer).toHaveValue(text);
+  await expect(page.getByRole("button", { name: "Speak", exact: true })).toBeEnabled();
+  await composer.fill(text + "😀");
+  await expect(composer).toHaveValue(text + "😀");
+  await expect(composer).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText("Shorten text to speak", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Speak", exact: true })).toBeDisabled();
+  await composer.press("Backspace");
+  await expect(page.getByRole("button", { name: "Speak", exact: true })).toBeEnabled();
+});

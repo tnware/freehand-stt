@@ -190,5 +190,20 @@ func Active(service *Service) bool {
 	return state != Idle && state != Failed
 }
 
+// PlaybackTranscript is a backend-only capability for the selected completed result.
+// It does not require history or expose a renderer-controlled text argument.
+func PlaybackTranscript(service *Service, generation uint64) (string, error) {
+	if service == nil || service.recorder == nil {
+		return "", errors.New("voice transcription is unavailable")
+	}
+	c := service.recorder
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed.Load() || generation != c.status.Generation || c.status.Transcript == "" || (c.status.State != Idle && c.status.State != Failed) {
+		return "", errors.New("current transcript is no longer available")
+	}
+	return c.status.Transcript, nil
+}
+
 func (s *Service) CopyCurrent(generation uint64) error  { return s.recorder.copyCurrent(generation) }
 func (s *Service) ClearCurrent(generation uint64) error { return s.recorder.clearCurrent(generation) }

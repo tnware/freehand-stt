@@ -7,6 +7,7 @@ export type SpeechStateService = Pick<
   | "CurrentStatus"
   | "PlayHistoryEntry"
   | "PlayFileTranscript"
+  | "PlayVoiceTranscript"
   | "PreviewVoice"
   | "SpeakText"
   | "Pause"
@@ -65,6 +66,15 @@ export class SpeechState {
     this.#messages.clear();
     try {
       await this.#service.PlayFileTranscript();
+    } catch (cause) {
+      this.#messages.fail(cause);
+    }
+  }
+
+  async listenVoiceTranscript(generation: number) {
+    this.#messages.clear();
+    try {
+      await this.#service.PlayVoiceTranscript(generation);
     } catch (cause) {
       this.#messages.fail(cause);
     }

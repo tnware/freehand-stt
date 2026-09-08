@@ -33,6 +33,7 @@ describe("SpeechState", () => {
     const service = bindings();
     const PlayHistoryEntry = vi.fn(service.PlayHistoryEntry);
     const PlayFileTranscript = vi.fn(service.PlayFileTranscript);
+    const PlayVoiceTranscript = vi.fn(service.PlayVoiceTranscript);
     const SpeakText = vi.fn(service.SpeakText);
     const Pause = vi.fn(service.Pause);
     const Resume = vi.fn(service.Resume);
@@ -46,6 +47,7 @@ describe("SpeechState", () => {
         ...service,
         PlayHistoryEntry,
         PlayFileTranscript,
+        PlayVoiceTranscript,
         SpeakText,
         Pause,
         Resume,
@@ -59,6 +61,7 @@ describe("SpeechState", () => {
     try {
       await speech.listenHistoryEntry(7, HistoryTextVersion.HistoryTextRaw);
       await speech.listenFileTranscript();
+      await speech.listenVoiceTranscript(17);
       await speech.speakText("user-authored text");
       await speech.pauseTTS();
       await speech.resumeTTS();
@@ -72,6 +75,7 @@ describe("SpeechState", () => {
         7,
         HistoryTextVersion.HistoryTextRaw,
       );
+      expect(PlayVoiceTranscript).toHaveBeenCalledExactlyOnceWith(17);
       expect(SpeakText).toHaveBeenCalledExactlyOnceWith("user-authored text");
       for (const call of [PlayFileTranscript, Pause, Resume, Restart, Stop, SaveAudio, ClearAudio])
         expect(call).toHaveBeenCalledExactlyOnceWith();

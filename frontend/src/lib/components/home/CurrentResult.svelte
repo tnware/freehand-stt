@@ -1,6 +1,7 @@
 <script lang="ts">
   import { followTranscript } from "$lib/utils/transcriptScroll";
-  import type { Snippet } from "svelte";
+  import { onDestroy, type Snippet } from "svelte";
+  import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
   import { Button } from "$lib/components/ui/button";
   let {
     live = false,
@@ -35,12 +36,13 @@
     onClear: () => void;
     onListen?: () => void;
   } = $props();
-  let copiedKey = $state("");
+  const feedback = new CopyFeedback();
+  onDestroy(() => feedback.dispose());
   let following = $state(true);
   let jump = $state(0);
   async function copy() {
     const snapshot = resultKey;
-    if (await onCopy()) copiedKey = snapshot;
+    await feedback.copy(snapshot, onCopy);
   }
 </script>
 
@@ -75,7 +77,7 @@
         >{/if}
       <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
       <Button variant="outline" size="sm" disabled={working || !canCopy} onclick={copy}
-        >{copiedKey === resultKey ? "Copied" : "Copy"}</Button
+        >{feedback.key === resultKey ? "Copied" : "Copy"}</Button
       >
     {/if}
   </div>

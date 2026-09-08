@@ -107,15 +107,26 @@
     <Textarea
       id="speech-composer-text"
       bind:value={text}
-      maxlength={maximumCharacters}
+      aria-invalid={characterCount > maximumCharacters}
+      aria-describedby="speech-character-count"
       disabled={working}
       class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-4 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-inset disabled:opacity-100"
       placeholder="Write or paste text to speak…"
     />
   </div>
   <div class="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-hairline px-4">
-    <span class="text-xs tabular-nums text-muted-foreground" aria-label="Character count">
+    <span
+      id="speech-character-count"
+      class={cn(
+        "text-xs tabular-nums",
+        characterCount > maximumCharacters ? "text-destructive" : "text-muted-foreground",
+      )}
+      aria-label="Character count"
+    >
       {characterCount.toLocaleString()} / {maximumCharacters.toLocaleString()}
+      {#if characterCount > maximumCharacters}<span role="status">
+          · Shorten text to speak</span
+        >{/if}
     </span>
     <div class="flex items-center gap-2">
       <Button variant="ghost" size="sm" disabled={!text || working} onclick={() => (text = "")}

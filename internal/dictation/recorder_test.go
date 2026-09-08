@@ -369,3 +369,37 @@ func TestCurrentResultIsIndependentOfHistoryAndGenerationBound(t *testing.T) {
 		t.Fatal("cleared result copied")
 	}
 }
+
+func TestPlaybackTranscriptRequiresSelectedCompletedResult(t *testing.T) {
+	c := New(capFake{}, &platFake{}, nil, nil, settingsFake{}, nil)
+	service := &Service{recorder: c.recorder}
+	c.status = Status{State: Idle, Generation: 3, Transcript: "current result"}
+	if text, err := PlaybackTranscript(service, 3); err != nil || text != "current result" {
+		t.Fatalf("text=%q err=%v", text, err)
+	}
+	if _, err := PlaybackTranscript(service, 2); err == nil {
+		t.Fatal("stale result accepted")
+	}
+	c.status.State = Recording
+	if _, err := PlaybackTranscript(service, 3); err == nil {
+		t.Fatal("active recording accepted")
+	}
+	c.status.State = Failed
+	if text, err := PlaybackTranscript(service, 3); err != nil || text != "current result" {
+		t.Fatal("recoverable result unavailable")
+	}
+	if err := c.clearCurrent(3); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := PlaybackTranscript(service, 3); err == nil {
+		t.Fatal("cleared result accepted")
+	}
+	c.status.Transcript = "closed result"
+	c.closed.Store(true)
+	if _, err := PlaybackTranscript(service, 3); err == nil {
+		t.Fatal("closed recorder accepted")
+	}
+	if _, err := PlaybackTranscript(nil, 3); err == nil {
+		t.Fatal("missing owner accepted")
+	}
+}

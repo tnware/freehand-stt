@@ -3,6 +3,7 @@
   import { CancellablePromise } from "@wailsio/runtime";
   import { ID as ModelProfileID } from "$bindings/modelprofile";
   import { modelOptions } from "$lib/utils/modelSettings";
+  import { TTSPhase, TTSSource } from "$lib/state";
   import { Purpose } from "$bindings/savedconnection";
   import { AuthenticationMode } from "$bindings/config";
   import { Session } from "$lib/stores/session.svelte";
@@ -19,7 +20,7 @@
 
   let current = structuredClone(settings);
   current.setupCompleted = true;
-  current.historyEnabled = true;
+  current.historyEnabled = new URLSearchParams(location.search).get("history") !== "off";
   current.authenticationMode = AuthenticationMode.AuthenticationModeNone;
   current.postProcessing.model = "cleanup/standard";
   current.voiceTranscription = {
@@ -124,6 +125,21 @@
   });
   const session = new Session(
     serviceWithStatus(() => CancellablePromise.resolve(idle), {
+      speech: {
+        PlayVoiceTranscript: (generation) => {
+          if (generation !== 7)
+            return CancellablePromise.reject(new Error("Wrong result generation"));
+          session.speech.applyStatus({
+            ...session.speech.status,
+            generation: 1,
+            source: TTSSource.SourceVoice,
+            phase: TTSPhase.Completed,
+            canRestart: true,
+            canClear: true,
+          });
+          return CancellablePromise.resolve();
+        },
+      },
       settings: {
         SaveSettings: (request) => saves.save(structuredClone($state.snapshot(request))),
       },
@@ -132,8 +148,8 @@
   session.editor.applySettingsSnapshot(structuredClone(current));
   session.editor.devices = [{ id: "desk-mic", name: "Desk microphone", default: true }];
   session.editor.connection = structuredClone(connectionResult);
-  session.dictation.status = { ...idle, transcript: "Testing, testing." };
-  session.history.entries = [1, 2].map((id) => ({
+  session.dictation.status = { ...idle, generation: 7, transcript: "Testing, testing." };
+  session.history.entries = (current.historyEnabled ? [1, 2] : []).map((id) => ({
     ...structuredClone(historyEntry),
     id,
     text: "Testing, testing.",
