@@ -436,13 +436,25 @@ confirm its selectors match Settings and its cards use the same single border
 and fill. Browser fixtures and native builds do not replace interactive Windows acceptance.
 Use only operator-selected models for deliberate live inference acceptance.
 
-For connection navigation, open Edit connection from each feature and confirm Back and
-save return to that feature. Editing from Connections returns to the library. Unchanged
-forms leave without a prompt; changed fields or a replacement/removal key require
-discard confirmation on Back, Cancel, or another sidebar section. Keep editing and
-Escape retain the draft; discard clears the key without saving. Check keyboard section
-order against the visible Capture, Features, and Application groups, including narrow
-layouts.
+For connection navigation, open Settings → Connections and Manage connections from
+each workflow picker: both open the list. Edit connection opens the selected row.
+At wider widths, keep the searchable list visible beside the editor; below 760px,
+All connections must return to the list. Verify all seven representative entries
+fit comfortably in a normal window, list and form scroll independently, and Save
+and Cancel remain visible at compact heights. Check both action menus for readable
+single-line labels, workflow icons/checkmarks, and compact disabled Delete state.
+
+Change a field, then switch rows, use All connections, or close: Keep editing and
+Escape retain the draft, Discard clears it without saving, and Save and continue
+completes the pending navigation only after a successful save. A failed save keeps
+the draft and shows the error. Repeat with a transient replacement key. Add from a
+workflow, save and set up, and confirm the matching model settings open. Creating
+with Save for later must leave active selections unchanged. Use for selects only
+its chosen workflow, while existing model settings and unsaved Settings drafts
+retain their protections. Check keyboard navigation, searchable pickers, and list
+empty/no-match states. Metadata discovery must target only the opened workflow,
+reuse results, require explicit retries after failure, and reject old completions
+when the selected connection changes.
 
 For dark-palette review, check the main window, Settings, About, connection/model
 menus, dialogs, inputs, focused controls, disabled controls, and recording overlay.
@@ -619,15 +631,15 @@ remain on screen when the shortcut hint is hidden at compact widths.
 
 ## Speech controls, vocabulary feedback, and transcript reading
 
-Connection-card tests retain separate results, reject missing IDs, preserve active
+Connection-manager tests retain separate results, reject missing IDs, preserve active
 selections, and invalidate cached/in-flight checks on confirmed settings snapshots,
 even when public endpoint fields are unchanged. Model-source tests cover combined
 saved/server/draft labels and manually entered IDs. Navigation tests keep keyboard
 order aligned with the displayed groups.
 
-Review Connections at normal and compact window sizes: direct Check connection,
-per-card status and expandable details, active-use badges, and independent sidebar
-scrolling. Review the shared model picker in every workflow and quick panel,
+Review Connections at normal and compact window sizes: list-first navigation,
+collapsed diagnostics for the selected entry, active-use summaries, and independent
+list/form scrolling. Review the shared model picker in every workflow and quick panel,
 including a failed save, retry, manual ID, and long list. Sticky Settings headings
 must leave focused validation controls visible. These checks use metadata or
 synthetic fixtures and require no inference inventory probes.

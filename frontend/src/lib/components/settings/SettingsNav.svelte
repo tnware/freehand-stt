@@ -6,6 +6,7 @@
     sectionsInGroup,
   } from "$lib/navigation";
   import type { SettingsSectionID } from "$lib/navigation";
+  import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
   import { cn } from "$lib/utils";
 
   let {
@@ -50,7 +51,7 @@
               SETTINGS_SECTIONS.length) %
             SETTINGS_SECTIONS.length;
     const next = SETTINGS_SECTIONS[nextIndex];
-    onSelect(next.id);
+    if (next.id !== "connections") onSelect(next.id);
     queueMicrotask(() => {
       navigationRef?.querySelector<HTMLElement>(`[data-settings-section="${next.id}"]`)?.focus();
     });
@@ -84,6 +85,9 @@
         >
           <section.icon class="size-[15px] shrink-0" />
           <span class="hidden truncate sm:inline">{section.label}</span>
+          {#if section.id === "connections"}<ExternalLinkIcon
+              class="ml-auto hidden size-3 text-muted-foreground sm:block"
+            />{/if}
           {#if invalidSection === section.id}<span
               class="font-semibold text-destructive"
               aria-hidden="true">!</span

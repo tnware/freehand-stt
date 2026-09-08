@@ -173,7 +173,7 @@ describe("saved connection editor", () => {
 });
 
 describe("task connection creation", () => {
-  it.each([Purpose.Transcription, Purpose.Cleanup, Purpose.Speech])(
+  it.each([Purpose.Voice, Purpose.Transcription, Purpose.Cleanup, Purpose.Speech])(
     "preselects %s and requests one atomic save",
     async (purpose) => {
       const next = configured();
@@ -297,5 +297,67 @@ describe("connection card checks", () => {
     expect(editor.savedConnectionCheckErrors.second).toContain("Try again");
     await editor.testSavedConnection("missing");
     expect(services.connection.TestSavedConnection).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("workflow metadata discovery", () => {
+  it("loads only the opened workflow and reuses its metadata", async () => {
+    const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
+    const speech = vi.spyOn(services.connection, "TestTextToSpeechConnection");
+    const files = vi.spyOn(services.connection, "TestConnection");
+    const cleanup = vi.spyOn(services.connection, "TestPostProcessingConnection");
+    const voice = vi.spyOn(services.connection, "TestSavedConnection");
+    const { editor } = createEditor(services);
+    editor.applySettingsSnapshot(configured());
+    await editor.ensureConnectionMetadata(Purpose.Speech);
+    await editor.ensureConnectionMetadata(Purpose.Speech);
+    expect(speech).toHaveBeenCalledTimes(1);
+    expect(files).not.toHaveBeenCalled();
+    expect(cleanup).not.toHaveBeenCalled();
+    expect(voice).not.toHaveBeenCalled();
+  });
+  it("does not probe unsaved settings or automatically retry failed requests", async () => {
+    const probe = vi.fn(() => CancellablePromise.reject(new Error("offline")));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle), {
+        connection: { TestTextToSpeechConnection: probe },
+      }),
+    );
+    editor.applySettingsSnapshot(configured());
+    editor.draft!.model = "unsaved";
+    await editor.ensureConnectionMetadata(Purpose.Speech);
+    expect(probe).not.toHaveBeenCalled();
+    editor.draft!.model = editor.applied!.model;
+    await editor.ensureConnectionMetadata(Purpose.Speech);
+    await editor.ensureConnectionMetadata(Purpose.Speech);
+    expect(probe).toHaveBeenCalledTimes(1);
+    await editor.testTextToSpeechConnection();
+    expect(probe).toHaveBeenCalledTimes(2);
+  });
+  it("loads a newly selected connection once the previous check finishes", async () => {
+    const response = CancellablePromise.withResolvers<typeof connectionResult>();
+    const probe = vi
+      .fn()
+      .mockImplementationOnce(() => response.promise)
+      .mockImplementation(() => CancellablePromise.resolve(connectionResult));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle), {
+        connection: { TestTextToSpeechConnection: probe },
+      }),
+    );
+    editor.applySettingsSnapshot(configured());
+    const first = editor.ensureConnectionMetadata(Purpose.Speech);
+    const next = configured();
+    next.savedConnections.selected!.speech = "second";
+    next.textToSpeech.baseURL = "https://second.example.test/v1";
+    editor.applySettingsSnapshot(next);
+    await editor.ensureConnectionMetadata(Purpose.Speech);
+    expect(probe).toHaveBeenCalledTimes(1);
+    response.resolve(connectionResult);
+    await first;
+    expect(editor.ttsConnection).toBeNull();
+    await editor.ensureConnectionMetadata(Purpose.Speech);
+    expect(probe).toHaveBeenCalledTimes(2);
+    expect(probe.mock.calls[1][0].baseURL).toBe(next.textToSpeech.baseURL);
   });
 });

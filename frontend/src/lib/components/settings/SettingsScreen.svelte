@@ -1,13 +1,12 @@
 <script lang="ts">
   import { SETTINGS_NAVIGATION } from "$lib/navigation";
   import VocabularySection from "./sections/VocabularySection.svelte";
-  import { setContext, tick } from "svelte";
+  import { setContext, tick, untrack } from "svelte";
   import {
     SETTINGS_VALIDATION,
     type SettingsValidationContext,
   } from "$lib/utils/settingsValidation";
   import * as Dialog from "$lib/components/ui/dialog";
-  import ConnectionsSection from "$lib/components/settings/sections/ConnectionsSection.svelte";
   import * as WindowingService from "$bindings/windowing/service";
   import SavedConnectionPicker from "$lib/components/settings/SavedConnectionPicker.svelte";
   import { Purpose } from "$bindings/savedconnection";
@@ -55,6 +54,27 @@
 
   const section = $derived(sectionByID(active));
   const dirty = $derived(session.editor.dirty);
+  const workflowPurpose = $derived(
+    active === "voice-transcription"
+      ? Purpose.Voice
+      : active === "server"
+        ? Purpose.Transcription
+        : active === "processing"
+          ? Purpose.Cleanup
+          : active === "speech"
+            ? Purpose.Speech
+            : null,
+  );
+  $effect(() => {
+    const purpose = workflowPurpose;
+    const id = purpose && session.editor.applied?.savedConnections.selected?.[purpose];
+    const checking = purpose && session.editor.connectionMetadataBusy(purpose);
+    if (visible && purpose && id && !checking)
+      untrack(() => {
+        void session.editor.ensureConnectionMetadata(purpose);
+      });
+  });
+
   setContext<SettingsValidationContext>(SETTINGS_VALIDATION, {
     get issue() {
       return session.editor.validationIssue;
@@ -130,7 +150,20 @@
     if (!visible) pendingConnectionAction = null;
   });
   setContext(SETTINGS_NAVIGATION, selectSection);
+  function browseConnections() {
+    withSavedSettings(() => {
+      void WindowingService.OpenConnectionManager({
+        id: "",
+        purpose: Purpose.$zero,
+        create: false,
+      }).catch((cause) => session.messages.reportFailure(String(cause)));
+    });
+  }
   function selectSection(id: SettingsSectionID) {
+    if (id === "connections") {
+      browseConnections();
+      return;
+    }
     active = id;
     if (id === "audio") void session.editor.refreshDevices();
   }
@@ -266,6 +299,7 @@
                         ? Purpose.Cleanup
                         : Purpose.Speech,
                 )}
+              onBrowse={browseConnections}
               onManage={() =>
                 withSavedSettings(() => {
                   const purpose =
@@ -288,30 +322,7 @@
             />
           {/if}
           {#if active === "connections"}
-            <ConnectionsSection
-              editor={session.editor}
-              onEdit={(connection) =>
-                withSavedSettings(() => {
-                  void WindowingService.OpenConnectionManager({
-                    id: connection?.id ?? "",
-                    purpose: Purpose.$zero,
-                    create: !connection,
-                  }).catch((cause) => session.messages.reportFailure(String(cause)));
-                })}
-              error={session.messages.error}
-              onBack={() => {}}
-              onSaved={() => {}}
-              onOpenFeature={(p) =>
-                selectSection(
-                  p === Purpose.Voice
-                    ? "voice-transcription"
-                    : p === Purpose.Transcription
-                      ? "server"
-                      : p === Purpose.Cleanup
-                        ? "processing"
-                        : "speech",
-                )}
-            />
+            <Button onclick={browseConnections}>Open connections</Button>
           {:else if active === "voice-transcription"}
             {#if session.editor.draft.savedConnections.selected?.voice}<div
                 class="rounded-xl border border-hairline bg-layer-fill px-5 py-4"

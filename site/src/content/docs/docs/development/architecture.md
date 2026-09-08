@@ -73,9 +73,14 @@ Named connections represent reusable servers, with explicit supported uses and
 independent active selections for Voice transcription, audio-file transcription, cleanup, and playback. One ID
 can be selected by multiple features; their models and runtime options remain
 independent while URL, profile, authentication, and credential reference are shared. The shared connection editor owns endpoint/authentication/profile fields.
-The Connections page provides library creation, editing, duplication, deletion,
-and saved metadata tests. Library creation is inactive; task pickers reuse that
-editor in a separate, purpose-scoped native Connection Manager window. Its explicit Save and use action sends
+Settings and workflow pickers open the same native Connection Manager: a compact
+searchable list, a persistent list beside the editor at desktop widths, and an
+explicit All connections route at every size. It owns library creation, editing,
+duplication, deletion, and saved metadata tests. Its renderer guards list, row,
+workflow, and close navigation with save/discard/keep-editing handling; credential
+drafts never cross windows. Workflow pickers search the same catalog and retain
+Add and Manage actions outside the scrolling results. Library creation offers
+Save for later or a workflow setup destination. Its explicit Save and set up action sends
 `Change.ActivateFor` with Create so catalog, selection, settings, and key references
 commit together. Storage rejects invalid or unsupported activation purposes and
 activation on other actions. New selections still require model configuration;
@@ -552,7 +557,7 @@ Quick controls remain disabled while the Settings window owns an editable draft.
 saved/server/draft provenance across Voice, files, cleanup, and speech. Its profile
 summary is descriptive; model IDs never select behavior. `QuickSaveStatus` reads
 field-scoped pending, saved, and failed state from the existing editor owner.
-Saved-connection cards keep metadata results by catalog ID in that same editor;
+The connection manager keeps metadata results by catalog ID in that same editor;
 every confirmed settings adoption or credential-draft teardown invalidates the
 cache and in-flight revisions, including credential-only changes invisible to the
 renderer. No diagnostic result is persisted.

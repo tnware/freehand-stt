@@ -3,13 +3,16 @@ title: Saved connections
 description: Create server connections in one place, then choose which connection each feature uses.
 ---
 
-Start from the task you want to use. Its connection picker offers **Add connection…**;
-feature Settings pages also have an **Add connection** button when none is selected.
-Add and Edit open a separate, reusable **Connection Manager** window.
-The library is also available in **Settings → Connections**. Reopening the manager
-while it is open preserves an unfinished edit. Closing with unsaved changes offers
-Keep editing or Discard; closing clears the transient credential draft.
+**Settings → Connections** opens the Connection Manager as a searchable list.
+The same list is available through **Manage connections…** in each workflow's
+connection picker. Search by name, backend, or address; select a row to edit it.
+The list stays beside the editor in wider windows. **All connections** returns to
+the full list at any size, and Save and Cancel stay visible below the form.
+
 New installations start with an empty list; upgrading retains existing connections.
+Reopening the manager preserves unfinished edits. Switching rows, returning to the
+list, or closing with changes offers **Keep editing**, **Discard**, or **Save and
+continue**. Closing clears the transient credential draft.
 
 A connection represents one reusable server: its URL, backend profile, authentication,
 and HTTP permission. Voice transcription, Audio-file transcription, Cleanup, and Text to speech select connections
@@ -22,19 +25,19 @@ quick popover keeps its compact connection selector.
 ## Add a connection while setting up a task
 
 1. Open the task's connection picker and choose **Add connection…**.
-2. Enter a recognizable name, choose the server's **Compatibility profile**, and
+2. Enter a recognizable name, choose the server's **Backend**, and
    enter its base URL. The task you came from is already selected under supported uses.
 3. Configure authentication and explicitly allow HTTP if your trusted server uses it.
-   **Also use this server for other tasks** lets you declare additional operations
-   the deployment exposes; this does not select it for those tasks.
-4. Choose **Save and use connection**. Saving and selecting happen together. On
+   Expand **Available in … workflows** to declare additional operations the deployment
+   exposes; this does not select it for those tasks.
+4. Choose **Save and set up**. Saving and selecting happen together. On
    failure, the previous selection stays active and the form remains available to retry.
-5. You return to the same task or Settings page. Discover models or enter an exact model
-   ID; whisper.cpp uses its server-loaded model. Home's quick controls apply immediately.
+5. The workflow Settings page opens and loads metadata for its selected connection.
+   Choose a discovered model or enter an exact model ID; whisper.cpp uses its server-loaded model. Home's quick controls apply immediately.
    In Settings, model and task edits apply with **Save settings**.
 
 **Cancel** returns without changing the active connection. If you edited the form,
-you can keep editing or discard those changes. Closing the window clears its transient key draft.
+you can keep editing, discard those changes, or save before returning to the list. Closing the window clears its transient key draft.
 
 Dictation's first-run screen includes connection and model controls. Run **Test connection**
 and **Finish setup** after reviewing the microphone and shortcut. Audio-file transcription
@@ -43,9 +46,10 @@ See [Get started](../../getting-started/).
 
 ## Create a library entry without using it yet
 
-Open **Settings → Connections → New connection**, enter the server details and supported
-uses, then choose **Save connection**. This creates an inactive entry. Select it later
-from any task it supports. The library remains the place to edit, duplicate, or delete servers.
+Open **Settings → Connections → Add connection**, enter the server details and supported
+uses, set **After saving** to **Save for later**, then choose **Save connection**. This creates an inactive entry. Select it later
+from any task it supports. To configure it immediately instead, choose a workflow
+under **After saving** and use **Save and set up**. The library remains the place to edit, duplicate, or delete servers.
 
 While editing an entry in the Connection Manager, use **Save connection** or **Cancel**. A disabled save explains what
 the form still needs. Only available backend profiles appear as new choices;
@@ -92,13 +96,13 @@ profiles differ. Custom transcription health paths and headers apply to Voice an
   for that feature. A connection without a remembered model starts with defaults;
   cleanup and text to speech turn off until configured and enabled again, and
   transcription needs its setup completed again. Running jobs keep their captured settings and keys.
-- Choose **Edit connection** to open the selected entry in Connections. Save or
-  discard feature edits first using **Save and continue**, **Discard and continue**, or **Keep editing** when prompted. The **Back** button at the top returns to the
-  feature you came from, or to the connection list when editing there. Saving
-  returns to that feature too. Simply viewing a connection needs no save or
-  discard. If you changed something, Back, Cancel, or choosing another section
-  lets you keep editing or discard the connection edits.
-- **Duplicate** creates an inactive copy with no remembered model preferences. Later edits and key replacements affect
+- **Manage connections…** opens the list; **Edit connection** opens the selected
+  entry. Save or discard feature edits first when prompted. **All connections**
+  and **Cancel** return to the list. Saving an existing entry keeps its editor open.
+- The editor's **Use for…** menu selects this server for a supported workflow and
+  opens that workflow's model settings. A checkmark identifies workflows already
+  using it; choosing one opens those settings without changing the selection.
+- The **…** menu contains **Duplicate** and **Delete**. **Duplicate** creates an inactive copy with no remembered model preferences. Later edits and key replacements affect
   only that copy. Rename it through **Edit** if needed.
 - **Delete** removes an inactive entry after confirmation. To delete an active
   entry, select another connection or **None** in every feature using it first.
@@ -114,13 +118,13 @@ for choosing, saving, and forgetting those preferences.
 
 ## Test and protect credentials
 
-Each connection card separates **Active in** (the workflows currently selecting
-it) from **Available for** (its configured uses). **Check connection** is available
-directly on the card and checks that saved entry, including its own
-credential, without selecting it. It reads health or model-list metadata only.
-Each card keeps its result while you check other entries; expand **Check details**
-for the diagnostic breakdown. Checks clear when confirmed settings change or
-Settings is left, so a previous endpoint or credential check is not shown as current.
+The list shows which workflows currently use each connection. Select an entry and
+expand **Connection check** for **Check connection** and its diagnostics. It checks
+that saved entry, including its own credential, without selecting it or using
+unsaved edits. It reads health or model-list metadata only. Results stay with their
+entries while browsing and clear when confirmed settings change or the manager
+closes. Advanced transcription headers and health paths have a separate collapsed
+section in the editor.
 Results distinguish metadata access and authentication. They do not assess every
 feature that can use this connection. Open a feature and choose **Refresh models**
 to check its selected model and local option requirements too. See

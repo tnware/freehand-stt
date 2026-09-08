@@ -559,7 +559,7 @@ export class SettingsEditor {
       : {};
   }
 
-  beginConnection(connection?: Connection, purpose = Purpose.Transcription) {
+  beginConnection(connection?: Connection, purpose = Purpose.Voice) {
     if (this.runtimeDirty || this.saving) {
       this.#messages.reportInfo("Save or discard feature settings before editing a connection.");
       return;
@@ -671,12 +671,12 @@ export class SettingsEditor {
       this.#announceSettingsSaved(
         saved,
         change.action === Action.Select
-          ? "Connection selected. Remembered model settings were restored where available; review the feature before use."
+          ? "Connection selected."
           : change.action === Action.Delete
             ? "Connection deleted."
             : change.activateFor
-              ? "Connection saved and selected. Choose a model to finish setup."
-              : "Connection saved. Active feature selections are unchanged.",
+              ? "Connection saved. Choose a model to finish setup."
+              : "Connection saved.",
       );
       return true;
     } catch (cause) {
@@ -995,6 +995,41 @@ export class SettingsEditor {
     return this.applied && this.#voiceTestID === connectionInputKey(this.applied, Purpose.Voice)
       ? this.voiceConnection
       : null;
+  }
+
+  #automaticMetadataInputs: Partial<Record<Purpose, string>> = {};
+  connectionMetadataBusy(purpose: Purpose): boolean {
+    return purpose === Purpose.Voice
+      ? this.voiceConnectionTesting
+      : purpose === Purpose.Transcription
+        ? this.sttConnectionTesting
+        : purpose === Purpose.Cleanup
+          ? this.processingConnectionTesting
+          : this.ttsConnectionTesting;
+  }
+  async ensureConnectionMetadata(purpose: Purpose): Promise<void> {
+    const settings = this.applied;
+    if (!settings?.savedConnections.selected?.[purpose] || this.runtimeDirty) return;
+    if (this.connectionMetadataBusy(purpose)) return;
+    const key = connectionInputKey(settings, purpose);
+    // Opening a workflow loads its metadata once; failures require an explicit retry.
+    if (this.#automaticMetadataInputs[purpose] === key || this.#testedInputs[purpose] === key)
+      return;
+    this.#automaticMetadataInputs[purpose] = key;
+    switch (purpose) {
+      case Purpose.Voice:
+        await this.testVoiceConnection();
+        break;
+      case Purpose.Transcription:
+        await this.testConnection(settings, "", false);
+        break;
+      case Purpose.Cleanup:
+        await this.testPostProcessingConnection(settings, "");
+        break;
+      case Purpose.Speech:
+        await this.testTextToSpeechConnection(settings, "");
+        break;
+    }
   }
 
   async testConnection(settings = this.draft, apiKey = this.apiKey, clearExistingMessages = true) {

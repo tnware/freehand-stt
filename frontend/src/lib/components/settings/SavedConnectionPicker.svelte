@@ -1,9 +1,5 @@
 <script lang="ts">
-  import {
-    type Catalog,
-    type Change,
-    type Purpose,
-  } from "$bindings/savedconnection";
+  import { type Catalog, type Change, type Purpose } from "$bindings/savedconnection";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Button } from "$lib/components/ui/button";
   let {
@@ -13,6 +9,7 @@
     busy,
     onChange,
     onManage,
+    onBrowse,
     onAdd,
   }: {
     catalog: Catalog;
@@ -21,14 +18,11 @@
     busy: boolean;
     onChange: (change: Change) => Promise<boolean>;
     onManage: () => void;
+    onBrowse: () => void;
     onAdd: () => void;
   } = $props();
-  const entries = $derived(
-    (catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)),
-  );
-  const selected = $derived(
-    entries.find((c) => c.id === catalog.selected?.[purpose]),
-  );
+  const entries = $derived((catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)));
+  const selected = $derived(entries.find((c) => c.id === catalog.selected?.[purpose]));
 </script>
 
 <section
@@ -36,9 +30,7 @@
   aria-label="Active connection"
 >
   <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-    <label for={`saved-connection-${purpose}`} class="text-sm font-medium"
-      >Connection</label
-    >
+    <label for={`saved-connection-${purpose}`} class="text-sm font-medium">Connection</label>
     <div class="min-w-44 flex-1">
       <ConnectionSelect
         id={`saved-connection-${purpose}`}
@@ -47,13 +39,10 @@
         disabled={busy}
         {onChange}
         {onAdd}
+        onManage={onBrowse}
       />
     </div>
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={busy}
-      onclick={selected ? onManage : onAdd}
+    <Button variant="ghost" size="sm" disabled={busy} onclick={selected ? onManage : onAdd}
       >{selected ? "Edit connection" : "Add connection"}</Button
     >
   </div>
@@ -68,9 +57,7 @@
         ? "Choose a saved connection to configure this feature."
         : "Add a server, then choose its model here."}
     </p>{/if}
-  <p class="mt-2 text-xs leading-relaxed text-muted-foreground">
-    {dirty
-      ? "Save or discard your edits before changing connections."
-      : "Connection changes apply immediately. Save settings applies the options below."}
-  </p>
+  {#if dirty}<p class="mt-2 text-xs text-muted-foreground">
+      Save or discard your edits before switching connections.
+    </p>{/if}
 </section>
