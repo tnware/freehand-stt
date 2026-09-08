@@ -37,6 +37,13 @@ task links must reach the intended section, text must remain readable without
 horizontal scrolling, and headings/keyboard navigation must retain their order.
 Also build with `CI=true` when checking GitHub Pages base-path links.
 
+The documentation sidebar follows the reader's path: Get started, Use Freehand,
+Backend profiles, Model profiles, Reference, then Contribute. Installation,
+connections, and choosing a model profile precede specialized guides. Keep
+provider/model directories with their corresponding guide groups, and sort peer
+backend/model guides by name after their overview material. Verify that sidebar
+links and previous/next links retain this order on desktop and mobile.
+
 Keep the README, homepage metadata, and user prerequisites aligned: dictation
 leads, file transcription needs no microphone or shortcut, and optional
 text-to-speech needs no STT connection. Cleanup is subordinate to transcription.

@@ -1,5 +1,4 @@
 ---
-provider: vllm-omni
 title: vLLM-Omni
 description: Connect vLLM-Omni for text to speech with Qwen3-TTS preset voices and style instructions.
 ---

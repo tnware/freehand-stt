@@ -1,5 +1,4 @@
 ---
-provider: speaches
 title: Speaches
 description: Connect Speaches for transcription and on-demand speech playback.
 ---

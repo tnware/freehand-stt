@@ -1,5 +1,4 @@
 ---
-provider: generic
 title: Generic OpenAI-compatible
 description: Configure the default Freehand contract for a compatible server.
 ---

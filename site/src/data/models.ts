@@ -5,7 +5,7 @@ export const modelProfiles = [
     id: "s1-mini",
     name: "S1-mini",
     family: "Superwhisper · Transcript cleanup",
-    icon: null,
+    icon: "s1-mini",
     summary: "Turn spoken English into text with the style and structure you want.",
     guide: "/docs/models/s1-mini/",
     backends: [
@@ -26,7 +26,7 @@ export const modelProfiles = [
     id: "nemotron-3.5-streaming",
     name: "Nemotron 3.5 ASR",
     family: "NVIDIA · Streaming 0.6B",
-    icon: "nemo-speech-v1",
+    icon: "nemotron-3.5-streaming",
     summary: "Dictate live or transcribe recordings with your language and terminology.",
     guide: "/docs/models/nemotron/",
     backends: [{ name: "NeMo-Speech.cpp", guide: "/docs/backends/nemo-speech/" }],

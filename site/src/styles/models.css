@@ -4,7 +4,6 @@
 .model-card { display: flex; flex-direction: column; min-width: 0; padding: 28px; border: 1px solid var(--line-strong); border-radius: 18px; background: linear-gradient(155deg, #111a2b, #0c1320); }
 .model-card-heading { display: flex; align-items: center; gap: 14px; }
 .model-card-heading p { margin: 0; color: var(--blue-soft); font-size: 11px; }
-.model-initial { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1px solid var(--line-strong); border-radius: 10px; background: #203252; color: #e6edff; font-family: var(--mono); font-size: 17px; }
 .model-card h3 { margin: 24px 0 12px; font-family: var(--display); font-size: 27px; font-weight: 500; letter-spacing: -.04em; line-height: 1.2; }
 .model-summary { min-height: 72px; margin: 0 0 24px; color: var(--muted-strong); font-size: 15px; line-height: 1.6; }
 .model-controls { margin: 0; padding: 0; }
