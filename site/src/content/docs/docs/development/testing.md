@@ -814,3 +814,13 @@ list. They verify that draft selections survive page navigation, custom language
 values remain reachable after an unmatched search, and failed immediate Voice
 saves restore the previous language. Fixture profiles are renderer data only;
 no model inventory or inference call is involved.
+
+### Vocabulary presentation
+
+Synthetic component checks at 520px and 1000px cover visible editor/workflow
+controls, collapsed tuning and feedback, keyboard help and focus return, edits
+surviving disclosure, independent opt-ins, source-line selection, unsupported
+selection explanations, retry without draft loss, stale preview rejection, and
+UTF-8 byte overflow. Preview responses are fixtures; Go vocabulary tests remain
+the authority for actual model/backend restrictions. Native review should confirm
+these controls against the selected profiles and saved settings.

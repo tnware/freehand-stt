@@ -914,7 +914,13 @@ window geometry and visual transitions do not alter inference or persistence.
 existing admission results: source line numbers, duplicate references, and per-use
 restriction messages. Counts use the same trimming and exact deduplication as
 request projection. The UI selects the corresponding local textarea range; it
-neither normalizes stored vocabulary nor invents adapter restrictions.
+neither normalizes stored vocabulary nor invents adapter restrictions. The shared
+Vocabulary editor groups task opt-ins with the phrase list, keeps support summaries
+visible, and discloses provider explanation, line feedback, and tuning on demand.
+Its debounced preview retains the open feedback panel while checking newer input,
+disables stale line selection, and ignores completions for superseded drafts.
+A local retry repeats only the Go preview; it neither saves settings nor invokes
+inference.
 
 The `followTranscript` DOM action owns only result scrolling. New recording keys
 reset following; scrolling away from the end pauses it until the reader returns
