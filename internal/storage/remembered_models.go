@@ -101,13 +101,13 @@ func (s *Store) BeginForgetModel(key modelsettings.Key, v config.Settings) (conf
 }
 
 func rememberActiveModels(state *connectionState, v config.Settings) error {
-	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech, savedconnection.Realtime} {
+	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech, savedconnection.Voice} {
 		id := state.selected[p]
 		if id == "" {
 			continue
 		}
 		model := strings.TrimSpace(modelsettings.Model(v, p))
-		if model == "" && !(p == savedconnection.Transcription && v.CompatibilityProfile == compatibility.WhisperCPP) {
+		if model == "" && !((p == savedconnection.Transcription && v.CompatibilityProfile == compatibility.WhisperCPP) || (p == savedconnection.Voice && v.VoiceTranscription.CompatibilityProfile == compatibility.WhisperCPP)) {
 			continue
 		}
 		e := modelsettings.Entry{ConnectionID: id, Purpose: p, Model: model, Selected: true, Options: modelsettings.Extract(v, p)}
@@ -140,7 +140,7 @@ func rememberActiveModels(state *connectionState, v config.Settings) error {
 func (s *Store) BeginModelEdits(edits []modelsettings.Edit) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.pending == nil || s.pendingConnections != nil || len(edits) > modelsettings.MaxPerUse*3 {
+	if s.pending == nil || s.pendingConnections != nil || len(edits) > modelsettings.MaxPerUse*4 {
 		return errors.New("model edits are unavailable or exceed the limit")
 	}
 	state := s.connections.clone()

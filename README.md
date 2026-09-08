@@ -38,9 +38,9 @@ network, and optional cleanup stage.
   not require a transcription connection.
 
 Dictation is the default task, not a setup requirement for the others. Microphone
-and file transcription share the completed-STT configuration. Optional
+and file transcription have independent connection/model settings. Optional
 [live dictation](https://tnware.github.io/freehand-stt/docs/guides/live-transcription/)
-uses an independent Nemotron / NeMo-Speech.cpp connection and can show live
+is a mode of the Voice transcription selection when using Nemotron / NeMo-Speech.cpp, showing live
 results and single-row overlay captions. Cleanup and text-to-speech
 can each use a separate service and model.
 

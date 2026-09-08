@@ -323,6 +323,9 @@ func (s *Store) open(ctx context.Context) (retErr error) {
 	return nil
 }
 func (s *Store) initialize(ctx context.Context, db *sql.DB, v config.Settings, source string) error {
+	if source == "legacy" {
+		v.VoiceTranscription = config.VoiceFromCompleted(v)
+	}
 	p, err := goose.NewProvider(goose.DialectSQLite3, db, s.migrations, goose.WithLogger(goose.NopLogger()))
 	if err != nil {
 		return err
@@ -343,6 +346,9 @@ func (s *Store) initialize(ctx context.Context, db *sql.DB, v config.Settings, s
 		account := ""
 		if source == "legacy" {
 			account = legacyAccount(purpose)
+			if purpose == "voice" {
+				account = legacyAccount("stt")
+			}
 		}
 		if source == "reset" {
 			account = s.refs[purpose]

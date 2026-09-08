@@ -145,8 +145,8 @@
         onSaved={saved}
         onOpenFeature={(purpose) => {
           void WindowingService.OpenSettings(
-            purpose === "realtime"
-              ? "realtime"
+            purpose === "voice"
+              ? "voice-transcription"
               : purpose === "stt"
                 ? "server"
                 : purpose === "cleanup"

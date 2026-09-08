@@ -9,7 +9,7 @@ func TestConnectionWindowOwnsDraftThroughStartupAndReopen(t *testing.T) {
 	s := NewService(nil, nil, nil, nil, nil, nil)
 	opens := 0
 	ConfigureConnections(s, ConnectionManagerWindow{Open: func() { opens++ }, Exists: func(id string) bool { return id == "existing" }})
-	first := ConnectionManagerRequest{Create: true, Purpose: savedconnection.Realtime}
+	first := ConnectionManagerRequest{Create: true, Purpose: savedconnection.Voice}
 	if err := s.OpenConnectionManager(first); err != nil {
 		t.Fatal(err)
 	}

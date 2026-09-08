@@ -73,10 +73,12 @@ func TestRealtimeNeverDeliversPreviewAndCancellationDiscardsIt(t *testing.T) {
 			}))
 			defer server.Close()
 			cfg := config.Default()
-			cfg.Realtime.AllowInsecureHTTP = true
-			cfg.Realtime.Enabled = true
-			cfg.Realtime.BaseURL = server.URL + "/v1"
-			cfg.Realtime.Model = "fixture"
+			cfg.VoiceTranscription.AllowInsecureHTTP = true
+			cfg.VoiceTranscription.Realtime = true
+			cfg.VoiceTranscription.CompatibilityProfile = "nemo-speech-v1"
+			cfg.VoiceTranscription.ModelProfile = "nemotron-3.5-streaming"
+			cfg.VoiceTranscription.BaseURL = server.URL + "/v1"
+			cfg.VoiceTranscription.Model = "fixture"
 			cfg.AutoInsert = true
 			capture := &liveCaptureFixture{}
 			target := &platFake{}

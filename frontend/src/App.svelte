@@ -14,10 +14,7 @@
   import { session } from "$lib/stores/session.svelte";
   import { subscribeSessionEvents } from "$lib/stores/session-events";
   import { activeAppearanceMode } from "$lib/appearance";
-  import {
-    shouldAutomaticallyTestConnection,
-    taskConnectionStatus,
-  } from "$lib/utils/connection";
+  import { shouldAutomaticallyTestConnection, taskConnectionStatus } from "$lib/utils/connection";
 
   let settingsOpen = $state(false);
   let aboutOpen = $state(false);
@@ -26,23 +23,17 @@
   // the one build-info source rather than restated here.
   let version = $state("");
   let now = $state(Date.now());
-  const footerStatus = $derived(
-    taskConnectionStatus(inputMode, session.editor, now),
-  );
+  const footerStatus = $derived(taskConnectionStatus(inputMode, session.editor, now));
   $effect(() => {
     const timer = setInterval(() => (now = Date.now()), 30_000);
     return () => clearInterval(timer);
   });
 
   const fileWorking = $derived(
-    session.files.status.phase ===
-      FileTranscriptionPhase.FileTranscriptionUploading ||
-      session.files.status.phase ===
-        FileTranscriptionPhase.FileTranscriptionProcessing ||
-      session.files.status.phase ===
-        FileTranscriptionPhase.FileTranscriptionStreaming ||
-      session.files.status.phase ===
-        FileTranscriptionPhase.FileTranscriptionCancelling,
+    session.files.status.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
+      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
+      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
+      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
   );
   const voiceActive = $derived(
     session.dictation.status.state !== State.Idle &&
@@ -50,8 +41,7 @@
   );
 
   $effect(() => {
-    document.documentElement.dataset.material = session.editor.applied
-      ?.micaActive
+    document.documentElement.dataset.material = session.editor.applied?.micaActive
       ? "mica"
       : "solid";
   });
@@ -62,6 +52,7 @@
   $effect(() => {
     const settings = session.editor.applied;
     if (
+      inputMode !== "file" ||
       !settings ||
       settings.configuration.recoveryRequired ||
       !shouldAutomaticallyTestConnection(
@@ -74,20 +65,27 @@
     void session.editor.testConnection(settings, "", false);
   });
 
+  $effect(() => {
+    const settings = session.editor.applied;
+    if (
+      inputMode !== "voice" ||
+      !settings ||
+      settings.configuration.recoveryRequired ||
+      !settings.savedConnections.selected?.voice ||
+      session.editor.voiceConnectionChecked ||
+      session.editor.voiceConnectionTesting
+    )
+      return;
+    void session.editor.testVoiceConnection();
+  });
+
   onMount(() => {
     setMode("system");
 
-    const offSession = subscribeSessionEvents(
-      session,
-      Events.On,
-      (status, previous) => {
-        if (
-          (status.state === State.Recording) !==
-          (previous.state === State.Recording)
-        )
-          levels.reset();
-      },
-    );
+    const offSession = subscribeSessionEvents(session, Events.On, (status, previous) => {
+      if ((status.state === State.Recording) !== (previous.state === State.Recording))
+        levels.reset();
+    });
     // Go only sends these while recording and while this window is on screen,
     // so there is no stream to pay for the rest of the time.
     const offLevel = Events.On("dictation:level", (event: { data: number }) => {
@@ -101,18 +99,12 @@
         "Freehand is already running — that launch revealed this window instead of starting a second recorder.",
       );
     });
-    const offSettingsVisibility = Events.On(
-      "settings:visibility",
-      (event: { data: boolean }) => {
-        settingsOpen = event.data;
-      },
-    );
-    const offAboutVisibility = Events.On(
-      "about:visibility",
-      (event: { data: boolean }) => {
-        aboutOpen = event.data;
-      },
-    );
+    const offSettingsVisibility = Events.On("settings:visibility", (event: { data: boolean }) => {
+      settingsOpen = event.data;
+    });
+    const offAboutVisibility = Events.On("about:visibility", (event: { data: boolean }) => {
+      aboutOpen = event.data;
+    });
     void BuildInfoService.Current()
       .then((info) => (version = info.version))
       .catch(() => (version = ""));
@@ -122,9 +114,7 @@
     void WindowingService.AboutVisible()
       .then((visible) => (aboutOpen = visible))
       .catch((cause) => session.messages.reportFailure(String(cause)));
-    void session
-      .load()
-      .finally(() => setMode(activeAppearanceMode(session.editor.applied)));
+    void session.load().finally(() => setMode(activeAppearanceMode(session.editor.applied)));
     return () => {
       offSession();
       session.dispose();
@@ -156,9 +146,7 @@
 
 <ConfigurationRecoveryDialog {session} />
 
-<div
-  class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground"
->
+<div class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground">
   <AppHeader
     bind:inputMode
     settings={session.editor.applied ?? session.editor.draft}
@@ -181,10 +169,5 @@
     quickSettingsDisabled={settingsOpen}
   />
 
-  <StatusStrip
-    connectionState={footerStatus}
-    {version}
-    {aboutOpen}
-    onAbout={openAbout}
-  />
+  <StatusStrip connectionState={footerStatus} {version} {aboutOpen} onAbout={openAbout} />
 </div>

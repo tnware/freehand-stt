@@ -90,11 +90,11 @@ func TestWhisperCPPDoesNotRequireAClientModel(t *testing.T) {
 	s.SetupCompleted = true
 	s.CompatibilityProfile = compatibility.WhisperCPP
 	s.Model = ""
-	if err := Validate(s); err != nil {
+	if err := ValidateVoiceRecording(VoiceFromCompleted(s)); err != nil {
 		t.Fatal(err)
 	}
 	s.CompatibilityProfile = compatibility.VLLM
-	if err := Validate(s); err == nil {
+	if err := ValidateVoiceRecording(VoiceFromCompleted(s)); err == nil {
 		t.Fatal("vLLM accepted missing model")
 	}
 }

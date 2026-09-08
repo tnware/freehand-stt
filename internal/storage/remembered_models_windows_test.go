@@ -97,7 +97,7 @@ func TestVersionSixUpgradePreservesCurrentModelOptions(t *testing.T) {
 	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: v}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.db.Exec(`DROP TABLE realtime_settings; DELETE FROM credential_refs WHERE purpose='realtime'; DROP TABLE remembered_models;DELETE FROM goose_db_version WHERE version_id>=7;`); err != nil {
+	if _, err := s.db.Exec(`DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models;DELETE FROM goose_db_version WHERE version_id>=7;`); err != nil {
 		t.Fatal(err)
 	}
 	path, legacy, vault := s.path, s.legacy, s.vault

@@ -42,3 +42,8 @@ SELECT connection_id,purpose FROM saved_connection_uses ORDER BY connection_id,p
 DELETE FROM saved_connection_uses;
 -- name: PutConnectionUse :exec
 INSERT INTO saved_connection_uses(connection_id,purpose) VALUES(?,?);
+
+-- name: SeedVoiceUse :exec
+INSERT INTO saved_connection_uses(connection_id,purpose) SELECT 'initial-stt','voice' WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT DO NOTHING;
+-- name: SeedVoiceSelection :exec
+INSERT INTO selected_connections(purpose,connection_id) SELECT 'voice','initial-stt' WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT DO NOTHING;

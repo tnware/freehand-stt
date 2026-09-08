@@ -102,8 +102,8 @@ func WithConfigurationLoad(loader ConfigLoader, failure *config.LoadFailure, rep
 	}
 }
 
-func WithRealtimeCredential(store credential.Store) Option {
-	return func(service *Service) { service.realtimeKeys = store }
+func WithVoiceCredential(store credential.Store) Option {
+	return func(service *Service) { service.voiceKeys = store }
 }
 
 func WithTextToSpeechCredential(store credential.Store) Option {
@@ -128,7 +128,7 @@ type Service struct {
 	keys                   credential.Store
 	processKeys            credential.Store
 	ttsKeys                credential.Store
-	realtimeKeys           credential.Store
+	voiceKeys              credential.Store
 	startup                Startup
 	hold                   HoldInfo
 	shortcutChanged        func(config.Settings) error
@@ -174,7 +174,7 @@ func (source Source) Current() config.Settings { return source() }
 type RequestProfile struct {
 	Settings                 config.Settings
 	STTCredential            string
-	RealtimeCredential       string
+	VoiceCredential          string
 	PostProcessingCredential string
 }
 
@@ -210,6 +210,7 @@ func (s *Service) current() config.Settings {
 	defer s.mu.RUnlock()
 	v := s.cfg
 	v.Headers = clone(v.Headers)
+	v.VoiceTranscription.Headers = clone(v.VoiceTranscription.Headers)
 	return v
 }
 func clone(m map[string]string) map[string]string {
@@ -232,7 +233,7 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 		return RequestProfile{}, errors.New("saved settings must be recovered before transcription can start")
 	}
 	profile := RequestProfile{Settings: s.current()}
-	if (!dictation || !profile.Settings.Realtime.Enabled) && profile.Settings.AuthenticationMode == config.AuthenticationModeAPIKey {
+	if !dictation && profile.Settings.AuthenticationMode == config.AuthenticationModeAPIKey {
 		if s.keys == nil {
 			return RequestProfile{}, errors.New("API credential is not configured")
 		}
@@ -242,15 +243,16 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 		}
 		profile.STTCredential = key
 	}
-	if dictation && profile.Settings.Realtime.Enabled && profile.Settings.Realtime.AuthenticationMode == config.AuthenticationModeAPIKey {
-		if s.realtimeKeys == nil {
-			return RequestProfile{}, errors.New("realtime credential is not configured")
+	if dictation && profile.Settings.VoiceTranscription.AuthenticationMode == config.AuthenticationModeAPIKey {
+		if s.voiceKeys == nil {
+			return RequestProfile{}, errors.New("voice transcription credential is not configured")
 		}
-		key, err := s.realtimeKeys.Get()
+		key, err := s.voiceKeys.Get()
 		if err != nil {
-			return RequestProfile{}, errors.New("realtime credential is not configured")
+			return RequestProfile{}, errors.New("voice transcription credential is not configured")
 		}
-		profile.RealtimeCredential = key
+		profile.VoiceCredential = key
+		profile.STTCredential = key
 	}
 	if profile.Settings.PostProcessing.Enabled && s.processKeys != nil {
 		key, err := s.processKeys.Get()
@@ -262,6 +264,9 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 			profile.STTCredential = ""
 			return RequestProfile{}, errors.New("post-processing credential could not be read")
 		}
+	}
+	if dictation {
+		profile.Settings = config.WithVoiceTranscription(profile.Settings)
 	}
 	return profile, nil
 }
@@ -350,7 +355,7 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 		SavedConnections:                   catalog,
 		CompatibilityProfiles:              compatibility.Profiles(),
 		RealtimeLanguages:                  modelprofile.NemotronLanguages(),
-		ModelProfiles:                      modelprofile.Profiles(v.CompatibilityProfile, v.PostProcessing.CompatibilityProfile, v.TextToSpeech.CompatibilityProfile),
+		ModelProfiles:                      modelCatalog(v),
 		TranscriptionLanguages:             speechlanguage.Options(),
 		Settings:                           v,
 		Configuration:                      cloneConfigurationStatus(s.configuration),
@@ -522,7 +527,7 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 		v.Model = strings.TrimSpace(v.Model)
 		v.PostProcessing.Model = strings.TrimSpace(v.PostProcessing.Model)
 		v.TextToSpeech.Model = strings.TrimSpace(v.TextToSpeech.Model)
-		v.Realtime.Model = strings.TrimSpace(v.Realtime.Model)
+		v.VoiceTranscription.Model = strings.TrimSpace(v.VoiceTranscription.Model)
 		if validateErr := config.Validate(v); validateErr != nil {
 			return SettingsDTO{}, validateErr
 		}
@@ -885,4 +890,10 @@ func (s *Service) ServiceShutdown() error {
 		return closer.Close()
 	}
 	return nil
+}
+
+func modelCatalog(v config.Settings) modelprofile.Catalog {
+	c := modelprofile.Profiles(v.CompatibilityProfile, v.PostProcessing.CompatibilityProfile, v.TextToSpeech.CompatibilityProfile)
+	c.VoiceTranscription = modelprofile.VoiceProfiles(v.VoiceTranscription.CompatibilityProfile)
+	return c
 }

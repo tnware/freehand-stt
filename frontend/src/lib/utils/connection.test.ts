@@ -7,10 +7,7 @@ import { ID, type Profile } from "$bindings/compatibility";
 import CompatibilityProfilePicker from "$lib/components/settings/CompatibilityProfilePicker.svelte";
 
 const pickerSource = readFileSync(
-  new URL(
-    "../components/settings/CompatibilityProfilePicker.svelte",
-    import.meta.url,
-  ),
+  new URL("../components/settings/CompatibilityProfilePicker.svelte", import.meta.url),
   "utf8",
 );
 
@@ -47,14 +44,8 @@ describe("compatibility profile picker options", () => {
           body: { start: number; end: number };
           expression: { start: number; end: number };
         };
-        if (
-          pickerSource
-            .slice(block.body.start, block.body.end)
-            .includes("Select.Item")
-        ) {
-          optionLists.push(
-            pickerSource.slice(block.expression.start, block.expression.end),
-          );
+        if (pickerSource.slice(block.body.start, block.body.end).includes("Select.Item")) {
+          optionLists.push(pickerSource.slice(block.expression.start, block.expression.end));
         }
       }
       for (const child of Object.values(value)) {
@@ -95,41 +86,37 @@ const result = (errorKind = ConnectionErrorKind.$zero): ConnectionResult => ({
 });
 
 describe("connection metadata presentation", () => {
-  it.each(["voice", "file", "tts"])(
-    "scopes %s metadata to its own endpoint",
-    (mode) => {
-      const status = taskConnectionStatus(
-        mode,
-        {
-          applied: {
-            ...settings,
-            baseURL: "https://stt.test/v1",
-            textToSpeech: {
-              ...settings.textToSpeech,
-              enabled: true,
-              baseURL: "https://tts.test/v1",
-            },
+  it.each(["voice", "file", "tts"])("scopes %s metadata to its own endpoint", (mode) => {
+    const status = taskConnectionStatus(
+      mode,
+      {
+        applied: {
+          ...settings,
+          baseURL: "https://stt.test/v1",
+          voiceTranscription: { ...settings.voiceTranscription, baseURL: "https://stt.test/v1" },
+          textToSpeech: {
+            ...settings.textToSpeech,
+            enabled: true,
+            baseURL: "https://tts.test/v1",
           },
-          connectionResultStale: () => false,
-          connection: result(),
-          ttsConnection: result(ConnectionErrorKind.ConnectionErrorTimeout),
-          sttConnectionStale: false,
-          ttsConnectionStale: false,
-          sttConnectionTesting: false,
-          ttsConnectionTesting: false,
         },
-        Date.parse("2026-08-30T15:01:00Z"),
-      );
-      expect(status.scope).toBe(
-        mode === "tts" ? "Text to speech" : "Transcription",
-      );
-      expect(status.label).toBe(mode === "tts" ? "Unavailable" : "Reachable");
-      expect(status.detail).toBe(
-        `${mode === "tts" ? "tts.test" : "stt.test"} · checked 1m ago`,
-      );
-      expect(status.title).toContain("No model was invoked");
-    },
-  );
+        connectionResultStale: () => false,
+        currentVoiceConnection: result(),
+        voiceConnectionTesting: false,
+        connection: result(),
+        ttsConnection: result(ConnectionErrorKind.ConnectionErrorTimeout),
+        sttConnectionStale: false,
+        ttsConnectionStale: false,
+        sttConnectionTesting: false,
+        ttsConnectionTesting: false,
+      },
+      Date.parse("2026-08-30T15:01:00Z"),
+    );
+    expect(status.scope).toBe(mode === "tts" ? "Text to speech" : "Transcription");
+    expect(status.label).toBe(mode === "tts" ? "Unavailable" : "Reachable");
+    expect(status.detail).toBe(`${mode === "tts" ? "tts.test" : "stt.test"} · checked 1m ago`);
+    expect(status.title).toContain("No model was invoked");
+  });
   it.each([
     {
       mode: "tts",
@@ -230,13 +217,16 @@ describe("connection metadata presentation", () => {
           applied: {
             ...settings,
             baseURL: "https://stt.test/v1",
+            voiceTranscription: { ...settings.voiceTranscription, baseURL: "https://stt.test/v1" },
             textToSpeech: {
               ...settings.textToSpeech,
               enabled,
               baseURL: "https://tts.test/v1",
             },
           },
-          connectionResultStale: () => false,
+          connectionResultStale: () => mode === "voice" && stale,
+          currentVoiceConnection: stt,
+          voiceConnectionTesting: mode === "voice" && testing,
           connection: stt,
           ttsConnection: tts,
           sttConnectionStale: mode !== "tts" && stale,
@@ -256,22 +246,10 @@ describe("connection metadata presentation", () => {
   );
 
   it("never probes an endpoint automatically before setup is complete", () => {
-    expect(
-      shouldAutomaticallyTestConnection(
-        { setupCompleted: false },
-        false,
-        false,
-      ),
-    ).toBe(false);
-    expect(
-      shouldAutomaticallyTestConnection({ setupCompleted: true }, false, false),
-    ).toBe(true);
-    expect(
-      shouldAutomaticallyTestConnection({ setupCompleted: true }, true, false),
-    ).toBe(false);
-    expect(
-      shouldAutomaticallyTestConnection({ setupCompleted: true }, false, true),
-    ).toBe(false);
+    expect(shouldAutomaticallyTestConnection({ setupCompleted: false }, false, false)).toBe(false);
+    expect(shouldAutomaticallyTestConnection({ setupCompleted: true }, false, false)).toBe(true);
+    expect(shouldAutomaticallyTestConnection({ setupCompleted: true }, true, false)).toBe(false);
+    expect(shouldAutomaticallyTestConnection({ setupCompleted: true }, false, true)).toBe(false);
   });
 
   it("recognizes a successful metadata-only model probe", () => {
@@ -292,9 +270,7 @@ describe("connection metadata presentation", () => {
     };
     expect(connectionSucceeded(value)).toBe(true);
     expect(connectionStatusLabel(value)).toBe("Server reachable");
-    expect(connectionDescription(value)).toContain(
-      "inference compatibility is unverified",
-    );
+    expect(connectionDescription(value)).toContain("inference compatibility is unverified");
   });
 
   it("does not label an HTTP 200 malformed model list as a successful check", () => {
@@ -318,20 +294,12 @@ describe("connection metadata presentation", () => {
     };
     expect(connectionStatusLabel(value)).toBe("Model list received");
     expect(modelPresenceLabel(value)).toBe("Not listed");
-    expect(connectionDescription(value)).toContain(
-      "inference compatibility is unverified",
-    );
+    expect(connectionDescription(value)).toContain("inference compatibility is unverified");
   });
 
   it.each([
-    [
-      ConnectionErrorKind.ConnectionErrorCredentialMissing,
-      "Credential required",
-    ],
-    [
-      ConnectionErrorKind.ConnectionErrorCredentialUnavailable,
-      "Credential unavailable",
-    ],
+    [ConnectionErrorKind.ConnectionErrorCredentialMissing, "Credential required"],
+    [ConnectionErrorKind.ConnectionErrorCredentialUnavailable, "Credential unavailable"],
     [ConnectionErrorKind.ConnectionErrorDNS, "Name not found"],
     [ConnectionErrorKind.ConnectionErrorTLS, "TLS failed"],
     [ConnectionErrorKind.ConnectionErrorHTTP, "HTTP 401"],

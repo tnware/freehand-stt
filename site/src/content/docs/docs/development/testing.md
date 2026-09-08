@@ -576,3 +576,11 @@ the server/runtime/model revision and distinguish transport inference evidence
 from interactive Windows acceptance. Exercise the native checklist below; a
 successful compilation or synthetic socket probe does not establish focus safety
 or window behavior. Never load inventories or add automatic inference to CI.
+
+### Unified Voice transcription
+
+Migration fixtures exercise old realtime-enabled and completed configurations, preserving the file selection and inactive remembered realtime models. Completed Voice profile tests isolate endpoint, model, options, headers, and credential snapshots from Audio file. Backend eligibility tests must reject realtime on Generic or a mismatched server/profile.
+
+For native acceptance, open Voice → Transcription: there must be no separate Live button. Choose NeMo-Speech.cpp, its loaded model, and the explicit Nemotron profile; enable Realtime inside that panel. Verify live results and one-row captions. Turn realtime off and record using the same connection/model. Switch to an ineligible model/connection and verify mode is disabled. Configure Audio file separately, switch between tasks, and verify independent connection/model/language settings and truthful footer status. Restart and repeat. Test Voice-only first-run setup with Audio file unconfigured. These native checks are separate from successful builds and deterministic tests.
+
+Language dropdown acceptance: check the searchable language picker and the qualified Nemotron select inside quick-settings popovers at short and normal window heights. Menus must remain within the window, scroll internally with the wheel, and expose the final option through keyboard navigation.

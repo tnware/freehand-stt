@@ -656,26 +656,57 @@ func TestShortcutChangesRefreshOverlayHints(t *testing.T) {
 func TestLiveAndFileProfilesReadOnlyTheirOwnCredentials(t *testing.T) {
 	service, _, _, keys := transactionalService(false)
 	service.cfg.AuthenticationMode = config.AuthenticationModeAPIKey
-	service.cfg.Realtime.Enabled = true
-	service.cfg.Realtime.Model = "live-model"
-	service.cfg.Realtime.AuthenticationMode = config.AuthenticationModeAPIKey
+	service.cfg.VoiceTranscription.Realtime = true
+	service.cfg.VoiceTranscription.Model = "live-model"
+	service.cfg.VoiceTranscription.AuthenticationMode = config.AuthenticationModeAPIKey
 	log := []string{}
 	liveKeys := &keyFake{log: &log, present: true, value: "live-canary"}
-	service.realtimeKeys = liveKeys
+	service.voiceKeys = liveKeys
 	keys.getErr = errors.New("completed server credential unavailable")
 	live, err := DictationProfiles(service).Capture()
-	if err != nil || live.RealtimeCredential != "live-canary" || live.STTCredential != "" {
+	if err != nil || live.VoiceCredential != "live-canary" || live.STTCredential != "live-canary" {
 		t.Fatal("live capture accessed completed STT credentials")
 	}
 	keys.getErr = nil
 	keys.value = "file-canary"
 	liveKeys.getErr = errors.New("live credential unavailable")
 	file, err := RequestProfiles(service).Capture()
-	if err != nil || file.STTCredential != "file-canary" || file.RealtimeCredential != "" {
+	if err != nil || file.STTCredential != "file-canary" || file.VoiceCredential != "" {
 		t.Fatal("file capture accessed live credentials")
 	}
-	service.cfg.Realtime.Model = "replacement-model"
-	if live.Settings.Realtime.Model != "live-model" || live.RealtimeCredential != "live-canary" {
+	service.cfg.VoiceTranscription.Model = "replacement-model"
+	if live.Settings.VoiceTranscription.Model != "live-model" || live.VoiceCredential != "live-canary" {
 		t.Fatal("live snapshot changed during settings replacement")
+	}
+}
+
+func TestCompletedVoiceProfileIsIndependentAndImmutable(t *testing.T) {
+	service, _, _, keys := transactionalService(false)
+	service.cfg.BaseURL = "https://files.example.test/v1"
+	service.cfg.Model = "file-model"
+	service.cfg.AuthenticationMode = config.AuthenticationModeAPIKey
+	v := config.VoiceFromCompleted(service.cfg)
+	v.BaseURL = "https://voice.example.test/v1"
+	v.Model = "voice-model"
+	v.Language = "ja"
+	v.Headers = map[string]string{"X-Route": "voice"}
+	v.TranscriptionOptions.Prompt = "voice context"
+	service.cfg.VoiceTranscription = v
+	log := []string{}
+	service.voiceKeys = &keyFake{log: &log, present: true, value: "voice-canary"}
+	keys.getErr = errors.New("file credential unavailable")
+	voice, err := DictationProfiles(service).Capture()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if voice.Settings.BaseURL != v.BaseURL || voice.Settings.Model != v.Model || voice.Settings.Language != "ja" || voice.Settings.TranscriptionOptions.Prompt != "voice context" || voice.STTCredential != "voice-canary" {
+		t.Fatal("completed Voice used file configuration")
+	}
+	service.cfg.VoiceTranscription.Headers["X-Route"] = "replacement"
+	if voice.Settings.Headers["X-Route"] != "voice" || voice.Settings.VoiceTranscription.Headers["X-Route"] != "voice" {
+		t.Fatal("in-flight headers changed")
+	}
+	if service.GetSettings().BaseURL != "https://files.example.test/v1" {
+		t.Fatal("capturing Voice changed file settings")
 	}
 }

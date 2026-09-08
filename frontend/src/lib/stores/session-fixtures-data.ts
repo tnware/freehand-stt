@@ -37,7 +37,13 @@ import { Session, type SessionServices } from "$lib/stores/session.svelte";
 const settings: Settings = {
   modelProfile: ModelProfileID.Generic,
   rememberedModels: { entries: [], defaults: {} },
-  modelProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
+  modelProfiles: {
+    voiceTranscription: [],
+    transcription: [],
+    postProcessing: [],
+    speech: [],
+    realtime: [],
+  },
   transcriptionOptions: {
     prompt: "",
     hotwords: "",
@@ -48,8 +54,12 @@ const settings: Settings = {
   compatibilityProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
   transcriptionLanguages: [],
   realtimeLanguages: [],
-  realtime: {
-    enabled: false,
+  voiceTranscription: {
+    realtime: false,
+    healthPath: "",
+    headers: {},
+    timeoutSeconds: 120,
+    transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
     compatibilityProfile: ID.NeMoSpeechV1,
     modelProfile: ModelProfileID.Nemotron35,
     baseURL: "",

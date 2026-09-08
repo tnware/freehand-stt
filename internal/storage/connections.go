@@ -61,7 +61,7 @@ func (s *Store) ConnectionCatalog() savedconnection.Catalog {
 	return catalog
 }
 func seedConnections(ctx context.Context, q *dbgen.Queries) error {
-	for _, seed := range []func(context.Context) error{q.SeedTranscriptionConnection, q.SeedCleanupConnection, q.SeedSpeechConnection, q.SeedConnectionUses, q.SeedSelectedConnections, q.SeedConnectionHeaders} {
+	for _, seed := range []func(context.Context) error{q.SeedTranscriptionConnection, q.SeedCleanupConnection, q.SeedSpeechConnection, q.SeedConnectionUses, q.SeedSelectedConnections, q.SeedConnectionHeaders, q.SeedVoiceUse, q.SeedVoiceSelection} {
 		if err := seed(ctx); err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 		p := savedconnection.Purpose(use.Purpose)
 		c, ok := state.entries[use.ConnectionID]
 		counts[p]++
-		if !ok || !savedconnection.ValidPurpose(p) || counts[p] > savedconnection.MaxPerPurpose {
+		if !ok || !savedconnection.ValidPurpose(p) || counts[p] > savedconnection.Limit(p) {
 			return state, errors.New("invalid connection uses")
 		}
 		c.Uses = append(c.Uses, p)
@@ -112,7 +112,7 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	}
 	for _, h := range headers {
 		c, ok := state.entries[h.ConnectionID]
-		if !ok || !c.Supports(savedconnection.Transcription) {
+		if !ok || !c.Supports(savedconnection.Transcription) && !c.Supports(savedconnection.Voice) {
 			return state, errors.New("invalid saved headers")
 		}
 		c.Details.Headers[h.Name] = h.Value
@@ -261,8 +261,8 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 					v.SetupCompleted = previous.SetupCompleted
 				case savedconnection.Cleanup:
 					v.PostProcessing.Enabled = previous.PostProcessing.Enabled
-				case savedconnection.Realtime:
-					v.Realtime.Enabled = previous.Realtime.Enabled
+				case savedconnection.Voice:
+					v.VoiceTranscription.Realtime = previous.VoiceTranscription.Realtime && config.VoiceRealtimeEligible(v.VoiceTranscription)
 				case savedconnection.Speech:
 					v.TextToSpeech.Enabled = previous.TextToSpeech.Enabled
 				}
@@ -285,8 +285,8 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	for _, c := range state.entries {
 		for _, role := range c.Uses {
 			counts[role]++
-			if counts[role] > savedconnection.MaxPerPurpose {
-				return v, errors.New("each feature supports at most 32 connections")
+			if counts[role] > savedconnection.Limit(role) {
+				return v, errors.New("connection use limit reached")
 			}
 		}
 	}
@@ -385,7 +385,7 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 func (s *Store) ApplySelectedConnections(v config.Settings) config.Settings {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech, savedconnection.Realtime} {
+	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech, savedconnection.Voice} {
 		if c, ok := s.connections.entries[s.connections.selected[p]]; ok {
 			v = savedconnection.Apply(v, p, c.Details)
 		} else {

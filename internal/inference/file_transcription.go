@@ -38,6 +38,9 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 	if err != nil {
 		return TranscriptionResult{}, err
 	}
+	if !contract.Capabilities.ServerLoadedModel && strings.TrimSpace(model) == "" {
+		return TranscriptionResult{}, &Error{Kind: "invalid_settings", Message: "choose a transcription model"}
+	}
 	if err := c.validateTranscriptionOptions(); err != nil {
 		return TranscriptionResult{}, err
 	}
@@ -153,6 +156,9 @@ func (c *Client) TranscribeFile(ctx context.Context, base, model, language, key 
 			}
 		}
 	}
+	if err == nil && c.modelProfile == modelprofile.Nemotron35 {
+		result.Text, _ = modelprofile.StripNemotronLanguageTag(result.Text)
+	}
 	result.Text = strings.TrimSpace(result.Text)
 	if key != "" && strings.Contains(result.Text, key) {
 		return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
@@ -228,6 +234,15 @@ func (r *progressReader) Read(p []byte) (int, error) {
 }
 
 func writeFileMultipart(mw *multipart.Writer, filename, model, language string, stream bool, options compatibility.TranscriptionOptions, contract compatibility.Contract, file io.Reader) error {
+	if contract.ID == compatibility.NeMoSpeechV1 {
+		if err := mw.WriteField("automatic_punctuation", "true"); err != nil {
+			return err
+		}
+		if err := mw.WriteField("verbatim", "true"); err != nil {
+			return err
+		}
+	}
+
 	if !contract.Capabilities.ServerLoadedModel {
 		if err := mw.WriteField("model", model); err != nil {
 			return err
@@ -250,6 +265,7 @@ func writeFileMultipart(mw *multipart.Writer, filename, model, language string, 
 		return err
 	}
 	part, err := mw.CreateFormFile("file", filename)
+
 	if err != nil {
 		return err
 	}

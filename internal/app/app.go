@@ -187,7 +187,7 @@ func New(opts Options) (*App, error) {
 		rootLogger,
 		settingsservice.WithConfigurationLoad(store, settingsFailure, store.LoadReport()),
 		settingsservice.WithTextToSpeechCredential(ttsKeys),
-		settingsservice.WithRealtimeCredential(store.RealtimeCredentials()),
+		settingsservice.WithVoiceCredential(store.VoiceCredentials()),
 		settingsservice.WithUpdateChecks(func(enabled bool) { updates.ApplyEnabled(a.updates, enabled) }),
 	)
 	settingsSource := settingsservice.CurrentSource(a.settingsService)

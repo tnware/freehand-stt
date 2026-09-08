@@ -10,7 +10,7 @@
   import ValueInput from "$lib/components/settings/ValueInput.svelte";
   import { Badge } from "$lib/components/ui/badge";
   import { PostProcessingPreset, type Settings, type ConnectionResult } from "$lib/state";
-  import { ID } from "$bindings/compatibility";
+  import { ID } from "$bindings/modelprofile";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   let {
     settings = $bindable(),
@@ -51,7 +51,10 @@
     onForget={onForgetModel}
     savedModels={rememberedModels(settings, Purpose.Transcription).map((e) => e.model)}
     models={connection?.modelIDs ?? []}
-    serverLoaded={!!compatibility?.capabilities.serverLoadedModel}
+    serverLoaded={!!compatibility?.capabilities.serverLoadedModel &&
+      !settings.compatibilityProfiles.transcription?.find(
+        (p) => p.id === settings.compatibilityProfile,
+      )?.capabilities.realtime}
     {busy}
     onDiscover={onTestConnection}
   />
@@ -74,12 +77,15 @@
   <ValueRow
     id="language"
     label="Language"
-    hint="Used for microphone and file transcription. Server default leaves the language unset; Automatic detection uses the selected provider’s detection contract. This does not request translation."
+    hint="Used for audio-file transcription. Server default leaves the language unset; Automatic detection uses the selected provider’s detection contract. This does not request translation."
   >
     {#snippet control()}
       <LanguagePicker
         id="language"
-        languages={settings.transcriptionLanguages ?? []}
+        restricted={settings.modelProfile === ID.Nemotron35}
+        languages={settings.modelProfile === ID.Nemotron35
+          ? (settings.realtimeLanguages ?? [])
+          : (settings.transcriptionLanguages ?? [])}
         disabled={!compatibility?.capabilities.languageHint}
         bind:value={() => settings.language ?? "", (value) => (settings.language = value)}
       />
@@ -93,24 +99,6 @@
       turn cleanup off for other languages.
     </p>
   {/if}
-
-  <ValueRow
-    id="transcription-timeout"
-    label="Recording request timeout"
-    hint="Maximum time for each microphone transcription request after its audio is captured. Checkpoints each receive a fresh budget."
-  >
-    {#snippet control()}
-      <ValueInput
-        id="transcription-timeout"
-        type="number"
-        min={10}
-        max={3600}
-        step={10}
-        bind:value={settings.transcriptionTimeoutSeconds}
-      />
-    {/snippet}
-    {#snippet action()}<Badge variant="outline">seconds</Badge>{/snippet}
-  </ValueRow>
 
   <ValueRow
     id="file-transcription-timeout"

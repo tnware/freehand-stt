@@ -75,21 +75,6 @@ type PreferencesSetting struct {
 	SegmentSilenceMs        int64
 }
 
-type RealtimeSetting struct {
-	ID                   int64
-	Enabled              int64
-	CompatibilityProfile string
-	ModelProfile         string
-	BaseUrl              string
-	AllowInsecureHttp    int64
-	AuthenticationMode   string
-	Model                string
-	Language             string
-	Captions             int64
-	Vocabulary           string
-	Boost                float64
-}
-
 type RememberedModel struct {
 	ConnectionID        string
 	Purpose             string
@@ -177,4 +162,30 @@ type TranscriptionSetting struct {
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
 	ModelProfile                            string
+}
+
+type VoiceRequestHeader struct {
+	Name  string
+	Value string
+}
+
+type VoiceTranscriptionSetting struct {
+	ID                   int64
+	Realtime             int64
+	CompatibilityProfile string
+	ModelProfile         string
+	BaseUrl              string
+	AllowInsecureHttp    int64
+	AuthenticationMode   string
+	Model                string
+	Language             string
+	HealthPath           string
+	TimeoutSeconds       int64
+	Prompt               string
+	Hotwords             string
+	TemperatureOverride  int64
+	Temperature          float64
+	Captions             int64
+	Vocabulary           string
+	Boost                float64
 }

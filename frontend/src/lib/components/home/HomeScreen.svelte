@@ -7,6 +7,7 @@
   import ResultQuickSettings from "./ResultQuickSettings.svelte";
   import WorkspaceSplit from "./WorkspaceSplit.svelte";
   import { Button } from "$lib/components/ui/button";
+  import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
   import ReadinessPanel from "$lib/components/home/ReadinessPanel.svelte";
   import AudioFileTranscription from "$lib/components/home/AudioFileTranscription.svelte";
@@ -65,7 +66,7 @@
     runtimeSettings
       ? appReadiness(
           runtimeSettings,
-          session.editor.connection,
+          inputMode === "file" ? session.editor.connection : session.editor.currentVoiceConnection,
           session.editor.devices,
           session.editor.devicesBusy,
           inputMode === "file" ? "file" : "voice",
@@ -168,13 +169,13 @@
             status={session.dictation.status}
             busy={fileWorking}
             toggleShortcut={session.editor.draft.toggleShortcut}
-            model={runtimeSettings?.model ?? ""}
+            model={runtimeSettings?.voiceTranscription.model ?? ""}
             processingModel={runtimeSettings?.postProcessing.model ?? ""}
             microphone={microphoneLabel}
             onToggle={() => session.dictation.toggleRecording()}
             onCancel={() => session.dictation.cancel()}
             onCopy={() => session.dictation.copyPending()}
-            onOpenSettings={onOpenServerSettings}
+            onOpenSettings={() => void WindowingService.OpenSettings("voice-transcription")}
           />
         {:else if inputMode === "file"}
           <AudioFileTranscription
@@ -283,9 +284,14 @@
             {#if showReadiness && readiness}
               <ReadinessPanel
                 {readiness}
-                testing={session.editor.sttConnectionTesting}
+                testing={inputMode === "file"
+                  ? session.editor.sttConnectionTesting
+                  : session.editor.voiceConnectionTesting}
                 completing={session.editor.setupCompleting}
-                onTestConnection={() => session.editor.testConnection(session.editor.applied, "")}
+                onTestConnection={() =>
+                  inputMode === "file"
+                    ? session.editor.testConnection(session.editor.applied, "")
+                    : session.editor.testVoiceConnection()}
                 onComplete={() => session.editor.completeSetup()}
                 onDismiss={() => {
                   dismissedRecoveryKey = readiness.recoveryKey;
@@ -293,39 +299,53 @@
                 onOpenSettings={(section) => {
                   if (section === "audio") onOpenAudioSettings();
                   else if (section === "shortcuts") onOpenShortcutSettings();
+                  else if (section === "voice-transcription")
+                    void WindowingService.OpenSettings("voice-transcription");
                   else onOpenServerSettings();
                 }}
               >
                 {#snippet serverControls()}
-                  <QuickSettings
-                    showCapture={false}
-                    showCleanup={false}
-                    settings={runtimeSettings!}
-                    devices={session.editor.devices}
-                    processingProfiles={session.editor.processingProfiles}
-                    connection={session.editor.connection}
-                    processingConnection={session.editor.processingConnection}
-                    sttStale={session.editor.sttConnectionStale ||
-                      session.editor.connectionResultStale(Purpose.Transcription, runtimeSettings)}
-                    processingStale={session.editor.processingConnectionStale ||
-                      session.editor.connectionResultStale(Purpose.Cleanup, runtimeSettings)}
-                    pending={session.editor.quickSettingsPending}
-                    savedField={session.editor.quickSettingsSaved}
-                    sttTesting={session.editor.sttConnectionTesting}
-                    processingTesting={session.editor.processingConnectionTesting}
-                    onAddConnection={addConnection}
-                    onChangeConnection={(change) => session.editor.changeConnection(change)}
-                    onUpdate={(patch, field) => session.editor.updateQuickSettings(patch, field)}
-                    onTestConnection={() =>
-                      session.editor.testConnection(session.editor.applied, "")}
-                    onTestProcessingConnection={() =>
-                      session.editor.testPostProcessingConnection(session.editor.applied, "")}
-                    disabled={quickSettingsDisabled || session.editor.saving}
-                    {onOpenServerSettings}
-                    {onOpenProcessingSettings}
-                    {onOpenAudioSettings}
-                    onOpenDeliverySettings={onOpenGeneralSettings}
-                  />
+                  {#if inputMode === "voice"}
+                    <VoiceTranscriptionSettings
+                      editor={session.editor}
+                      settings={runtimeSettings!}
+                      disabled={quickSettingsDisabled || session.editor.saving}
+                      onAddConnection={addConnection}
+                    />
+                  {:else}
+                    <QuickSettings
+                      showCapture={false}
+                      showCleanup={false}
+                      settings={runtimeSettings!}
+                      devices={session.editor.devices}
+                      processingProfiles={session.editor.processingProfiles}
+                      connection={session.editor.connection}
+                      processingConnection={session.editor.processingConnection}
+                      sttStale={session.editor.sttConnectionStale ||
+                        session.editor.connectionResultStale(
+                          Purpose.Transcription,
+                          runtimeSettings,
+                        )}
+                      processingStale={session.editor.processingConnectionStale ||
+                        session.editor.connectionResultStale(Purpose.Cleanup, runtimeSettings)}
+                      pending={session.editor.quickSettingsPending}
+                      savedField={session.editor.quickSettingsSaved}
+                      sttTesting={session.editor.sttConnectionTesting}
+                      processingTesting={session.editor.processingConnectionTesting}
+                      onAddConnection={addConnection}
+                      onChangeConnection={(change) => session.editor.changeConnection(change)}
+                      onUpdate={(patch, field) => session.editor.updateQuickSettings(patch, field)}
+                      onTestConnection={() =>
+                        session.editor.testConnection(session.editor.applied, "")}
+                      onTestProcessingConnection={() =>
+                        session.editor.testPostProcessingConnection(session.editor.applied, "")}
+                      disabled={quickSettingsDisabled || session.editor.saving}
+                      {onOpenServerSettings}
+                      {onOpenProcessingSettings}
+                      {onOpenAudioSettings}
+                      onOpenDeliverySettings={onOpenGeneralSettings}
+                    />
+                  {/if}
                 {/snippet}
               </ReadinessPanel>
             {:else if inputMode === "tts"}

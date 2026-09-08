@@ -33,6 +33,7 @@ const (
 // Capabilities are the implemented wire contract. Model-specific advanced
 // parameters must acquire their own qualified rules before being exposed.
 type Capabilities struct {
+	Realtime                    bool `json:"realtime"`
 	ServerLoadedModel           bool `json:"serverLoadedModel"`
 	VLLMTranscriptionEvents     bool `json:"vllmTranscriptionEvents"`
 	CleanupOutputLimit          bool `json:"cleanupOutputLimit"`
@@ -119,6 +120,7 @@ func options(role Role) []Profile {
 	switch role {
 	case Transcription:
 		result = append(result,
+			Profile{ID: NeMoSpeechV1, Label: "NeMo-Speech.cpp", Available: true, Description: "Completed transcription and qualified realtime dictation with the server-loaded speech model; v0.1.0.", Capabilities: Capabilities{ServerLoadedModel: true, LanguageHint: true, Realtime: true}},
 			Profile{ID: WhisperCPP, Label: "whisper.cpp", Available: true, Description: "Completed transcription through the native /inference route. Uses the model already loaded by the server; connection checks use /health. File streaming is unavailable.", Capabilities: Capabilities{ServerLoadedModel: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}},
 			Profile{ID: VLLM, Label: "vLLM", Available: true, Description: "Completed transcription and vLLM file streams. Context, language, and temperature depend on the selected speech model; qualified against v0.28.0.", Capabilities: Capabilities{FileStreaming: true, VLLMTranscriptionEvents: true, LanguageHint: true, TranscriptionPrompt: true, TranscriptionTemperature: true}},
 		)

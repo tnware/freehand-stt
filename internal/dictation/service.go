@@ -10,6 +10,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/activity"
 	"github.com/tnware/freehand-stt/internal/audio"
+	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/history"
 	"github.com/tnware/freehand-stt/internal/inference"
 	"github.com/tnware/freehand-stt/internal/insertion"
@@ -143,8 +144,11 @@ func (s *Service) StartRecording(mode RecordingMode) error {
 	if s.closed.Load() {
 		return errors.New("application is shutting down")
 	}
-	if s.settings == nil || (!s.settings.Current().SetupCompleted && !s.settings.Current().Realtime.Enabled) {
+	if s.settings == nil {
 		return errors.New("complete setup before starting a recording")
+	}
+	if err := config.ValidateVoiceRecording(s.settings.Current().VoiceTranscription); err != nil {
+		return err
 	}
 	release, err := s.activity.BeginRecording()
 	if err != nil {

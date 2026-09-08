@@ -36,8 +36,12 @@ in [ADR 0005](../../decisions/0005-remote-first-product-direction/) remain uncha
 3.5 on NeMo-Speech.cpp v0.1.0. `internal/realtime` owns the versioned WebSocket
 adapter and bounded audio/text transport; `internal/dictation` owns capture,
 generation fencing, immutable profiles, finalization, cleanup, and safe delivery.
-Files continue to capture completed-STT profiles. Realtime credentials are fetched
-only for enabled live dictation. Native captions carry a bounded transient tail
+[ADR 0009](../../decisions/0009-unified-voice-transcription/) gives Voice one active
+connection/model/profile and an optional qualified realtime mode. `VoiceTranscription`
+owns microphone settings; root STT fields own audio files. Dictation captures only
+the Voice credential for either transport, while files capture only their own key.
+The completed Voice snapshot adapts onto the existing STT request fields without
+changing persistent file settings. Native captions carry a bounded transient tail
 in one fixed row; they never become a delivery source or take focus.
 
 The Connection Manager is a reusable native window composed in `internal/app`.
@@ -57,7 +61,7 @@ retains coherent saves and immutable request profiles. See the
 Transcript history remains optional and memory-only.
 
 Named connections represent reusable servers, with explicit supported uses and
-independent active selections for completed transcription, realtime, cleanup, and playback. One ID
+independent active selections for Voice transcription, audio-file transcription, cleanup, and playback. One ID
 can be selected by multiple features; their models and runtime options remain
 independent while URL, profile, authentication, and credential reference are shared. The shared connection editor owns endpoint/authentication/profile fields.
 The Connections page provides library creation, editing, duplication, deletion,

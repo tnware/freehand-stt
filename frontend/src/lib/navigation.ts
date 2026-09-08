@@ -15,7 +15,7 @@ export type SettingsSectionID =
   | "audio"
   | "overlay"
   | "connections"
-  | "realtime"
+  | "voice-transcription"
   | "server"
   | "processing"
   | "speech"
@@ -57,15 +57,15 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   },
   {
     id: "server",
-    label: "Transcription",
+    label: "Audio-file transcription",
     blurb: "Choose a connection, model, language, and transcription options.",
     icon: FileAudioIcon,
     group: "features",
   },
   {
-    id: "realtime",
-    label: "Live transcription",
-    blurb: "Stream microphone audio and preview words as you speak.",
+    id: "voice-transcription",
+    label: "Voice transcription",
+    blurb: "Choose a microphone transcription provider, model, and supported recording mode.",
     icon: MicIcon,
     group: "features",
   },

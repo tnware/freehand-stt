@@ -15,7 +15,7 @@ import (
 type Purpose string
 
 const (
-	Realtime      Purpose = "realtime"
+	Voice         Purpose = "voice"
 	Transcription Purpose = "stt"
 	Cleanup       Purpose = "cleanup"
 	Speech        Purpose = "speech"
@@ -67,7 +67,7 @@ type Catalog struct {
 }
 
 func ValidPurpose(p Purpose) bool {
-	return p == Transcription || p == Cleanup || p == Speech || p == Realtime
+	return p == Transcription || p == Cleanup || p == Speech || p == Voice
 }
 func ValidateName(name string) error {
 	if strings.TrimSpace(name) != name || name == "" || len(name) > 80 || !utf8.ValidString(name) {
@@ -91,11 +91,15 @@ func CloneDetails(v Details) Details {
 func Extract(v config.Settings, p Purpose) Details {
 	d := Details{Headers: map[string]string{}, AuthenticationMode: config.AuthenticationModeNone}
 	switch p {
-	case Realtime:
-		d.CompatibilityProfile = v.Realtime.CompatibilityProfile
-		d.BaseURL = v.Realtime.BaseURL
-		d.AllowInsecureHTTP = v.Realtime.AllowInsecureHTTP
-		d.AuthenticationMode = v.Realtime.AuthenticationMode
+	case Voice:
+		d.CompatibilityProfile = v.VoiceTranscription.CompatibilityProfile
+		d.BaseURL = v.VoiceTranscription.BaseURL
+		d.AllowInsecureHTTP = v.VoiceTranscription.AllowInsecureHTTP
+		d.AuthenticationMode = v.VoiceTranscription.AuthenticationMode
+		d.HealthPath = v.VoiceTranscription.HealthPath
+		for k, x := range v.VoiceTranscription.Headers {
+			d.Headers[k] = x
+		}
 	case Transcription:
 		d.CompatibilityProfile = v.CompatibilityProfile
 		d.BaseURL = v.BaseURL
@@ -121,11 +125,13 @@ func Extract(v config.Settings, p Purpose) Details {
 // Apply selects endpoint details. The settings owner validates model options before committing.
 func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 	switch p {
-	case Realtime:
-		v.Realtime.CompatibilityProfile = d.CompatibilityProfile
-		v.Realtime.BaseURL = d.BaseURL
-		v.Realtime.AllowInsecureHTTP = d.AllowInsecureHTTP
-		v.Realtime.AuthenticationMode = d.AuthenticationMode
+	case Voice:
+		v.VoiceTranscription.CompatibilityProfile = d.CompatibilityProfile
+		v.VoiceTranscription.BaseURL = d.BaseURL
+		v.VoiceTranscription.AllowInsecureHTTP = d.AllowInsecureHTTP
+		v.VoiceTranscription.AuthenticationMode = d.AuthenticationMode
+		v.VoiceTranscription.HealthPath = d.HealthPath
+		v.VoiceTranscription.Headers = CloneDetails(d).Headers
 	case Transcription:
 		v.CompatibilityProfile = d.CompatibilityProfile
 		v.BaseURL = d.BaseURL
@@ -150,8 +156,8 @@ func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 func Validate(p Purpose, d Details) error {
 	var operation compatibility.Role
 	switch p {
-	case Realtime:
-		operation = compatibility.Realtime
+	case Voice:
+		operation = compatibility.Transcription
 	case Transcription:
 		operation = compatibility.Transcription
 	case Cleanup:
@@ -168,7 +174,7 @@ func Validate(p Purpose, d Details) error {
 		return err
 	}
 	switch p {
-	case Transcription:
+	case Transcription, Voice:
 		return config.ValidateSTTConnection(d.BaseURL, d.AllowInsecureHTTP, d.AuthenticationMode, "", d.HealthPath, d.Headers)
 	case Cleanup:
 		return config.ValidatePostProcessingConnection(d.BaseURL, d.AllowInsecureHTTP, "")
@@ -180,12 +186,11 @@ func Validate(p Purpose, d Details) error {
 // ClearModel requires an explicit model choice after switching servers.
 func ClearModel(v config.Settings, p Purpose) config.Settings {
 	switch p {
-	case Realtime:
-		v.Realtime.Model = ""
-		v.Realtime.Enabled = false
+	case Voice:
+		v.VoiceTranscription.Model = ""
+		v.VoiceTranscription.Realtime = false
 	case Transcription:
 		v.Model = ""
-		v.SetupCompleted = false
 	case Cleanup:
 		v.PostProcessing.Model = ""
 		v.PostProcessing.Enabled = false
@@ -212,7 +217,7 @@ func ValidateUses(uses []Purpose, d Details) error {
 			return err
 		}
 	}
-	if !seen[Transcription] && (d.HealthPath != "" || len(d.Headers) != 0) {
+	if !seen[Transcription] && !seen[Voice] && (d.HealthPath != "" || len(d.Headers) != 0) {
 		return errors.New("custom health paths and headers require transcription use")
 	}
 	return nil
@@ -221,7 +226,7 @@ func ValidateUses(uses []Purpose, d Details) error {
 // Project reflects the fields owned by one runtime; the connection keeps its full shared details.
 func Project(d Details, p Purpose) Details {
 	d = CloneDetails(d)
-	if p != Transcription {
+	if p != Transcription && p != Voice {
 		d.HealthPath = ""
 		d.Headers = map[string]string{}
 	}
@@ -229,4 +234,12 @@ func Project(d Details, p Purpose) Details {
 		d.AuthenticationMode = config.AuthenticationModeNone
 	}
 	return d
+}
+
+// Voice can inherit both former completed and realtime connection inventories.
+func Limit(p Purpose) int {
+	if p == Voice {
+		return MaxPerPurpose * 2
+	}
+	return MaxPerPurpose
 }

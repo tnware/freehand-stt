@@ -1,6 +1,5 @@
 <script lang="ts">
-  import RadioIcon from "@lucide/svelte/icons/radio";
-  import RealtimeSettings from "./RealtimeSettings.svelte";
+  import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import MicIcon from "@lucide/svelte/icons/mic";
   import TextCursorInputIcon from "@lucide/svelte/icons/text-cursor-input";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
@@ -35,15 +34,12 @@
     onOpenAudioSettings: () => void;
     onOpenGeneralSettings: () => void;
   } = $props();
-  type Panel = "audio" | "stt" | "cleanup" | "delivery" | "realtime";
+  type Panel = "audio" | "stt" | "cleanup" | "delivery";
   let activePanel = $state<Panel | null>(null);
   const panels = $derived<Panel[]>(
-    showCapture
-      ? ["audio", "stt", "realtime", "cleanup", "delivery"]
-      : ["stt", "cleanup", "delivery"],
+    showCapture ? ["audio", "stt", "cleanup", "delivery"] : ["stt", "cleanup", "delivery"],
   );
   const labels = {
-    realtime: "Live transcription settings",
     audio: "Audio settings",
     stt: "Transcription settings",
     cleanup: "Cleanup settings",
@@ -68,13 +64,12 @@
         class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9 min-w-0 gap-2 px-2")}
       >
         {#if panel === "audio"}<MicIcon class="size-4" />
-        {:else if panel === "realtime"}<RadioIcon
-            class={settings.realtime.enabled ? "size-4 text-primary" : "size-4"}
-          /><span class="hidden text-[13px] @min-[540px]:inline">Live</span>
         {:else if panel === "delivery"}<TextCursorInputIcon class="size-4" />
         {:else}<ProviderIcon
             profile={panel === "stt"
-              ? settings.compatibilityProfile
+              ? showCapture
+                ? settings.voiceTranscription.compatibilityProfile
+                : settings.compatibilityProfile
               : settings.postProcessing.compatibilityProfile}
             size={20}
           />
@@ -91,8 +86,8 @@
         <ChevronDownIcon class="size-3 text-muted-foreground" />
       </Popover.Trigger>
       <Popover.Content role="dialog" aria-label={labels[panel]}>
-        {#if panel === "realtime"}
-          <RealtimeSettings
+        {#if panel === "stt" && showCapture}
+          <VoiceTranscriptionSettings
             {editor}
             {settings}
             {disabled}

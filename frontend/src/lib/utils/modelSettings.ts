@@ -5,8 +5,8 @@ import type { Options } from "$bindings/modelsettings";
 import type { Settings } from "$lib/state";
 
 export function modelFor(settings: Settings, purpose: Purpose): string {
-  return purpose === Purpose.Realtime
-    ? settings.realtime.model
+  return purpose === Purpose.Voice
+    ? settings.voiceTranscription.model
     : purpose === Purpose.Transcription
       ? settings.model
       : purpose === Purpose.Cleanup
@@ -33,12 +33,13 @@ export function modelOptions(settings: Settings, purpose: Purpose): Options {
     voice: "",
     speed: 0,
   };
-  if (purpose === Purpose.Realtime)
+  if (purpose === Purpose.Voice)
     return {
       ...base,
-      profile: settings.realtime.modelProfile,
-      language: settings.realtime.language,
-      realtime: { ...settings.realtime.options },
+      profile: settings.voiceTranscription.modelProfile,
+      language: settings.voiceTranscription.language,
+      realtime: { ...settings.voiceTranscription.options },
+      transcription: { ...settings.voiceTranscription.transcriptionOptions },
     };
   if (purpose === Purpose.Transcription)
     return {
@@ -96,11 +97,16 @@ export function applyModelOptions(
     transcription: { ...options.transcription },
     cleanup: { ...options.cleanup },
   };
-  if (purpose === Purpose.Realtime) {
-    Object.assign(settings.realtime, {
+  if (purpose === Purpose.Voice) {
+    Object.assign(settings.voiceTranscription, {
       model,
       modelProfile: o.profile,
       options: { ...o.realtime },
+      transcriptionOptions: o.transcription,
+      realtime:
+        settings.voiceTranscription.realtime &&
+        !!settings.modelProfiles.voiceTranscription?.find((p) => p.id === o.profile)?.capabilities
+          .realtime,
     });
   } else if (purpose === Purpose.Transcription) {
     settings.model = model;

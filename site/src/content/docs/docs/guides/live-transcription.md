@@ -8,9 +8,9 @@ Live transcription is an optional microphone mode. Words appear in the results p
 ## Connect your server
 
 1. Run **NeMo-Speech.cpp v0.1.0** with **Nemotron 3.5 ASR streaming 0.6B** loaded on a machine you choose. Freehand does not host the model. Follow the runtime's [installation guide](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/install.md).
-2. In Voice's **Live** quick controls, or **Settings → Live transcription**, add a connection. The separate Connection Manager opens. Choose **NeMo-Speech.cpp** and enter its HTTP API base URL, such as `http://127.0.0.1:8088/v1` for a server listening locally on port 8088. Allow HTTP explicitly when appropriate for your server; HTTPS uses a secure WebSocket.
+2. In Voice's **Transcription** quick controls, or **Settings → Voice transcription**, add a connection. The separate Connection Manager opens. Choose **NeMo-Speech.cpp** and enter its HTTP API base URL, such as `http://127.0.0.1:8088/v1` for a server listening locally on port 8088. Allow HTTP explicitly when appropriate for your server; HTTPS uses a secure WebSocket.
 3. Save and use the connection. Choose **Check**, then select the exact loaded model ID reported by the server. This only reads metadata. The server must actually host the qualified Nemotron model; a model name alone does not establish compatibility.
-4. Choose the spoken language or automatic detection and enable **Use live transcription**. Keep **Live overlay captions** enabled to see the caption strip; the main overlay preference must also be enabled.
+4. Choose **Nemotron 3.5 ASR streaming** under **Model profile**. Choose the spoken language or automatic detection and enable **Realtime transcription** in that same panel. Keep **Live overlay captions** enabled to see the caption strip; the main overlay preference must also be enabled.
 
 The client connects to `/v1/realtime` beneath the selected API root. Local servers configured without authentication need no key. A remotely authenticated deployment can use a stored API key, sent in the WebSocket upgrade header.
 
@@ -26,4 +26,4 @@ The preview can change as speech is recognized. NeMo-Speech.cpp v0.1.0 can emit 
 
 Only finalized text can be cleaned up, retained in optional memory history, copied, or inserted. Cancellation or a disconnected stream discards its preview. Start a new recording after a connection failure; Freehand does not replay captured audio.
 
-Live mode uses the existing toggle/hold shortcut and recording duration limit. Silence trimming, checkpoints, and automatic stop are for completed transcription and are bypassed in live mode. Turning live mode off restores that workflow with its saved preferences. File transcription always uses its separate completed-STT configuration.
+Live mode uses the existing toggle/hold shortcut and recording duration limit. Silence trimming, checkpoints, and automatic stop are for completed transcription and are bypassed in live mode. Turning realtime off keeps the same connection and model and uses completed recording/checkpoints with your saved capture preferences. Vocabulary hints and live captions apply only in realtime mode. Audio-file transcription has its own connection, model, language, and options; changing Voice does not change it.

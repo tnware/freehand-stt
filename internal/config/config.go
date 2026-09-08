@@ -204,62 +204,62 @@ const (
 )
 
 type Settings struct {
-	Realtime                        RealtimeSettings       `json:"realtime"`
-	ModelProfile                    modelprofile.ID        `json:"modelProfile"`
-	CompatibilityProfile            compatibility.ID       `json:"compatibilityProfile"`
-	BaseURL                         string                 `json:"baseURL"`
-	AllowInsecureHTTP               bool                   `json:"allowInsecureHTTP"`
-	AuthenticationMode              AuthenticationMode     `json:"authenticationMode"`
-	Model                           string                 `json:"model"`
-	Language                        string                 `json:"language,omitempty"`
-	Headers                         map[string]string      `json:"headers,omitempty"`
-	HealthPath                      string                 `json:"healthPath,omitempty"`
-	ToggleShortcut                  string                 `json:"toggleShortcut"`
-	ShowShortcut                    string                 `json:"showShortcut"`
-	HoldShortcut                    string                 `json:"holdShortcut,omitempty"`
-	MicrophoneID                    string                 `json:"microphoneID,omitempty"`
-	MaxDurationSeconds              int                    `json:"maxDurationSeconds"`
-	TranscriptionTimeoutSeconds     int                    `json:"transcriptionTimeoutSeconds"`
-	FileTranscriptionTimeoutSeconds int                    `json:"fileTranscriptionTimeoutSeconds"`
-	AutoInsert                      bool                   `json:"autoInsert"`
-	StartWithWindows                bool                   `json:"startWithWindows"`
-	ShowWindowOnLaunch              bool                   `json:"showWindowOnLaunch"`
-	CheckForUpdates                 bool                   `json:"checkForUpdates"`
-	SetupCompleted                  bool                   `json:"setupCompleted"`
-	UseMica                         bool                   `json:"useMica"`
-	AppearanceMode                  AppearanceMode         `json:"appearanceMode"`
-	OverlayEnabled                  bool                   `json:"overlayEnabled"`
-	OverlaySizePercent              int                    `json:"overlaySizePercent"`
-	OverlayOpacityPercent           int                    `json:"overlayOpacityPercent"`
-	OverlayTopOffset                int                    `json:"overlayTopOffset"`
-	OverlayGlowPercent              int                    `json:"overlayGlowPercent"`
-	OverlayLayout                   OverlayLayout          `json:"overlayLayout"`
-	OverlayAnchor                   OverlayAnchor          `json:"overlayAnchor"`
-	OverlayVisibility               OverlayVisibility      `json:"overlayVisibility"`
-	OverlayMotion                   OverlayMotion          `json:"overlayMotion"`
-	OverlaySurface                  OverlaySurface         `json:"overlaySurface"`
-	OverlayVisualizer               OverlayVisualizer      `json:"overlayVisualizer"`
-	HistoryEnabled                  bool                   `json:"historyEnabled"`
-	VADEnabled                      bool                   `json:"vadEnabled"`
-	VADMode                         VADMode                `json:"vadMode"`
-	VADActivitySilenceMS            int                    `json:"vadActivitySilenceMilliseconds"`
-	SilenceTrimming                 bool                   `json:"silenceTrimming"`
-	SpeechPaddingMS                 int                    `json:"speechPaddingMilliseconds"`
-	AutoStopEnabled                 bool                   `json:"autoStopEnabled"`
-	AutoStopSilenceMS               int                    `json:"autoStopSilenceMilliseconds"`
-	AutoStopMinimumSpeechMS         int                    `json:"autoStopMinimumSpeechMilliseconds"`
-	SilenceSplitting                bool                   `json:"silenceSplitting"`
-	SegmentSeconds                  int                    `json:"segmentSeconds"`
-	SegmentSilenceMS                int                    `json:"segmentSilenceMilliseconds"`
-	PostProcessing                  PostProcessingSettings `json:"postProcessing"`
-	TextToSpeech                    TextToSpeechSettings   `json:"textToSpeech"`
+	VoiceTranscription              VoiceTranscriptionSettings `json:"voiceTranscription"`
+	ModelProfile                    modelprofile.ID            `json:"modelProfile"`
+	CompatibilityProfile            compatibility.ID           `json:"compatibilityProfile"`
+	BaseURL                         string                     `json:"baseURL"`
+	AllowInsecureHTTP               bool                       `json:"allowInsecureHTTP"`
+	AuthenticationMode              AuthenticationMode         `json:"authenticationMode"`
+	Model                           string                     `json:"model"`
+	Language                        string                     `json:"language,omitempty"`
+	Headers                         map[string]string          `json:"headers,omitempty"`
+	HealthPath                      string                     `json:"healthPath,omitempty"`
+	ToggleShortcut                  string                     `json:"toggleShortcut"`
+	ShowShortcut                    string                     `json:"showShortcut"`
+	HoldShortcut                    string                     `json:"holdShortcut,omitempty"`
+	MicrophoneID                    string                     `json:"microphoneID,omitempty"`
+	MaxDurationSeconds              int                        `json:"maxDurationSeconds"`
+	TranscriptionTimeoutSeconds     int                        `json:"transcriptionTimeoutSeconds"`
+	FileTranscriptionTimeoutSeconds int                        `json:"fileTranscriptionTimeoutSeconds"`
+	AutoInsert                      bool                       `json:"autoInsert"`
+	StartWithWindows                bool                       `json:"startWithWindows"`
+	ShowWindowOnLaunch              bool                       `json:"showWindowOnLaunch"`
+	CheckForUpdates                 bool                       `json:"checkForUpdates"`
+	SetupCompleted                  bool                       `json:"setupCompleted"`
+	UseMica                         bool                       `json:"useMica"`
+	AppearanceMode                  AppearanceMode             `json:"appearanceMode"`
+	OverlayEnabled                  bool                       `json:"overlayEnabled"`
+	OverlaySizePercent              int                        `json:"overlaySizePercent"`
+	OverlayOpacityPercent           int                        `json:"overlayOpacityPercent"`
+	OverlayTopOffset                int                        `json:"overlayTopOffset"`
+	OverlayGlowPercent              int                        `json:"overlayGlowPercent"`
+	OverlayLayout                   OverlayLayout              `json:"overlayLayout"`
+	OverlayAnchor                   OverlayAnchor              `json:"overlayAnchor"`
+	OverlayVisibility               OverlayVisibility          `json:"overlayVisibility"`
+	OverlayMotion                   OverlayMotion              `json:"overlayMotion"`
+	OverlaySurface                  OverlaySurface             `json:"overlaySurface"`
+	OverlayVisualizer               OverlayVisualizer          `json:"overlayVisualizer"`
+	HistoryEnabled                  bool                       `json:"historyEnabled"`
+	VADEnabled                      bool                       `json:"vadEnabled"`
+	VADMode                         VADMode                    `json:"vadMode"`
+	VADActivitySilenceMS            int                        `json:"vadActivitySilenceMilliseconds"`
+	SilenceTrimming                 bool                       `json:"silenceTrimming"`
+	SpeechPaddingMS                 int                        `json:"speechPaddingMilliseconds"`
+	AutoStopEnabled                 bool                       `json:"autoStopEnabled"`
+	AutoStopSilenceMS               int                        `json:"autoStopSilenceMilliseconds"`
+	AutoStopMinimumSpeechMS         int                        `json:"autoStopMinimumSpeechMilliseconds"`
+	SilenceSplitting                bool                       `json:"silenceSplitting"`
+	SegmentSeconds                  int                        `json:"segmentSeconds"`
+	SegmentSilenceMS                int                        `json:"segmentSilenceMilliseconds"`
+	PostProcessing                  PostProcessingSettings     `json:"postProcessing"`
+	TextToSpeech                    TextToSpeechSettings       `json:"textToSpeech"`
 
 	TranscriptionOptions compatibility.TranscriptionOptions `json:"transcriptionOptions"`
 }
 
 func Default() Settings {
 	return Settings{
-		Realtime:             DefaultRealtime(),
+		VoiceTranscription:   DefaultVoiceTranscription(),
 		CompatibilityProfile: compatibility.Generic,
 		// First launch and settings recovery must not select a network peer or a
 		// credential-bearing authentication mode on the user's behalf. The setup
@@ -313,8 +313,8 @@ func (s Settings) EffectiveAppearanceMode() AppearanceMode {
 var headerNameRE = regexp.MustCompile(`^[!#$%&'*+\-.^_` + "`" + `|~0-9A-Za-z]+$`)
 
 func Validate(s Settings) error {
-	if err := ValidateRealtime(s.Realtime); err != nil {
-		return fieldError("realtime", "Check the live transcription connection, model profile, language, and vocabulary.", err)
+	if err := ValidateVoiceTranscription(s.VoiceTranscription); err != nil {
+		return fieldError("voice-transcription", "Check the voice transcription connection, model profile, language, and options.", err)
 	}
 	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Transcription); err != nil {
 		return fieldError("compatibilityProfile", "Choose a supported transcription server profile.", err)
@@ -546,12 +546,11 @@ func ValidateOverlayPreferences(preferences OverlayPreferences) error {
 	return nil
 }
 
-// validatePersistedSTTSettings permits exactly one unconfigured connection
-// state: both endpoint and model are empty while first-run setup is incomplete.
-// This lets settings recovery persist safe defaults without making a partially
-// configured or previously completed profile valid.
+// validatePersistedSTTSettings permits an unconfigured audio-file task independently
+// of Voice setup. Model choice can follow metadata discovery; recording/file
+// request admission enforces the selected backend's model requirement.
 func validatePersistedSTTSettings(s Settings) error {
-	if !s.SetupCompleted && s.BaseURL == "" && s.Model == "" {
+	if s.BaseURL == "" && s.Model == "" {
 		switch s.AuthenticationMode {
 		case AuthenticationModeAPIKey, AuthenticationModeNone:
 		default:
@@ -565,11 +564,11 @@ func validatePersistedSTTSettings(s Settings) error {
 		}
 		return validateHeaders(s.Headers)
 	}
-	contract, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Transcription)
+	_, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Transcription)
 	if err != nil {
 		return err
 	}
-	return validateSTTConnection(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, s.Model, s.HealthPath, s.Headers, s.SetupCompleted && !contract.Capabilities.ServerLoadedModel)
+	return validateSTTConnection(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, s.Model, s.HealthPath, s.Headers, false)
 }
 
 // ValidateSTTConnection validates only renderer-controlled values needed for

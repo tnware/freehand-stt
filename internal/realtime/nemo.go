@@ -59,8 +59,11 @@ type Session struct {
 
 // Open admits the exact selected contract and completes configuration before
 // microphone capture starts. Credentials travel only in the upgrade header.
-func Open(parent context.Context, cfg config.RealtimeSettings, key string, publish func(Update)) (*Session, error) {
-	if err := config.ValidateRealtime(cfg); err != nil {
+func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key string, publish func(Update)) (*Session, error) {
+	if !cfg.Realtime {
+		return nil, errors.New("realtime transcription is not enabled")
+	}
+	if err := config.ValidateVoiceTranscription(cfg); err != nil {
 		return nil, err
 	}
 	if cfg.AuthenticationMode == config.AuthenticationModeAPIKey && key == "" {
@@ -77,6 +80,9 @@ func Open(parent context.Context, cfg config.RealtimeSettings, key string, publi
 		u.Scheme = "ws"
 	}
 	headers := http.Header{}
+	for name, value := range cfg.Headers {
+		headers.Set(name, value)
+	}
 	if cfg.AuthenticationMode == config.AuthenticationModeAPIKey {
 		headers.Set("Authorization", "Bearer "+key)
 	}

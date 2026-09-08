@@ -128,7 +128,7 @@ type stoppedRecording struct {
 
 func (w *stoppedRecording) clearCredentials() {
 	w.profile.STTCredential = ""
-	w.profile.RealtimeCredential = ""
+	w.profile.VoiceCredential = ""
 	w.profile.PostProcessingCredential = ""
 }
 
@@ -244,7 +244,7 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 	}
 	defer func() {
 		profile.STTCredential = ""
-		profile.RealtimeCredential = ""
+		profile.VoiceCredential = ""
 		profile.PostProcessingCredential = ""
 	}()
 	target, _ := c.targetPlatform.CaptureTarget()
@@ -265,7 +265,7 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 	c.cancelWorkLocked()
 	c.pending = ""
 	cfg := profile.Settings
-	if cfg.Realtime.Enabled {
+	if cfg.VoiceTranscription.Realtime {
 		cfg.VADEnabled = false
 		cfg.SilenceTrimming = false
 		cfg.AutoStopEnabled = false
@@ -316,15 +316,15 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 			TimeoutSeconds: cfg.PostProcessing.TimeoutSeconds,
 		},
 	}
-	if cfg.Realtime.Enabled {
+	if cfg.VoiceTranscription.Realtime {
 		c.status.Live = true
-		c.status.LiveCaptions = cfg.Realtime.Captions
+		c.status.LiveCaptions = cfg.VoiceTranscription.Captions
 		details := c.runDetails[gen]
-		details.Server = history.SanitizedServer(cfg.Realtime.BaseURL)
+		details.Server = history.SanitizedServer(cfg.VoiceTranscription.BaseURL)
 		details.Route = "/realtime"
-		details.AuthenticationMode = string(cfg.Realtime.AuthenticationMode)
-		details.Model = cfg.Realtime.Model
-		details.Language = cfg.Realtime.Language
+		details.AuthenticationMode = string(cfg.VoiceTranscription.AuthenticationMode)
+		details.Model = cfg.VoiceTranscription.Model
+		details.Language = cfg.VoiceTranscription.Language
 		details.RequestTimeoutSeconds = 30
 		c.runDetails[gen] = details
 	}
@@ -354,12 +354,12 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 	var live *realtime.Session
 	var e error
 	captureStarted := time.Now()
-	if cfg.Realtime.Enabled {
+	if cfg.VoiceTranscription.Realtime {
 		streamCapture, ok := c.capture.(audio.StreamCapture)
 		if !ok {
 			e = errors.New("streaming capture is unavailable on this platform")
 		} else {
-			live, e = realtime.Open(c.ctx, cfg.Realtime, profile.RealtimeCredential, func(update realtime.Update) { c.publishLive(gen, update) })
+			live, e = realtime.Open(c.ctx, cfg.VoiceTranscription, profile.VoiceCredential, func(update realtime.Update) { c.publishLive(gen, update) })
 			if e == nil {
 				c.mu.Lock()
 				c.realtime = live
@@ -639,7 +639,7 @@ func (c *recorder) stopCapture(gen uint64, limit, automatic bool) (*stoppedRecor
 	c.publish(s)
 	if err != nil {
 		profile.STTCredential = ""
-		profile.RealtimeCredential = ""
+		profile.VoiceCredential = ""
 		profile.PostProcessingCredential = ""
 		c.logger.Error("dictation capture stop failed", "generation", gen, "error_kind", diagnostics.ErrorKind(err))
 		c.fail(gen, "Microphone: "+err.Error())
@@ -673,7 +673,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	automatic := work.automatic
 	defer func() {
 		profile.STTCredential = ""
-		profile.RealtimeCredential = ""
+		profile.VoiceCredential = ""
 		profile.PostProcessingCredential = ""
 		work.clearCredentials()
 	}()
@@ -696,7 +696,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		result := work.realtime.Wait()
 		text, e = result.Text, result.Err
 		details.AudioDurationMilliseconds = result.AudioMilliseconds
-		cfg.Language = cfg.Realtime.Language
+		cfg.Language = cfg.VoiceTranscription.Language
 		if result.Language != "" {
 			cfg.Language = result.Language
 		}

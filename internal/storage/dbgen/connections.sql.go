@@ -275,6 +275,24 @@ func (q *Queries) SeedTranscriptionConnection(ctx context.Context) error {
 	return err
 }
 
+const seedVoiceSelection = `-- name: SeedVoiceSelection :exec
+INSERT INTO selected_connections(purpose,connection_id) SELECT 'voice','initial-stt' WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) SeedVoiceSelection(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, seedVoiceSelection)
+	return err
+}
+
+const seedVoiceUse = `-- name: SeedVoiceUse :exec
+INSERT INTO saved_connection_uses(connection_id,purpose) SELECT 'initial-stt','voice' WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT DO NOTHING
+`
+
+func (q *Queries) SeedVoiceUse(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, seedVoiceUse)
+	return err
+}
+
 const selectSavedConnection = `-- name: SelectSavedConnection :exec
 INSERT INTO selected_connections(purpose,connection_id) VALUES(?,?) ON CONFLICT(purpose) DO UPDATE SET connection_id=excluded.connection_id
 `

@@ -4,8 +4,8 @@ import { modelOptions, modelFor } from "$lib/utils/modelSettings";
 // Non-secret comparison input. It is never persisted, logged, or sent to the server.
 export function connectionInputKey(settings: Settings, purpose: Purpose): string {
   const feature =
-    purpose === Purpose.Realtime
-      ? settings.realtime
+    purpose === Purpose.Voice
+      ? settings.voiceTranscription
       : purpose === Purpose.Transcription
         ? settings
         : purpose === Purpose.Cleanup
@@ -23,10 +23,20 @@ export function connectionInputKey(settings: Settings, purpose: Purpose): string
         ? settings.postProcessingCredentialConfigured
         : purpose === Purpose.Transcription
           ? settings.authenticationMode
-          : purpose === Purpose.Realtime
-            ? settings.realtime.authenticationMode
+          : purpose === Purpose.Voice
+            ? settings.voiceTranscription.authenticationMode
             : settings.textToSpeech.authenticationMode,
-    health: purpose === Purpose.Transcription ? settings.healthPath : undefined,
-    headers: purpose === Purpose.Transcription ? settings.headers : undefined,
+    health:
+      purpose === Purpose.Transcription
+        ? settings.healthPath
+        : purpose === Purpose.Voice
+          ? settings.voiceTranscription.healthPath
+          : undefined,
+    headers:
+      purpose === Purpose.Transcription
+        ? settings.headers
+        : purpose === Purpose.Voice
+          ? settings.voiceTranscription.headers
+          : undefined,
   });
 }

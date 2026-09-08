@@ -46,8 +46,8 @@
   const entries = $derived(catalog?.entries ?? []);
   const busy = $derived(editor.saving || editor.managedConnectionTesting);
   const roles = [
-    { id: Purpose.Realtime, label: "Live transcription" },
-    { id: Purpose.Transcription, label: "Transcription" },
+    { id: Purpose.Voice, label: "Voice transcription" },
+    { id: Purpose.Transcription, label: "Audio-file transcription" },
     { id: Purpose.Cleanup, label: "Cleanup" },
     { id: Purpose.Speech, label: "Text to speech" },
   ];
@@ -55,8 +55,8 @@
   const profiles = $derived.by(() => {
     const catalog = editor.applied?.compatibilityProfiles;
     const all = activateFor
-      ? ((activateFor === Purpose.Realtime
-          ? catalog?.realtime
+      ? ((activateFor === Purpose.Voice
+          ? catalog?.transcription
           : activateFor === Purpose.Transcription
             ? catalog?.transcription
             : activateFor === Purpose.Cleanup
@@ -66,7 +66,7 @@
           ...(catalog?.transcription ?? []),
           ...(catalog?.postProcessing ?? []),
           ...(catalog?.speech ?? []),
-          ...(catalog?.realtime ?? []),
+          ...(catalog?.transcription ?? []),
         ];
     return [...new Map(all.map((p) => [p.id, p])).values()].map((p) => ({
       ...p,
@@ -81,8 +81,8 @@
   function supports(purpose: Purpose, profile = form?.details.compatibilityProfile) {
     const catalog = editor.applied?.compatibilityProfiles;
     const list =
-      purpose === Purpose.Realtime
-        ? catalog?.realtime
+      purpose === Purpose.Voice
+        ? catalog?.transcription
         : purpose === Purpose.Transcription
           ? catalog?.transcription
           : purpose === Purpose.Cleanup
@@ -94,7 +94,7 @@
     if (!form) return;
     form.details.compatibilityProfile = profile;
     form.uses = form.uses.filter((p) => supports(p, profile));
-    if (!form.uses.includes(Purpose.Transcription)) {
+    if (!form.uses.includes(Purpose.Transcription) && !form.uses.includes(Purpose.Voice)) {
       form.details.healthPath = "";
       form.details.headers = {};
     }
@@ -102,7 +102,7 @@
   function setUse(p: Purpose, enabled: boolean) {
     if (!form) return;
     form.uses = enabled ? [...form.uses, p] : form.uses.filter((x) => x !== p);
-    if (!form.uses.includes(Purpose.Transcription)) {
+    if (!form.uses.includes(Purpose.Transcription) && !form.uses.includes(Purpose.Voice)) {
       form.details.healthPath = "";
       form.details.headers = {};
     }
@@ -343,7 +343,7 @@
           </details>
         {/if}
       </SettingsCard>
-      {#if form.uses.includes(Purpose.Transcription)}
+      {#if form.uses.includes(Purpose.Transcription) || form.uses.includes(Purpose.Voice)}
         <details class="rounded-xl border border-hairline bg-layer-fill p-4">
           <summary class="cursor-pointer text-sm font-medium"
             >Transcription connection options</summary

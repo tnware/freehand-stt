@@ -12,7 +12,7 @@ Keep editing or Discard; closing clears the transient credential draft.
 New installations start with an empty list; upgrading retains existing connections.
 
 A connection represents one reusable server: its URL, backend profile, authentication,
-and HTTP permission. Transcription, Live transcription, Cleanup, and Text to speech select connections
+and HTTP permission. Voice transcription, Audio-file transcription, Cleanup, and Text to speech select connections
 independently and can share the same server.
 
 ## Add a connection while setting up a task
@@ -71,18 +71,14 @@ and the previously applied settings remain intact.
 
 ## Reuse a server
 
-A Speaches connection can enable both Transcription and Text to speech, while
-vLLM can enable Transcription and Cleanup. Generic offers those three completed operations;
-NeMo-Speech.cpp offers the qualified [live transcription](../live-transcription/) use;
-llama.cpp currently offers Cleanup, and whisper.cpp offers Transcription.
+A transcription server can be enabled for Voice, Audio file, or both. Each task keeps its own model and options. Speaches also supports Text to speech; vLLM supports Cleanup. Generic offers completed transcription, cleanup, and speech generation. NeMo-Speech.cpp offers completed transcription and qualified [realtime Voice mode](../live-transcription/) with the explicit Nemotron profile. llama.cpp currently offers Cleanup, and whisper.cpp offers completed transcription.
 These choices describe Freehand's implemented contracts, not detected server
 capabilities. A particular vLLM deployment may expose only one operation.
 
 To extend an existing connection, **Edit** it, enable another supported use, and
 **Save connection**. Then select it on the other feature page and choose that
 feature's model. Use separate connections when URLs, credentials, or backend
-profiles differ. Transcription's custom health path and headers apply only to
-transcription; they do not get sent through cleanup or playback adapters.
+profiles differ. Custom transcription health paths and headers apply to Voice and Audio file; they do not get sent through cleanup or playback adapters.
 
 ## Switch, edit, duplicate, or delete
 

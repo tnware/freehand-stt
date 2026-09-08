@@ -28,10 +28,11 @@ type Profile struct {
 }
 
 type Catalog struct {
-	Realtime       []Profile `json:"realtime"`
-	Transcription  []Profile `json:"transcription"`
-	PostProcessing []Profile `json:"postProcessing"`
-	Speech         []Profile `json:"speech"`
+	VoiceTranscription []Profile `json:"voiceTranscription"`
+	Realtime           []Profile `json:"realtime"`
+	Transcription      []Profile `json:"transcription"`
+	PostProcessing     []Profile `json:"postProcessing"`
+	Speech             []Profile `json:"speech"`
 }
 
 // Contract retains the backend path/response encoding, but narrows request
@@ -50,11 +51,11 @@ func Effective(id ID) ID {
 
 func definition(id ID, role compatibility.Role) (Profile, error) {
 	id = Effective(id)
-	if role == compatibility.Realtime {
+	if role == compatibility.Realtime || (role == compatibility.Transcription && id == Nemotron35) {
 		if id != Nemotron35 {
 			return Profile{}, errors.New("choose the qualified Nemotron 3.5 streaming model profile")
 		}
-		return Profile{ID: id, Name: "Nemotron 3.5 ASR streaming", Description: "32 base-model locales and vocabulary boosting. Live text is provisional until finalized.", Capabilities: compatibility.Capabilities{LanguageHint: true}}, nil
+		return Profile{ID: id, Name: "Nemotron 3.5 ASR streaming", Description: "32 base-model locales and vocabulary boosting. Live text is provisional until finalized.", Capabilities: compatibility.Capabilities{LanguageHint: true, Realtime: true}}, nil
 	}
 	p := Profile{ID: id, Name: "Generic"}
 	switch role {
@@ -87,6 +88,7 @@ func definition(id ID, role compatibility.Role) (Profile, error) {
 // constrain preserves transport facts (routes/event encoding/server-loaded
 // models). Only user-facing model capabilities participate in the intersection.
 func constrain(backend, model compatibility.Capabilities) compatibility.Capabilities {
+	backend.Realtime = backend.Realtime && model.Realtime
 	backend.LanguageHint = backend.LanguageHint && model.LanguageHint
 	backend.FileStreaming = backend.FileStreaming && model.FileStreaming
 	backend.TranscriptionPrompt = backend.TranscriptionPrompt && model.TranscriptionPrompt
@@ -99,6 +101,9 @@ func constrain(backend, model compatibility.Capabilities) compatibility.Capabili
 }
 
 func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract, error) {
+	if id == Nemotron35 && backend != compatibility.NeMoSpeechV1 {
+		return Contract{}, errors.New("Nemotron profile requires the qualified NeMo-Speech.cpp backend")
+	}
 	p, err := definition(id, role)
 	if err != nil {
 		return Contract{}, err
@@ -114,6 +119,9 @@ func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract
 
 func options(backend compatibility.ID, role compatibility.Role) []Profile {
 	ids := []ID{Generic}
+	if role == compatibility.Transcription && backend == compatibility.NeMoSpeechV1 {
+		ids = append(ids, Nemotron35)
+	}
 	if role == compatibility.Realtime {
 		ids = []ID{Nemotron35}
 	}
@@ -139,6 +147,13 @@ func ValidateLanguage(id ID, role compatibility.Role, selected string, detected 
 	p, err := definition(id, role)
 	if err != nil {
 		return err
+	}
+	if id == Nemotron35 {
+		// An omitted language delegates automatic detection to the server.
+		if selected == "" {
+			return nil
+		}
+		return ValidateNemotron(selected, NemotronOptions{})
 	}
 	if p.Language == "" {
 		return nil
@@ -200,4 +215,8 @@ func ValidateSpeech(id ID, backend compatibility.ID, speed float64) error {
 		return errors.New("speech speed is unavailable for this model profile")
 	}
 	return nil
+}
+
+func VoiceProfiles(backend compatibility.ID) []Profile {
+	return options(backend, compatibility.Transcription)
 }

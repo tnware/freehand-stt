@@ -11,14 +11,11 @@ import {
 } from "./session-fixtures";
 
 describe("connection assessment snapshots", () => {
-  it.each(["voice", "tts"])(
+  it.each(["file", "tts"])(
     "does not attribute a draft-only check to the applied %s task",
     async (mode) => {
-      const services = serviceWithStatus(() =>
-        CancellablePromise.resolve(idle),
-      );
-      services.connection.TestConnection = () =>
-        CancellablePromise.resolve(connectionResult);
+      const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
+      services.connection.TestConnection = () => CancellablePromise.resolve(connectionResult);
       services.connection.TestTextToSpeechConnection = () =>
         CancellablePromise.resolve(connectionResult);
       const { editor } = createEditor(services);
@@ -41,16 +38,13 @@ describe("connection assessment snapshots", () => {
   );
   it("captures model options and marks results stale only for relevant changes", async () => {
     const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
-    services.connection.TestConnection = vi.fn(() =>
-      CancellablePromise.resolve(connectionResult),
-    );
+    services.connection.TestConnection = vi.fn(() => CancellablePromise.resolve(connectionResult));
     const { editor } = createEditor(services);
     editor.applySettingsSnapshot(structuredClone(settings));
     await editor.testConnection();
-    expect(
-      vi.mocked(services.connection.TestConnection).mock.calls[0][0].options
-        ?.profile,
-    ).toBe(settings.modelProfile);
+    expect(vi.mocked(services.connection.TestConnection).mock.calls[0][0].options?.profile).toBe(
+      settings.modelProfile,
+    );
     expect(editor.connectionResultStale(Purpose.Transcription)).toBe(false);
     editor.draft!.maxDurationSeconds += 1;
     expect(editor.connectionResultStale(Purpose.Transcription)).toBe(false);

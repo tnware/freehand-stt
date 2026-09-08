@@ -14,7 +14,7 @@
   import { Skeleton } from "$lib/components/ui/skeleton";
   import Notifications from "$lib/components/shell/Notifications.svelte";
   import SettingsNav from "$lib/components/settings/SettingsNav.svelte";
-  import RealtimeSettings from "$lib/components/home/RealtimeSettings.svelte";
+  import VoiceTranscriptionSettings from "$lib/components/home/VoiceTranscriptionSettings.svelte";
   import AudioSection from "$lib/components/settings/sections/AudioSection.svelte";
   import GeneralSection from "$lib/components/settings/sections/GeneralSection.svelte";
   import HistorySection from "$lib/components/settings/sections/HistorySection.svelte";
@@ -286,8 +286,8 @@
               onSaved={() => {}}
               onOpenFeature={(p) =>
                 selectSection(
-                  p === Purpose.Realtime
-                    ? "realtime"
+                  p === Purpose.Voice
+                    ? "voice-transcription"
                     : p === Purpose.Transcription
                       ? "server"
                       : p === Purpose.Cleanup
@@ -295,9 +295,9 @@
                         : "speech",
                 )}
             />
-          {:else if active === "realtime"}
+          {:else if active === "voice-transcription"}
             <div class="max-w-xl rounded-lg border border-hairline bg-layer-fill p-5">
-              <RealtimeSettings
+              <VoiceTranscriptionSettings
                 editor={session.editor}
                 settings={session.editor.draft}
                 draft

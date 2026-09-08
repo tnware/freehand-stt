@@ -55,12 +55,12 @@ type Catalog struct {
 
 func Defaults() map[savedconnection.Purpose]Options {
 	d := config.Default()
-	return map[savedconnection.Purpose]Options{savedconnection.Transcription: Extract(d, savedconnection.Transcription), savedconnection.Cleanup: Extract(d, savedconnection.Cleanup), savedconnection.Speech: Extract(d, savedconnection.Speech), savedconnection.Realtime: Extract(d, savedconnection.Realtime)}
+	return map[savedconnection.Purpose]Options{savedconnection.Transcription: Extract(d, savedconnection.Transcription), savedconnection.Cleanup: Extract(d, savedconnection.Cleanup), savedconnection.Speech: Extract(d, savedconnection.Speech), savedconnection.Voice: Extract(d, savedconnection.Voice)}
 }
 func Model(v config.Settings, p savedconnection.Purpose) string {
 	switch p {
-	case savedconnection.Realtime:
-		return v.Realtime.Model
+	case savedconnection.Voice:
+		return v.VoiceTranscription.Model
 	case savedconnection.Transcription:
 		return v.Model
 	case savedconnection.Cleanup:
@@ -72,8 +72,8 @@ func Model(v config.Settings, p savedconnection.Purpose) string {
 }
 func Extract(v config.Settings, p savedconnection.Purpose) Options {
 	switch p {
-	case savedconnection.Realtime:
-		return Options{Profile: v.Realtime.ModelProfile, Language: v.Realtime.Language, Realtime: v.Realtime.Options}
+	case savedconnection.Voice:
+		return Options{Profile: v.VoiceTranscription.ModelProfile, Language: v.VoiceTranscription.Language, Realtime: v.VoiceTranscription.Options, Transcription: v.VoiceTranscription.TranscriptionOptions}
 	case savedconnection.Transcription:
 		return Options{Profile: modelprofile.Effective(v.ModelProfile), Language: v.Language, Transcription: v.TranscriptionOptions}
 	case savedconnection.Cleanup:
@@ -87,11 +87,12 @@ func Extract(v config.Settings, p savedconnection.Purpose) Options {
 }
 func Apply(v config.Settings, p savedconnection.Purpose, model string, o Options) config.Settings {
 	switch p {
-	case savedconnection.Realtime:
-		v.Realtime.Model = model
-		v.Realtime.ModelProfile = o.Profile
-		v.Realtime.Language = o.Language
-		v.Realtime.Options = o.Realtime
+	case savedconnection.Voice:
+		v.VoiceTranscription.Model = model
+		v.VoiceTranscription.ModelProfile = o.Profile
+		v.VoiceTranscription.Language = o.Language
+		v.VoiceTranscription.Options = o.Realtime
+		v.VoiceTranscription.TranscriptionOptions = o.Transcription
 	case savedconnection.Transcription:
 		v.Model = model
 		v.ModelProfile = o.Profile
@@ -124,7 +125,7 @@ func Validate(e Entry, d savedconnection.Details) error {
 			return errors.New("invalid remembered model")
 		}
 	}
-	if e.Model == "" && !(e.Purpose == savedconnection.Transcription && d.CompatibilityProfile == compatibility.WhisperCPP) {
+	if e.Model == "" && !((e.Purpose == savedconnection.Transcription || e.Purpose == savedconnection.Voice) && d.CompatibilityProfile == compatibility.WhisperCPP) {
 		return errors.New("remembered model ID is required")
 	}
 	v := Apply(savedconnection.Apply(config.Default(), e.Purpose, d), e.Purpose, e.Model, e.Options)
@@ -132,8 +133,8 @@ func Validate(e Entry, d savedconnection.Details) error {
 		return errors.New("remembered options contain fields for another feature")
 	}
 	switch e.Purpose {
-	case savedconnection.Realtime:
-		return config.ValidateRealtime(v.Realtime)
+	case savedconnection.Voice:
+		return config.ValidateVoiceTranscription(v.VoiceTranscription)
 	case savedconnection.Transcription:
 		return config.Validate(v)
 	case savedconnection.Cleanup:
@@ -150,7 +151,8 @@ func Validate(e Entry, d savedconnection.Details) error {
 func Select(v config.Settings, p savedconnection.Purpose, model string, o Options) config.Settings {
 	next := Apply(v, p, model, o)
 	next.Language = v.Language
-	next.Realtime.Language = v.Realtime.Language
+	next.VoiceTranscription.Language = v.VoiceTranscription.Language
+	next.VoiceTranscription.Realtime = v.VoiceTranscription.Realtime && config.VoiceRealtimeEligible(next.VoiceTranscription)
 	next.PostProcessing.SystemPrompt = v.PostProcessing.SystemPrompt
 	next.PostProcessing.Styling = v.PostProcessing.Styling
 	next.PostProcessing.Structure = v.PostProcessing.Structure

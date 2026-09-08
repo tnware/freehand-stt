@@ -21,6 +21,8 @@ export interface TaskConnectionStatus {
 type TaskConnectionSource = Pick<
   SettingsEditor,
   | "applied"
+  | "currentVoiceConnection"
+  | "voiceConnectionTesting"
   | "connection"
   | "ttsConnection"
   | "sttConnectionStale"
@@ -36,11 +38,22 @@ export function taskConnectionStatus(
   now: number,
 ): TaskConnectionStatus {
   const speech = mode === "tts";
+  const voice = mode === "voice";
   const scope = speech ? "Text to speech" : "Transcription";
   const settings = source.applied;
-  const connection = speech ? source.ttsConnection : source.connection;
+  const connection = speech
+    ? source.ttsConnection
+    : voice
+      ? source.currentVoiceConnection
+      : source.connection;
   const host = settings
-    ? endpointHost(speech ? settings.textToSpeech.baseURL : settings.baseURL)
+    ? endpointHost(
+        speech
+          ? settings.textToSpeech.baseURL
+          : voice
+            ? settings.voiceTranscription.baseURL
+            : settings.baseURL,
+      )
     : "";
   const summary = (
     label: string,
@@ -55,16 +68,21 @@ export function taskConnectionStatus(
     title: `${scope}: ${title}`,
   });
   if (!settings) return summary("Loading", "reading settings");
-  if (speech && !settings.textToSpeech.enabled)
-    return summary("Off", "generation disabled");
+  if (speech && !settings.textToSpeech.enabled) return summary("Off", "generation disabled");
   // A settings window may be checking an unsaved draft. Never attach that
   // pending check or its result to the applied endpoint used by the home task.
-  if (speech ? source.ttsConnectionTesting : source.sttConnectionTesting)
+  if (
+    speech
+      ? source.ttsConnectionTesting
+      : voice
+        ? source.voiceConnectionTesting
+        : source.sttConnectionTesting
+  )
     return summary("Checking", "metadata only");
   if (
-    (speech ? source.ttsConnectionStale : source.sttConnectionStale) ||
+    (speech ? source.ttsConnectionStale : voice ? false : source.sttConnectionStale) ||
     source.connectionResultStale(
-      speech ? Purpose.Speech : Purpose.Transcription,
+      speech ? Purpose.Speech : voice ? Purpose.Voice : Purpose.Transcription,
       settings,
     )
   )
@@ -102,9 +120,7 @@ export const shouldAutomaticallyTestConnection = (
 export const connectionSucceeded = (result: ConnectionResult): boolean =>
   result.errorKind === ConnectionErrorKind.$zero;
 
-export const connectionStatusLabel = (
-  result: ConnectionResult | null,
-): string => {
+export const connectionStatusLabel = (result: ConnectionResult | null): string => {
   if (!result) return "Not checked";
   if (connectionSucceeded(result)) {
     return result.probe === ConnectionProbe.ConnectionProbeHealth
@@ -174,14 +190,10 @@ export const connectionDescription = (result: ConnectionResult): string => {
 };
 
 export const connectionProbeLabel = (result: ConnectionResult): string =>
-  result.probe === ConnectionProbe.ConnectionProbeHealth
-    ? "GET /health"
-    : "GET /models";
+  result.probe === ConnectionProbe.ConnectionProbeHealth ? "GET /health" : "GET /models";
 
 export const modelPresenceLabel = (result: ConnectionResult): string => {
-  if (result.modelPresence === ModelPresence.ModelPresenceListed)
-    return "Listed";
-  if (result.modelPresence === ModelPresence.ModelPresenceNotListed)
-    return "Not listed";
+  if (result.modelPresence === ModelPresence.ModelPresenceListed) return "Listed";
+  if (result.modelPresence === ModelPresence.ModelPresenceNotListed) return "Not listed";
   return "Unavailable";
 };

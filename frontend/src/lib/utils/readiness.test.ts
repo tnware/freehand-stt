@@ -24,7 +24,25 @@ import { appReadiness, readinessVisible } from "$lib/utils/readiness";
 const devices: Device[] = [{ id: "mic-1", name: "Desk microphone", default: true }];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
-  savedConnections: { entries: [], selected: {} },
+  savedConnections: {
+    entries: [
+      {
+        id: "voice",
+        name: "Voice",
+        uses: [],
+        hasCredential: overrides.credentialConfigured ?? true,
+        details: {
+          compatibilityProfile: ID.Generic,
+          baseURL: "https://example.test/v1",
+          allowInsecureHTTP: false,
+          authenticationMode: AuthenticationMode.AuthenticationModeAPIKey,
+          healthPath: "",
+          headers: {},
+        },
+      },
+    ],
+    selected: { voice: "voice" },
+  },
   transcriptionOptions: {
     prompt: "",
     hotwords: "",
@@ -34,21 +52,31 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   compatibilityProfile: ID.Generic,
   compatibilityProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
   rememberedModels: { entries: [], defaults: {} },
-  modelProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
+  modelProfiles: {
+    voiceTranscription: [],
+    transcription: [],
+    postProcessing: [],
+    speech: [],
+    realtime: [],
+  },
   modelProfile: ModelProfileID.Generic,
   transcriptionLanguages: [],
   realtimeLanguages: [],
-  realtime: {
-    enabled: false,
-    compatibilityProfile: ID.NeMoSpeechV1,
-    modelProfile: ModelProfileID.Nemotron35,
-    baseURL: "",
+  voiceTranscription: {
+    realtime: false,
+    healthPath: "",
+    headers: {},
+    timeoutSeconds: 120,
+    transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
+    compatibilityProfile: overrides.compatibilityProfile ?? ID.Generic,
+    modelProfile: ModelProfileID.Generic,
+    baseURL: overrides.baseURL ?? "https://example.test/v1",
     allowInsecureHTTP: false,
-    authenticationMode: AuthenticationMode.AuthenticationModeNone,
-    model: "",
+    authenticationMode: overrides.authenticationMode ?? AuthenticationMode.AuthenticationModeAPIKey,
+    model: overrides.model ?? "speech/stt",
     language: "auto",
     captions: true,
-    options: { vocabulary: "", boost: 3 },
+    options: { vocabulary: "", boost: 0 },
   },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
@@ -267,6 +295,7 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
       description: "Native server",
       available: true,
       capabilities: {
+        realtime: false,
         voiceDiscovery: false,
         serverLoadedModel: true,
         vllmTranscriptionEvents: false,
@@ -285,7 +314,7 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
   ];
   const native = appReadiness(cfg, null, devices, false);
   expect(native.steps.find((step) => step.id === "server")?.status).toBe("complete");
-  cfg.compatibilityProfile = ID.Generic;
+  cfg.voiceTranscription.compatibilityProfile = ID.Generic;
   expect(
     appReadiness(cfg, null, devices, false).steps.find((step) => step.id === "server")?.status,
   ).toBe("attention");

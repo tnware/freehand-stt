@@ -67,7 +67,7 @@ export type QuickSettingsPatch = Partial<
     | "overlayEnabled"
   >
 > & {
-  realtime?: Partial<Settings["realtime"]>;
+  voiceTranscription?: Partial<Settings["voiceTranscription"]>;
   model?: string;
   postProcessing?: Partial<
     Pick<
@@ -78,7 +78,7 @@ export type QuickSettingsPatch = Partial<
 };
 
 export type QuickSettingsField =
-  | "realtime"
+  | "voice-transcription"
   | "microphone"
   | "vad-enabled"
   | "silence-splitting"
@@ -94,7 +94,12 @@ export type QuickSettingsField =
 /** Keeps the editable draft independent from the backend-confirmed snapshot. */
 const copySettings = (settings: Settings): Settings => ({
   ...settings,
-  realtime: { ...settings.realtime, options: { ...settings.realtime.options } },
+  voiceTranscription: {
+    ...settings.voiceTranscription,
+    headers: { ...settings.voiceTranscription.headers },
+    transcriptionOptions: { ...settings.voiceTranscription.transcriptionOptions },
+    options: { ...settings.voiceTranscription.options },
+  },
   savedConnections: {
     selected: { ...settings.savedConnections.selected },
     entries: (settings.savedConnections.entries ?? []).map((c) => ({
@@ -542,7 +547,7 @@ export class SettingsEditor {
       details: connection
         ? { ...connection.details, headers: { ...connection.details.headers } }
         : {
-            compatibilityProfile: purpose === Purpose.Realtime ? ID.NeMoSpeechV1 : ID.Generic,
+            compatibilityProfile: ID.Generic,
             baseURL: "",
             allowInsecureHTTP: false,
             authenticationMode: AuthenticationMode.AuthenticationModeNone,
@@ -707,12 +712,7 @@ export class SettingsEditor {
   async save(): Promise<boolean> {
     if (!this.draft || this.saving) return false;
     this.validationIssue = null;
-    for (const purpose of [
-      Purpose.Transcription,
-      Purpose.Cleanup,
-      Purpose.Speech,
-      Purpose.Realtime,
-    ])
+    for (const purpose of [Purpose.Transcription, Purpose.Cleanup, Purpose.Speech, Purpose.Voice])
       this.#retainModelDraft(purpose);
     this.saving = true;
     this.#messages.clear();
@@ -829,13 +829,13 @@ export class SettingsEditor {
     const operation = this.#quickSettingsQueue.then(async () => {
       if (!this.applied) return;
       const next = copySettings(this.applied);
-      if (patch.realtime) {
+      if (patch.voiceTranscription) {
         if (
-          patch.realtime.model !== undefined &&
-          !applyModel(next, Purpose.Realtime, patch.realtime.model.trim())
+          patch.voiceTranscription.model !== undefined &&
+          !applyModel(next, Purpose.Voice, patch.voiceTranscription.model.trim())
         )
-          throw new Error("Reload settings before selecting a live model.");
-        next.realtime = { ...next.realtime, ...patch.realtime };
+          throw new Error("Reload settings before selecting a Voice model.");
+        next.voiceTranscription = { ...next.voiceTranscription, ...patch.voiceTranscription };
       }
       if (patch.model !== undefined && !applyModel(next, Purpose.Transcription, patch.model.trim()))
         throw new Error("Reload settings before selecting a model.");
@@ -903,6 +903,40 @@ export class SettingsEditor {
   connectionResultStale(purpose: Purpose, settings = this.draft): boolean {
     const tested = this.#testedInputs[purpose];
     return !!(tested && settings && tested !== connectionInputKey(settings, purpose));
+  }
+
+  voiceConnection = $state<ConnectionResult | null>(null);
+  voiceConnectionTesting = $state(false);
+  #voiceTestID = $state("");
+  async testVoiceConnection() {
+    const settings = this.applied;
+    const id = settings?.savedConnections.selected?.voice;
+    if (!settings || !id || this.voiceConnectionTesting) return;
+    const key = connectionInputKey(settings, Purpose.Voice);
+    this.voiceConnectionTesting = true;
+    this.voiceConnection = null;
+    this.#voiceTestID = key;
+    try {
+      const result = await this.#service.connection.TestSavedConnection(id);
+      if (this.applied && key === connectionInputKey(this.applied, Purpose.Voice)) {
+        this.voiceConnection = result;
+        this.#testedInputs[Purpose.Voice] = key;
+        this.#voiceTestID = key;
+        return result;
+      }
+    } catch (cause) {
+      this.#messages.fail(cause);
+    } finally {
+      this.voiceConnectionTesting = false;
+    }
+  }
+  get voiceConnectionChecked(): boolean {
+    return !!this.applied && this.#voiceTestID === connectionInputKey(this.applied, Purpose.Voice);
+  }
+  get currentVoiceConnection(): ConnectionResult | null {
+    return this.applied && this.#voiceTestID === connectionInputKey(this.applied, Purpose.Voice)
+      ? this.voiceConnection
+      : null;
   }
 
   async testConnection(settings = this.draft, apiKey = this.apiKey, clearExistingMessages = true) {

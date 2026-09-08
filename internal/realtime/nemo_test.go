@@ -47,9 +47,11 @@ func fixtureServer(t *testing.T, after func(context.Context, *websocket.Conn), o
 	}))
 }
 
-func fixtureConfig(server *httptest.Server) config.RealtimeSettings {
-	v := config.DefaultRealtime()
-	v.Enabled = true
+func fixtureConfig(server *httptest.Server) config.VoiceTranscriptionSettings {
+	v := config.DefaultVoiceTranscription()
+	v.Realtime = true
+	v.CompatibilityProfile = "nemo-speech-v1"
+	v.ModelProfile = "nemotron-3.5-streaming"
 	v.BaseURL = server.URL + "/v1"
 	v.Model = "fixture-model"
 	v.AuthenticationMode = config.AuthenticationModeAPIKey

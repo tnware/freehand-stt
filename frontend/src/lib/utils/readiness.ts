@@ -1,4 +1,3 @@
-import { usesServerLoadedModel } from "$lib/utils/compatibility";
 import type { SettingsSectionID } from "$lib/navigation";
 import { AuthenticationMode, type ConnectionResult, type Device, type Settings } from "$lib/state";
 import { connectionStatusLabel, connectionSucceeded } from "$lib/utils/connection";
@@ -40,16 +39,19 @@ export function appReadiness(
   devicesLoading: boolean,
   task: "voice" | "file" = "voice",
 ): Readiness {
-  const live = task === "voice" && settings.realtime.enabled;
-  const endpoint = live ? settings.realtime : settings;
-  const hasCredential = live
+  const voice = task === "voice";
+  const endpoint = voice ? settings.voiceTranscription : settings;
+  const hasCredential = voice
     ? !!settings.savedConnections.entries?.find(
-        (c) => c.id === settings.savedConnections.selected?.realtime,
+        (c) => c.id === settings.savedConnections.selected?.voice,
       )?.hasCredential
     : settings.credentialConfigured;
-  const initialSetup = task === "voice" && !settings.setupCompleted && !live;
-  if (live) connection = null;
-  const serverLoadedModel = !live && usesServerLoadedModel(settings);
+  const initialSetup = voice && !settings.setupCompleted;
+  const serverLoadedModel =
+    !(voice && settings.voiceTranscription.realtime) &&
+    !!settings.compatibilityProfiles.transcription?.find(
+      (p) => p.id === endpoint.compatibilityProfile,
+    )?.capabilities.serverLoadedModel;
   const serverConfigured = Boolean(
     endpoint.baseURL.trim() && (serverLoadedModel || endpoint.model.trim()),
   );
@@ -72,7 +74,7 @@ export function appReadiness(
           : "Add an endpoint and model.",
       status: serverConfigured ? "complete" : "attention",
       blocking: !serverConfigured,
-      settingsSection: live ? "realtime" : "server",
+      settingsSection: voice ? "voice-transcription" : "server",
     },
     {
       id: "credential",
@@ -85,7 +87,7 @@ export function appReadiness(
             : "Add the API key required by this endpoint.",
       status: credentialConfigured ? "complete" : "attention",
       blocking: !credentialConfigured,
-      settingsSection: live ? "realtime" : "server",
+      settingsSection: voice ? "voice-transcription" : "server",
     },
     {
       id: "microphone",
@@ -123,7 +125,7 @@ export function appReadiness(
             : "Not checked during this session.",
       status: connectionVerified ? "complete" : connection ? "attention" : "pending",
       blocking: connection ? !connectionVerified : initialSetup,
-      settingsSection: live ? "realtime" : "server",
+      settingsSection: voice ? "voice-transcription" : "server",
     },
   ];
 
@@ -138,10 +140,10 @@ export function appReadiness(
       .filter((step) => step.status === "attention" && step.blocking)
       .map((step) => step.id),
     server: endpoint.baseURL,
-    model: serverLoadedModel ? "" : settings.model,
-    profile: settings.compatibilityProfile,
+    model: serverLoadedModel ? "" : endpoint.model,
+    profile: endpoint.compatibilityProfile,
     authentication: endpoint.authenticationMode,
-    credentialConfigured: settings.credentialConfigured,
+    credentialConfigured: hasCredential,
     microphone: microphoneChoice,
     connection: connection
       ? {

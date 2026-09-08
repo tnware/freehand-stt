@@ -7,6 +7,8 @@ description: Add an optional Nemotron streaming transport without expanding Free
 - Date: 2026-09-07
 - Supersedes: ADR 0005's blanket deferral of realtime dictation, and ADR 0002's proposed first transport and event correlation requirements for this adapter only.
 
+> The separate feature-selection and credential-slot design below is superseded by [ADR 0009](../0009-unified-voice-transcription/). The qualified transport and safety decisions remain in force.
+
 ## Decision
 
 Offer opt-in realtime microphone dictation using the explicit **NeMo-Speech.cpp v0.1.0** backend and **Nemotron 3.5 ASR streaming 0.6B** model profile. Completed/file transcription remains independently configured; the existing pause-aware flow remains the default. Conversation mode remains deferred. Freehand never installs, starts, downloads, or manages inference models as a product feature.
