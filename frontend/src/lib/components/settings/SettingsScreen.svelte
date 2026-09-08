@@ -88,6 +88,7 @@
   }
 
   let contentPane = $state<HTMLDivElement | null>(null);
+  let headingHeight = $state(0);
   const contentKey = $derived(
     `${active}/${active === "connections" ? (session.editor.connectionDraft?.id ?? "list") : "section"}`,
   );
@@ -197,12 +198,19 @@
   />
 
   <div class="flex min-w-0 flex-1 flex-col">
-    <div bind:this={contentPane} class="min-h-0 flex-1 overflow-y-auto px-5 py-6">
+    <div
+      bind:this={contentPane}
+      style:scroll-padding-top={`${headingHeight + 16}px`}
+      class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5 sm:px-6"
+    >
       <section
         aria-labelledby="settings-section-title"
-        class="@container flex max-w-[680px] flex-col gap-4"
+        class="@container flex w-full max-w-[760px] flex-col gap-4"
       >
-        <div class="space-y-1.5 pb-1">
+        <div
+          bind:clientHeight={headingHeight}
+          class="sticky top-0 z-10 space-y-1.5 border-b border-hairline bg-background py-4"
+        >
           <h3 id="settings-page-heading" tabindex="-1" class="text-xl font-semibold tracking-tight">
             {section.label}
           </h3>
@@ -213,7 +221,7 @@
         <h2 id="settings-section-title" class="sr-only" aria-live="polite" aria-atomic="true">
           {section.label} settings
         </h2>
-        <Notifications {messages} />
+        {#if messages.length}<Notifications {messages} />{/if}
         {#if session.editor.validationIssue}
           <div class="flex flex-wrap items-center gap-2 border-l-2 border-destructive pl-3 text-sm">
             <p id="settings-validation-message" role="alert" class="text-destructive">
@@ -229,14 +237,16 @@
         {/if}
 
         {#if session.editor.draft}
-          {#if active === "server" || active === "processing" || active === "speech"}
+          {#if active === "voice-transcription" || active === "server" || active === "processing" || active === "speech"}
             <SavedConnectionPicker
               catalog={session.editor.draft.savedConnections}
-              purpose={active === "server"
-                ? Purpose.Transcription
-                : active === "processing"
-                  ? Purpose.Cleanup
-                  : Purpose.Speech}
+              purpose={active === "voice-transcription"
+                ? Purpose.Voice
+                : active === "server"
+                  ? Purpose.Transcription
+                  : active === "processing"
+                    ? Purpose.Cleanup
+                    : Purpose.Speech}
               dirty={session.editor.dirty}
               busy={session.editor.saving || session.editor.quickSettingsPending.length > 0}
               onChange={async (change) => {
@@ -248,20 +258,24 @@
               }}
               onAdd={() =>
                 addConnection(
-                  active === "server"
-                    ? Purpose.Transcription
-                    : active === "processing"
-                      ? Purpose.Cleanup
-                      : Purpose.Speech,
+                  active === "voice-transcription"
+                    ? Purpose.Voice
+                    : active === "server"
+                      ? Purpose.Transcription
+                      : active === "processing"
+                        ? Purpose.Cleanup
+                        : Purpose.Speech,
                 )}
               onManage={() =>
                 withSavedSettings(() => {
                   const purpose =
-                    active === "server"
-                      ? Purpose.Transcription
-                      : active === "processing"
-                        ? Purpose.Cleanup
-                        : Purpose.Speech;
+                    active === "voice-transcription"
+                      ? Purpose.Voice
+                      : active === "server"
+                        ? Purpose.Transcription
+                        : active === "processing"
+                          ? Purpose.Cleanup
+                          : Purpose.Speech;
                   const c = session.editor.applied?.savedConnections.entries?.find(
                     (c) => c.id === session.editor.applied?.savedConnections.selected?.[purpose],
                   );
@@ -299,15 +313,17 @@
                 )}
             />
           {:else if active === "voice-transcription"}
-            <div class="max-w-xl rounded-lg border border-hairline bg-layer-fill p-5">
-              <VoiceTranscriptionSettings
-                editor={session.editor}
-                settings={session.editor.draft}
-                draft
-                disabled={session.editor.saving}
-                onAddConnection={addConnection}
-              />
-            </div>
+            {#if session.editor.draft.savedConnections.selected?.voice}<div
+                class="rounded-xl border border-hairline bg-layer-fill px-5 py-4"
+              >
+                <VoiceTranscriptionSettings
+                  editor={session.editor}
+                  settings={session.editor.draft}
+                  draft
+                  disabled={session.editor.saving}
+                  onAddConnection={addConnection}
+                />
+              </div>{/if}
           {:else if active === "vocabulary"}
             <VocabularySection
               settings={session.editor.draft}
@@ -385,7 +401,9 @@
                 connectionBusy={session.editor.ttsConnectionTesting}
                 canPreview={session.dictation.status.state === State.Idle &&
                   !session.files.status.canCancel}
-                onPreview={() => session.speech.previewVoice()}
+                onPreview={() => {
+                  if (session.editor.draft) void session.speech.previewVoice(session.editor.draft);
+                }}
                 onStop={() => session.speech.stopTTS()}
                 onSave={() => session.speech.saveTTSAudio()}
                 onClear={() => session.speech.clearTTSAudio()}

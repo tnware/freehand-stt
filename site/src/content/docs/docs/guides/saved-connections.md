@@ -15,6 +15,10 @@ A connection represents one reusable server: its URL, backend profile, authentic
 and HTTP permission. Voice transcription, Audio-file transcription, Cleanup, and Text to speech select connections
 independently and can share the same server.
 
+All four workflow Settings pages put the active connection in a separate card
+above model options, with its endpoint and **Edit connection** action. Voice’s
+quick popover keeps its compact connection selector.
+
 ## Add a connection while setting up a task
 
 1. Open the task's connection picker and choose **Add connection…**.
@@ -49,13 +53,13 @@ an unavailable saved profile remains visible until you explicitly replace it.
 
 ## What goes where?
 
-| Settings → Connections | Feature settings pages |
-| --- | --- |
-| Connection name and supported uses | Active connection selection |
-| Compatibility profile and base URL | Model, model profile, and language |
-| Authentication and stored API key | Cleanup preset and instructions |
-| Allow insecure HTTP | Voice, speed, and feature enable switches |
-| Transcription health path and headers | Timeouts and provider-specific options |
+| Settings → Connections                | Feature settings pages                    |
+| ------------------------------------- | ----------------------------------------- |
+| Connection name and supported uses    | Active connection selection               |
+| Compatibility profile and base URL    | Model, model profile, and language        |
+| Authentication and stored API key     | Cleanup preset and instructions           |
+| Allow insecure HTTP                   | Voice, speed, and feature enable switches |
+| Transcription health path and headers | Timeouts and provider-specific options    |
 
 **Save connection** updates only that connection. Editing an active connection
 applies its endpoint settings and key to new requests from **every feature using
@@ -105,13 +109,18 @@ New names must be unique across the connection library, with up to 32 available
 connections per feature. Upgrades preserve existing names and entries; duplicate
 URLs are not automatically merged because their authentication or uses may differ.
 Voice and provider-specific engine options follow the remembered model. Language,
-cleanup instructions and style, and speaking speed stay with the current task. See [Model profiles](../model-profiles/)
+cleanup instructions and style, and speaking speed stay with the current task. See [Model profiles](../../models/)
 for choosing, saving, and forgetting those preferences.
 
 ## Test and protect credentials
 
-**Test connection** in Connections checks that saved entry, including its own
+Each connection card separates **Active in** (the workflows currently selecting
+it) from **Available for** (its configured uses). **Check connection** is available
+directly on the card and checks that saved entry, including its own
 credential, without selecting it. It reads health or model-list metadata only.
+Each card keeps its result while you check other entries; expand **Check details**
+for the diagnostic breakdown. Checks clear when confirmed settings change or
+Settings is left, so a previous endpoint or credential check is not shown as current.
 Results distinguish metadata access and authentication. They do not assess every
 feature that can use this connection. Open a feature and choose **Refresh models**
 to check its selected model and local option requirements too. See
@@ -130,7 +139,6 @@ preserve the previously committed settings and credentials.
 
 See [connect a server](../connect-a-server/), [backend guides](../../backends/),
 and [settings recovery](../troubleshooting/#saved-settings-need-attention).
-
 
 ### Discover speech voices
 

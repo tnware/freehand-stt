@@ -5,37 +5,25 @@ test("file and speech workspaces retain usable controls and the speech draft", a
 }, testInfo) => {
   await page.goto("/tests/browser/app/?view=workspace");
   await page.getByRole("tab", { name: "Audio file", exact: true }).click();
-  await expect(
-    page.getByRole("region", { name: "Current result", exact: true }),
-  ).toBeInViewport();
-  await expect(
-    page.getByRole("button", { name: "Audio settings", exact: true }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Current result", exact: true })).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Audio settings", exact: true })).toHaveCount(0);
   await page.getByRole("tab", { name: "Text to speech", exact: true }).click();
   const composer = page.getByRole("textbox", {
     name: "Text to speak",
     exact: true,
   });
   await composer.fill("A draft to review, without generating audio.");
-  await expect(
-    page.getByRole("button", { name: "Speak", exact: true }),
-  ).toBeEnabled();
-  await expect(
-    page.getByRole("button", { name: "Speak", exact: true }),
-  ).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Speak", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Speak", exact: true })).toBeInViewport();
   await page.getByRole("button", { name: "Speech settings", exact: true }).click();
-  await expect(
-    page.getByRole("dialog", { name: "Speech settings", exact: true }),
-  ).toBeInViewport();
+  await expect(page.getByRole("dialog", { name: "Speech settings", exact: true })).toBeInViewport();
   await page.keyboard.press("Escape");
   await page.screenshot({
     path: testInfo.outputPath("speech-workspace-light.png"),
   });
   await page.getByRole("tab", { name: "Voice", exact: true }).click();
   await page.getByRole("tab", { name: "Text to speech", exact: true }).click();
-  await expect(composer).toHaveValue(
-    "A draft to review, without generating audio.",
-  );
+  await expect(composer).toHaveValue("A draft to review, without generating audio.");
 });
 
 for (const width of [560, 900, 1156]) {
@@ -54,49 +42,32 @@ for (const width of [560, 900, 1156]) {
     });
     await expect(transcript).toBeVisible();
     const original = await transcript.boundingBox();
-    await page
-      .getByRole("button", { name: "Audio settings", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Audio settings", exact: true }).click();
     const audio = page.getByRole("dialog", {
       name: "Audio settings",
       exact: true,
     });
     await expect(audio).toBeVisible();
     expect(await transcript.boundingBox()).toEqual(original);
-    await audio
-      .getByRole("button", { name: "Microphone: System default microphone" })
-      .click();
-    await page
-      .getByRole("menuitemradio", { name: "Desk microphone", exact: true })
-      .click();
+    await audio.getByRole("button", { name: "Microphone: System default microphone" }).click();
+    await page.getByRole("menuitemradio", { name: "Desk microphone", exact: true }).click();
     const save = await saves.waitForStart();
     await saves.complete(save, "success");
-    await expect(
-      audio.getByRole("button", { name: "Microphone: Desk microphone" }),
-    ).toBeVisible();
+    await expect(audio.getByRole("button", { name: "Microphone: Desk microphone" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(
-      page.getByRole("button", { name: "Audio settings", exact: true }),
-    ).toBeFocused();
-    await page
-      .getByRole("button", { name: "Transcription settings", exact: true })
-      .click();
+    await expect(page.getByRole("button", { name: "Audio settings", exact: true })).toBeFocused();
+    await page.getByRole("button", { name: "Transcription settings", exact: true }).click();
     const stt = page.getByRole("dialog", {
       name: "Transcription settings",
       exact: true,
     });
-    await stt.getByRole("button", { name: "Model", exact: true }).click();
-    await page
-      .getByRole("option", { name: "speech/alternate", exact: true })
-      .click();
+    await stt.getByRole("combobox", { name: "Choose model" }).fill("speech/alternate");
+    await page.keyboard.press("Enter");
     await saves.complete(await saves.waitForStart(), "failure");
-    await expect(
-      stt.getByRole("button", { name: "Model", exact: true }),
-    ).toContainText("speech/stt");
+    await expect(stt.getByRole("status")).toContainText("Could not save");
+    await expect(stt.getByRole("combobox", { name: "Choose model" })).toHaveValue("speech/stt");
     await page.keyboard.press("Escape");
-    await page
-      .getByRole("button", { name: "Cleanup settings", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Cleanup settings", exact: true }).click();
     await expect(
       page.getByRole("dialog", { name: "Cleanup settings", exact: true }),
     ).toBeInViewport();
@@ -105,18 +76,12 @@ for (const width of [560, 900, 1156]) {
     });
     await page.keyboard.press("Escape");
     await expect(result).toBeInViewport();
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
     if (width < 900) {
-      await page
-        .getByRole("button", { name: "History · 2", exact: true })
-        .click();
-      await expect(
-        page.getByRole("complementary", { name: "Recent history" }),
-      ).toBeVisible();
+      await page.getByRole("button", { name: "History · 2", exact: true }).click();
+      await expect(page.getByRole("complementary", { name: "Recent history" })).toBeVisible();
       await expect(result).toHaveCount(0);
     }
   });

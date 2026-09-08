@@ -22,6 +22,15 @@
   current.historyEnabled = true;
   current.authenticationMode = AuthenticationMode.AuthenticationModeNone;
   current.postProcessing.model = "cleanup/standard";
+  current.voiceTranscription = {
+    ...current.voiceTranscription,
+    baseURL: current.baseURL,
+    compatibilityProfile: current.compatibilityProfile,
+    authenticationMode: AuthenticationMode.AuthenticationModeNone,
+    model: "speech/stt",
+    modelProfile: ModelProfileID.Generic,
+    realtime: false,
+  };
   current.textToSpeech = {
     ...current.textToSpeech,
     enabled: true,
@@ -32,9 +41,24 @@
   current.savedConnections.selected = {
     ...current.savedConnections.selected,
     speech: "speech-fixture",
+    voice: "voice-fixture",
   };
   current.savedConnections.entries = [
     ...(current.savedConnections.entries ?? []),
+    {
+      id: "voice-fixture",
+      name: "Example transcription server",
+      uses: [Purpose.Voice],
+      hasCredential: false,
+      details: {
+        compatibilityProfile: current.compatibilityProfile,
+        baseURL: current.baseURL,
+        allowInsecureHTTP: false,
+        authenticationMode: AuthenticationMode.AuthenticationModeNone,
+        healthPath: "",
+        headers: {},
+      },
+    },
     {
       id: "speech-fixture",
       name: "Example speech server",
@@ -77,6 +101,7 @@
   current.rememberedModels.defaults = {
     ...current.rememberedModels.defaults,
     speech: modelOptions(current, Purpose.Speech),
+    voice: modelOptions(current, Purpose.Voice),
   };
   current.rememberedModels.entries = [
     ...(current.rememberedModels.entries ?? []),

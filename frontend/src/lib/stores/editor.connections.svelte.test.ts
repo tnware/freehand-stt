@@ -173,22 +173,41 @@ describe("saved connection editor", () => {
 });
 
 describe("task connection creation", () => {
-  it.each([Purpose.Transcription, Purpose.Cleanup, Purpose.Speech])("preselects %s and requests one atomic save", async (purpose) => {
-    const next = configured();
-    const SaveSettings = vi.fn(() => CancellablePromise.resolve(next));
-    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle), { settings: { SaveSettings } }));
-    editor.applySettingsSnapshot(configured());
-    editor.beginConnection(undefined, purpose);
-    expect(editor.connectionDraft!.uses).toEqual([purpose]);
-    editor.connectionDraft!.name = "New task server";
-    editor.connectionDraft!.details.baseURL = "https://new.example.test/v1";
-    expect(await editor.saveConnection(purpose)).toBe(true);
-    expect(SaveSettings).toHaveBeenCalledTimes(1);
-    expect(SaveSettings).toHaveBeenCalledWith(expect.objectContaining({ connectionChange: expect.objectContaining({ action: Action.Create, activateFor: purpose, uses: [purpose] }) }));
-    expect(editor.connectionDraft).toBeNull();
-  });
+  it.each([Purpose.Transcription, Purpose.Cleanup, Purpose.Speech])(
+    "preselects %s and requests one atomic save",
+    async (purpose) => {
+      const next = configured();
+      const SaveSettings = vi.fn(() => CancellablePromise.resolve(next));
+      const { editor } = createEditor(
+        serviceWithStatus(() => CancellablePromise.resolve(idle), { settings: { SaveSettings } }),
+      );
+      editor.applySettingsSnapshot(configured());
+      editor.beginConnection(undefined, purpose);
+      expect(editor.connectionDraft!.uses).toEqual([purpose]);
+      editor.connectionDraft!.name = "New task server";
+      editor.connectionDraft!.details.baseURL = "https://new.example.test/v1";
+      expect(await editor.saveConnection(purpose)).toBe(true);
+      expect(SaveSettings).toHaveBeenCalledTimes(1);
+      expect(SaveSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          connectionChange: expect.objectContaining({
+            action: Action.Create,
+            activateFor: purpose,
+            uses: [purpose],
+          }),
+        }),
+      );
+      expect(editor.connectionDraft).toBeNull();
+    },
+  );
   it("retains a failed new-connection draft and the active selection for retry", async () => {
-    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle), { settings: { SaveSettings: () => CancellablePromise.reject(new Error("fixture save failure")) } }));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle), {
+        settings: {
+          SaveSettings: () => CancellablePromise.reject(new Error("fixture save failure")),
+        },
+      }),
+    );
     editor.applySettingsSnapshot(configured());
     editor.beginConnection(undefined, Purpose.Speech);
     editor.connectionDraft!.name = "New speech server";
@@ -217,4 +236,66 @@ it("adopts the latest external selection only after discarding a connection draf
   expect(editor.applied!.savedConnections.selected!.stt).toBe("other-window");
   expect(editor.draft!.model).toBe("other-model");
   expect(editor.dirty).toBe(false);
+});
+
+describe("connection card checks", () => {
+  function setup() {
+    const config = configured();
+    config.savedConnections.entries!.push({
+      ...config.savedConnections.entries![0],
+      id: "second",
+      name: "Second",
+    });
+    const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
+    vi.spyOn(services.settings, "SaveSettings");
+    services.connection.TestSavedConnection = vi.fn(() =>
+      CancellablePromise.resolve(connectionResult),
+    );
+    const { editor } = createEditor(services);
+    editor.applySettingsSnapshot(config);
+    return { editor, services, config };
+  }
+  it("retains individual results without changing the active connection", async () => {
+    const { editor, services } = setup();
+    await editor.testSavedConnection("first");
+    await editor.testSavedConnection("second");
+    expect(Object.keys(editor.savedConnectionChecks)).toEqual(["first", "second"]);
+    expect(editor.applied!.savedConnections.selected?.stt).toBe("first");
+    expect(services.settings.SaveSettings).not.toHaveBeenCalled();
+  });
+  it("invalidates card checks while preserving a draft against an external snapshot", async () => {
+    const { editor, config } = setup();
+    await editor.testSavedConnection("first");
+    editor.draft!.model = "unfinished-model";
+    expect(editor.applySettingsSnapshot(config)).toBe(false);
+    expect(editor.savedConnectionChecks).toEqual({});
+    expect(editor.draft!.model).toBe("unfinished-model");
+  });
+  it("invalidates checks and late completions on a confirmed settings snapshot", async () => {
+    const { editor, services, config } = setup();
+    await editor.testSavedConnection("first");
+    const response = CancellablePromise.withResolvers<typeof connectionResult>();
+    services.connection.TestSavedConnection = vi.fn(() => response.promise);
+    const pending = editor.testSavedConnection("second");
+    expect(editor.savedConnectionCheckingID).toBe("second");
+    // Identical public settings can still accompany a credential rotation.
+    editor.applySettingsSnapshot(config);
+    response.resolve(connectionResult);
+    await pending;
+    expect(editor.savedConnectionChecks).toEqual({});
+    expect(editor.managedConnectionTesting).toBe(false);
+    expect(editor.savedConnectionCheckingID).toBe("");
+  });
+  it("keeps a failed retry on its own card and rejects unknown connection ids", async () => {
+    const { editor, services } = setup();
+    await editor.testSavedConnection("first");
+    services.connection.TestSavedConnection = vi.fn(() =>
+      CancellablePromise.reject(new Error("failure")),
+    );
+    await editor.testSavedConnection("second");
+    expect(editor.savedConnectionChecks.first).toEqual(connectionResult);
+    expect(editor.savedConnectionCheckErrors.second).toContain("Try again");
+    await editor.testSavedConnection("missing");
+    expect(services.connection.TestSavedConnection).toHaveBeenCalledTimes(1);
+  });
 });

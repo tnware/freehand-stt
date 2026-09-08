@@ -104,7 +104,7 @@ this native installation recipe has not received separate live acceptance.
 
 This alternative uses Docker Desktop's WSL2 Linux backend and an NVIDIA GPU.
 Use the model directory from [Download a model](#download-a-model). The pinned
-CUDA image below is the one recorded in [compatibility evidence](#contract-and-evidence).
+CUDA image below is pinned for a repeatable installation.
 It runs the same HTTP server inside a container.
 
 Start the server:
@@ -181,31 +181,13 @@ root/prefix setting, not a full request URL.
 - Both workflows retain their existing size limits, timeouts, cancellation,
   optional cleanup, history policy, and delivery behavior.
 
-## Contract and evidence
+## Supported API
 
 Requests are multipart `POST /inference`, including `file` and
 `response_format=json`, without `model` or `stream`. Responses require a JSON
 object with a string `text`. Non-success statuses and malformed responses fail
 without replay. The configured credential and permitted custom headers apply
 as they do for other transcription profiles.
-
-Source qualification pins whisper.cpp
-[`52a939a2a762`](https://github.com/ggml-org/whisper.cpp/blob/52a939a2a762224e255d366c1182b2af4dd1a032/examples/server/server.cpp).
-Client fixtures cover prefixed routing, health defaults/overrides, omitted
-model fields, bounded multipart upload, hints, and completed-only behavior.
-This is not a claim that every build, audio format, or model has been tested
-interactively on Windows.
-
-
-### Scoped live acceptance — 2026-09-05
-
-Freehand's Windows Go adapters completed both microphone-request and file-upload
-paths against the existing CUDA image (`sha256:2c42506808d7546ea3440c0053dd6543373cc4252c525b7972ab96554a533837`)
-using `ggml-tiny.en.bin` and the public 11-second whisper.cpp JFK sample. The
-server's `/health` probe succeeded. This exercises HTTP/inference behavior from
-Windows; interactive capture, focus-safe insertion, and every file format were
-not part of that fixed-sample run. The source pin above records inspected
-contract evidence independently of the tested image digest.
 
 ## Language selection
 

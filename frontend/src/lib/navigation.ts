@@ -30,7 +30,7 @@ export type SettingsSection = {
   label: string;
   blurb: string;
   icon: Component;
-  group: "capture" | "features" | "application";
+  group: "workflows" | "shared" | "capture" | "application";
 };
 
 /**
@@ -38,6 +38,48 @@ export type SettingsSection = {
  * card on an ever-growing page, which is the whole point of the two-pane shell.
  */
 export const SETTINGS_SECTIONS: SettingsSection[] = [
+  {
+    id: "voice-transcription",
+    label: "Voice transcription",
+    blurb: "Choose a microphone transcription provider, model, and supported recording mode.",
+    icon: MicIcon,
+    group: "workflows",
+  },
+  {
+    id: "server",
+    label: "Audio-file transcription",
+    blurb: "Choose a connection, model, language, and transcription options.",
+    icon: FileAudioIcon,
+    group: "workflows",
+  },
+  {
+    id: "processing",
+    label: "Cleanup",
+    blurb: "Optionally clean completed transcripts with a separate language model.",
+    icon: WandSparklesIcon,
+    group: "workflows",
+  },
+  {
+    id: "speech",
+    label: "Text to speech",
+    blurb: "Write text to speak, or listen to completed transcripts.",
+    icon: Volume2Icon,
+    group: "workflows",
+  },
+  {
+    id: "connections",
+    label: "Connections",
+    blurb: "Create and manage saved server connections.",
+    icon: ServerIcon,
+    group: "shared",
+  },
+  {
+    id: "vocabulary",
+    label: "Vocabulary",
+    blurb: "Names and terminology, shared across your transcription models.",
+    icon: BookOpenIcon,
+    group: "shared",
+  },
   {
     id: "shortcuts",
     label: "Shortcuts",
@@ -60,52 +102,10 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     group: "capture",
   },
   {
-    id: "server",
-    label: "Audio-file transcription",
-    blurb: "Choose a connection, model, language, and transcription options.",
-    icon: FileAudioIcon,
-    group: "features",
-  },
-  {
-    id: "voice-transcription",
-    label: "Voice transcription",
-    blurb: "Choose a microphone transcription provider, model, and supported recording mode.",
-    icon: MicIcon,
-    group: "features",
-  },
-  {
-    id: "vocabulary",
-    label: "Vocabulary",
-    blurb: "Names and terminology, shared across your transcription models.",
-    icon: BookOpenIcon,
-    group: "features",
-  },
-  {
-    id: "processing",
-    label: "Cleanup",
-    blurb: "Optionally clean completed transcripts with a separate language model.",
-    icon: WandSparklesIcon,
-    group: "features",
-  },
-  {
-    id: "speech",
-    label: "Text to speech",
-    blurb: "Write text to speak, or listen to completed transcripts.",
-    icon: Volume2Icon,
-    group: "features",
-  },
-  {
     id: "general",
     label: "General",
     blurb: "Startup, transcript delivery and appearance.",
     icon: SettingsIcon,
-    group: "application",
-  },
-  {
-    id: "connections",
-    label: "Connections",
-    blurb: "Create and manage saved server connections.",
-    icon: ServerIcon,
     group: "application",
   },
   {
@@ -119,9 +119,12 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 
 export const GROUP_LABELS: Record<SettingsSection["group"], string> = {
   capture: "Capture",
-  features: "Features",
+  workflows: "Workflows",
+  shared: "Connections & vocabulary",
   application: "Application",
 };
+
+export const SETTINGS_GROUPS = ["workflows", "shared", "capture", "application"] as const;
 
 export const sectionsInGroup = (group: SettingsSection["group"]): SettingsSection[] =>
   SETTINGS_SECTIONS.filter((section) => section.group === group);

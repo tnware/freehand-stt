@@ -47,13 +47,9 @@
       (p) => String(p.id) === (processor.preset || ID.Generic),
     ),
   );
-  const selectedProfile = $derived(
-    processingProfile(profiles, processor.preset),
-  );
+  const selectedProfile = $derived(processingProfile(profiles, processor.preset));
   function updateS1Mini(
-    patch: Partial<
-      Pick<Settings["postProcessing"], "styling" | "structure" | "context">
-    >,
+    patch: Partial<Pick<Settings["postProcessing"], "styling" | "structure" | "context">>,
   ) {
     Object.assign(settings.postProcessing, patch);
   }
@@ -70,15 +66,14 @@
         />{/snippet}</SettingRow
     >
     <RuntimeModelPicker
+      profileName={compatibility?.name ?? processor.preset}
       id="cleanup-model"
       value={settings.postProcessing.model}
       {draftModels}
       onChoose={onChooseModel}
       onForget={onForgetModel}
-      savedModels={rememberedModels(settings, Purpose.Cleanup).map(
-        (e) => e.model,
-      )}
-      models={connection?.modelIDs ?? []}
+      savedModels={rememberedModels(settings, Purpose.Cleanup).map((e) => e.model)}
+      models={connectionStale ? [] : (connection?.modelIDs ?? [])}
       {busy}
       onDiscover={onTestConnection}
     />
@@ -137,19 +132,16 @@
   />
 
   <p class="px-1 text-xs leading-relaxed text-muted-foreground">
-    If cleanup fails, your raw transcript is still available. With history
-    enabled, raw and cleaned text are saved together.
+    If cleanup fails, your raw transcript is still available. With history enabled, raw and cleaned
+    text are saved together.
   </p>
   <details class="px-1 text-xs leading-relaxed text-muted-foreground">
-    <summary class="cursor-pointer font-medium text-foreground"
-      >Cleanup request details</summary
-    >
+    <summary class="cursor-pointer font-medium text-foreground">Cleanup request details</summary>
     <p class="mt-3">
-      Raw transcription completes before cleanup starts. The Model profile
-      controls model instructions and options; the connection's Compatibility
-      profile controls the server API. S1-mini is an explicit specialized
-      choice, not the default for other models. Connection checks stop after 15
-      seconds. Cleanup requests are capped at 2 MiB and responses at 1 MiB.
+      Raw transcription completes before cleanup starts. The Model profile controls model
+      instructions and options; the connection's Compatibility profile controls the server API.
+      S1-mini is an explicit specialized choice, not the default for other models. Connection checks
+      stop after 15 seconds. Cleanup requests are capped at 2 MiB and responses at 1 MiB.
     </p>
   </details>
 </div>

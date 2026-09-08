@@ -202,8 +202,8 @@ func (s *Service) PlayFileTranscript() error {
 	return s.start(text, SourceFile, 0, history.HistoryTextFinal)
 }
 
-func (s *Service) PreviewVoice() error {
-	return s.start("This is Freehand's speech playback preview.", SourcePreview, 0, history.HistoryTextFinal)
+func (s *Service) PreviewVoice(draft *settings.TextToSpeechPreview) error {
+	return s.startWithPreview("This is Freehand's speech playback preview.", SourcePreview, 0, history.HistoryTextFinal, draft)
 }
 
 // SpeakText generates speech for bounded user-authored text from the
@@ -213,6 +213,10 @@ func (s *Service) SpeakText(text string) error {
 }
 
 func (s *Service) start(text string, source Source, historyID uint64, version history.HistoryTextVersion) error {
+	return s.startWithPreview(text, source, historyID, version, nil)
+}
+
+func (s *Service) startWithPreview(text string, source Source, historyID uint64, version history.HistoryTextVersion, draft *settings.TextToSpeechPreview) error {
 	release, err := s.activity.BeginPlayback()
 	if err != nil {
 		return err
@@ -230,7 +234,7 @@ func (s *Service) start(text string, source Source, historyID uint64, version hi
 	if utf8.RuneCountInString(text) > config.MaxTTSInputCharacters || len(text) > config.MaxTTSInputBytes {
 		return errors.New("speech input is too long")
 	}
-	profile, err := s.profiles.Capture()
+	profile, err := s.profiles.CapturePreview(draft)
 	if err != nil {
 		return err
 	}

@@ -123,7 +123,7 @@ func newHarness(t *testing.T, beforeSpeechProfile func(), fileProfile func()) *h
 		}
 		return profiles.Capture()
 	}, client, nil, nil, input{}, func() (string, error) { return path, nil }, nil, nil, h.admission, nil)
-	h.speech = tts.NewService(func() (settings.TextToSpeechProfile, error) {
+	h.speech = tts.NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
 		if beforeSpeechProfile != nil {
 			beforeSpeechProfile()
 		}
@@ -197,7 +197,7 @@ func TestRealServicesExcludeTranscriptionAndReleaseAfterCancel(t *testing.T) {
 				if err := h.files.StartFileTranscription(false); err == nil {
 					t.Fatal("file overlapped dictation")
 				}
-				if err := h.speech.PreviewVoice(); err == nil {
+				if err := h.speech.PreviewVoice(nil); err == nil {
 					t.Fatal("speech overlapped dictation")
 				}
 				if err := h.voice.Cancel(); err != nil {
@@ -213,7 +213,7 @@ func TestRealServicesExcludeTranscriptionAndReleaseAfterCancel(t *testing.T) {
 				if err := h.voice.StartRecording(dictation.RecordingToggle); err == nil {
 					t.Fatal("dictation overlapped file")
 				}
-				if err := h.speech.PreviewVoice(); err == nil {
+				if err := h.speech.PreviewVoice(nil); err == nil {
 					t.Fatal("speech overlapped file")
 				}
 				if err := h.files.CancelFileTranscription(); err != nil {
@@ -234,7 +234,7 @@ func TestSpeechStartAndRecordingPreemptionShareLockOrder(t *testing.T) {
 	unblock := func() { once.Do(func() { close(release) }) }
 	h := newHarness(t, func() { close(gate); <-release }, nil)
 	t.Cleanup(unblock)
-	startSpeech := async(h.speech.PreviewVoice)
+	startSpeech := async(func() error { return h.speech.PreviewVoice(nil) })
 	entered(t, gate)
 	startVoice := async(func() error { return h.voice.StartRecording(dictation.RecordingToggle) })
 	h.capture.beforeStart = func() {
@@ -266,7 +266,7 @@ func TestRecordingPreemptionBlocksCompetingPlaybackAndShutdown(t *testing.T) {
 			h.player.stop = func() error { stopOnce.Do(func() { close(gate); <-release }); return nil }
 			recording := async(func() error { return h.voice.StartRecording(dictation.RecordingToggle) })
 			entered(t, gate)
-			playback := async(h.speech.PreviewVoice)
+			playback := async(func() error { return h.speech.PreviewVoice(nil) })
 			if shutdown {
 				h.admission.Close()
 			}

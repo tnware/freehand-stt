@@ -39,7 +39,7 @@ func TestFileAdmissionSpansPreparation(t *testing.T) {
 
 func TestExistingSpeechIsNotPreemptedByFileTranscription(t *testing.T) {
 	h := newHarness(t, nil, nil)
-	if err := h.speech.PreviewVoice(); err != nil {
+	if err := h.speech.PreviewVoice(nil); err != nil {
 		t.Fatal(err)
 	}
 	before := h.speech.CurrentStatus()

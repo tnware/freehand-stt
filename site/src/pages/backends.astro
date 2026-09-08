@@ -16,7 +16,7 @@ const href = (path: string) => `${base}${path}`;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
-    <CustomPageMetadata title="Backends & compatibility — Freehand" description="Compare Freehand's server profiles for dictation, audio files, transcript cleanup, and speech playback. Find setup guides, known limits, and planned integrations." path="backends/" />
+    <CustomPageMetadata title="Backends & compatibility — Freehand" description="Compare Freehand's server profiles for dictation, audio files, transcript cleanup, and speech playback. Find setup guides and supported features." path="backends/" />
     <meta name="theme-color" content="#070a12" />
     <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
   </head>
@@ -29,7 +29,7 @@ const href = (path: string) => `${base}${path}`;
         <div>
           <p class="kicker"><span></span> Backend directory</p>
           <h1 id="backends-title">Your models.<br /><em>Connected.</em></h1>
-          <p class="backends-lede">Find the right connection for your speech stack. Compare what Freehand can send, receive, and play—then follow the guide for your server.</p>
+          <p class="backends-lede">Find the right connection for your speech stack. Compare transcription, cleanup, and speech features, then connect your server. Explore <a href={href("/models/")}>model profiles</a> for the controls each model adds.</p>
           <nav class="backend-jump-links" aria-label="On this page">
             <a class="button button-dark" href="#compare">Compare capabilities <span aria-hidden="true">↓</span></a>
             <a class="text-action" href="#planned">Planned profiles <span aria-hidden="true">↘</span></a>
@@ -48,19 +48,19 @@ const href = (path: string) => `${base}${path}`;
       </section>
       <div class="catalog-note"><span>Current development</span><p>This directory follows Freehand’s main branch. Your installed release may have fewer options. Model support and server versions still matter.</p></div>
       <section id="available" class="backend-section" aria-labelledby="available-title">
-        <div class="backend-section-head"><div><p class="section-index">01 / Connect today</p><h2 id="available-title">Available profiles</h2></div><p>Start with Generic, or select a dedicated profile for a documented setup.</p></div>
+        <div class="backend-section-head"><div><p class="section-index">01 / Connect today</p><h2 id="available-title">Available profiles</h2></div><p>Choose your server below for setup instructions and supported features.</p></div>
         <div class="backend-grid">
           {availableBackends.map((backend) => <article class="backend-card">
             <div class="backend-card-top"><ProviderIcon profile={backend.id} size={42} /><span class="backend-status">Available profile</span></div>
             <h3>{backend.name}</h3><p class="backend-summary">{backend.summary}</p>
             <ul class="backend-roles" aria-label="Available operations">{backend.entries.filter((entry) => entry.available).map((entry) => <li>{entry.role}</li>)}</ul>
-            <div class="backend-evidence"><strong>{backend.evidence}</strong><p>{backend.detail}</p></div>
+            <div class="backend-details"><strong>{backend.highlight}</strong><p>{backend.detail}</p></div>
             <a class="backend-guide-link" href={href(backend.guide)}>Setup & capabilities <span aria-hidden="true">↗</span></a>
           </article>)}
         </div>
       </section>
       <section id="compare" class="backend-section" aria-labelledby="compare-title">
-        <div class="backend-section-head"><div><p class="section-index">02 / Find your fit</p><h2 id="compare-title">What can you connect?</h2></div><p>A checkmark means Freehand implements the contract. The chosen model must support the operation too.</p></div>
+        <div class="backend-section-head"><div><p class="section-index">02 / Find your fit</p><h2 id="compare-title">What can you connect?</h2></div><p>Compare the features available with each profile. Model-specific options appear when you select a compatible model profile.</p></div>
         <div class="matrix-scroll" role="region" aria-label="Backend capability comparison; scroll horizontally on small screens" tabindex="0">
           <table class="backend-matrix">
             <caption>Available profiles in the current development build</caption>
@@ -68,15 +68,15 @@ const href = (path: string) => `${base}${path}`;
             <tbody>{availableBackends.map((backend) => <tr><th scope="row"><a class="backend-identity" href={href(backend.guide)}><ProviderIcon profile={backend.id} size={24} />{backend.name}</a></th>{features.map((feature) => <td><span class:list={["support-cell", backend.features[feature.key]]}><span aria-hidden="true">{backend.features[feature.key] === "available" ? "✓" : supportLabel[backend.features[feature.key]]}</span><span class="sr-only">{backend.features[feature.key] === "none" ? "Not part of this profile" : supportLabel[backend.features[feature.key]]}</span></span></td>)}</tr>)}</tbody>
           </table>
         </div>
-        <div class="matrix-notes"><p><strong>File streaming</strong> delivers results from an uploaded file. It is separate from live microphone streaming.</p><p><strong>Speech playback</strong> currently buffers PCM16 WAV audio before playing. Speaches and Kokoro-FastAPI can list voices; custom IDs remain available. Advanced voice inputs and progressive playback are future work.</p><p><strong>—</strong> means the operation is outside this profile’s implemented scope. Language selection depends on the model; Automatic detection follows each provider’s contract. S1-mini cleanup supports English only. Transcription context and temperature are optional; hotwords use the Speaches contract. Their effect depends on the model. Cleanup token limits are optional; disabling reasoning requires a qualified llama.cpp or vLLM build and compatible model template. Diarization and timestamps remain outside the current scope.</p></div>
+        <div class="matrix-notes"><p><strong>File streaming</strong> shows results as an uploaded file is transcribed. Live transcription shows text while you speak.</p><p><strong>Speech playback</strong> plays after the audio has finished generating. Speaches and Kokoro-FastAPI offer browsable voice lists; you can also enter a voice ID.</p><p><strong>Model options</strong> vary by server and model profile. See each setup guide for languages, vocabulary, and generation controls. S1-mini cleanup supports English only. A dash means the feature is unavailable with that profile.</p></div>
       </section>
-      <section class="backend-section evidence-section" aria-labelledby="evidence-title">
-        <div><p class="section-index">03 / Read the evidence</p><h2 id="evidence-title">Support has a scope.</h2><p>An available profile is a specific connection contract. It does not certify every model or every version of a server.</p><a class="text-action" href={href("/docs/backends/")}>How compatibility is tracked <span aria-hidden="true">→</span></a></div>
-        <dl class="evidence-list"><div><dt>Contract fixtures</dt><dd>Automated requests and responses exercise Freehand’s supported protocol behavior.</dd></div><div><dt>Reported working setup</dt><dd>A particular server and model combination has been used successfully. The guide records the limits of that evidence.</dd></div><div><dt>Planned profile</dt><dd>Dedicated handling is not ready to select. A compatible endpoint may already work through Generic.</dd></div></dl>
+      <section class="backend-section setup-section" aria-labelledby="setup-title">
+        <div><p class="section-index">03 / Make it yours</p><h2 id="setup-title">One app.<br />Your speech stack.</h2><p>Use a local server, a machine on your network, or a hosted service. Each workflow can have its own connection and model.</p><a class="text-action" href={href("/docs/guides/connect-a-server/")}>Set up a connection <span aria-hidden="true">→</span></a></div>
+        <dl class="setup-list"><div><dt>Choose a connection</dt><dd>Select your server profile and enter its URL. Reuse it across workflows or keep separate connections.</dd></div><div><dt>Choose a model</dt><dd>Browse the server’s model list or enter an ID. <a href={href("/models/")}>Model profiles</a> bring the relevant options into Settings.</dd></div><div><dt>Set it up your way</dt><dd>Choose a language, add vocabulary, select a voice, or enable optional cleanup.</dd></div></dl>
       </section>
       <section id="planned" class="backend-section" aria-labelledby="planned-title">
-        <div class="backend-section-head"><div><p class="section-index">04 / Room to grow</p><h2 id="planned-title">Planned profiles</h2></div><p>These entries match the disabled choices in Settings. Each links to the contract work still needed; no delivery date is promised.</p></div>
-        <div class="planned-grid">{plannedBackends.map((backend) => <article class="planned-card"><div class="planned-card-head"><div class="backend-identity"><ProviderIcon profile={backend.id} size={28} /><h3>{backend.name}</h3></div><span>Planned</span></div><p>{backend.summary}</p><ul class="planned-roles" aria-label="Planned operation scope">{backend.entries.map((entry) => <li>{entry.role}</li>)}</ul><a href={href(backend.guide)}>Contract work remaining <span aria-hidden="true">→</span></a></article>)}</div>
+        <div class="backend-section-head"><div><p class="section-index">04 / Room to grow</p><h2 id="planned-title">Planned profiles</h2></div><p>These dedicated profiles are not available yet. Some services may already connect through Generic OpenAI-compatible.</p></div>
+        <div class="planned-grid">{plannedBackends.map((backend) => <article class="planned-card"><div class="planned-card-head"><div class="backend-identity"><ProviderIcon profile={backend.id} size={28} /><h3>{backend.name}</h3></div><span>Planned</span></div><p>{backend.summary}</p><ul class="planned-roles" aria-label="Planned operation scope">{backend.entries.map((entry) => <li>{entry.role}</li>)}</ul><a href={href(backend.guide)}>About this integration <span aria-hidden="true">→</span></a></article>)}</div>
       </section>
       <section class="backend-next" aria-label="Get connected"><div><h2>Have your endpoint ready?</h2><p>Choose your profile, enter your server URL, and connect the model you want to use.</p></div><a class="button button-light" href={href("/docs/guides/connect-a-server/")}>Connect a server <span aria-hidden="true">→</span></a></section>
     </main>

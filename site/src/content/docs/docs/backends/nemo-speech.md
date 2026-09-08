@@ -1,14 +1,39 @@
 ---
 title: NeMo-Speech.cpp
-description: Use a user-managed Nemotron server for completed or realtime transcription.
+description: Connect the NeMo-Speech.cpp server for completed audio and realtime microphone transcription.
 ---
 
-Freehand supports **NeMo-Speech.cpp v0.1.0** for completed microphone and audio-file transcription. With the explicit **Nemotron 3.5 ASR streaming** model profile, Voice can also use its qualified realtime protocol. Freehand does not install or manage this server as a product feature.
+Freehand's **NeMo-Speech.cpp** backend profile supports the **v0.1.0** server API
+for microphone recordings, audio-file uploads, and realtime microphone audio.
+For Nemotron's language and vocabulary controls, use the separate
+**[Nemotron 3.5 ASR streaming model profile](../../models/nemotron/)**.
 
-Add a **NeMo-Speech.cpp** connection and enable the uses you need: **Voice transcription**, **Audio-file transcription**, or both. Enter the HTTP API root, for example `http://127.0.0.1:8088/v1` for a locally configured server, and explicitly allow insecure HTTP when appropriate. Select the connection in each task independently. Metadata checks read server information without invoking a model.
+## Run the server
 
-Choose the model loaded on the server and its explicit model profile. Generic offers completed transcription without assuming Nemotron-specific behavior. The Nemotron profile restricts spoken languages to supported base-model locales. In Voice, it also exposes **Realtime transcription** inside the Transcription panel. See the [live transcription guide](../../guides/live-transcription/) for language, vocabulary, and caption controls.
+Follow NeMo-Speech.cpp's [v0.1.0 installation guide](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/install.md)
+to install the runtime and load **Nemotron 3.5 ASR streaming 0.6B**.
+The server controls model loading, GPU selection, and chunk latency.
+It can run on the same PC or on another machine reachable from Freehand.
 
-Completed requests upload audio to `/v1/audio/transcriptions` and expect JSON. The server owns the loaded model; Freehand requests native punctuation and verbatim output without optional ITN processing. Realtime uses `/v1/realtime`, a versioned project-specific WebSocket protocol. It is separate from streamed responses to a completed audio-file upload; this backend does not expose file-response streaming in Freehand.
+## Connect Freehand
 
-Turning realtime off retains the same Voice connection/model and returns to completed recording or checkpoints. Audio file keeps its own settings. Native capture, cancellation, cleanup, and focus-safe insertion remain Freehand's responsibility; GPU selection and model loading stay on your chosen server.
+1. Open **Settings → Connections** and choose **New connection**.
+2. Choose **NeMo-Speech.cpp**, name the connection, and enable **Voice transcription**, **Audio-file transcription**, or both.
+3. Enter the HTTP API root, such as `http://127.0.0.1:8088/v1` for a local server on port 8088. Allow insecure HTTP when using HTTP; add authentication if required by the server.
+4. Save the connection, then select it in each workflow you want to use.
+5. Check the connection and select the model loaded on the server. Choose **Nemotron 3.5 ASR streaming** as the model profile for its language, vocabulary, and realtime controls.
+
+Connection checks read server metadata without invoking the model. Generic
+model behavior offers completed transcription; the Nemotron model profile
+also enables **Realtime transcription** in Voice's Transcription panel.
+
+## Supported API
+
+Completed audio uploads use `/v1/audio/transcriptions` and return JSON text.
+Realtime uses `/v1/realtime`, NeMo-Speech.cpp's versioned WebSocket protocol.
+Freehand derives the WebSocket address from your HTTP base URL; HTTPS uses WSS.
+An API key, when configured, is sent in the upgrade header.
+
+This backend returns completed file results; it does not stream partial results
+from file uploads. Live microphone transcription is configured separately
+inside Voice. Turning live mode off retains the same connection and model.

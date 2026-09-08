@@ -346,3 +346,7 @@ footer nav { justify-self: end; display: flex; gap: 23px; }
 .provider-list > p { color: #b7c9e8; font-size: 12px; line-height: 1.6; margin: 4px 0 14px; }
 @media (max-width: 1100px) { .provider-list { margin-top: 40px; } }
 @media (max-width: 600px) { .provider-list { padding: 8px 15px; } }
+
+.hero + .compatibility { margin-top: 0; }
+.compatibility-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; margin-top: 30px; }
+.compatibility-actions .button { margin-top: 0; }

@@ -50,7 +50,7 @@ arbitrary single language. Repeated content is not heuristically deduplicated.
 
 ## Evidence
 
-See the [Qwen setup guide](../../backends/qwen3-asr/) for pinned source links,
+See the [Qwen setup guide](../../models/qwen3-asr/) for pinned source links,
 runtime setup, supported controls, and scoped transport evidence. Recognition
 quality and runtime performance are deployment concerns, not Freehand contracts.
 

@@ -13,13 +13,13 @@ are rejected by Go, including disabled feature settings and metadata probes.
 Invalid saved selections use the existing configuration recovery flow without
 overwriting the document.
 
-| Profile ID | Implemented operations | Contract |
-| --- | --- | --- |
-| `generic` | STT, post-processing, TTS | Existing bounded multipart JSON, text chat, and buffered PCM16 WAV contracts |
-| `speaches` | STT, TTS | Shared request shapes; typed transcription events and legacy per-segment text SSE; buffered WAV speech |
-| `llama-cpp` | Post-processing | Shared non-streaming text chat adapter; prompt preset remains independent |
-| `whisper-cpp` | STT | Native `/inference`, server-loaded model, `/health`, completed JSON |
-| `vllm` | STT, post-processing | Completed JSON, dedicated transcription-chunk stream decoder, qualified text cleanup |
+| Profile ID    | Implemented operations    | Contract                                                                                               |
+| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `generic`     | STT, post-processing, TTS | Existing bounded multipart JSON, text chat, and buffered PCM16 WAV contracts                           |
+| `speaches`    | STT, TTS                  | Shared request shapes; typed transcription events and legacy per-segment text SSE; buffered WAV speech |
+| `llama-cpp`   | Post-processing           | Shared non-streaming text chat adapter; prompt preset remains independent                              |
+| `whisper-cpp` | STT                       | Native `/inference`, server-loaded model, `/health`, completed JSON                                    |
+| `vllm`        | STT, post-processing      | Completed JSON, dedicated transcription-chunk stream decoder, qualified text cleanup                   |
 
 Generic intentionally retains legacy Speaches SSE support for existing
 configurations. Generic and Speaches require final text for typed
@@ -37,37 +37,12 @@ Metadata tests remain GET-only and never discover capabilities through inference
 
 Disabled placeholders are operation-specific: `openai` and `localai` across
 all three roles;
-`vllm-omni`, `kokoro-fastapi`, and `openedai-speech` for TTS. A disabled dedicated
+`vllm-omni` and `openedai-speech` for TTS. A disabled dedicated
 profile does not prevent use of a server through the generic contract.
 
-Qualification evidence for the Speaches stream formats comes from the audit's
-v0.8.3 and v0.9.0-rc.3 source comparison. Profile fixtures cover these response
-shapes and the shared llama.cpp text request; they do not establish live
-compatibility with every release or model. Existing user-tested integrations
-remain distinct from automated fixture coverage.
-
-## Validated implementations
-
-Freehand targets capability-specific OpenAI-compatible routes rather than requiring one particular server. Compatibility claims use three evidence levels:
-
-- **Validated** — exercised end to end in the native Windows application.
-- **Contract-compatible** — the client implements the documented route and
-  shape, but a named backend is not claimed as tested.
-- **Unsupported or unknown** — a required route is absent, or available evidence
-  is insufficient to make a compatibility claim.
-
-The following combinations have been exercised end to end in the Windows app:
-
-| Freehand capability | Tested backend | Compatible route | Evidence |
-| --- | --- | --- | --- |
-| Microphone and stored-file speech to text | [Speaches](https://github.com/speaches-ai/speaches) | `POST /v1/audio/transcriptions` | Validated in native Windows use |
-| Text to speech | [Speaches](https://github.com/speaches-ai/speaches) | `POST /v1/audio/speech` | Validated in native Windows use |
-| S1-mini transcript post-processing | [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` | `POST /v1/chat/completions` | Validated in native Windows use |
-
-These are known-working implementations, not product dependencies or an exhaustive compatibility list. “OpenAI-compatible” does not guarantee that a server implements every optional audio and chat route, so Freehand configures and tests STT, TTS, and post-processing independently. A project name or model listing is never sufficient evidence to claim end-to-end support.
-
-See [Connect a speech server](../../guides/connect-a-server/) for topology,
-configuration, and failure guidance.
+See [Backend compatibility](../../backends/) for available integrations and
+[Connect a server](../../guides/connect-a-server/) for setup. The sections below
+describe the request fields and response handling for each operation.
 
 ## STT request
 
@@ -169,13 +144,13 @@ Each operation uses the budget captured when it starts. Change these values
 in Settings for subsequent requests; the shared HTTP transport adds no
 separate response-header deadline.
 
-| Operation | Default request budget |
-| --- | --- |
-| Microphone transcription | 120 seconds |
-| Each pause-aware checkpoint | 120 seconds |
-| Stored-audio transcription | 360 minutes (6 hours) |
-| Transcript cleanup | 120 seconds |
-| Speech generation | 180 seconds |
+| Operation                   | Default request budget |
+| --------------------------- | ---------------------- |
+| Microphone transcription    | 120 seconds            |
+| Each pause-aware checkpoint | 120 seconds            |
+| Stored-audio transcription  | 360 minutes (6 hours)  |
+| Transcript cleanup          | 120 seconds            |
+| Speech generation           | 180 seconds            |
 
 An explicit retry receives a new request budget. If a server has rejected
 streaming, a subsequent file attempt can use completed output. Freehand does
@@ -186,15 +161,15 @@ not automatically retry an ordinary failed inference request.
 These client limits cannot be changed in Settings. A server or reverse proxy
 may impose a lower limit.
 
-| Input or response | Maximum |
-| --- | --- |
-| Microphone WAV | 8 MiB |
-| Stored audio file | 2 GiB |
-| Completed microphone transcription, metadata, or chat response | 1 MiB |
-| Stored-file transcript response | 8 MiB |
-| Chat request | 2 MiB |
-| Speech playback text | 4,096 characters |
-| Generated WAV | 32 MiB |
+| Input or response                                              | Maximum          |
+| -------------------------------------------------------------- | ---------------- |
+| Microphone WAV                                                 | 8 MiB            |
+| Stored audio file                                              | 2 GiB            |
+| Completed microphone transcription, metadata, or chat response | 1 MiB            |
+| Stored-file transcript response                                | 8 MiB            |
+| Chat request                                                   | 2 MiB            |
+| Speech playback text                                           | 4,096 characters |
+| Generated WAV                                                  | 32 MiB           |
 
 ## Text to speech
 
@@ -221,7 +196,7 @@ Structure: prose | lists
 Context: general | email
 ```
 
-The alpha sends one cleanup request per input, with no sentence chunking or input-relative output limit. A completion explicitly reporting `finish_reason: "length"` fails with `incomplete_response`, even when its text is nonempty. The workflow uses the raw transcript, shows an output-limit notice, and retains safe response metadata when history is enabled. The partial cleaned text is discarded; no automatic cleanup retry occurs. Missing or other finish reasons retain the existing response rules, so unreported omissions cannot be detected. See the [input-length limits](../../guides/post-processing/#input-length-and-alpha-limits) before processing long text.
+The alpha sends one cleanup request per input, with no sentence chunking or input-relative output limit. A completion explicitly reporting `finish_reason: "length"` fails with `incomplete_response`, even when its text is nonempty. The workflow uses the raw transcript, shows an output-limit notice, and retains safe response metadata when history is enabled. The partial cleaned text is discarded; no automatic cleanup retry occurs. Missing or other finish reasons retain the existing response rules, so unreported omissions cannot be detected. See the [cleanup result handling](../../models/s1-mini/#language-and-results) before processing long text.
 
 The default is `semi-casual/prose/general`; `balanced` is not a trained S1-mini v1 value. Thinking must be disabled: the llama.cpp and vLLM profiles automatically request this for S1-mini; Generic requires the backend route to enforce it. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/) and the [post-processing setup guide](../../guides/post-processing/).
 
@@ -281,7 +256,6 @@ added. Options are copied with the job's connection/credential profile. Both
 microphone and stored-file cleanup retain length-limit rejection, durable raw
 fallback, cancellation, and one request per cleanup attempt.
 
-
 ## Additional qualified provider profiles
 
 whisper.cpp now supports completed transcription using its native `/inference`
@@ -308,7 +282,6 @@ profile descriptor. Selected or reported non-English input bypasses cleanup
 and preserves raw text with `unsupported_language`; unknown language assumes
 English as displayed in the controls. The fixed prompt and reasoning-off
 contract are unchanged. See [language selection](../../guides/languages/).
-
 
 ## Speech voice discovery
 

@@ -45,13 +45,14 @@
 
 <SettingsCard>
   <RuntimeModelPicker
+    profileName={compatibility?.name ?? settings.modelProfile}
     id="model"
     value={settings.model}
     {draftModels}
     onChoose={onChooseModel}
     onForget={onForgetModel}
     savedModels={rememberedModels(settings, Purpose.Transcription).map((e) => e.model)}
-    models={connection?.modelIDs ?? []}
+    models={connectionStale ? [] : (connection?.modelIDs ?? [])}
     serverLoaded={!!compatibility?.capabilities.serverLoadedModel &&
       !settings.compatibilityProfiles.transcription?.find(
         (p) => p.id === settings.compatibilityProfile,

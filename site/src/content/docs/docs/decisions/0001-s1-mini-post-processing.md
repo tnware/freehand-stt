@@ -35,7 +35,7 @@ prompt, temperature, or control values.
 
 An optional fixed output-token limit is also implemented. Input-relative
 budgets and sentence chunking remain unimplemented; the fixed limit does not
-fulfill those separate design requirements. See the [provider qualification](../../backends/llama-cpp/#source-qualification)
+fulfill those separate design requirements. See the [provider qualification](../../development/backend-compatibility/#llama-cpp-source-qualification)
 for source evidence and runtime/template limits.
 
 ## Protocol reliability clarification — 2026-09-05

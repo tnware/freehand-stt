@@ -72,8 +72,24 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
         </div>
       </section>
 
+      <section class="compatibility" aria-labelledby="compatibility-title">
+        <div class="compatibility-copy">
+          <p class="section-index">01 / Compatibility</p>
+          <h2 id="compatibility-title">Your endpoint.<br />Your choice.</h2>
+          <p>Connect to speech services on your PC, across your network, or in the cloud. Choose a connection and model for each workflow, and switch whenever you want.</p>
+          <div class="compatibility-actions">
+            <a class="button button-light" href={href("/backends/")}>Compare backends <span aria-hidden="true">→</span></a>
+            <a class="text-action" href={href("/models/")}>Explore model profiles <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+        <nav class="provider-list" aria-label="Available backend guides">
+          {availableBackends.map((backend) => <a href={href(backend.guide)}><ProviderIcon profile={backend.id} size={34} /><span>{backend.name}</span><span aria-hidden="true">↗</span></a>)}
+          <p>Capabilities vary by profile, server, and model.</p>
+        </nav>
+      </section>
+
       <section class="statement" aria-labelledby="statement-title">
-        <p class="section-index">01 / Purpose</p>
+        <p class="section-index">02 / Purpose</p>
         <div>
           <h2 id="statement-title">Keep your computer<br /><em>free for your work.</em></h2>
           <div class="statement-copy"><p>No room for a speech model? Or a powerful GPU you’d rather use for something else? Connect Freehand to another computer on your network or a compatible hosted service. Model memory and inference stay on that server.</p><p>Prefer to run everything on your own PC? That works too. Choose transcription, optional cleanup, and text-to-speech services independently.</p><p class="service-cost-note">Freehand is free forever. Your chosen provider or hosting may have its own costs.</p></div>
@@ -82,18 +98,18 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
 
       <section id="workflow" class="workflow" aria-labelledby="workflow-title">
         <div class="section-intro">
-          <p class="section-index">02 / Your task</p>
+          <p class="section-index">03 / Your task</p>
           <h2 id="workflow-title">Speech and text.<br />Your way.</h2>
           <p>Start with the task you need. Dictation is the default, but file transcription and text-to-speech work without completing dictation setup.</p>
         </div>
 
         <section class="workflow-options" aria-labelledby="task-choice-title">
           <h3 id="task-choice-title">Choose your task</h3>
-          <p>Configure only what that task needs. Microphone and file transcription share the same speech-to-text settings; text-to-speech has its own connection and model.</p>
+          <p>Configure only what that task needs. Voice, audio files, and text to speech each have their own connection and model settings.</p>
           <ul class="task-choices">
             <li>
               <h4>Dictate into apps</h4>
-              <p>Use a microphone and global shortcut. Freehand delivers the transcript to the original safe target, or leaves it ready to copy.</p>
+              <p>Use a microphone and global shortcut. Freehand inserts your words into the app you started in, or leaves them ready to copy.</p>
               <a href={href("/docs/getting-started/#run-your-first-dictation")}>Start dictating <span aria-hidden="true">→</span></a>
             </li>
             <li>
@@ -115,17 +131,17 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
           <ol class="workflow-track">
             <li>
               <span class="track-number">01</span>
-              <div class="track-copy"><small>Begin anywhere</small><h4>Press your shortcut</h4><p>Toggle recording or hold to talk. Freehand captures the exact Windows target before the microphone starts.</p></div>
+              <div class="track-copy"><small>Begin anywhere</small><h4>Press your shortcut</h4><p>Toggle recording or hold to talk. Start recording from the app you’re using.</p></div>
               <div class="track-art hotkey-art" aria-hidden="true"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd></div>
             </li>
             <li>
               <span class="track-number">02</span>
-              <div class="track-copy"><small>Route deliberately</small><h4>Use your speech stack</h4><p>Your selected speech model transcribes the audio. Keep that result or send it to a separate chat model for optional cleanup.</p></div>
+              <div class="track-copy"><small>Choose your model</small><h4>Use your speech stack</h4><p>Your selected speech model transcribes the audio. Keep that result or send it to a separate chat model for optional cleanup.</p></div>
               <div class="track-art route-art" aria-hidden="true"><span>voice</span><i></i><span>text</span></div>
             </li>
             <li>
               <span class="track-number">03</span>
-              <div class="track-copy"><small>Finish safely</small><h4>Receive the words</h4><p>If the original target still owns focus, Freehand inserts the text. If anything changed, it stops and leaves the result ready to copy.</p></div>
+              <div class="track-copy"><small>Finish safely</small><h4>Your words, in place</h4><p>If the original target still owns focus, Freehand inserts the text. If anything changed, it stops and leaves the result ready to copy.</p></div>
               <div class="track-art result-art" aria-hidden="true"><span>Original target</span><b>Verified</b></div>
             </li>
           </ol>
@@ -134,7 +150,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
 
       <section class="feature-story" aria-labelledby="feature-title">
         <div class="story-heading">
-          <p class="section-index">03 / In practice</p>
+          <p class="section-index">04 / In practice</p>
           <h2 id="feature-title">A quiet utility with the right depth.</h2>
         </div>
 
@@ -180,7 +196,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
 
       <section id="principles" class="principles" aria-labelledby="principles-title">
         <div class="principles-heading">
-          <p class="section-index">04 / Trust</p>
+          <p class="section-index">05 / Trust</p>
           <h2 id="principles-title">Know what happens<br />to your data.</h2>
           <p>Freehand makes its handling of audio, credentials, connection checks, and text insertion explicit.</p>
           <a href={href("/docs/guides/privacy-and-safety/")}>Read the privacy and safety guide <span aria-hidden="true">↗</span></a>
@@ -192,19 +208,6 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
           <li><span>03</span><div><h3>Keys stored by Windows</h3><p>Saved API keys use Windows Credential Manager. HTTPS is required unless you explicitly allow an HTTP endpoint.</p></div></li>
           <li><span>04</span><div><h3>No Freehand account</h3><p>Connect the speech services you already use without another sign-in.</p></div></li>
         </ol>
-      </section>
-
-      <section class="compatibility" aria-labelledby="compatibility-title">
-        <div class="compatibility-copy">
-          <p class="section-index">05 / Compatibility</p>
-          <h2 id="compatibility-title">Your endpoint.<br />Your choice.</h2>
-          <p>Freehand does not bundle a model or manage an inference runtime. Transcription, cleanup, and text-to-speech can each use infrastructure you operate or deliberately select. It is a speech client, not a meeting recorder, notes workspace, or voice assistant.</p>
-          <a class="button button-light" href={href("/backends/")}>Compare backends <span aria-hidden="true">→</span></a>
-        </div>
-        <nav class="provider-list" aria-label="Available backend guides">
-          {availableBackends.map((backend) => <a href={href(backend.guide)}><ProviderIcon profile={backend.id} size={34} /><span>{backend.name}</span><span aria-hidden="true">↗</span></a>)}
-          <p>Capabilities vary by profile, server, and model.</p>
-        </nav>
       </section>
 
       <section class="closing" aria-labelledby="closing-title">

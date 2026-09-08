@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SETTINGS_SECTIONS, sectionByID, sectionsInGroup } from "$lib/navigation";
+import { SETTINGS_GROUPS, SETTINGS_SECTIONS, sectionByID, sectionsInGroup } from "$lib/navigation";
 
 describe("settings navigation", () => {
   it("organizes sections by user task", () => {
@@ -13,22 +13,20 @@ describe("settings navigation", () => {
     ]);
     expect(sectionsInGroup("application").map((section) => section.id)).toEqual([
       "general",
-      "connections",
       "history",
     ]);
-    expect(sectionsInGroup("features").map((section) => section.label)).toEqual([
-      "Audio-file transcription",
+    expect(sectionsInGroup("workflows").map((section) => section.label)).toEqual([
       "Voice transcription",
-      "Vocabulary",
+      "Audio-file transcription",
       "Cleanup",
       "Text to speech",
     ]);
+    expect(sectionsInGroup("shared").map((section) => section.id)).toEqual([
+      "connections",
+      "vocabulary",
+    ]);
     expect(SETTINGS_SECTIONS.map((section) => section.id)).toEqual(
-      ["capture", "features", "application"].flatMap((group) =>
-        sectionsInGroup(group as Parameters<typeof sectionsInGroup>[0]).map(
-          (section) => section.id,
-        ),
-      ),
+      SETTINGS_GROUPS.flatMap((group) => sectionsInGroup(group).map((section) => section.id)),
     );
   });
 

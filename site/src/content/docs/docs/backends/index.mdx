@@ -1,41 +1,55 @@
 ---
 title: Backend compatibility
-description: Understand Freehand's profile contracts, validation evidence, and provider guides.
+description: Choose a backend for transcription, cleanup, and text to speech.
 ---
 
 import ProviderIcon from "../../../../components/ProviderIcon.astro";
 import { availableBackends } from "../../../../data/backends";
-export const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+export const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 Freehand connects to infrastructure you choose. Start with the
 [visual backend directory](../../backends/) to compare operations, then use
-a guide below for configuration and limits.
+a guide below to get connected. For S1-mini, Nemotron, and Qwen3-ASR controls,
+visit the separate [model directory](../../models/) and [model profile guides](../models/).
 
 :::note[Development documentation]
 This directory follows the main branch. Your installed release may have fewer
-options. An available profile describes Freehand's implemented contract;
-support can still depend on the server version and selected model.
+options. Each guide lists the features and server requirements for that profile.
 :::
 
 <div class="provider-guide-grid">
-  {availableBackends.map((backend) => <a class="provider-guide-card" href={`${base}${backend.guide}`}><ProviderIcon profile={backend.id} size={32} /><span><strong>{backend.name}</strong><small>{backend.summary}</small></span></a>)}
-  <a class="provider-guide-card" href={`${base}/docs/backends/planned/`}><span><strong>Planned profiles</strong><small>Dedicated contracts still awaiting implementation and qualification.</small></span></a>
+  {availableBackends.map((backend) => (
+    <a class="provider-guide-card" href={`${base}${backend.guide}`}>
+      <ProviderIcon profile={backend.id} size={32} />
+      <span>
+        <strong>{backend.name}</strong>
+        <small>{backend.summary}</small>
+      </span>
+    </a>
+  ))}
+  <a class="provider-guide-card" href={`${base}/docs/backends/planned/`}>
+    <span>
+      <strong>Planned profiles</strong>
+      <small>Upcoming integrations and alternatives.</small>
+    </span>
+  </a>
 </div>
 
 ## Run a backend
 
-Each provider page below is also listed under **Backend guides** in the docs
+Each provider page below is also listed under **Backend profiles** in the docs
 sidebar. The main site's **Backends** navigation opens the capability directory,
 whose cards link to these same guides.
 
-| Server | Launch instructions | Freehand operation |
-| --- | --- | --- |
-| whisper.cpp | [Native Windows](./whisper-cpp/#run-natively-on-windows) or [Docker](./whisper-cpp/#run-whispercpp-with-docker) | Transcription with a server-loaded model |
-| vLLM | [Windows + Docker, NVIDIA GPU](./vllm/#run-vllm-with-docker) | Qwen3-ASR transcription or S1-mini cleanup |
-| Speaches | [Docker GPU or CPU](./speaches/#run-speaches-with-docker) | Transcription; optional speech playback |
-| Kokoro-FastAPI | [Docker CPU or GPU](./kokoro-fastapi/#run-kokoro-fastapi-with-docker) | Speech playback with voice discovery |
-| llama.cpp | [Native Windows server](./llama-cpp/#run-llamacpp-on-windows) | S1-mini or compatible custom cleanup |
-| Generic OpenAI-compatible | [Connect an existing endpoint](./generic/) | The operations implemented by your server |
+| Server                    | Launch instructions                                                                                             | Freehand operation                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| whisper.cpp               | [Native Windows](./whisper-cpp/#run-natively-on-windows) or [Docker](./whisper-cpp/#run-whispercpp-with-docker) | Transcription with a server-loaded model   |
+| vLLM                      | [Windows + Docker, NVIDIA GPU](./vllm/#run-vllm-with-docker)                                                    | Qwen3-ASR transcription or S1-mini cleanup |
+| Speaches                  | [Docker GPU or CPU](./speaches/#run-speaches-with-docker)                                                       | Transcription; optional speech playback    |
+| Kokoro-FastAPI            | [Docker CPU or GPU](./kokoro-fastapi/#run-kokoro-fastapi-with-docker)                                           | Speech playback with voice discovery       |
+| llama.cpp                 | [Native Windows server](./llama-cpp/#run-llamacpp-on-windows)                                                   | S1-mini or compatible custom cleanup       |
+| NeMo-Speech.cpp           | [Runtime installation](./nemo-speech/#run-the-server)                                                           | Completed and live transcription           |
+| Generic OpenAI-compatible | [Connect an existing endpoint](./generic/)                                                                      | The operations implemented by your server  |
 
 These local examples use PowerShell and loopback ports. Docker recipes require
 Docker Desktop with Linux containers; NVIDIA examples also require a working
@@ -44,36 +58,25 @@ if `docker run --gpus ...` cannot access the card. First use downloads the image
 and the selected model. Model weights stay in the recipe's folder or named
 volume when a container stops.
 
-Choose a model that fits the GPU memory available after other applications.
-Smaller models can trade recognition quality for lower latency; being able to
-list a model does not establish its quality. Stop an unused inference server
-before starting another if both models do not fit. Each recipe includes its
-own stop/restart commands; Freehand does not manage these processes.
+Each recipe includes stop and restart commands. If you run several models on
+one GPU, leave enough memory for each or stop an unused server first.
 
 For a remote or hosted server, use the same profile with the administrator's
 HTTPS base URL, model ID, and authentication instead. Loopback-bound examples
 are for a client on the same PC. See [connection topologies](../guides/connect-a-server/#choose-a-topology)
 for separate STT, cleanup, and speech endpoints.
 
-## What the labels mean
+## Check your connection
 
-| Label | Evidence and limits |
-| --- | --- |
-| Available profile | Freehand implements a bounded contract and permits selection for the documented operations. |
-| Automated contract fixtures | Local request/response fixtures cover the client behavior. They do not run a provider's models. |
-| Reported working setup | A particular server/model combination has been used successfully. This is not a claim about every listed model or server release. |
-| Planned profile | The dedicated option is disabled. A compatible server may already work through Generic. |
-
-There is no certification or blanket approval of a provider. In particular,
-**Test** reads health or model-list metadata only. It does not prove that a
-model transcribes audio, accepts cleanup parameters, or returns playable speech.
-**Refresh voices** is also metadata-only and available for qualified speech profiles.
+**Check connection** reads server health or model metadata. **Refresh voices**
+lists voices on supported speech servers. Neither action generates audio or
+runs transcription. Use a short recording or voice preview to try your selection.
 
 ## Choose profiles per operation
 
-The microphone and stored-file workflows share the transcription connection.
-Post-processing and speech playback each have their own connection and profile.
-All three may use the same saved connection or different connections. Manage
+Voice transcription, Audio-file transcription, Cleanup, and Text to speech each
+have their own connection and model settings. They can share a saved connection
+or use different servers. Manage
 endpoint, authentication, and backend profile in **Settings → Connections**.
 Choose models, model profiles, voices, and other model options in feature settings;
 Freehand remembers those options for each connection and model.

@@ -1,6 +1,7 @@
 import { TTSPhase, type TTSStatus, type HistoryTextVersion } from "$lib/state";
 import type { SessionMessages } from "./messages.svelte";
 import type * as TtsBindings from "$bindings/tts/service";
+import type { Settings } from "$lib/state";
 export type SpeechStateService = Pick<
   typeof TtsBindings,
   | "CurrentStatus"
@@ -69,12 +70,21 @@ export class SpeechState {
     }
   }
 
-  async previewVoice() {
+  async previewVoice(settings: Settings) {
     if (this.previewing) return;
     this.previewing = true;
     this.#messages.clear();
     try {
-      await this.#service.PreviewVoice();
+      const draft = settings.textToSpeech;
+      await this.#service.PreviewVoice({
+        connectionID: settings.savedConnections.selected?.speech ?? "",
+        enabled: draft.enabled,
+        modelProfile: draft.modelProfile,
+        model: draft.model,
+        voice: draft.voice,
+        speed: draft.speed,
+        timeoutSeconds: draft.timeoutSeconds,
+      });
     } catch (cause) {
       this.#messages.fail(cause);
     } finally {

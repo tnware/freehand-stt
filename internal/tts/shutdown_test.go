@@ -47,7 +47,9 @@ func testSpeechService(t *testing.T, player Player) (*Service, *speechClientFake
 	cfg := config.Default().TextToSpeech
 	cfg.Enabled, cfg.BaseURL, cfg.Model, cfg.Voice = true, "https://fixture.invalid/v1", "speech", "voice"
 	cfg.AuthenticationMode = config.AuthenticationModeNone
-	service := NewService(func() (settings.TextToSpeechProfile, error) { return settings.TextToSpeechProfile{Settings: cfg}, nil }, client, player, nil, nil, nil, nil, nil, nil)
+	service := NewService(func(*settings.TextToSpeechPreview) (settings.TextToSpeechProfile, error) {
+		return settings.TextToSpeechProfile{Settings: cfg}, nil
+	}, client, player, nil, nil, nil, nil, nil, nil)
 	t.Cleanup(func() {
 		if p, ok := player.(*playerGate); ok {
 			p.unblock()

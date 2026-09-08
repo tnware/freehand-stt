@@ -618,6 +618,19 @@ remain on screen when the shortcut hint is hidden at compact widths.
 
 ## Speech controls, vocabulary feedback, and transcript reading
 
+Connection-card tests retain separate results, reject missing IDs, preserve active
+selections, and invalidate cached/in-flight checks on confirmed settings snapshots,
+even when public endpoint fields are unchanged. Model-source tests cover combined
+saved/server/draft labels and manually entered IDs. Navigation tests keep keyboard
+order aligned with the displayed groups.
+
+Review Connections at normal and compact window sizes: direct Check connection,
+per-card status and expandable details, active-use badges, and independent sidebar
+scrolling. Review the shared model picker in every workflow and quick panel,
+including a failed save, retry, manual ID, and long list. Sticky Settings headings
+must leave focused validation controls visible. These checks use metadata or
+synthetic fixtures and require no inference inventory probes.
+
 Run the config/modelprofile/settings tests and frontend suite. Vocabulary cases
 cover UTF-8 phrase limits, exact duplicates with source line numbers, the first
 excess phrase and byte budget, context consumption, unsupported workflows, and
@@ -635,3 +648,17 @@ activate a line link and verify selection/scrolling, then discard the draft. Che
 normal and compact windows, light/dark themes, long transcripts, and popup Escape
 focus return. Builds and synthetic streaming do not establish microphone or model
 inference acceptance.
+
+### Unsaved speech preview
+
+Settings tests cover draft model/profile/voice/speed/timeout capture, draft enable
+while saved speech is disabled, immutable endpoint/credential snapshots, no saves,
+and rejection of invalid options or stale connection IDs before credential access.
+The speech service test checks that synthesis receives captured draft options;
+renderer tests verify that preview forwards only the bounded draft DTO.
+
+For native acceptance, change voice and speed without saving, preview the fixed
+phrase, stop, change them again, and preview again. Discard edits and confirm normal
+Text to speech still uses the saved options. Test draft enable with saved speech
+disabled, invalid settings, a connection changed in another window, cancellation,
+and recording admission. Use only the explicitly chosen model; no inventory probes.
