@@ -45,6 +45,7 @@
 
 <SettingsCard>
   <RuntimeModelPicker
+    showProfileName={false}
     profileName={compatibility?.name ?? settings.modelProfile}
     id="model"
     value={settings.model}
@@ -79,14 +80,14 @@
       }
     }}
   />
-  <ValueRow
-    id="language"
-    label="Spoken language"
-    hint="Choose the language in the recording, or let the model detect it. This does not translate audio."
-  >
+  <ValueRow id="language" label="Spoken language">
     {#snippet control()}
       <LanguagePicker
         id="language"
+        unavailableReason={!compatibility?.capabilities.languageHint &&
+        !compatibility?.languages?.length
+          ? "This model profile does not support choosing a language."
+          : ""}
         restricted={!!compatibility?.languages?.length}
         languages={compatibility?.languages?.length
           ? compatibility.languages

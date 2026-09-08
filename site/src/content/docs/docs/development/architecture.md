@@ -939,3 +939,9 @@ are composed into the voice picker; they retain the draft-preview service path.
 Voice's workflow-level validation opens its disclosures because the backend does
 not currently identify individual voice fields. Disclosures never own option
 values or change capability admission, persistence, or request snapshots.
+
+Voice reuses `ModelProfilePicker` and `LanguagePicker` in draft and immediate
+settings. Shared pickers present the provided model contracts and delegate edits
+to their existing callbacks; they do not infer capabilities or own save policy.
+`FieldHelp` presents supporting copy without moving the surrounding controls.
+Restrictions and unavailable states stay inline rather than depending on help.

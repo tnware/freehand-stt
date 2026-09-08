@@ -69,6 +69,7 @@
         />{/snippet}</SettingRow
     >
     <RuntimeModelPicker
+      showProfileName={false}
       profileName={compatibility?.name ?? processor.preset}
       id="cleanup-model"
       value={settings.postProcessing.model}

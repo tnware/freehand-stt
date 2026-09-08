@@ -56,6 +56,7 @@
 </script>
 
 <RuntimeModelPicker
+  showProfileName={!modelDetails}
   id={compact ? "quick-speech-model" : "tts-model"}
   value={speech.model}
   profileName={profile?.name ?? speech.modelProfile}

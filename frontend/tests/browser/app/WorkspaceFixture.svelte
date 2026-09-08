@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { configurePickerFixture } from "./picker-data";
   import { onDestroy } from "svelte";
   import { CancellablePromise } from "@wailsio/runtime";
   import { ID as ModelProfileID } from "$bindings/modelprofile";
@@ -119,6 +120,7 @@
       },
     },
   ];
+  if (new URLSearchParams(location.search).has("pickers")) configurePickerFixture(current);
   const saves = controlledSaves((request) => {
     current = structuredClone({ ...current, ...request.settings });
     return structuredClone(current);

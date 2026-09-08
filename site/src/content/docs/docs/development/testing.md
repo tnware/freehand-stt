@@ -743,3 +743,13 @@ At 560px and 1156px they verify compact history footers and visible cleanup
 fallback explanations. File error details must remain inside the viewport,
 preserve transport geometry, and disappear when retry starts. Retained history
 and file status are fixture data; these checks invoke no native inference.
+
+### Shared settings pickers
+
+Synthetic picker tests cover keyboard access to help, nested-popover Escape
+focus restoration, profile descriptions at desktop and narrow widths, and
+restricted-language search by code with navigation to the end of a scrollable
+list. They verify that draft selections survive page navigation, custom language
+values remain reachable after an unmatched search, and failed immediate Voice
+saves restore the previous language. Fixture profiles are renderer data only;
+no model inventory or inference call is involved.

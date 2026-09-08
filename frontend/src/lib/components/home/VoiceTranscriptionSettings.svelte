@@ -3,7 +3,7 @@
   import RuntimeModelPicker from "../settings/RuntimeModelPicker.svelte";
   import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import VocabularyLink from "$lib/components/settings/VocabularyLink.svelte";
-  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
+  import ModelProfilePicker from "../settings/ModelProfilePicker.svelte";
   import { onDestroy } from "svelte";
   import { ID } from "$bindings/modelprofile";
   import LanguagePicker from "$lib/components/settings/LanguagePicker.svelte";
@@ -14,7 +14,6 @@
   import type { SettingsEditor } from "$lib/stores/editor.svelte";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Switch } from "$lib/components/ui/switch";
-  import * as Select from "$lib/components/ui/select";
 
   let {
     editor,
@@ -148,7 +147,7 @@
     value={cfg.model}
     compact
     immediate={!draft}
-    profileName={profile?.name ?? cfg.modelProfile}
+    showProfileName={false}
     models={availableModels}
     savedModels={rememberedModels(settings, Purpose.Voice).map((m) => m.model)}
     draftModels={draft ? editor.modelDraftIDs(Purpose.Voice) : []}
@@ -163,37 +162,14 @@
         }
       : undefined}
   />
-  {#if (settings.modelProfiles.voiceTranscription?.length ?? 0) > 1 || cfg.modelProfile !== ID.Generic}
-    <div class="space-y-1.5">
-      <label for="voice-profile" class="text-xs font-medium">Model profile</label>
-      <Select.Root
-        type="single"
-        value={cfg.modelProfile}
-        disabled={busy}
-        onValueChange={(id) => chooseProfile(id)}
-      >
-        <Select.Trigger id="voice-profile" class="w-full"
-          >{#if profile && profile.id !== ID.Generic}<ProviderIcon
-              profile={profile?.id}
-              size={18}
-            />{/if}{profile?.name ?? cfg.modelProfile}</Select.Trigger
-        >
-        <Select.Content
-          >{#each settings.modelProfiles.voiceTranscription ?? [] as option (option.id)}<Select.Item
-              value={option.id}
-              label={option.name}
-              >{#if option.id !== ID.Generic}<ProviderIcon
-                  profile={option.id}
-                  size={18}
-                />{/if}{option.name}</Select.Item
-            >{/each}</Select.Content
-        >
-      </Select.Root>
-      <p class="text-xs text-muted-foreground">
-        {profile?.description ?? "Choose the behavior of the model loaded on your server."}
-      </p>
-    </div>
-  {/if}
+  <ModelProfilePicker
+    id="voice-profile"
+    value={cfg.modelProfile}
+    profiles={settings.modelProfiles.voiceTranscription ?? []}
+    disabled={busy}
+    compact
+    onChange={chooseProfile}
+  />
   {#if profileNotice}<p class="text-xs text-muted-foreground" role="status">
       {profileNotice}
     </p>{/if}
@@ -221,38 +197,21 @@
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
     <div class="space-y-1.5">
-      <label for="voice-language" class="text-xs font-medium">Spoken language</label>
-      {#if profile.languages?.length}
-        <Select.Root
-          type="single"
-          value={cfg.language}
-          disabled={busy}
-          onValueChange={(language) => update({ language })}
-        >
-          <Select.Trigger id="voice-language" class="w-full"
-            >{profile.languages.find((l) => l.code === cfg.language)?.label ??
-              cfg.language}</Select.Trigger
-          >
-          <Select.Content
-            >{#each profile.languages as language (language.code)}<Select.Item
-                value={language.code}
-                label={language.label}>{language.label}</Select.Item
-              >{/each}</Select.Content
-          >
-        </Select.Root>
-      {:else}
-        <LanguagePicker
-          id="voice-language"
-          languages={settings.transcriptionLanguages ?? []}
-          disabled={busy}
-          bind:value={() => cfg.language, (language) => update({ language })}
-        />
-      {/if}
+      <label for="voice-language" class="text-sm font-medium">Spoken language</label>
+      <LanguagePicker
+        id="voice-language"
+        restricted={!!profile.languages?.length}
+        languages={profile.languages?.length
+          ? profile.languages
+          : (settings.transcriptionLanguages ?? [])}
+        disabled={busy}
+        bind:value={() => cfg.language, (language) => update({ language })}
+      />
     </div>
   {/if}
   {#if !cfg.realtime && profile?.capabilities.transcriptionPrompt}
     <div class="space-y-1.5">
-      <label for="voice-prompt" class="text-xs font-medium">Context hint</label><textarea
+      <label for="voice-prompt" class="text-sm font-medium">Context hint</label><textarea
         id="voice-prompt"
         rows="2"
         maxlength="8192"

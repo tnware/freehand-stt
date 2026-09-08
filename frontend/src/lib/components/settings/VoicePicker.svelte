@@ -140,7 +140,7 @@
           : supported
             ? "Search or enter a voice ID…"
             : "Enter a voice ID…"}
-        class="h-10 w-full rounded-md border border-input bg-background px-3 pr-10 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="h-9 w-full rounded-md border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         spellcheck={false}
         maxlength={200}
         oninput={(e) => {
@@ -167,14 +167,15 @@
       </Combobox.Input>
       <Combobox.Trigger
         aria-label="Show voices"
-        class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground"
+        class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
         ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
       >
     </div>
     <Combobox.Portal
       ><Combobox.Content
         sideOffset={4}
-        class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+        collisionPadding={12}
+        class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
       >
         {#key query}{#each choices as choice (choice.value)}
             <Combobox.Item
@@ -221,7 +222,7 @@
         : "server voices; availability depends on the selected model."}
       {result.truncated ? "List limited to 500 entries. " : ""}Custom voice IDs remain available.
     {:else}{supported
-        ? "Choose a server voice or enter an ID. Saved with this model’s settings."
-        : "Enter a voice ID supported by your model. Saved with this model’s settings."}{/if}
+        ? "Choose a server voice or enter an ID."
+        : "Enter a voice ID supported by your model."}{/if}
   </p>
 </div>

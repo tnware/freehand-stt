@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { configurePickerFixture } from "./picker-data";
   import { CancellablePromise } from "@wailsio/runtime";
   import { Action, Purpose } from "$bindings/savedconnection";
   import { CheckKind, CheckStatus } from "$bindings/connection";
@@ -77,6 +78,7 @@
     current.textToSpeech.model = "speech/tts";
     current.textToSpeech.voice = "alloy";
   }
+  if (new URLSearchParams(location.search).has("pickers")) configurePickerFixture(current);
   const saves = controlledSaves((request) => {
     const next = { ...current, ...request.settings };
     const change = request.connectionChange;
