@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.0-alpha.4](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.3...v0.1.0-alpha.4) (2026-09-08)
+
+
+### Features
+
+* realtime transcription for nemo and qwen ([#45](https://github.com/tnware/freehand-stt/issues/45)) ([e66cb6e](https://github.com/tnware/freehand-stt/commit/e66cb6e505dd7ab454dd19e878450ed33b7f5b92))
+
+
+### Bug Fixes
+
+* align Audio file and Text to speech workspace layouts ([#46](https://github.com/tnware/freehand-stt/issues/46)) ([fab0759](https://github.com/tnware/freehand-stt/commit/fab07598bf14a8adc8b543d9a17aacfd23aaa09c))
+* **logging:** make workflow diagnostics consistent ([#38](https://github.com/tnware/freehand-stt/issues/38)) ([c97c79a](https://github.com/tnware/freehand-stt/commit/c97c79ac18bc48628c50c4f18ddfb76ac5e35ac4))
+* polish speech controls, vocabulary feedback, and transcript reading ([#47](https://github.com/tnware/freehand-stt/issues/47)) ([f74a71b](https://github.com/tnware/freehand-stt/commit/f74a71bb7b943a6881110297cfda5445eb89e65e))
+* polish workflow settings and separate backend and model documentation ([#48](https://github.com/tnware/freehand-stt/issues/48)) ([04d6cbc](https://github.com/tnware/freehand-stt/commit/04d6cbcf4d453a686e81cacc6d481f703e16b0bf))
+* **ui:** open transcription details in a native window ([#44](https://github.com/tnware/freehand-stt/issues/44)) ([44c40d2](https://github.com/tnware/freehand-stt/commit/44c40d268d5f7a020d2451bfe3a26ce4fcd87774))
+* **ui:** refine desktop workspace layout and quick settings ([#43](https://github.com/tnware/freehand-stt/issues/43)) ([7cd8e8d](https://github.com/tnware/freehand-stt/commit/7cd8e8ded796d3aaef80a2563cd1233ece95e9e9))
+* **ux:** improve settings navigation and task feedback ([#42](https://github.com/tnware/freehand-stt/issues/42)) ([2651c76](https://github.com/tnware/freehand-stt/commit/2651c76c825e4a3577686d4777bbcfe24c301aac))
+
 ## [0.1.0-alpha.3](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.2...v0.1.0-alpha.3) (2026-09-06)
 
 
