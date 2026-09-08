@@ -11,6 +11,7 @@ import (
 )
 
 var settingsSections = map[string]struct{}{
+	"vocabulary":          {},
 	"general":             {},
 	"shortcuts":           {},
 	"audio":               {},

@@ -110,27 +110,27 @@ these provider contracts with their endpoint and opaque credential reference.
 
 ## Authority map
 
-| Concern | Owner |
-|---|---|
-| Live dictation state machine | `internal/dictation` |
-| Cross-feature start admission and recording preemption | `internal/activity` |
-| Global shortcuts | Windows platform adapter |
-| Audio capture and normalization | Go audio service |
-| Endpoint requests and cancellation | Go provider-neutral inference client |
-| Native stored-file grant and transcription job | `internal/filetranscription` + inference client |
-| Optional transcript post-processing | `internal/postprocess` request/outcome policy; feature-owned execution |
-| API credentials | Windows Credential Manager adapter |
-| Original target and insertion | Windows focus/input adapter |
-| Optional transcript history | `internal/history` memory store |
+| Concern                                                                                           | Owner                                                                   |
+| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Live dictation state machine                                                                      | `internal/dictation`                                                    |
+| Cross-feature start admission and recording preemption                                            | `internal/activity`                                                     |
+| Global shortcuts                                                                                  | Windows platform adapter                                                |
+| Audio capture and normalization                                                                   | Go audio service                                                        |
+| Endpoint requests and cancellation                                                                | Go provider-neutral inference client                                    |
+| Native stored-file grant and transcription job                                                    | `internal/filetranscription` + inference client                         |
+| Optional transcript post-processing                                                               | `internal/postprocess` request/outcome policy; feature-owned execution  |
+| API credentials                                                                                   | Windows Credential Manager adapter                                      |
+| Original target and insertion                                                                     | Windows focus/input adapter                                             |
+| Optional transcript history                                                                       | `internal/history` memory store                                         |
 | Optional authored-text/transcript synthesis, native playback, and explicit generated-audio export | `internal/tts` + inference speech capability + Windows playback adapter |
-| Optional passive status overlay | Cohesive Go overlay service + narrow native Win32 renderer |
-| Native tray presentation/actions | `internal/tray` consuming bounded domain snapshots |
-| Tray ownership, startup, single instance | Go/Wails Windows lifecycle |
-| Task, settings, and status rendering | Svelte through generated Wails bindings |
-| Durable non-secret configuration | `%LOCALAPPDATA%\Freehand\settings.db` (SQLite) |
-| Structured runtime diagnostics | One Wails default logger hierarchy, injected by `internal/app` |
-| Release identity and version | `build/config.yml`, parsed by `internal/releaseinfo` |
-| Release discovery and staged executable updates | `internal/updates` + Wails updater GitHub provider |
+| Optional passive status overlay                                                                   | Cohesive Go overlay service + narrow native Win32 renderer              |
+| Native tray presentation/actions                                                                  | `internal/tray` consuming bounded domain snapshots                      |
+| Tray ownership, startup, single instance                                                          | Go/Wails Windows lifecycle                                              |
+| Task, settings, and status rendering                                                              | Svelte through generated Wails bindings                                 |
+| Durable non-secret configuration                                                                  | `%LOCALAPPDATA%\Freehand\settings.db` (SQLite)                          |
+| Structured runtime diagnostics                                                                    | One Wails default logger hierarchy, injected by `internal/app`          |
+| Release identity and version                                                                      | `build/config.yml`, parsed by `internal/releaseinfo`                    |
+| Release discovery and staged executable updates                                                   | `internal/updates` + Wails updater GitHub provider                      |
 
 The frontend never receives a stored API key, raw audio, or selected filesystem path. A key being entered by the user exists only as a bounded, transient password-field draft until it is saved to Windows Credential Manager or the settings flow is left. Go opens the Wails native file picker and converts its result into a backend-only selection capability; the zero-argument renderer binding cannot nominate another path. Status events contain the opaque operation generation, base file name, byte progress, mode, and transcript text, never the full path or audio bytes.
 
@@ -184,16 +184,16 @@ frontend/src               thin Svelte components
 
 The renderer sees small Wails services registered from the package that owns each capability. Wails is the bridge boundary, not the application's package hierarchy:
 
-| Bound package | Renderer responsibility | Backend authority |
-|---|---|---|
-| `settings` | Renderer-safe snapshot and one atomic settings/credential/startup/shortcut save request | Settings transaction owner |
-| `input` | Microphone inventory and native shortcut capture | Audio and Windows keyboard adapters |
-| `connection` | Focused STT and post-processing health/model probes | Inference metadata capability |
-| `dictation` | Live commands and status snapshot | Package-owned recorder |
-| `history` | Bounded history queries, copy, delete, and clear | Package-owned synchronized store |
-| `filetranscription` | Native picker grant, upload/transcription state, retry, cancellation, copy | Package-owned file job using the injected history store |
-| `tts` | Speak bounded user-authored text; listen to backend-owned history versions or the completed file transcript; preview, pause, resume, restart, stop, save, clear, and status | Package-owned synthesis/playback session; native-dialog audio export |
-| `updates` | Current bounded status and explicit user-initiated update review | Package-owned polling policy over the configured Wails updater |
+| Bound package       | Renderer responsibility                                                                                                                                                     | Backend authority                                                    |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `settings`          | Renderer-safe snapshot and one atomic settings/credential/startup/shortcut save request                                                                                     | Settings transaction owner                                           |
+| `input`             | Microphone inventory and native shortcut capture                                                                                                                            | Audio and Windows keyboard adapters                                  |
+| `connection`        | Focused STT and post-processing health/model probes                                                                                                                         | Inference metadata capability                                        |
+| `dictation`         | Live commands and status snapshot                                                                                                                                           | Package-owned recorder                                               |
+| `history`           | Bounded history queries, copy, delete, and clear                                                                                                                            | Package-owned synchronized store                                     |
+| `filetranscription` | Native picker grant, upload/transcription state, retry, cancellation, copy                                                                                                  | Package-owned file job using the injected history store              |
+| `tts`               | Speak bounded user-authored text; listen to backend-owned history versions or the completed file transcript; preview, pause, resume, restart, stop, save, clear, and status | Package-owned synthesis/playback session; native-dialog audio export |
+| `updates`           | Current bounded status and explicit user-initiated update review                                                                                                            | Package-owned polling policy over the configured Wails updater       |
 
 Focused operations use generated request DTOs. A connection probe receives only its endpoint, model-discovery, headers, authentication policy, and bounded transient credential draft, so unrelated shortcut, VAD, window, history, or processing drafts cannot invalidate it. Settings save similarly receives one generated `SaveSettingsRequest` instead of a positional credential argument list. Svelte constructs and consumes those generated shapes directly.
 
@@ -517,7 +517,7 @@ constants in `internal/platform/overlay.go` match the panel and accent. Status
 colours keep their separate meanings. Dark Mica applies one translucent navy
 tint at `#app` plus translucent panels, while native captions remain under DWM
 control. Light-mode tokens remain independent.
- Windows Mica is an explicit persisted opt-in applied when all four native windows are created, so changing it requires a process restart. The service reports the launch-time material separately from the editable preference; Svelte continues rendering the launch-time material until restart rather than making its surfaces translucent over solid native windows. Shell chrome uses the same material-aware layer roles, including the main header/status strip, Settings navigation/action bar, and About action bar.
+Windows Mica is an explicit persisted opt-in applied when all four native windows are created, so changing it requires a process restart. The service reports the launch-time material separately from the editable preference; Svelte continues rendering the launch-time material until restart rather than making its surfaces translucent over solid native windows. Shell chrome uses the same material-aware layer roles, including the main header/status strip, Settings navigation/action bar, and About action bar.
 
 `internal/app` owns four named Wails windows: the normal `main` shell plus hidden, reused `settings`, `about`, and `transcription-details` renderers. It creates them from Wails' `ApplicationStarted` lifecycle event, after the framework has populated its screen manager, so the saved main-window placement is supplied directly through `WebviewWindowOptions`. Settings and About use the narrow generated `internal/windowing` binding. Transcription details uses `internal/history.Service`, which validates completed entry IDs and owns only the selected ID; `internal/app` owns its native window handle. `internal/windowstate` persists only the main window's normal bounds relative to its display work area and independently from product settings. On launch, the saved display is matched by Wails screen ID and stable device name, then its bounds are clamped to the current work area; a missing display falls back to a centered primary window. Immediately before Settings, About, or Transcription details is revealed from a hidden state, its Wails logical bounds are centered over the main window and clamped to the main window's current display work area. No auxiliary placement is persisted. Each WebView has independent Svelte state, while the transactional Go settings service remains authoritative and broadcasts its renderer-safe committed snapshot to every window that needs it. Settings reloads from Go whenever it is revealed, preserves an active draft against external events, and routes native close requests through its existing discard confirmation before asking Go to hide it. About and Transcription details have no editable state and hide immediately from either their native close action or footer. Opening another history entry updates and focuses the same details window. Details subscribes before fetching its selection, ignores superseded responses, and refreshes after history actions, settings changes, and workflow status events. Deleting, clearing, disabling, or evicting history makes details unavailable; closing the window clears its selection. No details snapshot is retained separately by Go or persisted. Because Wails parent-blocking modal attachment is not supported on Windows, the main window's rack is inert while the modeless Settings window is visible.
 
@@ -641,7 +641,6 @@ History never contains a URL path supplied by the user, target-window identity, 
 - Automatic release checks are opt-out, quiet metadata reads scheduled by `internal/updates`; Wails owns GitHub release comparison, checksum verification, its review window, download, executable staging, and restart. The service stops polling and rejects new checks during shutdown.
 - Services that own asynchronous work retain a child of Wails' application context themselves. Live `StopRecording` owns only the serialized native capture-stop transition; it then submits exactly one generation-scoped completion to the dictation service's single managed worker, which owns transcription, post-processing, history finalization, and insertion. Renderer, toggle, hold-release, duration-limit, and automatic-silence callers therefore share status events as their outcome contract instead of blocking a bridge or native callback on inference. Shutdown atomically stops admission and cancels the service root before waiting for native or workflow locks. Dictation and stored-file transcription each allow five seconds for the complete teardown; speech allows two seconds. These are per-service wait budgets, not a global process-exit guarantee. Wails closes shortcut capture before the dictation/audio owner. Native capture has a closed-state fence before and after device preparation so a late warmup cannot recreate resources.
 
-
 ### Shutdown and audio export ownership
 
 Each workflow starts one tracked cleanup operation and fences new work before
@@ -730,7 +729,6 @@ inference adapter maps the effective options to `max_tokens` and
 Generic still requires external reasoning configuration for S1-mini. No model-ID
 sniffing, arbitrary JSON extensions, automatic retries, or chunking are added.
 
-
 ## Native transcription and vLLM adapters
 
 The compatibility catalog owns native server-loaded model semantics and the
@@ -789,7 +787,6 @@ no inference probes, automatic inventory iterations, capability guesses, or new
 readiness gates for unlisted aliases. Model and option checks do not replace
 normal runtime admission and captured request settings.
 
-
 ### Voice discovery ownership
 
 `internal/compatibility` advertises voice discovery only for qualified speech
@@ -840,3 +837,7 @@ Language, cleanup intent, and speaking speed survive model/connection switches;
 engine options and voice remain scoped to a model. The existing SQLite snapshot
 format stays readable without changing released migrations. Historical task fields
 in model rows are not restored over the current task.
+
+### Shared vocabulary
+
+Following [ADR 0010](../../decisions/0010-shared-vocabulary/), `config.VocabularySettings` owns task-level terminology and Voice/file opt-ins. `modelprofile.VocabularyMode` resolves qualified hint fields; the renderer preview and request projection share Go validation. `settings.captureProfile` projects only into immutable workflow snapshots. Completed NeMo speech contexts use request-only transcription fields, excluded from JSON/model preferences. SQLite migration 00010 and sqlc queries persist the shared settings in the existing transaction. Historical model terms cannot replace the shared list on selection.

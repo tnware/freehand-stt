@@ -35,6 +35,7 @@ import {
 import { Session, type SessionServices } from "$lib/stores/session.svelte";
 
 const settings: Settings = {
+  vocabulary: { terms: "", voice: false, files: false, boost: 3 },
   modelProfile: ModelProfileID.Generic,
   rememberedModels: { entries: [], defaults: {} },
   modelProfiles: {

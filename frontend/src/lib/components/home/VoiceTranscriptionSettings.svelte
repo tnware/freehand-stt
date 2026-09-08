@@ -1,4 +1,5 @@
 <script lang="ts">
+  import VocabularyLink from "$lib/components/settings/VocabularyLink.svelte";
   import { onDestroy } from "svelte";
   import { ID } from "$bindings/modelprofile";
   import LanguagePicker from "$lib/components/settings/LanguagePicker.svelte";
@@ -279,24 +280,7 @@
       ></textarea>
     </div>
   {/if}
-  {#if !cfg.realtime && profile?.capabilities.transcriptionHotwords}
-    <div class="space-y-1.5">
-      <label for="voice-hotwords" class="text-xs font-medium">Hotwords</label><input
-        id="voice-hotwords"
-        maxlength="2048"
-        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-        disabled={busy}
-        value={cfg.transcriptionOptions.hotwords}
-        onchange={(event) =>
-          update({
-            transcriptionOptions: {
-              ...cfg.transcriptionOptions,
-              hotwords: event.currentTarget.value,
-            },
-          })}
-      />
-    </div>
-  {/if}
+  <VocabularyLink {settings} voice />
   {#if !cfg.realtime && profile?.capabilities.transcriptionTemperature}
     <div class="flex items-center justify-between gap-3">
       <label for="voice-temperature-override" class="text-sm">Override temperature</label><Switch
@@ -346,38 +330,6 @@
     </div>
   {/if}
   {#if cfg.realtime}
-    <div class="space-y-1.5">
-      <label for="voice-vocabulary" class="text-xs font-medium">Vocabulary hints</label>
-      <textarea
-        id="voice-vocabulary"
-        rows="3"
-        maxlength="2048"
-        disabled={busy}
-        class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        placeholder="One name or phrase per line"
-        value={cfg.options.vocabulary}
-        onchange={(event) =>
-          update({ options: { ...cfg.options, vocabulary: event.currentTarget.value } })}
-      ></textarea>
-      <p class="text-xs text-muted-foreground">
-        Names and terminology, up to 32 phrases. For rewrite instructions, use Cleanup.
-      </p>
-    </div>
-    <div class="flex items-center justify-between gap-3">
-      <label for="voice-boost" class="text-xs font-medium">Vocabulary strength</label>
-      <input
-        id="voice-boost"
-        type="number"
-        min="0"
-        max="5"
-        step="0.5"
-        value={cfg.options.boost}
-        disabled={busy}
-        class="h-8 w-20 rounded-md border border-input bg-background px-2 text-sm"
-        onchange={(event) =>
-          update({ options: { ...cfg.options, boost: event.currentTarget.valueAsNumber } })}
-      />
-    </div>
     <div class="flex items-center justify-between gap-3">
       <label for="voice-captions" class="text-sm">Live overlay captions</label>
       <Switch

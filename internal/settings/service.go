@@ -266,7 +266,18 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 		}
 	}
 	if dictation {
+		var err error
+		profile.Settings, err = config.WithVocabulary(profile.Settings, true)
+		if err != nil {
+			return RequestProfile{}, err
+		}
 		profile.Settings = config.WithVoiceTranscription(profile.Settings)
+	} else {
+		var err error
+		profile.Settings, err = config.WithVocabulary(profile.Settings, false)
+		if err != nil {
+			return RequestProfile{}, err
+		}
 	}
 	return profile, nil
 }
@@ -374,6 +385,11 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 // path without duplicating model-specific protocol text.
 func (s *Service) GetPostProcessingProfiles() []postprocess.ProfileDescriptor {
 	return postprocess.Profiles()
+}
+
+// PreviewVocabulary evaluates a bounded renderer draft without saving or inference.
+func (s *Service) PreviewVocabulary(request config.VocabularyPreviewRequest) config.VocabularyPreview {
+	return config.VocabularyPreview{Voice: config.PreviewVocabulary(request.Vocabulary, request.Voice), Files: config.PreviewVocabulary(request.Vocabulary, request.Files)}
 }
 
 // SaveSettings atomically applies one complete settings and credential change

@@ -28,7 +28,7 @@ func TestVersionFiveModelProfileUpgradePreservesCleanupAndConnections(t *testing
 		t.Fatal(err)
 	}
 	catalog := s.ConnectionCatalog()
-	if _, err := s.db.Exec(`DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models; ALTER TABLE transcription_settings DROP COLUMN model_profile; ALTER TABLE speech_settings DROP COLUMN model_profile; DELETE FROM goose_db_version WHERE version_id>=6;`); err != nil {
+	if _, err := s.db.Exec(`DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models; ALTER TABLE transcription_settings DROP COLUMN model_profile; ALTER TABLE speech_settings DROP COLUMN model_profile; DELETE FROM goose_db_version WHERE version_id>=6;`); err != nil {
 		t.Fatal(err)
 	}
 	s = reopen(t, s)

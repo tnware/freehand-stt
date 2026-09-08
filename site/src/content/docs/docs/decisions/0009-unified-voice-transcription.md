@@ -26,3 +26,5 @@ Voice setup completion and recording readiness no longer depend on an audio-file
 ## Validation
 
 Deterministic tests cover v8 migration with realtime on and off, retained inactive choices, completed Voice snapshot and credential isolation, mode eligibility, both completed request forms, and file/Voice selection independence. Svelte checks, frontend tests, generated bindings/SQL checks, and a Windows build are required. Native review separately checks connection selection, mode switching, capture, one-row captions, and focus-safe delivery. No automatic inference tests are introduced.
+
+Vocabulary ownership is superseded by [ADR 0010](../0010-shared-vocabulary/): phrase lists and use preferences are shared task settings, including completed NeMo requests.

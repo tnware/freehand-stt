@@ -94,6 +94,7 @@ export type QuickSettingsField =
 /** Keeps the editable draft independent from the backend-confirmed snapshot. */
 const copySettings = (settings: Settings): Settings => ({
   ...settings,
+  vocabulary: { ...settings.vocabulary },
   voiceTranscription: {
     ...settings.voiceTranscription,
     headers: { ...settings.voiceTranscription.headers },

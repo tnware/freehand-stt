@@ -9,6 +9,7 @@ export interface SettingsValidationIssue {
 }
 
 const targets: Record<string, Pick<SettingsValidationIssue, "section" | "control">> = {
+  vocabulary: { section: "vocabulary", control: "vocabulary-terms" },
   "voice-transcription": { section: "voice-transcription", control: "voice-connection" },
   maxDurationSeconds: { section: "audio", control: "max-duration" },
   microphoneID: { section: "audio", control: "microphone-select" },

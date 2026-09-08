@@ -24,7 +24,6 @@ Optional S1-mini by Superwhisper processing is implemented as a separate stage a
 
 Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 and the explicit Nemotron 3.5 streaming profile. Follow `site/src/content/docs/docs/decisions/0008-qualified-realtime-dictation.md`; retain ADR 0002's applicable transport and safety research. Follow ADR 0009 for unified Voice selection: completed and realtime microphone transcription use one connection/model/profile with a capability-gated mode switch. Audio-file transcription remains independently configurable. Partial text is presentation-only; authoritative finals use the existing cleanup and focus-safe delivery path. The pause-aware completed flow remains the default. Conversation mode remains shelved, and inference runtimes remain user-managed.
 
-
 ## Non-negotiable safety rules
 
 1. Model discovery and endpoint health checks are metadata-only. Use `/health` or `/v1/models`; qualified speech profiles may also read `/v1/audio/voices` for voice discovery.
@@ -53,6 +52,7 @@ Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 a
   cleanup intent, and speaking speed; historical task fields in saved model snapshots
   are not selection authority. Persist it with active settings through the existing settings transaction
   and sqlc queries; never store transport or credentials in model preferences.
+- Shared vocabulary follows ADR 0010: task-owned phrases and Voice/file opt-ins, qualified adapter projection into immutable requests, and no restoration of historical per-model phrase fields. Cleanup instructions and prose context remain separate.
 - Model profiles belong to feature settings, independently of reusable server
   connections. Do not infer them from model IDs, URLs, or model inventories.
 - Add specialized profiles only with a justified, qualified per-role contract,

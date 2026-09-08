@@ -24,8 +24,8 @@ func TestVersionEightUpgradeSelectsOneVoiceProvider(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = s.db.Exec(`DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers;
-   DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DELETE FROM remembered_models WHERE purpose='voice';` + string(old) + `DELETE FROM goose_db_version WHERE version_id=9;
+			_, err = s.db.Exec(`DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers;
+   DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DELETE FROM remembered_models WHERE purpose='voice';` + string(old) + `DELETE FROM goose_db_version WHERE version_id>=9;
    INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) VALUES('live-fixture','Live fixture','nemo-speech-v1','https://live.example.test/v1',0,'none','','');
    INSERT INTO saved_connection_uses VALUES('live-fixture','realtime'); INSERT INTO selected_connections VALUES('realtime','live-fixture');
    UPDATE realtime_settings SET base_url='https://live.example.test/v1',model='live-model',language='fr-FR',vocabulary='Freehand',boost=2.5;
@@ -45,7 +45,7 @@ func TestVersionEightUpgradeSelectsOneVoiceProvider(t *testing.T) {
 			}
 			selected := s.ConnectionCatalog().Selected[savedconnection.Voice]
 			if live {
-				if !got.SetupCompleted || !got.VoiceTranscription.Realtime || got.VoiceTranscription.Model != "live-model" || got.VoiceTranscription.Language != "fr-FR" || got.VoiceTranscription.Options.Vocabulary != "Freehand" || selected != "live-fixture" {
+				if !got.SetupCompleted || !got.VoiceTranscription.Realtime || got.VoiceTranscription.Model != "live-model" || got.VoiceTranscription.Language != "fr-FR" || got.Vocabulary.Terms != "Freehand" || selected != "live-fixture" {
 					t.Fatal("migration lost active realtime selection")
 				}
 			} else if !reflect.DeepEqual(got.VoiceTranscription, config.VoiceFromCompleted(before)) || selected != s.ConnectionCatalog().Selected[savedconnection.Transcription] {

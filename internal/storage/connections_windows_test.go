@@ -208,7 +208,8 @@ func TestConnectionSwitchRestoresOptionsForEachBackend(t *testing.T) {
 	next := selected.Settings
 	next.Model = "whisper"
 	next.Language = "ja"
-	next.TranscriptionOptions.Hotwords = "Freehand"
+	next.Vocabulary.Terms = "Freehand"
+	next.Vocabulary.Files = true
 	saved, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: next})
 	if err != nil {
 		t.Fatal(err)
@@ -221,7 +222,7 @@ func TestConnectionSwitchRestoresOptionsForEachBackend(t *testing.T) {
 		t.Fatal("hotwords leaked to another backend")
 	}
 	got = changeConnection(t, svc, savedconnection.Change{Action: savedconnection.Select, Purpose: savedconnection.Transcription, ID: saved.SavedConnections.Selected[savedconnection.Transcription]})
-	if got.TranscriptionOptions.Hotwords != "Freehand" || got.Model != "whisper" {
+	if got.Vocabulary.Terms != "Freehand" || !got.Vocabulary.Files || got.TranscriptionOptions.Hotwords != "" || got.Model != "whisper" {
 		t.Fatal("returning to the connection lost model options")
 	}
 

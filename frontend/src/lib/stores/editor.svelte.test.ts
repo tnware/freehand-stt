@@ -771,3 +771,18 @@ it("changes Voice mode without changing the selected connection/model or Audio f
     realtime: true,
   });
 });
+
+describe("shared vocabulary draft", () => {
+  it("keeps edits separate from applied settings and restores them on discard", () => {
+    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    editor.applySettingsSnapshot(settings);
+    editor.draft!.vocabulary.terms = "Freehand\nNew York";
+    editor.draft!.vocabulary.voice = true;
+    expect(editor.applied!.vocabulary.terms).toBe("");
+    expect(editor.applied!.vocabulary.voice).toBe(false);
+    expect(editor.dirty).toBe(true);
+    editor.discardSettingsDraft();
+    expect(editor.draft!.vocabulary).toEqual(settings.vocabulary);
+    expect(editor.dirty).toBe(false);
+  });
+});

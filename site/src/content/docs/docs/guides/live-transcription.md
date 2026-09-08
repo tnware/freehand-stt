@@ -16,7 +16,7 @@ The client connects to `/v1/realtime` beneath the selected API root. Local serve
 
 ## Recognition controls
 
-**Vocabulary hints** favor names and terminology: one phrase per line, up to 32 phrases, with 128 UTF-8 bytes per phrase and 2048 total. **Vocabulary strength** ranges from 0 to 5; start with 2–3. These are recognition hints, not commands or fine-tuning. Use Cleanup for rewrite instructions. The profile exposes only languages supported by the base model, without requiring adaptation packages.
+**[Settings → Vocabulary](/docs/guides/vocabulary/)** holds the shared names and terminology list. Enable it for Voice transcription: one phrase per line, up to 32 phrases, with 128 UTF-8 bytes per phrase and 2048 total. **Vocabulary strength** ranges from 0 to 5; start with 2–3. These are recognition hints, not commands or fine-tuning. Use Cleanup for rewrite instructions. The profile exposes only languages supported by the base model, without requiring adaptation packages.
 
 The server owns GPU selection, loaded models, chunk latency, and optional extra processing models. Freehand preserves the model's native punctuation and requests verbatim output; it does not load optional ITN, punctuation, diarization, or VAD models.
 
@@ -26,4 +26,4 @@ The preview can change as speech is recognized. NeMo-Speech.cpp v0.1.0 can emit 
 
 Only finalized text can be cleaned up, retained in optional memory history, copied, or inserted. Cancellation or a disconnected stream discards its preview. Start a new recording after a connection failure; Freehand does not replay captured audio.
 
-Live mode uses the existing toggle/hold shortcut and recording duration limit. Silence trimming, checkpoints, and automatic stop are for completed transcription and are bypassed in live mode. Turning realtime off keeps the same connection and model and uses completed recording/checkpoints with your saved capture preferences. Vocabulary hints and live captions apply only in realtime mode. Audio-file transcription has its own connection, model, language, and options; changing Voice does not change it.
+Live mode uses the existing toggle/hold shortcut and recording duration limit. Silence trimming, checkpoints, and automatic stop are for completed transcription and are bypassed in live mode. Turning realtime off keeps the same connection and model and uses completed recording/checkpoints with your saved capture preferences. Shared vocabulary works in both modes; live captions apply only in realtime mode. Audio-file transcription has its own connection, model, language, and options; changing Voice does not change it.

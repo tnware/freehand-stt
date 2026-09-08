@@ -101,8 +101,8 @@ export function applyModelOptions(
     Object.assign(settings.voiceTranscription, {
       model,
       modelProfile: o.profile,
-      options: { ...o.realtime },
-      transcriptionOptions: o.transcription,
+      options: { ...o.realtime, vocabulary: "" },
+      transcriptionOptions: { ...o.transcription, hotwords: "" },
       realtime:
         settings.voiceTranscription.realtime &&
         !!settings.modelProfiles.voiceTranscription?.find((p) => p.id === o.profile)?.capabilities
@@ -111,7 +111,7 @@ export function applyModelOptions(
   } else if (purpose === Purpose.Transcription) {
     settings.model = model;
     settings.modelProfile = o.profile;
-    settings.transcriptionOptions = o.transcription;
+    settings.transcriptionOptions = { ...o.transcription, hotwords: "" };
   } else if (purpose === Purpose.Cleanup) {
     Object.assign(settings.postProcessing, {
       model,

@@ -24,6 +24,7 @@ import { appReadiness, readinessVisible } from "$lib/utils/readiness";
 const devices: Device[] = [{ id: "mic-1", name: "Desk microphone", default: true }];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
+  vocabulary: { terms: "", voice: false, files: false, boost: 3 },
   savedConnections: {
     entries: [
       {

@@ -1,4 +1,5 @@
 import type { Component } from "svelte";
+import BookOpenIcon from "@lucide/svelte/icons/book-open";
 import HistoryIcon from "@lucide/svelte/icons/history";
 import KeyboardIcon from "@lucide/svelte/icons/keyboard";
 import MicIcon from "@lucide/svelte/icons/mic";
@@ -8,6 +9,8 @@ import ServerIcon from "@lucide/svelte/icons/server";
 import SettingsIcon from "@lucide/svelte/icons/settings";
 import WandSparklesIcon from "@lucide/svelte/icons/wand-sparkles";
 import Volume2Icon from "@lucide/svelte/icons/volume-2";
+
+export const SETTINGS_NAVIGATION = Symbol("settings-navigation");
 
 export type SettingsSectionID =
   | "general"
@@ -19,7 +22,8 @@ export type SettingsSectionID =
   | "server"
   | "processing"
   | "speech"
-  | "history";
+  | "history"
+  | "vocabulary";
 
 export type SettingsSection = {
   id: SettingsSectionID;
@@ -67,6 +71,13 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     label: "Voice transcription",
     blurb: "Choose a microphone transcription provider, model, and supported recording mode.",
     icon: MicIcon,
+    group: "features",
+  },
+  {
+    id: "vocabulary",
+    label: "Vocabulary",
+    blurb: "Names and terminology, shared across your transcription models.",
+    icon: BookOpenIcon,
     group: "features",
   },
   {

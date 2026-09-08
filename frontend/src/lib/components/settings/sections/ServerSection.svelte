@@ -1,4 +1,5 @@
 <script lang="ts">
+  import VocabularyLink from "../VocabularyLink.svelte";
   import { Purpose } from "$bindings/savedconnection";
   import { rememberedModels } from "$lib/utils/modelSettings";
   import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
@@ -120,6 +121,7 @@
   </ValueRow>
 </SettingsCard>
 
+<VocabularyLink {settings} />
 <TranscriptionControls
   bind:options={settings.transcriptionOptions}
   capabilities={compatibility?.capabilities}

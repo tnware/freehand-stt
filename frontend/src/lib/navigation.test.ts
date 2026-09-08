@@ -19,6 +19,7 @@ describe("settings navigation", () => {
     expect(sectionsInGroup("features").map((section) => section.label)).toEqual([
       "Audio-file transcription",
       "Voice transcription",
+      "Vocabulary",
       "Cleanup",
       "Text to speech",
     ]);

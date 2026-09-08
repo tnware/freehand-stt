@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { SETTINGS_NAVIGATION } from "$lib/navigation";
+  import VocabularySection from "./sections/VocabularySection.svelte";
   import { setContext, tick } from "svelte";
   import {
     SETTINGS_VALIDATION,
@@ -126,6 +128,7 @@
   $effect(() => {
     if (!visible) pendingConnectionAction = null;
   });
+  setContext(SETTINGS_NAVIGATION, selectSection);
   function selectSection(id: SettingsSectionID) {
     active = id;
     if (id === "audio") void session.editor.refreshDevices();
@@ -305,6 +308,12 @@
                 onAddConnection={addConnection}
               />
             </div>
+          {:else if active === "vocabulary"}
+            <VocabularySection
+              settings={session.editor.draft}
+              onChange={(patch) => Object.assign(session.editor.draft!.vocabulary, patch)}
+              disabled={session.editor.saving}
+            />
           {:else if active === "general"}
             <GeneralSection bind:settings={session.editor.draft} />
           {:else if active === "shortcuts"}

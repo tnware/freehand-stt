@@ -164,6 +164,14 @@ type TranscriptionSetting struct {
 	ModelProfile                            string
 }
 
+type VocabularySetting struct {
+	ID    int64
+	Terms string
+	Voice int64
+	Files int64
+	Boost float64
+}
+
 type VoiceRequestHeader struct {
 	Name  string
 	Value string

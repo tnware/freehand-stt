@@ -139,7 +139,6 @@ verify capability labels and metadata outcomes without invoking model inventorie
 These UI checks do not establish microphone, inference, insertion, or playback
 acceptance.
 
-
 ## Diagnostic logging acceptance
 
 Run the affected backend packages on Windows:
@@ -360,7 +359,6 @@ build and template/model details for reasoning behavior; neither a model list no
 a successful client fixture proves a runtime honored the override. CI performs
 no provider inference.
 
-
 ## whisper.cpp and vLLM acceptance
 
 Use one explicitly chosen server/model at a time. Record the server revision,
@@ -512,7 +510,6 @@ probes are part of these checks.
 - Review the results panel in light/dark themes and a narrow settings window.
   Pair browser presentation checks with native Windows tests and builds.
 
-
 ### Voice discovery and Kokoro playback
 
 Run inference and connection tests for current/legacy Kokoro voice shapes,
@@ -584,3 +581,7 @@ Migration fixtures exercise old realtime-enabled and completed configurations, p
 For native acceptance, open Voice → Transcription: there must be no separate Live button. Choose NeMo-Speech.cpp, its loaded model, and the explicit Nemotron profile; enable Realtime inside that panel. Verify live results and one-row captions. Turn realtime off and record using the same connection/model. Switch to an ineligible model/connection and verify mode is disabled. Configure Audio file separately, switch between tasks, and verify independent connection/model/language settings and truthful footer status. Restart and repeat. Test Voice-only first-run setup with Audio file unconfigured. These native checks are separate from successful builds and deterministic tests.
 
 Language dropdown acceptance: check the searchable language picker and the qualified Nemotron select inside quick-settings popovers at short and normal window heights. Menus must remain within the window, scroll internally with the wheel, and expose the final option through keyboard navigation.
+
+### Shared vocabulary acceptance
+
+Check Vocabulary at regular and small Settings window sizes in both themes. Edit names, independently toggle Voice/files, save, and reopen. Follow Vocabulary links from a dirty Voice/file settings draft and verify that edits survive navigation. Confirm the NVIDIA mark appears for NeMo in quick controls, connections, and the Vocabulary page. Switch supported/unsupported models and preserve the list and use preferences. For NeMo, verify limits and strength, then test completed Voice, audio files, and realtime against only the explicitly selected model when native inference acceptance is authorized. Backend fixtures cover migration, immutable workflow projections, Unicode limits, omission, and multipart speech contexts without automatic inference.

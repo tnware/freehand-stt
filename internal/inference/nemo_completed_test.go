@@ -2,6 +2,7 @@ package inference
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"io"
@@ -29,6 +30,13 @@ func TestNemoCompletedRequestsPreserveNativeText(t *testing.T) {
 				if r.FormValue("stream") != "" || r.FormValue("prompt") != "" || r.FormValue("model") != "" {
 					t.Error("unsupported options sent")
 				}
+				var contexts []struct {
+					Phrases []string `json:"phrases"`
+					Boost   float64  `json:"boost"`
+				}
+				if err := json.Unmarshal([]byte(r.FormValue("speech_contexts")), &contexts); err != nil || len(contexts) != 1 || strings.Join(contexts[0].Phrases, "\n") != "Freehand\nNew York" || contexts[0].Boost != 2.5 {
+					t.Error("wrong speech contexts")
+				}
 				f, _, err := r.FormFile("file")
 				if err != nil {
 					t.Error(err)
@@ -43,7 +51,7 @@ func TestNemoCompletedRequestsPreserveNativeText(t *testing.T) {
 				io.WriteString(w, `{"text":"Bonjour. <fr-FR>"}`)
 			}))
 			defer server.Close()
-			client := New().WithCompatibility(compatibility.NeMoSpeechV1).WithModelProfile(modelprofile.Nemotron35)
+			client := New().WithCompatibility(compatibility.NeMoSpeechV1).WithModelProfile(modelprofile.Nemotron35).WithTranscriptionOptions(compatibility.TranscriptionOptions{Vocabulary: "Freehand\nNew York", VocabularyBoost: 2.5})
 			var result TranscriptionResult
 			var err error
 			if file {

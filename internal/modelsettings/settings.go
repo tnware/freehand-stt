@@ -150,6 +150,14 @@ func Validate(e Entry, d savedconnection.Details) error {
 // format; historical task fields in remembered rows are not selection authority.
 func Select(v config.Settings, p savedconnection.Purpose, model string, o Options) config.Settings {
 	next := Apply(v, p, model, o)
+	// Historical per-model terms are not authority over the shared vocabulary.
+	if p == savedconnection.Transcription {
+		next.TranscriptionOptions.Hotwords = ""
+	}
+	if p == savedconnection.Voice {
+		next.VoiceTranscription.TranscriptionOptions.Hotwords = ""
+		next.VoiceTranscription.Options.Vocabulary = ""
+	}
 	next.Language = v.Language
 	next.VoiceTranscription.Language = v.VoiceTranscription.Language
 	next.VoiceTranscription.Realtime = v.VoiceTranscription.Realtime && config.VoiceRealtimeEligible(next.VoiceTranscription)

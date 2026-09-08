@@ -16,11 +16,11 @@ Choose an active connection, choose or enter the model, and review **Model
 profile** directly beneath it. Choose a specialized profile only when you know
 that is the model your server is running, then **Save feature settings**.
 
-| Feature | Available model profiles | Behavior |
-| --- | --- | --- |
+| Feature            | Available model profiles                               | Behavior                                                                                                                                                                          |
+| ------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Voice / Audio file | Generic; Nemotron 3.5 ASR streaming on NeMo-Speech.cpp | Generic offers the selected backend’s completed transcription options. Nemotron restricts languages to qualified base-model locales and enables optional realtime mode for Voice. |
-| Cleanup | Generic; S1-mini by Superwhisper | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls. |
-| Text to speech | Generic | Standard WAV speech generation with a provider voice ID. |
+| Cleanup            | Generic; S1-mini by Superwhisper                       | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                   |
+| Text to speech     | Generic                                                | Standard WAV speech generation with a provider voice ID.                                                                                                                          |
 
 Where only Generic is available, the redundant profile row is hidden. The standard
 backend contract still applies; there is no extra choice to make.
@@ -35,7 +35,7 @@ Model discovery reads metadata only. Freehand does not infer a model profile
 from a name, download a model, or run one to detect its capabilities. For
 whisper.cpp, the model remains the one already loaded by the server.
 
-Voice’s **Transcription** quick controls also expose the model profile. With NeMo-Speech.cpp and the Nemotron profile selected, **Realtime transcription** appears inside that panel. Its vocabulary and caption controls appear when enabled; turning it off keeps the same connection/model. Audio file remains independent.
+Voice’s **Transcription** quick controls also expose the model profile. With NeMo-Speech.cpp and the Nemotron profile selected, **Realtime transcription** appears inside that panel. Its caption control appears when enabled; shared terminology is managed in **Settings → Vocabulary**, and turning it off keeps the same connection/model. Audio file remains independent.
 
 ## S1-mini
 
@@ -59,16 +59,16 @@ model ID**. Choose a saved model from the searchable **Model** picker to restore
 without listing models on the server. A new model ID starts with Generic and
 Freehand's default engine options; its name never selects a specialized profile.
 
-| Feature | Remembered model options |
-| --- | --- |
-| Transcription | Model profile, context hint, hotwords, and temperature override |
-| Cleanup | Model profile, output limit, and reasoning override |
-| Text to speech | Model profile and voice |
+| Feature        | Remembered model options                                    |
+| -------------- | ----------------------------------------------------------- |
+| Transcription  | Model profile, prose context hint, and temperature override |
+| Cleanup        | Model profile, output limit, and reasoning override         |
+| Text to speech | Model profile and voice                                     |
 
 **Task intent stays in place when you change models or connections:** transcription
 language, the custom cleanup instruction, S1-mini style/structure/context choices,
 and speaking speed. Switching engines does not replace these with an older model's
-values. Recognition hints and hotwords remain model options because their meaning
+values. Prose context hints remain model options because their meaning
 and availability depend on the backend. Specialized profiles still constrain what
 can run: S1-mini's English-only behavior never changes the transcription language.
 
@@ -104,3 +104,5 @@ language and options yourself when changing it. The server still owns model load
 
 Upgrades retain current model selections and seed their remembered preferences.
 No credentials or generated transcripts are included in model preferences.
+
+Shared vocabulary terms and Voice/file opt-ins live in [Vocabulary](../vocabulary/), independently of remembered models.

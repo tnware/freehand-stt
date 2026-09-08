@@ -204,6 +204,7 @@ const (
 )
 
 type Settings struct {
+	Vocabulary                      VocabularySettings         `json:"vocabulary"`
 	VoiceTranscription              VoiceTranscriptionSettings `json:"voiceTranscription"`
 	ModelProfile                    modelprofile.ID            `json:"modelProfile"`
 	CompatibilityProfile            compatibility.ID           `json:"compatibilityProfile"`
@@ -259,6 +260,7 @@ type Settings struct {
 
 func Default() Settings {
 	return Settings{
+		Vocabulary:           VocabularySettings{Boost: 3},
 		VoiceTranscription:   DefaultVoiceTranscription(),
 		CompatibilityProfile: compatibility.Generic,
 		// First launch and settings recovery must not select a network peer or a
@@ -313,6 +315,9 @@ func (s Settings) EffectiveAppearanceMode() AppearanceMode {
 var headerNameRE = regexp.MustCompile(`^[!#$%&'*+\-.^_` + "`" + `|~0-9A-Za-z]+$`)
 
 func Validate(s Settings) error {
+	if err := ValidateVocabulary(s.Vocabulary); err != nil {
+		return fieldError("vocabulary", "Check vocabulary text and strength.", err)
+	}
 	if err := ValidateVoiceTranscription(s.VoiceTranscription); err != nil {
 		return fieldError("voice-transcription", "Check the voice transcription connection, model profile, language, and options.", err)
 	}

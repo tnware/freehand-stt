@@ -17,6 +17,9 @@ func boolean(v bool) int64 {
 	return 0
 }
 func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) error {
+	if err := q.PutVocabulary(ctx, dbgen.PutVocabularyParams{Terms: v.Vocabulary.Terms, Voice: boolean(v.Vocabulary.Voice), Files: boolean(v.Vocabulary.Files), Boost: v.Vocabulary.Boost}); err != nil {
+		return err
+	}
 	r := v.VoiceTranscription
 	if err := q.PutVoiceTranscription(ctx, dbgen.PutVoiceTranscriptionParams{Realtime: boolean(r.Realtime), CompatibilityProfile: string(r.CompatibilityProfile), ModelProfile: string(r.ModelProfile), BaseUrl: r.BaseURL, AllowInsecureHttp: boolean(r.AllowInsecureHTTP), AuthenticationMode: string(r.AuthenticationMode), Model: r.Model, Language: r.Language, Captions: boolean(r.Captions), Vocabulary: r.Options.Vocabulary, Boost: r.Options.Boost, HealthPath: r.HealthPath, TimeoutSeconds: int64(r.TimeoutSeconds), Prompt: r.TranscriptionOptions.Prompt, Hotwords: r.TranscriptionOptions.Hotwords, TemperatureOverride: boolean(r.TranscriptionOptions.TemperatureOverride), Temperature: r.TranscriptionOptions.Temperature}); err != nil {
 		return err
@@ -137,6 +140,11 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 }
 func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error) {
 	v := config.Default()
+	vocabulary, err := q.GetVocabulary(ctx)
+	if err != nil {
+		return v, err
+	}
+	v.Vocabulary = config.VocabularySettings{Terms: config.VocabularyTerms(vocabulary.Terms), Voice: vocabulary.Voice != 0, Files: vocabulary.Files != 0, Boost: vocabulary.Boost}
 	if _, err := q.GetInitialization(ctx); err != nil {
 		return v, err
 	}
