@@ -1,5 +1,6 @@
 <script lang="ts">
   import VocabularyLink from "$lib/components/settings/VocabularyLink.svelte";
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { onDestroy } from "svelte";
   import { ID } from "$bindings/modelprofile";
   import LanguagePicker from "$lib/components/settings/LanguagePicker.svelte";
@@ -42,8 +43,7 @@
     const selected = settings.modelProfiles.voiceTranscription?.find((p) => p.id === value);
     if (!selected || selected.id === cfg.modelProfile) return;
     const language =
-      selected.id === ID.Nemotron35 &&
-      !settings.realtimeLanguages?.some((l) => l.code === cfg.language)
+      selected.languages?.length && !selected.languages.some((l) => l.code === cfg.language)
         ? "auto"
         : cfg.language;
     profileNotice =
@@ -199,12 +199,19 @@
         onValueChange={(id) => chooseProfile(id)}
       >
         <Select.Trigger id="voice-profile" class="w-full"
-          >{profile?.name ?? cfg.modelProfile}</Select.Trigger
+          >{#if profile?.id === ID.Qwen3ASR}<ProviderIcon
+              profile="qwen3-asr"
+              size={18}
+            />{/if}{profile?.name ?? cfg.modelProfile}</Select.Trigger
         >
         <Select.Content
           >{#each settings.modelProfiles.voiceTranscription ?? [] as option (option.id)}<Select.Item
               value={option.id}
-              label={option.name}>{option.name}</Select.Item
+              label={option.name}
+              >{#if option.id === ID.Qwen3ASR}<ProviderIcon
+                  profile="qwen3-asr"
+                  size={18}
+                />{/if}{option.name}</Select.Item
             >{/each}</Select.Content
         >
       </Select.Root>
@@ -230,10 +237,16 @@
       />
     </div>
   {/if}
-  {#if profile?.capabilities.languageHint}
+  {#if cfg.realtime && cfg.modelProfile === ID.Qwen3ASR}
+    <p class="text-xs leading-relaxed text-muted-foreground">
+      Qwen realtime uses automatic language detection. Language, context, vocabulary, and
+      temperature hints apply only with realtime off.
+    </p>
+  {/if}
+  {#if profile?.capabilities.languageHint && (!cfg.realtime || profile.realtimeLanguageHint)}
     <div class="space-y-1.5">
       <label for="voice-language" class="text-xs font-medium">Spoken language</label>
-      {#if cfg.modelProfile === ID.Nemotron35}
+      {#if profile.languages?.length}
         <Select.Root
           type="single"
           value={cfg.language}
@@ -241,11 +254,11 @@
           onValueChange={(language) => update({ language })}
         >
           <Select.Trigger id="voice-language" class="w-full"
-            >{settings.realtimeLanguages?.find((l) => l.code === cfg.language)?.label ??
+            >{profile.languages.find((l) => l.code === cfg.language)?.label ??
               cfg.language}</Select.Trigger
           >
           <Select.Content
-            >{#each settings.realtimeLanguages ?? [] as language (language.code)}<Select.Item
+            >{#each profile.languages as language (language.code)}<Select.Item
                 value={language.code}
                 label={language.label}>{language.label}</Select.Item
               >{/each}</Select.Content

@@ -6,7 +6,7 @@ const NeMoSpeechV1 ID = "nemo-speech-v1"
 const Realtime Role = "realtime"
 
 func realtimeProfiles() []Profile {
-	return []Profile{{ID: NeMoSpeechV1, Label: "NeMo-Speech.cpp", Available: true,
+	return []Profile{{ID: VLLM, Label: "vLLM", Available: true, Description: "vLLM 0.28.0 realtime JSON PCM16 transport. Requires an explicitly qualified realtime model profile.", Capabilities: Capabilities{Realtime: true}}, {ID: NeMoSpeechV1, Label: "NeMo-Speech.cpp", Available: true,
 		Description:  "Live PCM16 transcription using the v0.1.0 WebSocket contract. Uses the server's loaded model.",
 		Capabilities: Capabilities{Realtime: true, ServerLoadedModel: true, LanguageHint: true}}}
 }

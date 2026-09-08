@@ -33,8 +33,10 @@ in [ADR 0005](../../decisions/0005-remote-first-product-direction/) remain uncha
 ## Optional realtime dictation
 
 [ADR 0008](../../decisions/0008-qualified-realtime-dictation/) qualifies Nemotron
-3.5 on NeMo-Speech.cpp v0.1.0. `internal/realtime` owns the versioned WebSocket
-adapter and bounded audio/text transport; `internal/dictation` owns capture,
+3.5 on NeMo-Speech.cpp v0.1.0. [ADR 0011](../../decisions/0011-qwen-vllm-realtime/)
+adds Qwen3-ASR on vLLM 0.28.0, with model-only configuration, JSON/base64 audio,
+and distinct delta/done events. `internal/realtime` owns the versioned WebSocket
+adapters and bounded audio/text transport; `internal/dictation` owns capture,
 generation fencing, immutable profiles, finalization, cleanup, and safe delivery.
 [ADR 0009](../../decisions/0009-unified-voice-transcription/) gives Voice one active
 connection/model/profile and an optional qualified realtime mode. `VoiceTranscription`
@@ -43,6 +45,13 @@ the Voice credential for either transport, while files capture only their own ke
 The completed Voice snapshot adapts onto the existing STT request fields without
 changing persistent file settings. Native captions carry a bounded transient tail
 in one fixed row; they never become a delivery source or take focus.
+
+The Qwen profile intersects model languages with the vLLM language map and
+publishes restricted choices plus mode-specific language-hint metadata. Realtime
+omits saved completed context, language, vocabulary, and temperature. The model
+layer removes fragmented structured Qwen headers; it never deduplicates speech.
+Only an explicit final text field after local stop is deliverable. A mixed
+language result is reported as multilingual so English-only cleanup falls back.
 
 The Connection Manager is a reusable native window composed in `internal/app`.
 `internal/windowing` owns validated navigation and whether an edit session is open,

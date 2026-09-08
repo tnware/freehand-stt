@@ -5,6 +5,8 @@ description: Add an optional Nemotron streaming transport without expanding Free
 
 - Status: Accepted
 - Date: 2026-09-07
+
+> [ADR 0011](../0011-qwen-vllm-realtime/) adds a separately qualified vLLM/Qwen3-ASR transport. The NeMo-specific protocol below remains unchanged.
 - Supersedes: ADR 0005's blanket deferral of realtime dictation, and ADR 0002's proposed first transport and event correlation requirements for this adapter only.
 
 > The separate feature-selection and credential-slot design below is superseded by [ADR 0009](../0009-unified-voice-transcription/). The qualified transport and safety decisions remain in force.

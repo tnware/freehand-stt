@@ -73,7 +73,13 @@
     id="transcription-model-profile"
     value={settings.modelProfile}
     profiles={settings.modelProfiles.transcription ?? []}
-    onChange={(id) => (settings.modelProfile = id)}
+    onChange={(id) => {
+      settings.modelProfile = id;
+      const languages = settings.modelProfiles.transcription?.find((p) => p.id === id)?.languages;
+      if (languages?.length && !languages.some((l) => l.code === settings.language)) {
+        settings.language = "auto";
+      }
+    }}
   />
   <ValueRow
     id="language"
@@ -83,9 +89,9 @@
     {#snippet control()}
       <LanguagePicker
         id="language"
-        restricted={settings.modelProfile === ID.Nemotron35}
-        languages={settings.modelProfile === ID.Nemotron35
-          ? (settings.realtimeLanguages ?? [])
+        restricted={!!compatibility?.languages?.length}
+        languages={compatibility?.languages?.length
+          ? compatibility.languages
           : (settings.transcriptionLanguages ?? [])}
         disabled={!compatibility?.capabilities.languageHint}
         bind:value={() => settings.language ?? "", (value) => (settings.language = value)}

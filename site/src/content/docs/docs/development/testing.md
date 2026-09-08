@@ -585,3 +585,20 @@ Language dropdown acceptance: check the searchable language picker and the quali
 ### Shared vocabulary acceptance
 
 Check Vocabulary at regular and small Settings window sizes in both themes. Edit names, independently toggle Voice/files, save, and reopen. Follow Vocabulary links from a dirty Voice/file settings draft and verify that edits survive navigation. Confirm the NVIDIA mark appears for NeMo in quick controls, connections, and the Vocabulary page. Switch supported/unsupported models and preserve the list and use preferences. For NeMo, verify limits and strength, then test completed Voice, audio files, and realtime against only the explicitly selected model when native inference acceptance is authorized. Backend fixtures cover migration, immutable workflow projections, Unicode limits, omission, and multipart speech contexts without automatic inference.
+
+## Qwen3-ASR and vLLM realtime
+
+Run `go test ./internal/modelprofile ./internal/realtime ./internal/inference`.
+Fixtures verify the explicit Qwen/vLLM intersection, supported language hints,
+model-only realtime setup, JSON/base64 PCM16, fragmented language headers,
+authoritative final replacement, cancellation, disconnect, premature or missing
+finals, peer-error redaction, and transcript bounds. No inference runs in CI.
+
+For manual Windows acceptance, select vLLM and the Qwen3-ASR profile under Voice,
+then enable realtime and live captions. Verify provisional results, single-row
+captions, stop/finalization, cancellation, and focus-safe delivery. Toggle back to
+completed transcription and verify saved language/context controls return.
+Select Audio file independently. Confirm shared vocabulary applies to completed
+audio only and remains saved when realtime is active. Check the Qwen model mark
+and restricted language menus in quick settings and Settings. Successful builds
+and synthetic transport checks do not substitute for native microphone acceptance.

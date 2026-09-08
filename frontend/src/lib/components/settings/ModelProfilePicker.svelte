@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ID, type Profile } from "$bindings/modelprofile";
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import ValueRow from "$lib/components/settings/ValueRow.svelte";
   import { Badge } from "$lib/components/ui/badge";
   import * as Select from "$lib/components/ui/select";
@@ -36,11 +37,17 @@
       {:else}
         <Select.Root type="single" value={value || ID.Generic} onValueChange={select} {disabled}>
           <Select.Trigger {id} class="w-full" aria-label="Model profile">
+            {#if selected?.id === ID.Qwen3ASR}<ProviderIcon profile="qwen3-asr" size={18} />{/if}
             {selected?.name ?? "Choose model profile"}
           </Select.Trigger>
           <Select.Content>
             {#each profiles as profile (profile.id)}
-              <Select.Item value={profile.id} label={profile.name}>{profile.name}</Select.Item>
+              <Select.Item value={profile.id} label={profile.name}
+                >{#if profile.id === ID.Qwen3ASR}<ProviderIcon
+                    profile="qwen3-asr"
+                    size={18}
+                  />{/if}{profile.name}</Select.Item
+              >
             {/each}
           </Select.Content>
         </Select.Root>

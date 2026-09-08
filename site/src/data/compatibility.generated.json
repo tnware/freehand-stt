@@ -1,6 +1,28 @@
 {
   "realtime": [
     {
+      "id": "vllm",
+      "label": "vLLM",
+      "available": true,
+      "description": "vLLM 0.28.0 realtime JSON PCM16 transport. Requires an explicitly qualified realtime model profile.",
+      "capabilities": {
+        "realtime": true,
+        "serverLoadedModel": false,
+        "vllmTranscriptionEvents": false,
+        "cleanupOutputLimit": false,
+        "cleanupDisableReasoning": false,
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "voiceDiscovery": false,
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
+      }
+    },
+    {
       "id": "nemo-speech-v1",
       "label": "NeMo-Speech.cpp",
       "available": true,
@@ -160,9 +182,9 @@
       "id": "vllm",
       "label": "vLLM",
       "available": true,
-      "description": "Completed transcription and vLLM file streams. Context, language, and temperature depend on the selected speech model; qualified against v0.28.0.",
+      "description": "Completed transcription, file streams, and qualified Qwen3-ASR realtime. Context, language, and temperature depend on the model and mode; v0.28.0.",
       "capabilities": {
-        "realtime": false,
+        "realtime": true,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": true,
         "cleanupOutputLimit": false,

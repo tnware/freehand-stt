@@ -1,4 +1,5 @@
 import manifest from "./manifest.json";
+import qwen from "./qwen.svg?url";
 import nvidia from "./nvidia.svg?url";
 import generic from "./generic.svg?url";
 import speaches from "./speaches.svg?url";
@@ -10,6 +11,7 @@ import localai from "./localai.svg?url";
 import speech from "./speech.svg?url";
 
 const assets: Record<string, string> = {
+  "qwen.svg": qwen,
   "nvidia.svg": nvidia,
   "generic.svg": generic,
   "speaches.svg": speaches,

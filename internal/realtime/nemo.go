@@ -16,6 +16,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/tnware/freehand-stt/internal/audio"
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
@@ -37,9 +38,10 @@ type Result struct {
 	Err               error
 }
 type wireEvent struct {
-	Type       string `json:"type"`
-	Delta      string `json:"delta"`
-	Transcript string `json:"transcript"`
+	Type       string  `json:"type"`
+	Delta      string  `json:"delta"`
+	Transcript string  `json:"transcript"`
+	Text       *string `json:"text"`
 	Session    struct {
 		Model string `json:"model"`
 	} `json:"session"`
@@ -55,6 +57,7 @@ type Session struct {
 	Done      chan struct{}
 	once      sync.Once
 	result    Result
+	backend   compatibility.ID
 }
 
 // Open admits the exact selected contract and completes configuration before
@@ -111,6 +114,17 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 	if err != nil || created.Type != "session.created" {
 		return fail()
 	}
+	if cfg.CompatibilityProfile == compatibility.VLLM {
+		// vLLM has no session.updated acknowledgement. The ordered start event
+		// follows model selection; asynchronous admission errors fail the session.
+		message, _ := json.Marshal(map[string]any{"type": "session.update", "model": cfg.Model})
+		if conn.Write(setup, websocket.MessageText, message) != nil || conn.Write(setup, websocket.MessageText, []byte(`{"type":"input_audio_buffer.commit","final":false}`)) != nil {
+			return fail()
+		}
+		s := &Session{conn: conn, ctx: ctx, cancel: cancel, Pipe: audio.NewFramePipe(), Failed: make(chan struct{}), Done: make(chan struct{}), backend: compatibility.VLLM}
+		go s.run(publish)
+		return s, nil
+	}
 	if cfg.Model != "" && created.Session.Model != cfg.Model {
 		cancel()
 		_ = conn.CloseNow()
@@ -161,7 +175,12 @@ func (s *Session) run(publish func(Update)) {
 	defer s.conn.CloseNow()
 	readDone := make(chan Result, 1)
 	go func() {
-		result := s.read(publish)
+		var result Result
+		if s.backend == compatibility.VLLM {
+			result = s.readVLLM(publish)
+		} else {
+			result = s.read(publish)
+		}
 		if result.Err != nil {
 			s.once.Do(func() { close(s.Failed) })
 			s.cancel()
@@ -175,7 +194,7 @@ func (s *Session) run(publish func(Update)) {
 	for frame := range s.Pipe.Frames() {
 		if s.ctx.Err() == nil && writeErr == nil {
 			writeCtx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
-			if err := s.conn.Write(writeCtx, websocket.MessageBinary, frame); err != nil {
+			if err := s.writeAudio(writeCtx, frame); err != nil {
 				writeErr = errors.New("realtime audio could not be sent")
 				s.once.Do(func() { close(s.Failed) })
 				s.cancel()
@@ -190,7 +209,11 @@ func (s *Session) run(publish func(Update)) {
 	defer timer.Stop()
 	if s.ctx.Err() == nil && writeErr == nil {
 		s.committed.Store(true)
-		if err := s.conn.Write(s.ctx, websocket.MessageText, []byte(`{"type":"input_audio_buffer.commit"}`)); err != nil {
+		commit := []byte(`{"type":"input_audio_buffer.commit"}`)
+		if s.backend == compatibility.VLLM {
+			commit = []byte(`{"type":"input_audio_buffer.commit","final":true}`)
+		}
+		if err := s.conn.Write(s.ctx, websocket.MessageText, commit); err != nil {
 			writeErr = errors.New("realtime completion could not be requested")
 			s.cancel()
 		}

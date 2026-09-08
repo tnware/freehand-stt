@@ -18,7 +18,7 @@ that is the model your server is running, then **Save feature settings**.
 
 | Feature            | Available model profiles                               | Behavior                                                                                                                                                                          |
 | ------------------ | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Voice / Audio file | Generic; Nemotron 3.5 ASR streaming on NeMo-Speech.cpp | Generic offers the selected backend’s completed transcription options. Nemotron restricts languages to qualified base-model locales and enables optional realtime mode for Voice. |
+| Voice / Audio file | Generic; Nemotron on NeMo-Speech.cpp; Qwen3-ASR on vLLM | Generic offers the selected backend’s completed transcription options. Nemotron and Qwen restrict controls to their qualified server/model contracts and enable optional realtime for Voice. |
 | Cleanup            | Generic; S1-mini by Superwhisper                       | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                   |
 | Text to speech     | Generic                                                | Standard WAV speech generation with a provider voice ID.                                                                                                                          |
 
@@ -35,7 +35,7 @@ Model discovery reads metadata only. Freehand does not infer a model profile
 from a name, download a model, or run one to detect its capabilities. For
 whisper.cpp, the model remains the one already loaded by the server.
 
-Voice’s **Transcription** quick controls also expose the model profile. With NeMo-Speech.cpp and the Nemotron profile selected, **Realtime transcription** appears inside that panel. Its caption control appears when enabled; shared terminology is managed in **Settings → Vocabulary**, and turning it off keeps the same connection/model. Audio file remains independent.
+Voice’s **Transcription** quick controls also expose the model profile. With NeMo-Speech.cpp/Nemotron or vLLM/Qwen3-ASR selected, **Realtime transcription** appears inside that panel. Its caption control appears when enabled; shared terminology is managed in **Settings → Vocabulary**, and turning it off keeps the same connection/model. Audio file remains independent.
 
 ## S1-mini
 
@@ -106,3 +106,5 @@ Upgrades retain current model selections and seed their remembered preferences.
 No credentials or generated transcripts are included in model preferences.
 
 Shared vocabulary terms and Voice/file opt-ins live in [Vocabulary](../vocabulary/), independently of remembered models.
+
+For Qwen setup, supported languages, and completed versus realtime controls, see [Qwen3-ASR](../../backends/qwen3-asr/).
