@@ -10,8 +10,8 @@ services you choose. Choose **Voice** (the default) to dictate into another
 application, **Audio file** to transcribe a recording, or optional **Text to
 speech** to generate audio from your own text or listen to retained transcripts.
 Each task can be used independently; the tabs remain available before dictation
-setup is complete. Voice and audio files share the same configured STT connection
-and model. TTS has its own settings.
+setup is complete. Voice and audio files have independent transcription connections and models.
+TTS has its own settings.
 
 New installations use a capsule overlay with an envelope visualizer, minimal
 surface, bottom-center position, 85% opacity, and 70% glow. Adjust these under
@@ -79,16 +79,17 @@ Checkpoints prefer natural pauses but still enforce a hard segment limit; they d
 
 ## Audio files
 
-Configure the STT connection and model, shared with Voice. You do not need a
+Configure the audio-file transcription connection and model, independently of Voice. You do not need a
 microphone, recording shortcut, or completed dictation setup.
 
 <Steps>
 
-1. **Open Audio file** and choose **Choose audio** to select a recording.
-2. **Choose the response mode.** Use completed output, or streaming when your
-   server supports it.
+1. **Open Audio file** and choose **Choose** to select a recording.
+2. **Choose the response mode.** Enable **Show text as it arrives** for streaming when supported, or disable
+   it for completed output. The control remains in place while a file is processed.
 3. **Select Transcribe** and wait for the result. Use **Cancel** to stop active work.
 4. **Copy the completed transcript** explicitly into the application you want.
+   Use **Change** to select another file, or **Again** to transcribe the current file again.
 
 </Steps>
 
@@ -126,11 +127,12 @@ needed; enabling history is not required for recovery.
 
 The toolbar at the top of **Current result** keeps quick settings close at hand.
 The microphone icon opens audio controls; the **Transcription** and **Cleanup**
-provider buttons open connection, model, and processing options. The delivery
-icon opens direct-input and history controls. These changes apply immediately.
+provider buttons open connection, model, and processing options. In Voice, the delivery
+icon opens direct-input and history controls. Audio file shows only its transcription
+and cleanup controls. These changes apply immediately.
 Each popover links to its full Settings page. Press Escape to close it and return
-to its toolbar button. Text to speech shows its own connection and links to its
-model and voice settings.
+to its toolbar button. Text to speech uses the same compact header: its **Speech** provider button opens
+the connection picker and a link to model and voice settings.
 
 With history enabled, wider windows show result and history side by side. Drag
 the divider to change their widths, or focus it with Tab and use the arrow keys.
@@ -177,14 +179,16 @@ a microphone, recording shortcut, STT connection, or completed dictation setup.
 
 <Steps>
 
-1. **Open Text to speech** and use its connection picker to select a saved
-   connection or **Add connection…**. Then open **Model and voice settings**, set
+1. **Open Text to speech**, then open **Speech** in the composer header to select
+   a saved connection or **Add connection…**. Then open **Model and voice settings**, set
    the model and voice ID, turn on **Enable text to speech**, and choose **Save
    settings**. These options also live under **Settings → Text to speech**.
 2. **Return to Text to speech** and enter the text you want to hear. Your unsent text
    survives switching tasks or visiting Settings, and is cleared when the window
    reloads or Freehand exits.
-3. **Choose Speak** to generate and play the audio.
+3. **Choose Speak** to generate and play the audio. Playback and save controls
+   occupy a permanent area below the editor, so the editor stays the same size
+   as generation and playback progress.
 4. **Use the playback controls** to pause, resume, restart, stop, or explicitly
    **Save generated speech** to a file.
 
