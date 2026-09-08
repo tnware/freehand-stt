@@ -308,6 +308,8 @@
               {#if showReadiness && readiness}
                 <ReadinessPanel
                   {readiness}
+                  task={inputMode === "file" ? "file" : "voice"}
+                  saving={session.editor.saving || session.editor.quickSettingsPending.length > 0}
                   testing={inputMode === "file"
                     ? session.editor.sttConnectionTesting
                     : session.editor.voiceConnectionTesting}
@@ -331,6 +333,7 @@
                   {#snippet serverControls()}
                     {#if inputMode === "voice"}
                       <VoiceTranscriptionSettings
+                        setup
                         editor={session.editor}
                         settings={runtimeSettings!}
                         disabled={quickSettingsDisabled || session.editor.saving}

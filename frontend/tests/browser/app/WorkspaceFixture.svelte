@@ -4,7 +4,13 @@
   import { CancellablePromise } from "@wailsio/runtime";
   import { ID as ModelProfileID } from "$bindings/modelprofile";
   import { modelOptions } from "$lib/utils/modelSettings";
-  import { TTSPhase, TTSSource, FileTranscriptionPhase, HistoryProcessingStatus } from "$lib/state";
+  import {
+    TTSPhase,
+    TTSSource,
+    FileTranscriptionPhase,
+    HistoryProcessingStatus,
+    ConnectionErrorKind,
+  } from "$lib/state";
   import { Purpose } from "$bindings/savedconnection";
   import { AuthenticationMode } from "$bindings/config";
   import { Session } from "$lib/stores/session.svelte";
@@ -19,6 +25,9 @@
   import AppHeader from "$lib/components/shell/AppHeader.svelte";
   import { controlledSaves } from "./save-control";
 
+  const setupScenario = new URLSearchParams(location.search).get("setup");
+  let openedSettings = $state("");
+  let connectionChecks = 0;
   let current = structuredClone(settings);
   current.setupCompleted = true;
   current.historyEnabled = new URLSearchParams(location.search).get("history") !== "off";
@@ -121,12 +130,34 @@
     },
   ];
   if (new URLSearchParams(location.search).has("pickers")) configurePickerFixture(current);
+  if (setupScenario) {
+    current.setupCompleted = !["first", "retry", "missing-model", "loading"].includes(
+      setupScenario,
+    );
+    current.historyEnabled = false;
+    if (setupScenario === "missing-model") current.voiceTranscription.model = "";
+  }
   const saves = controlledSaves((request) => {
     current = structuredClone({ ...current, ...request.settings });
     return structuredClone(current);
   });
   const session = new Session(
     serviceWithStatus(() => CancellablePromise.resolve(idle), {
+      connection: {
+        TestSavedConnection: () => {
+          connectionChecks++;
+          return CancellablePromise.resolve({
+            ...structuredClone(connectionResult),
+            ...(connectionChecks === 1 && ["retry", "connection"].includes(setupScenario ?? "")
+              ? {
+                  reachable: false,
+                  errorKind: ConnectionErrorKind.ConnectionErrorNetwork,
+                  httpStatus: 0,
+                }
+              : {}),
+          });
+        },
+      },
       files: {
         StartFileTranscription: () => {
           session.files.applyStatus({
@@ -195,6 +226,13 @@
         "The transcription server did not respond before the request timeout. Check the connection or increase the request timeout in Audio-file transcription settings, then retry this file.",
     });
   }
+  if (setupScenario) {
+    session.dictation.status = { ...idle, transcript: "" };
+    session.editor.connection = null;
+    if (setupScenario === "microphone" || setupScenario === "loading") session.editor.devices = [];
+    if (setupScenario === "loading") session.editor.devicesBusy = true;
+    if (setupScenario === "connection") void session.editor.testVoiceConnection();
+  }
   window.testSaves = saves.control;
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
@@ -209,14 +247,14 @@
     onOpenHistorySettings={noop}
     onOpenServerSettings={noop}
     onOpenProcessingSettings={noop}
-    onOpenAudioSettings={noop}
-    onOpenShortcutSettings={noop}
+    onOpenAudioSettings={() => (openedSettings = "Audio settings")}
+    onOpenShortcutSettings={() => (openedSettings = "Shortcut settings")}
     onOpenSpeechSettings={noop}
     onOpenGeneralSettings={noop}
   />
   <footer
     class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
   >
-    Transcription: Reachable · Example connection
+    {openedSettings || "Transcription: Reachable · Example connection"}
   </footer>
 </div>

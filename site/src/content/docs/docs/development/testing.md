@@ -52,6 +52,25 @@ not establish native behavior or live-server compatibility. Keep generated
 artwork descriptions faithful to the artwork rather than changing alt text to
 advertise capabilities it does not depict.
 
+### Desktop setup and recovery
+
+`frontend/tests/browser/readiness.spec.ts` exercises the real workspace with
+synthetic settings and metadata services. It checks prerequisite gating, model
+discovery before selection, failed-check retry, failed completion save and
+retry, completed-check disclosure, optional controls, and focused microphone and
+connection recovery. First-run completion has no dismiss action; established
+recovery retains its existing dismissal behavior. File readiness remains
+independent of microphone readiness. The presentation-priority unit tests
+supplement the existing readiness policy tests.
+
+Review setup at normal and narrow window sizes, including a short window: the
+next action must remain reachable, expandable sections must work by keyboard,
+and controls must not introduce horizontal scrolling. On Windows, separately
+verify opening Audio/Shortcuts/connection settings, returning to setup after
+saving, unplugging the selected microphone, retrying a failed connection check,
+and persisting setup completion across restart. Browser fixtures and executable
+compilation do not establish those native interactions or invoke inference.
+
 ## Compatibility profile acceptance
 
 The published catalog fixture compares the website export with the app-owned

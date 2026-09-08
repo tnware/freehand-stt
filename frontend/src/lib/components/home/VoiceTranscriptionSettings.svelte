@@ -20,12 +20,14 @@
     settings,
     disabled,
     draft = false,
+    setup = false,
     onAddConnection,
   }: {
     editor: SettingsEditor;
     settings: Settings;
     disabled: boolean;
     draft?: boolean;
+    setup?: boolean;
     onAddConnection: (purpose: Purpose) => void;
   } = $props();
   const cfg = $derived(settings.voiceTranscription);
@@ -124,7 +126,7 @@
 
 <div class="space-y-4">
   {#if !draft}
-    <h3 class="text-sm font-semibold">Transcription</h3>
+    {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
     <div class="space-y-1.5">
       <label for="voice-connection" class="text-xs font-medium">Connection</label>
       <div class="flex gap-2">
@@ -170,6 +172,23 @@
     compact
     onChange={chooseProfile}
   />
+  {#if setup}
+    <SettingsDisclosure
+      title="Transcription options"
+      description="Language, realtime, and recognition hints"
+    >
+      <div class="space-y-4 p-4">{@render optionalControls()}</div>
+    </SettingsDisclosure>
+  {:else}{@render optionalControls()}{/if}
+  {#if !draft}<QuickSaveStatus
+      fields={["voice-transcription"]}
+      pending={editor.quickSettingsPending}
+      saved={editor.quickSettingsSaved}
+      failed={editor.quickSettingsFailed}
+    />{/if}
+</div>
+
+{#snippet optionalControls()}
   {#if profileNotice}<p class="text-xs text-muted-foreground" role="status">
       {profileNotice}
     </p>{/if}
@@ -255,13 +274,7 @@
       transcription.
     </p>
   {/if}
-  {#if !draft}<QuickSaveStatus
-      fields={["voice-transcription"]}
-      pending={editor.quickSettingsPending}
-      saved={editor.quickSettingsSaved}
-      failed={editor.quickSettingsFailed}
-    />{/if}
-</div>
+{/snippet}
 
 {#snippet requestControls()}
   {#if !cfg.realtime && profile?.capabilities.transcriptionTemperature}
