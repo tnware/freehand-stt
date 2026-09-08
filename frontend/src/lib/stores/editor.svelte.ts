@@ -69,7 +69,7 @@ export type QuickSettingsPatch = Partial<
 > & {
   voiceTranscription?: Partial<Settings["voiceTranscription"]>;
   model?: string;
-  textToSpeech?: Partial<Pick<Settings["textToSpeech"], "model" | "voice" | "speed">>;
+  textToSpeech?: Partial<Pick<Settings["textToSpeech"], "model" | "voice" | "speed" | "options">>;
   postProcessing?: Partial<
     Pick<
       Settings["postProcessing"],
@@ -119,7 +119,10 @@ const copySettings = (settings: Settings): Settings => ({
     ...settings.postProcessing,
     generationOptions: { ...settings.postProcessing.generationOptions },
   },
-  textToSpeech: { ...settings.textToSpeech },
+  textToSpeech: {
+    ...settings.textToSpeech,
+    options: { ...settings.textToSpeech.options },
+  },
   microphoneID: settings.microphoneID ?? "",
 });
 

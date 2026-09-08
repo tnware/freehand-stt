@@ -18,6 +18,7 @@ const MaxPerUse = 32
 // Options intentionally excludes endpoints, credentials, enablement, and capture policy.
 // Only fields belonging to Purpose are populated; Apply ignores all other fields.
 type Options struct {
+	Speech        modelprofile.SpeechOptions         `json:"speech"`
 	Realtime      modelprofile.NemotronOptions       `json:"realtime"`
 	Profile       modelprofile.ID                    `json:"profile"`
 	Language      string                             `json:"language"`
@@ -81,7 +82,7 @@ func Extract(v config.Settings, p savedconnection.Purpose) Options {
 		return Options{Profile: modelprofile.Effective(modelprofile.ID(c.Preset)), Cleanup: c.GenerationOptions, SystemPrompt: c.SystemPrompt, Styling: c.Styling, Structure: c.Structure, Context: c.Context}
 	case savedconnection.Speech:
 		c := v.TextToSpeech
-		return Options{Profile: modelprofile.Effective(c.ModelProfile), Voice: c.Voice, Speed: c.Speed}
+		return Options{Profile: modelprofile.Effective(c.ModelProfile), Voice: c.Voice, Speed: c.Speed, Speech: c.Options}
 	}
 	return Options{}
 }
@@ -111,6 +112,7 @@ func Apply(v config.Settings, p savedconnection.Purpose, model string, o Options
 		c := &v.TextToSpeech
 		c.Model = model
 		c.ModelProfile = o.Profile
+		c.Options = o.Speech
 		c.Voice = o.Voice
 		c.Speed = o.Speed
 	}

@@ -15,6 +15,7 @@ import (
 const maxSpeechResponse = 32 << 20
 
 type SpeechRequest struct {
+	Options              modelprofile.SpeechOptions
 	ModelProfile         modelprofile.ID
 	CompatibilityProfile compatibility.ID
 	Model                string
@@ -31,10 +32,16 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, base, key string, input S
 	if err != nil {
 		return nil, err
 	}
+	if err := modelprofile.ValidateSpeechOptions(input.ModelProfile, input.CompatibilityProfile, input.Voice, input.Options); err != nil {
+		return nil, &Error{Kind: "invalid_settings", Message: err.Error()}
+	}
 	if input.Speed != 1 && !contract.Capabilities.SpeechSpeed {
 		return nil, &Error{Kind: "invalid_settings", Message: "speech speed is unavailable for this profile"}
 	}
 	request := struct {
+		Language       string  `json:"language,omitempty"`
+		Instructions   string  `json:"instructions,omitempty"`
+		TaskType       string  `json:"task_type,omitempty"`
 		Model          string  `json:"model"`
 		Input          string  `json:"input"`
 		Voice          string  `json:"voice"`
@@ -42,7 +49,12 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, base, key string, input S
 		Speed          float64 `json:"speed"`
 		Stream         *bool   `json:"stream,omitempty"`
 	}{Model: input.Model, Input: input.Input, Voice: input.Voice, ResponseFormat: "wav", Speed: input.Speed}
-	if contract.ID == compatibility.KokoroFastAPI {
+	if input.ModelProfile == modelprofile.Qwen3TTS {
+		request.Language = modelprofile.SpeechLanguageName(input.Options.Language)
+		request.Instructions = input.Options.Instructions
+		request.TaskType = "CustomVoice"
+	}
+	if contract.ID == compatibility.KokoroFastAPI || contract.ID == compatibility.VLLMOmni {
 		buffered := false
 		request.Stream = &buffered
 	}

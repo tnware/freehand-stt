@@ -52,7 +52,12 @@ const settings: Settings = {
     temperature: 0,
   },
   compatibilityProfile: ID.Generic,
-  compatibilityProfiles: { transcription: [], postProcessing: [], speech: [], realtime: [] },
+  compatibilityProfiles: {
+    transcription: [],
+    postProcessing: [],
+    speech: [],
+    realtime: [],
+  },
   transcriptionLanguages: [],
   realtimeLanguages: [],
   voiceTranscription: {
@@ -60,7 +65,12 @@ const settings: Settings = {
     healthPath: "",
     headers: {},
     timeoutSeconds: 120,
-    transcriptionOptions: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
+    transcriptionOptions: {
+      prompt: "",
+      hotwords: "",
+      temperatureOverride: false,
+      temperature: 0,
+    },
     compatibilityProfile: ID.NeMoSpeechV1,
     modelProfile: ModelProfileID.Nemotron35,
     baseURL: "",
@@ -130,6 +140,7 @@ const settings: Settings = {
     timeoutSeconds: 120,
   },
   textToSpeech: {
+    options: { language: "", instructions: "" },
     modelProfile: ModelProfileID.Generic,
     compatibilityProfile: ID.Generic,
     enabled: false,

@@ -76,9 +76,15 @@
     profiles={settings.modelProfiles.transcription ?? []}
     onChange={(id) => {
       settings.modelProfile = id;
+      settings.transcriptionOptions = {
+        prompt: "",
+        hotwords: "",
+        temperatureOverride: false,
+        temperature: 0,
+      };
       const languages = settings.modelProfiles.transcription?.find((p) => p.id === id)?.languages;
       if (languages?.length && !languages.some((l) => l.code === settings.language)) {
-        settings.language = "auto";
+        settings.language = languages[0]?.code ?? "auto";
       }
     }}
   />
@@ -94,7 +100,7 @@
         languages={compatibility?.languages?.length
           ? compatibility.languages
           : (settings.transcriptionLanguages ?? [])}
-        disabled={!compatibility?.capabilities.languageHint}
+        disabled={!compatibility?.capabilities.languageHint && !compatibility?.languages?.length}
         bind:value={() => settings.language ?? "", (value) => (settings.language = value)}
       />
     {/snippet}

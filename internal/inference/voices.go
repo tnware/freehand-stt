@@ -131,7 +131,7 @@ func (c *Client) ListVoices(ctx context.Context, backend compatibility.ID, base,
 	for _, raw := range voices {
 		var v Voice
 		if len(raw) > 0 && raw[0] == '"' {
-			if backend != compatibility.KokoroFastAPI || json.Unmarshal(raw, &v.ID) != nil {
+			if (backend != compatibility.KokoroFastAPI && backend != compatibility.VLLMOmni) || json.Unmarshal(raw, &v.ID) != nil {
 				result.ErrorKind = "response"
 				result.Voices = nil
 				return

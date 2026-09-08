@@ -48,16 +48,17 @@ type wireEvent struct {
 }
 
 type Session struct {
-	committed atomic.Bool
-	conn      *websocket.Conn
-	ctx       context.Context
-	cancel    context.CancelFunc
-	Pipe      *audio.FramePipe
-	Failed    chan struct{}
-	Done      chan struct{}
-	once      sync.Once
-	result    Result
-	backend   compatibility.ID
+	committed    atomic.Bool
+	conn         *websocket.Conn
+	ctx          context.Context
+	cancel       context.CancelFunc
+	Pipe         *audio.FramePipe
+	Failed       chan struct{}
+	Done         chan struct{}
+	once         sync.Once
+	result       Result
+	backend      compatibility.ID
+	modelProfile modelprofile.ID
 }
 
 // Open admits the exact selected contract and completes configuration before
@@ -121,7 +122,7 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 		if conn.Write(setup, websocket.MessageText, message) != nil || conn.Write(setup, websocket.MessageText, []byte(`{"type":"input_audio_buffer.commit","final":false}`)) != nil {
 			return fail()
 		}
-		s := &Session{conn: conn, ctx: ctx, cancel: cancel, Pipe: audio.NewFramePipe(), Failed: make(chan struct{}), Done: make(chan struct{}), backend: compatibility.VLLM}
+		s := &Session{conn: conn, ctx: ctx, cancel: cancel, Pipe: audio.NewFramePipe(), Failed: make(chan struct{}), Done: make(chan struct{}), backend: compatibility.VLLM, modelProfile: cfg.ModelProfile}
 		go s.run(publish)
 		return s, nil
 	}

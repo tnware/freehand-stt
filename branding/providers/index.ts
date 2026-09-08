@@ -1,4 +1,6 @@
 import manifest from "./manifest.json";
+import cohere from "./cohere.svg?url";
+import mistral from "./mistral.svg?url";
 import qwen from "./qwen.svg?url";
 import nvidia from "./nvidia.svg?url";
 import generic from "./generic.svg?url";
@@ -11,6 +13,8 @@ import localai from "./localai.svg?url";
 import speech from "./speech.svg?url";
 
 const assets: Record<string, string> = {
+  "cohere.svg": cohere,
+  "mistral.svg": mistral,
   "qwen.svg": qwen,
   "nvidia.svg": nvidia,
   "generic.svg": generic,

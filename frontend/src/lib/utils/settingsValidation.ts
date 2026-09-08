@@ -10,7 +10,10 @@ export interface SettingsValidationIssue {
 
 const targets: Record<string, Pick<SettingsValidationIssue, "section" | "control">> = {
   vocabulary: { section: "vocabulary", control: "vocabulary-terms" },
-  "voice-transcription": { section: "voice-transcription", control: "saved-connection-voice" },
+  "voice-transcription": {
+    section: "voice-transcription",
+    control: "saved-connection-voice",
+  },
   maxDurationSeconds: { section: "audio", control: "max-duration" },
   microphoneID: { section: "audio", control: "microphone-select" },
   vadMode: { section: "audio", control: null },
@@ -81,6 +84,7 @@ const targets: Record<string, Pick<SettingsValidationIssue, "section" | "control
   },
   "textToSpeech.timeoutSeconds": { section: "speech", control: "tts-timeout" },
   "textToSpeech.voice": { section: "speech", control: "tts-voice" },
+  "textToSpeech.options": { section: "speech", control: "tts-instructions" },
   "textToSpeech.speed": { section: "speech", control: "tts-speed" },
   appearanceMode: { section: "general", control: null },
   overlayEnabled: { section: "overlay", control: null },

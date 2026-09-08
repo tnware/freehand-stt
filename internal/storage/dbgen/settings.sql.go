@@ -237,7 +237,7 @@ func (q *Queries) GetPreferences(ctx context.Context) (GetPreferencesRow, error)
 }
 
 const getSpeech = `-- name: GetSpeech :one
-SELECT model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds FROM speech_settings WHERE id=1
+SELECT model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds, speech_language, speech_instructions FROM speech_settings WHERE id=1
 `
 
 type GetSpeechRow struct {
@@ -251,6 +251,8 @@ type GetSpeechRow struct {
 	Voice                string
 	Speed                float64
 	TimeoutSeconds       int64
+	SpeechLanguage       string
+	SpeechInstructions   string
 }
 
 func (q *Queries) GetSpeech(ctx context.Context) (GetSpeechRow, error) {
@@ -267,6 +269,8 @@ func (q *Queries) GetSpeech(ctx context.Context) (GetSpeechRow, error) {
 		&i.Voice,
 		&i.Speed,
 		&i.TimeoutSeconds,
+		&i.SpeechLanguage,
+		&i.SpeechInstructions,
 	)
 	return i, err
 }
@@ -507,9 +511,9 @@ func (q *Queries) PutPreferences(ctx context.Context, arg PutPreferencesParams) 
 }
 
 const putSpeech = `-- name: PutSpeech :exec
-INSERT INTO speech_settings (id, model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, voice=excluded.voice, speed=excluded.speed, timeout_seconds=excluded.timeout_seconds
+INSERT INTO speech_settings (id, model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds, speech_language, speech_instructions)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, voice=excluded.voice, speed=excluded.speed, timeout_seconds=excluded.timeout_seconds, speech_language=excluded.speech_language, speech_instructions=excluded.speech_instructions
 `
 
 type PutSpeechParams struct {
@@ -523,6 +527,8 @@ type PutSpeechParams struct {
 	Voice                string
 	Speed                float64
 	TimeoutSeconds       int64
+	SpeechLanguage       string
+	SpeechInstructions   string
 }
 
 func (q *Queries) PutSpeech(ctx context.Context, arg PutSpeechParams) error {
@@ -537,6 +543,8 @@ func (q *Queries) PutSpeech(ctx context.Context, arg PutSpeechParams) error {
 		arg.Voice,
 		arg.Speed,
 		arg.TimeoutSeconds,
+		arg.SpeechLanguage,
+		arg.SpeechInstructions,
 	)
 	return err
 }

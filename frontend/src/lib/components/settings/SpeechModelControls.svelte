@@ -1,4 +1,5 @@
 <script lang="ts">
+  import LanguagePicker from "./LanguagePicker.svelte";
   import { ID } from "$bindings/modelprofile";
   import type { Snippet } from "svelte";
   import type { Settings } from "$lib/state";
@@ -25,6 +26,7 @@
     onDiscoverVoices,
     onVoice,
     onSpeed,
+    onOptions,
     modelDetails,
   }: {
     settings: Settings;
@@ -42,6 +44,7 @@
     onDiscoverVoices: () => void;
     onVoice: (voice: string) => boolean | Promise<boolean>;
     onSpeed: (speed: number) => boolean | Promise<boolean>;
+    onOptions: (options: Settings["textToSpeech"]["options"]) => boolean | Promise<boolean>;
     modelDetails?: Snippet;
   } = $props();
   const speech = $derived(settings.textToSpeech);
@@ -71,6 +74,7 @@
   value={speech.voice}
   supported={!!profile?.capabilities.voiceDiscovery}
   result={voices}
+  allowedVoices={profile?.voices ?? []}
   busy={voicesBusy}
   disabled={busy}
   {compact}
@@ -85,3 +89,55 @@
   {compact}
   onChange={onSpeed}
 />
+
+{#if profile?.capabilities.speechLanguage || profile?.capabilities.speechInstructions}
+  <div class={compact ? "space-y-4" : "space-y-4 p-5"}>
+    {#if profile.capabilities.speechLanguage}
+      <div class="space-y-1.5">
+        <label for={compact ? "quick-speech-language" : "tts-language"} class="text-sm font-medium"
+          >Speech language</label
+        >
+        <LanguagePicker
+          id={compact ? "quick-speech-language" : "tts-language"}
+          languages={profile.languages ?? []}
+          restricted
+          disabled={busy}
+          bind:value={
+            () => speech.options.language || "auto",
+            (language) => {
+              void onOptions({ ...speech.options, language });
+            }
+          }
+        />
+      </div>
+    {/if}
+    {#if profile.capabilities.speechInstructions}
+      <div class="space-y-1.5">
+        <label
+          for={compact ? "quick-speech-instructions" : "tts-instructions"}
+          class="text-sm font-medium">Voice style</label
+        >
+        <textarea
+          id={compact ? "quick-speech-instructions" : "tts-instructions"}
+          rows="3"
+          maxlength="500"
+          class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          placeholder="Speak warmly and clearly, with a relaxed pace."
+          disabled={busy}
+          value={speech.options.instructions}
+          oninput={(event) => {
+            if (!immediate)
+              void onOptions({ ...speech.options, instructions: event.currentTarget.value });
+          }}
+          onchange={(event) => {
+            if (immediate)
+              void onOptions({ ...speech.options, instructions: event.currentTarget.value });
+          }}
+        ></textarea>
+        <p class="text-xs leading-relaxed text-muted-foreground">
+          Describe tone, emotion, or delivery. Leave empty for the selected voice’s usual style.
+        </p>
+      </div>
+    {/if}
+  </div>
+{/if}

@@ -201,13 +201,14 @@ type TextToSpeechProfile struct {
 // TextToSpeechPreview contains only non-secret, request-level draft options.
 // Connection identity is checked against the active saved speech connection.
 type TextToSpeechPreview struct {
-	ConnectionID   string          `json:"connectionID"`
-	Enabled        bool            `json:"enabled"`
-	ModelProfile   modelprofile.ID `json:"modelProfile"`
-	Model          string          `json:"model"`
-	Voice          string          `json:"voice"`
-	Speed          float64         `json:"speed"`
-	TimeoutSeconds int             `json:"timeoutSeconds"`
+	Options        modelprofile.SpeechOptions `json:"options"`
+	ConnectionID   string                     `json:"connectionID"`
+	Enabled        bool                       `json:"enabled"`
+	ModelProfile   modelprofile.ID            `json:"modelProfile"`
+	Model          string                     `json:"model"`
+	Voice          string                     `json:"voice"`
+	Speed          float64                    `json:"speed"`
+	TimeoutSeconds int                        `json:"timeoutSeconds"`
 }
 
 type TextToSpeechProfileSource func(*TextToSpeechPreview) (TextToSpeechProfile, error)
@@ -320,6 +321,7 @@ func (s *Service) captureTextToSpeechProfile(draft *TextToSpeechPreview) (TextTo
 		if math.IsNaN(draft.Speed) || math.IsInf(draft.Speed, 0) {
 			return TextToSpeechProfile{}, errors.New("speech preview speed must be finite")
 		}
+		profile.Settings.Options = draft.Options
 		profile.Settings.Enabled = draft.Enabled
 		profile.Settings.ModelProfile = draft.ModelProfile
 		profile.Settings.Model = strings.TrimSpace(draft.Model)

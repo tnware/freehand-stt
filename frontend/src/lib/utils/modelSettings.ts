@@ -21,11 +21,21 @@ export function rememberedModels(settings: Settings, purpose: Purpose) {
 }
 export function modelOptions(settings: Settings, purpose: Purpose): Options {
   const base: Options = {
+    speech: { language: "", instructions: "" },
     realtime: { vocabulary: "", boost: 0 },
     profile: ID.Generic,
     language: "",
-    transcription: { prompt: "", hotwords: "", temperatureOverride: false, temperature: 0 },
-    cleanup: { limitOutputTokens: false, maxOutputTokens: 0, disableReasoning: false },
+    transcription: {
+      prompt: "",
+      hotwords: "",
+      temperatureOverride: false,
+      temperature: 0,
+    },
+    cleanup: {
+      limitOutputTokens: false,
+      maxOutputTokens: 0,
+      disableReasoning: false,
+    },
     systemPrompt: "",
     styling: "",
     structure: "",
@@ -64,6 +74,7 @@ export function modelOptions(settings: Settings, purpose: Purpose): Options {
   return {
     ...base,
     profile: settings.textToSpeech.modelProfile || ID.Generic,
+    speech: { ...settings.textToSpeech.options },
     voice: settings.textToSpeech.voice,
     speed: settings.textToSpeech.speed,
   };
@@ -126,6 +137,7 @@ export function applyModelOptions(
       model,
       modelProfile: o.profile,
       voice: o.voice,
+      options: { ...o.speech },
     });
   }
   return true;

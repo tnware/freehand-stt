@@ -110,6 +110,8 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 		return err
 	}
 	if err := q.PutSpeech(ctx, dbgen.PutSpeechParams{
+		SpeechLanguage:       v.TextToSpeech.Options.Language,
+		SpeechInstructions:   v.TextToSpeech.Options.Instructions,
 		ModelProfile:         string(modelprofile.Effective(v.TextToSpeech.ModelProfile)),
 		CompatibilityProfile: string(v.TextToSpeech.CompatibilityProfile),
 		Enabled:              boolean(v.TextToSpeech.Enabled),
@@ -233,6 +235,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	v.TextToSpeech.AllowInsecureHTTP = rSpeech.AllowInsecureHttp != 0
 	v.TextToSpeech.AuthenticationMode = config.AuthenticationMode(rSpeech.AuthenticationMode)
 	v.TextToSpeech.ModelProfile = modelprofile.ID(rSpeech.ModelProfile)
+	v.TextToSpeech.Options = modelprofile.SpeechOptions{Language: rSpeech.SpeechLanguage, Instructions: rSpeech.SpeechInstructions}
 	v.TextToSpeech.Model = rSpeech.Model
 	v.TextToSpeech.Voice = rSpeech.Voice
 	v.TextToSpeech.Speed = rSpeech.Speed

@@ -11,7 +11,7 @@ func TestSharedVocabularyMigrationAndRoundTrip(t *testing.T) {
 	s := testStore(t)
 	before := loadStore(t, s)
 	// Recreate v9 active hint fields without changing old released migrations.
-	if _, err := s.db.Exec(`DROP TABLE vocabulary_settings; DELETE FROM goose_db_version WHERE version_id=10;
+	if _, err := s.db.Exec(`ALTER TABLE speech_settings DROP COLUMN speech_language; ALTER TABLE speech_settings DROP COLUMN speech_instructions; ALTER TABLE remembered_models DROP COLUMN speech_language; ALTER TABLE remembered_models DROP COLUMN speech_instructions; DROP TABLE vocabulary_settings; DELETE FROM goose_db_version WHERE version_id>=10;
 UPDATE voice_transcription_settings SET compatibility_profile='nemo-speech-v1',model_profile='nemotron-3.5-streaming',vocabulary='Freehand',hotwords='東京',boost=2.5;
 UPDATE transcription_settings SET transcription_options_hotwords='File term';`); err != nil {
 		t.Fatal(err)

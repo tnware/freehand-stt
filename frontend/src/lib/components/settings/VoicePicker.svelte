@@ -10,6 +10,7 @@
     id,
     value = $bindable(),
     supported = false,
+    allowedVoices = [],
     result = null,
     busy = false,
     onDiscover,
@@ -20,6 +21,7 @@
     id: string;
     value: string;
     supported?: boolean;
+    allowedVoices?: string[];
     result?: VoicesResult | null;
     busy?: boolean;
     onDiscover: () => void;
@@ -30,14 +32,24 @@
   let open = $state(false),
     query = $state("");
   let edited = $state(false);
-  const voices = $derived(result?.errorKind ? [] : (result?.voices ?? []));
+  const voices = $derived(
+    allowedVoices.length
+      ? allowedVoices.map(
+          (id) => result?.voices?.find((v) => v.id === id) ?? { id, name: id, language: "" },
+        )
+      : result?.errorKind
+        ? []
+        : (result?.voices ?? []),
+  );
   const matches = $derived(
     voices.filter((v) =>
       `${v.id} ${v.name} ${v.language}`.toLowerCase().includes(query.trim().toLowerCase()),
     ),
   );
   const custom = $derived(
-    query.trim() && !voices.some((v) => v.id === query.trim()) ? query.trim() : "",
+    !allowedVoices.length && query.trim() && !voices.some((v) => v.id === query.trim())
+      ? query.trim()
+      : "",
   );
   const choices = $derived([
     ...matches.map((v) => ({ value: v.id, label: v.name || v.id, language: v.language })),
@@ -68,6 +80,7 @@
   );
   async function choose(next: string) {
     edited = false;
+    if (allowedVoices.length && !allowedVoices.includes(next)) return;
     if (next && (!onChoose || (await onChoose(next)))) {
       if (!onChoose) value = next;
       edited = false;
@@ -101,7 +114,7 @@
     onValueChange={choose}
     onOpenChange={(next) => {
       if (!next) {
-        if (edited) {
+        if (edited && !allowedVoices.length) {
           if (onChoose) void onChoose(query.trim());
           else value = query.trim();
         }
@@ -116,7 +129,11 @@
         {id}
         aria-label="Choose voice"
         aria-describedby={`${id}-help`}
-        placeholder={supported ? "Search or enter a voice ID…" : "Enter a voice ID…"}
+        placeholder={allowedVoices.length
+          ? "Search preset voices…"
+          : supported
+            ? "Search or enter a voice ID…"
+            : "Enter a voice ID…"}
         class="h-10 w-full rounded-md border border-input bg-background px-3 pr-10 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         spellcheck={false}
         maxlength={200}
@@ -172,9 +189,11 @@
               {#if value === choice.value}<CheckIcon class="size-3.5 shrink-0" />{/if}
             </Combobox.Item>
           {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
-              {supported
-                ? "Refresh voices, or enter a voice ID supplied by your server."
-                : "Enter a voice ID supplied by your server."}
+              {allowedVoices.length
+                ? "No matching preset voices."
+                : supported
+                  ? "Refresh voices, or enter a voice ID supplied by your server."
+                  : "Enter a voice ID supplied by your server."}
             </p>{/each}{/key}
       </Combobox.Content></Combobox.Portal
     >
@@ -186,7 +205,10 @@
       ? "sr-only"
       : `text-xs leading-relaxed ${failure ? "text-warning" : "text-muted-foreground"}`}
   >
-    {#if failure}{failure}
+    {#if allowedVoices.length}{voices.length} preset voices for this model profile. {failure
+        ? "Server voice refresh failed; the preset list remains available."
+        : ""}
+    {:else if failure}{failure}
     {:else if result}{voices.length}
       {result.scope === VoiceScope.VoiceScopeModel
         ? "voices advertised for this model."

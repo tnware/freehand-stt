@@ -23,9 +23,9 @@ func TestProfileProbesRemainMetadataOnlyAndRejectPlannedSelections(t *testing.T)
 	keys := &keyFake{}
 	service := NewService(keys, keys, keys, inference.New(), nil)
 	for _, planned := range []bool{false, true} {
-		sttID, chatID, ttsID := compatibility.Speaches, compatibility.LlamaCPP, compatibility.Speaches
+		sttID, chatID, ttsID := compatibility.Speaches, compatibility.LlamaCPP, compatibility.VLLMOmni
 		if planned {
-			sttID, chatID, ttsID = compatibility.LocalAI, compatibility.LocalAI, compatibility.VLLMOmni
+			sttID, chatID, ttsID = compatibility.LocalAI, compatibility.LocalAI, compatibility.LocalAI
 		}
 		results := []ConnectionResult{
 			service.TestConnection(ConnectionTestRequest{CompatibilityProfile: sttID, BaseURL: server.URL + "/v1", AllowInsecureHTTP: true, AuthenticationMode: config.AuthenticationModeNone}),

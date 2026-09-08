@@ -81,6 +81,8 @@
       description: "Synthetic speech profile",
       reasoningOffRequired: false,
       capabilities: {
+        speechInstructions: false,
+        speechLanguage: false,
         realtime: false,
         serverLoadedModel: false,
         vllmTranscriptionEvents: false,
@@ -110,7 +112,10 @@
       purpose: Purpose.Speech,
       model: "speech/alternate",
       selected: false,
-      options: { ...modelOptions(current, Purpose.Speech), voice: "Alternate voice" },
+      options: {
+        ...modelOptions(current, Purpose.Speech),
+        voice: "Alternate voice",
+      },
     },
   ];
   const saves = controlledSaves((request) => {

@@ -56,4 +56,128 @@ export const modelProfiles = [
       "Choose Qwen3-ASR in the Transcription panel to see its recognition options. Enabling realtime shows live results and optional captions while preserving completed-mode settings.",
     note: "The realtime setup uses the 1.7B checkpoint with vLLM's realtime architecture. Context and vocabulary apply to completed audio only.",
   },
+  {
+    id: "parakeet-tdt-v3",
+    name: "Parakeet TDT v3",
+    family: "NVIDIA · Multilingual recognition",
+    icon: "parakeet-tdt-v3",
+    summary: "Transcribe recordings with automatic language detection and punctuation.",
+    guide: "/docs/models/parakeet/",
+    backends: [
+      {
+        name: "NeMo-Speech.cpp",
+        guide: "/docs/backends/nemo-speech/",
+      },
+    ],
+    controls: [
+      {
+        name: "Recognition",
+        detail: "Automatic language and punctuation",
+      },
+      {
+        name: "Voice",
+        detail: "Recordings and checkpoints",
+      },
+      {
+        name: "Audio files",
+        detail: "Completed results",
+      },
+    ],
+    inApp:
+      "Choose Parakeet TDT v3 in Voice or Audio-file transcription. Its profile keeps the completed workflow and hides unsupported recognition hints and realtime controls.",
+    note: "This profile covers the TDT v3 checkpoint on NeMo-Speech.cpp.",
+  },
+  {
+    id: "cohere-transcribe",
+    name: "Cohere Transcribe",
+    family: "Cohere · Speech recognition",
+    icon: "cohere-transcribe",
+    summary: "Transcribe completed audio with an explicit choice of fourteen languages.",
+    guide: "/docs/models/cohere-transcribe/",
+    backends: [
+      {
+        name: "vLLM",
+        guide: "/docs/backends/vllm/",
+      },
+    ],
+    controls: [
+      {
+        name: "Language",
+        detail: "14 languages; English default",
+      },
+      {
+        name: "Recognition",
+        detail: "Temperature override",
+      },
+      {
+        name: "Audio files",
+        detail: "Optional streamed results",
+      },
+    ],
+    inApp:
+      "The Transcription panel shows Cohere’s language choices and temperature control. Punctuation follows vLLM’s model adapter.",
+    note: "Context and vocabulary controls are absent because this adapter does not apply them.",
+  },
+  {
+    id: "voxtral-realtime",
+    name: "Voxtral Mini Realtime",
+    family: "Mistral · Streaming recognition",
+    icon: "voxtral-realtime",
+    summary: "Follow your dictation in the results pane and single-row overlay captions.",
+    guide: "/docs/models/voxtral-realtime/",
+    backends: [
+      {
+        name: "vLLM",
+        guide: "/docs/backends/vllm/",
+      },
+    ],
+    controls: [
+      {
+        name: "Live mode",
+        detail: "Results and optional captions",
+      },
+      {
+        name: "Language",
+        detail: "Automatic detection",
+      },
+      {
+        name: "Completed audio",
+        detail: "Recordings and files",
+      },
+    ],
+    inApp:
+      "Select Voxtral Mini Realtime and enable Realtime transcription within Voice’s existing Transcription panel. Stop to finalize and apply your usual cleanup and delivery.",
+    note: "Uses the Voxtral Mini 4B Realtime checkpoint. Audio files retain their own selection.",
+  },
+  {
+    id: "qwen3-tts-customvoice",
+    name: "Qwen3-TTS",
+    family: "Qwen · 1.7B CustomVoice",
+    icon: "qwen3-tts-customvoice",
+    summary: "Choose a preset speaker and describe how you want the words spoken.",
+    guide: "/docs/models/qwen3-tts/",
+    backends: [
+      {
+        name: "vLLM-Omni",
+        guide: "/docs/backends/vllm-omni/",
+      },
+    ],
+    controls: [
+      {
+        name: "Voice",
+        detail: "Nine preset speakers",
+      },
+      {
+        name: "Language",
+        detail: "Automatic or ten languages",
+      },
+      {
+        name: "Voice style",
+        detail: "Natural-language instructions",
+      },
+    ],
+    inApp:
+      "Text to speech and its quick settings show language and voice-style controls. Preview uses your current edits before saving, including the selected voice and speaking speed.",
+    note: "CustomVoice 1.7B behavior. Voice cloning and VoiceDesign use different model contracts.",
+  },
 ] as const;

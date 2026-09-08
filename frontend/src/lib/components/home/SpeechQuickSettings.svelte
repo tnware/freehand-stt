@@ -75,6 +75,7 @@
         onChooseModel={(model) => update({ model })}
         onVoice={(voice) => update({ voice })}
         onSpeed={(speed) => update({ speed })}
+        onOptions={(options) => update({ options })}
         onDiscoverModels={() => editor.testTextToSpeechConnection(settings, "")}
         onDiscoverVoices={() => editor.discoverVoices(true)}
       />

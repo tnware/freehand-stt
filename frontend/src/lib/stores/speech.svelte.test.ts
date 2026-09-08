@@ -121,9 +121,11 @@ it("previews a snapshot of unsaved speech options without forwarding transport o
     voice: "draft-voice",
     speed: 1.5,
     timeoutSeconds: 42,
+    options: { language: "ja", instructions: "Warm delivery" },
   };
   await speech.previewVoice(draft);
   draft.textToSpeech.voice = "later-edit";
+  draft.textToSpeech.options.instructions = "Later instructions";
   expect(PreviewVoice).toHaveBeenCalledExactlyOnceWith({
     connectionID: "draft-connection",
     enabled: true,
@@ -132,6 +134,7 @@ it("previews a snapshot of unsaved speech options without forwarding transport o
     voice: "draft-voice",
     speed: 1.5,
     timeoutSeconds: 42,
+    options: { language: "ja", instructions: "Warm delivery" },
   });
   messages.dispose();
 });

@@ -8,6 +8,9 @@ for microphone recordings, audio-file uploads, and realtime microphone audio.
 For Nemotron's language and vocabulary controls, use the separate
 **[Nemotron 3.5 ASR streaming model profile](../../models/nemotron/)**.
 
+For automatic language detection with completed recordings, choose the
+[Parakeet TDT v3 model profile](../../models/parakeet/).
+
 ## Run the server
 
 Follow NeMo-Speech.cpp's [v0.1.0 installation guide](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/install.md)

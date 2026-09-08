@@ -18,6 +18,11 @@ import (
 )
 
 func TestVLLMProtocolAndFinalAuthority(t *testing.T) {
+	for _, profile := range []modelprofile.ID{modelprofile.Qwen3ASR, modelprofile.VoxtralRealtime} {
+		t.Run(string(profile), func(t *testing.T) { testVLLMProtocol(t, profile) })
+	}
+}
+func testVLLMProtocol(t *testing.T, profile modelprofile.ID) {
 	for _, scenario := range []string{"final", "missing-text", "disconnect", "error", "early-final", "oversize", "cancel"} {
 		t.Run(scenario, func(t *testing.T) {
 			preview := make(chan struct{}, 1)
@@ -102,11 +107,13 @@ func TestVLLMProtocolAndFinalAuthority(t *testing.T) {
 			defer server.Close()
 			cfg := fixtureConfig(server)
 			cfg.CompatibilityProfile = compatibility.VLLM
-			cfg.ModelProfile = modelprofile.Qwen3ASR
-			cfg.Language = "en"
+			cfg.ModelProfile = profile
+			cfg.Language = "auto"
 			cfg.Options = modelprofile.NemotronOptions{}
 			// Completed hints are saved but must never leak into realtime messages.
-			cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "private context", TemperatureOverride: true, Temperature: .3}
+			if profile == modelprofile.Qwen3ASR {
+				cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "private context", TemperatureOverride: true, Temperature: .3}
+			}
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			var updates []Update
@@ -149,10 +156,14 @@ func TestVLLMProtocolAndFinalAuthority(t *testing.T) {
 			}
 			result := s.Wait()
 			if scenario == "final" {
-				if result.Err != nil || result.Text != "Correct. Final." || result.Language != "en" || result.AudioMilliseconds != 20 {
+				expected, language := "Correct. Final.", "en"
+				if profile == modelprofile.VoxtralRealtime {
+					expected, language = "language English<asr_text>Correct.language English<asr_text>Final.", ""
+				}
+				if result.Err != nil || result.Text != expected || result.Language != language || result.AudioMilliseconds != 20 {
 					t.Fatalf("wrong final: %#v", result)
 				}
-				if len(updates) != 3 || updates[0].Partial != "" || updates[1].Partial != "Provisional." || updates[2].Final != result.Text {
+				if len(updates) != 3 || (profile == modelprofile.Qwen3ASR && (updates[0].Partial != "" || updates[1].Partial != "Provisional.")) || updates[2].Final != result.Text {
 					t.Fatal("wrong preview replacement")
 				}
 			} else if result.Err == nil || result.Text != "" || strings.Contains(result.Err.Error(), "private") {

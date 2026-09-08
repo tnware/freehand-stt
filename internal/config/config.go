@@ -182,16 +182,17 @@ type PostProcessingSettings struct {
 }
 
 type TextToSpeechSettings struct {
-	ModelProfile         modelprofile.ID    `json:"modelProfile"`
-	CompatibilityProfile compatibility.ID   `json:"compatibilityProfile"`
-	Enabled              bool               `json:"enabled"`
-	BaseURL              string             `json:"baseURL"`
-	AllowInsecureHTTP    bool               `json:"allowInsecureHTTP"`
-	AuthenticationMode   AuthenticationMode `json:"authenticationMode"`
-	Model                string             `json:"model"`
-	Voice                string             `json:"voice"`
-	Speed                float64            `json:"speed"`
-	TimeoutSeconds       int                `json:"timeoutSeconds"`
+	Options              modelprofile.SpeechOptions `json:"options"`
+	ModelProfile         modelprofile.ID            `json:"modelProfile"`
+	CompatibilityProfile compatibility.ID           `json:"compatibilityProfile"`
+	Enabled              bool                       `json:"enabled"`
+	BaseURL              string                     `json:"baseURL"`
+	AllowInsecureHTTP    bool                       `json:"allowInsecureHTTP"`
+	AuthenticationMode   AuthenticationMode         `json:"authenticationMode"`
+	Model                string                     `json:"model"`
+	Voice                string                     `json:"voice"`
+	Speed                float64                    `json:"speed"`
+	TimeoutSeconds       int                        `json:"timeoutSeconds"`
 }
 
 type VADMode string
@@ -423,6 +424,9 @@ func Validate(s Settings) error {
 func ValidateTextToSpeech(s TextToSpeechSettings, requireConnection bool) error {
 	if err := modelprofile.ValidateSpeech(s.ModelProfile, s.CompatibilityProfile, s.Speed); err != nil {
 		return fieldError("textToSpeech.modelProfile", "Choose a compatible speech model profile and speaking speed.", err)
+	}
+	if err := modelprofile.ValidateSpeechOptions(s.ModelProfile, s.CompatibilityProfile, s.Voice, s.Options); err != nil {
+		return fieldError("textToSpeech.options", "Check the speech language, voice, and style instructions.", err)
 	}
 	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Speech); err != nil {
 		return fieldError("textToSpeech.compatibilityProfile", "Choose a supported speech server profile.", err)
