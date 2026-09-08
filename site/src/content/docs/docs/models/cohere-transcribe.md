@@ -11,6 +11,9 @@ checkpoints, and audio-file results, including streamed file responses.
 ## Connect the model
 
 Prepare your inference machine using the [vLLM backend guide](../../backends/vllm/).
+Accept the model's access conditions on Hugging Face and authenticate the inference
+runtime with an account that has access before downloading it. This download login
+is separate from any API key used to connect Freehand to your running server.
 Serve the model with the runtime's audio dependencies installed:
 
 ```sh
