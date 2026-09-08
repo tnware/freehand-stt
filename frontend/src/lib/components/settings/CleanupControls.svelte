@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingsDisclosure from "./SettingsDisclosure.svelte";
   import type { Capabilities, CleanupOptions } from "$bindings/compatibility";
   import { Badge } from "$lib/components/ui/badge";
   import { Switch } from "$lib/components/ui/switch";
@@ -37,15 +38,13 @@
   }
 </script>
 
-<details class="rounded-xl border border-hairline bg-layer-fill">
-  <summary
-    class="cursor-pointer rounded-xl px-5 py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring"
-    >Generation controls</summary
-  >
+<SettingsDisclosure title="Generation controls" description="Output limit and reasoning">
   <div class="border-t border-hairline">
     <SettingRow
       title="Limit output tokens"
-      description="Off uses the server's output limit. A limit that is too small can leave cleanup incomplete; Freehand then uses the raw transcript."
+      controlID="cleanup-limit-output"
+      compact
+      description="Off uses the server default. Incomplete cleanup falls back to the raw transcript."
     >
       {#snippet control()}
         <Switch
@@ -89,6 +88,7 @@
   <div class="border-t border-hairline">
     <SettingRow
       title="Disable reasoning"
+      compact
       description={s1Mini
         ? capabilities?.cleanupDisableReasoning
           ? "S1-mini requires reasoning to be off. Freehand sends the reasoning-off override on every cleanup request."
@@ -127,4 +127,4 @@
     S1-mini keeps its fixed prompt and temperature zero. Its requirement to keep reasoning off is
     separate from the optional setting for custom cleanup.
   </p>
-</details>
+</SettingsDisclosure>

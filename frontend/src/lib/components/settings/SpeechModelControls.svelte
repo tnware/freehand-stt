@@ -28,6 +28,7 @@
     onSpeed,
     onOptions,
     modelDetails,
+    voiceActions,
   }: {
     settings: Settings;
     models?: string[];
@@ -46,6 +47,7 @@
     onSpeed: (speed: number) => boolean | Promise<boolean>;
     onOptions: (options: Settings["textToSpeech"]["options"]) => boolean | Promise<boolean>;
     modelDetails?: Snippet;
+    voiceActions?: Snippet;
   } = $props();
   const speech = $derived(settings.textToSpeech);
   const profile = $derived(
@@ -78,6 +80,7 @@
   busy={voicesBusy}
   disabled={busy}
   {compact}
+  actions={voiceActions}
   onChoose={onVoice}
   onDiscover={onDiscoverVoices}
 />

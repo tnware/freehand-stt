@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingsDisclosure from "../settings/SettingsDisclosure.svelte";
   import RuntimeModelPicker from "../settings/RuntimeModelPicker.svelte";
   import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import VocabularyLink from "$lib/components/settings/VocabularyLink.svelte";
@@ -269,6 +270,41 @@
     </div>
   {/if}
   <VocabularyLink {settings} voice />
+  {#if draft && !cfg.realtime}
+    <SettingsDisclosure
+      title="Request settings"
+      description="Timeout and supported temperature controls"
+    >
+      <div class="space-y-4 px-5 py-4">{@render requestControls()}</div>
+    </SettingsDisclosure>
+  {:else}
+    {@render requestControls()}
+  {/if}
+  {#if cfg.realtime}
+    <div class="flex items-center justify-between gap-3">
+      <label for="voice-captions" class="text-sm">Live overlay captions</label>
+      <Switch
+        id="voice-captions"
+        checked={cfg.captions}
+        disabled={busy}
+        onCheckedChange={(captions) => update({ captions })}
+      />
+    </div>
+    <p class="border-t border-hairline pt-3 text-xs leading-relaxed text-muted-foreground">
+      Microphone audio streams while recording. Stop to finalize, clean up, and insert. Live mode
+      uses the recording limit; silence trimming, checkpoints, and automatic stop apply to completed
+      transcription.
+    </p>
+  {/if}
+  {#if !draft}<QuickSaveStatus
+      fields={["voice-transcription"]}
+      pending={editor.quickSettingsPending}
+      saved={editor.quickSettingsSaved}
+      failed={editor.quickSettingsFailed}
+    />{/if}
+</div>
+
+{#snippet requestControls()}
   {#if !cfg.realtime && profile?.capabilities.transcriptionTemperature}
     <div class="flex items-center justify-between gap-3">
       <label for="voice-temperature-override" class="text-sm">Override temperature</label><Switch
@@ -322,26 +358,4 @@
       </p>
     </div>
   {/if}
-  {#if cfg.realtime}
-    <div class="flex items-center justify-between gap-3">
-      <label for="voice-captions" class="text-sm">Live overlay captions</label>
-      <Switch
-        id="voice-captions"
-        checked={cfg.captions}
-        disabled={busy}
-        onCheckedChange={(captions) => update({ captions })}
-      />
-    </div>
-    <p class="border-t border-hairline pt-3 text-xs leading-relaxed text-muted-foreground">
-      Microphone audio streams while recording. Stop to finalize, clean up, and insert. Live mode
-      uses the recording limit; silence trimming, checkpoints, and automatic stop apply to completed
-      transcription.
-    </p>
-  {/if}
-  {#if !draft}<QuickSaveStatus
-      fields={["voice-transcription"]}
-      pending={editor.quickSettingsPending}
-      saved={editor.quickSettingsSaved}
-      failed={editor.quickSettingsFailed}
-    />{/if}
-</div>
+{/snippet}

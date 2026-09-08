@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import { Combobox } from "bits-ui";
   import { VoiceScope, type VoicesResult } from "$bindings/inference";
   import { Button } from "$lib/components/ui/button";
@@ -17,7 +18,9 @@
     compact = false,
     disabled = false,
     onChoose,
+    actions,
   }: {
+    actions?: Snippet;
     id: string;
     value: string;
     supported?: boolean;
@@ -91,18 +94,21 @@
 </script>
 
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
-  <div class="flex items-center justify-between gap-3">
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <label for={id} class="text-sm font-medium">Voice</label>
-    {#if supported}<Button
-        variant="ghost"
-        size="sm"
-        disabled={busy || disabled}
-        onclick={onDiscover}
-      >
-        <RefreshCwIcon class={busy ? "size-3.5 animate-spin" : "size-3.5"} />{busy
-          ? "Loading voices…"
-          : "Refresh voices"}
-      </Button>{/if}
+    <div class="flex flex-wrap items-center gap-2">
+      {#if supported}<Button
+          variant="ghost"
+          size="sm"
+          disabled={busy || disabled}
+          onclick={onDiscover}
+        >
+          <RefreshCwIcon class={busy ? "size-3.5 animate-spin" : "size-3.5"} />{busy
+            ? "Loading voices…"
+            : "Refresh voices"}
+        </Button>{/if}
+      {@render actions?.()}
+    </div>
   </div>
   <Combobox.Root
     {disabled}

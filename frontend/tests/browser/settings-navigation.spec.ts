@@ -58,6 +58,7 @@ for (const width of [1100, 520]) {
       page,
       saves,
     }) => {
+      await page.locator("summary", { hasText: "Request settings" }).click();
       await page.locator("#file-transcription-timeout").fill("75");
       await section(page, "audio").click();
       await page.locator("#max-duration").fill("0");

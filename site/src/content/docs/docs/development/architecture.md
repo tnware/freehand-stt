@@ -931,3 +931,11 @@ Overlay keep common controls visible and group fine tuning in `SettingsDisclosur
 Validation opens ancestor disclosures before focusing a rejected field. Shared
 setting rows associate switch labels with their controls; sliders forward their
 accessible labels to the focusable thumb.
+
+Workflow pages use the same disclosures for request timeouts and metadata
+checks. `RequestSettings` preserves visible warning/stale summaries while
+keeping detailed diagnostics below everyday controls. Speech preview actions
+are composed into the voice picker; they retain the draft-preview service path.
+Voice's workflow-level validation opens its disclosures because the backend does
+not currently identify individual voice fields. Disclosures never own option
+values or change capability admission, persistence, or request snapshots.

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingsDisclosure from "./SettingsDisclosure.svelte";
   import type { Capabilities, TranscriptionOptions } from "$bindings/compatibility";
   import { Switch } from "$lib/components/ui/switch";
   import { Textarea } from "$lib/components/ui/textarea";
@@ -29,16 +30,10 @@
   const promptBytes = $derived(new TextEncoder().encode(options.prompt).length);
 </script>
 
-<details class="rounded-xl border border-hairline bg-layer-fill">
-  <summary
-    class="cursor-pointer rounded-xl px-5 py-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring"
-  >
-    Transcription controls
-  </summary>
+<SettingsDisclosure title="Transcription controls" description="Context hints and temperature">
   <div class="border-t border-hairline px-5 py-4">
     <p class="text-xs leading-relaxed text-muted-foreground">
-      Optional context for audio files. Model support varies. Manage shared names and terminology in
-      Vocabulary.
+      Give the model context for recognizing speech. Shared terms are managed in Vocabulary.
     </p>
     <div class="mt-4 space-y-2">
       <label for="transcription-prompt" class="text-sm font-medium">Transcription context</label>
@@ -64,7 +59,9 @@
   <div class="border-t border-hairline">
     <SettingRow
       title="Override temperature"
-      description="Off uses the server default. Turn on to send an explicit value, including zero."
+      controlID="transcription-temperature-override"
+      compact
+      description="Off uses the server default."
     >
       {#snippet control()}
         <Switch
@@ -103,4 +100,4 @@
       {/if}
     {/if}
   </div>
-</details>
+</SettingsDisclosure>

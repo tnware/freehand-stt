@@ -90,6 +90,10 @@
     pendingConnectionAction = null;
     active = issue.section;
     await tick();
+    // Voice validation currently identifies the workflow, rather than an individual option.
+    if (issue.field === "voice-transcription") {
+      for (const details of contentPane?.querySelectorAll("details") ?? []) details.open = true;
+    }
     const control = issue.control
       ? contentPane?.querySelector<HTMLElement>(`#${CSS.escape(issue.control)}`)
       : null;

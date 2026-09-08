@@ -727,3 +727,10 @@ slider changes, and draft preservation after navigation. A synthetic validation
 failure on speech padding must reopen its disclosure and focus the slider at
 both desktop and narrow widths. Minimal overlay surfaces must disable glow
 adjustment without resetting its value. Fixtures use no capture or inference.
+
+The workflow streamlining fixture checks all four workflow pages at 860px and
+520px: request controls start collapsed, edits survive collapsing and navigation,
+and save validation reveals hidden request limits. Voice workflow validation
+also exposes its temperature and timeout controls. Speech preview stays beside
+voice selection. All workflow fixtures use synthetic profiles and service
+responses; they do not contact inference servers.

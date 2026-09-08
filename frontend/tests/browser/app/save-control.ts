@@ -5,7 +5,13 @@ export interface SaveControl {
   waitForStart: (after: number) => Promise<number>;
   complete: (
     id: number,
-    outcome: "success" | "failure" | "invalid-duration" | "invalid-speech-padding",
+    outcome:
+      | "success"
+      | "failure"
+      | "invalid-duration"
+      | "invalid-speech-padding"
+      | "invalid-file-timeout"
+      | "invalid-voice",
   ) => void;
 }
 
@@ -36,16 +42,26 @@ export function controlledSaves(result: (request: SaveSettingsRequest) => Settin
       if (!pending || pending.id !== id) throw new Error("No matching pending save");
       const save = pending;
       pending = undefined;
-      if (outcome === "invalid-duration" || outcome === "invalid-speech-padding") {
+      if (outcome.startsWith("invalid-")) {
         const message =
           outcome === "invalid-duration"
             ? "Enter a recording limit from 1 to 262 seconds."
-            : "Review the speech padding.";
+            : outcome === "invalid-file-timeout"
+              ? "Review the file request timeout."
+              : outcome === "invalid-voice"
+                ? "Review voice transcription settings."
+                : "Review the speech padding.";
         const error = new Error(message, {
           cause: {
             kind: "settings_validation",
             field:
-              outcome === "invalid-duration" ? "maxDurationSeconds" : "speechPaddingMilliseconds",
+              outcome === "invalid-duration"
+                ? "maxDurationSeconds"
+                : outcome === "invalid-file-timeout"
+                  ? "fileTranscriptionTimeoutSeconds"
+                  : outcome === "invalid-voice"
+                    ? "voice-transcription"
+                    : "speechPaddingMilliseconds",
             message,
           },
         });
