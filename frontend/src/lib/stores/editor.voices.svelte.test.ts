@@ -6,14 +6,20 @@ import { createEditor, settings, idle, serviceWithStatus } from "./session-fixtu
 const result: VoicesResult = {
   voices: [{ id: "af_heart", name: "Heart", language: "en-us" }],
   scope: VoiceScope.VoiceScopeModel,
-  errorKind: "", httpStatus: 200, latencyMilliseconds: 1, truncated: false,
+  errorKind: "",
+  httpStatus: 200,
+  latencyMilliseconds: 1,
+  truncated: false,
 };
 function setup() {
   const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
   services.connection.ListSpeechVoices = vi.fn(() => CancellablePromise.resolve(result));
   const { editor } = createEditor(services);
   const config = structuredClone(settings);
-  config.savedConnections.selected = { ...config.savedConnections.selected, speech: "speech-server" };
+  config.savedConnections.selected = {
+    ...config.savedConnections.selected,
+    speech: "speech-server",
+  };
   config.textToSpeech.model = "kokoro";
   config.textToSpeech.voice = "custom-alias";
   editor.applySettingsSnapshot(config);
@@ -23,7 +29,10 @@ describe("speech voice discovery", () => {
   it("sends only the saved connection/model and preserves the current voice", async () => {
     const { services, editor } = setup();
     await editor.discoverVoices();
-    expect(services.connection.ListSpeechVoices).toHaveBeenCalledWith({connectionID: "speech-server", model: "kokoro"});
+    expect(services.connection.ListSpeechVoices).toHaveBeenCalledWith({
+      connectionID: "speech-server",
+      model: "kokoro",
+    });
     expect(editor.voices).toEqual(result);
     expect(editor.draft!.textToSpeech.voice).toBe("custom-alias");
     editor.draft!.textToSpeech.speed = 1.2;
@@ -38,7 +47,11 @@ describe("speech voice discovery", () => {
     const pending = editor.discoverVoices();
     await editor.discoverVoices();
     if (field === "model") editor.draft!.textToSpeech.model = "other";
-    else editor.draft!.savedConnections.selected = { ...editor.draft!.savedConnections.selected, speech: "other" };
+    else
+      editor.draft!.savedConnections.selected = {
+        ...editor.draft!.savedConnections.selected,
+        speech: "other",
+      };
     response.resolve(result);
     await pending;
     expect(editor.voices).toBeNull();
@@ -48,9 +61,24 @@ describe("speech voice discovery", () => {
   it("preserves a custom voice after discovery fails", async () => {
     const { services, editor } = setup();
     await editor.discoverVoices();
-    services.connection.ListSpeechVoices = vi.fn(() => CancellablePromise.resolve({...result, voices: [], errorKind: "http", httpStatus: 404}));
+    services.connection.ListSpeechVoices = vi.fn(() =>
+      CancellablePromise.resolve({ ...result, voices: [], errorKind: "http", httpStatus: 404 }),
+    );
     await editor.discoverVoices();
     expect(editor.voices?.errorKind).toBe("http");
     expect(editor.draft!.textToSpeech.voice).toBe("custom-alias");
   });
+});
+
+it("quick discovery uses the applied model without exposing an unrelated draft's metadata", async () => {
+  const { services, editor } = setup();
+  editor.draft!.textToSpeech.model = "unsaved-model";
+  await editor.discoverVoices(true);
+  expect(services.connection.ListSpeechVoices).toHaveBeenCalledWith({
+    connectionID: "speech-server",
+    model: "kokoro",
+  });
+  expect(editor.voicesFor(editor.applied)).toEqual(result);
+  expect(editor.voices).toBeNull();
+  expect(editor.draft!.textToSpeech.model).toBe("unsaved-model");
 });

@@ -1,11 +1,7 @@
 <script lang="ts">
-  import VoicePicker from "$lib/components/settings/VoicePicker.svelte";
+  import SpeechModelControls from "../SpeechModelControls.svelte";
   import type { VoicesResult } from "$bindings/inference";
-  import { Purpose } from "$bindings/savedconnection";
-  import { rememberedModels } from "$lib/utils/modelSettings";
   import ModelProfilePicker from "$lib/components/settings/ModelProfilePicker.svelte";
-  import { ID } from "$bindings/compatibility";
-  import RuntimeModelPicker from "$lib/components/settings/RuntimeModelPicker.svelte";
   import SettingsCard from "$lib/components/settings/SettingsCard.svelte";
   import SettingRow from "$lib/components/settings/SettingRow.svelte";
   import ValueRow from "$lib/components/settings/ValueRow.svelte";
@@ -13,18 +9,12 @@
   import { Switch } from "$lib/components/ui/switch";
   import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
-  import * as Slider from "$lib/components/ui/slider";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import DownloadIcon from "@lucide/svelte/icons/download";
   import SquareIcon from "@lucide/svelte/icons/square";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
-  import {
-    TTSPhase,
-    type Settings,
-    type ConnectionResult,
-    type TTSStatus,
-  } from "$lib/state";
+  import { TTSPhase, type Settings, type ConnectionResult, type TTSStatus } from "$lib/state";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   let {
     settings = $bindable(),
@@ -71,11 +61,6 @@
       status.phase === TTSPhase.Playing ||
       status.phase === TTSPhase.Paused,
   );
-  const compatibility = $derived(
-    settings.modelProfiles.speech?.find(
-      (p) => p.id === (speech.modelProfile || ID.Generic),
-    ),
-  );
   $effect(() => {
     if (settings.textToSpeech.enabled && settings.textToSpeech.speed === 0)
       settings.textToSpeech.speed = 1;
@@ -92,68 +77,46 @@
           aria-label="Enable text to speech"
         />{/snippet}</SettingRow
     >
-    <RuntimeModelPicker
-      id="tts-model"
-      value={settings.textToSpeech.model}
+    <SpeechModelControls
+      {settings}
       {draftModels}
-      onChoose={onChooseModel}
-      onForget={onForgetModel}
-      savedModels={rememberedModels(settings, Purpose.Speech).map(
-        (e) => e.model,
-      )}
+      {voices}
+      {voicesBusy}
+      {busy}
       models={connection?.modelIDs ?? []}
-      busy={connectionBusy}
-      onDiscover={onTestConnection}
-    />
-    {#if connection}
-      <div class="p-5">
-        <ConnectionDiagnostics
-          result={connection}
-          stale={connectionStale}
-          {busy}
-          onCheck={onTestConnection}
-        />
-      </div>
-    {/if}
-    <ModelProfilePicker
-      id="speech-model-profile"
-      value={speech.modelProfile}
-      profiles={settings.modelProfiles.speech ?? []}
-      onChange={(id) => (settings.textToSpeech.modelProfile = id)}
-    />
-    <VoicePicker
-      id="tts-voice"
-      bind:value={settings.textToSpeech.voice}
-      supported={!!compatibility?.capabilities.voiceDiscovery}
-      result={voices}
-      busy={voicesBusy}
-      onDiscover={onDiscoverVoices}
-    />
-
-    <ValueRow
-      id="tts-speed"
-      label="Speaking speed"
-      hint="Requests 0.25× through 4×; support and effect depend on the server and model."
+      modelsBusy={connectionBusy}
+      {onChooseModel}
+      {onForgetModel}
+      onDiscoverModels={onTestConnection}
+      {onDiscoverVoices}
+      onVoice={(voice) => {
+        settings.textToSpeech.voice = voice;
+        return true;
+      }}
+      onSpeed={(speed) => {
+        settings.textToSpeech.speed = speed;
+        return true;
+      }}
     >
-      {#snippet control()}
-        <div class="flex items-center gap-3">
-          <Slider.Root
-            disabled={!compatibility?.capabilities.speechSpeed}
-            id="tts-speed"
-            type="single"
-            min={0.25}
-            max={4}
-            step={0.05}
-            value={settings.textToSpeech.speed}
-            onValueChange={(value) => (settings.textToSpeech.speed = value)}
-            aria-label="Speech playback speed"
-          />
-          <Badge variant="outline" class="min-w-14 justify-center font-mono"
-            >{speech.speed.toFixed(2)}×</Badge
-          >
-        </div>
+      {#snippet modelDetails()}
+        {#if connection}
+          <div class="p-5">
+            <ConnectionDiagnostics
+              result={connection}
+              stale={connectionStale}
+              {busy}
+              onCheck={onTestConnection}
+            />
+          </div>
+        {/if}
+        <ModelProfilePicker
+          id="speech-model-profile"
+          value={speech.modelProfile}
+          profiles={settings.modelProfiles.speech ?? []}
+          onChange={(id) => (settings.textToSpeech.modelProfile = id)}
+        />
       {/snippet}
-    </ValueRow>
+    </SpeechModelControls>
 
     <ValueRow
       id="tts-timeout"
@@ -179,8 +142,7 @@
       <div class="min-w-0">
         <p class="text-sm font-medium">Voice preview</p>
         <p class="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Save these settings, then generate a short phrase to check the voice
-          and playback.
+          Save these settings, then generate a short phrase to check the voice and playback.
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -203,8 +165,7 @@
           <Button
             size="sm"
             disabled={busy || !canPreview || !settings.textToSpeech.enabled}
-            onclick={onPreview}
-            ><Volume2Icon data-icon="inline-start" />Preview again</Button
+            onclick={onPreview}><Volume2Icon data-icon="inline-start" />Preview again</Button
           >
         {:else}
           <Button
@@ -224,18 +185,15 @@
   </SettingsCard>
 
   <p class="px-1 text-xs leading-relaxed text-muted-foreground">
-    Generated audio stays in memory unless you choose Save. Clear, new speech,
-    recording, or quitting Freehand releases it.
+    Generated audio stays in memory unless you choose Save. Clear, new speech, recording, or
+    quitting Freehand releases it.
   </p>
   <details class="px-1 text-xs leading-relaxed text-muted-foreground">
-    <summary class="cursor-pointer font-medium text-foreground"
-      >Speech request details</summary
-    >
+    <summary class="cursor-pointer font-medium text-foreground">Speech request details</summary>
     <p class="mt-3">
-      Freehand requests uncompressed WAV · PCM16 audio for native Windows
-      playback. Save writes a WAV file to the location you choose. Connection
-      checks stop after 15 seconds. Speech input is limited to 4,096 characters
-      and generated WAV audio to 32 MiB.
+      Freehand requests uncompressed WAV · PCM16 audio for native Windows playback. Save writes a
+      WAV file to the location you choose. Connection checks stop after 15 seconds. Speech input is
+      limited to 4,096 characters and generated WAV audio to 32 MiB.
     </p>
   </details>
 </div>

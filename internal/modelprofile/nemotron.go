@@ -13,6 +13,12 @@ import (
 
 const Nemotron35 ID = "nemotron-3.5-streaming"
 
+const (
+	NemotronVocabularyBytes = 2048
+	NemotronPhraseBytes     = 128
+	NemotronPhraseCount     = 32
+)
+
 // NemotronOptions are request-level recognition hints, never instructions to
 // rewrite a transcript. Phrases are newline-separated to preserve spaces.
 type NemotronOptions struct {
@@ -45,7 +51,7 @@ func ValidateNemotron(language string, options NemotronOptions) error {
 	if !slices.Contains(nemotronLocales, language) {
 		return errors.New("choose a language supported by the Nemotron base model")
 	}
-	if !utf8.ValidString(options.Vocabulary) || len(options.Vocabulary) > 2048 {
+	if !utf8.ValidString(options.Vocabulary) || len(options.Vocabulary) > NemotronVocabularyBytes {
 		return errors.New("vocabulary must be at most 2048 UTF-8 bytes")
 	}
 	if math.IsNaN(options.Boost) || math.IsInf(options.Boost, 0) || options.Boost < 0 || options.Boost > 5 {
@@ -58,7 +64,7 @@ func ValidateNemotron(language string, options NemotronOptions) error {
 			continue
 		}
 		phrases++
-		if len(line) > 128 {
+		if len(line) > NemotronPhraseBytes {
 			return errors.New("each vocabulary phrase must be at most 128 bytes")
 		}
 		for _, r := range line {
@@ -67,7 +73,7 @@ func ValidateNemotron(language string, options NemotronOptions) error {
 			}
 		}
 	}
-	if phrases > 32 {
+	if phrases > NemotronPhraseCount {
 		return errors.New("use at most 32 vocabulary phrases")
 	}
 	return nil

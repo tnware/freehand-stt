@@ -69,6 +69,7 @@ export type QuickSettingsPatch = Partial<
 > & {
   voiceTranscription?: Partial<Settings["voiceTranscription"]>;
   model?: string;
+  textToSpeech?: Partial<Pick<Settings["textToSpeech"], "model" | "voice" | "speed">>;
   postProcessing?: Partial<
     Pick<
       Settings["postProcessing"],
@@ -78,6 +79,7 @@ export type QuickSettingsPatch = Partial<
 };
 
 export type QuickSettingsField =
+  | "speech-controls"
   | "voice-transcription"
   | "microphone"
   | "vad-enabled"
@@ -98,7 +100,9 @@ const copySettings = (settings: Settings): Settings => ({
   voiceTranscription: {
     ...settings.voiceTranscription,
     headers: { ...settings.voiceTranscription.headers },
-    transcriptionOptions: { ...settings.voiceTranscription.transcriptionOptions },
+    transcriptionOptions: {
+      ...settings.voiceTranscription.transcriptionOptions,
+    },
     options: { ...settings.voiceTranscription.options },
   },
   savedConnections: {
@@ -184,8 +188,7 @@ export class SettingsEditor {
   #voicesInput = $state("");
   #voicesRevision = $state(-1);
 
-  #voiceInput(): string {
-    const settings = this.draft;
+  #voiceInput(settings = this.draft): string {
     if (!settings) return "";
     return JSON.stringify([
       settings.savedConnections.selected?.speech,
@@ -196,30 +199,36 @@ export class SettingsEditor {
   }
 
   get voices(): VoicesResult | null {
-    return this.#voicesInput === this.#voiceInput() &&
+    return this.voicesFor(this.draft);
+  }
+
+  voicesFor(settings: Settings | null): VoicesResult | null {
+    return this.#voicesInput === this.#voiceInput(settings) &&
       this.#voicesRevision === this.#ttsConnectionRevision
       ? this.#voices
       : null;
   }
 
-  async discoverVoices() {
-    const connectionID = this.draft?.savedConnections.selected?.speech;
-    if (this.voicesBusy || !connectionID || !this.draft) return;
-    const input = this.#voiceInput();
+  async discoverVoices(applied = false) {
+    const current = () => (applied ? this.applied : this.draft);
+    const settings = current();
+    const connectionID = settings?.savedConnections.selected?.speech;
+    if (this.voicesBusy || !connectionID || !settings) return;
+    const input = this.#voiceInput(settings);
     const revision = this.#ttsConnectionRevision;
     this.voicesBusy = true;
     try {
       const result = await this.#service.connection.ListSpeechVoices({
         connectionID,
-        model: this.draft.textToSpeech.model,
+        model: settings.textToSpeech.model,
       });
-      if (revision === this.#ttsConnectionRevision && input === this.#voiceInput()) {
+      if (revision === this.#ttsConnectionRevision && input === this.#voiceInput(current())) {
         this.#voices = result;
         this.#voicesInput = input;
         this.#voicesRevision = revision;
       }
     } catch {
-      if (revision === this.#ttsConnectionRevision && input === this.#voiceInput()) {
+      if (revision === this.#ttsConnectionRevision && input === this.#voiceInput(current())) {
         this.#voices = {
           voices: [],
           scope: VoiceScope.$zero,
@@ -836,7 +845,16 @@ export class SettingsEditor {
           !applyModel(next, Purpose.Voice, patch.voiceTranscription.model.trim())
         )
           throw new Error("Reload settings before selecting a Voice model.");
-        next.voiceTranscription = { ...next.voiceTranscription, ...patch.voiceTranscription };
+        next.voiceTranscription = {
+          ...next.voiceTranscription,
+          ...patch.voiceTranscription,
+        };
+      }
+      if (patch.textToSpeech) {
+        const { model, ...options } = patch.textToSpeech;
+        if (model !== undefined && !applyModel(next, Purpose.Speech, model.trim()))
+          throw new Error("Reload settings before selecting a speech model.");
+        next.textToSpeech = { ...next.textToSpeech, ...options };
       }
       if (patch.model !== undefined && !applyModel(next, Purpose.Transcription, patch.model.trim()))
         throw new Error("Reload settings before selecting a model.");
@@ -883,6 +901,7 @@ export class SettingsEditor {
       if (patch.postProcessing?.model !== undefined) {
         this.#invalidateProcessingConnection();
       }
+      if (patch.textToSpeech?.model !== undefined) this.#invalidateTTSConnection();
       this.#markQuickSettingsSaved(field);
       operationResult = true;
     });

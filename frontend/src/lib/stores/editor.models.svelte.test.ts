@@ -8,14 +8,22 @@ import { createEditor, settings, idle, serviceWithStatus } from "./session-fixtu
 
 function configured() {
   const v = structuredClone(settings);
-  v.savedConnections.selected = { stt: "shared", cleanup: "shared", speech: "shared" };
+  v.savedConnections.selected = {
+    stt: "shared",
+    cleanup: "shared",
+    speech: "shared",
+  };
   v.rememberedModels.entries = [
     {
       connectionID: "shared",
       purpose: Purpose.Cleanup,
       model: "s1",
       selected: false,
-      options: { ...modelOptions(v, Purpose.Cleanup), profile: ID.S1Mini, styling: "formal" },
+      options: {
+        ...modelOptions(v, Purpose.Cleanup),
+        profile: ID.S1Mini,
+        styling: "formal",
+      },
     },
     {
       connectionID: "shared",
@@ -29,14 +37,22 @@ function configured() {
       purpose: Purpose.Speech,
       model: "voice-model",
       selected: false,
-      options: { ...modelOptions(v, Purpose.Speech), voice: "voice-a", speed: 1.4 },
+      options: {
+        ...modelOptions(v, Purpose.Speech),
+        voice: "voice-a",
+        speed: 1.4,
+      },
     },
     {
       connectionID: "another",
       purpose: Purpose.Cleanup,
       model: "s1",
       selected: false,
-      options: { ...modelOptions(v, Purpose.Cleanup), profile: ID.Generic, styling: "casual" },
+      options: {
+        ...modelOptions(v, Purpose.Cleanup),
+        profile: ID.Generic,
+        styling: "casual",
+      },
     },
   ];
   return v;
@@ -124,5 +140,66 @@ describe("remembered model settings", () => {
     expect(edits).toHaveLength(2);
     expect(edits.find((e) => e.model === "s1")?.options.styling).toBe("casual");
     expect(edits.every((e) => e.connectionID === "shared")).toBe(true);
+  });
+});
+
+describe("speech quick settings", () => {
+  it("restores the chosen model's voice, preserves task speed and saves no unrelated draft or credentials", async () => {
+    const bindings = serviceWithStatus(() => CancellablePromise.resolve(idle));
+    bindings.settings.SaveSettings = vi.fn((request) =>
+      CancellablePromise.resolve({ ...configured(), ...request.settings }),
+    );
+    const { editor } = createEditor(bindings);
+    editor.applySettingsSnapshot(configured());
+    editor.draft!.language = "ja";
+    editor.ttsAPIKey = "unsaved-secret";
+    expect(
+      await editor.updateQuickSettings(
+        { textToSpeech: { model: " voice-model " } },
+        "speech-controls",
+      ),
+    ).toBe(true);
+    const request = vi.mocked(bindings.settings.SaveSettings).mock.calls[0][0];
+    expect(request.settings.textToSpeech.model).toBe("voice-model");
+    expect(request.settings.textToSpeech.voice).toBe("voice-a");
+    expect(request.settings.textToSpeech.speed).toBe(settings.textToSpeech.speed);
+    expect(request.settings.language).toBe(settings.language);
+    expect(request.textToSpeechCredentialDraft).toBe("");
+    expect(request.clearTextToSpeechCredential).toBe(false);
+    expect(
+      await editor.updateQuickSettings(
+        { textToSpeech: { voice: "voice-b", speed: 1.25 } },
+        "speech-controls",
+      ),
+    ).toBe(true);
+    expect(editor.applied!.textToSpeech.voice).toBe("voice-b");
+    expect(editor.applied!.textToSpeech.model).toBe("voice-model");
+    expect(editor.applied!.textToSpeech.speed).toBe(1.25);
+  });
+  it("retains the confirmed options after a failed speech save and allows retry", async () => {
+    const bindings = serviceWithStatus(() => CancellablePromise.resolve(idle));
+    bindings.settings.SaveSettings = vi.fn(() =>
+      CancellablePromise.reject(new Error("save failed")),
+    );
+    const { editor } = createEditor(bindings);
+    editor.applySettingsSnapshot(configured());
+    expect(
+      await editor.updateQuickSettings(
+        { textToSpeech: { voice: "replacement" } },
+        "speech-controls",
+      ),
+    ).toBe(false);
+    expect(editor.applied!.textToSpeech.voice).toBe(settings.textToSpeech.voice);
+    expect(editor.isQuickSettingsPending("speech-controls")).toBe(false);
+    bindings.settings.SaveSettings = vi.fn((request) =>
+      CancellablePromise.resolve({ ...configured(), ...request.settings }),
+    );
+    expect(
+      await editor.updateQuickSettings(
+        { textToSpeech: { voice: "replacement" } },
+        "speech-controls",
+      ),
+    ).toBe(true);
+    expect(editor.applied!.textToSpeech.voice).toBe("replacement");
   });
 });

@@ -13,6 +13,9 @@
     result = null,
     busy = false,
     onDiscover,
+    compact = false,
+    disabled = false,
+    onChoose,
   }: {
     id: string;
     value: string;
@@ -20,6 +23,9 @@
     result?: VoicesResult | null;
     busy?: boolean;
     onDiscover: () => void;
+    compact?: boolean;
+    disabled?: boolean;
+    onChoose?: (voice: string) => boolean | Promise<boolean>;
   } = $props();
   let open = $state(false),
     query = $state("");
@@ -60,9 +66,10 @@
         : errors[result.errorKind] ||
           "Voice discovery failed. Check your connection and try again.",
   );
-  function choose(next: string) {
-    if (next) {
-      value = next;
+  async function choose(next: string) {
+    edited = false;
+    if (next && (!onChoose || (await onChoose(next)))) {
+      if (!onChoose) value = next;
       edited = false;
       open = false;
       query = "";
@@ -70,16 +77,22 @@
   }
 </script>
 
-<div class="space-y-2 px-5 py-4">
+<div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
   <div class="flex items-center justify-between gap-3">
     <label for={id} class="text-sm font-medium">Voice</label>
-    {#if supported}<Button variant="ghost" size="sm" disabled={busy} onclick={onDiscover}>
+    {#if supported}<Button
+        variant="ghost"
+        size="sm"
+        disabled={busy || disabled}
+        onclick={onDiscover}
+      >
         <RefreshCwIcon class={busy ? "size-3.5 animate-spin" : "size-3.5"} />{busy
           ? "Loading voices…"
           : "Refresh voices"}
       </Button>{/if}
   </div>
   <Combobox.Root
+    {disabled}
     type="single"
     {value}
     inputValue={open ? query : value}
@@ -88,7 +101,10 @@
     onValueChange={choose}
     onOpenChange={(next) => {
       if (!next) {
-        if (edited) value = query.trim();
+        if (edited) {
+          if (onChoose) void onChoose(query.trim());
+          else value = query.trim();
+        }
         edited = false;
         query = "";
       }
@@ -135,7 +151,7 @@
     <Combobox.Portal
       ><Combobox.Content
         sideOffset={4}
-        class="z-50 max-h-80 w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+        class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
       >
         {#key query}{#each choices as choice (choice.value)}
             <Combobox.Item
@@ -166,7 +182,9 @@
   <p
     id={`${id}-help`}
     role="status"
-    class={`text-xs leading-relaxed ${failure ? "text-warning" : "text-muted-foreground"}`}
+    class={compact && !result
+      ? "sr-only"
+      : `text-xs leading-relaxed ${failure ? "text-warning" : "text-muted-foreground"}`}
   >
     {#if failure}{failure}
     {:else if result}{voices.length}

@@ -18,6 +18,16 @@
   } = $props();
   let preview = $state<VocabularyPreview | null>(null);
   let error = $state("");
+  let input = $state<HTMLTextAreaElement | null>(null);
+  function selectLine(line: number) {
+    if (!input) return;
+    const lines = input.value.split("\n");
+    const start = lines.slice(0, line - 1).reduce((sum, value) => sum + value.length + 1, 0);
+    input.focus();
+    input.setSelectionRange(start, start + (lines[line - 1]?.length ?? 0));
+    const lineHeight = Number.parseFloat(getComputedStyle(input).lineHeight) || 20;
+    input.scrollTop = Math.max(0, (line - 2) * lineHeight);
+  }
   const bytes = $derived(new TextEncoder().encode(settings.vocabulary.terms).length);
   const request = $derived<VocabularyPreviewRequest>({
     vocabulary: { ...settings.vocabulary },
@@ -83,6 +93,8 @@
     guaranteed replacements or cleanup instructions.
   </p>
   <Textarea
+    bind:ref={input}
+    class="field-sizing-fixed h-52 resize-y font-mono text-sm"
     id="vocabulary-terms"
     bind:value={() => settings.vocabulary.terms, (terms) => onChange({ terms })}
     {disabled}
@@ -95,8 +107,48 @@
   <div class="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
     <p>Saved locally. Sent only to the workflows you enable below.</p>
     <p id="vocabulary-size">{bytes.toLocaleString()} / 16,384 bytes</p>
+    <p class="w-full" role="status">
+      {#if preview && bytes <= 16384}{preview.phraseCount} unique {preview.phraseCount === 1
+          ? "phrase"
+          : "phrases"}{preview.duplicateCount
+          ? ` · ${preview.duplicateCount} duplicate ${preview.duplicateCount === 1 ? "line" : "lines"} (sent once)`
+          : ""}{/if}
+    </p>
   </div>
 </div>
+
+{#if preview?.issues?.length}
+  <section
+    class="space-y-2 rounded-xl border border-hairline bg-layer-fill p-5"
+    aria-label="Vocabulary line feedback"
+  >
+    <h3 class="text-sm font-semibold">Review these lines</h3>
+    <p class="text-xs text-muted-foreground">
+      Select a line to edit it. Duplicates are sent once; your list stays unchanged.
+    </p>
+    <ul class="max-h-56 space-y-2 overflow-y-auto overscroll-contain">
+      {#each preview.issues as issue (issue.line)}
+        <li class="rounded-md border border-hairline p-3 text-xs leading-relaxed">
+          <button
+            type="button"
+            class="rounded-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            {disabled}
+            onclick={() => selectLine(issue.line)}>Line {issue.line}</button
+          >
+          {#if issue.duplicateOf}<span class="ml-2 text-muted-foreground"
+              >Duplicate of line {issue.duplicateOf}</span
+            >{/if}
+          {#if issue.voiceProblem}<p class="mt-1 text-warning">
+              Voice{settings.vocabulary.voice ? "" : " (off)"}: {issue.voiceProblem}
+            </p>{/if}
+          {#if issue.filesProblem}<p class="mt-1 text-warning">
+              Audio file{settings.vocabulary.files ? "" : " (off)"}: {issue.filesProblem}
+            </p>{/if}
+        </li>
+      {/each}
+    </ul>
+  </section>
+{/if}
 
 <div class="overflow-hidden rounded-xl border border-hairline bg-layer-fill">
   {#each uses as use (use.key)}

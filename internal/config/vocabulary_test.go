@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -80,5 +81,67 @@ func TestVocabularyLimitsAreVisibleAndNotSilentlyTruncated(t *testing.T) {
 	}
 	if ValidateVocabulary(VocabularySettings{Terms: "private\x00value"}) == nil {
 		t.Fatal("control character accepted")
+	}
+}
+
+func TestVocabularyLineFeedbackMatchesQualifiedAdmission(t *testing.T) {
+	nemo := VocabularySelection{Backend: compatibility.NeMoSpeechV1, ModelProfile: modelprofile.Nemotron35}
+	prompt := VocabularySelection{Backend: compatibility.Generic, ModelProfile: modelprofile.Generic, Context: strings.Repeat("x", 8187)}
+	request := VocabularyPreviewRequest{Vocabulary: VocabularySettings{Terms: "  One \r\n\nOne\n" + strings.Repeat("語", 43), Boost: 3}, Voice: nemo, Files: prompt}
+	result := InspectVocabulary(request)
+	if result.PhraseCount != 2 || result.DuplicateCount != 1 || len(result.Issues) != 2 {
+		t.Fatalf("unexpected accounting: %+v", result)
+	}
+	if result.Issues[0].Line != 3 || result.Issues[0].DuplicateOf != 1 {
+		t.Fatal("duplicate source lines were lost")
+	}
+	issue := result.Issues[1]
+	if issue.Line != 4 || !strings.Contains(issue.VoiceProblem, "129 bytes") || issue.FilesProblem == "" {
+		t.Fatalf("missing per-use UTF-8 feedback: %+v", issue)
+	}
+	if result.Voice.Problem == "" || result.Files.Problem == "" {
+		t.Fatal("line feedback disagrees with admission")
+	}
+	request.Files.Realtime = true
+	request.Files.ModelProfile = modelprofile.Qwen3ASR
+	request.Files.Backend = compatibility.VLLM
+	if got := InspectVocabulary(request); got.Issues[1].FilesProblem != "" {
+		t.Fatal("unsupported workflow received line restrictions")
+	}
+}
+
+func TestVocabularyCountAndBudgetIdentifyFirstExcessLine(t *testing.T) {
+	for _, mode := range []string{"count", "total"} {
+		t.Run(mode, func(t *testing.T) {
+			lines := []string{}
+			count := 33
+			if mode == "total" {
+				count = 17
+			}
+			for i := 1; i <= count; i++ {
+				line := fmt.Sprintf("phrase-%02d", i)
+				if mode == "total" {
+					line += strings.Repeat("x", 120-len(line))
+				}
+				lines = append(lines, line)
+			}
+			request := VocabularyPreviewRequest{Vocabulary: VocabularySettings{Terms: strings.Join(lines, "\n"), Boost: 3}, Voice: VocabularySelection{Backend: compatibility.NeMoSpeechV1, ModelProfile: modelprofile.Nemotron35}}
+			result := InspectVocabulary(request)
+			if len(result.Issues) != 1 || result.Issues[0].Line != count || result.Voice.Problem == "" {
+				t.Fatalf("incorrect first excess line: %+v", result)
+			}
+			request.Vocabulary.Terms = strings.Join(lines[:count-1], "\n")
+			result = InspectVocabulary(request)
+			if len(result.Issues) != 0 || result.Voice.Problem != "" {
+				t.Fatalf("valid boundary rejected: %+v", result)
+			}
+		})
+	}
+}
+
+func TestVocabularyOversizeDraftHasBoundedFeedback(t *testing.T) {
+	result := InspectVocabulary(VocabularyPreviewRequest{Vocabulary: VocabularySettings{Terms: strings.Repeat("x\n", 16384)}})
+	if len(result.Issues) != 0 || result.PhraseCount != 0 {
+		t.Fatal("oversize draft was expanded into line feedback")
 	}
 }

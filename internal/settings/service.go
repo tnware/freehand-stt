@@ -389,7 +389,7 @@ func (s *Service) GetPostProcessingProfiles() []postprocess.ProfileDescriptor {
 
 // PreviewVocabulary evaluates a bounded renderer draft without saving or inference.
 func (s *Service) PreviewVocabulary(request config.VocabularyPreviewRequest) config.VocabularyPreview {
-	return config.VocabularyPreview{Voice: config.PreviewVocabulary(request.Vocabulary, request.Voice), Files: config.PreviewVocabulary(request.Vocabulary, request.Files)}
+	return config.InspectVocabulary(request)
 }
 
 // SaveSettings atomically applies one complete settings and credential change

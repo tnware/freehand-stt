@@ -851,13 +851,29 @@ in model rows are not restored over the current task.
 
 Following [ADR 0010](../../decisions/0010-shared-vocabulary/), `config.VocabularySettings` owns task-level terminology and Voice/file opt-ins. `modelprofile.VocabularyMode` resolves qualified hint fields; the renderer preview and request projection share Go validation. `settings.captureProfile` projects only into immutable workflow snapshots. Completed NeMo speech contexts use request-only transcription fields, excluded from JSON/model preferences. SQLite migration 00010 and sqlc queries persist the shared settings in the existing transaction. Historical model terms cannot replace the shared list on selection.
 
-
 ## File and speech workspace presentation
 
 `HomeScreen` gives the speech composer the same flexible content area as transcript
-results. `SpeechQuickSettings` places the existing connection selection and native
-model/voice settings navigation in its header. `TextToSpeech` owns the draft editor
+results. `SpeechQuickSettings` places connection selection and shared
+`SpeechModelControls` in its header. The full Speech settings section uses the
+same model/voice pickers and speed control. Quick saves use the editor’s serialized
+queue from its confirmed snapshot; full settings keep draft/save semantics.
+Voice discovery distinguishes applied quick settings from the full-page draft
+and rejects stale results. Model changes restore remembered voice/profile options
+while preserving task-owned speed. Speed commits on release rather than saving
+every intermediate slider value. `TextToSpeech` owns the draft editor
 and reserves a fixed playback area; `PlaybackBar` supports embedding in that area.
 Audio-file transport keeps its summary, response-mode option, and actions in stable
 slots. These components consume existing backend status and capability flags;
 window geometry and visual transitions do not alter inference or persistence.
+
+`config.InspectVocabulary` supplies bounded, text-free line diagnostics alongside
+existing admission results: source line numbers, duplicate references, and per-use
+restriction messages. Counts use the same trimming and exact deduplication as
+request projection. The UI selects the corresponding local textarea range; it
+neither normalizes stored vocabulary nor invents adapter restrictions.
+
+The `followTranscript` DOM action owns only result scrolling. New recording keys
+reset following; scrolling away from the end pauses it until the reader returns
+or chooses Jump to latest. Final text replacement preserves paused reading, and
+teardown disconnects its resize observer, scroll listener, and scheduled frame.
