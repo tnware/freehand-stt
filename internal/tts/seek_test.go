@@ -14,12 +14,12 @@ type seekPlayer struct {
 	seekErr, playErr error
 }
 
-func (p *seekPlayer) Seek(position int64) error {
+func (p *seekPlayer) SeekTo(position int64) error {
 	p.seeks++
 	if p.seekErr != nil {
 		return p.seekErr
 	}
-	return p.playerFake.Seek(position)
+	return p.playerFake.SeekTo(position)
 }
 func (p *seekPlayer) Play() error {
 	if p.playErr != nil {
@@ -124,7 +124,7 @@ func TestSeekFailuresKeepRetainedAudioRecoverable(t *testing.T) {
 	}
 }
 func TestSeekCannotResumeAfterShutdownDuringNativeStop(t *testing.T) {
-	player := newPlayerGate("Seek")
+	player := newPlayerGate("SeekTo")
 	service, _ := testSpeechService(t, player)
 	service.generation = 1
 	service.status = Status{Generation: 1, Phase: Playing, CanSeek: true, DurationMilliseconds: 1000}

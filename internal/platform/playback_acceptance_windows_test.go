@@ -28,7 +28,7 @@ func TestNativePlaybackSeek(t *testing.T) {
 		t.Fatal(err)
 	}
 	time.Sleep(100 * time.Millisecond)
-	if err := player.Seek(1250); err != nil {
+	if err := player.SeekTo(1250); err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(100 * time.Millisecond)
@@ -42,7 +42,7 @@ func TestNativePlaybackSeek(t *testing.T) {
 	if position, _, _ := player.Position(); position <= 1250 {
 		t.Fatalf("resumed output clock did not advance: %d", position)
 	}
-	if err := player.Seek(1800); err != nil {
+	if err := player.SeekTo(1800); err != nil {
 		t.Fatal(err)
 	}
 	if err := player.Play(); err != nil {
@@ -65,7 +65,7 @@ func TestNativePlaybackSeek(t *testing.T) {
 	if err := player.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := player.Seek(0); err == nil {
+	if err := player.SeekTo(0); err == nil {
 		t.Fatal("closed output accepted seek")
 	}
 }

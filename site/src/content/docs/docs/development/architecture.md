@@ -934,7 +934,8 @@ including the exact audio endpoint, before rendering so slider normalization can
 start a false drag. The full-width track sits below the playback controls. The generated
 `tts.SeekRequest` carries the retained session generation and position. Go validates
 the generation, capability, and bounds before the Windows adapter stops output
-and aligns the PCM cursor to a whole frame. The service preserves playback intent,
+and aligns the PCM cursor to a whole frame through `Player.SeekTo(milliseconds)`.
+This audio-position method is distinct from the standard `io.Seeker` file-offset contract. The service preserves playback intent,
 rechecks cancellation before resuming, and replaces the progress monitor under
 the same control lock used by recording preemption and shutdown. Seeking retains
 the audio generation identity and full export snapshot; replacement audio invalidates

@@ -68,8 +68,8 @@ type Player interface {
 	Pause() error
 	// Rewind stops and resets the retained session without starting playback.
 	Rewind() error
-	// Seek stops and positions retained PCM without starting playback.
-	Seek(int64) error
+	// SeekTo stops and positions retained PCM without starting playback.
+	SeekTo(int64) error
 	Position() (int64, int64, bool)
 	OutputName() string
 	Snapshot() ([]byte, error)

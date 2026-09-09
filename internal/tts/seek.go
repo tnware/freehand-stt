@@ -32,7 +32,7 @@ func (s *Service) Seek(request SeekRequest) (Status, error) {
 	if request.PositionMilliseconds < 0 || request.PositionMilliseconds > previous.DurationMilliseconds {
 		return Status{}, errors.New("seek position is outside the generated audio")
 	}
-	if err := s.player.Seek(request.PositionMilliseconds); err != nil {
+	if err := s.player.SeekTo(request.PositionMilliseconds); err != nil {
 		return Status{}, errors.New("speech playback could not seek to this position")
 	}
 	// Native Stop may block. Never restart the device after shutdown cancelled it.

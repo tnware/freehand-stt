@@ -148,9 +148,9 @@ func (p *Playback) Rewind() error {
 	return nil
 }
 
-// Seek moves to a whole PCM frame and leaves the device stopped. Only the
+// SeekTo moves to a whole PCM frame and leaves the device stopped. Only the
 // service may resume it after rechecking lifecycle and operation cancellation.
-func (p *Playback) Seek(milliseconds int64) error {
+func (p *Playback) SeekTo(milliseconds int64) error {
 	p.mu.Lock()
 	dev := p.dev
 	frameBytes := int64(p.channels) * 2

@@ -63,7 +63,7 @@ func TestPlaybackSeekAlignsPCMAndRetainsFullExport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := player.Seek(123); err != nil {
+	if err := player.SeekTo(123); err != nil {
 		t.Fatal(err)
 	}
 	wantFrame := 123 * 44100 / 1000
@@ -79,14 +79,14 @@ func TestPlaybackSeekAlignsPCMAndRetainsFullExport(t *testing.T) {
 	if !bytes.Equal(before, after) {
 		t.Fatal("seek changed retained export")
 	}
-	if err := player.Seek(2000); err != nil || player.position != len(pcm) {
+	if err := player.SeekTo(2000); err != nil || player.position != len(pcm) {
 		t.Fatal("end seek did not reach the last frame")
 	}
 	if _, _, done := player.Position(); done {
 		t.Fatal("paused seek claimed an audible drain")
 	}
 	for _, invalid := range []int64{-1, 2001, 1 << 62} {
-		if err := player.Seek(invalid); err == nil {
+		if err := player.SeekTo(invalid); err == nil {
 			t.Fatal("invalid native seek accepted")
 		}
 	}
