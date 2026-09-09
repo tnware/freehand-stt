@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import { followTranscript } from "$lib/utils/transcriptScroll";
   import { onDestroy, type Snippet } from "svelte";
   import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
@@ -104,31 +105,24 @@
               "Freehand kept this result because it could not insert it. Copy it when you’re ready."}
           </p>
         {/if}
-        {#if live}
+        {#if live || text}
           <div class="mx-auto w-full max-w-[76ch] p-4">
-            <p class="mb-3 text-xs text-muted-foreground" role="status">
-              Live preview · text may change
-            </p>
-            <div
+            {#if live}
+              <p class="mb-3 text-xs text-muted-foreground" role="status">
+                Live preview · text may change
+              </p>
+            {/if}
+            <TranscriptText
+              content={{
+                key: resultKey,
+                text: live ? liveFinal : text,
+                partial: live
+                  ? `${liveFinal && livePartial ? " " : ""}${livePartial || (!liveFinal ? "Listening…" : "")}`
+                  : undefined,
+              }}
+              label={live ? "Live transcript" : "Current transcript"}
               class="whitespace-pre-wrap break-words text-sm leading-7"
-              aria-label="Live transcript"
-            >
-              {liveFinal}<span class="text-muted-foreground"
-                >{liveFinal && livePartial ? " " : ""}{livePartial ||
-                  (!liveFinal ? "Listening…" : "")}</span
-              >
-            </div>
-          </div>
-        {:else if text}
-          <div
-            class="mx-auto w-full max-w-[76ch] whitespace-pre-wrap break-words p-4 text-sm leading-7"
-            tabindex="0"
-            role="textbox"
-            aria-readonly="true"
-            aria-multiline="true"
-            aria-label="Current transcript"
-          >
-            {text}
+            />
           </div>
         {:else if !message}
           <div class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-4 text-center">

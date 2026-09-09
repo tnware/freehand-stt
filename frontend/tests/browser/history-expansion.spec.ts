@@ -43,7 +43,7 @@ for (const width of [560, 1156]) {
     const headers = page.locator(".history-disclosure");
     await expect(headers.first()).toHaveAttribute("aria-expanded", "true");
     await expect(headers.nth(1)).toHaveAttribute("aria-expanded", "false");
-    const fullText = rows.first().locator('[id$="-content"] > p');
+    const fullText = rows.first().getByRole("textbox");
     await expect(fullText).toContainText("The final paragraph is visible too");
     expect(await fullText.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(
       true,
@@ -95,7 +95,7 @@ test("an unretained file result is fully readable above collapsed history", asyn
   await page.getByRole("button", { name: "Show file result", exact: true }).click();
   const result = page.getByRole("article", { name: "Audio file transcript result", exact: true });
   await expect(result).toBeVisible();
-  const text = result.locator(":scope > p");
+  const text = result.getByRole("textbox", { name: "Audio file transcript", exact: true });
   await expect(text).toContainText("The final paragraph is visible too");
   expect(await text.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true);
   for (const header of await page.locator(".history-disclosure").all()) {

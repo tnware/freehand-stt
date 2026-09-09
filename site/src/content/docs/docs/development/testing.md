@@ -717,6 +717,16 @@ popover, nested connection menu, Escape focus return, draft retention across tab
 and visible keyboard focus in both themes. The application Settings button must
 remain on screen when the shortcut hint is hidden at compact widths.
 
+### Transcript selection and keyboard reading
+
+`transcript-reader.spec.ts` exercises scoped Ctrl+A, a native Ctrl+C event for a
+partial selection, Page Up/Down and Home/End scrolling, and selection preservation
+through streaming and finalization at 560px and 1156px. Copy events are intercepted
+only in the fixture to avoid replacing the tester's system clipboard. History
+checks cover deferred cleanup updates and independent raw/cleaned selection.
+New recordings clear old selections. Native review should confirm copying a
+selected excerpt into another application, including Unicode text.
+
 ### Speech seeking and composer shortcut
 
 Speech composer fixtures verify editing during generation, playback, and pause,

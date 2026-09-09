@@ -1,4 +1,5 @@
 <script lang="ts">
+  import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import ArrowLeftRightIcon from "@lucide/svelte/icons/arrow-left-right";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
@@ -55,6 +56,7 @@
     maxHeight?: string;
     /** Ephemeral presentation of an active file run; retained history remains owned by Go. */
     live?: {
+      generation: number;
       text: string;
       fileName: string;
       status: string;
@@ -265,17 +267,17 @@
             </span>
           </div>
 
-          <p
-            class="mt-2.5 min-h-5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
-          >
-            {#if live.text}
-              {live.text}
-            {:else}
-              <span class="text-muted-foreground">
-                Transcript text will appear here as it arrives.
-              </span>
-            {/if}
-          </p>
+          {#if live.text}
+            <TranscriptText
+              content={{ key: `file:${live.generation}`, text: live.text }}
+              label="Audio file transcript"
+              class="mt-2.5 min-h-5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+            />
+          {:else}
+            <p class="mt-2.5 min-h-5 text-sm leading-7 text-muted-foreground">
+              Transcript text will appear here as it arrives.
+            </p>
+          {/if}
 
           <div
             class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
@@ -428,15 +430,15 @@
                         {/if}
                       </TooltipButton>
                     </div>
-                    <p
+                    <TranscriptText
+                      content={{
+                        key: `${entry.id}:raw`,
+                        text: entry.rawText,
+                        parts: comparison.raw,
+                      }}
+                      label="Raw transcript text"
                       class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
-                    >
-                      {#each comparison.raw as part, index (index)}
-                        <span class={cn(part.kind === "removed" && "diff-removed")}
-                          >{part.text}</span
-                        >
-                      {/each}
-                    </p>
+                    />
                   </section>
 
                   <section
@@ -469,21 +471,23 @@
                         {/if}
                       </TooltipButton>
                     </div>
-                    <p
+                    <TranscriptText
+                      content={{
+                        key: `${entry.id}:processed`,
+                        text: processedText,
+                        parts: comparison.processed,
+                      }}
+                      label="Cleaned transcript text"
                       class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
-                    >
-                      {#each comparison.processed as part, index (index)}
-                        <span class={cn(part.kind === "added" && "diff-added")}>{part.text}</span>
-                      {/each}
-                    </p>
+                    />
                   </section>
                 </div>
               {:else}
-                <p
+                <TranscriptText
+                  content={{ key: String(entry.id), text: entry.text }}
+                  label={`Transcript from ${completedDateTime(entry.completedAt)}`}
                   class="mt-2.5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
-                >
-                  {entry.text}
-                </p>
+                />
               {/if}
             {:else}
               <button
@@ -627,25 +631,6 @@
   }
   .history-disclosure:hover .disclosure-affordance {
     color: var(--foreground);
-  }
-  .diff-removed,
-  .diff-added {
-    border-radius: 0.2rem;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-  }
-  .diff-removed {
-    background-color: color-mix(in srgb, var(--destructive) 14%, transparent);
-    color: var(--destructive);
-    text-decoration: line-through;
-    text-decoration-thickness: 1px;
-  }
-  .diff-added {
-    background-color: color-mix(in srgb, var(--success) 17%, transparent);
-    text-decoration: underline;
-    text-decoration-color: color-mix(in srgb, var(--success) 55%, transparent);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 0.14em;
   }
   /* At the default 1080 px window the history column has enough room for two
      readable transcript columns. Narrow layouts keep the vertical flow. */

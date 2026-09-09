@@ -951,8 +951,18 @@ disables stale line selection, and ignores completions for superseded drafts.
 A local retry repeats only the Go preview; it neither saves settings nor invokes
 inference.
 
+`TranscriptText` supplies shared read-only textbox semantics for current results,
+expanded history, and raw/cleaned comparisons. Its `transcriptReader` action owns
+plain-text DOM nodes, scoped Select All, and keyboard scrolling of the nearest
+scrollable ancestor. Native copy operates on the browser selection; it does not
+call the whole-transcript copy binding. While a nonempty selection intersects the
+text, the action keeps the displayed snapshot and only the latest pending update.
+Selection clearing flushes that update; a changed recording/entry key resets the
+selection. Stable result markup preserves the snapshot across live finalization.
+No HTML is parsed, and teardown removes the document selection listener.
+
 The `followTranscript` DOM action owns only result scrolling. New recording keys
-reset following; scrolling away from the end pauses it until the reader returns
+reset following; an active selection suspends following, and scrolling away from the end pauses it until the reader returns
 or chooses Jump to latest. Final text replacement preserves paused reading, and
 teardown disconnects its resize observer, scroll listener, and scheduled frame.
 The conditional Jump to latest row occupies normal layout space outside the

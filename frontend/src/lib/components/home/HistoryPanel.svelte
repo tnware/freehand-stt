@@ -113,6 +113,7 @@
     }
     const text = fileStatus.transcript ?? "";
     return {
+      generation: fileStatus.generation,
       text,
       fileName: fileStatus.fileName ?? "Audio file",
       status,
