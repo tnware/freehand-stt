@@ -7,6 +7,51 @@ import { SpeechState } from "./speech.svelte";
 
 const bindings = () => serviceWithStatus(() => CancellablePromise.resolve(idle)).speech;
 
+it.each(["saved", "cancelled", "failed"])(
+  "guards saving until a %s outcome without blocking playback",
+  async (outcome) => {
+    const pending = CancellablePromise.withResolvers<boolean>();
+    const SaveAudio = vi.fn(() => pending.promise);
+    const Pause = vi.fn(() => CancellablePromise.resolve());
+    const messages = new SessionMessages();
+    const speech = new SpeechState({ ...bindings(), SaveAudio, Pause }, messages);
+    try {
+      const saving = speech.saveTTSAudio();
+      expect(speech.saving).toBe(true);
+      messages.reportInfo("An unrelated action notice");
+      await speech.saveTTSAudio();
+      expect(SaveAudio).toHaveBeenCalledTimes(1);
+      expect(messages.info).toBe("An unrelated action notice");
+      await speech.pauseTTS();
+      expect(Pause).toHaveBeenCalledTimes(1);
+      // The save guard belongs to the dialog/write, not the visible playback generation.
+      speech.applyStatus({
+        ...speech.status,
+        generation: 2,
+        phase: TTSPhase.Completed,
+        canSave: true,
+      });
+      await speech.saveTTSAudio();
+      expect(SaveAudio).toHaveBeenCalledTimes(1);
+      if (outcome === "failed") pending.reject(new Error("Audio could not be saved"));
+      else pending.resolve(outcome === "saved");
+      await saving;
+      expect(speech.saving).toBe(false);
+      expect(messages.notice).toBe(
+        outcome === "saved" ? "Generated speech saved as a WAV file." : "",
+      );
+      expect(messages.error).toBe(outcome === "failed" ? "Audio could not be saved" : "");
+      SaveAudio.mockImplementation(() => CancellablePromise.resolve(false));
+      await speech.saveTTSAudio();
+      expect(SaveAudio).toHaveBeenCalledTimes(2);
+      expect(speech.saving).toBe(false);
+      expect(messages.error).toBe("");
+    } finally {
+      messages.dispose();
+    }
+  },
+);
+
 it("admits only one Listen request across result and history controls and recovers after rejection", async () => {
   const pending = CancellablePromise.withResolvers<void>();
   const PlayVoiceTranscript = vi.fn(() => pending.promise);

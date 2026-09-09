@@ -218,6 +218,7 @@
         onRestart={() => session.speech.restartTTS()}
         onSeek={(request) => session.speech.seekTTS(request)}
         seeking={session.speech.seeking}
+        saving={session.speech.saving}
         onStop={() => session.speech.stopTTS()}
         onSave={() => session.speech.saveTTSAudio()}
         onClear={() => session.speech.clearTTSAudio()}
@@ -237,6 +238,7 @@
         onRestart={() => session.speech.restartTTS()}
         onSeek={(request) => session.speech.seekTTS(request)}
         seeking={session.speech.seeking}
+        saving={session.speech.saving}
         onStop={() => session.speech.stopTTS()}
         onSave={() => session.speech.saveTTSAudio()}
         onClear={() => session.speech.clearTTSAudio()}
@@ -460,6 +462,7 @@
                 onRestartTTS={() => session.speech.restartTTS()}
                 onSeekTTS={(request) => session.speech.seekTTS(request)}
                 seeking={session.speech.seeking}
+                saving={session.speech.saving}
                 onStopTTS={() => session.speech.stopTTS()}
                 onSaveTTS={() => session.speech.saveTTSAudio()}
                 onClearTTS={() => session.speech.clearTTSAudio()}

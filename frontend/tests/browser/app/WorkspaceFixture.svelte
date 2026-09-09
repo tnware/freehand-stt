@@ -31,6 +31,8 @@
   const listenScenario = new URLSearchParams(location.search).has("listen-pending");
   let listenRequests = $state(0);
   let finishListen: ((success: boolean) => void) | undefined;
+  const saveScenario = new URLSearchParams(location.search).has("save-pending");
+  let finishAudioSave: ((outcome: "saved" | "cancelled" | "failed") => void) | undefined;
   const playbackScenario = new URLSearchParams(location.search).has("playback");
   const fileStreamingScenario = new URLSearchParams(location.search).has("file-streaming");
   const fileActionsScenario = new URLSearchParams(location.search).has("file-actions");
@@ -47,7 +49,7 @@
   const feedbackScenario = new URLSearchParams(location.search).has("feedback");
   let speechRequests = $state(0);
   let submittedSpeechText = $state("");
-  let audioSaves = 0;
+  let audioSaves = $state(0);
   let current = structuredClone(settings);
   current.setupCompleted = true;
   current.historyEnabled = new URLSearchParams(location.search).get("history") !== "off";
@@ -312,6 +314,15 @@
         },
         SaveAudio: () => {
           audioSaves++;
+          if (saveScenario) {
+            const pending = CancellablePromise.withResolvers<boolean>();
+            finishAudioSave = (outcome) => {
+              finishAudioSave = undefined;
+              if (outcome === "failed") pending.reject(new Error("Audio could not be saved"));
+              else pending.resolve(outcome === "saved");
+            };
+            return pending.promise;
+          }
           return feedbackScenario && audioSaves === 1
             ? CancellablePromise.reject(
                 new Error(
@@ -621,6 +632,12 @@
           >
           <span role="status">Speech requests: {speechRequests}; seek requests: {seekCalls}</span>
           <span class="sr-only" aria-label="Submitted speech text">{submittedSpeechText}</span>
+          {#if saveScenario}
+            <button onclick={() => finishAudioSave?.("saved")}>Complete save</button>
+            <button onclick={() => finishAudioSave?.("cancelled")}>Cancel save</button>
+            <button onclick={() => finishAudioSave?.("failed")}>Fail save</button>
+            <span>Save requests: {audioSaves}</span>
+          {/if}
         </div>
       {:else if historyExpansion}
         <div class="flex gap-3">

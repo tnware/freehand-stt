@@ -45,6 +45,7 @@ export class SpeechState {
   previewing = $state(false);
   submitting = $state(false);
   seeking = $state(false);
+  saving = $state(false);
   listening = $state<Pick<TTSStatus, "source" | "historyID"> | null>(null);
   get canListen() {
     return (
@@ -188,6 +189,8 @@ export class SpeechState {
   }
 
   async saveTTSAudio() {
+    if (this.saving) return;
+    this.saving = true;
     this.#messages.clear();
     try {
       if (await this.#service.SaveAudio()) {
@@ -195,6 +198,8 @@ export class SpeechState {
       }
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.saving = false;
     }
   }
 

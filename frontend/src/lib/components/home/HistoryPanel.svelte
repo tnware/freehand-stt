@@ -37,6 +37,7 @@
     onRestartTTS,
     onSeekTTS,
     seeking = false,
+    saving = false,
     onStopTTS,
     onSaveTTS,
     onClearTTS,
@@ -64,6 +65,7 @@
     onRestartTTS: () => void;
     onSeekTTS?: (request: SeekRequest) => Promise<void>;
     seeking?: boolean;
+    saving?: boolean;
     onStopTTS: () => void;
     onSaveTTS: () => void;
     onClearTTS: () => void;
@@ -214,6 +216,7 @@
           onRestart={onRestartTTS}
           onSeek={onSeekTTS}
           {seeking}
+          {saving}
           onStop={onStopTTS}
           onSave={onSaveTTS}
           onClear={onClearTTS}

@@ -26,6 +26,7 @@
     embedded = false,
     onSeek,
     seeking = false,
+    saving = false,
     status,
     onPause,
     onResume,
@@ -38,6 +39,7 @@
     embedded?: boolean;
     onSeek?: (request: SeekRequest) => Promise<void>;
     seeking?: boolean;
+    saving?: boolean;
     status: TTSStatus;
     onPause: () => void;
     onResume: () => void;
@@ -113,6 +115,7 @@
   class:border={!embedded}
   aria-label="Speech playback"
 >
+  <span class="sr-only" role="status">{saving ? "Saving generated speech" : ""}</span>
   {#if !embedded}
     <div class="flex h-7 items-center gap-2" title={`${label} - ${phaseLabel}`}>
       <span class="sr-only" role="status">{label} - {phaseLabel}</span>
@@ -163,19 +166,24 @@
           ><SquareIcon /></TooltipButton
         >
       {/if}
-      {#if status.canRestart || status.canSave || (status.canClear && !status.canStop)}
+      {#if status.canRestart || status.canSave || saving || (status.canClear && !status.canStop)}
         <Menu.Root>
           <Menu.Trigger
             aria-label="Playback actions"
+            aria-busy={saving}
             class={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-            ><EllipsisIcon /></Menu.Trigger
+            >{#if saving}<LoaderCircleIcon
+                class="animate-spin motion-reduce:animate-none"
+              />{:else}<EllipsisIcon />{/if}</Menu.Trigger
           >
           <Menu.Content align="end" class="w-60 max-w-[calc(100vw-24px)]">
             {#if status.canRestart}<Menu.Item onclick={onRestart}
                 ><RotateCcwIcon />Restart speech playback</Menu.Item
               >{/if}
-            {#if status.canSave}<Menu.Item onclick={onSave}
-                ><DownloadIcon />Save generated speech</Menu.Item
+            {#if status.canSave || saving}<Menu.Item disabled={saving} onSelect={onSave}
+                >{#if saving}<LoaderCircleIcon
+                    class="animate-spin motion-reduce:animate-none"
+                  />Saving generated speech{:else}<DownloadIcon />Save generated speech{/if}</Menu.Item
               >{/if}
             {#if status.canClear && !status.canStop}
               {#if status.canRestart || status.canSave}<Menu.Separator />{/if}
@@ -242,12 +250,17 @@
             label="Restart speech playback"
             onclick={onRestart}><RotateCcwIcon /></TooltipButton
           >{/if}
-        {#if status.canSave}
+        {#if status.canSave || saving}
           <TooltipButton
             variant="ghost"
             size="icon-sm"
-            label="Save generated speech"
-            onclick={onSave}><DownloadIcon /></TooltipButton
+            label={saving ? "Saving generated speech" : "Save generated speech"}
+            disabled={saving}
+            aria-busy={saving}
+            onclick={onSave}
+            >{#if saving}<LoaderCircleIcon
+                class="animate-spin motion-reduce:animate-none"
+              />{:else}<DownloadIcon />{/if}</TooltipButton
           >
         {/if}
         {#if status.canStop}

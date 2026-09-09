@@ -313,6 +313,12 @@ Transcript playback uses a single compact row with play/pause, the seek track,
 elapsed time, and Stop. Open **Playback actions** for Restart or Save, or to clear
 completed audio from memory. Completed audio also has a direct replay button.
 
+Save shows a spinner while you choose a location and the audio is written. In
+compact playback, the spinner appears on **Playback actions**. Save stays disabled
+until that operation finishes; pause, resume, and seeking remain available.
+Cancelling the dialog quietly restores Save. A failed save shows an error and
+lets you try again.
+
 Drag the playback slider to choose a position; playback moves there when you release it.
 With the slider focused, use the arrow keys to adjust the position, **Home** for the
 start, or **End** for the end. Seeking during playback continues playing. Seeking

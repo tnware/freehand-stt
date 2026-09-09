@@ -20,6 +20,7 @@
     unavailable = false,
     submitting = false,
     seeking = false,
+    saving = false,
     onSeek,
     onSpeak,
     onPause,
@@ -37,6 +38,7 @@
     unavailable?: boolean;
     submitting?: boolean;
     seeking?: boolean;
+    saving?: boolean;
     onSeek?: (request: SeekRequest) => Promise<void>;
     onSpeak: (text: string) => void;
     onPause: () => void;
@@ -201,6 +203,7 @@
         {onRestart}
         {onSeek}
         {seeking}
+        {saving}
         {onStop}
         {onSave}
         {onClear}

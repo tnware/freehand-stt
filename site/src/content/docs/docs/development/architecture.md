@@ -400,6 +400,11 @@ command facade or a container for feature state.
   pause still allow an explicit replacement after generation completes. Go owns
   synthesis cancellation and audio replacement. The generated speech and dictation `CurrentStatus` methods remain
   in separate service namespaces.
+  Its save-pending state spans the complete SaveAudio binding, including the native
+  dialog and file write, and is shared by compact and embedded playback controls.
+  Duplicate renderer requests return before clearing feedback. Success, cancellation,
+  and rejection release that guard without blocking playback. Go retains its atomic
+  save-dialog guard, generation validation, PCM snapshot, and file-write ownership.
 - `HistoryState` owns history refresh/mutation ordering. Successful refresh
   acknowledges the completed file generation through an injected callback.
   `HistoryList` owns only local disclosure/comparison state: the leading result

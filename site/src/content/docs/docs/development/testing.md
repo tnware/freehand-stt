@@ -736,6 +736,17 @@ after generation. Speech store tests exercise cross-source admission, release
 after rejection, and continued replacement from playing/paused/completed states.
 All requests are synthetic; these tests do not invoke inference.
 
+### Saving generated audio
+
+`save-audio-pending.spec.ts` holds a synthetic SaveAudio response open in compact
+and embedded playback at 560px and 1000px. It verifies visible pending feedback,
+duplicate-click suppression, stable player height, usable pause/resume/seek,
+and recovery after cancellation, failure, and success. Store tests additionally
+keep the guard across playback-generation changes and verify duplicate requests
+do not clear other feedback. These fixtures do not open a native save dialog or
+write audio. Native review should confirm cancellation and retry with the Windows
+dialog and a chosen WAV destination.
+
 ### Speech seeking and composer shortcut
 
 Speech composer fixtures verify editing during generation, playback, and pause,
