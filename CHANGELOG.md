@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.0-alpha.5](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.4...v0.1.0-alpha.5) (2026-09-09)
+
+
+### Features
+
+* add speech model profiles and Qwen3-TTS support ([#49](https://github.com/tnware/freehand-stt/issues/49)) ([7cdd139](https://github.com/tnware/freehand-stt/commit/7cdd1393c58a51ab65abfff03bab8e74c1494acd))
+
+
+### Bug Fixes
+
+* polish speech playback and transcript interactions ([#52](https://github.com/tnware/freehand-stt/issues/52)) ([117af71](https://github.com/tnware/freehand-stt/commit/117af711b64af20ccceee6b9580ab08a05738cef))
+* streamline connection setup, settings, and transcript workflows ([#51](https://github.com/tnware/freehand-stt/issues/51)) ([ce05300](https://github.com/tnware/freehand-stt/commit/ce0530014b5449f0fa4299ae5b6c50210a306887))
+
 ## [0.1.0-alpha.4](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.3...v0.1.0-alpha.4) (2026-09-08)
 
 
