@@ -47,7 +47,8 @@
   } = $props();
 
   const fileWorking = $derived(
-    session.files.status.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
+    session.files.starting ||
+      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
       session.files.status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
       session.files.status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
       session.files.status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
@@ -186,6 +187,9 @@
             <AudioFileTranscription
               status={session.files.status}
               choosing={session.files.choosing}
+              starting={session.files.starting}
+              cancelling={session.files.cancelling}
+              clearing={session.files.clearing}
               streamingEnabled={session.files.streamingEnabled}
               resettingStreaming={session.files.resettingStreaming}
               onStreamingChange={(enabled) => (session.files.streamingPreferred = enabled)}

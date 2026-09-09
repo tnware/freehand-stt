@@ -692,6 +692,19 @@ reset admission. `file-streaming.spec.ts` checks tab remounts, simulated connect
 capabilities, completed-only profiles, and **Try streaming** enabling the next
 explicit request without uploading automatically. Native endpoint support remains
 owned by the existing Go capability checks; these renderer fixtures invoke no models.
+Deferred-command tests cover duplicate/conflicting file actions, failure recovery,
+cancellation while the Start reply is pending, and older/same/newer-generation picker
+replies. The file browser fixture also delays Start to check immediate **Starting…**
+feedback, disabled conflicting controls, restored controls after rejection, and
+transition to the backend-owned Cancel action after admission.
+
+Capture-clock tests cover missing/invalid/Go-zero start times, generation changes,
+and freezing the last take across transcription, cleanup, and failure.
+`capture-reading.spec.ts` reproduces the recording-to-transcribing zero-time
+transition at compact width and verifies no growth during processing. Its short
+viewport cases assert that Jump to latest sits outside the transcript scroll area,
+preserves reading position during updates/finalization, and still scrolls to the
+end when activated.
 
 Check Audio file and Text to speech at normal and compact desktop sizes, including
 1156×760 and 650×550. Use synthetic renderer fixtures for selected, busy, completed,

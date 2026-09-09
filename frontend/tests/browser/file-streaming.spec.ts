@@ -50,3 +50,25 @@ test("an unsupported connection submits completed mode without losing the prefer
   await page.getByRole("button", { name: "Streaming supported", exact: true }).click();
   await expect(page.locator("#file-stream-toggle")).toBeChecked();
 });
+
+test("file start responds immediately, blocks conflicting actions, and recovers after rejection", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?view=workspace&theme=dark&file-streaming&file-actions");
+  await page.getByRole("tab", { name: "Audio file", exact: true }).click();
+  await page.getByRole("button", { name: "Streaming supported", exact: true }).click();
+  await page.getByRole("button", { name: "Transcribe", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Starting…", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Change audio file", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Clear selected audio file", exact: true }),
+  ).toBeDisabled();
+  await expect(page.locator("#file-stream-toggle")).toBeDisabled();
+  await page.getByRole("button", { name: "Reject file start", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Transcribe", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Change audio file", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Transcribe", exact: true }).click();
+  await page.getByRole("button", { name: "Admit file start", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeEnabled();
+  await expect(page.getByText("File requests: 2; streaming: true", { exact: true })).toBeVisible();
+});

@@ -387,6 +387,11 @@ command facade or a container for feature state.
   capability reset enables the preference for the next manually started request.
   Resetting capability never starts inference and blocks conflicting local starts
   until it completes. This preference is not persisted across renderer reloads.
+  Pending start, clear, cancel, and picker commands also have renderer guards for
+  immediate feedback and duplicate suppression; Go retains authoritative admission.
+  Cancellation remains available once Go reports an active job even before the Start
+  binding returns. Picker responses use the same generation/revision reconciliation
+  as status events so a delayed reply cannot replace newer capability or progress state.
 - `SpeechState` owns playback projection and speech commands, including preview
   admission. The generated speech and dictation `CurrentStatus` methods remain
   in separate service namespaces.
@@ -945,6 +950,16 @@ The `followTranscript` DOM action owns only result scrolling. New recording keys
 reset following; scrolling away from the end pauses it until the reader returns
 or chooses Jump to latest. Final text replacement preserves paused reading, and
 teardown disconnects its resize observer, scroll listener, and scheduled frame.
+The conditional Jump to latest row occupies normal layout space outside the
+scroll viewport, including in compact windows; transcript padding is not a
+substitute for keeping controls out of the reading area.
+
+`CaptureClock` tracks the last valid recording start within a dictation generation.
+The transport samples it only during capture and once when capture ends, then
+freezes it through transcription, cleanup, or failure. Go's serialized zero time
+(`0001-01-01T00:00:00Z`), invalid timestamps, and missing timestamps cannot become
+elapsed durations. Idle and new generations reset the display; a pane mounted
+after capture without a known start does not invent a duration.
 
 ### Speech settings preview
 

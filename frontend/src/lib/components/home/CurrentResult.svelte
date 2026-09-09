@@ -81,7 +81,7 @@
       >
     {/if}
   </div>
-  <div class="relative flex min-h-0 flex-1 flex-col">
+  <div class="flex min-h-0 flex-1 flex-col">
     <div
       class="min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none]"
       use:followTranscript={{
@@ -105,7 +105,7 @@
           </p>
         {/if}
         {#if live}
-          <div class="mx-auto w-full max-w-[76ch] p-4 pb-14">
+          <div class="mx-auto w-full max-w-[76ch] p-4">
             <p class="mb-3 text-xs text-muted-foreground" role="status">
               Live preview · text may change
             </p>
@@ -121,7 +121,7 @@
           </div>
         {:else if text}
           <div
-            class="mx-auto w-full max-w-[76ch] whitespace-pre-wrap break-words p-4 pb-14 text-sm leading-7"
+            class="mx-auto w-full max-w-[76ch] whitespace-pre-wrap break-words p-4 text-sm leading-7"
             tabindex="0"
             role="textbox"
             aria-readonly="true"
@@ -157,13 +157,8 @@
       </div>
     </div>
     {#if !following && (text || liveFinal || livePartial)}
-      <div class="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
-        <Button
-          variant="secondary"
-          size="sm"
-          class="pointer-events-auto border border-border shadow-md"
-          onclick={() => jump++}>Jump to latest</Button
-        >
+      <div class="flex h-11 shrink-0 items-center justify-center border-t border-hairline px-3">
+        <Button variant="ghost" size="sm" onclick={() => jump++}>Jump to latest</Button>
       </div>
     {/if}
   </div>

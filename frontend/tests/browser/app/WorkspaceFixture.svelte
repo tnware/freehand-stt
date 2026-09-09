@@ -30,6 +30,9 @@
 
   const playbackScenario = new URLSearchParams(location.search).has("playback");
   const fileStreamingScenario = new URLSearchParams(location.search).has("file-streaming");
+  const fileActionsScenario = new URLSearchParams(location.search).has("file-actions");
+  const captureClockScenario = new URLSearchParams(location.search).has("capture-clock");
+  let finishFileStart: ((success: boolean) => void) | undefined;
   let fileRequests = $state(0);
   let lastFileStream = $state(false);
   let seekCalls = $state(0);
@@ -201,6 +204,24 @@
         StartFileTranscription: (stream) => {
           fileRequests++;
           lastFileStream = stream;
+          if (fileActionsScenario) {
+            return new CancellablePromise<void>((resolve, reject) => {
+              finishFileStart = (success) => {
+                finishFileStart = undefined;
+                if (!success) {
+                  reject(new Error("The file could not be started. Try again."));
+                  return;
+                }
+                session.files.applyStatus({
+                  ...session.files.status,
+                  phase: FileTranscriptionPhase.FileTranscriptionUploading,
+                  canStart: false,
+                  canCancel: true,
+                });
+                resolve();
+              };
+            });
+          }
           session.files.applyStatus({
             ...session.files.status,
             phase: FileTranscriptionPhase.FileTranscriptionUploading,
@@ -500,11 +521,36 @@
     <footer
       class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
     >
-      {#if fileStreamingScenario}
+      {#if captureClockScenario}
+        <div class="flex gap-3">
+          <button
+            onclick={() =>
+              session.dictation.applyStatus({
+                ...idle,
+                generation: session.dictation.status.generation + 1,
+                state: State.Recording,
+                startedAt: new Date(Date.now() - 4000).toISOString(),
+                canCancel: true,
+              })}>Simulate recording</button
+          >
+          <button
+            onclick={() =>
+              session.dictation.applyStatus({
+                ...session.dictation.status,
+                state: State.Transcribing,
+                startedAt: "0001-01-01T00:00:00Z",
+              })}>Simulate transcription</button
+          >
+        </div>
+      {:else if fileStreamingScenario}
         <div class="flex flex-wrap gap-3">
           <button onclick={() => fileCapability(false)}>Streaming supported</button>
           <button onclick={() => fileCapability(true)}>Streaming rejected</button>
           <button onclick={() => fileCapability(true, true)}>Completed-only profile</button>
+          {#if fileActionsScenario}
+            <button onclick={() => finishFileStart?.(true)}>Admit file start</button>
+            <button onclick={() => finishFileStart?.(false)}>Reject file start</button>
+          {/if}
           <span role="status"
             >File requests: {fileRequests}; streaming: {String(lastFileStream)}</span
           >

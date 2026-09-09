@@ -57,7 +57,8 @@ Choose a recording style:
    Freehand to show that recording has started, then speak.
 3. **Stop recording** with the same shortcut or by releasing the held chord.
 4. **Wait for transcription and any enabled cleanup.** Keep the original text
-   field focused for direct insertion.
+   field focused for direct insertion. The timer holds the recording duration;
+   time spent waiting for transcription or cleanup does not increase it.
 
 </Steps>
 
@@ -107,6 +108,10 @@ microphone, recording shortcut, or completed dictation setup.
    another file, or change connections, until the window reloads or Freehand exits.
    The control remains in place while a file is processed.
 3. **Select Transcribe** and wait for the result. Use **Cancel** to stop active work.
+   **Starting…** appears while Freehand accepts the request. File selection, clearing,
+   and response-mode changes pause during this step; **Cancel** becomes available
+   once the request is active. If starting fails, the selected file stays available
+   for another attempt.
 4. **Copy the completed transcript** explicitly into the application you want.
    Use **Change** to select another file, or **Again** to transcribe the current file again.
 
@@ -174,7 +179,8 @@ Freehand remembers the split. Each pane scrolls independently; opening quick
 settings does not move the transcript. Long transcripts use a comfortable reading width.
 Live text follows new words until you scroll back to read earlier text. Choose
 **Jump to latest**, or scroll to the bottom, to resume following; finalization preserves
-your position when you are reading back. Narrow windows use **Result** and
+your position when you are reading back. The jump button sits below the scroll area
+so it does not cover transcript text. Narrow windows use **Result** and
 **History** view buttons to give each view the full width.
 
 Endpoint and credential changes belong in **Settings → Connections**. Feature
