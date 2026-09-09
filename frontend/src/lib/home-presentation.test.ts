@@ -64,6 +64,7 @@ describe("home task presentation", () => {
         canPause: false,
         canResume: false,
         canRestart: false,
+        canSeek: false,
         canStop: false,
         canSave: false,
         canClear: false,

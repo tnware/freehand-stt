@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { SeekRequest } from "$bindings/tts";
   import HistoryIcon from "@lucide/svelte/icons/history";
   import DisclosureHeader from "$lib/components/shell/DisclosureHeader.svelte";
   import HistoryList from "$lib/components/history/HistoryList.svelte";
@@ -28,11 +29,15 @@
     ttsEnabled = false,
     ttsAvailable = true,
     ttsStatus,
+    ttsPending,
     onListen,
     onListenFile,
     onPauseTTS,
     onResumeTTS,
     onRestartTTS,
+    onSeekTTS,
+    seeking = false,
+    saving = false,
     onStopTTS,
     onSaveTTS,
     onClearTTS,
@@ -52,11 +57,15 @@
     ttsEnabled?: boolean;
     ttsAvailable?: boolean;
     ttsStatus: TTSStatus;
+    ttsPending?: Pick<TTSStatus, "source" | "historyID">;
     onListen: (id: number, version: HistoryTextVersion) => void;
     onListenFile: () => void;
     onPauseTTS: () => void;
     onResumeTTS: () => void;
     onRestartTTS: () => void;
+    onSeekTTS?: (request: SeekRequest) => Promise<void>;
+    seeking?: boolean;
+    saving?: boolean;
     onStopTTS: () => void;
     onSaveTTS: () => void;
     onClearTTS: () => void;
@@ -108,6 +117,7 @@
     }
     const text = fileStatus.transcript ?? "";
     return {
+      generation: fileStatus.generation,
       text,
       fileName: fileStatus.fileName ?? "Audio file",
       status,
@@ -168,7 +178,6 @@
   <div class="drawer" id="history-detail" inert={!open}>
     {#if enabled || entries.length > 0 || live}
       <HistoryList
-        maxHeight={collapsible ? undefined : "var(--history-max-height, 24rem)"}
         {entries}
         {live}
         {onCopy}
@@ -178,6 +187,7 @@
         {ttsEnabled}
         {ttsAvailable}
         {ttsStatus}
+        {ttsPending}
         {onListen}
         onListenLive={onListenFile}
       />
@@ -197,15 +207,21 @@
       </div>
     {/if}
     {#if showPlayback}
-      <PlaybackBar
-        status={ttsStatus}
-        onPause={onPauseTTS}
-        onResume={onResumeTTS}
-        onRestart={onRestartTTS}
-        onStop={onStopTTS}
-        onSave={onSaveTTS}
-        onClear={onClearTTS}
-      />
+      <div class="border-t border-hairline">
+        <PlaybackBar
+          embedded
+          status={ttsStatus}
+          onPause={onPauseTTS}
+          onResume={onResumeTTS}
+          onRestart={onRestartTTS}
+          onSeek={onSeekTTS}
+          {seeking}
+          {saving}
+          onStop={onStopTTS}
+          onSave={onSaveTTS}
+          onClear={onClearTTS}
+        />
+      </div>
     {/if}
   </div>
 </section>
@@ -224,15 +240,15 @@
   .history-card.open {
     flex-grow: 1;
   }
-  /* The parent bounds scrolling; short history lists size to their content. */
+  /* Fill the bounded pane so HistoryList owns the only scrolling viewport. */
   .history-card.bare {
     border: 0;
     border-radius: 0;
     background: transparent;
-    flex: 0 0 auto;
+    flex: 1;
   }
   .history-card.bare .drawer {
-    flex: 0 0 auto;
+    flex: 1;
   }
 
   /* Inset rather than a border, so the hairline costs no height while closed. */

@@ -42,6 +42,17 @@ export class FileTranscriptionState {
   }
   status = $state<FileTranscriptionStatus>(EMPTY_FILE);
   choosing = $state(false);
+  starting = $state(false);
+  cancelling = $state(false);
+  clearing = $state(false);
+  streamingPreferred = $state(true);
+  resettingStreaming = $state(false);
+  streamingEnabled = $derived(
+    this.streamingPreferred && !this.status.streamingUnavailable,
+  );
+  selectionBusy = $derived(
+    this.choosing || this.starting || this.clearing || this.resettingStreaming,
+  );
   historyGeneration = $state(0);
   #fileStatusRevision = 0;
   #fileStatusRequest = 0;
@@ -98,11 +109,19 @@ export class FileTranscriptionState {
   }
 
   async chooseAudioFile() {
-    if (this.choosing || this.status.canCancel) return;
+    if (this.selectionBusy || this.status.canCancel) return;
     this.#messages.clear();
     this.choosing = true;
+    const revision = this.#fileStatusRevision;
     try {
-      this.status = await this.#service.ChooseAudioFile();
+      const status = await this.#service.ChooseAudioFile();
+      // The picker response can arrive after its selection event or a newer
+      // capability/progress update. Only a newer generation may supersede those.
+      if (
+        status.generation > this.status.generation ||
+        revision === this.#fileStatusRevision
+      )
+        this.applyStatus(status);
     } catch (cause) {
       this.#messages.fail(cause);
     } finally {
@@ -110,33 +129,46 @@ export class FileTranscriptionState {
     }
   }
 
-  async startFileTranscription(stream: boolean) {
+  async startFileTranscription() {
+    if (this.selectionBusy || !this.status.canStart) return;
+    this.starting = true;
     this.#messages.clear();
     try {
-      await this.#service.StartFileTranscription(stream);
+      await this.#service.StartFileTranscription(this.streamingEnabled);
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.starting = false;
     }
   }
 
   async cancelFileTranscription() {
+    if (this.cancelling || !this.status.canCancel) return;
+    this.cancelling = true;
     this.#messages.clear();
     try {
       await this.#service.CancelFileTranscription();
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.cancelling = false;
     }
   }
 
   async tryFileStreamingAgain() {
+    if (this.selectionBusy || this.status.canCancel) return;
+    this.resettingStreaming = true;
     this.#messages.clear();
     try {
       await this.#service.TryFileStreamingAgain();
+      this.streamingPreferred = true;
       this.#messages.announce(
-        "Streaming can be tried again for this endpoint and model.",
+        "Text updates selected. Start transcription when you’re ready.",
       );
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.resettingStreaming = false;
     }
   }
 
@@ -152,11 +184,15 @@ export class FileTranscriptionState {
   }
 
   async clearAudioFile() {
+    if (this.selectionBusy || this.status.canCancel) return;
+    this.clearing = true;
     this.#messages.clear();
     try {
       await this.#service.ClearAudioFile();
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.clearing = false;
     }
   }
 

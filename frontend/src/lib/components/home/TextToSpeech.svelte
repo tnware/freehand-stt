@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { SeekRequest } from "$bindings/tts";
   import type { Snippet } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
@@ -17,6 +18,10 @@
     settings,
     status,
     unavailable = false,
+    submitting = false,
+    seeking = false,
+    saving = false,
+    onSeek,
     onSpeak,
     onPause,
     onResume,
@@ -31,6 +36,10 @@
     settings: Settings["textToSpeech"];
     status: TTSStatus;
     unavailable?: boolean;
+    submitting?: boolean;
+    seeking?: boolean;
+    saving?: boolean;
+    onSeek?: (request: SeekRequest) => Promise<void>;
     onSpeak: (text: string) => void;
     onPause: () => void;
     onResume: () => void;
@@ -49,6 +58,7 @@
         status.phase === TTSPhase.Playing ||
         status.phase === TTSPhase.Paused),
   );
+  const generating = $derived(status.phase === TTSPhase.Generating);
   const showPlayback = $derived(
     isOwnSession && status.phase !== TTSPhase.Idle && status.phase !== TTSPhase.Cancelled,
   );
@@ -59,7 +69,8 @@
   const canSpeak = $derived(
     configured &&
       !unavailable &&
-      !working &&
+      !submitting &&
+      !generating &&
       characterCount > 0 &&
       characterCount <= maximumCharacters,
   );
@@ -73,6 +84,20 @@
     if (status.phase === TTSPhase.Failed) return "Failed";
     return "Ready to generate";
   });
+
+  function composerKey(event: KeyboardEvent) {
+    if (
+      event.key !== "Enter" ||
+      !event.ctrlKey ||
+      event.altKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.isComposing
+    )
+      return;
+    event.preventDefault();
+    if (!event.repeat && canSpeak) onSpeak(text);
+  }
 
   const failed = $derived(isOwnSession && status.phase === TTSPhase.Failed);
 </script>
@@ -108,12 +133,17 @@
       id="speech-composer-text"
       bind:value={text}
       aria-invalid={characterCount > maximumCharacters}
-      aria-describedby="speech-character-count"
-      disabled={working}
-      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-4 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-inset disabled:opacity-100"
+      aria-describedby="speech-character-count speech-compose-shortcut"
+      aria-keyshortcuts="Control+Enter"
+      onkeydown={composerKey}
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-4 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-inset"
       placeholder="Write or paste text to speak…"
     />
   </div>
+  <p id="speech-compose-shortcut" class="sr-only">
+    Press Ctrl+Enter to speak. Enter adds a new line. Editing or clearing this draft does not change
+    the current audio. Speak generates this draft and replaces the current audio.
+  </p>
   <div class="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-hairline px-4">
     <span
       id="speech-character-count"
@@ -129,9 +159,7 @@
         >{/if}
     </span>
     <div class="flex items-center gap-2">
-      <Button variant="ghost" size="sm" disabled={!text || working} onclick={() => (text = "")}
-        >Clear</Button
-      >
+      <Button variant="ghost" size="sm" disabled={!text} onclick={() => (text = "")}>Clear</Button>
       {#if !configured}
         <Button
           variant="outline"
@@ -140,7 +168,13 @@
           onclick={onOpenSettings}><SettingsIcon />Set up speech</Button
         >
       {:else}
-        <Button size="sm" class="min-w-28" disabled={!canSpeak} onclick={() => onSpeak(text)}>
+        <Button
+          size="sm"
+          class="min-w-28"
+          disabled={!canSpeak}
+          title="Generate this text and replace the current audio"
+          onclick={() => onSpeak(text)}
+        >
           {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
               class="animate-spin motion-reduce:animate-none"
             />{:else}<Volume2Icon />{/if}
@@ -149,12 +183,16 @@
             : failed
               ? "Try again"
               : "Speak"}
+          {#if !working}<kbd
+              aria-hidden="true"
+              class="ml-1 hidden text-[10px] opacity-70 @sm:inline">Ctrl+Enter</kbd
+            >{/if}
         </Button>
       {/if}
     </div>
   </div>
   <div
-    class="flex h-24 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-secondary"
+    class="flex h-24 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-layer-fill"
     aria-label="Generated audio"
   >
     {#if showPlayback}
@@ -163,6 +201,9 @@
         {onPause}
         {onResume}
         {onRestart}
+        {onSeek}
+        {seeking}
+        {saving}
         {onStop}
         {onSave}
         {onClear}

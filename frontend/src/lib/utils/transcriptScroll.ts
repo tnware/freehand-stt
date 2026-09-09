@@ -1,3 +1,5 @@
+import { hasTranscriptSelection } from "./transcriptReader";
+
 export interface TranscriptScrollOptions {
   key: string;
   content: string;
@@ -29,6 +31,13 @@ export function followTranscript(node: HTMLElement, initial: TranscriptScrollOpt
     finishPending ||= finish;
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
+      // Reading/copying a selection takes precedence over automatic following.
+      if (hasTranscriptSelection(node)) {
+        setFollowing(false);
+        resetPending = false;
+        finishPending = false;
+        return;
+      }
       if (resetPending && !options.streaming) node.scrollTop = 0;
       else if (following && (options.streaming || finishPending))
         node.scrollTop = node.scrollHeight;
@@ -48,6 +57,8 @@ export function followTranscript(node: HTMLElement, initial: TranscriptScrollOpt
       const changed = next.key !== options.key;
       const jump = next.jump !== options.jump;
       const finish = options.streaming && !next.streaming;
+      if (jump && hasTranscriptSelection(node))
+        node.ownerDocument.getSelection()?.removeAllRanges();
       options = next;
       if (changed || jump) setFollowing(true);
       schedule(changed, finish || jump);

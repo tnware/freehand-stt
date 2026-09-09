@@ -1,4 +1,4 @@
-import { TTSPhase, type TTSStatus, type HistoryTextVersion } from "$lib/state";
+import { TTSPhase, TTSSource, type TTSStatus, type HistoryTextVersion } from "$lib/state";
 import type { SessionMessages } from "./messages.svelte";
 import type * as TtsBindings from "$bindings/tts/service";
 import type { Settings } from "$lib/state";
@@ -13,6 +13,7 @@ export type SpeechStateService = Pick<
   | "Pause"
   | "Resume"
   | "Restart"
+  | "Seek"
   | "Stop"
   | "SaveAudio"
   | "ClearAudio"
@@ -26,6 +27,7 @@ const IDLE_TTS: TTSStatus = {
   canPause: false,
   canResume: false,
   canRestart: false,
+  canSeek: false,
   canStop: false,
   canSave: false,
   canClear: false,
@@ -41,6 +43,18 @@ export class SpeechState {
   }
   status = $state<TTSStatus>(IDLE_TTS);
   previewing = $state(false);
+  submitting = $state(false);
+  seeking = $state(false);
+  saving = $state(false);
+  listening = $state<Pick<TTSStatus, "source" | "historyID"> | null>(null);
+  get canListen() {
+    return (
+      !this.listening &&
+      !this.submitting &&
+      !this.previewing &&
+      this.status.phase !== TTSPhase.Generating
+    );
+  }
   // Unsent work belongs to the WebView session, never browser or disk storage.
   draft = $state("");
   #ttsStatusRevision = 0;
@@ -63,34 +77,36 @@ export class SpeechState {
   }
 
   async listenHistoryEntry(id: number, version: HistoryTextVersion) {
-    this.#messages.clear();
-    try {
-      await this.#service.PlayHistoryEntry(id, version);
-    } catch (cause) {
-      this.#messages.fail(cause);
-    }
+    await this.#listen({ source: TTSSource.SourceHistory, historyID: id }, () =>
+      this.#service.PlayHistoryEntry(id, version),
+    );
   }
 
   async listenFileTranscript() {
-    this.#messages.clear();
-    try {
-      await this.#service.PlayFileTranscript();
-    } catch (cause) {
-      this.#messages.fail(cause);
-    }
+    await this.#listen({ source: TTSSource.SourceFile }, () => this.#service.PlayFileTranscript());
   }
 
   async listenVoiceTranscript(generation: number) {
+    await this.#listen({ source: TTSSource.SourceVoice }, () =>
+      this.#service.PlayVoiceTranscript(generation),
+    );
+  }
+
+  async #listen(target: Pick<TTSStatus, "source" | "historyID">, start: () => Promise<void>) {
+    if (!this.canListen) return;
+    this.listening = target;
     this.#messages.clear();
     try {
-      await this.#service.PlayVoiceTranscript(generation);
+      await start();
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.listening = null;
     }
   }
 
   async previewVoice(settings: Settings) {
-    if (this.previewing) return;
+    if (this.previewing || this.listening) return;
     this.previewing = true;
     this.#messages.clear();
     try {
@@ -113,11 +129,15 @@ export class SpeechState {
   }
 
   async speakText(text: string) {
+    if (this.submitting || this.listening) return;
+    this.submitting = true;
     this.#messages.clear();
     try {
       await this.#service.SpeakText(text);
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.submitting = false;
     }
   }
 
@@ -145,6 +165,21 @@ export class SpeechState {
     }
   }
 
+  async seekTTS(request: Parameters<SpeechStateService["Seek"]>[0]) {
+    if (this.seeking || request.generation !== this.status.generation || !this.status.canSeek)
+      return;
+    this.seeking = true;
+    const revision = this.#ttsStatusRevision;
+    try {
+      const status = await this.#service.Seek(request);
+      if (revision === this.#ttsStatusRevision) this.applyStatus(status);
+    } catch (cause) {
+      if (request.generation === this.status.generation) this.#messages.fail(cause);
+    } finally {
+      this.seeking = false;
+    }
+  }
+
   async stopTTS() {
     try {
       await this.#service.Stop();
@@ -154,6 +189,8 @@ export class SpeechState {
   }
 
   async saveTTSAudio() {
+    if (this.saving) return;
+    this.saving = true;
     this.#messages.clear();
     try {
       if (await this.#service.SaveAudio()) {
@@ -161,6 +198,8 @@ export class SpeechState {
       }
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.saving = false;
     }
   }
 

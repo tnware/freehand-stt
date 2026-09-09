@@ -16,6 +16,7 @@ vi.mock("$bindings/tts/service", () => ({
   Pause: vi.fn(),
   Resume: vi.fn(),
   Restart: vi.fn(),
+  Seek: vi.fn(),
   Stop: vi.fn(),
   SaveAudio: vi.fn(),
   ClearAudio: vi.fn(),

@@ -16,7 +16,13 @@
   let {
     status,
     choosing = false,
+    starting = false,
+    cancelling = false,
+    clearing = false,
     voiceActive = false,
+    streamingEnabled,
+    resettingStreaming = false,
+    onStreamingChange,
     onChoose,
     onStart,
     onTryStreamingAgain,
@@ -26,19 +32,20 @@
   }: {
     status: FileTranscriptionStatus;
     choosing?: boolean;
+    starting?: boolean;
+    cancelling?: boolean;
+    clearing?: boolean;
     voiceActive?: boolean;
+    streamingEnabled: boolean;
+    resettingStreaming?: boolean;
+    onStreamingChange: (enabled: boolean) => void;
     onChoose: () => void;
-    onStart: (stream: boolean) => void;
+    onStart: () => void;
     onTryStreamingAgain: () => void;
     onCancel: () => void;
     onClear: () => void;
     onOpenSettings?: () => void;
   } = $props();
-
-  let stream = $state(true);
-  $effect(() => {
-    if (status.streamingUnavailable) stream = false;
-  });
 
   const hasFile = $derived(status.phase !== FileTranscriptionPhase.FileTranscriptionEmpty);
   const uploading = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionUploading);
@@ -49,6 +56,7 @@
       status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
   );
   const completed = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionCompleted);
+  const selectionBusy = $derived(choosing || starting || clearing || resettingStreaming);
   const failed = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionFailed);
   const uploaded = $derived(status.bytesUploaded ?? 0);
   const fileSize = $derived(status.fileSize ?? 0);
@@ -187,8 +195,11 @@
         variant="ghost"
         size="icon-xs"
         label="Clear selected audio file"
-        disabled={!hasFile || working || choosing}
-        onclick={onClear}><XIcon /></TooltipButton
+        disabled={!hasFile || working || selectionBusy}
+        onclick={onClear}
+        >{#if clearing}<LoaderCircleIcon
+            class="animate-spin motion-reduce:animate-none"
+          />{:else}<XIcon />{/if}</TooltipButton
       >
     </div>
     {#if failed}
@@ -209,9 +220,9 @@
       <Switch
         id="file-stream-toggle"
         size="sm"
-        checked={stream && !status.streamingUnavailable}
-        disabled={working || status.streamingUnavailable}
-        onCheckedChange={(next) => (stream = next)}
+        checked={streamingEnabled}
+        disabled={working || status.streamingUnavailable || selectionBusy}
+        onCheckedChange={onStreamingChange}
       />
       <label
         class="truncate text-xs text-secondary-foreground"
@@ -227,7 +238,8 @@
           variant="ghost"
           size="sm"
           class="ml-auto h-6 px-1 text-xs"
-          onclick={onTryStreamingAgain}>Try streaming</Button
+          disabled={selectionBusy}
+          onclick={onTryStreamingAgain}>{resettingStreaming ? "Enabling…" : "Try streaming"}</Button
         >
       {/if}
     </div>
@@ -256,7 +268,7 @@
         variant={hasFile ? "outline" : "default"}
         size="sm"
         class="h-8 flex-1 px-2.5"
-        disabled={choosing || voiceActive || working}
+        disabled={selectionBusy || voiceActive || working}
         aria-label={hasFile ? "Change audio file" : "Choose audio"}
         onclick={onChoose}
       >
@@ -270,10 +282,10 @@
           variant="outline"
           size="sm"
           class="h-8 min-w-24 flex-1 px-2.5"
-          disabled={!status.canCancel}
+          disabled={!status.canCancel || cancelling}
           onclick={onCancel}
         >
-          {status.phase === FileTranscriptionPhase.FileTranscriptionCancelling
+          {cancelling || status.phase === FileTranscriptionPhase.FileTranscriptionCancelling
             ? "Cancelling…"
             : "Cancel"}
         </Button>
@@ -281,10 +293,10 @@
         <Button
           size="sm"
           class="h-8 min-w-24 flex-1 px-2.5"
-          disabled={!status.canStart || voiceActive || choosing}
-          onclick={() => onStart(stream)}
+          disabled={!status.canStart || voiceActive || selectionBusy}
+          onclick={onStart}
         >
-          {failed ? "Retry" : completed ? "Again" : "Transcribe"}
+          {starting ? "Starting…" : failed ? "Retry" : completed ? "Again" : "Transcribe"}
         </Button>
       {/if}
     </div>

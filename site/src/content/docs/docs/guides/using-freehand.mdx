@@ -57,7 +57,8 @@ Choose a recording style:
    Freehand to show that recording has started, then speak.
 3. **Stop recording** with the same shortcut or by releasing the held chord.
 4. **Wait for transcription and any enabled cleanup.** Keep the original text
-   field focused for direct insertion.
+   field focused for direct insertion. The timer holds the recording duration;
+   time spent waiting for transcription or cleanup does not increase it.
 
 </Steps>
 
@@ -103,8 +104,14 @@ microphone, recording shortcut, or completed dictation setup.
 
 1. **Open Audio file** and choose **Choose** to select a recording.
 2. **Choose the response mode.** Enable **Show text as it arrives** for streaming when supported, or disable
-   it for completed output. The control remains in place while a file is processed.
+   it for completed output. Your choice stays selected when you switch tasks, choose
+   another file, or change connections, until the window reloads or Freehand exits.
+   The control remains in place while a file is processed.
 3. **Select Transcribe** and wait for the result. Use **Cancel** to stop active work.
+   **Starting…** appears while Freehand accepts the request. File selection, clearing,
+   and response-mode changes pause during this step; **Cancel** becomes available
+   once the request is active. If starting fails, the selected file stays available
+   for another attempt.
 4. **Copy the completed transcript** explicitly into the application you want.
    Use **Change** to select another file, or **Again** to transcribe the current file again.
 
@@ -123,6 +130,12 @@ choose **Retry** to submit a new request in completed mode. This may repeat
 server work or incur another charge, so Freehand never resubmits automatically.
 A completed JSON response returned to the original streaming request is used
 immediately without another upload.
+
+An unsupported connection temporarily shows **Completed transcript** without changing
+your preference. Returning to a compatible connection restores your choice.
+**Try streaming**, when available, clears the remembered rejection and selects text
+updates for the next transcription. Choose **Transcribe**, **Retry**, or **Again**
+to start that request; choosing **Try streaming** alone does not upload the file.
 
 If a typed transcript stream ends before its final transcript arrives, the job
 fails and any accepted partial text remains available to copy. Cleanup does not
@@ -166,8 +179,17 @@ Freehand remembers the split. Each pane scrolls independently; opening quick
 settings does not move the transcript. Long transcripts use a comfortable reading width.
 Live text follows new words until you scroll back to read earlier text. Choose
 **Jump to latest**, or scroll to the bottom, to resume following; finalization preserves
-your position when you are reading back. Narrow windows use **Result** and
+your position when you are reading back. The jump button sits below the scroll area
+so it does not cover transcript text. Narrow windows use **Result** and
 **History** view buttons to give each view the full width.
+
+Focus a transcript and use **Ctrl+A** to select its text, then **Ctrl+C** to copy.
+Selecting a smaller portion copies only that portion. This also works in expanded
+history and each raw/cleaned comparison. **Page Up**, **Page Down**, **Home**, **End**,
+and the up/down arrows scroll the containing pane while the transcript has focus.
+While text is selected, its displayed text stays still through incoming updates;
+clearing the selection shows the latest text. **Jump to latest** clears a result
+selection and resumes following. A new recording replaces the previous result.
 
 Endpoint and credential changes belong in **Settings → Connections**. Feature
 pages choose an active connection and model. Settings-page edits use **Save
@@ -268,10 +290,12 @@ a microphone, recording shortcut, STT connection, or completed dictation setup.
 2. **Return to Text to speech** and enter the text you want to hear. Your unsent text
    survives switching tasks or visiting Settings, and is cleared when the window
    reloads or Freehand exits.
-3. **Choose Speak** to generate and play the audio. Playback and save controls
+3. **Choose Speak** or press **Ctrl+Enter** in the editor to generate and play the audio.
+   **Enter** on its own adds a new line. Playback and save controls
    occupy a permanent area below the editor, so the editor stays the same size
-   as generation and playback progress.
-4. **Use the playback controls** to pause, resume, restart, stop, or explicitly
+   as generation and playback progress. **Creating audio** appears until audio is ready;
+   elapsed time and duration appear when playback begins.
+4. **Use the playback controls** to pause, resume, seek, restart, stop, or explicitly
    **Save generated speech** to a file.
 
 </Steps>
@@ -279,9 +303,38 @@ a microphone, recording shortcut, STT connection, or completed dictation setup.
 Text to speech accepts up to 4,096 Unicode characters. Longer drafts remain
 editable; shorten the text to enable Speak.
 
+You can edit, select, copy, or clear the draft while speech is being generated,
+playing, or paused. Those edits do not change the current audio. Once generation
+finishes, **Speak** or **Ctrl+Enter** generates the text currently in the editor and
+replaces the previous audio, including when playback is paused. Playback controls
+and **Save generated speech** continue to operate on the existing audio until then.
+
+Transcript playback uses a single compact row with play/pause, the seek track,
+elapsed time, and Stop. Open **Playback actions** for Restart or Save, or to clear
+completed audio from memory. Completed audio also has a direct replay button.
+
+Save shows a spinner while you choose a location and the audio is written. In
+compact playback, the spinner appears on **Playback actions**. Save stays disabled
+until that operation finishes; pause, resume, and seeking remain available.
+Cancelling the dialog quietly restores Save. A failed save shows an error and
+lets you try again.
+
+Drag the playback slider to choose a position; playback moves there when you release it.
+With the slider focused, use the arrow keys to adjust the position, **Home** for the
+start, or **End** for the end. Seeking during playback continues playing. Seeking
+while paused or after completion leaves the audio paused until you choose **Resume**.
+Seeking uses the audio already in memory, and **Save generated speech** always saves
+the full audio.
+
 You can also choose **Listen** on a completed Voice or Audio-file result, even
 with history off, or on a retained history entry. Generated audio remains in memory until you clear or replace it, start a
 recording, or exit Freehand.
+
+Listen shows a spinner as soon as you request speech. Listen controls remain
+unavailable while that request is starting or generating, so repeated clicks do
+not restart it. You can still select and copy transcripts. Once generation
+finishes, you can choose another transcript; if the request fails, Listen becomes
+available again. Use the player's Stop control to cancel active generation.
 
 Playback starts on demand. Freehand does not automatically read every transcript aloud or provide a voice conversation mode.
 

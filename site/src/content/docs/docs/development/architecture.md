@@ -380,10 +380,31 @@ command facade or a container for feature state.
   editing transaction.
 - `DictationState` owns live-dictation projection and commands.
 - `FileTranscriptionState` owns stored-file projection, generation/revision
-  reconciliation, delta-gap recovery, and explicit file commands.
+  reconciliation, delta-gap recovery, and explicit file commands. It also owns the
+  renderer-session streaming preference independently of backend capability status.
+  Effective streaming intersects that preference with current support; component
+  remounts and unsupported connections cannot overwrite it. A successful explicit
+  capability reset enables the preference for the next manually started request.
+  Resetting capability never starts inference and blocks conflicting local starts
+  until it completes. This preference is not persisted across renderer reloads.
+  Pending start, clear, cancel, and picker commands also have renderer guards for
+  immediate feedback and duplicate suppression; Go retains authoritative admission.
+  Cancellation remains available once Go reports an active job even before the Start
+  binding returns. Picker responses use the same generation/revision reconciliation
+  as status events so a delayed reply cannot replace newer capability or progress state.
 - `SpeechState` owns playback projection and speech commands, including preview
-  admission. The generated speech and dictation `CurrentStatus` methods remain
+  admission. It admits one pending Listen binding across voice, file, and history,
+  retaining the source/history identity for immediate control feedback. Listen is
+  unavailable during that pending call or backend-reported generation, and during
+  composer/preview admission. Rejection releases the guard for retry. Playback and
+  pause still allow an explicit replacement after generation completes. Go owns
+  synthesis cancellation and audio replacement. The generated speech and dictation `CurrentStatus` methods remain
   in separate service namespaces.
+  Its save-pending state spans the complete SaveAudio binding, including the native
+  dialog and file write, and is shared by compact and embedded playback controls.
+  Duplicate renderer requests return before clearing feedback. Success, cancellation,
+  and rejection release that guard without blocking playback. Go retains its atomic
+  save-dialog guard, generation validation, PCM snapshot, and file-write ownership.
 - `HistoryState` owns history refresh/mutation ordering. Successful refresh
   acknowledges the completed file generation through an injected callback.
   `HistoryList` owns only local disclosure/comparison state: the leading result
@@ -568,12 +589,13 @@ Settings can request a presentation-only native preview through a narrow Wails b
 
 Home presents the selected task and current result first. The workspace keeps a readable width and uses a wider two-column layout when
 recent history is enabled: current work and controls on the left, history on the
-right. Narrow windows stack those areas. The current-result card has a compact, stable height across empty, working,
-recovery, and completed states, with status explanations inside it. Short history
-lists size to their content. In wide layouts the history scroll limit grows to
-match the adjacent result and task-settings column. Long results and history remain
-scrollable. An expandable task-settings
-area retains immediate-save STT and cleanup controls; microphone and delivery controls
+right. Narrow windows switch between Result and History views. Both panes fill the
+available height across empty, working, recovery, and completed states.
+`HistoryList` owns the single bounded history scroll viewport; its outer frame and
+drawer pass through the available height instead of creating a second scroll area.
+This keeps mouse-wheel input over transcript text and row controls in the visible
+scroller. Newest-entry arrival also resets that same viewport to the top.
+Result-toolbar popovers retain immediate-save STT and cleanup controls; microphone and delivery controls
 appear only for dictation. TTS shows its own connection and model/voice settings link.
 Each quick update starts from backend-confirmed settings, restores only engine options
 when a model changes, and calls the same transactional owner without credential mutation.
@@ -906,6 +928,24 @@ and rejects stale results. Model changes restore remembered voice/profile option
 while preserving task-owned speed. Speed commits on release rather than saving
 every intermediate slider value. `TextToSpeech` owns the draft editor
 and reserves a fixed playback area; `PlaybackBar` supports embedding in that area.
+Its seek slider keeps a local preview during dragging and commits a generated
+request only for user input. Native progress is projected onto valid slider steps,
+including the exact audio endpoint, before rendering so slider normalization cannot
+start a false drag. The full-width track sits below the playback controls. The generated
+`tts.SeekRequest` carries the retained session generation and position. Go validates
+the generation, capability, and bounds before the Windows adapter stops output
+and aligns the PCM cursor to a whole frame through `Player.SeekTo(milliseconds)`.
+This audio-position method is distinct from the standard `io.Seeker` file-offset contract. The service preserves playback intent,
+rechecks cancellation before resuming, and replaces the progress monitor under
+the same control lock used by recording preemption and shutdown. Seeking retains
+the audio generation identity and full export snapshot; replacement audio invalidates
+an unfinished drag. No synthesized bytes cross the bridge. The composer handles
+Ctrl+Enter locally, preserves ordinary Enter, and guards duplicate submissions.
+Generation shows an indeterminate message; playback time starts with decoded audio.
+The speech draft remains editable throughout generation and playback. Editing and
+clearing it never call the playback service. Speak is blocked during generation or
+pending submission but can explicitly replace playing/paused audio. The Go service's
+captured text argument remains independent of subsequent renderer draft edits.
 Audio-file transport keeps its summary, response-mode option, and actions in stable
 slots. These components consume existing backend status and capability flags;
 window geometry and visual transitions do not alter inference or persistence.
@@ -922,10 +962,30 @@ disables stale line selection, and ignores completions for superseded drafts.
 A local retry repeats only the Go preview; it neither saves settings nor invokes
 inference.
 
+`TranscriptText` supplies shared read-only textbox semantics for current results,
+expanded history, and raw/cleaned comparisons. Its `transcriptReader` action owns
+plain-text DOM nodes, scoped Select All, and keyboard scrolling of the nearest
+scrollable ancestor. Native copy operates on the browser selection; it does not
+call the whole-transcript copy binding. While a nonempty selection intersects the
+text, the action keeps the displayed snapshot and only the latest pending update.
+Selection clearing flushes that update; a changed recording/entry key resets the
+selection. Stable result markup preserves the snapshot across live finalization.
+No HTML is parsed, and teardown removes the document selection listener.
+
 The `followTranscript` DOM action owns only result scrolling. New recording keys
-reset following; scrolling away from the end pauses it until the reader returns
+reset following; an active selection suspends following, and scrolling away from the end pauses it until the reader returns
 or chooses Jump to latest. Final text replacement preserves paused reading, and
 teardown disconnects its resize observer, scroll listener, and scheduled frame.
+The conditional Jump to latest row occupies normal layout space outside the
+scroll viewport, including in compact windows; transcript padding is not a
+substitute for keeping controls out of the reading area.
+
+`CaptureClock` tracks the last valid recording start within a dictation generation.
+The transport samples it only during capture and once when capture ends, then
+freezes it through transcription, cleanup, or failure. Go's serialized zero time
+(`0001-01-01T00:00:00Z`), invalid timestamps, and missing timestamps cannot become
+elapsed durations. Idle and new generations reset the display; a pane mounted
+after capture without a known start does not invent a duration.
 
 ### Speech settings preview
 

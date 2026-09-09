@@ -35,7 +35,11 @@ func (p *playerGate) Load(data []byte, rate, channels uint32) error {
 	p.gate("Load")
 	return p.playerFake.Load(data, rate, channels)
 }
-func (p *playerGate) Play() error   { p.plays.Add(1); return p.playerFake.Play() }
+func (p *playerGate) Play() error { p.plays.Add(1); return p.playerFake.Play() }
+func (p *playerGate) SeekTo(position int64) error {
+	p.gate("SeekTo")
+	return p.playerFake.SeekTo(position)
+}
 func (p *playerGate) Pause() error  { p.gate("Pause"); return p.playerFake.Pause() }
 func (p *playerGate) Stop() error   { p.gate("Stop"); return p.playerFake.Stop() }
 func (p *playerGate) Unload() error { p.gate("Unload"); return p.playerFake.Unload() }

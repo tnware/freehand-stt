@@ -28,14 +28,28 @@
   import AppHeader from "$lib/components/shell/AppHeader.svelte";
   import { controlledSaves } from "./save-control";
 
+  const listenScenario = new URLSearchParams(location.search).has("listen-pending");
+  let listenRequests = $state(0);
+  let finishListen: ((success: boolean) => void) | undefined;
+  const saveScenario = new URLSearchParams(location.search).has("save-pending");
+  let finishAudioSave: ((outcome: "saved" | "cancelled" | "failed") => void) | undefined;
+  const playbackScenario = new URLSearchParams(location.search).has("playback");
+  const fileStreamingScenario = new URLSearchParams(location.search).has("file-streaming");
+  const fileActionsScenario = new URLSearchParams(location.search).has("file-actions");
+  const captureClockScenario = new URLSearchParams(location.search).has("capture-clock");
+  let finishFileStart: ((success: boolean) => void) | undefined;
+  let fileRequests = $state(0);
+  let lastFileStream = $state(false);
+  let seekCalls = $state(0);
   const historyExpansion = new URLSearchParams(location.search).get("history") === "expansion";
   const diagnosticsScenario = new URLSearchParams(location.search).get("diagnostics");
   const setupScenario = new URLSearchParams(location.search).get("setup");
   let openedSettings = $state("");
   let connectionChecks = 0;
   const feedbackScenario = new URLSearchParams(location.search).has("feedback");
-  let speechRequests = 0;
-  let audioSaves = 0;
+  let speechRequests = $state(0);
+  let submittedSpeechText = $state("");
+  let audioSaves = $state(0);
   let current = structuredClone(settings);
   current.setupCompleted = true;
   current.historyEnabled = new URLSearchParams(location.search).get("history") !== "off";
@@ -169,7 +183,7 @@
     current = structuredClone({ ...current, ...request.settings });
     return structuredClone(current);
   });
-  const session = new Session(
+  const session: Session = new Session(
     serviceWithStatus(() => CancellablePromise.resolve(idle), {
       connection: {
         TestSavedConnection: () => {
@@ -189,7 +203,31 @@
         },
       },
       files: {
-        StartFileTranscription: () => {
+        TryFileStreamingAgain: () => {
+          session.files.applyStatus({ ...session.files.status, streamingUnavailable: false });
+          return CancellablePromise.resolve();
+        },
+        StartFileTranscription: (stream) => {
+          fileRequests++;
+          lastFileStream = stream;
+          if (fileActionsScenario) {
+            return new CancellablePromise<void>((resolve, reject) => {
+              finishFileStart = (success) => {
+                finishFileStart = undefined;
+                if (!success) {
+                  reject(new Error("The file could not be started. Try again."));
+                  return;
+                }
+                session.files.applyStatus({
+                  ...session.files.status,
+                  phase: FileTranscriptionPhase.FileTranscriptionUploading,
+                  canStart: false,
+                  canCancel: true,
+                });
+                resolve();
+              };
+            });
+          }
           session.files.applyStatus({
             ...session.files.status,
             phase: FileTranscriptionPhase.FileTranscriptionUploading,
@@ -200,8 +238,63 @@
         },
       },
       speech: {
-        SpeakText: () => {
+        Seek: (request) => {
+          seekCalls++;
+          const status = session.speech.status;
+          if (request.generation !== status.generation)
+            return CancellablePromise.reject(new Error("stale seek"));
+          const atEnd = request.positionMilliseconds === status.durationMilliseconds;
+          const playing = status.phase === TTSPhase.Playing && !atEnd;
+          const next = {
+            ...status,
+            positionMilliseconds: request.positionMilliseconds,
+            phase: atEnd ? TTSPhase.Completed : playing ? TTSPhase.Playing : TTSPhase.Paused,
+            canPause: playing,
+            canResume: !playing && !atEnd,
+            canStop: !atEnd,
+          };
+          session.speech.applyStatus(next);
+          return CancellablePromise.resolve(next);
+        },
+        Pause: () => {
+          session.speech.applyStatus({
+            ...session.speech.status,
+            phase: TTSPhase.Paused,
+            canPause: false,
+            canResume: true,
+          });
+          return CancellablePromise.resolve();
+        },
+        Resume: () => {
+          session.speech.applyStatus({
+            ...session.speech.status,
+            phase: TTSPhase.Playing,
+            canPause: true,
+            canResume: false,
+          });
+          return CancellablePromise.resolve();
+        },
+        SpeakText: (text) => {
           speechRequests++;
+          submittedSpeechText = text;
+          if (playbackScenario) {
+            session.speech.applyStatus({
+              ...session.speech.status,
+              generation: session.speech.status.generation + 1,
+              source: TTSSource.SourceCompose,
+              phase: TTSPhase.Generating,
+              durationMilliseconds: 0,
+              positionMilliseconds: 0,
+              canSeek: false,
+              canPause: false,
+              canResume: false,
+              canRestart: false,
+              canSave: false,
+              canStop: true,
+              canClear: false,
+            });
+            return CancellablePromise.resolve();
+          }
           session.speech.applyStatus({
             ...session.speech.status,
             generation: speechRequests,
@@ -221,6 +314,15 @@
         },
         SaveAudio: () => {
           audioSaves++;
+          if (saveScenario) {
+            const pending = CancellablePromise.withResolvers<boolean>();
+            finishAudioSave = (outcome) => {
+              finishAudioSave = undefined;
+              if (outcome === "failed") pending.reject(new Error("Audio could not be saved"));
+              else pending.resolve(outcome === "saved");
+            };
+            return pending.promise;
+          }
           return feedbackScenario && audioSaves === 1
             ? CancellablePromise.reject(
                 new Error(
@@ -241,7 +343,12 @@
           });
           return CancellablePromise.resolve();
         },
+        PlayHistoryEntry: (id) =>
+          listenScenario ? startListen(TTSSource.SourceHistory, id) : CancellablePromise.resolve(),
+        PlayFileTranscript: () =>
+          listenScenario ? startListen(TTSSource.SourceFile) : CancellablePromise.resolve(),
         PlayVoiceTranscript: (generation) => {
+          if (listenScenario) return startListen(TTSSource.SourceVoice);
           if (generation !== 7)
             return CancellablePromise.reject(new Error("Wrong result generation"));
           session.speech.applyStatus({
@@ -370,6 +477,55 @@
       void session.editor.testTextToSpeechConnection();
     }
   }
+  function startListen(source: TTSSource, historyID?: number) {
+    listenRequests++;
+    const pending = CancellablePromise.withResolvers<void>();
+    finishListen = (success) => {
+      finishListen = undefined;
+      if (!success) {
+        pending.reject(new Error("Speech is unavailable"));
+        return;
+      }
+      session.speech.applyStatus({
+        ...session.speech.status,
+        generation: session.speech.status.generation + 1,
+        source,
+        historyID,
+        phase: TTSPhase.Generating,
+        canStop: true,
+      });
+      pending.resolve();
+    };
+    return pending.promise;
+  }
+  function finishGeneration() {
+    session.speech.applyStatus({
+      ...session.speech.status,
+      phase: TTSPhase.Playing,
+      durationMilliseconds: 60000,
+      positionMilliseconds: 10000,
+      canSeek: true,
+      canPause: true,
+      canResume: false,
+      canRestart: true,
+      canSave: true,
+      canClear: true,
+      canStop: true,
+    });
+  }
+  function fileCapability(unavailable: boolean, profile = false) {
+    session.files.applyStatus({
+      ...session.files.status,
+      generation: session.files.status.generation + 1,
+      phase: FileTranscriptionPhase.FileTranscriptionSelected,
+      fileName: "Example recording.wav",
+      fileSize: 10240,
+      canStart: true,
+      canCancel: false,
+      streamingUnavailable: unavailable,
+      streamingProfileUnavailable: profile,
+    });
+  }
   window.testSaves = saves.control;
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
@@ -407,7 +563,83 @@
     <footer
       class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
     >
-      {#if historyExpansion}
+      {#if listenScenario}
+        <div class="flex gap-3">
+          <button onclick={() => finishListen?.(true)}>Accept listen</button>
+          <button onclick={() => finishListen?.(false)}>Reject listen</button>
+          <button onclick={finishGeneration}>Finish generation</button>
+          <button onclick={showFileTranscript}>Show file result</button>
+          <span>Listen requests: {listenRequests}</span>
+        </div>
+      {:else if captureClockScenario}
+        <div class="flex gap-3">
+          <button
+            onclick={() =>
+              session.dictation.applyStatus({
+                ...idle,
+                generation: session.dictation.status.generation + 1,
+                state: State.Recording,
+                startedAt: new Date(Date.now() - 4000).toISOString(),
+                canCancel: true,
+              })}>Simulate recording</button
+          >
+          <button
+            onclick={() =>
+              session.dictation.applyStatus({
+                ...session.dictation.status,
+                state: State.Transcribing,
+                startedAt: "0001-01-01T00:00:00Z",
+              })}>Simulate transcription</button
+          >
+        </div>
+      {:else if fileStreamingScenario}
+        <div class="flex flex-wrap gap-3">
+          <button onclick={() => fileCapability(false)}>Streaming supported</button>
+          <button onclick={() => fileCapability(true)}>Streaming rejected</button>
+          <button onclick={() => fileCapability(true, true)}>Completed-only profile</button>
+          {#if fileActionsScenario}
+            <button onclick={() => finishFileStart?.(true)}>Admit file start</button>
+            <button onclick={() => finishFileStart?.(false)}>Reject file start</button>
+          {/if}
+          <span role="status"
+            >File requests: {fileRequests}; streaming: {String(lastFileStream)}</span
+          >
+        </div>
+      {:else if playbackScenario}
+        <div class="flex flex-wrap gap-3">
+          <button onclick={finishGeneration}>Finish generation</button>
+          <button
+            onclick={() =>
+              session.speech.applyStatus({
+                ...session.speech.status,
+                source: TTSSource.SourceVoice,
+              })}>Show transcript playback</button
+          >
+          <button
+            onclick={() =>
+              session.speech.applyStatus({
+                ...session.speech.status,
+                positionMilliseconds: session.speech.status.positionMilliseconds + 137,
+              })}>Advance playback</button
+          >
+          <button
+            onclick={() =>
+              session.speech.applyStatus({
+                ...session.speech.status,
+                generation: session.speech.status.generation + 1,
+                positionMilliseconds: 5000,
+              })}>Replace audio</button
+          >
+          <span role="status">Speech requests: {speechRequests}; seek requests: {seekCalls}</span>
+          <span class="sr-only" aria-label="Submitted speech text">{submittedSpeechText}</span>
+          {#if saveScenario}
+            <button onclick={() => finishAudioSave?.("saved")}>Complete save</button>
+            <button onclick={() => finishAudioSave?.("cancelled")}>Cancel save</button>
+            <button onclick={() => finishAudioSave?.("failed")}>Fail save</button>
+            <span>Save requests: {audioSaves}</span>
+          {/if}
+        </div>
+      {:else if historyExpansion}
         <div class="flex gap-3">
           <button onclick={addHistoryTranscript}>Add transcript</button>
           <button onclick={updateHistoryTranscript}>Update latest</button>

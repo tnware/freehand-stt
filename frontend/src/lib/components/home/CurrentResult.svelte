@@ -1,8 +1,10 @@
 <script lang="ts">
+  import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import { followTranscript } from "$lib/utils/transcriptScroll";
   import { onDestroy, type Snippet } from "svelte";
   import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
   import { Button } from "$lib/components/ui/button";
+  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   let {
     live = false,
     liveFinal = "",
@@ -18,6 +20,8 @@
     onCopy,
     onClear,
     onListen,
+    listenBusy = false,
+    listenDisabled = false,
     quickSettings,
   }: {
     live?: boolean;
@@ -35,6 +39,8 @@
     onCopy: () => Promise<boolean>;
     onClear: () => void;
     onListen?: () => void;
+    listenBusy?: boolean;
+    listenDisabled?: boolean;
   } = $props();
   const feedback = new CopyFeedback();
   onDestroy(() => feedback.dispose());
@@ -72,8 +78,19 @@
       {#if onListen}<Button
           variant="ghost"
           size="sm"
-          disabled={working || !canCopy}
-          onclick={onListen}>Listen</Button
+          class="min-w-16"
+          disabled={working || !canCopy || listenDisabled}
+          aria-label={listenBusy ? "Preparing speech for this transcript" : "Listen"}
+          aria-busy={listenBusy}
+          title={listenBusy
+            ? "Preparing speech for this transcript"
+            : listenDisabled
+              ? "Wait for speech generation to finish"
+              : "Listen to transcript"}
+          onclick={onListen}
+          >{#if listenBusy}<LoaderCircleIcon
+              class="animate-spin motion-reduce:animate-none"
+            />{:else}Listen{/if}</Button
         >{/if}
       <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
       <Button variant="outline" size="sm" disabled={working || !canCopy} onclick={copy}
@@ -81,7 +98,7 @@
       >
     {/if}
   </div>
-  <div class="relative flex min-h-0 flex-1 flex-col">
+  <div class="flex min-h-0 flex-1 flex-col">
     <div
       class="min-h-0 flex-1 overflow-y-auto overscroll-contain [overflow-anchor:none]"
       use:followTranscript={{
@@ -104,31 +121,24 @@
               "Freehand kept this result because it could not insert it. Copy it when you’re ready."}
           </p>
         {/if}
-        {#if live}
-          <div class="mx-auto w-full max-w-[76ch] p-4 pb-14">
-            <p class="mb-3 text-xs text-muted-foreground" role="status">
-              Live preview · text may change
-            </p>
-            <div
+        {#if live || text}
+          <div class="mx-auto w-full max-w-[76ch] p-4">
+            {#if live}
+              <p class="mb-3 text-xs text-muted-foreground" role="status">
+                Live preview · text may change
+              </p>
+            {/if}
+            <TranscriptText
+              content={{
+                key: resultKey,
+                text: live ? liveFinal : text,
+                partial: live
+                  ? `${liveFinal && livePartial ? " " : ""}${livePartial || (!liveFinal ? "Listening…" : "")}`
+                  : undefined,
+              }}
+              label={live ? "Live transcript" : "Current transcript"}
               class="whitespace-pre-wrap break-words text-sm leading-7"
-              aria-label="Live transcript"
-            >
-              {liveFinal}<span class="text-muted-foreground"
-                >{liveFinal && livePartial ? " " : ""}{livePartial ||
-                  (!liveFinal ? "Listening…" : "")}</span
-              >
-            </div>
-          </div>
-        {:else if text}
-          <div
-            class="mx-auto w-full max-w-[76ch] whitespace-pre-wrap break-words p-4 pb-14 text-sm leading-7"
-            tabindex="0"
-            role="textbox"
-            aria-readonly="true"
-            aria-multiline="true"
-            aria-label="Current transcript"
-          >
-            {text}
+            />
           </div>
         {:else if !message}
           <div class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-4 text-center">
@@ -157,13 +167,8 @@
       </div>
     </div>
     {#if !following && (text || liveFinal || livePartial)}
-      <div class="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
-        <Button
-          variant="secondary"
-          size="sm"
-          class="pointer-events-auto border border-border shadow-md"
-          onclick={() => jump++}>Jump to latest</Button
-        >
+      <div class="flex h-11 shrink-0 items-center justify-center border-t border-hairline px-3">
+        <Button variant="ghost" size="sm" onclick={() => jump++}>Jump to latest</Button>
       </div>
     {/if}
   </div>

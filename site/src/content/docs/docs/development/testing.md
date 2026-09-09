@@ -686,6 +686,26 @@ and synthetic transport checks do not substitute for native microphone acceptanc
 
 ## Audio file and speech workspace layout
 
+File streaming state tests cover enabled and disabled preferences across file and
+capability changes, explicit request flags, failed resets, and duplicate/pending
+reset admission. `file-streaming.spec.ts` checks tab remounts, simulated connection
+capabilities, completed-only profiles, and **Try streaming** enabling the next
+explicit request without uploading automatically. Native endpoint support remains
+owned by the existing Go capability checks; these renderer fixtures invoke no models.
+Deferred-command tests cover duplicate/conflicting file actions, failure recovery,
+cancellation while the Start reply is pending, and older/same/newer-generation picker
+replies. The file browser fixture also delays Start to check immediate **Starting…**
+feedback, disabled conflicting controls, restored controls after rejection, and
+transition to the backend-owned Cancel action after admission.
+
+Capture-clock tests cover missing/invalid/Go-zero start times, generation changes,
+and freezing the last take across transcription, cleanup, and failure.
+`capture-reading.spec.ts` reproduces the recording-to-transcribing zero-time
+transition at compact width and verifies no growth during processing. Its short
+viewport cases assert that Jump to latest sits outside the transcript scroll area,
+preserves reading position during updates/finalization, and still scrolls to the
+end when activated.
+
 Check Audio file and Text to speech at normal and compact desktop sizes, including
 1156×760 and 650×550. Use synthetic renderer fixtures for selected, busy, completed,
 and error states without invoking inference. File summary, response-mode switch,
@@ -696,6 +716,73 @@ generating, playing, paused, completed, and failed states. Check the Speech sett
 popover, nested connection menu, Escape focus return, draft retention across tabs,
 and visible keyboard focus in both themes. The application Settings button must
 remain on screen when the shortcut hint is hidden at compact widths.
+
+### Transcript selection and keyboard reading
+
+`transcript-reader.spec.ts` exercises scoped Ctrl+A, a native Ctrl+C event for a
+partial selection, Page Up/Down and Home/End scrolling, and selection preservation
+through streaming and finalization at 560px and 1156px. Copy events are intercepted
+only in the fixture to avoid replacing the tester's system clipboard. History
+checks cover deferred cleanup updates and independent raw/cleaned selection.
+New recordings clear old selections. Native review should confirm copying a
+selected excerpt into another application, including Unicode text.
+
+### Listen request feedback
+
+`listen-pending.spec.ts` delays voice, file, and history Listen bindings at 560px
+and 1156px. It checks immediate feedback without button-width changes, duplicate
+click suppression, continued text/copy access, rejection/retry, and re-enabling
+after generation. Speech store tests exercise cross-source admission, release
+after rejection, and continued replacement from playing/paused/completed states.
+All requests are synthetic; these tests do not invoke inference.
+
+### Saving generated audio
+
+`save-audio-pending.spec.ts` holds a synthetic SaveAudio response open in compact
+and embedded playback at 560px and 1000px. It verifies visible pending feedback,
+duplicate-click suppression, stable player height, usable pause/resume/seek,
+and recovery after cancellation, failure, and success. Store tests additionally
+keep the guard across playback-generation changes and verify duplicate requests
+do not clear other feedback. These fixtures do not open a native save dialog or
+write audio. Native review should confirm cancellation and retry with the Windows
+dialog and a chosen WAV destination.
+
+### Speech seeking and composer shortcut
+
+Speech composer fixtures verify editing during generation, playback, and pause,
+clearing the draft without releasing audio, and explicit replacement with the next
+submitted text. Ctrl+Enter cannot start a second generation while one is running.
+History expansion fixtures exercise real mouse-wheel events over the list at 560px
+and 1156px, scrolling in both directions, same-entry updates preserving the reading
+position, and newest-entry arrival returning the single viewport to the top.
+
+Transcript playback fixtures at 560px and 1000px verify a single row no taller than
+48px, keyboard seeking, pause/resume and Stop visibility, keyboard access to
+Restart and Save through Playback actions, and clearing completed audio.
+
+`speech-playback.spec.ts` uses synthetic renderer fixtures to check stable generation
+and playback geometry at 560px and 1000px, keyboard seeking and retained focus,
+drag previews, one commit on release, and rejection of a drag after audio replacement.
+Irregular native progress fixtures exercise updates between slider steps before and
+after seeking. Geometry assertions check visible fill height, full track width, and
+alignment between the filled range and thumb. This catches a frozen display even
+when the underlying seek request succeeds. Light/dark fixtures compare standalone
+playback surfaces and rounded borders with the adjacent result card; embedded
+playback uses its parent's frame.
+It also checks Enter/newline and Ctrl+Enter submission, including empty, oversized,
+composing, and repeated input. Frontend state tests cover delayed responses and
+duplicate submissions. These checks do not invoke inference.
+
+Go seek tests cover playing, paused, and completed intent, stale generations,
+out-of-range values, native errors, resume failure, and shutdown during a blocked
+seek. Windows adapter tests check whole-frame alignment and unchanged full WAV export.
+For an opt-in real Windows output check, set `FREEHAND_NATIVE_PLAYBACK_ACCEPTANCE=1`
+and run `go test ./internal/platform -run '^TestNativePlaybackSeek$' -count=1 -v`.
+This plays synthetic silence only and checks seek, paused position, resumed clock,
+buffer drain, and resource closure. It does not exercise a microphone or inference
+server and does not establish audible speech quality. For interactive acceptance,
+use explicitly generated speech to review seeking while playing and paused, replay
+after completion, full-audio export, and recording preemption.
 
 ## Speech controls, vocabulary feedback, and transcript reading
 

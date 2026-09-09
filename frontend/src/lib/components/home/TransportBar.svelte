@@ -11,6 +11,7 @@
   import TransportShell from "$lib/components/home/TransportShell.svelte";
   import Waveform from "$lib/components/home/Waveform.svelte";
   import { levels } from "$lib/stores/levels.svelte";
+  import { CaptureClock } from "$lib/utils/captureClock.svelte";
   import { cn } from "$lib/utils";
   import ShortcutKeys from "$lib/components/common/ShortcutKeys.svelte";
   import {
@@ -89,31 +90,20 @@
   // recording time. Failed and copy-required states can lose StartedAt, so the
   // final visible value remains available until the run returns to idle.
   let now = $state(Date.now());
-  let visibleSeconds = $state(0);
-  let clockWasRecording = false;
+  const captureClock = new CaptureClock();
+  const visibleSeconds = $derived(captureClock.seconds);
   $effect(() => {
     const state = status.state;
     const startedAt = status.startedAt;
-    if (state === State.Idle) {
-      visibleSeconds = 0;
-      clockWasRecording = false;
-      return;
-    }
+    const generation = status.generation;
     const update = () => {
-      now = Date.now();
-      visibleSeconds = startedAt
-        ? Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000))
-        : 0;
+      const currentTime = Date.now();
+      now = currentTime;
+      captureClock.update({ state, startedAt, generation }, currentTime);
     };
 
-    if (!recording) {
-      if (clockWasRecording && startedAt) update();
-      clockWasRecording = false;
-      return;
-    }
-
-    clockWasRecording = true;
     update();
+    if (!recording) return;
     const timer = setInterval(update, autoStopCountdown ? 100 : 1000);
     return () => clearInterval(timer);
   });
@@ -364,6 +354,7 @@
         "figure text-[34px] leading-none font-medium tracking-[-0.02em]",
         status.state === State.Idle || textStage ? "text-ink-disabled" : "text-foreground",
       )}
+      aria-label="Recording duration"
     >
       {clock}
     </span>

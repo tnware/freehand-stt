@@ -47,7 +47,8 @@
   } = $props();
 
   const fileWorking = $derived(
-    session.files.status.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
+    session.files.starting ||
+      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
       session.files.status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
       session.files.status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
       session.files.status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
@@ -186,10 +187,16 @@
             <AudioFileTranscription
               status={session.files.status}
               choosing={session.files.choosing}
+              starting={session.files.starting}
+              cancelling={session.files.cancelling}
+              clearing={session.files.clearing}
+              streamingEnabled={session.files.streamingEnabled}
+              resettingStreaming={session.files.resettingStreaming}
+              onStreamingChange={(enabled) => (session.files.streamingPreferred = enabled)}
               voiceActive={voiceActive || ttsWorking}
               onOpenSettings={onOpenServerSettings}
               onChoose={() => session.files.chooseAudioFile()}
-              onStart={(stream) => session.files.startFileTranscription(stream)}
+              onStart={() => session.files.startFileTranscription()}
               onTryStreamingAgain={() => session.files.tryFileStreamingAgain()}
               onCancel={() => session.files.cancelFileTranscription()}
               onClear={() => session.files.clearAudioFile()}
@@ -209,6 +216,9 @@
         onPause={() => session.speech.pauseTTS()}
         onResume={() => session.speech.resumeTTS()}
         onRestart={() => session.speech.restartTTS()}
+        onSeek={(request) => session.speech.seekTTS(request)}
+        seeking={session.speech.seeking}
+        saving={session.speech.saving}
         onStop={() => session.speech.stopTTS()}
         onSave={() => session.speech.saveTTSAudio()}
         onClear={() => session.speech.clearTTSAudio()}
@@ -221,10 +231,14 @@
         settings={runtimeSettings?.textToSpeech ?? session.editor.draft.textToSpeech}
         status={session.speech.status}
         unavailable={voiceActive || fileWorking}
+        submitting={session.speech.submitting || session.speech.listening !== null}
         onSpeak={(text) => session.speech.speakText(text)}
         onPause={() => session.speech.pauseTTS()}
         onResume={() => session.speech.resumeTTS()}
         onRestart={() => session.speech.restartTTS()}
+        onSeek={(request) => session.speech.seekTTS(request)}
+        seeking={session.speech.seeking}
+        saving={session.speech.saving}
         onStop={() => session.speech.stopTTS()}
         onSave={() => session.speech.saveTTSAudio()}
         onClear={() => session.speech.clearTTSAudio()}
@@ -290,6 +304,12 @@
                   if (inputMode === "file") void session.files.clearAudioFile();
                   else void session.dictation.clearCurrent();
                 }}
+                listenDisabled={!session.speech.canListen}
+                listenBusy={session.speech.listening?.source ===
+                  (inputMode === "file" ? TTSSource.SourceFile : TTSSource.SourceVoice) ||
+                  (session.speech.status.phase === TTSPhase.Generating &&
+                    session.speech.status.source ===
+                      (inputMode === "file" ? TTSSource.SourceFile : TTSSource.SourceVoice))}
                 onListen={runtimeSettings?.textToSpeech.enabled && !voiceActive && !fileWorking
                   ? () =>
                       inputMode === "file"
@@ -432,13 +452,17 @@
                 onDelete={(id) => session.history.deleteHistoryEntry(id)}
                 onCopyFile={() => session.files.copyFileTranscript()}
                 ttsEnabled={runtimeSettings?.textToSpeech.enabled ?? false}
-                ttsAvailable={!voiceActive && !fileWorking}
+                ttsAvailable={!voiceActive && !fileWorking && session.speech.canListen}
+                ttsPending={session.speech.listening ?? undefined}
                 ttsStatus={session.speech.status}
                 onListen={(id, version) => session.speech.listenHistoryEntry(id, version)}
                 onListenFile={() => session.speech.listenFileTranscript()}
                 onPauseTTS={() => session.speech.pauseTTS()}
                 onResumeTTS={() => session.speech.resumeTTS()}
                 onRestartTTS={() => session.speech.restartTTS()}
+                onSeekTTS={(request) => session.speech.seekTTS(request)}
+                seeking={session.speech.seeking}
+                saving={session.speech.saving}
                 onStopTTS={() => session.speech.stopTTS()}
                 onSaveTTS={() => session.speech.saveTTSAudio()}
                 onClearTTS={() => session.speech.clearTTSAudio()}
@@ -491,7 +515,6 @@
   }
   .history-sidebar {
     height: 100%;
-    --history-max-height: none;
     display: flex;
     min-width: 0;
     min-height: 0;
@@ -502,9 +525,11 @@
     background: var(--layer-fill);
   }
   .history-area {
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     flex: 1;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .onboarding .task-main {
     overflow-y: auto;
