@@ -505,7 +505,6 @@
   }
   .history-sidebar {
     height: 100%;
-    --history-max-height: none;
     display: flex;
     min-width: 0;
     min-height: 0;
@@ -516,9 +515,11 @@
     background: var(--layer-fill);
   }
   .history-area {
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     flex: 1;
-    overflow-y: auto;
+    overflow: hidden;
   }
   .onboarding .task-main {
     overflow-y: auto;

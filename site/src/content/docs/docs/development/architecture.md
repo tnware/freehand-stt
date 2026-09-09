@@ -579,12 +579,13 @@ Settings can request a presentation-only native preview through a narrow Wails b
 
 Home presents the selected task and current result first. The workspace keeps a readable width and uses a wider two-column layout when
 recent history is enabled: current work and controls on the left, history on the
-right. Narrow windows stack those areas. The current-result card has a compact, stable height across empty, working,
-recovery, and completed states, with status explanations inside it. Short history
-lists size to their content. In wide layouts the history scroll limit grows to
-match the adjacent result and task-settings column. Long results and history remain
-scrollable. An expandable task-settings
-area retains immediate-save STT and cleanup controls; microphone and delivery controls
+right. Narrow windows switch between Result and History views. Both panes fill the
+available height across empty, working, recovery, and completed states.
+`HistoryList` owns the single bounded history scroll viewport; its outer frame and
+drawer pass through the available height instead of creating a second scroll area.
+This keeps mouse-wheel input over transcript text and row controls in the visible
+scroller. Newest-entry arrival also resets that same viewport to the top.
+Result-toolbar popovers retain immediate-save STT and cleanup controls; microphone and delivery controls
 appear only for dictation. TTS shows its own connection and model/voice settings link.
 Each quick update starts from backend-confirmed settings, restores only engine options
 when a model changes, and calls the same transactional owner without credential mutation.
@@ -930,6 +931,10 @@ the audio generation identity and full export snapshot; replacement audio invali
 an unfinished drag. No synthesized bytes cross the bridge. The composer handles
 Ctrl+Enter locally, preserves ordinary Enter, and guards duplicate submissions.
 Generation shows an indeterminate message; playback time starts with decoded audio.
+The speech draft remains editable throughout generation and playback. Editing and
+clearing it never call the playback service. Speak is blocked during generation or
+pending submission but can explicitly replace playing/paused audio. The Go service's
+captured text argument remains independent of subsequent renderer draft edits.
 Audio-file transport keeps its summary, response-mode option, and actions in stable
 slots. These components consume existing backend status and capability flags;
 window geometry and visual transitions do not alter inference or persistence.

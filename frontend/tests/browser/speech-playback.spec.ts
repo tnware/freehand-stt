@@ -38,6 +38,95 @@ for (const theme of ["dark", "light"]) {
   });
 }
 for (const width of [560, 1000]) {
+  test(`transcript playback stays compact with accessible controls at ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 560 });
+    await playing(page);
+    await page.getByRole("button", { name: "Show transcript playback", exact: true }).click();
+    await page.getByRole("tab", { name: "Voice", exact: true }).click();
+    const bar = page.locator('[aria-label="Speech playback"]');
+    const slider = bar.getByRole("slider", { name: "Playback position", exact: true });
+    expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(48);
+    expect((await bar.locator('[data-slot="slider-track"]').boundingBox())!.width).toBeGreaterThan(
+      220,
+    );
+    await slider.focus();
+    await slider.press("ArrowRight");
+    await expect(slider).toHaveAttribute("aria-valuenow", "10100");
+    await bar.getByRole("button", { name: "Pause speech playback", exact: true }).click();
+    await expect(
+      bar.getByRole("button", { name: "Resume speech playback", exact: true }),
+    ).toBeVisible();
+    await expect(
+      bar.getByRole("button", { name: "Stop and release speech playback", exact: true }),
+    ).toBeVisible();
+    await page.screenshot({ path: info.outputPath(`compact-playback-${width}.png`) });
+    const actions = bar.getByRole("button", { name: "Playback actions", exact: true });
+    await actions.focus();
+    await actions.press("Enter");
+    await expect(
+      page.getByRole("menuitem", { name: "Restart speech playback", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("menuitem", { name: "Save generated speech", exact: true }).click();
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await slider.focus();
+    await slider.press("End");
+    await expect(
+      bar.getByRole("button", { name: "Restart speech playback", exact: true }),
+    ).toBeVisible();
+    await actions.click();
+    await page.getByRole("menuitem", { name: "Clear generated speech", exact: true }).click();
+    await expect(bar).toHaveCount(0);
+    await page.screenshot({ path: info.outputPath(`compact-playback-cleared-${width}.png`) });
+  });
+}
+
+for (const width of [560, 1000]) {
+  test(`speech draft stays editable without changing current audio at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 620 });
+    const text = await composer(page);
+    const submitted = page.locator('[aria-label="Submitted speech text"]');
+    await text.fill("The original request.");
+    await text.press("Control+Enter");
+    await expect(text).toBeEditable();
+    await text.fill("A draft for the next request.");
+    await text.press("Control+Enter");
+    await expect(submitted).toHaveText("The original request.");
+    await expect(
+      page.getByText("Speech requests: 1; seek requests: 0", { exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Finish generation", exact: true }).click();
+    await expect(text).toHaveValue("A draft for the next request.");
+    await text.fill("Edited during playback.");
+    const slider = page.getByRole("slider", { name: "Playback position", exact: true });
+    await expect(slider).toHaveAttribute("aria-valuenow", "10000");
+    await page.getByRole("button", { name: "Pause speech playback", exact: true }).click();
+    await expect(text).toBeEditable();
+    await page
+      .getByRole("region", { name: "Speech composer" })
+      .getByRole("button", { name: "Clear", exact: true })
+      .click();
+    await expect(text).toHaveValue("");
+    await expect(slider).toHaveAttribute("aria-valuenow", "10000");
+    await expect(
+      page.getByRole("button", { name: "Resume speech playback", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Save generated speech", exact: true }),
+    ).toBeEnabled();
+    await expect(submitted).toHaveText("The original request.");
+    await text.fill("The replacement request.");
+    await expect(page.getByRole("button", { name: "Speak", exact: false })).toBeEnabled();
+    await text.press("Control+Enter");
+    await expect(submitted).toHaveText("The replacement request.");
+    await expect(
+      page.getByText("Speech requests: 2; seek requests: 0", { exact: true }),
+    ).toBeVisible();
+  });
+
   test(`speech generation and seeking stay clear and keyboard accessible at ${width}px`, async ({
     page,
   }, info) => {

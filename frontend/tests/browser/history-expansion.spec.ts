@@ -1,6 +1,38 @@
 import { test, expect } from "./fixtures";
 
 for (const width of [560, 1156]) {
+  test(`mouse wheel scrolls history entries at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 560 });
+    await page.goto("/tests/browser/app/?view=workspace&theme=dark&history=expansion");
+    if (width < 900) await page.getByRole("button", { name: "History · 2", exact: true }).click();
+    const scroll = page.locator(".history-area .overflow-y-auto");
+    await expect(scroll).toHaveCount(1);
+    await expect
+      .poll(() => scroll.evaluate((node) => node.scrollHeight - node.clientHeight))
+      .toBeGreaterThan(100);
+    await scroll.hover();
+    const target = await scroll.evaluate((node) =>
+      Math.min(200, node.scrollHeight - node.clientHeight),
+    );
+    await page.mouse.wheel(0, 200);
+    await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBe(target);
+    await page.getByRole("button", { name: "Update latest", exact: true }).click();
+    // Native scroll anchoring may compensate for changed text/controls above
+    // the reader, but updating the same entry must not jump back to the top.
+    await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBeGreaterThan(100);
+    await scroll.hover();
+    await page.mouse.wheel(0, -1000);
+    await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBe(0);
+    await page.mouse.wheel(0, 10000);
+    await expect
+      .poll(() => scroll.evaluate((node) => node.scrollHeight - node.clientHeight - node.scrollTop))
+      .toBeLessThan(2);
+    await page.getByRole("button", { name: "Add transcript", exact: true }).click();
+    await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBe(0);
+  });
+}
+
+for (const width of [560, 1156]) {
   test(`history follows the newest transcript and preserves manual reading at ${width}px`, async ({
     page,
   }, info) => {

@@ -173,7 +173,6 @@
   <div class="drawer" id="history-detail" inert={!open}>
     {#if enabled || entries.length > 0 || live}
       <HistoryList
-        maxHeight={collapsible ? undefined : "var(--history-max-height, 24rem)"}
         {entries}
         {live}
         {onCopy}
@@ -234,15 +233,15 @@
   .history-card.open {
     flex-grow: 1;
   }
-  /* The parent bounds scrolling; short history lists size to their content. */
+  /* Fill the bounded pane so HistoryList owns the only scrolling viewport. */
   .history-card.bare {
     border: 0;
     border-radius: 0;
     background: transparent;
-    flex: 0 0 auto;
+    flex: 1;
   }
   .history-card.bare .drawer {
-    flex: 0 0 auto;
+    flex: 1;
   }
 
   /* Inset rather than a border, so the hairline costs no height while closed. */

@@ -43,6 +43,7 @@
   let connectionChecks = 0;
   const feedbackScenario = new URLSearchParams(location.search).has("feedback");
   let speechRequests = $state(0);
+  let submittedSpeechText = $state("");
   let audioSaves = 0;
   let current = structuredClone(settings);
   current.setupCompleted = true;
@@ -268,8 +269,9 @@
           });
           return CancellablePromise.resolve();
         },
-        SpeakText: () => {
+        SpeakText: (text) => {
           speechRequests++;
+          submittedSpeechText = text;
           if (playbackScenario) {
             session.speech.applyStatus({
               ...session.speech.status,
@@ -581,6 +583,7 @@
               })}>Replace audio</button
           >
           <span role="status">Speech requests: {speechRequests}; seek requests: {seekCalls}</span>
+          <span class="sr-only" aria-label="Submitted speech text">{submittedSpeechText}</span>
         </div>
       {:else if historyExpansion}
         <div class="flex gap-3">

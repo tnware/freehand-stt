@@ -719,6 +719,17 @@ remain on screen when the shortcut hint is hidden at compact widths.
 
 ### Speech seeking and composer shortcut
 
+Speech composer fixtures verify editing during generation, playback, and pause,
+clearing the draft without releasing audio, and explicit replacement with the next
+submitted text. Ctrl+Enter cannot start a second generation while one is running.
+History expansion fixtures exercise real mouse-wheel events over the list at 560px
+and 1156px, scrolling in both directions, same-entry updates preserving the reading
+position, and newest-entry arrival returning the single viewport to the top.
+
+Transcript playback fixtures at 560px and 1000px verify a single row no taller than
+48px, keyboard seeking, pause/resume and Stop visibility, keyboard access to
+Restart and Save through Playback actions, and clearing completed audio.
+
 `speech-playback.spec.ts` uses synthetic renderer fixtures to check stable generation
 and playback geometry at 560px and 1000px, keyboard seeking and retained focus,
 drag previews, one commit on release, and rejection of a drag after audio replacement.

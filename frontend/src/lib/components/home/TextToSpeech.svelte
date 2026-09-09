@@ -56,6 +56,7 @@
         status.phase === TTSPhase.Playing ||
         status.phase === TTSPhase.Paused),
   );
+  const generating = $derived(status.phase === TTSPhase.Generating);
   const showPlayback = $derived(
     isOwnSession && status.phase !== TTSPhase.Idle && status.phase !== TTSPhase.Cancelled,
   );
@@ -67,7 +68,7 @@
     configured &&
       !unavailable &&
       !submitting &&
-      !working &&
+      !generating &&
       characterCount > 0 &&
       characterCount <= maximumCharacters,
   );
@@ -133,13 +134,13 @@
       aria-describedby="speech-character-count speech-compose-shortcut"
       aria-keyshortcuts="Control+Enter"
       onkeydown={composerKey}
-      disabled={working}
-      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-4 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-inset disabled:opacity-100"
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-4 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-inset"
       placeholder="Write or paste text to speak…"
     />
   </div>
   <p id="speech-compose-shortcut" class="sr-only">
-    Press Ctrl+Enter to speak. Enter adds a new line.
+    Press Ctrl+Enter to speak. Enter adds a new line. Editing or clearing this draft does not change
+    the current audio. Speak generates this draft and replaces the current audio.
   </p>
   <div class="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-hairline px-4">
     <span
@@ -156,9 +157,7 @@
         >{/if}
     </span>
     <div class="flex items-center gap-2">
-      <Button variant="ghost" size="sm" disabled={!text || working} onclick={() => (text = "")}
-        >Clear</Button
-      >
+      <Button variant="ghost" size="sm" disabled={!text} onclick={() => (text = "")}>Clear</Button>
       {#if !configured}
         <Button
           variant="outline"
@@ -167,7 +166,13 @@
           onclick={onOpenSettings}><SettingsIcon />Set up speech</Button
         >
       {:else}
-        <Button size="sm" class="min-w-28" disabled={!canSpeak} onclick={() => onSpeak(text)}>
+        <Button
+          size="sm"
+          class="min-w-28"
+          disabled={!canSpeak}
+          title="Generate this text and replace the current audio"
+          onclick={() => onSpeak(text)}
+        >
           {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
               class="animate-spin motion-reduce:animate-none"
             />{:else}<Volume2Icon />{/if}
