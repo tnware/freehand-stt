@@ -4,6 +4,7 @@
   import { onDestroy, type Snippet } from "svelte";
   import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
   import { Button } from "$lib/components/ui/button";
+  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   let {
     live = false,
     liveFinal = "",
@@ -19,6 +20,8 @@
     onCopy,
     onClear,
     onListen,
+    listenBusy = false,
+    listenDisabled = false,
     quickSettings,
   }: {
     live?: boolean;
@@ -36,6 +39,8 @@
     onCopy: () => Promise<boolean>;
     onClear: () => void;
     onListen?: () => void;
+    listenBusy?: boolean;
+    listenDisabled?: boolean;
   } = $props();
   const feedback = new CopyFeedback();
   onDestroy(() => feedback.dispose());
@@ -73,8 +78,19 @@
       {#if onListen}<Button
           variant="ghost"
           size="sm"
-          disabled={working || !canCopy}
-          onclick={onListen}>Listen</Button
+          class="min-w-16"
+          disabled={working || !canCopy || listenDisabled}
+          aria-label={listenBusy ? "Preparing speech for this transcript" : "Listen"}
+          aria-busy={listenBusy}
+          title={listenBusy
+            ? "Preparing speech for this transcript"
+            : listenDisabled
+              ? "Wait for speech generation to finish"
+              : "Listen to transcript"}
+          onclick={onListen}
+          >{#if listenBusy}<LoaderCircleIcon
+              class="animate-spin motion-reduce:animate-none"
+            />{:else}Listen{/if}</Button
         >{/if}
       <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
       <Button variant="outline" size="sm" disabled={working || !canCopy} onclick={copy}

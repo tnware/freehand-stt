@@ -1,11 +1,58 @@
 import { CancellablePromise } from "@wailsio/runtime";
 import { describe, expect, it, vi } from "vitest";
-import { TTSPhase, HistoryTextVersion, type TTSStatus } from "$lib/state";
+import { TTSPhase, TTSSource, HistoryTextVersion, type TTSStatus } from "$lib/state";
 import { settings, idle, serviceWithStatus } from "./session-fixtures";
 import { SessionMessages } from "./messages.svelte";
 import { SpeechState } from "./speech.svelte";
 
 const bindings = () => serviceWithStatus(() => CancellablePromise.resolve(idle)).speech;
+
+it("admits only one Listen request across result and history controls and recovers after rejection", async () => {
+  const pending = CancellablePromise.withResolvers<void>();
+  const PlayVoiceTranscript = vi.fn(() => pending.promise);
+  const PlayHistoryEntry = vi.fn(() => CancellablePromise.resolve());
+  const PlayFileTranscript = vi.fn(() => CancellablePromise.resolve());
+  const messages = new SessionMessages();
+  const speech = new SpeechState(
+    { ...bindings(), PlayVoiceTranscript, PlayHistoryEntry, PlayFileTranscript },
+    messages,
+  );
+  try {
+    const first = speech.listenVoiceTranscript(7);
+    expect(speech.listening).toEqual({ source: TTSSource.SourceVoice });
+    expect(speech.canListen).toBe(false);
+    await speech.listenVoiceTranscript(7);
+    await speech.listenHistoryEntry(3, HistoryTextVersion.HistoryTextRaw);
+    await speech.listenFileTranscript();
+    expect(PlayVoiceTranscript).toHaveBeenCalledTimes(1);
+    expect(PlayHistoryEntry).not.toHaveBeenCalled();
+    expect(PlayFileTranscript).not.toHaveBeenCalled();
+    pending.reject(new Error("Speech is unavailable"));
+    await first;
+    expect(speech.listening).toBeNull();
+    expect(speech.canListen).toBe(true);
+    expect(messages.error).toContain("Speech is unavailable");
+    await speech.listenFileTranscript();
+    expect(PlayFileTranscript).toHaveBeenCalledTimes(1);
+    speech.applyStatus({ ...speech.status, generation: 1, phase: TTSPhase.Generating });
+    await speech.listenFileTranscript();
+    expect(PlayFileTranscript).toHaveBeenCalledTimes(1);
+    for (const phase of [
+      TTSPhase.Playing,
+      TTSPhase.Paused,
+      TTSPhase.Completed,
+      TTSPhase.Failed,
+      TTSPhase.Cancelled,
+    ]) {
+      speech.applyStatus({ ...speech.status, phase });
+      expect(speech.canListen).toBe(true);
+    }
+    await speech.listenHistoryEntry(3, HistoryTextVersion.HistoryTextRaw);
+    expect(PlayHistoryEntry).toHaveBeenCalledExactlyOnceWith(3, HistoryTextVersion.HistoryTextRaw);
+  } finally {
+    messages.dispose();
+  }
+});
 
 describe("SpeechState", () => {
   it("keeps live playback status over a pending snapshot and ignores older generations", async () => {

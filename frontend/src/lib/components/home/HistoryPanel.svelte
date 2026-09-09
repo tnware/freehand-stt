@@ -29,6 +29,7 @@
     ttsEnabled = false,
     ttsAvailable = true,
     ttsStatus,
+    ttsPending,
     onListen,
     onListenFile,
     onPauseTTS,
@@ -55,6 +56,7 @@
     ttsEnabled?: boolean;
     ttsAvailable?: boolean;
     ttsStatus: TTSStatus;
+    ttsPending?: Pick<TTSStatus, "source" | "historyID">;
     onListen: (id: number, version: HistoryTextVersion) => void;
     onListenFile: () => void;
     onPauseTTS: () => void;
@@ -183,6 +185,7 @@
         {ttsEnabled}
         {ttsAvailable}
         {ttsStatus}
+        {ttsPending}
         {onListen}
         onListenLive={onListenFile}
       />

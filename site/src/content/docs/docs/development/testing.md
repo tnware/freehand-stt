@@ -727,6 +727,15 @@ checks cover deferred cleanup updates and independent raw/cleaned selection.
 New recordings clear old selections. Native review should confirm copying a
 selected excerpt into another application, including Unicode text.
 
+### Listen request feedback
+
+`listen-pending.spec.ts` delays voice, file, and history Listen bindings at 560px
+and 1156px. It checks immediate feedback without button-width changes, duplicate
+click suppression, continued text/copy access, rejection/retry, and re-enabling
+after generation. Speech store tests exercise cross-source admission, release
+after rejection, and continued replacement from playing/paused/completed states.
+All requests are synthetic; these tests do not invoke inference.
+
 ### Speech seeking and composer shortcut
 
 Speech composer fixtures verify editing during generation, playback, and pause,

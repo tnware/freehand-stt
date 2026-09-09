@@ -45,6 +45,7 @@
     ttsEnabled = false,
     ttsAvailable = true,
     ttsStatus,
+    ttsPending,
     onListen,
     onListenLive,
   }: {
@@ -72,9 +73,14 @@
     ttsEnabled?: boolean;
     ttsAvailable?: boolean;
     ttsStatus?: TTSStatus;
+    ttsPending?: Pick<TTSStatus, "source" | "historyID">;
     onListen?: (id: number, version: HistoryTextVersion) => void;
     onListenLive?: () => void;
   } = $props();
+
+  const preparing = $derived(
+    ttsPending ?? (ttsStatus?.phase === TTSPhase.Generating ? ttsStatus : undefined),
+  );
 
   const outcomeLabel = (outcome: HistoryOutcome): string => {
     if (outcome === HistoryOutcome.HistoryCopyRequired) return "copy required";
@@ -289,10 +295,12 @@
                   variant="ghost"
                   size="icon-xs"
                   disabled={!ttsAvailable}
-                  label="Listen to audio file transcript"
+                  label={preparing?.source === TTSSource.SourceFile
+                    ? "Preparing speech for this transcript"
+                    : "Listen to audio file transcript"}
                   onclick={onListenLive}
                 >
-                  {#if ttsStatus?.source === TTSSource.SourceFile && ttsStatus.phase === TTSPhase.Generating}
+                  {#if preparing?.source === TTSSource.SourceFile}
                     <LoaderCircleIcon class="animate-spin motion-reduce:animate-none" />
                   {:else}
                     <Volume2Icon />
@@ -542,13 +550,12 @@
                     variant="ghost"
                     size="icon-xs"
                     disabled={!ttsAvailable}
-                    label={ttsStatus?.historyID === entry.id &&
-                    ttsStatus.phase === TTSPhase.Generating
-                      ? "Generating speech for this transcript"
+                    label={preparing?.historyID === entry.id
+                      ? "Preparing speech for this transcript"
                       : "Listen to transcript"}
                     onclick={() => onListen(entry.id, finalVersion)}
                   >
-                    {#if ttsStatus?.historyID === entry.id && ttsStatus.phase === TTSPhase.Generating}
+                    {#if preparing?.historyID === entry.id}
                       <LoaderCircleIcon class="animate-spin motion-reduce:animate-none" />
                     {:else}
                       <Volume2Icon />

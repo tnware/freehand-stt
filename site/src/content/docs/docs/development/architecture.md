@@ -393,7 +393,12 @@ command facade or a container for feature state.
   binding returns. Picker responses use the same generation/revision reconciliation
   as status events so a delayed reply cannot replace newer capability or progress state.
 - `SpeechState` owns playback projection and speech commands, including preview
-  admission. The generated speech and dictation `CurrentStatus` methods remain
+  admission. It admits one pending Listen binding across voice, file, and history,
+  retaining the source/history identity for immediate control feedback. Listen is
+  unavailable during that pending call or backend-reported generation, and during
+  composer/preview admission. Rejection releases the guard for retry. Playback and
+  pause still allow an explicit replacement after generation completes. Go owns
+  synthesis cancellation and audio replacement. The generated speech and dictation `CurrentStatus` methods remain
   in separate service namespaces.
 - `HistoryState` owns history refresh/mutation ordering. Successful refresh
   acknowledges the completed file generation through an injected callback.

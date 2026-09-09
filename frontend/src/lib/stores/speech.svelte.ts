@@ -1,4 +1,4 @@
-import { TTSPhase, type TTSStatus, type HistoryTextVersion } from "$lib/state";
+import { TTSPhase, TTSSource, type TTSStatus, type HistoryTextVersion } from "$lib/state";
 import type { SessionMessages } from "./messages.svelte";
 import type * as TtsBindings from "$bindings/tts/service";
 import type { Settings } from "$lib/state";
@@ -45,6 +45,15 @@ export class SpeechState {
   previewing = $state(false);
   submitting = $state(false);
   seeking = $state(false);
+  listening = $state<Pick<TTSStatus, "source" | "historyID"> | null>(null);
+  get canListen() {
+    return (
+      !this.listening &&
+      !this.submitting &&
+      !this.previewing &&
+      this.status.phase !== TTSPhase.Generating
+    );
+  }
   // Unsent work belongs to the WebView session, never browser or disk storage.
   draft = $state("");
   #ttsStatusRevision = 0;
@@ -67,34 +76,36 @@ export class SpeechState {
   }
 
   async listenHistoryEntry(id: number, version: HistoryTextVersion) {
-    this.#messages.clear();
-    try {
-      await this.#service.PlayHistoryEntry(id, version);
-    } catch (cause) {
-      this.#messages.fail(cause);
-    }
+    await this.#listen({ source: TTSSource.SourceHistory, historyID: id }, () =>
+      this.#service.PlayHistoryEntry(id, version),
+    );
   }
 
   async listenFileTranscript() {
-    this.#messages.clear();
-    try {
-      await this.#service.PlayFileTranscript();
-    } catch (cause) {
-      this.#messages.fail(cause);
-    }
+    await this.#listen({ source: TTSSource.SourceFile }, () => this.#service.PlayFileTranscript());
   }
 
   async listenVoiceTranscript(generation: number) {
+    await this.#listen({ source: TTSSource.SourceVoice }, () =>
+      this.#service.PlayVoiceTranscript(generation),
+    );
+  }
+
+  async #listen(target: Pick<TTSStatus, "source" | "historyID">, start: () => Promise<void>) {
+    if (!this.canListen) return;
+    this.listening = target;
     this.#messages.clear();
     try {
-      await this.#service.PlayVoiceTranscript(generation);
+      await start();
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.listening = null;
     }
   }
 
   async previewVoice(settings: Settings) {
-    if (this.previewing) return;
+    if (this.previewing || this.listening) return;
     this.previewing = true;
     this.#messages.clear();
     try {
@@ -117,7 +128,7 @@ export class SpeechState {
   }
 
   async speakText(text: string) {
-    if (this.submitting) return;
+    if (this.submitting || this.listening) return;
     this.submitting = true;
     this.#messages.clear();
     try {

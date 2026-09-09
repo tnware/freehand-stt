@@ -230,7 +230,7 @@
         settings={runtimeSettings?.textToSpeech ?? session.editor.draft.textToSpeech}
         status={session.speech.status}
         unavailable={voiceActive || fileWorking}
-        submitting={session.speech.submitting}
+        submitting={session.speech.submitting || session.speech.listening !== null}
         onSpeak={(text) => session.speech.speakText(text)}
         onPause={() => session.speech.pauseTTS()}
         onResume={() => session.speech.resumeTTS()}
@@ -302,6 +302,12 @@
                   if (inputMode === "file") void session.files.clearAudioFile();
                   else void session.dictation.clearCurrent();
                 }}
+                listenDisabled={!session.speech.canListen}
+                listenBusy={session.speech.listening?.source ===
+                  (inputMode === "file" ? TTSSource.SourceFile : TTSSource.SourceVoice) ||
+                  (session.speech.status.phase === TTSPhase.Generating &&
+                    session.speech.status.source ===
+                      (inputMode === "file" ? TTSSource.SourceFile : TTSSource.SourceVoice))}
                 onListen={runtimeSettings?.textToSpeech.enabled && !voiceActive && !fileWorking
                   ? () =>
                       inputMode === "file"
@@ -444,7 +450,8 @@
                 onDelete={(id) => session.history.deleteHistoryEntry(id)}
                 onCopyFile={() => session.files.copyFileTranscript()}
                 ttsEnabled={runtimeSettings?.textToSpeech.enabled ?? false}
-                ttsAvailable={!voiceActive && !fileWorking}
+                ttsAvailable={!voiceActive && !fileWorking && session.speech.canListen}
+                ttsPending={session.speech.listening ?? undefined}
                 ttsStatus={session.speech.status}
                 onListen={(id, version) => session.speech.listenHistoryEntry(id, version)}
                 onListenFile={() => session.speech.listenFileTranscript()}

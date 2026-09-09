@@ -28,6 +28,9 @@
   import AppHeader from "$lib/components/shell/AppHeader.svelte";
   import { controlledSaves } from "./save-control";
 
+  const listenScenario = new URLSearchParams(location.search).has("listen-pending");
+  let listenRequests = $state(0);
+  let finishListen: ((success: boolean) => void) | undefined;
   const playbackScenario = new URLSearchParams(location.search).has("playback");
   const fileStreamingScenario = new URLSearchParams(location.search).has("file-streaming");
   const fileActionsScenario = new URLSearchParams(location.search).has("file-actions");
@@ -329,7 +332,12 @@
           });
           return CancellablePromise.resolve();
         },
+        PlayHistoryEntry: (id) =>
+          listenScenario ? startListen(TTSSource.SourceHistory, id) : CancellablePromise.resolve(),
+        PlayFileTranscript: () =>
+          listenScenario ? startListen(TTSSource.SourceFile) : CancellablePromise.resolve(),
         PlayVoiceTranscript: (generation) => {
+          if (listenScenario) return startListen(TTSSource.SourceVoice);
           if (generation !== 7)
             return CancellablePromise.reject(new Error("Wrong result generation"));
           session.speech.applyStatus({
@@ -458,6 +466,27 @@
       void session.editor.testTextToSpeechConnection();
     }
   }
+  function startListen(source: TTSSource, historyID?: number) {
+    listenRequests++;
+    const pending = CancellablePromise.withResolvers<void>();
+    finishListen = (success) => {
+      finishListen = undefined;
+      if (!success) {
+        pending.reject(new Error("Speech is unavailable"));
+        return;
+      }
+      session.speech.applyStatus({
+        ...session.speech.status,
+        generation: session.speech.status.generation + 1,
+        source,
+        historyID,
+        phase: TTSPhase.Generating,
+        canStop: true,
+      });
+      pending.resolve();
+    };
+    return pending.promise;
+  }
   function finishGeneration() {
     session.speech.applyStatus({
       ...session.speech.status,
@@ -523,7 +552,15 @@
     <footer
       class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
     >
-      {#if captureClockScenario}
+      {#if listenScenario}
+        <div class="flex gap-3">
+          <button onclick={() => finishListen?.(true)}>Accept listen</button>
+          <button onclick={() => finishListen?.(false)}>Reject listen</button>
+          <button onclick={finishGeneration}>Finish generation</button>
+          <button onclick={showFileTranscript}>Show file result</button>
+          <span>Listen requests: {listenRequests}</span>
+        </div>
+      {:else if captureClockScenario}
         <div class="flex gap-3">
           <button
             onclick={() =>
