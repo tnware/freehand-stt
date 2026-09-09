@@ -186,10 +186,13 @@
             <AudioFileTranscription
               status={session.files.status}
               choosing={session.files.choosing}
+              streamingEnabled={session.files.streamingEnabled}
+              resettingStreaming={session.files.resettingStreaming}
+              onStreamingChange={(enabled) => (session.files.streamingPreferred = enabled)}
               voiceActive={voiceActive || ttsWorking}
               onOpenSettings={onOpenServerSettings}
               onChoose={() => session.files.chooseAudioFile()}
-              onStart={(stream) => session.files.startFileTranscription(stream)}
+              onStart={() => session.files.startFileTranscription()}
               onTryStreamingAgain={() => session.files.tryFileStreamingAgain()}
               onCancel={() => session.files.cancelFileTranscription()}
               onClear={() => session.files.clearAudioFile()}

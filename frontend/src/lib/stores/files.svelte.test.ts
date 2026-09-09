@@ -151,6 +151,71 @@ describe("FileTranscriptionState ordering", () => {
     await session.files.tryFileStreamingAgain();
 
     expect(TryFileStreamingAgain).toHaveBeenCalledOnce();
-    expect(session.messages.notice).toContain("Streaming can be tried again");
+    expect(session.messages.notice).toContain("Text updates selected");
   });
+});
+
+describe("file streaming preference", () => {
+  it.each([true, false])(
+    "keeps preference %s across capability and file changes",
+    async (preferred) => {
+      const StartFileTranscription = vi.fn(() => CancellablePromise.resolve());
+      const session = createFiles(
+        serviceWithStatus(() => CancellablePromise.resolve(idle), {
+          files: { StartFileTranscription },
+        }),
+      );
+      session.files.streamingPreferred = preferred;
+      for (const [generation, unavailable] of [
+        [1, true],
+        [2, false],
+        [3, true],
+        [4, false],
+      ] as const) {
+        session.files.applyStatus({
+          ...session.files.status,
+          generation,
+          streamingUnavailable: unavailable,
+        });
+        expect(session.files.streamingPreferred).toBe(preferred);
+        expect(session.files.streamingEnabled).toBe(preferred && !unavailable);
+        await session.files.startFileTranscription();
+        expect(StartFileTranscription).toHaveBeenLastCalledWith(
+          preferred && !unavailable,
+        );
+      }
+    },
+  );
+
+  it.each([true, false])(
+    "enables streaming only after successful reset (%s), without starting work",
+    async (success) => {
+      const pending = Promise.withResolvers<void>();
+      const TryFileStreamingAgain = vi.fn(
+        () =>
+          new CancellablePromise<void>((resolve, reject) =>
+            pending.promise.then(resolve, reject),
+          ),
+      );
+      const StartFileTranscription = vi.fn(() => CancellablePromise.resolve());
+      const session = createFiles(
+        serviceWithStatus(() => CancellablePromise.resolve(idle), {
+          files: { TryFileStreamingAgain, StartFileTranscription },
+        }),
+      );
+      session.files.streamingPreferred = false;
+      const reset = session.files.tryFileStreamingAgain();
+      expect(session.files.resettingStreaming).toBe(true);
+      expect(session.files.streamingPreferred).toBe(false);
+      await session.files.tryFileStreamingAgain();
+      await session.files.startFileTranscription();
+      expect(TryFileStreamingAgain).toHaveBeenCalledOnce();
+      if (success) pending.resolve();
+      else pending.reject(new Error("reset failed"));
+      await reset;
+      expect(session.files.streamingPreferred).toBe(success);
+      expect(session.files.resettingStreaming).toBe(false);
+      expect(StartFileTranscription).not.toHaveBeenCalled();
+    },
+  );
 });

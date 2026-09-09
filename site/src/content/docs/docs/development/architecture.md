@@ -380,7 +380,13 @@ command facade or a container for feature state.
   editing transaction.
 - `DictationState` owns live-dictation projection and commands.
 - `FileTranscriptionState` owns stored-file projection, generation/revision
-  reconciliation, delta-gap recovery, and explicit file commands.
+  reconciliation, delta-gap recovery, and explicit file commands. It also owns the
+  renderer-session streaming preference independently of backend capability status.
+  Effective streaming intersects that preference with current support; component
+  remounts and unsupported connections cannot overwrite it. A successful explicit
+  capability reset enables the preference for the next manually started request.
+  Resetting capability never starts inference and blocks conflicting local starts
+  until it completes. This preference is not persisted across renderer reloads.
 - `SpeechState` owns playback projection and speech commands, including preview
   admission. The generated speech and dictation `CurrentStatus` methods remain
   in separate service namespaces.

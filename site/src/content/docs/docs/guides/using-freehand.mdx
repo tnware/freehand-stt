@@ -103,7 +103,9 @@ microphone, recording shortcut, or completed dictation setup.
 
 1. **Open Audio file** and choose **Choose** to select a recording.
 2. **Choose the response mode.** Enable **Show text as it arrives** for streaming when supported, or disable
-   it for completed output. The control remains in place while a file is processed.
+   it for completed output. Your choice stays selected when you switch tasks, choose
+   another file, or change connections, until the window reloads or Freehand exits.
+   The control remains in place while a file is processed.
 3. **Select Transcribe** and wait for the result. Use **Cancel** to stop active work.
 4. **Copy the completed transcript** explicitly into the application you want.
    Use **Change** to select another file, or **Again** to transcribe the current file again.
@@ -123,6 +125,12 @@ choose **Retry** to submit a new request in completed mode. This may repeat
 server work or incur another charge, so Freehand never resubmits automatically.
 A completed JSON response returned to the original streaming request is used
 immediately without another upload.
+
+An unsupported connection temporarily shows **Completed transcript** without changing
+your preference. Returning to a compatible connection restores your choice.
+**Try streaming**, when available, clears the remembered rejection and selects text
+updates for the next transcription. Choose **Transcribe**, **Retry**, or **Again**
+to start that request; choosing **Try streaming** alone does not upload the file.
 
 If a typed transcript stream ends before its final transcript arrives, the job
 fails and any accepted partial text remains available to copy. Cleanup does not

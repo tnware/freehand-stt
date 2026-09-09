@@ -29,6 +29,9 @@
   import { controlledSaves } from "./save-control";
 
   const playbackScenario = new URLSearchParams(location.search).has("playback");
+  const fileStreamingScenario = new URLSearchParams(location.search).has("file-streaming");
+  let fileRequests = $state(0);
+  let lastFileStream = $state(false);
   let seekCalls = $state(0);
   const historyExpansion = new URLSearchParams(location.search).get("history") === "expansion";
   const diagnosticsScenario = new URLSearchParams(location.search).get("diagnostics");
@@ -191,7 +194,13 @@
         },
       },
       files: {
-        StartFileTranscription: () => {
+        TryFileStreamingAgain: () => {
+          session.files.applyStatus({ ...session.files.status, streamingUnavailable: false });
+          return CancellablePromise.resolve();
+        },
+        StartFileTranscription: (stream) => {
+          fileRequests++;
+          lastFileStream = stream;
           session.files.applyStatus({
             ...session.files.status,
             phase: FileTranscriptionPhase.FileTranscriptionUploading,
@@ -441,6 +450,19 @@
       canStop: true,
     });
   }
+  function fileCapability(unavailable: boolean, profile = false) {
+    session.files.applyStatus({
+      ...session.files.status,
+      generation: session.files.status.generation + 1,
+      phase: FileTranscriptionPhase.FileTranscriptionSelected,
+      fileName: "Example recording.wav",
+      fileSize: 10240,
+      canStart: true,
+      canCancel: false,
+      streamingUnavailable: unavailable,
+      streamingProfileUnavailable: profile,
+    });
+  }
   window.testSaves = saves.control;
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
@@ -478,7 +500,16 @@
     <footer
       class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
     >
-      {#if playbackScenario}
+      {#if fileStreamingScenario}
+        <div class="flex flex-wrap gap-3">
+          <button onclick={() => fileCapability(false)}>Streaming supported</button>
+          <button onclick={() => fileCapability(true)}>Streaming rejected</button>
+          <button onclick={() => fileCapability(true, true)}>Completed-only profile</button>
+          <span role="status"
+            >File requests: {fileRequests}; streaming: {String(lastFileStream)}</span
+          >
+        </div>
+      {:else if playbackScenario}
         <div class="flex flex-wrap gap-3">
           <button onclick={finishGeneration}>Finish generation</button>
           <button

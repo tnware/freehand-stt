@@ -686,6 +686,13 @@ and synthetic transport checks do not substitute for native microphone acceptanc
 
 ## Audio file and speech workspace layout
 
+File streaming state tests cover enabled and disabled preferences across file and
+capability changes, explicit request flags, failed resets, and duplicate/pending
+reset admission. `file-streaming.spec.ts` checks tab remounts, simulated connection
+capabilities, completed-only profiles, and **Try streaming** enabling the next
+explicit request without uploading automatically. Native endpoint support remains
+owned by the existing Go capability checks; these renderer fixtures invoke no models.
+
 Check Audio file and Text to speech at normal and compact desktop sizes, including
 1156×760 and 650×550. Use synthetic renderer fixtures for selected, busy, completed,
 and error states without invoking inference. File summary, response-mode switch,

@@ -17,6 +17,9 @@
     status,
     choosing = false,
     voiceActive = false,
+    streamingEnabled,
+    resettingStreaming = false,
+    onStreamingChange,
     onChoose,
     onStart,
     onTryStreamingAgain,
@@ -27,18 +30,16 @@
     status: FileTranscriptionStatus;
     choosing?: boolean;
     voiceActive?: boolean;
+    streamingEnabled: boolean;
+    resettingStreaming?: boolean;
+    onStreamingChange: (enabled: boolean) => void;
     onChoose: () => void;
-    onStart: (stream: boolean) => void;
+    onStart: () => void;
     onTryStreamingAgain: () => void;
     onCancel: () => void;
     onClear: () => void;
     onOpenSettings?: () => void;
   } = $props();
-
-  let stream = $state(true);
-  $effect(() => {
-    if (status.streamingUnavailable) stream = false;
-  });
 
   const hasFile = $derived(status.phase !== FileTranscriptionPhase.FileTranscriptionEmpty);
   const uploading = $derived(status.phase === FileTranscriptionPhase.FileTranscriptionUploading);
@@ -209,9 +210,9 @@
       <Switch
         id="file-stream-toggle"
         size="sm"
-        checked={stream && !status.streamingUnavailable}
-        disabled={working || status.streamingUnavailable}
-        onCheckedChange={(next) => (stream = next)}
+        checked={streamingEnabled}
+        disabled={working || status.streamingUnavailable || resettingStreaming}
+        onCheckedChange={onStreamingChange}
       />
       <label
         class="truncate text-xs text-secondary-foreground"
@@ -227,7 +228,8 @@
           variant="ghost"
           size="sm"
           class="ml-auto h-6 px-1 text-xs"
-          onclick={onTryStreamingAgain}>Try streaming</Button
+          disabled={resettingStreaming}
+          onclick={onTryStreamingAgain}>{resettingStreaming ? "Enabling…" : "Try streaming"}</Button
         >
       {/if}
     </div>
@@ -281,8 +283,8 @@
         <Button
           size="sm"
           class="h-8 min-w-24 flex-1 px-2.5"
-          disabled={!status.canStart || voiceActive || choosing}
-          onclick={() => onStart(stream)}
+          disabled={!status.canStart || voiceActive || choosing || resettingStreaming}
+          onclick={onStart}
         >
           {failed ? "Retry" : completed ? "Again" : "Transcribe"}
         </Button>

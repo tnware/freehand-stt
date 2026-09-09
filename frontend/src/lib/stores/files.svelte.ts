@@ -42,6 +42,11 @@ export class FileTranscriptionState {
   }
   status = $state<FileTranscriptionStatus>(EMPTY_FILE);
   choosing = $state(false);
+  streamingPreferred = $state(true);
+  resettingStreaming = $state(false);
+  streamingEnabled = $derived(
+    this.streamingPreferred && !this.status.streamingUnavailable,
+  );
   historyGeneration = $state(0);
   #fileStatusRevision = 0;
   #fileStatusRequest = 0;
@@ -110,10 +115,11 @@ export class FileTranscriptionState {
     }
   }
 
-  async startFileTranscription(stream: boolean) {
+  async startFileTranscription() {
+    if (this.resettingStreaming) return;
     this.#messages.clear();
     try {
-      await this.#service.StartFileTranscription(stream);
+      await this.#service.StartFileTranscription(this.streamingEnabled);
     } catch (cause) {
       this.#messages.fail(cause);
     }
@@ -129,14 +135,19 @@ export class FileTranscriptionState {
   }
 
   async tryFileStreamingAgain() {
+    if (this.resettingStreaming) return;
+    this.resettingStreaming = true;
     this.#messages.clear();
     try {
       await this.#service.TryFileStreamingAgain();
+      this.streamingPreferred = true;
       this.#messages.announce(
-        "Streaming can be tried again for this endpoint and model.",
+        "Text updates selected. Start transcription when you’re ready.",
       );
     } catch (cause) {
       this.#messages.fail(cause);
+    } finally {
+      this.resettingStreaming = false;
     }
   }
 
