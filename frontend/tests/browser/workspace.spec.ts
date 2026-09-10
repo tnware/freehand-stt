@@ -143,7 +143,9 @@ test("voice playback works with history off and exposes keyboard tooltips", asyn
   await page.goto("/tests/browser/app/?view=workspace&history=off");
   const result = page.getByRole("region", { name: "Current result", exact: true });
   await result.getByRole("button", { name: "Listen", exact: true }).click();
-  await expect(page.getByText("Voice transcript · Complete", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Voice transcript - Complete" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Restart speech playback", exact: true }).focus();
   await expect(page.getByRole("tooltip")).toHaveText("Restart speech playback");
   await page.keyboard.press("Escape");

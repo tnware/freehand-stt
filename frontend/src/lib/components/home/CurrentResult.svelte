@@ -53,7 +53,7 @@
 </script>
 
 <section
-  class="@container flex min-h-40 flex-1 flex-col overflow-hidden rounded-lg border border-hairline bg-layer-fill"
+  class="@container flex min-h-40 flex-1 flex-col overflow-hidden bg-background"
   aria-label="Current result"
 >
   <div class="flex h-12 shrink-0 items-center gap-1 border-b border-hairline px-3">

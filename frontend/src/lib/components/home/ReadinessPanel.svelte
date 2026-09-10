@@ -91,10 +91,7 @@
       class="setup-columns grid min-w-0 items-start gap-4"
     >
       <div class="flex min-w-0 flex-col gap-3">
-        <section
-          class="overflow-hidden rounded-xl border border-hairline bg-layer-fill"
-          aria-label="Next setup step"
-        >
+        <section class="settings-group border-b border-hairline" aria-label="Next setup step">
           <div class="space-y-3 p-5">
             <h3 class="text-sm font-semibold" aria-live="polite">
               {readiness.canComplete
@@ -160,7 +157,7 @@
         </section>
 
         {#if complete.length}
-          <details class="group rounded-xl border border-hairline bg-layer-fill">
+          <details class="group border-t border-hairline">
             <summary
               class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
             >
@@ -175,7 +172,7 @@
           </details>
         {/if}
         {#if !readiness.initialSetup && connectionNeedsAttention && serverControls}
-          <details class="group rounded-xl border border-hairline bg-layer-fill">
+          <details class="group border-t border-hairline">
             <summary
               class="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
             >
@@ -189,7 +186,7 @@
       </div>
       {#if readiness.initialSetup && serverControls}
         <section
-          class="setup-controls min-w-0 rounded-xl border border-hairline bg-layer-fill p-5"
+          class="setup-controls min-w-0 border-t border-hairline py-5"
           aria-label="Transcription connection"
         >
           {@render serverControls()}

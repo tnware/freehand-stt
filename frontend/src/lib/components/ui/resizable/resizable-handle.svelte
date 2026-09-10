@@ -11,10 +11,10 @@
 
 <PaneResizer
   class={cn(
-    "relative flex w-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-accent/10 hover:text-accent focus-visible:bg-accent/10 focus-visible:ring-2 focus-visible:ring-ring data-[active]:bg-accent/10 data-[active]:text-accent data-[direction=vertical]:h-4 data-[direction=vertical]:w-full",
+    "relative flex w-3 shrink-0 items-center justify-center bg-layer-fill text-muted-foreground outline-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:bg-hairline transition-colors hover:bg-accent-wash hover:text-accent-text focus-visible:bg-accent-wash focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[active]:bg-accent-wash data-[active]:text-accent-text data-[direction=vertical]:h-3 data-[direction=vertical]:w-full data-[direction=vertical]:before:inset-x-0 data-[direction=vertical]:before:top-1/2 data-[direction=vertical]:before:h-px data-[direction=vertical]:before:w-full",
     className,
   )}
   {...props}
 >
-  {#if withHandle}<GripVerticalIcon class="size-3.5" aria-hidden="true" />{/if}
+  {#if withHandle}<GripVerticalIcon class="relative size-3 bg-layer-fill" aria-hidden="true" />{/if}
 </PaneResizer>

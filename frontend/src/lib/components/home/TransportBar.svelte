@@ -226,25 +226,30 @@
   }
 </script>
 
-<TransportShell {rail} busy={held} state={status.state}>
+<TransportShell
+  {rail}
+  busy={held}
+  state={status.state}
+  actionsVisible={waiting || failed || status.canCancel}
+>
   {#snippet control()}
     {#if waiting}
       <span
-        class="grid size-[62px] place-items-center rounded-full border border-accent-edge bg-accent-wash text-accent-text"
+        class="grid size-12 place-items-center rounded-full border border-accent-edge bg-accent-wash text-accent-text"
         aria-hidden="true"
       >
         <ClipboardIcon class="size-[22px]" />
       </span>
     {:else if failed}
       <span
-        class="grid size-[62px] place-items-center rounded-full border border-destructive/30 bg-destructive/10 text-destructive"
+        class="grid size-12 place-items-center rounded-full border border-destructive/30 bg-destructive/10 text-destructive"
         aria-hidden="true"
       >
         <TriangleAlertIcon class="size-[22px]" />
       </span>
     {:else if held}
       <span
-        class="grid size-[62px] place-items-center rounded-full border border-hairline bg-control-fill text-primary"
+        class="grid size-12 place-items-center rounded-full border border-hairline bg-control-fill text-primary"
         aria-hidden="true"
       >
         {#if status.state === State.PostProcessing}
@@ -276,7 +281,7 @@
       <p class="mt-1.5 text-[13.5px] font-medium">
         {manualCopy ? "Manual copy is selected for this profile." : "Focus moved before insertion."}
       </p>
-      <p class="figure mt-1 text-[10.5px] text-muted-foreground">
+      <p class="roomy figure mt-1 text-[10.5px] text-muted-foreground">
         The transcript is held in memory · the audio has been discarded
       </p>
     {:else if failed}
@@ -293,21 +298,22 @@
       <p class="figure mt-1 truncate text-[11px] text-destructive" title={status.message}>
         {status.message || "The endpoint did not return a transcript."}
       </p>
-      <p class="figure mt-1 text-[10.5px] text-muted-foreground">
+      <p class="roomy figure mt-1 text-[10.5px] text-muted-foreground">
         Nothing was inserted. The audio has been discarded.
       </p>
     {:else}
       <Waveform active={recording} quiet={vadSilence} {held} history={levels.history} />
-      <div
-        class="mt-2 flex min-h-5 items-center justify-between gap-3 border-t border-hairline pt-1.5"
-      >
+      <div class="mt-1 flex min-h-5 items-center justify-between gap-3">
         {#if showShortcut}
           <span class="flex min-w-0 items-center gap-2 text-[11.5px] text-secondary-foreground">
             <span class="roomy shrink-0">Press</span>
             <ShortcutKeys value={toggleShortcut} label="Toggle recording shortcut" />
-            <span class="roomy shrink-0">from any application to start</span>
+            <span class="roomy shrink-0">to record</span>
           </span>
-          <span class="roomy figure shrink-0 text-[9.5px] text-ink-quiet">
+          <span
+            class="roomy figure min-w-0 max-w-[35%] truncate text-[10.5px] text-ink-quiet"
+            title={microphone}
+          >
             {microphone}
           </span>
         {:else if autoStopCountdown}
@@ -348,11 +354,11 @@
     {/if}
   {/snippet}
 
-  {#snippet readout()}
+  {#snippet summary()}
     <span
       class={cn(
-        "figure text-[34px] leading-none font-medium tracking-[-0.02em]",
-        status.state === State.Idle || textStage ? "text-ink-disabled" : "text-foreground",
+        "figure text-2xl leading-none font-medium tracking-[-0.02em]",
+        status.state === State.Idle || textStage ? "text-secondary-foreground" : "text-foreground",
       )}
       aria-label="Recording duration"
     >
@@ -415,8 +421,18 @@
       {/if}
     </div>
 
-    <!-- One action slot. It keeps its height in every state so the meter never
-         shifts when a run begins or ends. -->
+    <span class="sr-only" aria-live="polite">{checkpointAnnouncement}</span>
+    <span class="sr-only" aria-live="polite">
+      {autoStopCountdown
+        ? "Silence detected. Automatic stop countdown started. Speaking again cancels it."
+        : ""}
+    </span>
+    <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {stateAnnouncement}
+    </span>
+  {/snippet}
+  {#snippet readout()}
+    <!-- Actions share the control row; the strip keeps a stable height. -->
     <div class="flex min-h-[26px] items-center gap-1.5">
       {#if waiting}
         <button
@@ -449,16 +465,6 @@
         </button>
       {/if}
     </div>
-
-    <span class="sr-only" aria-live="polite">{checkpointAnnouncement}</span>
-    <span class="sr-only" aria-live="polite">
-      {autoStopCountdown
-        ? "Silence detected. Automatic stop countdown started. Speaking again cancels it."
-        : ""}
-    </span>
-    <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-      {stateAnnouncement}
-    </span>
   {/snippet}
 </TransportShell>
 
@@ -477,8 +483,8 @@
   .rec {
     display: grid;
     place-items: center;
-    width: 3.875rem;
-    height: 3.875rem;
+    width: 3rem;
+    height: 3rem;
     flex-shrink: 0;
     border: 1px solid color-mix(in srgb, var(--record) 78%, #ffffff);
     border-radius: 999px;
@@ -493,8 +499,8 @@
   }
   .rec .glyph {
     display: block;
-    width: 18px;
-    height: 18px;
+    width: 15px;
+    height: 15px;
     border-radius: 999px;
     background-color: #ffffff;
     transition:

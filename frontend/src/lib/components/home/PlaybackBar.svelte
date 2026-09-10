@@ -111,8 +111,7 @@
 
 <div
   class="shrink-0 border-hairline bg-layer-fill px-3 py-2"
-  class:rounded-lg={!embedded}
-  class:border={!embedded}
+  class:border-b={!embedded}
   aria-label="Speech playback"
 >
   <span class="sr-only" role="status">{saving ? "Saving generated speech" : ""}</span>

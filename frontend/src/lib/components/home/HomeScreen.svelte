@@ -408,7 +408,7 @@
                 </ReadinessPanel>
               {:else if !runtimeSettings?.historyEnabled}
                 <div
-                  class="flex items-center justify-between gap-3 px-1 text-xs text-muted-foreground"
+                  class="flex shrink-0 items-center justify-between gap-3 border-t border-hairline px-4 py-2 text-xs text-muted-foreground"
                 >
                   <span
                     >History is off. Current results remain available until you clear them or start
@@ -430,7 +430,7 @@
         {#snippet history()}
           <aside class="history-sidebar" aria-label="Recent history">
             <div
-              class="flex min-h-14 shrink-0 flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-hairline px-4 py-3"
+              class="flex min-h-12 shrink-0 flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-hairline px-4 py-2.5"
             >
               <h2 class="text-sm font-semibold">
                 Recent history <span class="ml-1 text-muted-foreground"
@@ -490,11 +490,9 @@
   }
   .transport-frame {
     flex-shrink: 0;
-    padding: 1rem 1rem 0;
+    padding: 0;
   }
   .transport-frame :global(.transport) {
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-lg);
     overflow: hidden;
   }
   .body {
@@ -502,8 +500,8 @@
     min-height: 0;
     flex: 1;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem 1rem;
+    gap: 0;
+    padding: 0;
   }
   .task-main {
     height: 100%;
@@ -511,7 +509,7 @@
     min-width: 0;
     min-height: 0;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0;
   }
   .history-sidebar {
     height: 100%;
@@ -520,8 +518,6 @@
     min-height: 0;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-lg);
     background: var(--layer-fill);
   }
   .history-area {
@@ -532,10 +528,12 @@
     overflow: hidden;
   }
   .onboarding .task-main {
+    padding: 1.25rem;
+    gap: 1.25rem;
     overflow-y: auto;
   }
   .speech-workspace .body {
-    padding-top: 1rem;
+    padding-top: 0;
   }
   .columns {
     display: flex;

@@ -106,7 +106,7 @@
   ]);
 </script>
 
-<div class="overflow-hidden rounded-xl border border-hairline bg-layer-fill">
+<div class="settings-group">
   <div class="space-y-3 p-4">
     <div class="flex items-center justify-between gap-3">
       <label for="vocabulary-terms" class="text-sm font-semibold">Names and phrases</label>
@@ -153,12 +153,12 @@
     {/if}
     {#if preview?.issues?.length}
       <details
-        class="group/lines rounded-lg border border-hairline"
+        class="group/lines border-y border-hairline"
         aria-label="Vocabulary line feedback"
         aria-busy={checking}
       >
         <summary
-          class="flex cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2.5 text-xs hover:bg-subtle-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+          class="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 text-xs hover:bg-subtle-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
         >
           <span
             class={cn(

@@ -51,7 +51,11 @@
   }
 </script>
 
-<div class="flex h-12 min-w-0 items-center gap-1" role="group" aria-label="Quick settings">
+<div
+  class="@container/quick-settings flex h-12 min-w-0 items-center gap-1"
+  role="group"
+  aria-label="Quick settings"
+>
   {#each panels as panel (panel)}
     <Popover.Root
       open={!disabled && activePanel === panel}
@@ -73,7 +77,7 @@
               : settings.postProcessing.compatibilityProfile}
             size={20}
           />
-          <span class="hidden text-[13px] @min-[540px]:inline"
+          <span class="hidden text-[13px] @min-[400px]/quick-settings:inline"
             >{panel === "stt" ? "Transcription" : "Cleanup"}</span
           >
           {#if panel === "cleanup"}<span

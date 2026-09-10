@@ -329,7 +329,7 @@
             <Button onclick={browseConnections}>Open connections</Button>
           {:else if active === "voice-transcription"}
             {#if session.editor.draft.savedConnections.selected?.voice}<div
-                class="rounded-xl border border-hairline bg-layer-fill px-5 py-4"
+                class="border-b border-hairline pb-4"
               >
                 <VoiceTranscriptionSettings
                   editor={session.editor}

@@ -54,7 +54,7 @@
     </Button>
   </div>
 
-  <div class="min-h-44 overflow-hidden rounded-xl border border-hairline bg-layer-fill">
+  <div class="min-h-44 overflow-hidden border-t border-hairline">
     <HistoryList {entries} scrollable={false} {onCopy} {onCopyVersion} {onDelete} />
   </div>
 </div>

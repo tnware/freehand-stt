@@ -5,12 +5,9 @@
 </script>
 
 <!--
-  One card per setting cluster, with a quiet outer stroke and hairline row
-  dividers. Controls retain their own familiar Windows input chrome while the
-  card supplies the broader information hierarchy.
+  Flat settings groups share the page surface. Row dividers and consistent
+  alignment provide hierarchy; inputs keep their own interactive boundaries.
 -->
-<div
-  class="overflow-hidden rounded-xl border border-hairline bg-layer-fill [&>*+*]:border-t [&>*+*]:border-hairline"
->
+<div class="settings-group [&>*+*]:border-t [&>*+*]:border-hairline">
   {@render children()}
 </div>

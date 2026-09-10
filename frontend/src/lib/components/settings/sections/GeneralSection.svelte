@@ -116,8 +116,8 @@
           <Label
             for={`appearance-${mode.value}`}
             class={settings.useMica
-              ? "flex cursor-not-allowed items-center gap-2.5 rounded-lg border border-hairline bg-background/35 px-3 py-2.5 has-data-checked:border-primary/30 has-data-checked:bg-primary/5"
-              : "flex cursor-pointer items-center gap-2.5 rounded-lg border border-hairline bg-background/35 px-3 py-2.5 transition-colors has-data-checked:border-primary/30 has-data-checked:bg-primary/5 hover:bg-accent/55"}
+              ? "flex cursor-not-allowed items-center gap-2.5 rounded-sm bg-transparent px-3 py-2.5 has-data-checked:bg-accent-wash"
+              : "flex cursor-pointer items-center gap-2.5 rounded-sm bg-transparent px-3 py-2.5 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"}
           >
             <RadioGroup.Item id={`appearance-${mode.value}`} value={mode.value} />
             <span class="min-w-0">
@@ -166,7 +166,7 @@
     >
       <Label
         for="delivery-direct-input"
-        class="flex cursor-pointer items-start gap-3 rounded-lg border border-hairline bg-background/35 px-3 py-3 transition-colors hover:bg-accent/55"
+        class="flex cursor-pointer items-start gap-3 rounded-sm bg-transparent px-3 py-3 transition-colors hover:bg-accent/55"
       >
         <RadioGroup.Item
           id="delivery-direct-input"
@@ -184,7 +184,7 @@
 
       <Label
         for="delivery-manual-copy"
-        class="flex cursor-pointer items-start gap-3 rounded-lg border border-hairline bg-background/35 px-3 py-3 transition-colors hover:bg-accent/55"
+        class="flex cursor-pointer items-start gap-3 rounded-sm bg-transparent px-3 py-3 transition-colors hover:bg-accent/55"
       >
         <RadioGroup.Item
           id="delivery-manual-copy"

@@ -430,9 +430,18 @@ drafts without stopping Go-owned recording, transcription, or playback. Hiding
 the reusable Settings window continues to discard its draft through the existing
 settings lifecycle.
 
-Settings clusters use the shared `SettingsCard` component with the same
-`layer-fill` background and single `hairline` border as saved-connection cards.
-Internal row dividers remain; card outlines do not stack with elevation shadows.
+The main workspace uses continuous recording and playback rows above adjoining
+result and history panes. Voice groups its record control, clock, and status
+next to a centered waveform; actions share the control row and the strip keeps
+a fixed height across idle, recording, processing, and recovery states.
+`WorkspaceSplit` keeps its persisted, keyboard-resizable
+divider and compact Result/History view switch. The result shares the main
+background; history uses `layer-fill` to distinguish the secondary pane.
+Settings clusters use the shared `SettingsCard` component as flat groups, with
+row dividers and content aligned to page headings through `settings-group`.
+Connection summaries and disclosures follow the same alignment. Input borders,
+floating-menu surfaces, selection states, and focus rings remain explicit;
+decorative container frames do not own workflow or scrolling behavior.
 The shared switch uses a pill track and an inset circular thumb, retaining
 Bits UI state, keyboard semantics, and visible focus indicators.
 

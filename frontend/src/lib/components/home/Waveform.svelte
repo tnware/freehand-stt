@@ -25,7 +25,7 @@
 
 <!-- The transport owns the meter's height so a narrow window can shorten it
      without the bars losing their floor. -->
-<div class="meter flex min-w-0 flex-1 items-end gap-[2px]" aria-hidden="true">
+<div class="meter flex min-w-0 shrink-0 items-center gap-[2px]" aria-hidden="true">
   {#each history as level, index (index)}
     <span
       class="min-h-[2px] w-full min-w-0 flex-1 rounded-[1px] {fill}"

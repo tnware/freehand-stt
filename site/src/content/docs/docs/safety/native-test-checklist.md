@@ -57,3 +57,9 @@ tests and a successful executable build do not replace these interactive checks.
   Connection Manager. Reopen/minimize/restore without losing an unfinished draft.
   Native close and Escape protect unsaved edits; hide/save clears credential input.
   Saving updates the other windows, and conflicting stale edits are rejected.
+
+## Flat workspace and settings surfaces
+
+- At 560 × 560 and normal desktop sizes, check Voice, Audio file, and Text to speech in light and dark appearance. Recording, playback, toolbars, and footer actions must remain visible without horizontal overflow.
+- With history enabled, resize the adjoining panes by pointer and keyboard. In compact mode switch Result/History and scroll each transcript with the mouse wheel; open quick settings and confirm they do not move the content.
+- In Settings and the connection manager, verify flat groups align with headings, disclosures reveal all their controls, and long pages still scroll to the final option. Selected rows, input boundaries, and keyboard focus must remain distinguishable in both themes and Windows contrast mode.
