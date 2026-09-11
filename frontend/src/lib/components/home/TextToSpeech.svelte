@@ -103,10 +103,10 @@
 </script>
 
 <section
-  class="@container flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
+  class="@container flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-hairline bg-card"
   aria-label="Speech composer"
 >
-  <div class="flex h-12 shrink-0 items-center gap-3 border-b border-hairline px-3">
+  <div class="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-3">
     <h2 class="sr-only">Text to speech</h2>
     <div class="min-w-0 flex-1">
       {#if quickSettings}{@render quickSettings()}{:else}<span class="text-sm font-medium"
@@ -136,7 +136,7 @@
       aria-describedby="speech-character-count speech-compose-shortcut"
       aria-keyshortcuts="Control+Enter"
       onkeydown={composerKey}
-      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-4 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-inset"
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-6 py-4 text-[15px] leading-8 focus-visible:ring-2 focus-visible:ring-inset"
       placeholder="Write or paste text to speak…"
     />
   </div>

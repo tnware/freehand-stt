@@ -430,7 +430,7 @@
         {#snippet history()}
           <aside class="history-sidebar" aria-label="Recent history">
             <div
-              class="flex min-h-12 shrink-0 flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-hairline px-4 py-2.5"
+              class="flex min-h-12 shrink-0 flex-wrap items-baseline gap-x-2 gap-y-1 px-4 py-2.5"
             >
               <h2 class="text-sm font-semibold">
                 Recent history <span class="ml-1 text-muted-foreground"
@@ -490,10 +490,13 @@
   }
   .transport-frame {
     flex-shrink: 0;
-    padding: 0;
+    padding: 0 1.25rem 1rem;
   }
   .transport-frame :global(.transport) {
     overflow: hidden;
+    border: 1px solid var(--hairline);
+    border-radius: 1rem;
+    background: linear-gradient(115deg, var(--card), var(--layer-fill));
   }
   .body {
     display: flex;
@@ -501,7 +504,7 @@
     flex: 1;
     flex-direction: column;
     gap: 0;
-    padding: 0;
+    padding: 0 1.25rem 1rem;
   }
   .task-main {
     height: 100%;
@@ -510,6 +513,10 @@
     min-height: 0;
     flex-direction: column;
     gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    border-radius: 1rem;
+    background: var(--card);
   }
   .history-sidebar {
     height: 100%;
@@ -518,7 +525,7 @@
     min-height: 0;
     flex-direction: column;
     overflow: hidden;
-    background: var(--layer-fill);
+    background: transparent;
   }
   .history-area {
     display: flex;
@@ -538,5 +545,13 @@
   .columns {
     display: flex;
     gap: 0.875rem;
+  }
+  @container (max-width: 699px) {
+    .transport-frame {
+      padding: 0 0.75rem 0.75rem;
+    }
+    .body {
+      padding: 0 0.75rem 0.75rem;
+    }
   }
 </style>

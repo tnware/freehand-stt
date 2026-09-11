@@ -5,9 +5,11 @@
 </script>
 
 <!--
-  Flat settings groups share the page surface. Row dividers and consistent
-  alignment provide hierarchy; inputs keep their own interactive boundaries.
+  One group surface holds related settings; rows share the same inset and
+  dividers, while individual inputs retain their interactive boundaries.
 -->
-<div class="settings-group [&>*+*]:border-t [&>*+*]:border-hairline">
+<div
+  class="settings-group rounded-xl border border-hairline bg-card [&>*+*]:border-t [&>*+*]:border-hairline"
+>
   {@render children()}
 </div>

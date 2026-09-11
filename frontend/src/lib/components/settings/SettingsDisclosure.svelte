@@ -5,9 +5,9 @@
     $props();
 </script>
 
-<details class="group/disclosure border-t border-hairline">
+<details class="group/disclosure rounded-xl border border-hairline bg-card">
   <summary
-    class="flex cursor-pointer list-none items-center gap-3 py-3.5 hover:bg-subtle-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+    class="flex cursor-pointer list-none items-center gap-3 rounded-xl px-[18px] py-4 hover:bg-subtle-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
   >
     <span class="min-w-0 flex-1">
       <span class="block text-sm font-medium">{title}</span>

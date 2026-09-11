@@ -435,11 +435,11 @@ result and history panes. Voice groups its record control, clock, and status
 next to a centered waveform; actions share the control row and the strip keeps
 a fixed height across idle, recording, processing, and recovery states.
 `WorkspaceSplit` keeps its persisted, keyboard-resizable
-divider and compact Result/History view switch. The result shares the main
-background; history uses `layer-fill` to distinguish the secondary pane.
-Settings clusters use the shared `SettingsCard` component as flat groups, with
-row dividers and content aligned to page headings through `settings-group`.
-Connection summaries and disclosures follow the same alignment. Input borders,
+divider and compact Result/History view switch. The result uses a rounded `card` surface, while history stays on the canvas
+with compact entry surfaces. Both sit below an inset transport panel.
+Settings clusters use the shared `SettingsCard` component as one quiet surface
+per group, with row dividers and a consistent inset through `settings-group`.
+Connection summaries and disclosures follow the same spacing. Input borders,
 floating-menu surfaces, selection states, and focus rings remain explicit;
 decorative container frames do not own workflow or scrolling behavior.
 The shared switch uses a pill track and an inset circular thumb, retaining
@@ -577,13 +577,15 @@ existing coherent settings transaction; opening a popover performs no probe or
 inference request. Transcript and history scrolling do not resize the workspace.
 
 The main, Settings, About, and Transcription details windows use the opaque product palette by default.
-Dark surfaces adapt the website’s navy to a tighter desktop ladder (`#111722`,
-`#171f2c`, `#1c2635`) with its cobalt accent (`#4d8dff`). Inputs use `#121925`
-for a gentle recess; subdued strokes and supporting text keep dense forms calm. The semantic CSS roles in `frontend/src/app.css`
+Dark surfaces use a neutral charcoal ladder (`#121212`, `#1b1b1b`,
+`#242424`) with Freehand’s brand blue (`#4d8dff`). Light mode pairs neutral
+white surfaces (`#f4f4f4`, `#ffffff`) with blue (`#326fe5`). Inputs use `#151515`
+in dark mode for a gentle recess. Archivo headings distinguish page and
+workspace titles; controls retain the native system typeface. The semantic CSS roles in `frontend/src/app.css`
 cover cards, inputs, popovers, dialogs, and navigation. Native dark captions and
 startup backgrounds in `internal/app/window.go` match the ground; overlay colour
 constants in `internal/platform/overlay.go` match the panel and accent. Status
-colours keep their separate meanings. Dark Mica applies one translucent navy
+colours keep their separate meanings. Dark Mica applies one translucent charcoal
 tint at `#app` plus translucent panels, while native captions remain under DWM
 control. Light-mode tokens remain independent.
 Windows Mica is an explicit persisted opt-in applied when all four native windows are created, so changing it requires a process restart. The service reports the launch-time material separately from the editable preference; Svelte continues rendering the launch-time material until restart rather than making its surfaces translucent over solid native windows. Shell chrome uses the same material-aware layer roles, including the main header/status strip, Settings navigation/action bar, and About action bar.
@@ -609,7 +611,8 @@ appear only for dictation. TTS shows its own connection and model/voice settings
 Each quick update starts from backend-confirmed settings, restores only engine options
 when a model changes, and calls the same transactional owner without credential mutation.
 Quick controls remain disabled while the Settings window owns an editable draft.
-The header keeps its active-mode underline inside the clipped window chrome.
+The header groups input modes in a segmented selector with a raised selected
+surface and accent text. Selection and keyboard focus remain separate states.
 Open quick-setting triggers use the shared accent wash and text roles; a hairline
 separates them from result actions. History dates, counts, and status badges use
 the interface typeface, with tabular figures for changing numeric metadata.

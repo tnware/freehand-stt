@@ -1,176 +1,177 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+@import "@fontsource-variable/archivo";
 @import "tw-animate-css";
 @import "shadcn-svelte/tailwind.css";
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Freehand shares the website’s navy surfaces and cobalt accent in dark mode.
- * Light mode keeps its neutral surfaces. Semantic roles stay consistent across
+ * Freehand pairs its brand blue with neutral black and charcoal dark surfaces
+ * and neutral white light surfaces. Semantic roles stay consistent across
  * solid and Mica appearances; status colours remain separate from the brand.
  */
 :root {
-	/* Surfaces, recessed to raised. */
-	--well: #f0f0f0;
-	--background: #f3f3f3;
-	--layer-fill: #f7f7f7;
-	--secondary: #fafafa;
-	--card: #ffffff;
-	--popover: #ffffff;
-	--popover-foreground: #1c1d21;
-	--dialog-surface: #ffffff;
-	--dialog-stroke: #dedede;
-	--dialog-smoke: rgb(28 29 33 / 24%);
+  /* Surfaces, recessed to raised. */
+  --well: #f0f0f0;
+  --background: #f4f4f4;
+  --layer-fill: #ededed;
+  --secondary: #fafafa;
+  --card: #ffffff;
+  --popover: #ffffff;
+  --popover-foreground: #202020;
+  --dialog-surface: #ffffff;
+  --dialog-stroke: #dddddd;
+  --dialog-smoke: rgb(28 28 28 / 24%);
 
-	/* Ink, strongest to quietest. */
-	--foreground: #1c1d21;
-	--card-foreground: #2b2b2b;
-	--secondary-foreground: #525252;
-	--muted-foreground: #6f6f6f;
-	--ink-quiet: #6b6b6b;
-	--ink-disabled: #c2c2c2;
+  /* Ink, strongest to quietest. */
+  --foreground: #202020;
+  --card-foreground: #303030;
+  --secondary-foreground: #555555;
+  --muted-foreground: #6b6b6b;
+  --ink-quiet: #6b6b6b;
+  --ink-disabled: #aaaaaa;
 
-	/* Accent. One hue, four weights: fill, hover, text-on-surface, rest. */
-	--primary: #326fe5;
-	--primary-foreground: #ffffff;
-	--primary-hover: #245fcf;
-	--accent-text: #245fcf;
-	--accent-wash: rgb(50 111 229 / 9%);
-	--accent-wash-strong: rgb(50 111 229 / 14%);
-	--accent-edge: rgb(50 111 229 / 22%);
-	--meter: #326fe5;
-	--meter-rest: #c9d9f7;
+  /* Accent. One hue, four weights: fill, hover, text-on-surface, rest. */
+  --primary: #326fe5;
+  --primary-foreground: #ffffff;
+  --primary-hover: #245fcf;
+  --accent-text: #245fcf;
+  --accent-wash: rgb(50 111 229 / 9%);
+  --accent-wash-strong: rgb(50 111 229 / 14%);
+  --accent-edge: rgb(50 111 229 / 22%);
+  --meter: #326fe5;
+  --meter-rest: #c9d9f7;
 
-	/* Controls. A control is a subtle raise; an input is a recessed well. */
-	--control-fill: #ffffff;
-	--control-fill-hover: #f3f5f8;
-	--control-fill-pressed: #e9edf2;
-	--control-fill-active: #ffffff;
-	--subtle-fill-hover: rgb(15 17 21 / 4%);
-	--subtle-fill-pressed: rgb(15 17 21 / 7%);
+  /* Controls. A control is a subtle raise; an input is a recessed well. */
+  --control-fill: #ffffff;
+  --control-fill-hover: #f3f3f3;
+  --control-fill-pressed: #e8e8e8;
+  --control-fill-active: #ffffff;
+  --subtle-fill-hover: rgb(15 15 15 / 4%);
+  --subtle-fill-pressed: rgb(15 15 15 / 7%);
 
-	/* Registry aliases. Accent is the wash that menus and hovers reach for. */
-	--muted: #eff1f4;
-	--accent: #eff1f4;
-	--accent-foreground: #2d3036;
+  /* Registry aliases. Accent is the wash that menus and hovers reach for. */
+  --muted: #eeeeee;
+  --accent: #eeeeee;
+  --accent-foreground: #333333;
 
-	/* Status. Green and amber darken on light so they stay legible as text. */
-	--success: #16a34a;
-	--warning: #b45309;
-	--destructive: #dc2626;
-	/* The record control is the one saturated constant in both themes. */
-	--record: #d13438;
+  /* Status. Green and amber darken on light so they stay legible as text. */
+  --success: #197f60;
+  --warning: #b45309;
+  --destructive: #dc2626;
+  /* The record control is the one saturated constant in both themes. */
+  --record: #cf4d62;
 
-	--border: #dedede;
-	--input: #d6d6d6;
-	--ring: #326fe5;
-	--card-stroke: #e1e1e1;
-	--hairline: rgb(28 29 33 / 8%);
-	/* The 1px highlight that separates a panel from its ground. */
-	--highlight: #ffffff;
+  --border: #dddddd;
+  --input: #d2d2d2;
+  --ring: #326fe5;
+  --card-stroke: #e2e2e2;
+  --hairline: rgb(28 28 28 / 8%);
+  /* The 1px highlight that separates a panel from its ground. */
+  --highlight: #ffffff;
 
-	--scrollbar-track: transparent;
-	--scrollbar-thumb: rgb(15 17 21 / 26%);
-	--scrollbar-thumb-hover: rgb(15 17 21 / 42%);
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgb(15 15 15 / 26%);
+  --scrollbar-thumb-hover: rgb(15 15 15 / 42%);
 
-	/*
+  /*
 	 * Panels are lifted by an inset top highlight, not a drop shadow. On light
 	 * a white inset alone is invisible, so it is paired with the faintest
 	 * possible cast, giving the same one-step separation the dark inset gets.
 	 */
-	--lift: 0 1px 2px rgb(28 29 33 / 5%), 0 4px 14px rgb(28 29 33 / 3%);
+  --lift: 0 1px 2px rgb(28 28 28 / 5%), 0 4px 14px rgb(28 28 28 / 3%);
 
-	--chart-1: #2563eb;
-	--chart-2: #475569;
-	--chart-3: #64748b;
-	--chart-4: #94a3b8;
-	--chart-5: #c0c7d2;
+  --chart-1: #2563eb;
+  --chart-2: #475569;
+  --chart-3: #64748b;
+  --chart-4: #94a3b8;
+  --chart-5: #c0c7d2;
 
-	--radius: 0.625rem;
+  --radius: 0.75rem;
 
-	--sidebar: #fafbfc;
-	--sidebar-foreground: #1c1d21;
-	--sidebar-primary: #326fe5;
-	--sidebar-primary-foreground: #ffffff;
-	--sidebar-accent: #eff1f4;
-	--sidebar-accent-foreground: #2d3036;
-	--sidebar-border: #dfe2e7;
-	--sidebar-ring: #326fe5;
+  --sidebar: #ededed;
+  --sidebar-foreground: #202020;
+  --sidebar-primary: #326fe5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eeeeee;
+  --sidebar-accent-foreground: #333333;
+  --sidebar-border: #dddddd;
+  --sidebar-ring: #326fe5;
 }
 
 .dark {
-	/* Dense desktop controls need closer surface steps than the marketing site.
-	 * Inputs recess gently; cobalt is reserved for actions and selected state. */
-	--well: #121925;
-	--background: #111722;
-	--layer-fill: #171f2c;
-	--secondary: #1c2635;
-	--card: #171f2c;
-	--popover: #1c2635;
-	--popover-foreground: #e7ecf3;
-	--dialog-surface: #1c2635;
-	--dialog-stroke: #354256;
-	--dialog-smoke: rgb(0 0 0 / 55%);
+  /* Charcoal surfaces separate the canvas, content and floating controls.
+	 * Brand blue is reserved for actions and selected state. */
+  --well: #151515;
+  --background: #121212;
+  --layer-fill: #1b1b1b;
+  --secondary: #242424;
+  --card: #1b1b1b;
+  --popover: #242424;
+  --popover-foreground: #f2f2f2;
+  --dialog-surface: #242424;
+  --dialog-stroke: #383838;
+  --dialog-smoke: rgb(0 0 0 / 55%);
 
-	--foreground: #e7ecf3;
-	--card-foreground: #e7ecf3;
-	--secondary-foreground: #b7c2d1;
-	--muted-foreground: #93a0b2;
-	--ink-quiet: #8897ac;
-	--ink-disabled: #58677d;
+  --foreground: #f2f2f2;
+  --card-foreground: #f2f2f2;
+  --secondary-foreground: #c2c2c2;
+  --muted-foreground: #a0a0a0;
+  --ink-quiet: #929292;
+  --ink-disabled: #606060;
 
-	--primary: #4d8dff;
-	--primary-foreground: #111722;
-	--primary-hover: #76a9ff;
-	--accent-text: #76a9ff;
-	--accent-wash: rgb(77 141 255 / 12%);
-	--accent-wash-strong: rgb(77 141 255 / 18%);
-	--accent-edge: rgb(77 141 255 / 25%);
-	--meter: #4d8dff;
-	--meter-rest: #30405b;
+  --primary: #4d8dff;
+  --primary-foreground: #080808;
+  --primary-hover: #76a9ff;
+  --accent-text: #76a9ff;
+  --accent-wash: rgb(77 141 255 / 12%);
+  --accent-wash-strong: rgb(77 141 255 / 18%);
+  --accent-edge: rgb(77 141 255 / 25%);
+  --meter: #4d8dff;
+  --meter-rest: #303030;
 
-	--control-fill: rgb(160 179 208 / 6%);
-	--control-fill-hover: rgb(160 179 208 / 10%);
-	--control-fill-pressed: rgb(160 179 208 / 4%);
-	--control-fill-active: rgb(160 179 208 / 9%);
-	--subtle-fill-hover: rgb(160 179 208 / 6%);
-	--subtle-fill-pressed: rgb(160 179 208 / 4%);
+  --control-fill: rgb(210 210 210 / 6%);
+  --control-fill-hover: rgb(210 210 210 / 10%);
+  --control-fill-pressed: rgb(210 210 210 / 4%);
+  --control-fill-active: rgb(210 210 210 / 9%);
+  --subtle-fill-hover: rgb(210 210 210 / 6%);
+  --subtle-fill-pressed: rgb(210 210 210 / 4%);
 
-	--muted: rgb(160 179 208 / 6%);
-	--accent: rgb(160 179 208 / 6%);
-	--accent-foreground: #e7ecf3;
+  --muted: rgb(210 210 210 / 6%);
+  --accent: rgb(210 210 210 / 6%);
+  --accent-foreground: #f2f2f2;
 
-	/* Green and amber lighten on dark for the same reason they darken on light. */
-	--success: #22c55e;
-	--warning: #fbbf24;
-	--destructive: #f87171;
-	--record: #d13438;
+  /* Green and amber lighten on dark for the same reason they darken on light. */
+  --success: #56c7a0;
+  --warning: #fbbf24;
+  --destructive: #f87171;
+  --record: #cf4d62;
 
-	--border: #354256;
-	--input: #39475c;
-	--ring: #76a9ff;
-	--card-stroke: rgb(160 179 208 / 10%);
-	--hairline: rgb(160 179 208 / 10%);
-	--highlight: rgb(160 179 208 / 6%);
+  --border: #383838;
+  --input: #424242;
+  --ring: #76a9ff;
+  --card-stroke: rgb(210 210 210 / 10%);
+  --hairline: rgb(210 210 210 / 10%);
+  --highlight: rgb(210 210 210 / 6%);
 
-	--scrollbar-thumb: rgb(170 190 222 / 30%);
-	--scrollbar-thumb-hover: rgb(170 190 222 / 48%);
+  --scrollbar-thumb: rgb(210 210 210 / 30%);
+  --scrollbar-thumb-hover: rgb(210 210 210 / 48%);
 
-	--lift: 0 1px 2px rgb(0 0 0 / 22%), 0 6px 18px rgb(0 0 0 / 10%);
+  --lift: 0 1px 2px rgb(0 0 0 / 22%), 0 6px 18px rgb(0 0 0 / 10%);
 
-	--chart-1: #4d8dff;
-	--chart-2: #c3cbd7;
-	--chart-3: #9aa6b8;
-	--chart-4: #8796ad;
-	--chart-5: #58677d;
+  --chart-1: #4d8dff;
+  --chart-2: #c3cbd7;
+  --chart-3: #9aa6b8;
+  --chart-4: #8796ad;
+  --chart-5: #606060;
 
-	--sidebar: #171f2c;
-	--sidebar-foreground: #e7ecf3;
-	--sidebar-primary: #4d8dff;
-	--sidebar-primary-foreground: #111722;
-	--sidebar-accent: rgb(160 179 208 / 6%);
-	--sidebar-accent-foreground: #e7ecf3;
-	--sidebar-border: #354256;
-	--sidebar-ring: #76a9ff;
+  --sidebar: #1b1b1b;
+  --sidebar-foreground: #f2f2f2;
+  --sidebar-primary: #4d8dff;
+  --sidebar-primary-foreground: #121212;
+  --sidebar-accent: rgb(210 210 210 / 6%);
+  --sidebar-accent-foreground: #f2f2f2;
+  --sidebar-border: #383838;
+  --sidebar-ring: #76a9ff;
 }
 
 /*
@@ -179,167 +180,168 @@
  * launch, so translucent CSS is never painted over a still-solid native window.
  */
 :root[data-material="mica"] {
-	--well: rgb(15 17 21 / 5%);
-	--layer-fill: rgb(255 255 255 / 40%);
-	--secondary: rgb(255 255 255 / 55%);
-	--card: rgb(255 255 255 / 72%);
-	--popover: #f9f9f9;
-	--dialog-surface: #f9f9f9;
-	--dialog-stroke: rgb(0 0 0 / 14%);
-	--dialog-smoke: rgb(0 0 0 / 16%);
-	--control-fill: rgb(255 255 255 / 70%);
-	--control-fill-hover: rgb(255 255 255 / 85%);
-	--control-fill-pressed: rgb(249 249 249 / 45%);
-	--control-fill-active: rgb(255 255 255 / 85%);
-	--muted: rgb(15 17 21 / 4%);
-	--accent: rgb(15 17 21 / 4%);
-	--border: rgb(0 0 0 / 10%);
-	--input: rgb(0 0 0 / 10%);
-	--card-stroke: rgb(0 0 0 / 8%);
-	--hairline: rgb(0 0 0 / 7%);
-	--highlight: rgb(255 255 255 / 65%);
-	--lift: inset 0 1px 0 rgb(255 255 255 / 65%), 0 0 0 1px var(--card-stroke);
+  --well: rgb(15 15 15 / 5%);
+  --layer-fill: rgb(255 255 255 / 40%);
+  --secondary: rgb(255 255 255 / 55%);
+  --card: rgb(255 255 255 / 72%);
+  --popover: #f9f9f9;
+  --dialog-surface: #f9f9f9;
+  --dialog-stroke: rgb(0 0 0 / 14%);
+  --dialog-smoke: rgb(0 0 0 / 16%);
+  --control-fill: rgb(255 255 255 / 70%);
+  --control-fill-hover: rgb(255 255 255 / 85%);
+  --control-fill-pressed: rgb(249 249 249 / 45%);
+  --control-fill-active: rgb(255 255 255 / 85%);
+  --muted: rgb(15 15 15 / 4%);
+  --accent: rgb(15 15 15 / 4%);
+  --border: rgb(0 0 0 / 10%);
+  --input: rgb(0 0 0 / 10%);
+  --card-stroke: rgb(0 0 0 / 8%);
+  --hairline: rgb(0 0 0 / 7%);
+  --highlight: rgb(255 255 255 / 65%);
+  --lift: inset 0 1px 0 rgb(255 255 255 / 65%), 0 0 0 1px var(--card-stroke);
 }
 
 .dark[data-material="mica"] {
-	--well: rgb(18 25 37 / 65%);
-	--layer-fill: rgb(23 31 44 / 70%);
-	--secondary: rgb(28 38 53 / 75%);
-	--card: rgb(23 31 44 / 75%);
-	--popover: #1c2635;
-	--dialog-surface: #1c2635;
-	--dialog-stroke: rgb(160 179 208 / 18%);
-	--dialog-smoke: rgb(0 0 0 / 16%);
-	--control-fill: rgb(170 190 222 / 10%);
-	--control-fill-hover: rgb(170 190 222 / 15%);
-	--control-fill-pressed: rgb(170 190 222 / 6%);
-	--control-fill-active: rgb(170 190 222 / 13%);
-	--muted: rgb(170 190 222 / 8%);
-	--accent: rgb(170 190 222 / 8%);
-	--border: rgb(160 179 208 / 18%);
-	--input: rgb(160 179 208 / 23%);
-	--card-stroke: rgb(160 179 208 / 12%);
-	--hairline: rgb(160 179 208 / 12%);
-	--highlight: rgb(160 179 208 / 6%);
-	--lift: inset 0 1px 0 rgb(160 179 208 / 6%), 0 0 0 1px var(--card-stroke);
+  --well: rgb(21 21 21 / 65%);
+  --layer-fill: rgb(27 27 27 / 70%);
+  --secondary: rgb(36 36 36 / 75%);
+  --card: rgb(27 27 27 / 75%);
+  --popover: #242424;
+  --dialog-surface: #242424;
+  --dialog-stroke: rgb(210 210 210 / 18%);
+  --dialog-smoke: rgb(0 0 0 / 16%);
+  --control-fill: rgb(210 210 210 / 10%);
+  --control-fill-hover: rgb(210 210 210 / 15%);
+  --control-fill-pressed: rgb(210 210 210 / 6%);
+  --control-fill-active: rgb(210 210 210 / 13%);
+  --muted: rgb(210 210 210 / 8%);
+  --accent: rgb(210 210 210 / 8%);
+  --border: rgb(210 210 210 / 18%);
+  --input: rgb(210 210 210 / 23%);
+  --card-stroke: rgb(210 210 210 / 12%);
+  --hairline: rgb(210 210 210 / 12%);
+  --highlight: rgb(210 210 210 / 6%);
+  --lift: inset 0 1px 0 rgb(210 210 210 / 6%), 0 0 0 1px var(--card-stroke);
 }
 
 @theme inline {
-	--font-sans: 'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
-	--font-mono: 'Cascadia Mono', 'SFMono-Regular', Consolas, ui-monospace, monospace;
-	--color-hairline: var(--hairline);
-	--color-highlight: var(--highlight);
-	--color-scrollbar-thumb-hover: var(--scrollbar-thumb-hover);
-	--color-scrollbar-thumb: var(--scrollbar-thumb);
-	--color-scrollbar-track: var(--scrollbar-track);
-	--color-success: var(--success);
-	--color-warning: var(--warning);
-	--color-record: var(--record);
-	--shadow-lift: var(--lift);
-	--color-sidebar-ring: var(--sidebar-ring);
-	--color-sidebar-border: var(--sidebar-border);
-	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-	--color-sidebar-accent: var(--sidebar-accent);
-	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-	--color-sidebar-primary: var(--sidebar-primary);
-	--color-sidebar-foreground: var(--sidebar-foreground);
-	--color-sidebar: var(--sidebar);
-	--color-chart-5: var(--chart-5);
-	--color-chart-4: var(--chart-4);
-	--color-chart-3: var(--chart-3);
-	--color-chart-2: var(--chart-2);
-	--color-chart-1: var(--chart-1);
-	--color-ring: var(--ring);
-	--color-input: var(--input);
-	--color-border: var(--border);
-	--color-destructive: var(--destructive);
-	--color-accent-foreground: var(--accent-foreground);
-	--color-accent: var(--accent);
-	--color-accent-text: var(--accent-text);
-	--color-accent-wash: var(--accent-wash);
-	--color-accent-wash-strong: var(--accent-wash-strong);
-	--color-accent-edge: var(--accent-edge);
-	--color-meter: var(--meter);
-	--color-meter-rest: var(--meter-rest);
-	--color-muted-foreground: var(--muted-foreground);
-	--color-muted: var(--muted);
-	--color-ink-quiet: var(--ink-quiet);
-	--color-ink-disabled: var(--ink-disabled);
-	--color-secondary-foreground: var(--secondary-foreground);
-	--color-secondary: var(--secondary);
-	--color-primary-foreground: var(--primary-foreground);
-	--color-primary: var(--primary);
-	--color-primary-hover: var(--primary-hover);
-	--color-control-fill: var(--control-fill);
-	--color-control-fill-hover: var(--control-fill-hover);
-	--color-control-fill-pressed: var(--control-fill-pressed);
-	--color-control-fill-active: var(--control-fill-active);
-	--color-layer-fill: var(--layer-fill);
-	--color-well: var(--well);
-	--color-subtle-fill-hover: var(--subtle-fill-hover);
-	--color-subtle-fill-pressed: var(--subtle-fill-pressed);
-	--color-popover-foreground: var(--popover-foreground);
-	--color-popover: var(--popover);
-	--color-dialog-surface: var(--dialog-surface);
-	--color-dialog-stroke: var(--dialog-stroke);
-	--color-card-foreground: var(--card-foreground);
-	--color-card: var(--card);
-	--color-foreground: var(--foreground);
-	--color-background: var(--background);
-	--radius-sm: 0.25rem;
-	--radius-md: 0.375rem;
-	--radius-lg: 0.5rem;
-	--radius-xl: 0.625rem;
-	--radius-2xl: 1rem;
-	--radius-3xl: 1.25rem;
-	--radius-4xl: 1.5rem;
+  --font-display: "Archivo Variable", var(--font-sans);
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "SFMono-Regular", Consolas, ui-monospace, monospace;
+  --color-hairline: var(--hairline);
+  --color-highlight: var(--highlight);
+  --color-scrollbar-thumb-hover: var(--scrollbar-thumb-hover);
+  --color-scrollbar-thumb: var(--scrollbar-thumb);
+  --color-scrollbar-track: var(--scrollbar-track);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-record: var(--record);
+  --shadow-lift: var(--lift);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-wash: var(--accent-wash);
+  --color-accent-wash-strong: var(--accent-wash-strong);
+  --color-accent-edge: var(--accent-edge);
+  --color-meter: var(--meter);
+  --color-meter-rest: var(--meter-rest);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-ink-quiet: var(--ink-quiet);
+  --color-ink-disabled: var(--ink-disabled);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-control-fill: var(--control-fill);
+  --color-control-fill-hover: var(--control-fill-hover);
+  --color-control-fill-pressed: var(--control-fill-pressed);
+  --color-control-fill-active: var(--control-fill-active);
+  --color-layer-fill: var(--layer-fill);
+  --color-well: var(--well);
+  --color-subtle-fill-hover: var(--subtle-fill-hover);
+  --color-subtle-fill-pressed: var(--subtle-fill-pressed);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-dialog-surface: var(--dialog-surface);
+  --color-dialog-stroke: var(--dialog-stroke);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.25rem;
+  --radius-4xl: 1.5rem;
 }
 
 @layer base {
-	* {
-		@apply border-border outline-ring/50;
-		scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-		scrollbar-width: thin;
-	}
-	body {
-		@apply min-h-screen bg-background text-foreground antialiased;
-		margin: 0;
-		--wails-resize: all;
-	}
-	html {
-		@apply font-sans;
-		min-width: 320px;
-		background: var(--background);
-	}
-	#app {
-		background: var(--background);
-	}
-	button,
-	input {
-		font: inherit;
-	}
-	::selection {
-		background: color-mix(in oklab, var(--primary) 28%, transparent);
-	}
-	::-webkit-scrollbar {
-		width: 0.625rem;
-		height: 0.625rem;
-	}
-	::-webkit-scrollbar-track,
-	::-webkit-scrollbar-corner {
-		background: var(--scrollbar-track);
-	}
-	::-webkit-scrollbar-thumb {
-		min-height: 1.5rem;
-		border: 0.1875rem solid transparent;
-		border-radius: 999px;
-		background-color: var(--scrollbar-thumb);
-		background-clip: content-box;
-	}
-	::-webkit-scrollbar-thumb:hover {
-		border-width: 0.125rem;
-		background-color: var(--scrollbar-thumb-hover);
-	}
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    scrollbar-width: thin;
+  }
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
+    margin: 0;
+    --wails-resize: all;
+  }
+  html {
+    @apply font-sans;
+    min-width: 320px;
+    background: var(--background);
+  }
+  #app {
+    background: var(--background);
+  }
+  button,
+  input {
+    font: inherit;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 28%, transparent);
+  }
+  ::-webkit-scrollbar {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    min-height: 1.5rem;
+    border: 0.1875rem solid transparent;
+    border-radius: 999px;
+    background-color: var(--scrollbar-thumb);
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    border-width: 0.125rem;
+    background-color: var(--scrollbar-thumb-hover);
+  }
 }
 
 /*
@@ -347,60 +349,93 @@
  * Monospace is reserved for literal endpoints, model IDs, shortcuts and code.
  */
 @utility figure {
-	font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums;
 }
 
 @utility caption {
-	font-family: var(--font-sans);
-	font-size: 0.75rem;
-	font-weight: 600;
-	letter-spacing: 0.01em;
-	line-height: 1.35;
-	color: var(--secondary-foreground);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  color: var(--secondary-foreground);
 }
 
 html[data-material="mica"],
 html[data-material="mica"] body,
 html[data-material="mica"] #app {
-	background: transparent;
+  background: transparent;
 }
 
-/* A single translucent navy tint keeps dark Mica in the brand palette while
+/* A single translucent charcoal tint keeps dark Mica in the app palette while
  * allowing the Windows material through. Do not stack it on html and body. */
 html.dark[data-material="mica"] #app {
-	background: rgb(17 23 34 / 78%);
+  background: rgb(18 18 18 / 78%);
 }
 
 /* Keep the registry Dialog source untouched while making its window-level
  * material calmer: Fluent smoke dims the owner without blurring its content. */
 [data-slot="dialog-overlay"] {
-	background-color: var(--dialog-smoke);
-	backdrop-filter: none;
+  background-color: var(--dialog-smoke);
+  backdrop-filter: none;
 }
 
 /* Motion is presentation, never state. Keep every registry and app animation
  * readable for people who ask Windows to reduce motion, including portals
  * that live outside the component that opened them. */
 @media (prefers-reduced-motion: reduce) {
-	*,
-	*::before,
-	*::after {
-		scroll-behavior: auto !important;
-		animation-duration: 0.01ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.01ms !important;
-		transition-delay: 0ms !important;
-	}
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
 }
 
 @media (forced-colors: active) {
-	:focus-visible {
-		outline: 2px solid Highlight !important;
-		outline-offset: 2px;
-	}
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
 }
 
-/* Page groups align with their section heading; only actual controls are framed. */
+/* Settings use one quiet group surface; row content shares a consistent inset. */
 .settings-group > * {
-	padding-inline: 0;
+  padding-inline: 1.125rem;
+}
+
+/* Shared control geometry belongs to the application, across all windows. */
+[data-slot="button"],
+[data-slot="input"],
+[data-slot="textarea"],
+[data-slot="select-trigger"] {
+  border-radius: 0.5rem;
+}
+[data-slot="button"] {
+  font-weight: 500;
+}
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="select-content"] {
+  border-radius: 0.875rem;
+  box-shadow:
+    0 12px 40px rgb(0 0 0 / 16%),
+    0 2px 6px rgb(0 0 0 / 8%);
+}
+[data-slot="dialog-content"] {
+  border-radius: 1rem;
+}
+[data-slot="badge"] {
+  letter-spacing: 0;
+  text-transform: none;
+}
+@media (forced-colors: active) {
+  [aria-current="page"],
+  [aria-pressed="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
 }

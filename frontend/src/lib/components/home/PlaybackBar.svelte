@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cn } from "$lib/utils";
   import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import PauseIcon from "@lucide/svelte/icons/pause";
@@ -110,8 +111,10 @@
 {/snippet}
 
 <div
-  class="shrink-0 border-hairline bg-layer-fill px-3 py-2"
-  class:border-b={!embedded}
+  class={cn(
+    "shrink-0 px-3 py-2",
+    embedded ? "bg-layer-fill" : "mb-3 rounded-2xl border border-hairline bg-card",
+  )}
   aria-label="Speech playback"
 >
   <span class="sr-only" role="status">{saving ? "Saving generated speech" : ""}</span>

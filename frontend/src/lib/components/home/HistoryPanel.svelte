@@ -249,6 +249,7 @@
   }
   .history-card.bare .drawer {
     flex: 1;
+    box-shadow: none;
   }
 
   /* Inset rather than a border, so the hairline costs no height while closed. */

@@ -49,15 +49,14 @@
     }
   }
 
-  // Compact navigation keeps the recognizable section icons. At full width the
-  // icon gives way to the label, and the active row is marked by an accent edge
-  // rather than a floating card: the nav is chrome, not content.
+  // Compact navigation keeps section icons; full width adds labels.
+  // The selected row uses the same accent wash as workspace navigation.
   const itemClass = (id: SettingsSectionID) =>
     cn(
-      "flex min-h-8 w-full items-center justify-center gap-2.5 rounded-md px-0 text-[13px] transition-colors sm:justify-start sm:px-2.5",
+      "flex min-h-9 w-full items-center justify-center gap-2.5 rounded-lg px-0 text-[13px] transition-colors sm:justify-start sm:px-3",
       "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
       id === active
-        ? "bg-control-fill font-medium text-foreground shadow-[inset_2px_0_0_var(--primary)]"
+        ? "bg-accent-wash font-medium text-accent-text"
         : "text-secondary-foreground hover:bg-subtle-fill-hover hover:text-foreground active:bg-subtle-fill-pressed",
     );
 
@@ -87,8 +86,9 @@
 <nav
   bind:this={navigationRef}
   aria-label="Settings sections"
-  class="flex min-h-0 w-14 shrink-0 flex-col gap-3 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill px-2 py-4 sm:w-56 sm:px-2.5"
+  class="flex min-h-0 w-14 shrink-0 flex-col gap-5 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill/50 px-2 py-5 sm:w-56 sm:px-3"
 >
+  <p class="hidden px-3 font-display text-lg font-semibold tracking-tight sm:block">Settings</p>
   <p id="settings-nav-help" class="sr-only">
     Use the arrow keys to move between settings sections. Press Home or End to jump to the first or
     last section.

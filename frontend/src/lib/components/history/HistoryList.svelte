@@ -339,13 +339,13 @@
           : HistoryTextVersion.HistoryTextFinal}
         <article
           class={cn(
-            "history-entry group px-4 pt-3.5 pb-2 transition-colors",
-            isExpanded && "bg-muted/20",
+            "history-entry group mb-2 rounded-xl border border-hairline px-4 pt-3.5 pb-2 transition-colors",
+            isExpanded ? "bg-card" : "bg-layer-fill/40",
           )}
         >
           <div
             class={cn(
-              "history-row-header -mx-4 -mt-3.5 flex min-h-8 w-[calc(100%+2rem)] min-w-0 items-center border-b border-hairline bg-layer-fill",
+              "history-row-header -mx-4 -mt-3.5 flex min-h-8 w-[calc(100%+2rem)] min-w-0 items-center rounded-t-xl bg-card",
               isExpanded && "sticky top-0 z-10",
             )}
           >
@@ -663,7 +663,7 @@
       border-left: 1px solid var(--hairline);
     }
   }
-  @container (max-width: 319px) {
+  @container (max-width: 259px) {
     .history-footer {
       align-items: flex-start;
       flex-direction: column;

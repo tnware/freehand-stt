@@ -302,7 +302,13 @@
         Nothing was inserted. The audio has been discarded.
       </p>
     {:else}
-      <Waveform active={recording} quiet={vadSilence} {held} history={levels.history} />
+      {#if status.state === State.Idle}
+        <p class="font-display text-xl font-medium tracking-tight text-foreground">
+          Ready to dictate
+        </p>
+      {:else}
+        <Waveform active={recording} quiet={vadSilence} {held} history={levels.history} />
+      {/if}
       <div class="mt-1 flex min-h-5 items-center justify-between gap-3">
         {#if showShortcut}
           <span class="flex min-w-0 items-center gap-2 text-[11.5px] text-secondary-foreground">
@@ -486,9 +492,12 @@
     width: 3rem;
     height: 3rem;
     flex-shrink: 0;
-    border: 1px solid color-mix(in srgb, var(--record) 78%, #ffffff);
+    border: 1px solid color-mix(in srgb, var(--record) 65%, #ffffff);
     border-radius: 999px;
     background-color: var(--record);
+    box-shadow:
+      0 0 0 7px color-mix(in srgb, var(--record) 10%, transparent),
+      0 4px 14px color-mix(in srgb, var(--record) 18%, transparent);
     transition:
       opacity 180ms ease,
       box-shadow 180ms ease;

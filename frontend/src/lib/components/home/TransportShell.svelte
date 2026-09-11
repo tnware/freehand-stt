@@ -189,9 +189,9 @@
     grid-template-areas: "control summary stage readout";
     align-items: center;
     column-gap: 1rem;
-    height: 6.5rem;
+    height: 8rem;
     padding: 0 1.5rem;
-    --meter-height: 2.25rem;
+    --meter-height: 3rem;
   }
   .recording-strip .control,
   .recording-strip .stage,

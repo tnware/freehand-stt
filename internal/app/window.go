@@ -38,24 +38,24 @@ const (
 func opaqueWindowTheme() application.ThemeSettings {
 	return application.ThemeSettings{
 		LightModeActive: &application.WindowTheme{
-			TitleBarColour:  application.NewRGBPtr(247, 248, 250),
-			TitleTextColour: application.NewRGBPtr(15, 17, 21),
-			BorderColour:    application.NewRGBPtr(229, 231, 235),
+			TitleBarColour:  application.NewRGBPtr(244, 244, 244),
+			TitleTextColour: application.NewRGBPtr(32, 32, 32),
+			BorderColour:    application.NewRGBPtr(221, 221, 221),
 		},
 		LightModeInactive: &application.WindowTheme{
-			TitleBarColour:  application.NewRGBPtr(247, 248, 250),
-			TitleTextColour: application.NewRGBPtr(100, 116, 139),
-			BorderColour:    application.NewRGBPtr(229, 231, 235),
+			TitleBarColour:  application.NewRGBPtr(244, 244, 244),
+			TitleTextColour: application.NewRGBPtr(107, 107, 107),
+			BorderColour:    application.NewRGBPtr(221, 221, 221),
 		},
 		DarkModeActive: &application.WindowTheme{
-			TitleBarColour:  application.NewRGBPtr(17, 23, 34),
-			TitleTextColour: application.NewRGBPtr(231, 236, 243),
-			BorderColour:    application.NewRGBPtr(53, 66, 86),
+			TitleBarColour:  application.NewRGBPtr(18, 18, 18),
+			TitleTextColour: application.NewRGBPtr(242, 242, 242),
+			BorderColour:    application.NewRGBPtr(56, 56, 56),
 		},
 		DarkModeInactive: &application.WindowTheme{
-			TitleBarColour:  application.NewRGBPtr(17, 23, 34),
-			TitleTextColour: application.NewRGBPtr(147, 160, 178),
-			BorderColour:    application.NewRGBPtr(53, 66, 86),
+			TitleBarColour:  application.NewRGBPtr(18, 18, 18),
+			TitleTextColour: application.NewRGBPtr(160, 160, 160),
+			BorderColour:    application.NewRGBPtr(56, 56, 56),
 		},
 	}
 }
@@ -104,7 +104,7 @@ func baseWindowOptions(name, title, url string, width, height, minWidth, minHeig
 			application.PermissionNotifications: application.PermissionDeny,
 			application.PermissionClipboardRead: application.PermissionDeny,
 		},
-		BackgroundColour: application.NewRGB(247, 248, 250),
+		BackgroundColour: application.NewRGB(244, 244, 244),
 		BackgroundType:   application.BackgroundTypeSolid,
 		Frameless:        false,
 		Windows: application.WindowsWindow{
@@ -116,7 +116,7 @@ func baseWindowOptions(name, title, url string, width, height, minWidth, minHeig
 		},
 	}
 	if appearanceIsDark(effectiveAppearance, systemDark) {
-		options.BackgroundColour = application.NewRGB(17, 23, 34)
+		options.BackgroundColour = application.NewRGB(18, 18, 18)
 	}
 	if useMica {
 		options.BackgroundColour = application.NewRGBA(0, 0, 0, 0)
