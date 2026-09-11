@@ -5,6 +5,10 @@ for (const width of [560, 1156]) {
     await page.setViewportSize({ width, height: 560 });
     await page.goto("/tests/browser/app/?view=workspace&theme=dark&history=expansion");
     if (width < 900) await page.getByRole("button", { name: "History · 2", exact: true }).click();
+    // Keep enough content to exercise wheel scrolling and update anchoring as
+    // workspace chrome and history typography become more compact.
+    await page.getByRole("button", { name: "Add transcript", exact: true }).click();
+    await page.getByRole("button", { name: "Add transcript", exact: true }).click();
     const scroll = page.locator(".history-area .overflow-y-auto");
     await expect(scroll).toHaveCount(1);
     await expect
@@ -93,7 +97,10 @@ for (const width of [560, 1156]) {
 test("an unretained file result is fully readable above collapsed history", async ({ page }) => {
   await page.goto("/tests/browser/app/?view=workspace&history=expansion");
   await page.getByRole("button", { name: "Show file result", exact: true }).click();
-  const result = page.getByRole("article", { name: "Audio file transcript result", exact: true });
+  const result = page.getByRole("article", {
+    name: "Audio file transcript result",
+    exact: true,
+  });
   await expect(result).toBeVisible();
   const text = result.getByRole("textbox", { name: "Audio file transcript", exact: true });
   await expect(text).toContainText("The final paragraph is visible too");

@@ -28,6 +28,12 @@ Cross-compilation is not acceptance. Run these checks on a non-elevated Windows 
 
 The connection test may call only `/health` or `/models`. Do not invoke or iterate through models as part of acceptance.
 
+For workspace appearance changes, check light and dark modes at compact and
+desktop widths and 100%/150%/200% DPI. The active input-mode underline must stay
+inside the header, open quick-setting triggers must remain identifiable, and
+history labels and result actions must stay readable without clipping. Verify
+keyboard focus separately from selection, including Windows contrast themes.
+
 ## SQLite settings acceptance
 
 Use a separate test user or isolated data directories, not personal settings.

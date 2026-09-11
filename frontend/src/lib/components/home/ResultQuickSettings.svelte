@@ -65,7 +65,10 @@
         {disabled}
         aria-label={labels[panel]}
         title={labels[panel]}
-        class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9 min-w-0 gap-2 px-2")}
+        class={cn(
+          buttonVariants({ variant: "ghost", size: "sm" }),
+          "h-9 min-w-0 gap-2 px-2 text-secondary-foreground aria-expanded:bg-accent-wash aria-expanded:text-accent-text",
+        )}
       >
         {#if panel === "audio"}<MicIcon class="size-4" />
         {:else if panel === "delivery"}<TextCursorInputIcon class="size-4" />

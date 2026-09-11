@@ -83,11 +83,11 @@
   );
 
   const outcomeLabel = (outcome: HistoryOutcome): string => {
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "copy required";
-    if (outcome === HistoryOutcome.HistoryFailed) return "delivery failed";
-    if (outcome === HistoryOutcome.HistoryTranscribed) return "audio file";
-    if (outcome === HistoryOutcome.HistoryCancelled) return "cancelled";
-    return "inserted";
+    if (outcome === HistoryOutcome.HistoryCopyRequired) return "Copy required";
+    if (outcome === HistoryOutcome.HistoryFailed) return "Delivery failed";
+    if (outcome === HistoryOutcome.HistoryTranscribed) return "Audio file";
+    if (outcome === HistoryOutcome.HistoryCancelled) return "Cancelled";
+    return "Inserted";
   };
 
   const outcomeDot = (outcome: HistoryOutcome): string => {
@@ -99,7 +99,7 @@
 
   const outcomeBadgeClass = (outcome: HistoryOutcome): string => {
     if (outcome === HistoryOutcome.HistoryFailed) return "";
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-primary/10 text-primary";
+    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-accent-wash text-accent-text";
     if (outcome === HistoryOutcome.HistoryInserted) return "bg-success/10 text-success";
     return "";
   };
@@ -152,10 +152,10 @@
 
   const processingLabel = (entry: HistoryEntry): string => {
     if (entry.processingStatus === HistoryProcessingStatus.HistoryProcessingPending)
-      return "raw + processing";
+      return "Raw + processing";
     if (entry.processingStatus === HistoryProcessingStatus.HistoryProcessingCompleted)
-      return "raw + cleaned";
-    return "raw only";
+      return "Raw + cleaned";
+    return "Raw only";
   };
 
   // A new leading result resets presentation in both history views. Updates to
@@ -260,7 +260,10 @@
                   live.failed ? "bg-destructive" : live.working ? "bg-primary" : "bg-success",
                 )}
               ></span>
-              <Badge variant={live.failed ? "destructive" : "secondary"} class="font-mono">
+              <Badge
+                variant={live.failed ? "destructive" : "secondary"}
+                class="text-[11px] tracking-normal normal-case"
+              >
                 {#if live.working}
                   <LoaderCircleIcon class="animate-spin motion-reduce:animate-none" />
                 {/if}
@@ -268,7 +271,7 @@
               </Badge>
               <span class="truncate text-xs font-medium">{live.fileName}</span>
             </div>
-            <span class="shrink-0 font-mono text-[10px] text-muted-foreground">
+            <span class="figure shrink-0 text-xs text-muted-foreground">
               {characterLabel(live.characterCount)}
             </span>
           </div>
@@ -288,7 +291,7 @@
           <div
             class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
           >
-            <span class="font-mono text-[10px] text-primary">audio file · {live.status}</span>
+            <span class="text-xs text-accent-text">Audio file · {live.status}</span>
             <div class="flex items-center">
               {#if ttsEnabled && onListenLive && !live.working}
                 <TooltipButton
@@ -362,7 +365,7 @@
                 <time
                   datetime={entry.completedAt}
                   title={completedDateTime(entry.completedAt)}
-                  class="font-mono text-[11px] font-medium"
+                  class="figure text-xs font-medium text-secondary-foreground"
                 >
                   {completedLabel(entry.completedAt)}
                 </time>
@@ -370,12 +373,18 @@
                   variant={entry.outcome === HistoryOutcome.HistoryFailed
                     ? "destructive"
                     : "secondary"}
-                  class={cn("font-mono", outcomeBadgeClass(entry.outcome))}
+                  class={cn(
+                    "text-[11px] tracking-normal normal-case",
+                    outcomeBadgeClass(entry.outcome),
+                  )}
                 >
                   {outcomeLabel(entry.outcome)}
                 </Badge>
                 {#if hasProcessing(entry)}
-                  <Badge variant="secondary" class="font-mono text-primary">
+                  <Badge
+                    variant="secondary"
+                    class="text-[11px] tracking-normal text-accent-text normal-case"
+                  >
                     {processingLabel(entry)}
                   </Badge>
                 {/if}
@@ -534,7 +543,7 @@
             class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
           >
             <div
-              class="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[10px] text-muted-foreground"
+              class="figure flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted-foreground"
             >
               <span class="shrink-0">{characterLabel(entry.characterCount)}</span>
               <span class="shrink-0" aria-hidden="true">·</span>
@@ -582,8 +591,10 @@
                 <Menu.Root>
                   <Menu.Trigger
                     aria-label="Transcript actions"
-                    class={buttonVariants({ variant: "ghost", size: "icon-xs" })}
-                    ><EllipsisIcon /></Menu.Trigger
+                    class={buttonVariants({
+                      variant: "ghost",
+                      size: "icon-xs",
+                    })}><EllipsisIcon /></Menu.Trigger
                   >
                   <Menu.Content align="end" class="w-64 max-w-[calc(100vw-24px)]">
                     <Menu.Item

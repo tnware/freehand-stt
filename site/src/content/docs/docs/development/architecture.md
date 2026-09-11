@@ -609,6 +609,10 @@ appear only for dictation. TTS shows its own connection and model/voice settings
 Each quick update starts from backend-confirmed settings, restores only engine options
 when a model changes, and calls the same transactional owner without credential mutation.
 Quick controls remain disabled while the Settings window owns an editable draft.
+The header keeps its active-mode underline inside the clipped window chrome.
+Open quick-setting triggers use the shared accent wash and text roles; a hairline
+separates them from result actions. History dates, counts, and status badges use
+the interface typeface, with tabular figures for changing numeric metadata.
 `RuntimeModelPicker` supplies model search, manual IDs, discovery actions, and
 saved/server/draft provenance across Voice, files, cleanup, and speech. Its profile
 summary is descriptive; model IDs never select behavior. `QuickSaveStatus` reads

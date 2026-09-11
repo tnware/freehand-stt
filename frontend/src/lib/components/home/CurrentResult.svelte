@@ -75,6 +75,8 @@
       <div class="min-w-0 flex-1">{@render quickSettings()}</div>
     {/if}
     {#if text}
+      {#if quickSettings}<span class="mx-1 h-4 w-px shrink-0 bg-hairline" aria-hidden="true"
+        ></span>{/if}
       {#if onListen}<Button
           variant="ghost"
           size="sm"

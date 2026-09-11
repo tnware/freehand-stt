@@ -54,7 +54,7 @@
       <Tabs.Trigger
         value="voice"
         disabled={fileWorking}
-        class="h-full rounded-none px-0 text-[12.5px] after:bottom-px after:bg-primary"
+        class="h-full rounded-none px-0 text-[12.5px] after:bg-primary group-data-[orientation=horizontal]/tabs:after:bottom-px"
       >
         <MicIcon data-icon="inline-start" />
         Voice
@@ -62,7 +62,7 @@
       <Tabs.Trigger
         value="file"
         disabled={voiceActive}
-        class="h-full rounded-none px-0 text-[12.5px] after:bottom-px after:bg-primary"
+        class="h-full rounded-none px-0 text-[12.5px] after:bg-primary group-data-[orientation=horizontal]/tabs:after:bottom-px"
       >
         <FileAudioIcon data-icon="inline-start" />
         Audio file
@@ -70,7 +70,7 @@
       <Tabs.Trigger
         value="tts"
         disabled={voiceActive || fileWorking}
-        class="h-full rounded-none px-0 text-[12.5px] after:bottom-px after:bg-primary"
+        class="h-full rounded-none px-0 text-[12.5px] after:bg-primary group-data-[orientation=horizontal]/tabs:after:bottom-px"
       >
         <Volume2Icon data-icon="inline-start" />
         Text to speech
