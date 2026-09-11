@@ -6,9 +6,9 @@ require (
 	github.com/coder/websocket v1.8.15
 	github.com/gen2brain/malgo v0.11.26
 	github.com/pressly/goose/v3 v3.28.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.16
+	github.com/wailsapp/wails/v3 v3.0.0-beta.18
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/sys v0.47.0
+	golang.org/x/sys v0.48.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.58.0
 )
