@@ -100,13 +100,13 @@
     {#if selected && !open}<span
         class="pointer-events-none absolute inset-y-0 left-3 flex items-center"
       >
-        <ProviderIcon profile={selected.details.compatibilityProfile} size={compact ? 16 : 20} />
+        <ProviderIcon profile={selected.details.compatibilityProfile} size={16} />
       </span>{/if}
     <Combobox.Input
       {id}
       aria-label="Choose connection"
       placeholder={open ? "Search connections…" : "Choose or add a connection…"}
-      class={`w-full rounded-md border border-input bg-background pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${compact ? "h-[30px] text-xs" : "h-9"} ${selected && !open ? "pl-10" : "pl-3"}`}
+      class={`w-full min-w-0 rounded-lg border border-input bg-background pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${compact ? "h-8 text-xs" : "h-9"} ${selected && !open ? "pl-9" : "pl-3"}`}
       oninput={(event) => {
         query = event.currentTarget.value;
         open = true;
@@ -126,8 +126,9 @@
   </div>
   <Combobox.Portal
     ><Combobox.Content
+      data-slot="combobox-content"
       sideOffset={4}
-      class="z-50 flex max-h-[min(24rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md"
+      class="z-50 flex max-h-[min(24rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md"
     >
       <div class="min-h-0 overflow-y-auto overscroll-contain p-1">
         {#each matches as c (c.id)}

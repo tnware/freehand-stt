@@ -226,7 +226,7 @@
   });
 </script>
 
-<div class="flex min-h-0 flex-1">
+<div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
   <SettingsNav
     {active}
     onSelect={selectSection}
@@ -234,7 +234,7 @@
     invalidSection={session.editor.validationIssue?.section}
   />
 
-  <div class="flex min-w-0 flex-1 flex-col">
+  <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
     <div
       bind:this={contentPane}
       style:scroll-padding-top={`${headingHeight + 16}px`}
@@ -332,17 +332,15 @@
           {#if active === "connections"}
             <Button onclick={browseConnections}>Open connections</Button>
           {:else if active === "voice-transcription"}
-            {#if session.editor.draft.savedConnections.selected?.voice}<div
-                class="border-b border-hairline pb-4"
-              >
-                <VoiceTranscriptionSettings
-                  editor={session.editor}
-                  settings={session.editor.draft}
-                  draft
-                  disabled={session.editor.saving}
-                  onAddConnection={addConnection}
-                />
-              </div>{/if}
+            {#if session.editor.draft.savedConnections.selected?.voice}
+              <VoiceTranscriptionSettings
+                editor={session.editor}
+                settings={session.editor.draft}
+                draft
+                disabled={session.editor.saving}
+                onAddConnection={addConnection}
+              />
+            {/if}
           {:else if active === "vocabulary"}
             <VocabularySection
               settings={session.editor.draft}

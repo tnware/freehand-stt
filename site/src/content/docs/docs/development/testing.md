@@ -911,3 +911,8 @@ selection explanations, retry without draft loss, stale preview rejection, and
 UTF-8 byte overflow. Preview responses are fixtures; Go vocabulary tests remain
 the authority for actual model/backend restrictions. Native review should confirm
 these controls against the selected profiles and saved settings.
+
+`settings-layout.spec.ts` checks all four workflow pages at 100%, 125%, and 150%
+CSS scale: content scrolls, Save remains fixed and visible, and the document has
+no extra vertical overflow. It also checks Voice uses the shared settings group.
+Native WebView/DPI acceptance remains separate from these browser fixtures.

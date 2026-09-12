@@ -67,7 +67,7 @@
         title={labels[panel]}
         class={cn(
           buttonVariants({ variant: "ghost", size: "sm" }),
-          "h-9 min-w-0 gap-2 px-2 text-secondary-foreground aria-expanded:bg-accent-wash aria-expanded:text-accent-text",
+          "min-w-0 gap-2 px-2 text-secondary-foreground aria-expanded:bg-accent-wash aria-expanded:text-accent-text",
         )}
       >
         {#if panel === "audio"}<MicIcon class="size-4" />
@@ -78,7 +78,7 @@
                 ? settings.voiceTranscription.compatibilityProfile
                 : settings.compatibilityProfile
               : settings.postProcessing.compatibilityProfile}
-            size={20}
+            size={16}
           />
           <span class="hidden text-[13px] @min-[400px]/quick-settings:inline"
             >{panel === "stt" ? "Transcription" : "Cleanup"}</span

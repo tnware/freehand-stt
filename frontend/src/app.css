@@ -408,18 +408,15 @@ html.dark[data-material="mica"] #app {
 }
 
 /* Shared control geometry belongs to the application, across all windows. */
-[data-slot="button"],
 [data-slot="input"],
 [data-slot="textarea"],
 [data-slot="select-trigger"] {
   border-radius: 0.5rem;
 }
-[data-slot="button"] {
-  font-weight: 500;
-}
 [data-slot="popover-content"],
 [data-slot="dropdown-menu-content"],
-[data-slot="select-content"] {
+[data-slot="select-content"],
+[data-slot="combobox-content"] {
   border-radius: 0.875rem;
   box-shadow:
     0 12px 40px rgb(0 0 0 / 16%),
@@ -428,14 +425,37 @@ html.dark[data-material="mica"] #app {
 [data-slot="dialog-content"] {
   border-radius: 1rem;
 }
+[data-slot="dropdown-menu-item"],
+[data-slot="dropdown-menu-checkbox-item"],
+[data-slot="dropdown-menu-radio-item"] {
+  min-height: 2.25rem;
+  border-radius: 0.5rem;
+}
+
+/* Selected options share the navigation accent without changing focus rings. */
+[data-slot="toggle-group-item"][data-state="on"] {
+  background-color: var(--accent-wash);
+  color: var(--accent-text);
+}
+
 [data-slot="badge"] {
   letter-spacing: 0;
   text-transform: none;
 }
 @media (forced-colors: active) {
   [aria-current="page"],
-  [aria-pressed="true"] {
+  [aria-pressed="true"],
+  [data-slot="toggle-group-item"][data-state="on"] {
     outline: 2px solid Highlight;
     outline-offset: -2px;
   }
+}
+
+/* The settings shell is fixed to the WebView. Only its navigation and content
+ * panes scroll; a viewport-height body would add an outer scroller under zoom. */
+html:has([data-window="settings"]) {
+  overflow: clip;
+}
+html:has([data-window="settings"]) body {
+  min-height: 0;
 }

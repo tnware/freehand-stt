@@ -95,8 +95,12 @@
             />{:else}Listen{/if}</Button
         >{/if}
       <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
-      <Button variant="outline" size="sm" disabled={working || !canCopy} onclick={copy}
-        >{feedback.key === resultKey ? "Copied" : "Copy"}</Button
+      <Button
+        variant="outline"
+        size="sm"
+        class="min-w-18"
+        disabled={working || !canCopy}
+        onclick={copy}>{feedback.key === resultKey ? "Copied" : "Copy"}</Button
       >
     {/if}
   </div>

@@ -144,7 +144,9 @@
     Press Ctrl+Enter to speak. Enter adds a new line. Editing or clearing this draft does not change
     the current audio. Speak generates this draft and replaces the current audio.
   </p>
-  <div class="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-hairline px-4">
+  <div
+    class="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline px-4 py-3"
+  >
     <span
       id="speech-character-count"
       class={cn(
@@ -158,7 +160,7 @@
           · Shorten text to speak</span
         >{/if}
     </span>
-    <div class="flex items-center gap-2">
+    <div class="ml-auto flex shrink-0 items-center gap-2">
       <Button variant="ghost" size="sm" disabled={!text} onclick={() => (text = "")}>Clear</Button>
       {#if !configured}
         <Button
@@ -170,7 +172,7 @@
       {:else}
         <Button
           size="sm"
-          class="min-w-28"
+          class="w-32 @sm:w-40"
           disabled={!canSpeak}
           title="Generate this text and replace the current audio"
           onclick={() => onSpeak(text)}

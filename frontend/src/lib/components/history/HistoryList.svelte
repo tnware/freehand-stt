@@ -289,14 +289,14 @@
           {/if}
 
           <div
-            class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
+            class="history-footer mt-1.5 flex min-h-8 min-w-0 items-center justify-between gap-2"
           >
             <span class="text-xs text-accent-text">Audio file · {live.status}</span>
             <div class="flex items-center">
               {#if ttsEnabled && onListenLive && !live.working}
                 <TooltipButton
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon-sm"
                   disabled={!ttsAvailable}
                   label={preparing?.source === TTSSource.SourceFile
                     ? "Preparing speech for this transcript"
@@ -312,7 +312,7 @@
               {/if}
               <TooltipButton
                 variant="ghost"
-                size="icon-xs"
+                size="icon-sm"
                 disabled={!live.canCopy}
                 label={live.canCopy
                   ? "Copy audio file transcript"
@@ -404,7 +404,7 @@
               <Button
                 variant="ghost"
                 size="xs"
-                class={cn("mr-2 min-w-[4.75rem]", isComparing && "bg-control-fill-active")}
+                class={cn("mr-2 min-w-[4.75rem]", isComparing && "bg-accent-wash text-accent-text")}
                 aria-label={isComparing
                   ? "Show the final transcript"
                   : "Compare raw and cleaned transcripts"}
@@ -427,14 +427,16 @@
                 >
                   <section class="comparison-panel px-3 py-2.5" aria-label="Raw transcript">
                     <div class="mb-1.5 flex items-center justify-between gap-3">
-                      <span
-                        class="truncate font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase"
-                      >
-                        Raw · {compactModel(entry.details.model)}
+                      <span class="min-w-0 truncate text-xs text-muted-foreground">
+                        <span class="font-medium text-secondary-foreground">Raw</span>
+                        ·
+                        <span class="font-mono" title={entry.details.model}
+                          >{compactModel(entry.details.model)}</span
+                        >
                       </span>
                       <TooltipButton
                         variant="ghost"
-                        size="icon-xs"
+                        size="icon-sm"
                         label={feedback.key === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`
                           ? "Raw transcript copied"
                           : "Copy raw transcript"}
@@ -463,17 +465,19 @@
                     aria-label="Cleaned transcript"
                   >
                     <div class="mb-1.5 flex items-center justify-between gap-3">
-                      <span
-                        class="truncate font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase"
-                      >
-                        Cleaned · {compactModel(entry.details.processing.model)}
+                      <span class="min-w-0 truncate text-xs text-muted-foreground">
+                        <span class="font-medium text-secondary-foreground">Cleaned</span>
+                        ·
+                        <span class="font-mono" title={entry.details.processing.model}
+                          >{compactModel(entry.details.processing.model)}</span
+                        >
                         {#if entry.details.processing.preset}
                           · {processingProfileName([], entry.details.processing.preset)}
                         {/if}
                       </span>
                       <TooltipButton
                         variant="ghost"
-                        size="icon-xs"
+                        size="icon-sm"
                         label={feedback.key ===
                         `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`
                           ? "Cleaned transcript copied"
@@ -540,7 +544,7 @@
           {/if}
 
           <div
-            class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
+            class="history-footer mt-1.5 flex min-h-8 min-w-0 items-center justify-between gap-2"
           >
             <div
               class="figure flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted-foreground"
@@ -557,7 +561,7 @@
                 {#if ttsEnabled && onListen}
                   <TooltipButton
                     variant="ghost"
-                    size="icon-xs"
+                    size="icon-sm"
                     disabled={!ttsAvailable}
                     label={preparing?.historyID === entry.id
                       ? "Preparing speech for this transcript"
@@ -573,7 +577,7 @@
                 {/if}
                 <TooltipButton
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon-sm"
                   class="text-primary"
                   label={feedback.key === `${entry.id}:${finalVersion}`
                     ? "Transcript copied"
@@ -593,14 +597,14 @@
                     aria-label="Transcript actions"
                     class={buttonVariants({
                       variant: "ghost",
-                      size: "icon-xs",
+                      size: "icon-sm",
                     })}><EllipsisIcon /></Menu.Trigger
                   >
                   <Menu.Content align="end" class="w-64 max-w-[calc(100vw-24px)]">
                     <Menu.Item
                       disabled={!detailsAvailable(entry)}
                       onclick={() => void openDetails(entry)}
-                      class="gap-2.5 px-3 py-2.5"
+                      class="gap-2.5 px-3 py-2"
                     >
                       <InfoIcon />Transcription details
                     </Menu.Item>
@@ -608,7 +612,7 @@
                     <Menu.Item
                       variant="destructive"
                       onclick={() => void onDelete(entry.id)}
-                      class="gap-2.5 px-3 py-2.5"
+                      class="gap-2.5 px-3 py-2"
                     >
                       <TrashIcon />Remove from history
                     </Menu.Item>

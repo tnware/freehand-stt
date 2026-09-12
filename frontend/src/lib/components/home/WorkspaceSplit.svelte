@@ -37,11 +37,7 @@
   </Resizable.PaneGroup>
 {:else}
   {#if hasHistory}
-    <div
-      class="flex shrink-0 gap-1 border-b border-hairline px-3 py-2"
-      role="group"
-      aria-label="Workspace view"
-    >
+    <div class="flex shrink-0 gap-1 px-3 py-2" role="group" aria-label="Workspace view">
       <Button
         variant={visibleView === "result" ? "secondary" : "ghost"}
         size="sm"

@@ -1052,3 +1052,23 @@ settings. Shared pickers present the provided model contracts and delegate edits
 to their existing callbacks; they do not infer capabilities or own save policy.
 `FieldHelp` presents supporting copy without moving the surrounding controls.
 Restrictions and unavailable states stay inline rather than depending on help.
+
+Shared button variants own the 8px control radius and medium label weight, including
+menu and tooltip triggers. Workspace quick settings align to the adjacent 32px
+actions with 16px icons. Settings navigation expands from an icon rail at 760px;
+trailing row controls wrap when the content column needs more room.
+
+Speech uses the same toolbar geometry and picker surfaces as transcription. Its
+generate action reserves its width across ready and busy states. General settings
+choices wrap to one column in narrow content areas, and selected toggle groups
+use the shared blue accent while retaining their keyboard focus indicators.
+
+Quick-setting and feedback popovers use the shared floating-surface slot. History
+actions use 32px targets, while comparison labels distinguish plain-language
+labels from monospace model IDs. The application status bar is 28px high with 24px controls and retains a visible open state.
+
+The Settings window is fixed to its WebView viewport. Navigation and content own
+independent scrolling; the document body has no viewport-height minimum in this
+window, preventing an outer scrollbar under zoom. Voice draft settings group
+model, profile, language and recognition controls in the shared settings card;
+quick settings continue to use the compact presentation and immediate saves.

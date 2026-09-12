@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingsCard from "../settings/SettingsCard.svelte";
   import SettingsDisclosure from "../settings/SettingsDisclosure.svelte";
   import RuntimeModelPicker from "../settings/RuntimeModelPicker.svelte";
   import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
@@ -124,7 +125,7 @@
   }
 </script>
 
-<div class="space-y-4">
+<div class={draft ? "flex flex-col gap-5" : "space-y-4"}>
   {#if !draft}
     {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
     <div class="space-y-1.5">
@@ -144,10 +145,35 @@
   {#if message && testedID === connectionID}<p class="text-xs text-muted-foreground" role="status">
       {message}
     </p>{/if}
+  {#if draft}
+    <SettingsCard>
+      {@render modelControls()}
+      {@render recognitionControls()}
+    </SettingsCard>
+  {:else}
+    {@render modelControls()}
+  {/if}
+  {#if setup}
+    <SettingsDisclosure
+      title="Transcription options"
+      description="Language, realtime, and recognition hints"
+    >
+      <div class="space-y-4 p-4">{@render optionalControls()}</div>
+    </SettingsDisclosure>
+  {:else if draft}{@render finishingControls()}{:else}{@render optionalControls()}{/if}
+  {#if !draft}<QuickSaveStatus
+      fields={["voice-transcription"]}
+      pending={editor.quickSettingsPending}
+      saved={editor.quickSettingsSaved}
+      failed={editor.quickSettingsFailed}
+    />{/if}
+</div>
+
+{#snippet modelControls()}
   <RuntimeModelPicker
     id="voice-model"
     value={cfg.model}
-    compact
+    compact={!draft}
     immediate={!draft}
     showProfileName={false}
     models={availableModels}
@@ -169,31 +195,29 @@
     value={cfg.modelProfile}
     profiles={settings.modelProfiles.voiceTranscription ?? []}
     disabled={busy}
-    compact
+    compact={!draft}
     onChange={chooseProfile}
   />
-  {#if setup}
-    <SettingsDisclosure
-      title="Transcription options"
-      description="Language, realtime, and recognition hints"
-    >
-      <div class="space-y-4 p-4">{@render optionalControls()}</div>
-    </SettingsDisclosure>
-  {:else}{@render optionalControls()}{/if}
-  {#if !draft}<QuickSaveStatus
-      fields={["voice-transcription"]}
-      pending={editor.quickSettingsPending}
-      saved={editor.quickSettingsSaved}
-      failed={editor.quickSettingsFailed}
-    />{/if}
-</div>
+{/snippet}
 
 {#snippet optionalControls()}
-  {#if profileNotice}<p class="text-xs text-muted-foreground" role="status">
+  {@render recognitionControls()}
+  {@render finishingControls()}
+{/snippet}
+
+{#snippet recognitionControls()}
+  {#if profileNotice}<p
+      class={draft ? "px-5 py-3 text-xs text-muted-foreground" : "text-xs text-muted-foreground"}
+      role="status"
+    >
       {profileNotice}
     </p>{/if}
   {#if profile?.capabilities.realtime}
-    <div class="flex items-center justify-between gap-3 border-t border-hairline pt-3">
+    <div
+      class={draft
+        ? "flex items-center justify-between gap-4 px-5 py-4"
+        : "flex items-center justify-between gap-3 border-t border-hairline pt-3"}
+    >
       <div>
         <label for="voice-realtime" class="text-sm font-medium">Realtime transcription</label>
         <p class="mt-1 text-xs text-muted-foreground">
@@ -209,13 +233,17 @@
     </div>
   {/if}
   {#if cfg.realtime && cfg.modelProfile === ID.Qwen3ASR}
-    <p class="text-xs leading-relaxed text-muted-foreground">
+    <p
+      class={draft
+        ? "px-5 py-4 text-xs leading-relaxed text-muted-foreground"
+        : "text-xs leading-relaxed text-muted-foreground"}
+    >
       Qwen realtime uses automatic language detection. Language, context, vocabulary, and
       temperature hints apply only with realtime off.
     </p>
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
-    <div class="space-y-1.5">
+    <div class={draft ? "space-y-2 px-5 py-4" : "space-y-1.5"}>
       <label for="voice-language" class="text-sm font-medium">Spoken language</label>
       <LanguagePicker
         id="voice-language"
@@ -229,7 +257,7 @@
     </div>
   {/if}
   {#if !cfg.realtime && profile?.capabilities.transcriptionPrompt}
-    <div class="space-y-1.5">
+    <div class={draft ? "space-y-2 px-5 py-4" : "space-y-1.5"}>
       <label for="voice-prompt" class="text-sm font-medium">Context hint</label><textarea
         id="voice-prompt"
         rows="2"
@@ -247,6 +275,9 @@
       ></textarea>
     </div>
   {/if}
+{/snippet}
+
+{#snippet finishingControls()}
   <VocabularyLink {settings} voice />
   {#if draft && !cfg.realtime}
     <SettingsDisclosure

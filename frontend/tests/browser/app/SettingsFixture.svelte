@@ -137,7 +137,10 @@
   let active = $state<SettingsSectionID>("server");
 </script>
 
-<div class="flex h-screen flex-col text-foreground">
+<div
+  data-window="settings"
+  class="fixed inset-0 flex min-h-0 flex-col overflow-hidden text-foreground"
+>
   <SettingsScreen
     {session}
     bind:active
