@@ -278,7 +278,7 @@
           {#each VAD_MODES as mode (mode.value)}
             <Label
               for={`vad-mode-${mode.value}`}
-              class="flex cursor-pointer items-start gap-3 rounded-lg border border-hairline bg-background/35 px-3 py-2.5 transition-colors hover:bg-accent/55"
+              class="flex cursor-pointer items-start gap-3 rounded-sm bg-transparent px-3 py-2.5 transition-colors hover:bg-accent/55"
             >
               <RadioGroup.Item id={`vad-mode-${mode.value}`} value={mode.value} class="mt-0.5" />
               <span class="min-w-0">

@@ -21,7 +21,8 @@ for (const theme of ["dark", "light"]) {
     await page.getByRole("button", { name: "Show transcript playback", exact: true }).click();
     await page.getByRole("tab", { name: "Voice", exact: true }).click();
     const bar = page.locator('[aria-label="Speech playback"]');
-    const result = page.getByRole("region", { name: "Current result", exact: true });
+    // The result's outer frame owns its surface, stroke and corner geometry.
+    const result = page.getByRole("region", { name: "Current result", exact: true }).locator("..");
     const surface = (element: Element) => {
       const css = getComputedStyle(element);
       return {

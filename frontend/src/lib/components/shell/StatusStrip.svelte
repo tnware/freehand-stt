@@ -40,12 +40,12 @@
 <!-- Endpoint reachability is different from dictation state. Keep it quiet,
      persistent, and truthful about whether a probe has actually run. -->
 <footer
-  class="flex min-h-9 shrink-0 items-center justify-between gap-3 border-t border-hairline bg-layer-fill px-4 text-xs"
+  class="flex h-7 shrink-0 items-center justify-between gap-2 border-t border-hairline bg-layer-fill px-3 text-[11px] leading-none"
 >
   <Popover.Root bind:open>
     <Popover.Trigger
       aria-label={`${connectionState.scope} connection status: ${connectionState.label}`}
-      class="-ml-2 flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:outline-ring"
+      class="-ml-2 flex min-w-0 items-center gap-1.5 h-6 rounded-md px-2 text-left transition-colors hover:bg-subtle-fill-hover aria-expanded:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
     >
       <span class="size-1.5 shrink-0 rounded-full {connectionState.dot}"></span>
       <span class="truncate text-secondary-foreground"
@@ -81,12 +81,12 @@
     <Button
       variant="ghost"
       size="xs"
-      class="-mr-1.5 h-6 text-xs text-secondary-foreground hover:text-foreground"
+      class="-mr-1 h-6 rounded-md px-1.5 text-[11px] font-normal text-secondary-foreground hover:text-foreground focus-visible:ring-inset"
       onclick={onAbout}
       aria-label={aboutOpen ? "Focus About" : "Open About"}
       title={aboutOpen ? "Focus About" : "Open About"}
     >
-      <CircleHelpIcon class="size-3.5" />
+      <CircleHelpIcon class="size-3" />
       About
     </Button>
   </div>

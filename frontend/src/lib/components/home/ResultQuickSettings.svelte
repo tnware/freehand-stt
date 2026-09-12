@@ -51,7 +51,11 @@
   }
 </script>
 
-<div class="flex h-12 min-w-0 items-center gap-1" role="group" aria-label="Quick settings">
+<div
+  class="@container/quick-settings flex h-12 min-w-0 items-center gap-1"
+  role="group"
+  aria-label="Quick settings"
+>
   {#each panels as panel (panel)}
     <Popover.Root
       open={!disabled && activePanel === panel}
@@ -61,7 +65,10 @@
         {disabled}
         aria-label={labels[panel]}
         title={labels[panel]}
-        class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9 min-w-0 gap-2 px-2")}
+        class={cn(
+          buttonVariants({ variant: "ghost", size: "sm" }),
+          "min-w-0 gap-2 px-2 text-secondary-foreground aria-expanded:bg-accent-wash aria-expanded:text-accent-text",
+        )}
       >
         {#if panel === "audio"}<MicIcon class="size-4" />
         {:else if panel === "delivery"}<TextCursorInputIcon class="size-4" />
@@ -71,9 +78,9 @@
                 ? settings.voiceTranscription.compatibilityProfile
                 : settings.compatibilityProfile
               : settings.postProcessing.compatibilityProfile}
-            size={20}
+            size={16}
           />
-          <span class="hidden text-[13px] @min-[540px]:inline"
+          <span class="hidden text-[13px] @min-[400px]/quick-settings:inline"
             >{panel === "stt" ? "Transcription" : "Cleanup"}</span
           >
           {#if panel === "cleanup"}<span

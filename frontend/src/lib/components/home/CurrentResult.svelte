@@ -53,10 +53,10 @@
 </script>
 
 <section
-  class="@container flex min-h-40 flex-1 flex-col overflow-hidden rounded-lg border border-hairline bg-layer-fill"
+  class="@container flex min-h-40 flex-1 flex-col overflow-hidden bg-card"
   aria-label="Current result"
 >
-  <div class="flex h-12 shrink-0 items-center gap-1 border-b border-hairline px-3">
+  <div class="flex h-14 shrink-0 items-center gap-1 border-b border-hairline px-3">
     <h2 class={quickSettings ? "sr-only" : "text-sm font-medium"}>Current result</h2>
     <span class={quickSettings ? "sr-only" : "mr-auto text-xs text-muted-foreground"}
       >{working
@@ -75,6 +75,8 @@
       <div class="min-w-0 flex-1">{@render quickSettings()}</div>
     {/if}
     {#if text}
+      {#if quickSettings}<span class="mx-1 h-4 w-px shrink-0 bg-hairline" aria-hidden="true"
+        ></span>{/if}
       {#if onListen}<Button
           variant="ghost"
           size="sm"
@@ -93,8 +95,12 @@
             />{:else}Listen{/if}</Button
         >{/if}
       <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
-      <Button variant="outline" size="sm" disabled={working || !canCopy} onclick={copy}
-        >{feedback.key === resultKey ? "Copied" : "Copy"}</Button
+      <Button
+        variant="outline"
+        size="sm"
+        class="min-w-18"
+        disabled={working || !canCopy}
+        onclick={copy}>{feedback.key === resultKey ? "Copied" : "Copy"}</Button
       >
     {/if}
   </div>
@@ -122,7 +128,7 @@
           </p>
         {/if}
         {#if live || text}
-          <div class="mx-auto w-full max-w-[76ch] p-4">
+          <div class="mx-auto w-full max-w-[76ch] px-5 py-6 @min-[600px]:px-8">
             {#if live}
               <p class="mb-3 text-xs text-muted-foreground" role="status">
                 Live preview · text may change
@@ -137,12 +143,25 @@
                   : undefined,
               }}
               label={live ? "Live transcript" : "Current transcript"}
-              class="whitespace-pre-wrap break-words text-sm leading-7"
+              class="whitespace-pre-wrap break-words text-[15px] leading-8"
             />
           </div>
         {:else if !message}
           <div class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-4 text-center">
-            <p class="text-sm font-medium">
+            <span
+              class="mb-3 grid size-12 place-items-center rounded-2xl bg-accent-wash text-accent-text"
+              aria-hidden="true"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                class="size-6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"><path d="M5 10v4M9 6v12M13 3v18M17 7v10M21 10v4" /></svg
+              >
+            </span>
+            <p class="font-display text-xl font-medium tracking-tight">
               {failed
                 ? "No transcript to show"
                 : working

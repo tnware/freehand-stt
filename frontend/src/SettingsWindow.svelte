@@ -190,7 +190,10 @@
 
 <ConfigurationRecoveryDialog {session} />
 
-<div class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground">
+<div
+  data-window="settings"
+  class="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-transparent text-foreground"
+>
   <SettingsScreen
     {session}
     visible={windowVisible}

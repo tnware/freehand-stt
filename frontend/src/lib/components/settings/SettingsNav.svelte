@@ -49,15 +49,14 @@
     }
   }
 
-  // Compact navigation keeps the recognizable section icons. At full width the
-  // icon gives way to the label, and the active row is marked by an accent edge
-  // rather than a floating card: the nav is chrome, not content.
+  // Compact navigation keeps section icons; full width adds labels.
+  // The selected row uses the same accent wash as workspace navigation.
   const itemClass = (id: SettingsSectionID) =>
     cn(
-      "flex min-h-8 w-full items-center justify-center gap-2.5 rounded-md px-0 text-[13px] transition-colors sm:justify-start sm:px-2.5",
+      "flex min-h-9 w-full items-center justify-center gap-2.5 rounded-lg px-0 text-[13px] transition-colors min-[760px]:justify-start min-[760px]:px-3",
       "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
       id === active
-        ? "bg-control-fill font-medium text-foreground shadow-[inset_2px_0_0_var(--primary)]"
+        ? "bg-accent-wash font-medium text-accent-text"
         : "text-secondary-foreground hover:bg-subtle-fill-hover hover:text-foreground active:bg-subtle-fill-pressed",
     );
 
@@ -87,26 +86,29 @@
 <nav
   bind:this={navigationRef}
   aria-label="Settings sections"
-  class="flex min-h-0 w-14 shrink-0 flex-col gap-3 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill px-2 py-4 sm:w-56 sm:px-2.5"
+  class="flex min-h-0 w-14 shrink-0 flex-col gap-5 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill/50 px-2 py-5 min-[760px]:w-56 min-[760px]:px-3"
 >
+  <p class="hidden px-3 font-display text-lg font-semibold tracking-tight min-[760px]:block">
+    Settings
+  </p>
   <p id="settings-nav-help" class="sr-only">
     Use the arrow keys to move between settings sections. Press Home or End to jump to the first or
     last section.
   </p>
-  <div class="relative hidden shrink-0 sm:block">
+  <div class="relative hidden shrink-0 min-[760px]:block">
     <SearchIcon
-      class="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-muted-foreground"
+      class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
     />
     <input
       aria-label="Find settings"
       placeholder="Find settings…"
       bind:value={query}
       onkeydown={searchKey}
-      class="h-9 w-full rounded-md border border-input bg-background pl-8 pr-8 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      class="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-8 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
     />
     {#if query}<TooltipButton
         label="Clear settings search"
-        class="absolute right-1 top-1.5"
+        class="absolute right-1 top-1/2 -translate-y-1/2"
         onclick={() => (query = "")}><XIcon /></TooltipButton
       >{/if}
   </div>
@@ -117,7 +119,7 @@
     {@const sections = matches.filter((section) => section.group === group)}
     {#if sections.length}
       <div class="flex shrink-0 flex-col gap-1">
-        <p class="caption hidden px-2.5 pb-1.5 sm:block">{GROUP_LABELS[group]}</p>
+        <p class="caption hidden px-2.5 pb-1.5 min-[760px]:block">{GROUP_LABELS[group]}</p>
         {#each sections as section (section.id)}
           <button
             type="button"
@@ -131,10 +133,10 @@
             onclick={() => choose(section.id)}
             onkeydown={(event) => moveSelection(event, section.id)}
           >
-            <section.icon class="size-[15px] shrink-0" />
-            <span class="hidden truncate sm:inline">{section.label}</span>
+            <section.icon class="size-4 shrink-0" />
+            <span class="hidden truncate min-[760px]:inline">{section.label}</span>
             {#if section.id === "connections"}<ExternalLinkIcon
-                class="ml-auto hidden size-3 text-muted-foreground sm:block"
+                class="ml-auto hidden size-3 text-muted-foreground min-[760px]:block"
               />{/if}
             {#if invalidSection === section.id}<span
                 class="font-semibold text-destructive"

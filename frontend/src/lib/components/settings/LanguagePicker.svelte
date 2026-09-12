@@ -83,7 +83,7 @@
     <div class="relative">
       <Combobox.Input
         {id}
-        class="h-9 w-full rounded-md border border-input bg-background px-3 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        class="h-9 w-full rounded-lg border border-input bg-background px-3 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
         aria-describedby={`${id}-help`}
         placeholder="Search languages…"
         oninput={(event) => {
@@ -102,7 +102,8 @@
     </div>
     <Combobox.Portal>
       <Combobox.Content
-        class="z-50 max-h-[min(18rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-56 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+        data-slot="combobox-content"
+        class="z-50 max-h-[min(18rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-56 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
         sideOffset={4}
         collisionPadding={12}
       >

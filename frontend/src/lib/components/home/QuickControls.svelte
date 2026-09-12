@@ -4,10 +4,7 @@
   import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
   import type { Device, Settings } from "$lib/state";
-  import type {
-    QuickSettingsField,
-    QuickSettingsPatch,
-  } from "$lib/stores/editor.svelte";
+  import type { QuickSettingsField, QuickSettingsPatch } from "$lib/stores/editor.svelte";
   import {
     SYSTEM_DEFAULT_LABEL,
     SYSTEM_DEFAULT_MICROPHONE,
@@ -34,10 +31,7 @@
     devices: Device[];
     pending?: QuickSettingsField[];
     savedField?: QuickSettingsField | null;
-    onUpdate: (
-      patch: QuickSettingsPatch,
-      field: QuickSettingsField,
-    ) => Promise<boolean>;
+    onUpdate: (patch: QuickSettingsPatch, field: QuickSettingsField) => Promise<boolean>;
     onOpenAudioSettings: () => void;
     onOpenDeliverySettings: () => void;
     disabled?: boolean;
@@ -61,12 +55,8 @@
 
   const saving = $derived(pending.length > 0);
   const controlsDisabled = $derived(disabled || saving);
-  const selectedMicrophoneLabel = $derived(
-    microphoneLabel(selectedMicrophone, devices),
-  );
-  const selectedMicrophoneMissing = $derived(
-    microphoneMissing(selectedMicrophone, devices),
-  );
+  const selectedMicrophoneLabel = $derived(microphoneLabel(selectedMicrophone, devices));
+  const selectedMicrophoneMissing = $derived(microphoneMissing(selectedMicrophone, devices));
   const toolbarFields: QuickSettingsField[] = [
     "microphone",
     "vad-enabled",
@@ -83,12 +73,9 @@
   });
 
   async function chooseMicrophone(choice: string) {
-    if (!choice || choice === microphoneChoiceFor(settings.microphoneID))
-      return;
+    if (!choice || choice === microphoneChoiceFor(settings.microphoneID)) return;
     selectedMicrophone = choice;
-    if (
-      !(await onUpdate({ microphoneID: microphoneIDFor(choice) }, "microphone"))
-    ) {
+    if (!(await onUpdate({ microphoneID: microphoneIDFor(choice) }, "microphone"))) {
       selectedMicrophone = microphoneChoiceFor(settings.microphoneID);
     }
   }
@@ -194,17 +181,14 @@
                       selectedMicrophoneMissing ? "bg-warning" : "bg-success",
                     )}
                   ></span>
-                  <span class="min-w-0 flex-1 truncate text-left"
-                    >{selectedMicrophoneLabel}</span
-                  >
+                  <span class="min-w-0 flex-1 truncate text-left">{selectedMicrophoneLabel}</span>
                   <ChevronDownIcon class="size-3 shrink-0 text-ink-quiet" />
                 </button>
               {/snippet}
             </DropdownMenu.Trigger>
             <DropdownMenu.Content align="start" class="w-72">
               <DropdownMenu.Group>
-                <DropdownMenu.GroupHeading>Microphone</DropdownMenu.GroupHeading
-                >
+                <DropdownMenu.GroupHeading>Microphone</DropdownMenu.GroupHeading>
                 <DropdownMenu.RadioGroup
                   bind:value={selectedMicrophone}
                   onValueChange={(choice) => void chooseMicrophone(choice)}
@@ -218,9 +202,7 @@
                     </DropdownMenu.RadioItem>
                   {/if}
                   {#each devices as device (device.id)}
-                    <DropdownMenu.RadioItem value={device.id}
-                      >{device.name}</DropdownMenu.RadioItem
-                    >
+                    <DropdownMenu.RadioItem value={device.id}>{device.name}</DropdownMenu.RadioItem>
                   {/each}
                 </DropdownMenu.RadioGroup>
               </DropdownMenu.Group>
@@ -293,21 +275,17 @@
           onChange={toggleHistory}
         />
       </div>
-      <p class="mt-2 text-xs text-muted-foreground">
-        Direct input off uses manual copy.
-      </p>
+      <p class="mt-2 text-xs text-muted-foreground">Direct input off uses manual copy.</p>
     </div>
   {/if}
 </section>
 
 <style>
   .control-group {
-    padding: 1rem;
+    padding: 1rem 0;
   }
   .framed {
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-lg);
-    background: var(--layer-fill);
+    border-bottom: 1px solid var(--hairline);
   }
   .embedded {
     padding: 0;

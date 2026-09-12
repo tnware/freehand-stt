@@ -94,7 +94,7 @@
       {#if onForget && savedModels.includes(value) && !serverLoaded}<Menu.Root
           ><Menu.Trigger
             aria-label="Model actions"
-            class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             disabled={locked}><EllipsisIcon class="size-4" /></Menu.Trigger
           ><Menu.Content align="end" class="w-60 max-w-[calc(100vw-24px)]"
             ><Menu.Item onclick={onForget} class="gap-2.5 px-3 py-2.5">
@@ -125,7 +125,7 @@
           aria-label="Choose model"
           aria-describedby={`${id}-help`}
           placeholder="Search or enter a model ID…"
-          class="h-9 w-full rounded-md border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          class="h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           spellcheck={false}
           oninput={(e) => {
             query = e.currentTarget.value;
@@ -152,9 +152,10 @@
       </div>
       <Combobox.Portal
         ><Combobox.Content
+          data-slot="combobox-content"
           sideOffset={4}
           collisionPadding={12}
-          class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
         >
           {#key query}{#each choices as choice (choice.value)}
               <Combobox.Item

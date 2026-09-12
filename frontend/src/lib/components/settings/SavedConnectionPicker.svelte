@@ -25,10 +25,7 @@
   const selected = $derived(entries.find((c) => c.id === catalog.selected?.[purpose]));
 </script>
 
-<section
-  class="rounded-xl border border-hairline bg-layer-fill px-5 py-4"
-  aria-label="Active connection"
->
+<section class="border-b border-hairline pb-4" aria-label="Active connection">
   <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
     <label for={`saved-connection-${purpose}`} class="text-sm font-medium">Connection</label>
     <div class="min-w-44 flex-1">

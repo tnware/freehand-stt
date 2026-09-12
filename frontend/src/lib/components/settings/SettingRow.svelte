@@ -30,8 +30,8 @@
   aria-labelledby={titleID}
   aria-describedby={description ? descriptionID : undefined}
 >
-  <div class="flex items-center justify-between gap-5">
-    <div class="min-w-0">
+  <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+    <div class="min-w-0 flex-[1_1_12rem]">
       {#if controlID}
         <label id={titleID} for={controlID} class="cursor-pointer text-sm font-medium"
           >{title}</label
@@ -46,7 +46,9 @@
       {/if}
     </div>
     {#if control}
-      <div class="shrink-0">{@render control()}</div>
+      <div class="ml-auto flex max-w-full shrink-0 flex-wrap items-center gap-2">
+        {@render control()}
+      </div>
     {/if}
   </div>
   {#if children}

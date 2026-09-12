@@ -11,6 +11,7 @@
 
 <Popover.Portal>
   <Popover.Content
+    data-slot="popover-content"
     {sideOffset}
     {align}
     collisionPadding={12}

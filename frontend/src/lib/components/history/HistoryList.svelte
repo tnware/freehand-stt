@@ -83,11 +83,11 @@
   );
 
   const outcomeLabel = (outcome: HistoryOutcome): string => {
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "copy required";
-    if (outcome === HistoryOutcome.HistoryFailed) return "delivery failed";
-    if (outcome === HistoryOutcome.HistoryTranscribed) return "audio file";
-    if (outcome === HistoryOutcome.HistoryCancelled) return "cancelled";
-    return "inserted";
+    if (outcome === HistoryOutcome.HistoryCopyRequired) return "Copy required";
+    if (outcome === HistoryOutcome.HistoryFailed) return "Delivery failed";
+    if (outcome === HistoryOutcome.HistoryTranscribed) return "Audio file";
+    if (outcome === HistoryOutcome.HistoryCancelled) return "Cancelled";
+    return "Inserted";
   };
 
   const outcomeDot = (outcome: HistoryOutcome): string => {
@@ -99,7 +99,7 @@
 
   const outcomeBadgeClass = (outcome: HistoryOutcome): string => {
     if (outcome === HistoryOutcome.HistoryFailed) return "";
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-primary/10 text-primary";
+    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-accent-wash text-accent-text";
     if (outcome === HistoryOutcome.HistoryInserted) return "bg-success/10 text-success";
     return "";
   };
@@ -152,10 +152,10 @@
 
   const processingLabel = (entry: HistoryEntry): string => {
     if (entry.processingStatus === HistoryProcessingStatus.HistoryProcessingPending)
-      return "raw + processing";
+      return "Raw + processing";
     if (entry.processingStatus === HistoryProcessingStatus.HistoryProcessingCompleted)
-      return "raw + cleaned";
-    return "raw only";
+      return "Raw + cleaned";
+    return "Raw only";
   };
 
   // A new leading result resets presentation in both history views. Updates to
@@ -260,7 +260,10 @@
                   live.failed ? "bg-destructive" : live.working ? "bg-primary" : "bg-success",
                 )}
               ></span>
-              <Badge variant={live.failed ? "destructive" : "secondary"} class="font-mono">
+              <Badge
+                variant={live.failed ? "destructive" : "secondary"}
+                class="text-[11px] tracking-normal normal-case"
+              >
                 {#if live.working}
                   <LoaderCircleIcon class="animate-spin motion-reduce:animate-none" />
                 {/if}
@@ -268,7 +271,7 @@
               </Badge>
               <span class="truncate text-xs font-medium">{live.fileName}</span>
             </div>
-            <span class="shrink-0 font-mono text-[10px] text-muted-foreground">
+            <span class="figure shrink-0 text-xs text-muted-foreground">
               {characterLabel(live.characterCount)}
             </span>
           </div>
@@ -286,14 +289,14 @@
           {/if}
 
           <div
-            class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
+            class="history-footer mt-1.5 flex min-h-8 min-w-0 items-center justify-between gap-2"
           >
-            <span class="font-mono text-[10px] text-primary">audio file · {live.status}</span>
+            <span class="text-xs text-accent-text">Audio file · {live.status}</span>
             <div class="flex items-center">
               {#if ttsEnabled && onListenLive && !live.working}
                 <TooltipButton
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon-sm"
                   disabled={!ttsAvailable}
                   label={preparing?.source === TTSSource.SourceFile
                     ? "Preparing speech for this transcript"
@@ -309,7 +312,7 @@
               {/if}
               <TooltipButton
                 variant="ghost"
-                size="icon-xs"
+                size="icon-sm"
                 disabled={!live.canCopy}
                 label={live.canCopy
                   ? "Copy audio file transcript"
@@ -336,13 +339,13 @@
           : HistoryTextVersion.HistoryTextFinal}
         <article
           class={cn(
-            "history-entry group px-4 pt-3.5 pb-2 transition-colors",
-            isExpanded && "bg-muted/20",
+            "history-entry group mb-2 rounded-xl border border-hairline px-4 pt-3.5 pb-2 transition-colors",
+            isExpanded ? "bg-card" : "bg-layer-fill/40",
           )}
         >
           <div
             class={cn(
-              "history-row-header -mx-4 -mt-3.5 flex min-h-8 w-[calc(100%+2rem)] min-w-0 items-center border-b border-hairline bg-layer-fill",
+              "history-row-header -mx-4 -mt-3.5 flex min-h-8 w-[calc(100%+2rem)] min-w-0 items-center rounded-t-xl bg-card",
               isExpanded && "sticky top-0 z-10",
             )}
           >
@@ -362,7 +365,7 @@
                 <time
                   datetime={entry.completedAt}
                   title={completedDateTime(entry.completedAt)}
-                  class="font-mono text-[11px] font-medium"
+                  class="figure text-xs font-medium text-secondary-foreground"
                 >
                   {completedLabel(entry.completedAt)}
                 </time>
@@ -370,12 +373,18 @@
                   variant={entry.outcome === HistoryOutcome.HistoryFailed
                     ? "destructive"
                     : "secondary"}
-                  class={cn("font-mono", outcomeBadgeClass(entry.outcome))}
+                  class={cn(
+                    "text-[11px] tracking-normal normal-case",
+                    outcomeBadgeClass(entry.outcome),
+                  )}
                 >
                   {outcomeLabel(entry.outcome)}
                 </Badge>
                 {#if hasProcessing(entry)}
-                  <Badge variant="secondary" class="font-mono text-primary">
+                  <Badge
+                    variant="secondary"
+                    class="text-[11px] tracking-normal text-accent-text normal-case"
+                  >
                     {processingLabel(entry)}
                   </Badge>
                 {/if}
@@ -395,7 +404,7 @@
               <Button
                 variant="ghost"
                 size="xs"
-                class={cn("mr-2 min-w-[4.75rem]", isComparing && "bg-control-fill-active")}
+                class={cn("mr-2 min-w-[4.75rem]", isComparing && "bg-accent-wash text-accent-text")}
                 aria-label={isComparing
                   ? "Show the final transcript"
                   : "Compare raw and cleaned transcripts"}
@@ -418,14 +427,16 @@
                 >
                   <section class="comparison-panel px-3 py-2.5" aria-label="Raw transcript">
                     <div class="mb-1.5 flex items-center justify-between gap-3">
-                      <span
-                        class="truncate font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase"
-                      >
-                        Raw · {compactModel(entry.details.model)}
+                      <span class="min-w-0 truncate text-xs text-muted-foreground">
+                        <span class="font-medium text-secondary-foreground">Raw</span>
+                        ·
+                        <span class="font-mono" title={entry.details.model}
+                          >{compactModel(entry.details.model)}</span
+                        >
                       </span>
                       <TooltipButton
                         variant="ghost"
-                        size="icon-xs"
+                        size="icon-sm"
                         label={feedback.key === `${entry.id}:${HistoryTextVersion.HistoryTextRaw}`
                           ? "Raw transcript copied"
                           : "Copy raw transcript"}
@@ -454,17 +465,19 @@
                     aria-label="Cleaned transcript"
                   >
                     <div class="mb-1.5 flex items-center justify-between gap-3">
-                      <span
-                        class="truncate font-mono text-[10px] tracking-[0.04em] text-muted-foreground uppercase"
-                      >
-                        Cleaned · {compactModel(entry.details.processing.model)}
+                      <span class="min-w-0 truncate text-xs text-muted-foreground">
+                        <span class="font-medium text-secondary-foreground">Cleaned</span>
+                        ·
+                        <span class="font-mono" title={entry.details.processing.model}
+                          >{compactModel(entry.details.processing.model)}</span
+                        >
                         {#if entry.details.processing.preset}
                           · {processingProfileName([], entry.details.processing.preset)}
                         {/if}
                       </span>
                       <TooltipButton
                         variant="ghost"
-                        size="icon-xs"
+                        size="icon-sm"
                         label={feedback.key ===
                         `${entry.id}:${HistoryTextVersion.HistoryTextProcessed}`
                           ? "Cleaned transcript copied"
@@ -531,10 +544,10 @@
           {/if}
 
           <div
-            class="history-footer mt-1.5 flex min-h-6 min-w-0 items-center justify-between gap-2"
+            class="history-footer mt-1.5 flex min-h-8 min-w-0 items-center justify-between gap-2"
           >
             <div
-              class="flex min-w-0 flex-1 items-center gap-1.5 font-mono text-[10px] text-muted-foreground"
+              class="figure flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted-foreground"
             >
               <span class="shrink-0">{characterLabel(entry.characterCount)}</span>
               <span class="shrink-0" aria-hidden="true">·</span>
@@ -548,7 +561,7 @@
                 {#if ttsEnabled && onListen}
                   <TooltipButton
                     variant="ghost"
-                    size="icon-xs"
+                    size="icon-sm"
                     disabled={!ttsAvailable}
                     label={preparing?.historyID === entry.id
                       ? "Preparing speech for this transcript"
@@ -564,7 +577,7 @@
                 {/if}
                 <TooltipButton
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon-sm"
                   class="text-primary"
                   label={feedback.key === `${entry.id}:${finalVersion}`
                     ? "Transcript copied"
@@ -582,14 +595,16 @@
                 <Menu.Root>
                   <Menu.Trigger
                     aria-label="Transcript actions"
-                    class={buttonVariants({ variant: "ghost", size: "icon-xs" })}
-                    ><EllipsisIcon /></Menu.Trigger
+                    class={buttonVariants({
+                      variant: "ghost",
+                      size: "icon-sm",
+                    })}><EllipsisIcon /></Menu.Trigger
                   >
                   <Menu.Content align="end" class="w-64 max-w-[calc(100vw-24px)]">
                     <Menu.Item
                       disabled={!detailsAvailable(entry)}
                       onclick={() => void openDetails(entry)}
-                      class="gap-2.5 px-3 py-2.5"
+                      class="gap-2.5 px-3 py-2"
                     >
                       <InfoIcon />Transcription details
                     </Menu.Item>
@@ -597,7 +612,7 @@
                     <Menu.Item
                       variant="destructive"
                       onclick={() => void onDelete(entry.id)}
-                      class="gap-2.5 px-3 py-2.5"
+                      class="gap-2.5 px-3 py-2"
                     >
                       <TrashIcon />Remove from history
                     </Menu.Item>
@@ -652,7 +667,7 @@
       border-left: 1px solid var(--hairline);
     }
   }
-  @container (max-width: 319px) {
+  @container (max-width: 259px) {
     .history-footer {
       align-items: flex-start;
       flex-direction: column;

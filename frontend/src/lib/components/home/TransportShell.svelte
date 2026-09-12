@@ -6,10 +6,12 @@
     control,
     stage,
     readout,
+    summary,
+    actionsVisible = true,
     rail = "hidden",
     railPercent,
     tall = false,
-    stageGrid = true,
+    stageGrid = false,
     busy = false,
     state,
   }: {
@@ -19,6 +21,9 @@
     stage: Snippet;
     /** The 236px cell: the clock, the readouts, one action. */
     readout: Snippet;
+    /** A compact clock/status group next to the recording control. */
+    summary?: Snippet;
+    actionsVisible?: boolean;
     rail?: RailPhase;
     /**
      * Determinate progress, 0-100. A file upload knows its own length, so it
@@ -36,14 +41,14 @@
 </script>
 
 <!--
-  Every input mode and every dictation state shares this frame: a 116px control
-  cell, an elastic stage, and a 236px readout cell. Because the geometry never
-  changes, starting a recording, switching tabs or failing a request moves
-  nothing on screen; only the contents of the three cells change.
+  File transport uses three columns. Voice supplies a summary to group the
+  clock and status beside the record control. Each layout keeps a fixed height
+  across recording, processing and recovery states.
 -->
 <section
-  class="transport relative shrink-0 border-b border-hairline bg-layer-fill"
+  class="transport relative shrink-0 border-b border-hairline bg-background"
   class:tall
+  class:recording-strip={!!summary}
   data-state={state}
   aria-busy={busy}
 >
@@ -51,11 +56,15 @@
     {@render control()}
   </div>
 
+  {#if summary}
+    <div class="cell summary">{@render summary()}</div>
+  {/if}
+
   <div class:stage-grid={stageGrid} class="cell stage">
     {@render stage()}
   </div>
 
-  <div class="cell readout">
+  <div class="cell readout" class:actions-hidden={summary && !actionsVisible}>
     {@render readout()}
   </div>
 
@@ -88,7 +97,6 @@
     grid-area: control;
     align-items: center;
     justify-content: center;
-    border-right: 1px solid var(--hairline);
   }
   .stage {
     grid-area: stage;
@@ -111,7 +119,6 @@
     justify-content: center;
     gap: 0.625rem;
     padding: 0 1.125rem;
-    border-left: 1px solid var(--hairline);
   }
 
   /*
@@ -126,7 +133,7 @@
   @container (max-width: 699px) {
     .transport,
     .transport.tall {
-      grid-template-columns: 4.5rem minmax(0, 1fr);
+      grid-template-columns: 5.5rem minmax(0, 1fr);
       grid-template-areas:
         "control stage"
         "readout readout";
@@ -173,6 +180,55 @@
     .transport.tall .readout {
       padding: 0.375rem 0.75rem;
     }
+  }
+
+  /* Voice groups the record control, clock and status as one unit. The
+     waveform uses the remaining width and actions never change strip height. */
+  .recording-strip {
+    grid-template-columns: 3rem 7.5rem minmax(0, 1fr) auto;
+    grid-template-areas: "control summary stage readout";
+    align-items: center;
+    column-gap: 1rem;
+    height: 8rem;
+    padding: 0 1.5rem;
+    --meter-height: 3rem;
+  }
+  .recording-strip .control,
+  .recording-strip .stage,
+  .recording-strip .readout {
+    padding: 0;
+    border: 0;
+    min-height: 0;
+  }
+  .summary {
+    grid-area: summary;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .recording-strip .actions-hidden {
+    display: none;
+  }
+  .recording-strip .readout {
+    max-width: 12rem;
+  }
+  @container (max-width: 699px) {
+    .recording-strip:not(.tall) {
+      grid-template-columns: 3rem 6.25rem minmax(0, 1fr) auto;
+      grid-template-areas: "control summary stage readout";
+      grid-template-rows: minmax(0, 1fr);
+      column-gap: 0.75rem;
+      height: 6.5rem;
+      padding: 0 1rem;
+      --meter-height: 2rem;
+    }
+    .recording-strip .stage {
+      align-self: center;
+    }
+  }
+
+  .recording-strip .rail[data-phase="done"] {
+    height: 1px;
+    opacity: 0.55;
   }
 
   .rail {

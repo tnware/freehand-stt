@@ -30,17 +30,14 @@
     <Resizable.Pane id="current-result-pane" defaultSize={68} minSize={50}>
       {@render result()}
     </Resizable.Pane>
-    <Resizable.Handle
-      withHandle
-      aria-label="Resize current result and history"
-    />
+    <Resizable.Handle withHandle aria-label="Resize current result and history" />
     <Resizable.Pane id="recent-history-pane" defaultSize={32} minSize={25}>
       {@render history()}
     </Resizable.Pane>
   </Resizable.PaneGroup>
 {:else}
   {#if hasHistory}
-    <div class="flex shrink-0 gap-1" role="group" aria-label="Workspace view">
+    <div class="flex shrink-0 gap-1 px-3 py-2" role="group" aria-label="Workspace view">
       <Button
         variant={visibleView === "result" ? "secondary" : "ghost"}
         size="sm"
@@ -52,8 +49,7 @@
         size="sm"
         aria-pressed={visibleView === "history"}
         disabled={working}
-        onclick={() => (selectedView = "history")}
-        >History · {historyCount}</Button
+        onclick={() => (selectedView = "history")}>History · {historyCount}</Button
       >
     </div>
   {/if}

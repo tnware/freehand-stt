@@ -118,9 +118,9 @@
   <SettingsCard>
     <SettingRow compact title="Layout" description="Choose how much status detail to show.">
       <ToggleGroup.Root
-        class="grid w-full grid-cols-4"
+        class="grid w-full grid-cols-4 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
         type="single"
-        variant="outline"
+        spacing={1}
         size="sm"
         value={settings.overlayLayout}
         onValueChange={chooseLayout}
@@ -128,10 +128,7 @@
         disabled={!settings.overlayEnabled && !previewing}
       >
         {#each layoutChoices as choice (choice.value)}
-          <ToggleGroup.Item
-            value={choice.value}
-            class="h-11 min-w-0 flex-col gap-1 rounded-none px-1 text-[11px]"
-          >
+          <ToggleGroup.Item value={choice.value} class="h-11 min-w-0 flex-col gap-1 px-1 text-xs">
             <span class={`border border-current bg-current/15 ${choice.shape}`} aria-hidden="true"
             ></span>
             {choice.label}
@@ -145,9 +142,9 @@
       description="Follow the app’s monitor and stay inside its usable area."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-3"
+        class="grid w-full grid-cols-3 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
         type="single"
-        variant="outline"
+        spacing={1}
         size="sm"
         value={settings.overlayAnchor}
         onValueChange={chooseAnchor}
@@ -181,9 +178,9 @@
   >
     <SettingRow compact title="Surface" description="Choose a glass, solid or minimal background.">
       <ToggleGroup.Root
-        class="grid w-full grid-cols-3"
+        class="grid w-full grid-cols-3 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
         type="single"
-        variant="outline"
+        spacing={1}
         size="sm"
         value={settings.overlaySurface}
         onValueChange={chooseSurface}
@@ -201,9 +198,9 @@
       description="How microphone activity looks while recording."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-4"
+        class="grid w-full grid-cols-4 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
         type="single"
-        variant="outline"
+        spacing={1}
         size="sm"
         value={settings.overlayVisualizer}
         onValueChange={chooseVisualizer}
@@ -226,9 +223,9 @@
       description="Show recording only, all active work, or include results."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-3"
+        class="grid w-full grid-cols-3 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
         type="single"
-        variant="outline"
+        spacing={1}
         size="sm"
         value={settings.overlayVisibility}
         onValueChange={chooseVisibility}
@@ -252,9 +249,9 @@
       description="Reduce animation or follow your Windows preference."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-2"
+        class="grid w-full grid-cols-2 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
         type="single"
-        variant="outline"
+        spacing={1}
         size="sm"
         value={settings.overlayMotion}
         onValueChange={chooseMotion}

@@ -262,15 +262,15 @@ func nativeOverlayExtendedStyle() uintptr {
 // waveform gradients mix the accent toward overlayInk rather than toward a
 // second hue.
 const (
-	overlayGround = 0x171F2C
-	overlayInk    = 0xE7ECF3
+	overlayGround = 0x1B1B1B
+	overlayInk    = 0xF2F2F2
 	overlayAccent = 0x4D8DFF
 	// The record colour, shared with the window's record control. Capture being
 	// open is red; the accent is reserved for speech actually being heard, so
 	// the two recording states stay distinguishable without a second hue.
-	overlayRecord = 0xD13438
-	overlayQuiet  = 0x8897AC
-	overlayOK     = 0x22C55E
+	overlayRecord = 0xCF4D62
+	overlayQuiet  = 0x929292
+	overlayOK     = 0x56C7A0
 	overlayWarn   = 0xFBBF24
 	overlayBad    = 0xF87171
 )

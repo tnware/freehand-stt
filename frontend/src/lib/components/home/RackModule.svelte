@@ -35,9 +35,7 @@
     children: Snippet;
   } = $props();
 
-  const collapsible = $derived(
-    open !== undefined && Boolean(controls) && Boolean(onToggle),
-  );
+  const collapsible = $derived(open !== undefined && Boolean(controls) && Boolean(onToggle));
 
   const metaClass = $derived(
     metaTone === "ok"
@@ -66,32 +64,24 @@
         onclick={onToggle}
       >
         {#if dot}
-          <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"
-          ></span>
+          <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"></span>
         {/if}
         {@render icon?.()}
         <h2 class="caption shrink-0">{label}</h2>
         <span class="flex-1"></span>
         {#if meta}
-          <span
-            class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}"
-            >{meta}</span
-          >
+          <span class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}">{meta}</span>
         {/if}
       </button>
     {:else}
       {#if dot}
-        <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"
-        ></span>
+        <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"></span>
       {/if}
       {@render icon?.()}
       <h2 class="caption">{label}</h2>
       <span class="flex-1"></span>
       {#if meta}
-        <span
-          class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}"
-          >{meta}</span
-        >
+        <span class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}">{meta}</span>
       {/if}
     {/if}
     {@render actions?.()}
@@ -116,9 +106,7 @@
         onclick={onToggle}
       >
         <ChevronRightIcon
-          class="size-[14px] transition-transform duration-200 {open
-            ? 'rotate-90'
-            : ''}"
+          class="size-[14px] transition-transform duration-200 {open ? 'rotate-90' : ''}"
         />
       </button>
     {/if}
@@ -137,10 +125,8 @@
 
 <style>
   .framed {
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-lg);
-    background: var(--layer-fill);
-    padding: 0.75rem;
+    border-top: 1px solid var(--hairline);
+    padding: 0.75rem 0;
   }
   .module-card {
     display: flex;

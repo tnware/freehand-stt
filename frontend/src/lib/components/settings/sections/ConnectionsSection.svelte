@@ -323,7 +323,7 @@
         </div>
       {/if}
       {#if form.uses.includes(Purpose.Transcription) || form.uses.includes(Purpose.Voice)}
-        <details class="rounded-xl border border-hairline bg-layer-fill p-4">
+        <details class="border-t border-hairline py-4">
           <summary class="cursor-pointer text-sm font-medium"
             >Transcription connection options</summary
           >

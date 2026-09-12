@@ -4,11 +4,22 @@
   let { size = "default" }: { size?: "default" | "large" } = $props();
 </script>
 
-<!-- The mark stands on the ground unframed: a bordered tile would read as a
-     third container in a header that is already one. -->
-<img
-  src={freehandMark}
-  alt=""
+<!-- Reuse the canonical vector silhouette in the active interface palette. -->
+<span
+  role="img"
   aria-label="Freehand"
-  class="shrink-0 {size === 'large' ? 'size-7' : 'size-[19px]'}"
-/>
+  class="brand-mark block shrink-0 bg-accent-text {size === 'large' ? 'size-7' : 'size-[19px]'}"
+  style:mask-image={`url(${JSON.stringify(freehandMark)})`}
+  style:mask-size="contain"
+  style:mask-repeat="no-repeat"
+  style:mask-position="center"
+></span>
+
+<style>
+  @media (forced-colors: active) {
+    .brand-mark {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+  }
+</style>

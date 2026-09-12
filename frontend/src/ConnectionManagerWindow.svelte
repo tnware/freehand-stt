@@ -370,7 +370,7 @@
               onBack={() => leave(false)}
               onSaved={saved}
             />
-            {#if selected}<details class="mt-4 rounded-md border border-hairline px-4 py-3">
+            {#if selected}<details class="mt-4 border-t border-hairline py-3">
                 <summary class="cursor-pointer text-xs font-medium"
                   >Connection check · {connectionStatusLabel(
                     editor.savedConnectionChecks[selected.id] ?? null,

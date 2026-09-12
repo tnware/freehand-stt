@@ -226,7 +226,7 @@
   });
 </script>
 
-<div class="flex min-h-0 flex-1">
+<div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
   <SettingsNav
     {active}
     onSelect={selectSection}
@@ -234,21 +234,25 @@
     invalidSection={session.editor.validationIssue?.section}
   />
 
-  <div class="flex min-w-0 flex-1 flex-col">
+  <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
     <div
       bind:this={contentPane}
       style:scroll-padding-top={`${headingHeight + 16}px`}
-      class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5 sm:px-6"
+      class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 sm:px-7"
     >
       <section
         aria-labelledby="settings-section-title"
-        class="@container flex w-full max-w-[760px] flex-col gap-4"
+        class="@container mx-auto flex w-full max-w-[820px] flex-col gap-5"
       >
         <div
           bind:clientHeight={headingHeight}
-          class="sticky top-0 z-10 space-y-1.5 border-b border-hairline bg-background py-4"
+          class="sticky top-0 z-10 space-y-2 bg-background py-6"
         >
-          <h3 id="settings-page-heading" tabindex="-1" class="text-xl font-semibold tracking-tight">
+          <h3
+            id="settings-page-heading"
+            tabindex="-1"
+            class="font-display text-[26px] font-medium tracking-tight"
+          >
             {section.label}
           </h3>
           <p class="max-w-xl text-[13px] leading-relaxed text-muted-foreground">
@@ -328,17 +332,15 @@
           {#if active === "connections"}
             <Button onclick={browseConnections}>Open connections</Button>
           {:else if active === "voice-transcription"}
-            {#if session.editor.draft.savedConnections.selected?.voice}<div
-                class="rounded-xl border border-hairline bg-layer-fill px-5 py-4"
-              >
-                <VoiceTranscriptionSettings
-                  editor={session.editor}
-                  settings={session.editor.draft}
-                  draft
-                  disabled={session.editor.saving}
-                  onAddConnection={addConnection}
-                />
-              </div>{/if}
+            {#if session.editor.draft.savedConnections.selected?.voice}
+              <VoiceTranscriptionSettings
+                editor={session.editor}
+                settings={session.editor.draft}
+                draft
+                disabled={session.editor.saving}
+                onAddConnection={addConnection}
+              />
+            {/if}
           {:else if active === "vocabulary"}
             <VocabularySection
               settings={session.editor.draft}
@@ -445,7 +447,7 @@
     </div>
 
     <div
-      class="flex min-h-[58px] shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline bg-layer-fill px-5 py-3"
+      class="flex min-h-[64px] shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline bg-background px-6 py-3"
     >
       {#if session.editor.draft}
         <span

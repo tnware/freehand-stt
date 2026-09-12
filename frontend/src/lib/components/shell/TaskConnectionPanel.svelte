@@ -36,7 +36,7 @@
     <p class="text-xs text-muted-foreground">Active connection</p>
   </div>
   {#if details.selected}
-    <div class="flex items-start gap-3 rounded-lg border border-hairline bg-secondary p-3">
+    <div class="flex items-start gap-3 border-b border-hairline pb-4">
       <ProviderIcon profile={details.selected.details.compatibilityProfile} />
       <div class="min-w-0 space-y-1">
         <p class="break-words text-sm font-medium">{details.selected.name}</p>

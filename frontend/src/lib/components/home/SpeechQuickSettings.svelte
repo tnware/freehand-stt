@@ -39,9 +39,12 @@
       {disabled}
       aria-label="Speech settings"
       title="Speech settings"
-      class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9 gap-2 px-2")}
+      class={cn(
+        buttonVariants({ variant: "ghost", size: "sm" }),
+        "gap-2 px-2 text-secondary-foreground aria-expanded:bg-accent-wash aria-expanded:text-accent-text",
+      )}
     >
-      <ProviderIcon profile={speech.compatibilityProfile} size={20} />
+      <ProviderIcon profile={speech.compatibilityProfile} size={16} />
       <span class="text-[13px]">Speech</span>
       <ChevronDownIcon class="size-3 text-muted-foreground" />
     </Popover.Trigger>

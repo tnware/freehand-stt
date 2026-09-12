@@ -21,12 +21,14 @@
 <Popover.Root bind:open>
   <Popover.Trigger
     aria-label={label}
-    class={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-6 shrink-0 px-1 text-xs")}
-    >Details</Popover.Trigger
+    class={cn(
+      buttonVariants({ variant: "ghost", size: "xs" }),
+      "shrink-0 px-2 text-xs aria-expanded:bg-subtle-fill-hover",
+    )}>Details</Popover.Trigger
   >
   <Popover.Content role="dialog" aria-label={label}>
     <p class="text-sm font-medium">{title}</p>
-    <p class="mt-2 text-sm leading-relaxed break-words whitespace-pre-wrap">{message}</p>
+    <p class="mt-2 text-[13px] leading-relaxed break-words whitespace-pre-wrap">{message}</p>
     {#if actionLabel && onAction}
       <Button
         variant="outline"

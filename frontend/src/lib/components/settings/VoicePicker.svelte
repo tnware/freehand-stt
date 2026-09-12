@@ -103,7 +103,7 @@
           disabled={busy || disabled}
           onclick={onDiscover}
         >
-          <RefreshCwIcon class={busy ? "size-3.5 animate-spin" : "size-3.5"} />{busy
+          <RefreshCwIcon class={busy ? "size-4 animate-spin" : "size-4"} />{busy
             ? "Loading voices…"
             : "Refresh voices"}
         </Button>{/if}
@@ -140,7 +140,7 @@
           : supported
             ? "Search or enter a voice ID…"
             : "Enter a voice ID…"}
-        class="h-9 w-full rounded-md border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="h-9 w-full rounded-lg border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         spellcheck={false}
         maxlength={200}
         oninput={(e) => {
@@ -173,9 +173,10 @@
     </div>
     <Combobox.Portal
       ><Combobox.Content
+        data-slot="combobox-content"
         sideOffset={4}
         collisionPadding={12}
-        class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+        class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
       >
         {#key query}{#each choices as choice (choice.value)}
             <Combobox.Item

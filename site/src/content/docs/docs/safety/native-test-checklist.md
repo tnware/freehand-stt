@@ -28,6 +28,16 @@ Cross-compilation is not acceptance. Run these checks on a non-elevated Windows 
 
 The connection test may call only `/health` or `/models`. Do not invoke or iterate through models as part of acceptance.
 
+For workspace appearance changes, check light and dark modes at compact and
+desktop widths and 100%/150%/200% DPI. The selected input mode and
+open quick-setting triggers must remain identifiable, and
+history labels and result actions must stay readable without clipping. Verify
+keyboard focus separately from selection, including Windows contrast themes.
+Check that neutral black/white surfaces and the brand-blue accent extend to Settings, About,
+connection dialogs, native captions, and the passive overlay. Verify the local
+heading font loads without a network request, and that idle, recording,
+processing, copy recovery, and error states retain usable controls.
+
 ## SQLite settings acceptance
 
 Use a separate test user or isolated data directories, not personal settings.
@@ -57,3 +67,9 @@ tests and a successful executable build do not replace these interactive checks.
   Connection Manager. Reopen/minimize/restore without losing an unfinished draft.
   Native close and Escape protect unsaved edits; hide/save clears credential input.
   Saving updates the other windows, and conflicting stale edits are rejected.
+
+## Flat workspace and settings surfaces
+
+- At 560 × 560 and normal desktop sizes, check Voice, Audio file, and Text to speech in light and dark appearance. Recording, playback, toolbars, and footer actions must remain visible without horizontal overflow.
+- With history enabled, resize the adjoining panes by pointer and keyboard. In compact mode switch Result/History and scroll each transcript with the mouse wheel; open quick settings and confirm they do not move the content.
+- In Settings and the connection manager, verify flat groups align with headings, disclosures reveal all their controls, and long pages still scroll to the final option. Selected rows, input boundaries, and keyboard focus must remain distinguishable in both themes and Windows contrast mode.
