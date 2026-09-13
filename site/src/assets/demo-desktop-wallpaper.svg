@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="900" viewBox="0 0 680 450" fill="none">
+  <defs>
+    <linearGradient id="base" x1="70" y1="0" x2="600" y2="450" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#191b43"/><stop offset=".52" stop-color="#101d3c"/><stop offset="1" stop-color="#092b38"/>
+    </linearGradient>
+    <radialGradient id="violet" cx="0" cy="0" r="1" gradientTransform="translate(145 110) rotate(24) scale(440 290)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7560b8" stop-opacity=".66"/><stop offset="1" stop-color="#3a3473" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fold" x1="120" y1="160" x2="550" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#353b80"/><stop offset=".38" stop-color="#6c5fa9"/><stop offset=".65" stop-color="#3c60a0"/><stop offset="1" stop-color="#183b5c"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="195" y1="240" x2="510" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#222950"/><stop offset=".48" stop-color="#264779"/><stop offset=".76" stop-color="#367990"/><stop offset="1" stop-color="#153449"/>
+    </linearGradient>
+    <linearGradient id="foreground" x1="300" y1="310" x2="450" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#345474"/><stop offset=".42" stop-color="#182a4c"/><stop offset="1" stop-color="#0a142e"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="150" x2="670" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ac91dc" stop-opacity=".12"/><stop offset=".4" stop-color="#b1a0e6" stop-opacity=".65"/><stop offset=".8" stop-color="#7ebac5" stop-opacity=".4"/><stop offset="1" stop-color="#6eaece" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#base)" d="M0 0h680v450H0z"/>
+  <path fill="url(#violet)" d="M0 0h680v450H0z"/>
+  <path fill="url(#fold)" d="M-90-55C90 5 79 168 236 224c158 57 300 2 514 214v82H-90Z"/>
+  <path stroke="url(#rim)" stroke-width="1.5" d="M-90-55C90 5 79 168 236 224c158 57 300 2 514 214"/>
+  <path fill="url(#blue)" d="M-55 58C86 151 66 279 245 294c160 14 291-37 496 126v87H-55Z"/>
+  <path stroke="url(#rim)" d="M-55 58C86 151 66 279 245 294c160 14 291-37 496 126"/>
+  <path fill="url(#foreground)" d="M-50 252c137 73 218 128 374 97 150-30 219 9 401 114v50H-50Z"/>
+  <path stroke="url(#rim)" stroke-opacity=".65" d="M-50 252c137 73 218 128 374 97 150-30 219 9 401 114"/>
+</svg>

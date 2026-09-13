@@ -1,21 +1,20 @@
 ---
+import wallpaper from "../assets/demo-desktop-wallpaper.svg";
+interface Props { realtime?: boolean }
+const { realtime = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 // Illustrative scene, not a native capture. Capsule geometry and stage treatment
 // reference internal/platform/overlay_darwin.m; no microphone or network access.
 const transcript = [
   "Start with a small idea.",
-  "Make something useful, then try it out.",
+  realtime ? "Build something useful, then take a moment to try it out." : "Make something useful, then try it out.",
   "Keep what works. Leave the rest.",
 ].join("\n\n");
 ---
-<freehand-dictation-demo data-phase="done" data-paused="true">
-  <div class="dictation-desktop" role="img" aria-label="Illustrative macOS desktop: Freehand records speech, processes it, then inserts the completed text into the same focused document window.">
+<freehand-dictation-demo data-realtime={String(realtime)} data-phase="done" data-paused="true">
+  <div class="dictation-desktop" role="img" aria-label={realtime ? "Illustrative macOS desktop: live words appear in Freehand’s caption strip while recording. Only finalized text enters the same focused document after recording stops." : "Illustrative macOS desktop: Freehand records speech, processes it, then inserts the completed text into the same focused document window."}>
     <div class="desktop-art" aria-hidden="true">
-      <svg class="desktop-wallpaper" viewBox="0 0 680 450" preserveAspectRatio="xMidYMid slice">
-
-        <path fill="#d79872" d="M-60 410C110 240 224 404 362 256S568 80 740 174v340H-60z"/>
-        <path fill="#a36351" d="M-60 480C92 302 262 414 422 282S644 236 740 150v364H-60z"/>
-        <path fill="#653e40" d="M-30 470C194 310 350 448 544 322s160-48 206-32v224H-30z"/>
-      </svg>
+      <div class="desktop-wallpaper" style={{ backgroundImage: `url("${wallpaper.src}")` }}></div>
       <div class="desktop-menubar"><span class="desktop-system-mark">●</span><strong>TextEdit</strong><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Window</span><span class="desktop-menu-right">Sun 10:24 AM</span></div>
       <div class="demo-document">
         <div class="document-titlebar"><span class="window-controls"><i></i><i></i><i></i></span><span>Getting started</span><span class="document-file-mark">⌄</span></div>
@@ -26,26 +25,28 @@ const transcript = [
         </div>
       </div>
       <div class="demo-overlay">
-        <svg viewBox="0 0 208 54" fill="none">
-          <rect class="overlay-surface" x=".5" y=".5" width="207" height="53" rx="26.5"/>
+        <svg viewBox={`0 0 ${realtime ? 340 : 208} 54`} fill="none">
+          <rect class="overlay-surface" x=".5" y=".5" width={realtime ? 339 : 207} height="53" rx="26.5"/>
           <g class="overlay-mic" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="27" y="16" width="9" height="15" rx="4.5" fill="currentColor" stroke="none"/><path d="M23.5 26v1a8 8 0 0 0 16 0v-1M31.5 35v5m-4 0h8"/></g>
           <g class="overlay-spinner" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="32" cy="27" r="8" opacity=".25"/><path d="M32 19a8 8 0 0 1 8 8"/></g>
           <path class="overlay-check" d="m25 27 5 5 10-11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M57 17v20" stroke="#8697ad" stroke-opacity=".2"/>
+          {!realtime && <path d="M57 17v20" stroke="#8697ad" stroke-opacity=".2"/>}
           <g class="overlay-wave" fill="currentColor">{Array.from({ length: 17 }, (_, i) => <rect data-wave-bar x={73 + i * 6.7} y="25.5" width="3.6" height="3" rx="1.8" />)}</g>
           <g class="overlay-progress"><rect x="73" y="25" width="112" height="4" rx="2" fill="currentColor" opacity=".18"/><rect class="progress-segment" x="73" y="25" width="34" height="4" rx="2" fill="currentColor"/></g>
           <path class="overlay-finish" d="M73 27h110" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
+        {realtime && <div class="overlay-live-caption"><span data-live-caption>Listening…</span></div>}
       </div>
     </div>
   </div>
   <div class="demo-caption"><span><span data-demo-status>Text inserted</span><span class="demo-disclaimer"> · Illustrative demo</span></span><div class="demo-actions" hidden><button type="button" data-demo-toggle>Pause</button><button type="button" data-demo-replay aria-label="Replay dictation demo">Replay ↻</button></div></div>
+  {realtime && <p class="realtime-note">Requires a supported model and backend. <a href={`${base}/docs/guides/live-transcription/`}>Live transcription setup ↗</a></p>}
 </freehand-dictation-demo>
 <style>
   freehand-dictation-demo { display: block; min-width: 0; }
   .dictation-desktop { container-type: inline-size; position: relative; aspect-ratio: 680 / 450; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 8px; background: #254351; box-shadow: 0 22px 65px rgb(0 0 0 / 24%); }
   .desktop-art { position: absolute; inset: 0; color: #e5e5e7; color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.8cqw; line-height: 1.5; }
-  .desktop-wallpaper { position: absolute; width: 100%; height: 100%; background: linear-gradient(140deg, #152c42, #50747a); filter: brightness(.65) saturate(.8); }
+  .desktop-wallpaper { position: absolute; inset: 0; background-color: #121e3c; background-size: cover; background-position: center; }
   .desktop-menubar { position: absolute; inset: 0 0 auto; height: 4.4cqw; display: flex; align-items: center; gap: 2.2cqw; padding-inline: 2.3cqw; background: rgb(17 33 47 / 62%); color: #f3f5f8; font-size: 1.55cqw; }
   .desktop-system-mark { font-size: 1.8cqw; }
   .desktop-menu-right { margin-left: auto; font-variant-numeric: tabular-nums; }
@@ -67,6 +68,12 @@ const transcript = [
   .document-caret { display: inline-block; width: 1.5px; height: 1.18em; vertical-align: -.2em; margin-left: 1px; background: #82b1ff; }
   .demo-overlay { position: absolute; width: 30.6cqw; height: 7.95cqw; left: 50%; bottom: 3.7cqw; transform: translateX(-50%); color: #91baff; filter: drop-shadow(0 1cqw 1.5cqw #07101b66); transition: opacity .25s; }
   .demo-overlay svg { width: 100%; height: 100%; }
+  [data-realtime="true"] .demo-overlay { width: 50cqw; }
+  freehand-dictation-demo[data-realtime="true"] .overlay-wave, freehand-dictation-demo[data-realtime="true"] .overlay-progress, freehand-dictation-demo[data-realtime="true"] .overlay-finish { display: none; }
+  .overlay-live-caption { position: absolute; left: 8.5cqw; right: 2.6cqw; top: 0; height: 100%; display: flex; align-items: center; overflow: hidden; white-space: nowrap; color: #f1f4fa; font-size: 2.05cqw; }
+  [data-live-caption] { flex: none; }
+  .realtime-note { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+  .realtime-note a { color: var(--blue-bright); text-decoration: underline; text-underline-offset: 3px; }
   .overlay-surface { fill: #151d2bf5; stroke: #7ca9e354; }
   .overlay-spinner, .overlay-check, .overlay-progress, .overlay-finish { display: none; }
   [data-phase="processing"] .overlay-spinner { display: block; transform-origin: 32px 27px; animation: demo-spin 1.2s linear infinite; }
@@ -102,9 +109,12 @@ const transcript = [
       if (!text || !status || !toggle || !replay || !actions) return;
       const transcript = text.dataset.transcript ?? "";
       const sentences = transcript.split("\n\n");
-      const recordingMS = 1600;
-      const processingMS = 650;
-      const insertionMS = 500;
+      const realtime = this.dataset.realtime === "true";
+      const caption = this.querySelector<HTMLElement>("[data-live-caption]");
+      const captionViewport = this.querySelector<HTMLElement>(".overlay-live-caption");
+      const recordingMS = realtime ? 2400 : 1600;
+      const processingMS = realtime ? 150 : 650;
+      const insertionMS = realtime ? 180 : 500;
       const cycleMS = recordingMS + processingMS + insertionMS + 1200;
       const durationMS = cycleMS * sentences.length + 1800;
       const bars = this.querySelectorAll<SVGRectElement>("[data-wave-bar]");
@@ -127,7 +137,17 @@ const transcript = [
         const length = Math.max(0, Math.min(sentence.length, Math.floor((localMS - insertionStart) / insertionMS * sentence.length)));
         const completed = sentences.slice(0, sentenceIndex);
         text.textContent = [...completed, sentence.slice(0, length)].join("\n\n");
-        status.textContent = { recording: "Recording", processing: "Transcribing", inserting: "Inserting text", done: "Text inserted" }[phase];
+        status.textContent = { recording: realtime ? "Live transcription" : "Recording", processing: realtime ? "Finalizing" : "Transcribing", inserting: "Inserting text", done: "Text inserted" }[phase];
+        if (caption && captionViewport) {
+          const words = sentence.split(" ");
+          const count = Math.min(words.length, Math.floor(Math.max(0, localMS - 200) / (recordingMS - 450) * words.length));
+          const preview = words.slice(0, count).join(" ") || "Listening…";
+          if (caption.textContent !== preview) {
+            caption.textContent = preview;
+            // Match the native latest-text strip, not an endlessly cycling marquee.
+            captionViewport.scrollLeft = captionViewport.scrollWidth;
+          }
+        }
         toggle.textContent = paused ? "Resume" : "Pause";
 
         if (phase === "recording") bars.forEach((bar, index) => {

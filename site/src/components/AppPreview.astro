@@ -11,10 +11,12 @@ const previews = [
   <div class="preview-controls" hidden>
     <div class="sr-only" id="preview-label">App demonstration and screenshots</div>
     <button type="button" data-preview="dictation" aria-pressed="true" aria-controls="preview-dictation">Dictation</button>
+    <button type="button" data-preview="realtime" aria-pressed="false" aria-controls="preview-realtime">Realtime dictation</button>
     {previews.map((preview) => <button type="button" data-preview={preview.id} aria-pressed="false" aria-controls={`preview-${preview.id}`}>{preview.label}</button>)}
     <button type="button" class="preview-enlarge">Enlarge ↗</button>
   </div>
   <div id="preview-dictation" data-preview-panel="dictation"><DictationDemo /></div>
+  <div id="preview-realtime" data-preview-panel="realtime" hidden><DictationDemo realtime /></div>
   {previews.map((preview, index) => <figure id={`preview-${preview.id}`} data-preview-panel={preview.id} hidden>
     <img src={preview.image.src} width={preview.image.width} height={preview.image.height} alt={preview.alt} loading={index === 0 ? "eager" : "lazy"} />
     <figcaption>{preview.label} · UI review capture with sample data</figcaption>
@@ -22,6 +24,7 @@ const previews = [
   <dialog class="preview-dialog" aria-label="Enlarged app preview">
     <header><span data-dialog-title>Freehand · Dictation demonstration</span><button type="button" data-close autofocus>Close ×</button></header>
     <div data-dialog-demo hidden><DictationDemo /></div>
+    <div data-dialog-realtime hidden><DictationDemo realtime /></div>
     <img src={transcription.src} width={transcription.width} height={transcription.height} alt={previews[0].alt} />
   </dialog>
 </freehand-app-preview>
@@ -47,12 +50,15 @@ const previews = [
         const current = panel?.querySelector<HTMLImageElement>("img");
         const enlarged = dialog.querySelector("img");
         const demo = dialog.querySelector<HTMLElement>("[data-dialog-demo]");
+        const realtime = dialog.querySelector<HTMLElement>("[data-dialog-realtime]");
         const title = dialog.querySelector<HTMLElement>("[data-dialog-title]");
-        if (!panel || !enlarged || !demo || !title) return;
-        const isDemo = panel.dataset.previewPanel === "dictation";
-        demo.hidden = !isDemo;
-        enlarged.hidden = isDemo;
-        title.textContent = isDemo ? "Freehand · Dictation demonstration" : "Freehand · UI review capture";
+        if (!panel || !enlarged || !demo || !realtime || !title) return;
+        const isCompleted = panel.dataset.previewPanel === "dictation";
+        const isRealtime = panel.dataset.previewPanel === "realtime";
+        demo.hidden = !isCompleted;
+        realtime.hidden = !isRealtime;
+        enlarged.hidden = isCompleted || isRealtime;
+        title.textContent = isRealtime ? "Freehand · Realtime dictation demonstration" : isCompleted ? "Freehand · Dictation demonstration" : "Freehand · UI review capture";
         if (current) {
           enlarged.src = current.src;
           enlarged.alt = current.alt;
