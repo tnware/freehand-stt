@@ -13,6 +13,8 @@
   import type { SettingsEditor } from "$lib/stores/editor.svelte";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Switch } from "$lib/components/ui/switch";
+  import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
+  import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
 
   let {
     editor,
@@ -21,6 +23,8 @@
     draft = false,
     setup = false,
     onAddConnection,
+    runtime,
+    onManageRuntime = () => {},
   }: {
     editor: SettingsEditor;
     settings: Settings;
@@ -28,8 +32,22 @@
     draft?: boolean;
     setup?: boolean;
     onAddConnection: (purpose: Purpose) => void;
+    runtime?: ManagedRuntimeState;
+    onManageRuntime?: () => void;
   } = $props();
-  const cfg = $derived(settings.voiceTranscription);
+  const localModel = $derived(
+    runtime?.status?.models?.find(
+      (model) => model.id === runtime?.status?.selectedModel,
+    ),
+  );
+  const cfg = $derived(
+    runtime
+      ? {
+          ...settings.voiceTranscription,
+          realtime: runtime.status?.realtime ?? false,
+        }
+      : settings.voiceTranscription,
+  );
   let profileNotice = $state("");
   const backend = $derived(
     settings.compatibilityProfiles.transcription?.find(
@@ -40,9 +58,11 @@
     backend?.capabilities.serverLoadedModel && !backend?.capabilities.realtime,
   );
   const profile = $derived(
-    settings.modelProfiles.voiceTranscription?.find(
-      (p) => p.id === cfg.modelProfile,
-    ),
+    runtime
+      ? localModel?.behavior
+      : settings.modelProfiles.voiceTranscription?.find(
+          (p) => p.id === cfg.modelProfile,
+        ),
   );
   function chooseProfile(value: string) {
     const selected = settings.modelProfiles.voiceTranscription?.find(
@@ -74,6 +94,8 @@
   );
   const busy = $derived(
     disabled ||
+      runtime?.busy ||
+      runtime?.loading ||
       editor.saving ||
       editor.isQuickSettingsPending("voice-transcription"),
   );
@@ -103,33 +125,51 @@
   function test() {
     void editor.testAppliedConnection(Purpose.Voice);
   }
+  function setRealtime(realtime: boolean) {
+    if (busy) return;
+    if (runtime?.status) {
+      void runtime.setPreferences({
+        enabled: runtime.status.enabled,
+        model: runtime.status.selectedModel,
+        realtime,
+      });
+    } else update({ realtime });
+  }
 </script>
 
 <div class={draft ? "flex flex-col gap-5" : "space-y-4"}>
   {#if !draft}
     {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
-    <div class="space-y-1.5">
-      <label for="voice-connection" class="text-xs font-medium"
-        >Connection</label
-      >
-      <div class="flex gap-2">
-        <ConnectionSelect
-          id="voice-connection"
-          catalog={settings.savedConnections}
-          purpose={Purpose.Voice}
-          disabled={busy || testing}
-          onChange={(change) => editor.changeConnection(change)}
-          onAdd={() => onAddConnection(Purpose.Voice)}
-        />
-      </div>
-    </div>
+    {#if runtime}
+      <ManagedRuntimeControls
+        {runtime}
+        disabled={disabled ||
+          editor.saving ||
+          editor.quickSettingsPending.length > 0}
+        onManage={onManageRuntime}
+      />
+    {:else}<div class="space-y-1.5">
+        <label for="voice-connection" class="text-xs font-medium"
+          >Connection</label
+        >
+        <div class="flex gap-2">
+          <ConnectionSelect
+            id="voice-connection"
+            catalog={settings.savedConnections}
+            purpose={Purpose.Voice}
+            disabled={busy || testing}
+            onChange={(change) => editor.changeConnection(change)}
+            onAdd={() => onAddConnection(Purpose.Voice)}
+          />
+        </div>
+      </div>{/if}
   {/if}
   {#if draft}
     <SettingsCard>
       {@render modelControls()}
       {@render recognitionControls()}
     </SettingsCard>
-  {:else}
+  {:else if !runtime}
     {@render modelControls()}
   {/if}
   {#if setup}
@@ -214,8 +254,9 @@
       <Switch
         id="voice-realtime"
         checked={cfg.realtime}
-        disabled={busy || (!cfg.realtime && (!connectionID || !cfg.model))}
-        onCheckedChange={(realtime) => update({ realtime })}
+        disabled={busy ||
+          (!runtime && !cfg.realtime && (!connectionID || !cfg.model))}
+        onCheckedChange={setRealtime}
       />
     </div>
   {/if}

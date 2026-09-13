@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 
+vi.mock("$bindings/managedruntime/service", () => ({}));
 vi.mock("$bindings/connection/service", () => ({}));
 vi.mock("$bindings/dictation/service", () => ({}));
 vi.mock("$bindings/filetranscription/service", () => ({}));

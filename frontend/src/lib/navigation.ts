@@ -19,6 +19,7 @@ export type SettingsSectionID =
   | "overlay"
   | "connections"
   | "voice-transcription"
+  | "local-runtime"
   | "server"
   | "processing"
   | "speech"
@@ -39,9 +40,17 @@ export type SettingsSection = {
  */
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
+    id: "local-runtime",
+    label: "Local runtime",
+    blurb: "Manage on-device speech and downloaded models.",
+    icon: ServerIcon,
+    group: "workflows",
+  },
+  {
     id: "voice-transcription",
     label: "Voice transcription",
-    blurb: "Choose a microphone transcription provider, model, and supported recording mode.",
+    blurb:
+      "Choose a microphone transcription provider, model, and supported recording mode.",
     icon: MicIcon,
     group: "workflows",
   },
@@ -55,7 +64,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "processing",
     label: "Cleanup",
-    blurb: "Optionally clean completed transcripts with a separate language model.",
+    blurb:
+      "Optionally clean completed transcripts with a separate language model.",
     icon: WandSparklesIcon,
     group: "workflows",
   },
@@ -97,7 +107,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "overlay",
     label: "Overlay",
-    blurb: "Control the passive status indicator shown above other applications.",
+    blurb:
+      "Control the passive status indicator shown above other applications.",
     icon: PictureInPictureIcon,
     group: "capture",
   },
@@ -124,26 +135,39 @@ export const GROUP_LABELS: Record<SettingsSection["group"], string> = {
   application: "Application",
 };
 
-export const SETTINGS_GROUPS = ["workflows", "shared", "capture", "application"] as const;
+export const SETTINGS_GROUPS = [
+  "workflows",
+  "shared",
+  "capture",
+  "application",
+] as const;
 
-export const sectionsInGroup = (group: SettingsSection["group"]): SettingsSection[] =>
+export const sectionsInGroup = (
+  group: SettingsSection["group"],
+): SettingsSection[] =>
   SETTINGS_SECTIONS.filter((section) => section.group === group);
 
 export const sectionByID = (id: SettingsSectionID): SettingsSection =>
-  SETTINGS_SECTIONS.find((section) => section.id === id) ?? SETTINGS_SECTIONS[0];
+  SETTINGS_SECTIONS.find((section) => section.id === id) ??
+  SETTINGS_SECTIONS[0];
 
 /** Search terms mirror settings people look for, including controls below disclosures. */
 const SETTINGS_KEYWORDS: Record<SettingsSectionID, string> = {
+  "local-runtime":
+    "local offline private windows nemo nemotron download install gpu realtime live",
   "voice-transcription": "realtime live language context prompt model profile",
   server: "file upload language context prompt streaming timeout",
-  processing: "post processing s1 mini instructions reasoning temperature timeout",
+  processing:
+    "post processing s1 mini instructions reasoning temperature timeout",
   speech: "tts voice preview speed language style instructions timeout",
-  connections: "backend provider endpoint url api key authentication headers server",
+  connections:
+    "backend provider endpoint url api key authentication headers server",
   vocabulary: "names phrases terminology hotwords boosting",
   shortcuts: "hotkey keyboard hold toggle cancel record",
   audio:
     "microphone duration speech detection vad silence trim padding automatic stop segment split sensitivity",
-  overlay: "layout position size surface glass glow opacity visualizer motion animation preview",
+  overlay:
+    "layout position size surface glass glow opacity visualizer motion animation preview",
   general:
     "startup login tray updates theme light dark system mica clipboard direct input manual copy",
   history: "retention recent transcripts clear delete memory",

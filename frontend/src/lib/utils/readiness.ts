@@ -1,3 +1,5 @@
+import type { Status as ManagedStatus } from "$bindings/managedruntime";
+import { runtimePresentation } from "$lib/utils/managedRuntime";
 import { platformPresentation } from "$lib/platform";
 import type { SettingsSectionID } from "$lib/navigation";
 import {
@@ -48,6 +50,7 @@ export function appReadiness(
   devices: Device[],
   devicesLoading: boolean,
   task: "voice" | "file" = "voice",
+  runtime?: ManagedStatus | null,
 ): Readiness {
   const native = platformPresentation(settings.platform);
   const voice = task === "voice";
@@ -158,6 +161,35 @@ export function appReadiness(
     },
   ];
 
+  const managed = runtime?.enabled ?? settings.managedRuntime?.enabled ?? false;
+  if (managed) {
+    const view = runtimePresentation(runtime);
+    allSteps[0] = {
+      id: "server",
+      label: "Local speech runtime",
+      detail: view.selected?.name ?? runtime?.selectedModel ?? "Local runtime",
+      status: view.ready ? "complete" : "attention",
+      blocking: !view.ready,
+      settingsSection: "local-runtime",
+    };
+    allSteps[1] = {
+      id: "credential",
+      label: "Local transcription",
+      detail:
+        "No speech-provider API key is needed. No automatic fallback to a saved server.",
+      status: "complete",
+      blocking: false,
+    };
+    allSteps[4] = {
+      id: "connection",
+      label: "Runtime readiness",
+      detail: runtime?.error || runtime?.phase || view.label,
+      status: view.ready ? "complete" : "attention",
+      blocking: !view.ready,
+      settingsSection: "local-runtime",
+    };
+  }
+
   const steps =
     task === "file"
       ? allSteps.filter(
@@ -171,6 +203,13 @@ export function appReadiness(
     (step) => step.status === "attention" && step.blocking,
   );
   const recoveryKey = JSON.stringify({
+    managed: managed
+      ? {
+          state: runtime?.state,
+          supported: runtime?.supported,
+          model: runtime?.selectedModel,
+        }
+      : null,
     attention: steps
       .filter((step) => step.status === "attention" && step.blocking)
       .map((step) => step.id),
@@ -197,7 +236,7 @@ export function appReadiness(
     recoveryKey,
     show: initialSetup || recoveryNeeded,
     canComplete: initialSetup && blockers.length === 0,
-    canTestConnection: serverConfigured && credentialConfigured,
+    canTestConnection: !managed && serverConfigured && credentialConfigured,
     completedCount: steps.filter((step) => step.status === "complete").length,
     steps,
   };

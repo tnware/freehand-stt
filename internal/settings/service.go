@@ -16,6 +16,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/diagnostics"
+	"github.com/tnware/freehand-stt/internal/managedruntime"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"github.com/tnware/freehand-stt/internal/modelsettings"
 	"github.com/tnware/freehand-stt/internal/postprocess"
@@ -113,6 +114,8 @@ func WithUpdateChecks(apply func(bool)) Option {
 }
 
 type Service struct {
+	managedResolve         func(managedruntime.Preferences) (managedruntime.Endpoint, error)
+	managedChanged         func(managedruntime.Preferences)
 	mu                     sync.RWMutex
 	publicationMu          sync.Mutex // Serializes commits through runtime publication; callbacks may read settings.
 	saveMu                 sync.Mutex
@@ -181,7 +184,7 @@ type ProfileSource func() (RequestProfile, error)
 
 func (source ProfileSource) Capture() (RequestProfile, error) { return source() }
 
-func CurrentSource(service *Service) Source { return service.current }
+func CurrentSource(service *Service) Source { return service.effectiveCurrent }
 
 func DictationProfiles(service *Service) ProfileSource {
 	return func() (RequestProfile, error) { return service.captureProfile(true) }
@@ -249,6 +252,11 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 		return RequestProfile{}, errors.New("saved settings must be recovered before transcription can start")
 	}
 	profile := RequestProfile{Settings: s.current()}
+	var managedErr error
+	profile.Settings, managedErr = s.managedSettings(profile.Settings, dictation)
+	if managedErr != nil {
+		return RequestProfile{}, managedErr
+	}
 	if !dictation && profile.Settings.AuthenticationMode == config.AuthenticationModeAPIKey {
 		if s.keys == nil {
 			return RequestProfile{}, errors.New("API credential is not configured")
@@ -292,6 +300,15 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 		var err error
 		profile.Settings, err = config.WithVocabulary(profile.Settings, false)
 		if err != nil {
+			return RequestProfile{}, err
+		}
+	}
+	if profile.Settings.ManagedRuntime.Enabled {
+		if dictation {
+			if err := config.ValidateVoiceRecording(profile.Settings.VoiceTranscription); err != nil {
+				return RequestProfile{}, err
+			}
+		} else if err := modelprofile.ValidateTranscription(profile.Settings.ModelProfile, profile.Settings.CompatibilityProfile, profile.Settings.Language, profile.Settings.TranscriptionOptions.Inference()); err != nil {
 			return RequestProfile{}, err
 		}
 	}
@@ -609,6 +626,9 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 				return SettingsDTO{}, err
 			}
 		}
+		// Managed preferences have their own narrow mutation boundary. A stale
+		// settings editor must not undo a runtime selection or disable request.
+		v.ManagedRuntime = s.current().ManagedRuntime
 		v.Model = strings.TrimSpace(v.Model)
 		v.PostProcessing.Model = strings.TrimSpace(v.PostProcessing.Model)
 		v.TextToSpeech.Model = strings.TrimSpace(v.TextToSpeech.Model)
@@ -764,21 +784,7 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 		}
 		return SettingsDTO{}, err
 	}
-	if overlaySettingsDiffer(old, v) && s.overlaySettingsChanged != nil {
-		s.overlaySettingsChanged(v)
-	}
-	if s.historyEnabledChanged != nil {
-		s.historyEnabledChanged(v.HistoryEnabled)
-	}
-	if s.fileSettingsChanged != nil {
-		s.fileSettingsChanged(v)
-	}
-	if s.updateChecksChanged != nil {
-		s.updateChecksChanged(v.CheckForUpdates)
-	}
-	if s.settingsChanged != nil {
-		s.settingsChanged(result)
-	}
+	s.publishSettingsChange(old, v, result)
 	return result, nil
 }
 
@@ -896,6 +902,9 @@ func (s *Service) applyRecoveredSettingsLocked(next config.Settings, persist boo
 }
 
 func (s *Service) publishSettingsChange(old, next config.Settings, result SettingsDTO) {
+	if s.managedChanged != nil {
+		s.managedChanged(next.ManagedRuntime)
+	}
 	if overlaySettingsDiffer(old, next) && s.overlaySettingsChanged != nil {
 		s.overlaySettingsChanged(next)
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/hotkey"
+	"github.com/tnware/freehand-stt/internal/managedruntime"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"github.com/tnware/freehand-stt/internal/speechlanguage"
 )
@@ -195,6 +196,7 @@ const (
 )
 
 type Settings struct {
+	ManagedRuntime                  managedruntime.Preferences `json:"managedRuntime"`
 	Vocabulary                      VocabularySettings         `json:"vocabulary"`
 	VoiceTranscription              VoiceTranscriptionSettings `json:"voiceTranscription"`
 	ModelProfile                    modelprofile.ID            `json:"modelProfile"`
@@ -251,6 +253,7 @@ type Settings struct {
 
 func Default() Settings {
 	return Settings{
+		ManagedRuntime:       managedruntime.Defaults(),
 		Vocabulary:           VocabularySettings{Boost: 3},
 		VoiceTranscription:   DefaultVoiceTranscription(),
 		CompatibilityProfile: compatibility.Generic,
@@ -306,6 +309,25 @@ func (s Settings) EffectiveAppearanceMode() AppearanceMode {
 var headerNameRE = regexp.MustCompile(`^[!#$%&'*+\-.^_` + "`" + `|~0-9A-Za-z]+$`)
 
 func Validate(s Settings) error {
+	if err := managedruntime.Validate(s.ManagedRuntime); err != nil {
+		return fieldError("managedRuntime", "Choose a supported local runtime model and mode.", err)
+	}
+	if s.ManagedRuntime.Enabled {
+		behavior, err := managedruntime.QualifiedBehavior(s.ManagedRuntime.Model)
+		if err != nil {
+			return fieldError("managedRuntime", "Choose a supported local runtime model and mode.", err)
+		}
+		if err := modelprofile.ValidateTranscription(behavior.ID, compatibility.NeMoSpeechV1, s.VoiceTranscription.Language, compatibility.TranscriptionOptions{}); err != nil {
+			return fieldError("voice-transcription", "Choose a voice transcription language supported by the selected local model.", err)
+		}
+		if err := modelprofile.ValidateTranscription(behavior.ID, compatibility.NeMoSpeechV1, s.Language, compatibility.TranscriptionOptions{}); err != nil {
+			return fieldError("language", "Choose an audio file language supported by the selected local model.", err)
+		}
+		// Task languages belong to managed speech while these saved manual
+		// connections and model options remain independently valid for reuse.
+		s.VoiceTranscription.Language = "auto"
+		s.Language = "auto"
+	}
 	if err := ValidateVocabulary(s.Vocabulary); err != nil {
 		return fieldError("vocabulary", "Check vocabulary text and strength.", err)
 	}

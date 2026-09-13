@@ -1,0 +1,158 @@
+{
+  "defaults": {
+    "asr": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+    "codec": "nvidia/nemo-nano-codec-22khz-1.89kbps-21.5fps",
+    "diarization": "nvidia/diar_streaming_sortformer_4spk-v2",
+    "tokenizer": "nvidia/magpie_tts_multilingual_357m",
+    "tts": "nvidia/magpie_tts_multilingual_357m"
+  },
+  "models": [
+    {
+      "aliases": [
+        "nemotron-3.5",
+        "nemotron-asr"
+      ],
+      "commands": [
+        "transcribe",
+        "bench",
+        "serve"
+      ],
+      "companions": [],
+      "default_for": [
+        "asr"
+      ],
+      "license": "NVIDIA Open Model License (OpenMDW 1.1)",
+      "license_url": "https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b",
+      "repo": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+      "revision": "1c8deaecc64b91f034d73e08dd8b64625eb3395d",
+      "roles": [
+        "asr"
+      ]
+    },
+    {
+      "aliases": [
+        "nemotron-en"
+      ],
+      "commands": [
+        "transcribe",
+        "bench",
+        "serve"
+      ],
+      "companions": [],
+      "default_for": [],
+      "license": "NVIDIA Open Model License",
+      "license_url": "https://huggingface.co/nvidia/nemotron-speech-streaming-en-0.6b",
+      "repo": "nvidia/nemotron-speech-streaming-en-0.6b",
+      "revision": "ebe59e5a817142986528bbbee5dba8db7b38ed50",
+      "roles": [
+        "asr"
+      ]
+    },
+    {
+      "aliases": [
+        "parakeet-ctc"
+      ],
+      "commands": [
+        "transcribe",
+        "bench",
+        "serve"
+      ],
+      "companions": [],
+      "default_for": [],
+      "license": "CC-BY-4.0",
+      "license_url": "https://huggingface.co/nvidia/parakeet-ctc-1.1b",
+      "repo": "nvidia/parakeet-ctc-1.1b",
+      "revision": "20e63a0fed6aedba145b74b826dbd41df0941730",
+      "roles": [
+        "asr"
+      ]
+    },
+    {
+      "aliases": [
+        "parakeet-tdt"
+      ],
+      "commands": [
+        "transcribe",
+        "bench",
+        "serve"
+      ],
+      "companions": [],
+      "default_for": [],
+      "license": "CC-BY-4.0",
+      "license_url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3",
+      "repo": "nvidia/parakeet-tdt-0.6b-v3",
+      "revision": "541d1f99c6b0c3cd0b11a95167540bb8edefd82b",
+      "roles": [
+        "asr"
+      ]
+    },
+    {
+      "aliases": [
+        "sortformer",
+        "sortformer-diar"
+      ],
+      "commands": [
+        "diarize",
+        "transcribe --diarize",
+        "serve"
+      ],
+      "companions": [],
+      "default_for": [
+        "diarization"
+      ],
+      "license": "CC-BY-4.0",
+      "license_url": "https://huggingface.co/nvidia/diar_streaming_sortformer_4spk-v2",
+      "repo": "nvidia/diar_streaming_sortformer_4spk-v2",
+      "revision": "5240a64075176943f677d30fa2171c780229f341",
+      "roles": [
+        "diarization"
+      ]
+    },
+    {
+      "aliases": [
+        "magpie",
+        "magpie-tts"
+      ],
+      "commands": [
+        "synthesize",
+        "serve"
+      ],
+      "companions": [
+        "nvidia/nemo-nano-codec-22khz-1.89kbps-21.5fps"
+      ],
+      "default_for": [
+        "tokenizer",
+        "tts"
+      ],
+      "license": "NVIDIA Open Model License",
+      "license_url": "https://huggingface.co/nvidia/magpie_tts_multilingual_357m",
+      "repo": "nvidia/magpie_tts_multilingual_357m",
+      "revision": "452ef560f972c38d5fc16476259aac9456453547",
+      "roles": [
+        "tts",
+        "tokenizer"
+      ]
+    },
+    {
+      "aliases": [
+        "nano-codec",
+        "nanocodec"
+      ],
+      "commands": [
+        "synthesize",
+        "serve"
+      ],
+      "companions": [],
+      "default_for": [
+        "codec"
+      ],
+      "license": "NVIDIA Open Model License",
+      "license_url": "https://huggingface.co/nvidia/nemo-nano-codec-22khz-1.89kbps-21.5fps",
+      "repo": "nvidia/nemo-nano-codec-22khz-1.89kbps-21.5fps",
+      "revision": "fc00890b604aa2de298d2641ffc6c5f6caf8c4d7",
+      "roles": [
+        "codec"
+      ]
+    }
+  ]
+}

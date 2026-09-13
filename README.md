@@ -16,9 +16,11 @@ provider or hosting may have its own costs. You do not need a dedicated local
 GPU: send inference to another machine to keep this PC's memory and GPU
 available for your other work, or run your models locally if you prefer.
 
-Freehand stays compact by leaving model inference and model storage on the
-speech infrastructure you choose. Download sizes vary by platform and release;
-transcription time depends on the model, hardware, network, and optional cleanup stage.
+On Windows, you can let Freehand install and manage a local NeMo speech runtime,
+or connect to infrastructure you already run. The recommended local setup uses
+Nemotron 3.5 streaming for live transcription. Runtime and model downloads are
+optional and separate from the app; performance depends on your hardware, model,
+network, and optional cleanup stage.
 
 [Download the latest alpha](https://github.com/tnware/freehand-stt/releases) ·
 [Get started](https://tnware.github.io/freehand-stt/docs/getting-started/) ·
@@ -57,6 +59,8 @@ empty text, Freehand falls back to the raw transcript.
 - Toggle recording or hold to talk across Windows and macOS applications.
 - Use independent OpenAI-compatible endpoints for speech recognition,
   optional transcript cleanup, and optional speech playback.
+- Install an optional local speech runtime on Windows, browse its supported
+  model catalog, and use Nemotron streaming without configuring a server URL.
 - Keep the current transcript available to copy with history disabled.
 - Use local voice detection for silence trimming, automatic stop, and
   pause-aware checkpoints.
@@ -64,14 +68,15 @@ empty text, Freehand falls back to the raw transcript.
   them explicitly.
 - Opt into bounded, memory-only history; configure or disable the native status overlay.
 
-Freehand does not bundle a model, inference server, or heavyweight local
-runtime.
+Freehand does not bundle models in its executable. Managed runtime installation
+is optional; macOS continues to use a separately configured speech service.
 
 ## Install
 
 Freehand supports Windows 11 x64 with WebView2 and macOS 13 or newer on Apple
-Silicon or Intel. A reachable compatible service is required for your task; only
-dictation needs a microphone and recording shortcut. Download the Windows
+Silicon or Intel. Use the managed local speech runtime on Windows or a reachable
+compatible service for your task. Only dictation needs a microphone; recording
+shortcuts are optional. Download the Windows
 installer/portable executable or matching-architecture macOS ZIP from
 [GitHub Releases](https://github.com/tnware/freehand-stt/releases). Older releases
 may not include macOS assets; check the assets attached to the selected release.
@@ -92,6 +97,7 @@ Source-build instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - [Install and update on Windows](https://tnware.github.io/freehand-stt/docs/guides/windows-installer/)
 - [Connect a speech server](https://tnware.github.io/freehand-stt/docs/guides/connect-a-server/)
+- [Set up local speech on Windows](https://tnware.github.io/freehand-stt/docs/guides/local-runtime/)
 - [Use Freehand](https://tnware.github.io/freehand-stt/docs/guides/using-freehand/)
 - [Privacy and safety](https://tnware.github.io/freehand-stt/docs/guides/privacy-and-safety/)
 - [Troubleshooting](https://tnware.github.io/freehand-stt/docs/guides/troubleshooting/)

@@ -26,9 +26,42 @@ the memory-only playback session without another inference request.
 Readiness is task-specific, not an application-wide setup prerequisite:
 dictation owns recording setup, file transcription needs STT but no microphone
 or completed dictation setup, and the TTS composer needs its own enabled speech
-configuration but neither STT nor a microphone. These are client workflows, not
-bundled inference or conversation mode. The remote-first boundary and non-goals
-in [ADR 0005](../../decisions/0005-remote-first-product-direction/) remain unchanged.
+configuration but neither STT nor a microphone. Conversation mode remains out of
+scope. [ADR 0015](../../decisions/0015-managed-local-speech-runtime/) adds the
+optional Windows managed-runtime exception to ADR 0005's remote-first boundary.
+
+## Managed local speech
+
+`internal/managedruntime` owns installation, metadata catalog, model downloads,
+and the NeMo child process. It exposes a small intent-based Wails service and
+bounded status events, not upstream flags. Official versioned archives are
+checksum-verified before extraction is published. Model downloads use NeMo's
+own manager with a Freehand-owned cache. Listing the catalog never loads models.
+
+The settings owner persists enablement, selected model, and realtime preference
+through the existing SQLite transaction. It projects a ready local endpoint and
+qualified model profile into new Voice/file request snapshots without changing
+saved manual connections. It clears manual authentication and headers from that
+projection; cleanup and TTS retain their own coherent configuration. A failed
+managed runtime blocks admission rather than silently sending audio remotely.
+Explicitly disabling managed mode restores manual routing for subsequent work.
+
+Managed Nemotron setup recommends realtime Voice. Files still use completed
+transcription. The existing STT and NeMo WebSocket clients remain transport
+owners; no runtime install/start logic belongs in them. Readiness must reflect
+managed status rather than require an otherwise unused manual connection.
+
+The adapter probes `/ready` and `/v1/models` at the server origin, but publishes
+`http://127.0.0.1:<port>/v1` as the speech API base. Completed microphone/file
+clients append `audio/transcriptions`; the realtime client appends `realtime`.
+Keep this distinction at the adapter boundary, not in shared client URL handling.
+
+Windows owns children through a Job Object, including model-manager subprocesses.
+The server listens only on `127.0.0.1`; readiness and loaded model metadata are
+verified before the endpoint is admitted. Wails shutdown cancels work and closes
+the owned process tree within a bound. Child output stays in private bounded
+memory and is not application log content. Other platforms expose unsupported
+managed-runtime status without changing their native capture or manual endpoints.
 
 ## macOS platform boundary
 

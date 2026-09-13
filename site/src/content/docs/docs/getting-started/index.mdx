@@ -7,7 +7,9 @@ import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 
 Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
 services you choose. Start with voice dictation, transcribe an audio file, or
-generate speech from text. It does not install or run a model for you.
+generate speech from text. Windows users can choose the optional
+[managed local speech runtime](../guides/local-runtime/) instead of configuring
+a speech server.
 
 Freehand is **free forever and open source**, with no Freehand subscription or
 account. Your chosen provider or hosting may have its own costs. A dedicated
@@ -17,8 +19,9 @@ service if your PC lacks the resources, or you want to keep them for other work.
 ## What you need
 
 - Windows 11 x64 with WebView2, or macOS 13+ on Apple Silicon or Intel.
-- A reachable compatible service for your task (see the [backend guides](../backends/)).
-- Its base URL, model ID (except whisper.cpp's server-loaded model), and API key
+- The managed runtime on Windows for recognition, or a reachable compatible
+  service for your task (see the [backend guides](../backends/)).
+- For a manual service: its base URL, model ID (except whisper.cpp's server-loaded model), and API key
   when authentication is required.
 
 | Task | Additional requirements | Start here |
@@ -47,7 +50,13 @@ Freehand opens **Voice** with a **Set up voice transcription** screen. To work
 with a recording or generate speech instead, choose **Audio file** or **Text to
 speech** at the top. You can set up each task independently.
 
-To connect a service from your chosen task:
+For the recommended Windows local setup, follow
+[Local speech runtime](../guides/local-runtime/) to install NeMo and download
+Nemotron 3.5 streaming. It enables live microphone transcription without a
+manually entered server URL. Audio files use the same local model in completed
+mode. Cleanup and speech generation still need their own services.
+
+To connect a manual service from your chosen task:
 
 <Steps>
 

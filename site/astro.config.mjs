@@ -50,6 +50,7 @@ export default defineConfig({
             { label: "Download Freehand", link: "/download/" },
             { slug: "docs/guides/windows-installer" },
             { slug: "docs/guides/macos-setup" },
+            { slug: "docs/guides/local-runtime" },
             { slug: "docs/guides/connect-a-server" },
             { slug: "docs/guides/saved-connections" },
             { slug: "docs/models", label: "Choosing a model profile" },

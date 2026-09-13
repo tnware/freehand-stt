@@ -13,6 +13,10 @@ For automatic language detection with completed recordings, choose the
 
 ## Run the server
 
+On Windows, [managed local setup](../../guides/local-runtime/) can install NeMo,
+download a supported speech model, and start the server for you. The instructions
+below are for manually managed local or remote servers.
+
 Follow NeMo-Speech.cpp's [v0.1.0 installation guide](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/install.md)
 to install the runtime and load **Nemotron 3.5 ASR streaming 0.6B**.
 The server controls model loading, GPU selection, and chunk latency.

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SETTINGS_NAVIGATION } from "$lib/navigation";
+  import LocalRuntimeSection from "./sections/LocalRuntimeSection.svelte";
   import VocabularySection from "./sections/VocabularySection.svelte";
   import { setContext, tick, untrack } from "svelte";
   import {
@@ -27,7 +28,7 @@
   import { sectionByID } from "$lib/navigation";
   import type { SettingsSectionID } from "$lib/navigation";
   import type { Session } from "$lib/stores/session.svelte";
-  import { State } from "$lib/state";
+  import { State, FileTranscriptionPhase } from "$lib/state";
   import type { Message } from "$lib/utils/messages";
   import { shortcutCapture } from "$lib/stores/shortcutCapture.svelte";
   import { cn } from "$lib/utils";
@@ -70,6 +71,24 @@
 
   const section = $derived(sectionByID(active));
   const dirty = $derived(session.editor.dirty);
+  const managed = $derived(
+    session.runtime.status?.enabled ??
+      session.editor.applied?.managedRuntime.enabled ??
+      false,
+  );
+  const managedWorkflow = $derived(
+    managed && (active === "voice-transcription" || active === "server"),
+  );
+  const speechWorkBusy = $derived(
+    ![State.Idle, State.Failed].includes(session.dictation.status.state) ||
+      session.files.starting ||
+      [
+        FileTranscriptionPhase.FileTranscriptionUploading,
+        FileTranscriptionPhase.FileTranscriptionProcessing,
+        FileTranscriptionPhase.FileTranscriptionStreaming,
+        FileTranscriptionPhase.FileTranscriptionCancelling,
+      ].includes(session.files.status.phase),
+  );
   const workflowPurpose = $derived(
     active === "voice-transcription"
       ? Purpose.Voice
@@ -309,8 +328,35 @@
         {/if}
 
         {#if session.editor.draft}
+          {#if active === "voice-transcription" || managedWorkflow}
+            <div
+              class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline bg-card p-4"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium">
+                  {managed
+                    ? "Local runtime is selected"
+                    : "Live transcription on this PC"}
+                </p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  {managed
+                    ? "Your own server settings remain editable below, but are inactive. No automatic fallback."
+                    : "Use managed local speech, or keep using your own server below."}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onclick={() => selectSection("local-runtime")}
+                >{managed
+                  ? "Manage local runtime"
+                  : "Set up local runtime"}</Button
+              >
+            </div>
+          {/if}
           {#if active === "voice-transcription" || active === "server" || active === "processing" || active === "speech"}
             <SavedConnectionPicker
+              inactive={managedWorkflow}
               catalog={session.editor.draft.savedConnections}
               purpose={active === "voice-transcription"
                 ? Purpose.Voice
@@ -367,7 +413,15 @@
                 })}
             />
           {/if}
-          {#if active === "connections"}
+          {#if active === "local-runtime"}
+            <LocalRuntimeSection
+              runtime={session.runtime}
+              disabled={session.editor.saving}
+              workBusy={speechWorkBusy}
+              onAction={withSavedSettings}
+              onManual={() => selectSection("voice-transcription")}
+            />
+          {:else if active === "connections"}
             <Button onclick={browseConnections}>Open connections</Button>
           {:else if active === "voice-transcription"}
             {#if session.editor.draft.savedConnections.selected?.voice}
@@ -598,7 +652,7 @@
     onInteractOutside={preventDismissWhileSaving}
   >
     <Dialog.Header>
-      <Dialog.Title>Save settings before changing connections?</Dialog.Title>
+      <Dialog.Title>Save settings before continuing?</Dialog.Title>
       <Dialog.Description
         >Your model and task edits have not been applied. Save them for the
         current connection, or discard them before continuing.</Dialog.Description

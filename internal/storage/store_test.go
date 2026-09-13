@@ -289,7 +289,7 @@ func withUpgrade(s *Store, sql string) {
 		data, _ := embeddedMigrations.ReadFile("schema/" + entry.Name())
 		migrations[entry.Name()] = &fstest.MapFile{Data: data}
 	}
-	migrations["00002_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
+	migrations[fmt.Sprintf("%05d_fixture.sql", len(entries)+1)] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
 	s.migrations = migrations
 }
 func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
@@ -321,7 +321,8 @@ func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
 			var current int
 			db.QueryRow("SELECT max(version_id) FROM goose_db_version").Scan(&current)
 			db.Close()
-			if fail && current != 1 {
+			entries, _ := embeddedMigrations.ReadDir("schema")
+			if fail && current != len(entries) {
 				t.Fatal("failed migration advanced version")
 			}
 			restore := newStore(s.path, s.vault)

@@ -11,6 +11,7 @@ import (
 )
 
 var settingsSections = map[string]struct{}{
+	"local-runtime":       {},
 	"vocabulary":          {},
 	"general":             {},
 	"shortcuts":           {},

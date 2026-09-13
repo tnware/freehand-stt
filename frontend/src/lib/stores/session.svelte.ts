@@ -1,3 +1,8 @@
+import * as ManagedRuntimeService from "$bindings/managedruntime/service";
+import {
+  ManagedRuntimeState,
+  type ManagedRuntimeService as RuntimeService,
+} from "./managed-runtime.svelte";
 import * as ConnectionService from "$bindings/connection/service";
 import * as DictationService from "$bindings/dictation/service";
 import * as FileTranscriptionService from "$bindings/filetranscription/service";
@@ -16,6 +21,7 @@ import { SpeechState, type SpeechStateService } from "./speech.svelte";
 import { HistoryState, type HistoryStateService } from "./history.svelte";
 
 export interface SessionServices extends SettingsEditorServices {
+  runtime?: RuntimeService;
   dictation: DictationStateService;
   files: FileTranscriptionStateService;
   speech: SpeechStateService;
@@ -23,6 +29,7 @@ export interface SessionServices extends SettingsEditorServices {
 }
 
 const services: SessionServices = {
+  runtime: ManagedRuntimeService,
   settings: SettingsService,
   input: InputService,
   connection: ConnectionService,
@@ -35,6 +42,7 @@ const services: SessionServices = {
 /** Per-WebView composition. Feature state and commands live in their owners. */
 export class Session {
   readonly messages = new SessionMessages();
+  readonly runtime: ManagedRuntimeState;
   readonly editor: SettingsEditor;
   readonly dictation: DictationState;
   readonly files: FileTranscriptionState;
@@ -51,6 +59,14 @@ export class Session {
     this.editor = new SettingsEditor(bindings, this.messages, () =>
       this.history.refresh(),
     );
+    this.runtime = new ManagedRuntimeState(
+      bindings.runtime,
+      () =>
+        !this.editor.dirty &&
+        !this.editor.busy &&
+        !this.editor.quickSettingsPending.length,
+      () => this.editor.load(),
+    );
   }
 
   get busy() {
@@ -60,7 +76,7 @@ export class Session {
   async load() {
     this.messages.clear();
     try {
-      await this.dictation.load();
+      await Promise.all([this.dictation.load(), this.runtime.load()]);
       await this.speech.load();
       await this.files.refresh();
       if (!(await this.editor.load())) return;
@@ -72,6 +88,7 @@ export class Session {
   }
 
   dispose() {
+    this.runtime.dispose();
     this.speech.draft = "";
     this.editor.dispose();
     this.messages.dispose();

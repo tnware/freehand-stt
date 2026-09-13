@@ -20,6 +20,29 @@ that server's own privacy and retention policy still applies.
 | Transcript history | Memory on your computer | Off by default; at most 20 entries and 2 MiB, cleared on exit. |
 | Speech playback text and audio | Your playback endpoint receives text and returns audio | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit. |
 | Update checks | GitHub release service | Update metadata and any downloaded update; no recordings or transcripts are sent. |
+| Managed runtime installation (Windows, optional) | Official NeMo GitHub release; NeMo's model manager contacts its model host for explicit downloads | Runtime binaries and selected model weights in Freehand's application-data directory, until removed. |
+
+## Managed local recognition
+
+The optional Windows runtime recognizes speech on this PC. Its listener is
+restricted to this computer, not your LAN. Installing binaries and downloading
+models requires internet access; browsing the catalog does not run inference.
+Other software running on the same computer can potentially access a loopback
+service, so a local listener is not a sandbox against other local programs.
+
+Managed mode affects Voice and audio-file recognition. If transcript cleanup is
+enabled, its separately configured server still receives the recognized text.
+Text-to-speech also keeps its own endpoint. Turn those features off or configure
+them locally if you do not want their text sent to a remote service.
+
+Freehand keeps your manual connections and their API keys when you enable local
+recognition. It does not send those keys to the managed runtime. A runtime
+failure does not silently switch captured audio to a remote server: retry local
+setup or explicitly return to your manual connection for new work.
+
+Runtime/model removal does not remove source recordings, manual connections,
+or another application's model cache. Model weights are retained installation
+data, not retained microphone audio or transcript history.
 
 ## Audio
 

@@ -1,0 +1,68 @@
+// Package managedruntime owns the opt-in, isolated NeMo-Speech.cpp runtime.
+// It never reads remote endpoint configuration or credentials.
+package managedruntime
+
+import (
+	"errors"
+
+	"github.com/tnware/freehand-stt/internal/modelprofile"
+)
+
+const Version = "0.1.0"
+
+type Preferences struct {
+	Enabled  bool   `json:"enabled"`
+	Model    string `json:"model"`
+	Realtime bool   `json:"realtime"`
+}
+
+func Defaults() Preferences           { return Preferences{Model: "nemotron-3.5", Realtime: true} }
+func (p Preferences) Validate() error { return Validate(p) }
+func Validate(p Preferences) error {
+	q, ok := qualified[p.Model]
+	if !ok {
+		return errors.New("Choose a supported managed speech model.")
+	}
+	if p.Realtime && !q.Realtime {
+		return errors.New("This model does not support realtime dictation.")
+	}
+	return nil
+}
+
+type Endpoint struct {
+	Enabled  bool
+	BaseURL  string
+	Model    string
+	Realtime bool
+	Profile  string
+}
+type Model struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	SizeBytes   int64  `json:"sizeBytes"`
+	Installed   bool   `json:"installed"`
+	Recommended bool   `json:"recommended"`
+	Realtime    bool   `json:"realtime"`
+	Profile     string `json:"profile"`
+	// Behavior is the resolved model/backend contract, independent of manual settings.
+	Behavior *modelprofile.Profile `json:"behavior,omitempty"`
+}
+type Status struct {
+	Supported     bool    `json:"supported"`
+	State         string  `json:"state"`
+	Enabled       bool    `json:"enabled"`
+	SelectedModel string  `json:"selectedModel"`
+	Realtime      bool    `json:"realtime"`
+	Backend       string  `json:"backend"`
+	Version       string  `json:"version"`
+	Progress      float64 `json:"progress"`
+	Phase         string  `json:"phase"`
+	Error         string  `json:"error"`
+	Models        []Model `json:"models"`
+}
+
+var qualified = map[string]Model{
+	"nemotron-3.5": {ID: "nemotron-3.5", Name: "Nemotron 3.5 Streaming", Description: "Multilingual speech recognition with realtime dictation.", Recommended: true, Realtime: true, Profile: "nemotron-3.5-streaming"},
+	"parakeet-tdt": {ID: "parakeet-tdt", Name: "Parakeet TDT v3", Description: "Multilingual completed speech recognition.", Profile: "parakeet-tdt-v3"},
+}

@@ -19,13 +19,60 @@ import {
   type Device,
   type Settings,
 } from "$lib/state";
+import type { Status as ManagedStatus } from "$bindings/managedruntime";
 import { appReadiness, readinessVisible } from "$lib/utils/readiness";
+
+it("uses a running managed runtime for fresh Voice setup without touching manual endpoints", () => {
+  const cfg = settings();
+  cfg.voiceTranscription.baseURL = "";
+  cfg.voiceTranscription.model = "";
+  cfg.savedConnections = { entries: [], selected: {} };
+  const runtime: ManagedStatus = {
+    supported: true,
+    state: "running",
+    enabled: true,
+    selectedModel: "nemotron-3.5",
+    realtime: true,
+    backend: "vulkan",
+    version: "0.1.0",
+    progress: 1,
+    phase: "Ready",
+    error: "",
+    models: [],
+  };
+  const ready = appReadiness(cfg, null, devices, false, "voice", runtime);
+  expect(ready.canComplete).toBe(true);
+  expect(ready.canTestConnection).toBe(false);
+  expect(ready.steps.find((s) => s.id === "server")?.settingsSection).toBe(
+    "local-runtime",
+  );
+  expect(cfg.voiceTranscription.baseURL).toBe("");
+  expect(
+    appReadiness(cfg, connection(), devices, false, "voice", {
+      ...runtime,
+      state: "stopped",
+    }).canComplete,
+  ).toBe(false);
+  expect(
+    appReadiness(cfg, connection(), devices, false, "voice", {
+      ...runtime,
+      supported: false,
+    }).canComplete,
+  ).toBe(false);
+  expect(
+    appReadiness(cfg, null, devices, false, "file", runtime).canTestConnection,
+  ).toBe(false);
+  expect(
+    appReadiness(cfg, null, devices, false, "file", runtime).recoveryNeeded,
+  ).toBe(false);
+});
 
 const devices: Device[] = [
   { id: "mic-1", name: "Desk microphone", default: true },
 ];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
+  managedRuntime: { enabled: false, model: "nemotron-3.5", realtime: true },
   vocabulary: { terms: "", voice: false, files: false, boost: 3 },
   savedConnections: {
     entries: [
@@ -76,7 +123,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     timeoutSeconds: 120,
     transcriptionOptions: {
       prompt: "",
-        temperatureOverride: false,
+      temperatureOverride: false,
       temperature: 0,
     },
     compatibilityProfile: overrides.compatibilityProfile ?? ID.Generic,

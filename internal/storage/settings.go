@@ -103,10 +103,17 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 	}); err != nil {
 		return err
 	}
-	return nil
+	return q.PutManagedRuntime(ctx, dbgen.PutManagedRuntimeParams{
+		Enabled: boolean(v.ManagedRuntime.Enabled), Model: v.ManagedRuntime.Model, Realtime: boolean(v.ManagedRuntime.Realtime),
+	})
 }
 func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error) {
 	v := config.Default()
+	managed, err := q.GetManagedRuntime(ctx)
+	if err != nil { return v, err }
+	v.ManagedRuntime.Enabled = managed.Enabled != 0
+	v.ManagedRuntime.Model = managed.Model
+	v.ManagedRuntime.Realtime = managed.Realtime != 0
 	vocabulary, err := q.GetVocabulary(ctx)
 	if err != nil {
 		return v, err

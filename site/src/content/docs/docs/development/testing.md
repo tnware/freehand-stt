@@ -3,6 +3,51 @@ title: Testing contract
 description: Deterministic, integration, and native acceptance responsibilities.
 ---
 
+## Managed Windows runtime
+
+Keep managed-runtime tests isolated from the user's application-data directory.
+Use small synthetic archives, fake HTTP listeners, and disposable child
+executables for deterministic checks; these fixtures are not official NeMo
+runtime or model qualification.
+
+Coverage must include archive checksum failure, path traversal, cancellation,
+interrupted install/retry, bounded child output, metadata-only catalog filtering,
+model download failure/removal, unsupported platforms, premature child exit,
+readiness timeout, port conflicts, and shutdown during install/pull/start/run.
+Windows process tests must prove descendants cannot outlive the owner's Job
+Object, not just that the immediate child receives a kill request.
+
+Real SQLite tests exercise the forward migration from the clean baseline,
+disabled defaults, save/reopen, and failed persistence. Settings tests prove
+managed Voice realtime and completed-file snapshots keep manual endpoint
+credentials/headers out, preserve manual configuration, and reject unavailable
+managed endpoints without remote fallback. Existing realtime fixtures continue
+to check loaded-model identity, final-only delivery, and no automatic replay.
+
+`TestManagedEndpointReachesSpeechClients` passes the real adapter's published
+endpoint to the production microphone, file, and realtime clients against a
+versioned NeMo fixture. It covers both qualified completed profiles and the
+Nemotron handshake, catching a missing `/v1` prefix even when readiness succeeds.
+The fixture does not load a model or establish native inference acceptance.
+
+Browser fixtures should cover a fresh installation with no manual connections,
+recommended Nemotron realtime setup, supported catalog browsing without pulls,
+explicit download/cancel/retry, switching models, unsupported realtime, status
+refresh across windows, removal confirmation, and dirty-draft protection.
+At compact desktop sizes, assert that enable, install, selected-model download,
+progress/cancel, and start/stop remain in view without scrolling or Playwright's
+automatic click scrolling. Download completion must not implicitly start inference.
+Exercise keyboard navigation, narrow layouts, light/dark appearance, and reduced
+motion. Generated Wails DTOs remain the fixture contract.
+
+Native acceptance uses only the explicitly selected model. Check installation
+from an official verified archive, NeMo's model pull, a real ready listener,
+realtime microphone finals, completed files, Stop/Start, Quit during a model
+download, restart, and complete removal. Verify no listener binds to the LAN,
+no child remains after exit, and manual connections still work after managed
+mode is disabled. No model inventory inference belongs in CI. See the
+[Windows checklist](../../safety/native-test-checklist/#managed-local-runtime).
+
 ## Shortcut recovery regression checks
 
 The controller and input-service tests cover unavailable startup toggle/show

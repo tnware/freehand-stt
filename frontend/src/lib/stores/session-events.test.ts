@@ -186,7 +186,7 @@ describe("shared session event composition", () => {
       offSecond();
       expect(events.count()).toBe(0);
       const offAgain = subscribeSessionEvents(second, events.on);
-      expect(events.count()).toBe(5);
+      expect(events.count()).toBe(6);
       offAgain();
       events.emit("dictation:status", {
         ...recording,
@@ -215,6 +215,33 @@ describe("shared session event composition", () => {
       "registration failed",
     );
     expect(events.count()).toBe(0);
+    session.dispose();
+  });
+
+  it("routes runtime status to each window and detaches it on teardown", () => {
+    const session = new Session(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
+    const events = eventSource();
+    const off = subscribeSessionEvents(session, events.on);
+    const status: SessionEventMap["managed-runtime:status"] = {
+      supported: true,
+      state: "running",
+      enabled: true,
+      selectedModel: "nemotron-3.5",
+      realtime: true,
+      backend: "cpu",
+      version: "v0.1.0",
+      progress: -1,
+      phase: "",
+      error: "",
+      models: [],
+    };
+    events.emit("managed-runtime:status", status);
+    expect(session.runtime.status).toEqual(status);
+    off();
+    events.emit("managed-runtime:status", { ...status, state: "stopped" });
+    expect(session.runtime.status?.state).toBe("running");
     session.dispose();
   });
 });

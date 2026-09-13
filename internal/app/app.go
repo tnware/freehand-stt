@@ -21,6 +21,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/history"
 	"github.com/tnware/freehand-stt/internal/inference"
 	inputservice "github.com/tnware/freehand-stt/internal/input"
+	"github.com/tnware/freehand-stt/internal/managedruntime"
 	overlayservice "github.com/tnware/freehand-stt/internal/overlay"
 	"github.com/tnware/freehand-stt/internal/platform"
 	"github.com/tnware/freehand-stt/internal/postprocess"
@@ -74,6 +75,7 @@ type App struct {
 	opts            Options
 	settings        config.Settings
 	settingsService *settingsservice.Service
+	managedRuntime  *managedruntime.Service
 	buildInfo       *buildinfo.Service
 	connection      *connection.Service
 	inputService    *inputservice.Service
@@ -187,6 +189,7 @@ func New(opts Options) (*App, error) {
 		},
 	})
 	a.updates = updates.NewService(opts.Release.Version, settings.CheckForUpdates, opts.Development, a.publishUpdateStatus, rootLogger)
+	a.managedRuntime = managedruntime.NewService(a.managedRuntimeOptions(storage.Directory(store), admission))
 	transcripts := history.NewStore(settings.HistoryEnabled, nativeInput)
 	a.settingsService = settingsservice.NewService(
 		store, settings, keys, processingKeys, platform.Startup{}, holdAvailability,
@@ -196,6 +199,9 @@ func New(opts Options) (*App, error) {
 		a.publishSettings,
 		rootLogger,
 		settingsservice.WithConfigurationLoad(store, settingsFailure),
+		settingsservice.WithManagedRuntime(a.managedRuntime.ResolveFor, func(p managedruntime.Preferences) {
+			managedruntime.ApplyPreferences(a.managedRuntime, p)
+		}),
 		settingsservice.WithHoldRetry(func() error {
 			if err := admission.CheckShortcutCapture(); err != nil {
 				return err
@@ -268,6 +274,7 @@ func New(opts Options) (*App, error) {
 		application.NewService(a.buildInfo),
 		application.NewService(a.history),
 		application.NewService(a.settingsService),
+		application.NewService(a.managedRuntime),
 		application.NewService(a.connection),
 		application.NewService(a.dictation),
 		application.NewService(a.inputService),

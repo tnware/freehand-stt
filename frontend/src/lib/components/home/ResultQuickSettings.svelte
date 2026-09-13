@@ -1,5 +1,11 @@
 <script lang="ts">
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
+  import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
+  import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
+  import VocabularyLink from "$lib/components/settings/VocabularyLink.svelte";
+  import { runtimePresentation } from "$lib/utils/managedRuntime";
+  import ServerIcon from "@lucide/svelte/icons/server";
+
   import MicIcon from "@lucide/svelte/icons/mic";
   import TextCursorInputIcon from "@lucide/svelte/icons/text-cursor-input";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
@@ -16,6 +22,8 @@
   let {
     editor,
     settings,
+    runtimeState,
+    onOpenLocalRuntime,
     showCapture,
     disabled,
     onAddConnection,
@@ -26,6 +34,8 @@
   }: {
     editor: SettingsEditor;
     settings: Settings;
+    runtimeState: ManagedRuntimeState;
+    onOpenLocalRuntime: () => void;
     showCapture: boolean;
     disabled: boolean;
     onAddConnection: (purpose: Purpose) => void;
@@ -34,6 +44,17 @@
     onOpenAudioSettings: () => void;
     onOpenGeneralSettings: () => void;
   } = $props();
+  const runtime = $derived(runtimeState.status);
+  const managed = $derived(
+    runtime?.enabled ?? settings.managedRuntime?.enabled ?? false,
+  );
+  const local = $derived(runtimePresentation(runtime));
+  const localModel = $derived(
+    local.selected?.name ||
+      runtime?.selectedModel ||
+      settings.managedRuntime?.model ||
+      "No local model selected",
+  );
   type Panel = "audio" | "stt" | "cleanup" | "delivery";
   let activePanel = $state<Panel | null>(null);
   const panels = $derived<Panel[]>(
@@ -72,6 +93,11 @@
       >
         {#if panel === "audio"}<MicIcon class="size-4" />
         {:else if panel === "delivery"}<TextCursorInputIcon class="size-4" />
+        {:else if panel === "stt" && managed}
+          <ServerIcon class="size-4" />
+          <span class="max-w-48 truncate text-[13px]" title={localModel}
+            >{localModel}</span
+          >
         {:else}<ProviderIcon
             profile={panel === "stt"
               ? showCapture
@@ -87,7 +113,9 @@
               class={settings.postProcessing.enabled
                 ? "size-1.5 rounded-full bg-success"
                 : "size-1.5 rounded-full bg-muted-foreground"}
-              aria-label={settings.postProcessing.enabled ? "Enabled" : "Disabled"}
+              aria-label={settings.postProcessing.enabled
+                ? "Enabled"
+                : "Disabled"}
             ></span>{/if}
         {/if}
         <ChevronDownIcon class="size-3 text-muted-foreground" />
@@ -98,11 +126,28 @@
             {editor}
             {settings}
             {disabled}
+            runtime={managed ? runtimeState : undefined}
+            onManageRuntime={() => openSettings(onOpenLocalRuntime)}
             onAddConnection={(purpose) => {
               activePanel = null;
               onAddConnection(purpose);
             }}
           />
+        {:else if panel === "stt" && managed}
+          <div class="space-y-4">
+            <h3 class="text-sm font-semibold">Transcription</h3>
+            <ManagedRuntimeControls
+              runtime={runtimeState}
+              disabled={disabled ||
+                editor.saving ||
+                editor.quickSettingsPending.length > 0}
+              onManage={() => openSettings(onOpenLocalRuntime)}
+            />
+            <p class="text-xs text-muted-foreground">
+              Audio files use completed transcription.
+            </p>
+            <VocabularyLink {settings} />
+          </div>
         {:else if panel === "audio" || panel === "delivery"}
           <QuickControls
             {settings}
@@ -111,7 +156,8 @@
             savedField={editor.quickSettingsSaved}
             {disabled}
             section={panel}
-            onUpdate={(patch, field) => editor.updateQuickSettings(patch, field)}
+            onUpdate={(patch, field) =>
+              editor.updateQuickSettings(patch, field)}
             onOpenAudioSettings={() => openSettings(onOpenAudioSettings)}
             onOpenDeliverySettings={() => openSettings(onOpenGeneralSettings)}
           />
@@ -119,9 +165,14 @@
           <QuickSettings
             onEnterTranscription={() =>
               void editor.ensureConnectionMetadata(Purpose.Transcription, true)}
-            onEnterCleanup={() => void editor.ensureConnectionMetadata(Purpose.Cleanup, true)}
-            sttMetadataStatus={editor.connectionMetadataStatus(Purpose.Transcription)}
-            processingMetadataStatus={editor.connectionMetadataStatus(Purpose.Cleanup)}
+            onEnterCleanup={() =>
+              void editor.ensureConnectionMetadata(Purpose.Cleanup, true)}
+            sttMetadataStatus={editor.connectionMetadataStatus(
+              Purpose.Transcription,
+            )}
+            processingMetadataStatus={editor.connectionMetadataStatus(
+              Purpose.Cleanup,
+            )}
             embedded
             showCapture={false}
             showTranscription={panel === "stt"}
@@ -145,13 +196,15 @@
               onAddConnection(purpose);
             }}
             onChangeConnection={(change) => editor.changeConnection(change)}
-            onUpdate={(patch, field) => editor.updateQuickSettings(patch, field)}
+            onUpdate={(patch, field) =>
+              editor.updateQuickSettings(patch, field)}
             onTestConnection={() => editor.testConnection(editor.applied, "")}
             onTestProcessingConnection={() =>
               editor.testPostProcessingConnection(editor.applied, "")}
             disabled={disabled || editor.saving}
             onOpenServerSettings={() => openSettings(onOpenServerSettings)}
-            onOpenProcessingSettings={() => openSettings(onOpenProcessingSettings)}
+            onOpenProcessingSettings={() =>
+              openSettings(onOpenProcessingSettings)}
             onOpenAudioSettings={() => openSettings(onOpenAudioSettings)}
             onOpenDeliverySettings={() => openSettings(onOpenGeneralSettings)}
           />

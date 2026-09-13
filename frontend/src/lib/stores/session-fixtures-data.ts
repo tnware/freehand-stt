@@ -35,6 +35,7 @@ import {
 import { Session, type SessionServices } from "$lib/stores/session.svelte";
 
 const settings: Settings = {
+  managedRuntime: { enabled: false, model: "nemotron-3.5", realtime: true },
   vocabulary: { terms: "", voice: false, files: false, boost: 3 },
   modelProfile: ModelProfileID.Generic,
   rememberedModels: { entries: [], defaults: {} },
@@ -66,7 +67,7 @@ const settings: Settings = {
     timeoutSeconds: 120,
     transcriptionOptions: {
       prompt: "",
-        temperatureOverride: false,
+      temperatureOverride: false,
       temperature: 0,
     },
     compatibilityProfile: ID.NeMoSpeechV1,

@@ -20,6 +20,7 @@
     OpenPermissionSettings: async () => {},
   });
   import { configurePickerFixture } from "./picker-data";
+  import { createRuntimeFixture } from "./runtime-fixture";
   import { CancellablePromise } from "@wailsio/runtime";
   import { Action, Purpose } from "$bindings/savedconnection";
   import { CheckKind, CheckStatus } from "$bindings/connection";
@@ -45,6 +46,7 @@
   import { shortcutCapture } from "$lib/stores/shortcutCapture.svelte";
   import { ShortcutAction } from "$bindings/hotkey";
   let current = structuredClone(settings);
+  if (params.has("runtime-ready")) current.setupCompleted = true;
   if (new URLSearchParams(location.search).has("hold-degraded")) {
     current.holdShortcut = "F13";
     current.holdAvailable = false;
@@ -63,13 +65,14 @@
     }));
   }
   let retries = 0;
-  if (!new URLSearchParams(location.search).has("hold-binding")) setContext("hold-shortcut-retry", async () => {
-    retries++;
-    if (retries === 1) throw new Error("Secure Input is still active.");
-    current.holdAvailable = true;
-    current.holdAvailabilityReason = "Hold-to-talk is ready.";
-    return structuredClone(current);
-  });
+  if (!new URLSearchParams(location.search).has("hold-binding"))
+    setContext("hold-shortcut-retry", async () => {
+      retries++;
+      if (retries === 1) throw new Error("Secure Input is still active.");
+      current.holdAvailable = true;
+      current.holdAvailabilityReason = "Hold-to-talk is ready.";
+      return structuredClone(current);
+    });
   if (new URLSearchParams(location.search).get("platform") === "darwin") {
     current.platform = "darwin";
     current.useMica = true;
@@ -95,9 +98,16 @@
     selected: { [Purpose.Transcription]: "original" },
   };
   if (new URLSearchParams(location.search).has("workflows")) {
-    const uses = [Purpose.Transcription, Purpose.Voice, Purpose.Cleanup, Purpose.Speech];
+    const uses = [
+      Purpose.Transcription,
+      Purpose.Voice,
+      Purpose.Cleanup,
+      Purpose.Speech,
+    ];
     current.savedConnections.entries![0].uses = uses;
-    current.savedConnections.selected = Object.fromEntries(uses.map((use) => [use, "original"]));
+    current.savedConnections.selected = Object.fromEntries(
+      uses.map((use) => [use, "original"]),
+    );
     const profile: Profile = {
       id: ModelID.Generic,
       name: "Generic",
@@ -135,14 +145,16 @@
     current.textToSpeech.model = "speech/tts";
     current.textToSpeech.voice = "alloy";
   }
-  if (new URLSearchParams(location.search).has("pickers")) configurePickerFixture(current);
+  if (new URLSearchParams(location.search).has("pickers"))
+    configurePickerFixture(current);
   const blank = new URLSearchParams(location.search).has("blank");
   if (blank) {
     current.savedConnections = { entries: [], selected: {} };
     current.setupCompleted = false;
     current.voiceTranscription.model = "";
     current.voiceTranscription.modelProfile = ModelID.Generic;
-    current.rememberedModels.defaults![Purpose.Voice]!.profile = ModelID.Generic;
+    current.rememberedModels.defaults![Purpose.Voice]!.profile =
+      ModelID.Generic;
     current.model = "";
   }
   const saves = controlledSaves((request) => {
@@ -153,7 +165,10 @@
         throw new Error("Unexpected connection action");
       const id = "created";
       if (change.activateFor === Purpose.Voice) {
-        next.voiceTranscription = { ...next.voiceTranscription, ...change.details };
+        next.voiceTranscription = {
+          ...next.voiceTranscription,
+          ...change.details,
+        };
       }
       next.savedConnections = {
         entries: [
@@ -176,9 +191,24 @@
     return structuredClone(current);
   });
   if (child) current = wire(window.testConnectionWindows.settings());
-  const session = new Session(
-    serviceWithStatus(() => CancellablePromise.resolve(idle), {
-      input: { ListMicrophones: () => CancellablePromise.resolve([{ id: "default", name: "Fixture microphone", default: true }]) },
+  const runtimeFixture = params.has("runtime")
+    ? createRuntimeFixture(
+        current.platform !== "darwin",
+        (p) => {
+          current = { ...current, managedRuntime: p };
+        },
+        params.has("runtime-ready"),
+      )
+    : null;
+  if (runtimeFixture) window.testRuntime = runtimeFixture.control;
+  const session = new Session({
+    ...serviceWithStatus(() => CancellablePromise.resolve(idle), {
+      input: {
+        ListMicrophones: () =>
+          CancellablePromise.resolve([
+            { id: "default", name: "Fixture microphone", default: true },
+          ]),
+      },
       connection: {
         TestConnection: () =>
           CancellablePromise.resolve(
@@ -198,25 +228,39 @@
           ),
       },
       settings: {
-        GetSettings: () => CancellablePromise.resolve(child ? wire(window.testConnectionWindows.settings()) : structuredClone(current)),
-        SaveSettings: (request) => child
-          ? CancellablePromise.resolve(window.testConnectionWindows.save(wire(request)))
-          : saves.save(wire(request)),
+        GetSettings: () =>
+          CancellablePromise.resolve(
+            child
+              ? wire(window.testConnectionWindows.settings())
+              : structuredClone(current),
+          ),
+        SaveSettings: (request) =>
+          child
+            ? CancellablePromise.resolve(
+                window.testConnectionWindows.save(wire(request)),
+              )
+            : saves.save(wire(request)),
       },
     }),
-  );
+    runtime: runtimeFixture?.service,
+  });
   session.editor.applySettingsSnapshot(structuredClone(current));
+  runtimeFixture?.subscribe((status) => session.runtime.applyStatus(status));
   if (new URLSearchParams(location.search).has("workflows")) {
     session.editor.processingProfiles = structuredClone(processingProfiles);
   }
 
   if (!child) {
     window.testSaves = saves.control;
-    installConnectionWindows({
-      settings: () => structuredClone(current),
-      save: (request) => saves.save(wire(request)),
-      apply: (saved) => session.editor.applySettingsSnapshot(wire(saved)),
-    }, integrated, params.has("general"));
+    installConnectionWindows(
+      {
+        settings: () => structuredClone(current),
+        save: (request) => saves.save(wire(request)),
+        apply: (saved) => session.editor.applySettingsSnapshot(wire(saved)),
+      },
+      integrated,
+      params.has("general"),
+    );
   }
 </script>
 

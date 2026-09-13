@@ -9,6 +9,8 @@ description: One microphone provider/model selection with an optional qualified 
 > start in a distinct `freehand.db` lineage; other product decisions remain intact.
 
 - Status: Accepted
+
+> [ADR 0015](../0015-managed-local-speech-runtime/) adds managed mode, which projects one local model into Voice and audio-file request snapshots while preserving their independent saved manual selections.
 - Date: 2026-09-07
 - Supersedes: ADR 0008's separate realtime feature selection and ADR 0002's separate completed-microphone/realtime settings slots. Their transport and final-text safety contracts remain applicable.
 

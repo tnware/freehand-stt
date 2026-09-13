@@ -23,6 +23,13 @@ type CredentialGc struct {
 	Account string
 }
 
+type ManagedRuntimePreference struct {
+	ID       int64
+	Enabled  int64
+	Model    string
+	Realtime int64
+}
+
 type PreferencesSetting struct {
 	ID                      int64
 	ToggleShortcut          string

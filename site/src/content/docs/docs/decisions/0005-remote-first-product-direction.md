@@ -7,6 +7,8 @@ description: Keep Freehand focused on native access to user-selected speech infr
 - Date: 2026-09-03
 - Supersedes: ADR 0002 as an active roadmap commitment; retains its protocol and safety research
 
+> [ADR 0015](../0015-managed-local-speech-runtime/) supersedes the prohibition on managed inference with an optional, bounded Windows NeMo runtime. Manual endpoints remain first-class; the original decision below is preserved.
+
 
 > Update (2026-09-07): [ADR 0008](../0008-qualified-realtime-dictation/) admits optional qualified Nemotron realtime dictation. The historical decision below remains preserved; conversation mode and bundled inference remain outside scope.
 

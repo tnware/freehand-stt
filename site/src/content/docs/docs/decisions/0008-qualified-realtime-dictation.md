@@ -9,6 +9,8 @@ description: Add an optional Nemotron streaming transport without expanding Free
 > start in a distinct `freehand.db` lineage; other product decisions remain intact.
 
 - Status: Accepted
+
+> [ADR 0015](../0015-managed-local-speech-runtime/) adds optional Windows runtime/model management and recommends realtime for managed Nemotron setup. It does not change the qualified transport or final-text safety contract below.
 - Date: 2026-09-07
 
 > [ADR 0011](../0011-qwen-vllm-realtime/) adds a separately qualified vLLM/Qwen3-ASR transport. The NeMo-specific protocol below remains unchanged.

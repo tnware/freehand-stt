@@ -1,3 +1,4 @@
+import type { Status as ManagedStatus } from "$bindings/managedruntime";
 import { Events } from "@wailsio/runtime";
 import {
   FileTranscriptionPhase,
@@ -11,6 +12,7 @@ import {
 import type { Session } from "./session.svelte";
 
 export interface SessionEventMap {
+  "managed-runtime:status": ManagedStatus;
   "dictation:status": Status;
   "file-transcription:status": FileTranscriptionStatus;
   "file-transcription:delta": FileTranscriptionDelta;
@@ -72,6 +74,9 @@ export function subscribeSessionEvents(
       if (session.files.applyDelta(data) === "gap")
         void session.files.refresh();
     });
+    subscribe("managed-runtime:status", ({ data }) =>
+      session.runtime.applyStatus(data),
+    );
     subscribe("tts:status", ({ data }) => session.speech.applyStatus(data));
     subscribe("settings:changed", ({ data }) =>
       session.editor.applySettingsSnapshot(data),

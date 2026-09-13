@@ -24,6 +24,7 @@
   import type { Message } from "$lib/utils/messages";
   import { isFailure, statusMessage } from "$lib/utils/status";
   import { appReadiness, readinessVisible } from "$lib/utils/readiness";
+  import { runtimePresentation } from "$lib/utils/managedRuntime";
   import {
     FileTranscriptionPhase,
     State,
@@ -93,6 +94,23 @@
   const runtimeSettings = $derived(
     session.editor.applied ?? session.editor.draft,
   );
+  const managed = $derived(
+    session.runtime.status?.enabled ??
+      runtimeSettings?.managedRuntime.enabled ??
+      false,
+  );
+  const local = $derived(runtimePresentation(session.runtime.status));
+  const localModel = $derived(
+    local.selected?.name ||
+      session.runtime.status?.selectedModel ||
+      runtimeSettings?.managedRuntime.model ||
+      "Local speech",
+  );
+  function openLocalRuntime() {
+    void WindowingService.OpenTaskSettings("local-runtime", inputMode).catch(
+      (cause) => session.messages.fail(cause),
+    );
+  }
   const readiness = $derived(
     runtimeSettings
       ? appReadiness(
@@ -103,6 +121,7 @@
           session.editor.devices,
           session.editor.devicesBusy,
           inputMode === "file" ? "file" : "voice",
+          session.runtime.status,
         )
       : null,
   );
@@ -119,6 +138,11 @@
       inputMode !== "tts" &&
       readiness &&
       readinessVisible(readiness, dismissedRecoveryKey) &&
+      // Runtime lifecycle is recoverable in quick settings. Keep that surface
+      // mounted when stopping/switching models instead of navigating away.
+      !(managed && !readiness.initialSetup && readiness.steps.every(
+        (step) => !step.blocking || step.settingsSection === "local-runtime",
+      )) &&
       !voiceActive &&
       !fileWorking,
     ),
@@ -198,12 +222,19 @@
     <div class="transport-frame">
       {#if session.editor.draft}
         {#if !showReadiness}
-          {#if inputMode === "voice"}
+          {#if managed && (!local.ready || session.runtime.busy) && !voiceActive && !fileWorking}
+            <div class="px-5 py-4" role="status" aria-live="polite">
+              <h2 class="text-base font-semibold">Local speech: {session.runtime.busy ? "Updating" : local.label}</h2>
+              <p class="mt-1 text-sm text-muted-foreground">Use transcription quick settings below to start or manage the runtime.</p>
+            </div>
+          {:else if inputMode === "voice"}
             <TransportBar
               status={session.dictation.status}
               busy={fileWorking}
               toggleShortcut={session.editor.draft.toggleShortcut}
-              model={runtimeSettings?.voiceTranscription.model ?? ""}
+              model={managed
+                ? localModel
+                : (runtimeSettings?.voiceTranscription.model ?? "")}
               processingModel={runtimeSettings?.postProcessing.model ?? ""}
               microphone={microphoneLabel}
               onToggle={() => session.dictation.toggleRecording()}
@@ -211,7 +242,7 @@
               onCopy={() => session.dictation.copyPending()}
               onOpenSettings={() =>
                 void WindowingService.OpenTaskSettings(
-                  "voice-transcription",
+                  managed ? "local-runtime" : "voice-transcription",
                   inputMode,
                 ).catch((cause) => session.messages.fail(cause))}
             />
@@ -227,7 +258,7 @@
               onStreamingChange={(enabled) =>
                 (session.files.streamingPreferred = enabled)}
               voiceActive={voiceActive || ttsWorking}
-              onOpenSettings={onOpenServerSettings}
+              onOpenSettings={managed ? openLocalRuntime : onOpenServerSettings}
               onChoose={() => session.files.chooseAudioFile()}
               onStart={() => session.files.startFileTranscription()}
               onTryStreamingAgain={() => session.files.tryFileStreamingAgain()}
@@ -370,6 +401,8 @@
                   <ResultQuickSettings
                     settings={runtimeSettings!}
                     editor={session.editor}
+                    runtimeState={session.runtime}
+                    onOpenLocalRuntime={openLocalRuntime}
                     showCapture={inputMode === "voice"}
                     disabled={quickSettingsDisabled || session.editor.saving}
                     onAddConnection={addConnection}
@@ -405,7 +438,8 @@
                     dismissedRecoveryKey = readiness.recoveryKey;
                   }}
                   onOpenSettings={(section) => {
-                    if (section === "audio") onOpenAudioSettings();
+                    if (section === "local-runtime") openLocalRuntime();
+                    else if (section === "audio") onOpenAudioSettings();
                     else if (section === "shortcuts") onOpenShortcutSettings();
                     else if (section === "voice-transcription")
                       void WindowingService.OpenTaskSettings(
@@ -416,7 +450,24 @@
                   }}
                 >
                   {#snippet serverControls()}
-                    {#if inputMode === "voice"}
+                    {#if managed}
+                      <div class="space-y-2 py-2">
+                        <p class="text-sm font-medium">{localModel}</p>
+                        <p class="text-xs text-muted-foreground">
+                          {local.label} · {(session.runtime.status?.realtime ??
+                            runtimeSettings?.managedRuntime.realtime) &&
+                          inputMode === "voice"
+                            ? "Realtime"
+                            : "Completed transcription"}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onclick={openLocalRuntime}
+                          >Manage local runtime</Button
+                        >
+                      </div>
+                    {:else if inputMode === "voice"}
                       <VoiceTranscriptionSettings
                         setup
                         editor={session.editor}

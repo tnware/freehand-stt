@@ -47,6 +47,9 @@ type Store struct {
 	vault                   Vault
 }
 
+// Directory returns the immutable application-data root without touching disk.
+func Directory(s *Store) string { return filepath.Dir(s.path) }
+
 // NewStore does not open or modify any files. Load owns initialization/recovery.
 func NewStore() (*Store, error) {
 	local, err := localDataDir()
