@@ -5,7 +5,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/tnware/freehand-stt/internal/releaseinfo"
@@ -27,17 +27,45 @@ func parseMacInfo(data []byte) (macInfo, error) {
 			Description string `yaml:"description"`
 			Copyright   string `yaml:"copyright"`
 		} `yaml:"info"`
-		MacOS struct {
-			BuildNumber string `yaml:"buildNumber"`
-		} `yaml:"macos"`
 	}
 	if err := yaml.Unmarshal(data, &source); err != nil {
 		return macInfo{}, errors.New("invalid macOS release configuration")
 	}
-	if !regexp.MustCompile(`^[1-9][0-9]{0,3}$`).MatchString(source.MacOS.BuildNumber) {
-		return macInfo{}, errors.New("macOS buildNumber must be a positive integer from 1 to 9999")
+	build, err := macBuildVersion(identity)
+	if err != nil {
+		return macInfo{}, err
 	}
-	return macInfo{Info: identity, BuildNumber: source.MacOS.BuildNumber, Description: source.Info.Description, Copyright: source.Info.Copyright}, nil
+	return macInfo{Info: identity, BuildNumber: build, Description: source.Info.Description, Copyright: source.Info.Copyright}, nil
+}
+
+// macBuildVersion derives Apple's three numeric components from the same
+// release version Release Please updates. Each patch gets four 16-bit slots:
+// alpha, beta, rc, then stable. This preserves release ordering without a second
+// manually incremented build number; the marketing version remains unchanged.
+// https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundleversion
+func macBuildVersion(info releaseinfo.Info) (string, error) {
+	parts := strings.Split(info.WindowsVersion, ".") // validated uint16 components
+	patch, _ := strconv.ParseUint(parts[2], 10, 16)
+	revision, _ := strconv.ParseUint(parts[3], 10, 16)
+	stage := uint64(3)
+	version := strings.SplitN(info.Version, "+", 2)[0]
+	if _, prerelease, ok := strings.Cut(version, "-"); ok {
+		identifiers := strings.Split(prerelease, ".")
+		if len(identifiers) != 2 {
+			return "", errors.New("macOS prerelease must use alpha.N, beta.N or rc.N")
+		}
+		switch identifiers[0] {
+		case "alpha":
+			stage = 0
+		case "beta":
+			stage = 1
+		case "rc":
+			stage = 2
+		default:
+			return "", errors.New("macOS prerelease must use alpha.N, beta.N or rc.N")
+		}
+	}
+	return fmt.Sprintf("%s.%s.%d", parts[0], parts[1], patch*(1<<18)+stage*(1<<16)+revision), nil
 }
 
 // macPlist owns both generated plists. A distinct development identity avoids

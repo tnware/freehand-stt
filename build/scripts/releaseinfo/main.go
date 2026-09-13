@@ -95,7 +95,7 @@ func main() {
 		if err != nil {
 			fatal(fmt.Errorf("synchronize %s: %w", candidate.path, err))
 		}
-		if bytes.Equal(current, expected) {
+		if sameReleaseAsset(current, expected) {
 			continue
 		}
 		if mode == "check" {
@@ -111,6 +111,15 @@ func main() {
 		fatal(fmt.Errorf("release version assets are stale: %s; run wails3 task common:update:build-assets", strings.Join(stale, ", ")))
 	}
 	fmt.Printf("release identity %s (Windows %s, macOS build %s) is synchronized\n", info.Version, info.WindowsVersion, mac.BuildNumber)
+}
+
+// sameReleaseAsset ignores Git checkout line endings, not metadata or formatting.
+// Generated plists use LF even when core.autocrlf produces a CRLF worktree.
+func sameReleaseAsset(current, expected []byte) bool {
+	return bytes.Equal(
+		bytes.ReplaceAll(current, []byte("\r\n"), []byte("\n")),
+		bytes.ReplaceAll(expected, []byte("\r\n"), []byte("\n")),
+	)
 }
 
 func versionedJSON(data []byte, info releaseinfo.Info) ([]byte, error) {

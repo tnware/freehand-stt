@@ -84,6 +84,12 @@ func WindowsVersion(version string) (string, error) {
 	}
 	if prerelease := matches[4]; prerelease != "" {
 		identifiers := strings.Split(prerelease, ".")
+		for _, identifier := range identifiers {
+			// SemVer forbids leading zeros only in wholly numeric prerelease identifiers.
+			if len(identifier) > 1 && identifier[0] == '0' && strings.Trim(identifier, "0123456789") == "" {
+				return "", errors.New("numeric prerelease identifiers must not contain leading zeros")
+			}
+		}
 		revision, err := strconv.ParseUint(identifiers[len(identifiers)-1], 10, 16)
 		if err != nil || revision == 0 {
 			return "", errors.New("prerelease version must end in a positive numeric revision")

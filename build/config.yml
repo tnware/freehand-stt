@@ -10,17 +10,14 @@ info:
   productIdentifier: "io.github.tnware.freehand" # The unique product identifier
   description: "Speech to text, anywhere you type." # The application description
   copyright: "Copyright 2026 Tyler Woods" # Copyright text
-  comments: "Focus-safe Windows speech to text for local or remote endpoints." # Comments
+  comments: "Focus-safe Windows and macOS speech to text for local or remote endpoints." # Comments
   version: "0.1.0-alpha.5" # x-release-please-version; application version and human-readable release source
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"
 
-# Numeric, monotonically increasing macOS bundle build number. Increment for
-# each published Mac build (including prereleases); display version is info.version.
-# releaseinfo generates both plists; development uses productIdentifier + ".dev".
-macos:
-  buildNumber: "5"
+# releaseinfo derives macOS bundle build and display versions from info.version.
+# No separate build-number bump is needed; development uses the ".dev" identity.
 
 # iOS build configuration (uncomment to customise iOS project generation)
 # Note: Keys under `ios` OVERRIDE values under `info` when set.
@@ -34,7 +31,7 @@ macos:
 #   # The company/organisation name for templates and project settings
 #   company: "tnware"
 #   # Additional comments to embed in Info.plist metadata
-#   comments: "Focus-safe Windows speech to text for local or remote endpoints."
+#   comments: "Focus-safe Windows and macOS speech to text for local or remote endpoints."
 
 # Dev mode configuration
 dev_mode:
