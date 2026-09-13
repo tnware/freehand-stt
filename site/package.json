@@ -8,6 +8,7 @@
   "scripts": {
     "test": "node --test tests/downloads.test.mjs",
     "test:browser": "node tests/downloads.browser.mjs",
+    "screenshots": "node scripts/capture-app-previews.mjs",
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",
