@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.0-alpha.6](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.5...v0.1.0-alpha.6) (2026-09-13)
+
+
+### Features
+
+* add native macOS desktop support ([#57](https://github.com/tnware/freehand-stt/issues/57)) ([662a050](https://github.com/tnware/freehand-stt/commit/662a0501504c264050c02782d757643915574546))
+* **setup:** unify connection and model setup in Settings ([#59](https://github.com/tnware/freehand-stt/issues/59)) ([7c4fbf3](https://github.com/tnware/freehand-stt/commit/7c4fbf365c51ddbf78cb24c9c82ced58f1c9b87a))
+* **site:** streamline content and demonstrate desktop workflows ([#60](https://github.com/tnware/freehand-stt/issues/60)) ([f834603](https://github.com/tnware/freehand-stt/commit/f834603d0da367ff525f9f42e9fae405f3de0dd2))
+
 ## [0.1.0-alpha.5](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.4...v0.1.0-alpha.5) (2026-09-09)
 
 
