@@ -75,7 +75,7 @@ type App struct {
 	opts            Options
 	settings        config.Settings
 	settingsService *settingsservice.Service
-	managedRuntime  *managedruntime.Service
+	managedRuntime  *managedruntime.Manager
 	buildInfo       *buildinfo.Service
 	connection      *connection.Service
 	inputService    *inputservice.Service
@@ -189,7 +189,7 @@ func New(opts Options) (*App, error) {
 		},
 	})
 	a.updates = updates.NewService(opts.Release.Version, settings.CheckForUpdates, opts.Development, a.publishUpdateStatus, rootLogger)
-	a.managedRuntime = managedruntime.NewService(a.managedRuntimeOptions(storage.Directory(store), admission))
+	a.managedRuntime = managedruntime.NewManager(a.managedRuntimeOptions(storage.Directory(store), admission))
 	transcripts := history.NewStore(settings.HistoryEnabled, nativeInput)
 	a.settingsService = settingsservice.NewService(
 		store, settings, keys, processingKeys, platform.Startup{}, holdAvailability,
@@ -199,8 +199,9 @@ func New(opts Options) (*App, error) {
 		a.publishSettings,
 		rootLogger,
 		settingsservice.WithConfigurationLoad(store, settingsFailure),
-		settingsservice.WithManagedRuntime(a.managedRuntime.ResolveFor, func(p managedruntime.Preferences) {
-			managedruntime.ApplyPreferences(a.managedRuntime, p)
+		settingsservice.WithManagedRuntimes(a.managedRuntime.ResolveFor, nil),
+		settingsservice.WithManagedInventory(func(instances []managedruntime.Instance) (*managedruntime.InventoryReservation, error) {
+			return managedruntime.ReserveInstances(a.managedRuntime, instances)
 		}),
 		settingsservice.WithHoldRetry(func() error {
 			if err := admission.CheckShortcutCapture(); err != nil {
@@ -243,7 +244,7 @@ func New(opts Options) (*App, error) {
 			}
 		},
 	})
-	a.connection = connection.NewService(keys, processingKeys, ttsKeys, client, rootLogger, store)
+	a.connection = connection.NewService(keys, processingKeys, ttsKeys, client, rootLogger, settingsservice.ConnectionResolver(a.settingsService))
 	a.inputService = inputservice.NewService(a.audio, a.capture, a, admission, settingsSource, a.publishShortcutCapture, rootLogger)
 	a.buildInfo = buildinfo.NewService(
 		opts.Release.ProductName,

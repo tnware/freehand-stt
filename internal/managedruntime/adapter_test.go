@@ -29,10 +29,57 @@ func WithManagedEndpointFixture(t *testing.T, exercise func(Endpoint)) {
 	t.Helper()
 	root := t.TempDir()
 	ctx := context.Background()
+	a, calls := managedAdapterFixture(t, root)
+	backend, models, err := a.Inspect(ctx)
+	if err != nil || backend != "cpu" || len(models) != 2 || models[0].Installed {
+		t.Fatalf("inspect %s %+v %v", backend, models, err)
+	}
+	if len(*calls) != 1 || (*calls)[0] != "--json model list" {
+		t.Fatal(calls)
+	}
+	if err := a.Pull(ctx, "nemotron-3.5"); err != nil {
+		t.Fatal(err)
+	}
+	_, models, err = a.Inspect(ctx)
+	if err != nil || !models[0].Installed {
+		t.Fatalf("verified model absent: %+v %v", models, err)
+	}
+	a.listenerOwner = func(int, int) (bool, error) { return true, nil }
+	p, ep, err := a.Start(ctx, "nemotron-3.5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.kill()
+	if ep.Model != "actual GGUF name" || !ep.Enabled || !ep.Realtime || ep.Profile != qualified["nemotron-3.5"].Profile {
+		t.Fatal(ep)
+	}
+	if exercise != nil {
+		exercise(ep)
+	}
+	p.kill()
+	if err = a.RemoveModel(ctx, "nemotron-3.5"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = a.Start(ctx, "nemotron-3.5"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("missing model not rejected: %v", err)
+	}
+	if err = a.Remove(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = os.Stat(root); !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+}
+
+// managedAdapterFixture retains the real integrity, cache, catalog and HTTP
+// readiness paths, replacing only download bytes and the OS process boundary.
+func managedAdapterFixture(t *testing.T, root string) (*nemoAdapter, *[]string) {
+	t.Helper()
+	ctx := context.Background()
 	a := newAdapter(root)
 	data := zipFixture(t, map[string]string{"bin/nemo-speech.exe": "fixture, never executed"})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(data) }))
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 	pin := asset{backend: "cpu", url: srv.URL, size: int64(len(data)), sha256: fmt.Sprintf("%x", sha256.Sum256(data))}
 	saved := assets["cpu"]
 	assets["cpu"] = pin
@@ -115,45 +162,9 @@ func WithManagedEndpointFixture(t *testing.T, exercise func(Endpoint)) {
 		close(p.done)
 		return p, nil
 	}
-	backend, models, err := a.Inspect(ctx)
-	if err != nil || backend != "cpu" || len(models) != 2 || models[0].Installed {
-		t.Fatalf("inspect %s %+v %v", backend, models, err)
-	}
-	if len(calls) != 1 || calls[0] != "--json model list" {
-		t.Fatal(calls)
-	}
-	if err := a.Pull(ctx, "nemotron-3.5"); err != nil {
-		t.Fatal(err)
-	}
-	_, models, err = a.Inspect(ctx)
-	if err != nil || !models[0].Installed {
-		t.Fatalf("verified model absent: %+v %v", models, err)
-	}
+
 	a.listenerOwner = func(int, int) (bool, error) { return true, nil }
-	p, ep, err := a.Start(ctx, "nemotron-3.5")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer p.kill()
-	if ep.Model != "actual GGUF name" || !ep.Enabled || !ep.Realtime || ep.Profile != qualified["nemotron-3.5"].Profile {
-		t.Fatal(ep)
-	}
-	if exercise != nil {
-		exercise(ep)
-	}
-	p.kill()
-	if err = a.RemoveModel(ctx, "nemotron-3.5"); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err = a.Start(ctx, "nemotron-3.5"); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("missing model not rejected: %v", err)
-	}
-	if err = a.Remove(ctx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = os.Stat(root); !os.IsNotExist(err) {
-		t.Fatal(err)
-	}
+	return a, &calls
 }
 
 func TestAdapterReadinessUsesServerIdentity(t *testing.T) {

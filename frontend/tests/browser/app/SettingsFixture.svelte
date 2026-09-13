@@ -26,6 +26,7 @@
   import { CheckKind, CheckStatus } from "$bindings/connection";
   import { ID as ModelID, type Profile } from "$bindings/modelprofile";
   import { AuthenticationMode } from "$bindings/config";
+  import { ID as BackendID } from "$bindings/compatibility";
   import { Session } from "$lib/stores/session.svelte";
   import {
     settings,
@@ -195,12 +196,32 @@
     ? createRuntimeFixture(
         current.platform !== "darwin",
         (p) => {
-          current = { ...current, managedRuntime: p };
+          current = { ...current, managedRuntimes: p };
         },
         params.has("runtime-ready"),
       )
     : null;
   if (runtimeFixture) window.testRuntime = runtimeFixture.control;
+  if (runtimeFixture && current.managedRuntimes?.length && params.has("runtime-ready")) {
+    const instance = current.managedRuntimes[0];
+    const profiles = runtimeFixture.providers[0].models?.flatMap((m) => m.behavior ? [m.behavior] : []) ?? [];
+    current.modelProfiles.voiceTranscription = profiles;
+    current.modelProfiles.transcription = profiles;
+    current.savedConnections.entries!.push({
+      id: "local-speech", name: instance.name,
+      uses: [Purpose.Voice, Purpose.Transcription], hasCredential: false,
+      details: { managedInstanceID: instance.id, compatibilityProfile: BackendID.$zero,
+        baseURL: "", allowInsecureHTTP: false, authenticationMode: AuthenticationMode.AuthenticationModeNone,
+        healthPath: "", headers: {} },
+    });
+    const managed = { managedInstanceID: instance.id, model: instance.model,
+      compatibilityProfile: BackendID.NeMoSpeechV1, modelProfile: ModelID.Nemotron35,
+      baseURL: "", allowInsecureHTTP: false, authenticationMode: AuthenticationMode.AuthenticationModeNone,
+      healthPath: "", headers: {} };
+    current = { ...current, ...managed,
+      voiceTranscription: { ...current.voiceTranscription, ...managed, realtime: true } };
+    current.savedConnections.selected = { [Purpose.Voice]: "local-speech", [Purpose.Transcription]: "local-speech" };
+  }
   const session = new Session({
     ...serviceWithStatus(() => CancellablePromise.resolve(idle), {
       input: {

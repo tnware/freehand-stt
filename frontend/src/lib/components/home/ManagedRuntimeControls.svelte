@@ -6,153 +6,146 @@
   import PlayIcon from "@lucide/svelte/icons/play";
   import SquareIcon from "@lucide/svelte/icons/square";
   import SettingsIcon from "@lucide/svelte/icons/settings-2";
-  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
 
   let {
     runtime,
+    instanceID,
     disabled = false,
     onManage,
   }: {
     runtime: ManagedRuntimeState;
+    instanceID: string;
     disabled?: boolean;
     onManage: () => void;
   } = $props();
   const uid = $props.id();
-  const status = $derived(runtime.status);
+  const row = $derived(runtime.statusFor(instanceID));
+  const status = $derived(row?.status);
   const view = $derived(runtimePresentation(status));
+  const provider = $derived(
+    runtime.providers.find((p) => p.id === row?.instance.provider),
+  );
+  const operating = $derived(runtime.isBusy(instanceID));
   const locked = $derived(
-    disabled || runtime.busy || runtime.loading || !status?.supported,
+    disabled || operating || runtime.loading || !status?.supported,
   );
-  const running = $derived(status?.state === "running");
-  const problem = $derived(runtime.error || status?.error || "");
-  const backend = $derived(
-    status?.backend === "cpu"
-      ? "CPU"
-      : status?.backend?.startsWith("cuda")
-        ? "CUDA"
-        : "",
+  const models = $derived(
+    (status?.models ?? []).filter(
+      (m) => m.installed && provider?.models?.some((q) => q.id === m.id),
+    ),
   );
-  const choices = $derived(
-    (status?.models ?? []).map((model) => ({
-      value: model.id,
-      label: model.name,
-    })),
+  const selected = $derived(
+    status?.models?.find((m) => m.id === row?.instance.model),
+  );
+  const choices = $derived(models.map((m) => ({ value: m.id, label: m.name })));
+  const problem = $derived(
+    runtime.errorFor(instanceID) || runtime.error || status?.error || "",
   );
 </script>
 
 <div class="space-y-3">
   <div class="flex items-center justify-between gap-3">
     <div class="min-w-0">
-      <p class="text-xs font-medium text-muted-foreground">Connection</p>
-      <p class="mt-1 text-sm">Local speech</p>
+      <p class="truncate text-sm font-medium">
+        {row?.instance.name ?? "Runtime unavailable"}
+      </p>
+      <p class="text-xs text-muted-foreground">
+        {provider?.name ?? row?.instance.provider ?? "Status unavailable"}
+      </p>
     </div>
     <Button
       variant="ghost"
       size="icon-sm"
-      aria-label="Manage local runtime"
-      title="Manage local runtime"
-      onclick={onManage}
+      aria-label="Manage runtime"
+      title="Manage runtime"
+      onclick={onManage}><SettingsIcon class="size-4" /></Button
     >
-      <SettingsIcon class="size-4" />
-    </Button>
   </div>
-  <div class="space-y-1.5">
-    <label for={`${uid}-model`} class="text-xs font-medium">Model</label>
-    <Select.Root
-      type="single"
-      value={status?.selectedModel ?? ""}
-      items={choices}
-      disabled={locked}
-      onValueChange={(id) => {
-        if (!locked) void runtime.useModel(id);
-      }}
-    >
-      <Select.Trigger id={`${uid}-model`} class="w-full">
-        <span class="truncate"
-          >{view.selected?.name ?? "Choose a downloaded model"}</span
+  {#if row}
+    <div class="space-y-1.5">
+      <label for={`${uid}-model`} class="text-xs font-medium"
+        >Selected model</label
+      >
+      <Select.Root
+        type="single"
+        value={row.instance.model}
+        items={choices}
+        disabled={locked || !models.length}
+        onValueChange={(model) => {
+          if (!locked && models.some((m) => m.id === model))
+            void runtime.saveInstance({ ...row.instance, model });
+        }}
+      >
+        <Select.Trigger id={`${uid}-model`} class="w-full"
+          ><span class="truncate">{selected?.name ?? row.instance.model}</span
+          ></Select.Trigger
         >
-      </Select.Trigger>
-      <Select.Content>
-        {#each status?.models ?? [] as model (model.id)}
-          <Select.Item
-            value={model.id}
-            label={model.name}
-            disabled={!model.installed}
-          >
-            {model.name}{!model.installed ? " · Not downloaded" : ""}
-          </Select.Item>
-        {/each}
-      </Select.Content>
-    </Select.Root>
-  </div>
+        <Select.Content
+          >{#each models as model (model.id)}<Select.Item
+              value={model.id}
+              label={model.name}>{model.name}</Select.Item
+            >{/each}</Select.Content
+        >
+      </Select.Root>
+    </div>
+  {/if}
   <div class="flex items-center justify-between gap-3">
     <p
       class="flex min-w-0 items-center gap-2 text-xs text-muted-foreground"
       role="status"
-      aria-live="polite"
     >
-      {#if runtime.busy}<LoaderCircleIcon
+      {#if operating}<LoaderCircleIcon
           class="size-3 shrink-0 animate-spin"
         />{/if}
-      <span
-        >{runtime.busy
-          ? runtime.pending || view.label
-          : view.ready
-            ? "Model ready"
-            : view.label}{backend ? ` · ${backend}` : ""}</span
-      >
+      {runtime.pendingFor(instanceID) || view.label}
     </p>
     <div class="flex shrink-0 items-center gap-1">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Refresh runtime status"
-        title="Refresh runtime status"
-        disabled={locked}
-        onclick={() => void runtime.run("RefreshCatalog")}
-        ><RefreshCwIcon class="size-3.5" /></Button
-      >
-      {#if runtime.busy}
+      {#if operating}
         <Button
           variant="ghost"
           size="sm"
-          disabled={disabled || runtime.pending === "Cancelling"}
-          onclick={() => void runtime.cancel()}>Cancel</Button
+          disabled={disabled || runtime.pendingFor(instanceID) === "Cancelling"}
+          onclick={() => void runtime.cancel(instanceID)}>Cancel</Button
         >
-      {:else if running}
+      {:else if status?.state === "running"}
         <Button
           variant="ghost"
           size="sm"
           disabled={locked}
-          onclick={() => void runtime.run("Stop")}
-          ><SquareIcon class="size-3.5" />Stop runtime</Button
+          onclick={() => void runtime.run(instanceID, "Stop")}
+          ><SquareIcon class="size-3.5" />Stop</Button
         >
       {:else}
         <Button
           variant="ghost"
           size="sm"
-          disabled={locked ||
-            !status?.enabled ||
-            !view.installed ||
-            !view.selected?.installed}
-          onclick={() => void runtime.run("Start")}
-          ><PlayIcon class="size-3.5" />Start runtime</Button
+          disabled={locked || !view.installed || !selected?.installed}
+          onclick={() => void runtime.run(instanceID, "Start")}
+          ><PlayIcon class="size-3.5" />Start</Button
         >
       {/if}
     </div>
   </div>
-  {#if !view.installed || !view.selected?.installed}
-    <Button variant="outline" size="sm" class="w-full" onclick={onManage}
-      >Set up local speech</Button
+  {#if row?.activeModel}<p class="break-all text-xs text-muted-foreground">
+      Active model: {row.activeModel}
+    </p>{/if}
+  {#if row?.activeModel && row.activeModel !== row.instance.model}<p
+      class="text-xs text-muted-foreground"
     >
-  {/if}
+      The active API model identity differs from the selected catalog key.
+    </p>{/if}
+  {#if !view.installed || !selected?.installed}<Button
+      variant="outline"
+      size="sm"
+      class="w-full"
+      onclick={onManage}>Set up runtime</Button
+    >{/if}
   {#if problem}<p class="text-xs text-destructive" role="alert">
       {problem}
     </p>{/if}
-  {#if !running && !runtime.busy && view.installed && view.selected?.installed}
-    <p class="text-xs text-muted-foreground">
-      Start the runtime to transcribe. No automatic server fallback.
-    </p>
-  {/if}
+  {#if row && !view.ready}<p class="text-xs text-muted-foreground">
+      This connection stays selected while unavailable. No automatic server
+      fallback.
+    </p>{/if}
 </div>

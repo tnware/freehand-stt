@@ -648,6 +648,26 @@ export class SettingsEditor {
     };
     this.#connectionBaseline = this.#connectionFields();
   }
+  setConnectionTarget(managedInstanceID: string | undefined) {
+    const form = this.connectionDraft;
+    if (!form || this.saving) return;
+    form.credentialDraft = "";
+    form.clearCredential = false;
+    this.apiKey = "";
+    this.processingAPIKey = "";
+    this.ttsAPIKey = "";
+    this.clearKey = this.clearProcessingKey = this.clearTTSKey = false;
+    form.details = {
+      ...(managedInstanceID !== undefined ? { managedInstanceID } : {}),
+      compatibilityProfile:
+        managedInstanceID !== undefined ? ID.$zero : ID.Generic,
+      baseURL: "",
+      allowInsecureHTTP: false,
+      authenticationMode: AuthenticationMode.AuthenticationModeNone,
+      healthPath: "",
+      headers: {},
+    };
+  }
   cancelConnectionEdit() {
     this.clearCredentialDraft();
   }
@@ -716,6 +736,28 @@ export class SettingsEditor {
       );
       return false;
     }
+    if (
+      change.details?.managedInstanceID !== undefined &&
+      change.details.managedInstanceID !== null
+    ) {
+      const details = change.details;
+      if (
+        !details.managedInstanceID ||
+        credentialDraft ||
+        clearCredential ||
+        details.baseURL ||
+        details.healthPath ||
+        Object.keys(details.headers ?? {}).length ||
+        details.allowInsecureHTTP ||
+        details.authenticationMode !== AuthenticationMode.AuthenticationModeNone
+      ) {
+        if (this.connectionDraft) this.connectionDraft.credentialDraft = "";
+        this.#messages.reportInfo(
+          "Managed connections require an instance and cannot contain a URL, headers, or credentials.",
+        );
+        return false;
+      }
+    }
     this.saving = true;
     this.#messages.clear();
     try {
@@ -783,9 +825,17 @@ export class SettingsEditor {
   }
   chooseModel(purpose: Purpose, model: string): boolean {
     // Metadata reads do not lock local model drafts; every mutation guard remains.
-    if (!this.draft || !this.applied || this.saving || this.setupCompleting ||
-      this.managedConnectionTesting || this.configurationRetrying ||
-      this.configurationResetting || this.quickSettingsPending.length > 0) return false;
+    if (
+      !this.draft ||
+      !this.applied ||
+      this.saving ||
+      this.setupCompleting ||
+      this.managedConnectionTesting ||
+      this.configurationRetrying ||
+      this.configurationResetting ||
+      this.quickSettingsPending.length > 0
+    )
+      return false;
     model = model.trim();
     if (model === modelFor(this.draft, purpose)) return true;
     this.#retainModelDraft(purpose);
@@ -1123,10 +1173,8 @@ export class SettingsEditor {
 
   #automaticMetadataInputs = $state<Partial<Record<Purpose, string>>>({});
   connectionMetadataResult(purpose: Purpose): ConnectionResult | null {
-    if (
-      !this.applied ||
-      this.connectionResultStale(purpose, this.applied)
-    ) return null;
+    if (!this.applied || this.connectionResultStale(purpose, this.applied))
+      return null;
     return purpose === Purpose.Voice
       ? this.currentVoiceConnection
       : purpose === Purpose.Transcription
@@ -1147,7 +1195,8 @@ export class SettingsEditor {
           ? "ready"
           : "empty";
     return this.applied &&
-      this.#automaticMetadataInputs[purpose] === connectionInputKey(this.applied, purpose)
+      this.#automaticMetadataInputs[purpose] ===
+        connectionInputKey(this.applied, purpose)
       ? "failed"
       : "idle";
   }

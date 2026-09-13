@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -114,8 +115,9 @@ func WithUpdateChecks(apply func(bool)) Option {
 }
 
 type Service struct {
-	managedResolve         func(managedruntime.Preferences) (managedruntime.Endpoint, error)
-	managedChanged         func(managedruntime.Preferences)
+	managedResolve         func(managedruntime.Instance, compatibility.Role) (managedruntime.ResolvedEndpoint, error)
+	managedChanged         func([]managedruntime.Instance)
+	managedReserve         func([]managedruntime.Instance) (*managedruntime.InventoryReservation, error)
 	mu                     sync.RWMutex
 	publicationMu          sync.Mutex // Serializes commits through runtime publication; callbacks may read settings.
 	saveMu                 sync.Mutex
@@ -174,10 +176,11 @@ type Source func() config.Settings
 func (source Source) Current() config.Settings { return source() }
 
 type RequestProfile struct {
-	Settings                 config.Settings
-	STTCredential            string
-	VoiceCredential          string
-	PostProcessingCredential string
+	Settings                  config.Settings
+	STTCredential             string
+	VoiceCredential           string
+	PostProcessingCredential  string
+	PostProcessingUnavailable error
 }
 
 type ProfileSource func() (RequestProfile, error)
@@ -228,6 +231,7 @@ func (s *Service) current() config.Settings {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	v := s.cfg
+	v.ManagedRuntimes = slices.Clone(v.ManagedRuntimes)
 	v.Headers = clone(v.Headers)
 	v.VoiceTranscription.Headers = clone(v.VoiceTranscription.Headers)
 	return v
@@ -278,7 +282,8 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 		profile.VoiceCredential = key
 		profile.STTCredential = key
 	}
-	if profile.Settings.PostProcessing.Enabled && s.processKeys != nil {
+	profile.Settings, profile.PostProcessingUnavailable = s.managedCleanup(profile.Settings)
+	if profile.Settings.PostProcessing.Enabled && profile.Settings.PostProcessing.ManagedInstanceID == "" && s.processKeys != nil {
 		key, err := s.processKeys.Get()
 		switch {
 		case err == nil:
@@ -303,7 +308,7 @@ func (s *Service) captureProfile(dictation bool) (RequestProfile, error) {
 			return RequestProfile{}, err
 		}
 	}
-	if profile.Settings.ManagedRuntime.Enabled {
+	if (!dictation && profile.Settings.ManagedInstanceID != "") || (dictation && profile.Settings.VoiceTranscription.ManagedInstanceID != "") {
 		if dictation {
 			if err := config.ValidateVoiceRecording(profile.Settings.VoiceTranscription); err != nil {
 				return RequestProfile{}, err
@@ -336,6 +341,9 @@ func (s *Service) captureTextToSpeechProfile(draft *TextToSpeechPreview) (TextTo
 		if math.IsNaN(draft.Speed) || math.IsInf(draft.Speed, 0) {
 			return TextToSpeechProfile{}, errors.New("speech preview speed must be finite")
 		}
+		if profile.Settings.ManagedInstanceID != "" && (strings.TrimSpace(draft.Model) != profile.Settings.Model || draft.ModelProfile != profile.Settings.ModelProfile) {
+			return TextToSpeechProfile{}, errors.New("speech preview cannot change the managed instance model or profile")
+		}
 		profile.Settings.Options = draft.Options
 		profile.Settings.Enabled = draft.Enabled
 		profile.Settings.ModelProfile = draft.ModelProfile
@@ -343,12 +351,21 @@ func (s *Service) captureTextToSpeechProfile(draft *TextToSpeechPreview) (TextTo
 		profile.Settings.Voice = strings.TrimSpace(draft.Voice)
 		profile.Settings.Speed = draft.Speed
 		profile.Settings.TimeoutSeconds = draft.TimeoutSeconds
-		if err := config.ValidateTextToSpeech(profile.Settings, true); err != nil {
-			return TextToSpeechProfile{}, err
-		}
+		// Validate the actual resolved transport below, after the bounded draft.
 	}
 	if !profile.Settings.Enabled {
 		return TextToSpeechProfile{}, errors.New("speech playback is disabled")
+	}
+	current.TextToSpeech = profile.Settings
+	resolved, err := s.managedSpeech(current)
+	if err != nil {
+		return TextToSpeechProfile{}, err
+	}
+	profile.Settings = resolved.TextToSpeech
+	if draft != nil || profile.Settings.ManagedInstanceID != "" {
+		if err := config.ValidateTextToSpeech(profile.Settings, true); err != nil {
+			return TextToSpeechProfile{}, err
+		}
 	}
 	if profile.Settings.AuthenticationMode == config.AuthenticationModeAPIKey {
 		if s.ttsKeys == nil {
@@ -531,6 +548,8 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 		if clearTTSKey && strings.TrimSpace(newTTSAPIKey) != "" {
 			return SettingsDTO{}, errors.New("cannot set and clear the speech playback API key together")
 		}
+		// Preserve authoritative inventory before connection projection and validation.
+		v.ManagedRuntimes = s.current().ManagedRuntimes
 		if request.ExpectedConnections != nil {
 			store, ok := s.store.(interface {
 				ConnectionCatalog() savedconnection.Catalog
@@ -626,9 +645,7 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 				return SettingsDTO{}, err
 			}
 		}
-		// Managed preferences have their own narrow mutation boundary. A stale
-		// settings editor must not undo a runtime selection or disable request.
-		v.ManagedRuntime = s.current().ManagedRuntime
+		// Runtime inventory has already been restored before task projection.
 		v.Model = strings.TrimSpace(v.Model)
 		v.PostProcessing.Model = strings.TrimSpace(v.PostProcessing.Model)
 		v.TextToSpeech.Model = strings.TrimSpace(v.TextToSpeech.Model)
@@ -821,12 +838,19 @@ func (s *Service) RetryConfiguration() (result SettingsDTO, err error) {
 		)
 		return result, nil
 	}
+	reservation, err := s.reserveManaged(next.ManagedRuntimes)
+	if err != nil {
+		s.saveMu.Unlock()
+		return SettingsDTO{}, err
+	}
+	defer reservation.Finish(false)
 	result, old, err := s.applyRecoveredSettingsLocked(next, false)
 	s.saveMu.Unlock()
 	if err != nil {
 		s.log().Warn("settings recovery apply failed", "duration_ms", time.Since(started).Milliseconds(), "error_kind", diagnostics.ErrorKind(err))
 		return SettingsDTO{}, err
 	}
+	reservation.Finish(true)
 	s.publishSettingsChange(old, next, result)
 	s.log().Info("settings recovery completed",
 		"duration_ms", time.Since(started).Milliseconds(),
@@ -854,19 +878,30 @@ func (s *Service) ResetConfiguration() (result SettingsDTO, err error) {
 		return result, nil
 	}
 	next := config.Default()
+	reservation, err := s.reserveManaged(next.ManagedRuntimes)
+	if err != nil {
+		s.saveMu.Unlock()
+		return SettingsDTO{}, err
+	}
+	defer reservation.Finish(false)
 	result, old, err := s.applyRecoveredSettingsLocked(next, true)
 	s.saveMu.Unlock()
 	if err != nil {
 		s.log().Warn("settings recovery reset failed", "duration_ms", time.Since(started).Milliseconds(), "error_kind", diagnostics.ErrorKind(err))
 		return SettingsDTO{}, err
 	}
+	reservation.Finish(true)
 	s.publishSettingsChange(old, next, result)
 	s.log().Info("settings recovery completed", "duration_ms", time.Since(started).Milliseconds(), "outcome", "reset")
 	return result, nil
 }
 
 func (s *Service) applyRecoveredSettingsLocked(next config.Settings, persist bool) (SettingsDTO, config.Settings, error) {
-	if err := config.Validate(next); err != nil {
+	validate := config.ValidateStored
+	if persist {
+		validate = config.Validate
+	}
+	if err := validate(next); err != nil {
 		return SettingsDTO{}, config.Settings{}, err
 	}
 	old := s.current()
@@ -903,7 +938,7 @@ func (s *Service) applyRecoveredSettingsLocked(next config.Settings, persist boo
 
 func (s *Service) publishSettingsChange(old, next config.Settings, result SettingsDTO) {
 	if s.managedChanged != nil {
-		s.managedChanged(next.ManagedRuntime)
+		s.managedChanged(slices.Clone(next.ManagedRuntimes))
 	}
 	if overlaySettingsDiffer(old, next) && s.overlaySettingsChanged != nil {
 		s.overlaySettingsChanged(next)

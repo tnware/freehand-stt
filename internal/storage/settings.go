@@ -5,6 +5,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
+	"github.com/tnware/freehand-stt/internal/managedruntime"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/storage/dbgen"
@@ -103,17 +104,17 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 	}); err != nil {
 		return err
 	}
-	return q.PutManagedRuntime(ctx, dbgen.PutManagedRuntimeParams{
-		Enabled: boolean(v.ManagedRuntime.Enabled), Model: v.ManagedRuntime.Model, Realtime: boolean(v.ManagedRuntime.Realtime),
-	})
+	return nil
 }
 func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error) {
 	v := config.Default()
-	managed, err := q.GetManagedRuntime(ctx)
-	if err != nil { return v, err }
-	v.ManagedRuntime.Enabled = managed.Enabled != 0
-	v.ManagedRuntime.Model = managed.Model
-	v.ManagedRuntime.Realtime = managed.Realtime != 0
+	managed, err := q.ListManagedInstances(ctx)
+	if err != nil {
+		return v, err
+	}
+	for _, i := range managed {
+		v.ManagedRuntimes = append(v.ManagedRuntimes, managedruntime.Instance{ID: i.ID, Name: i.Name, Provider: managedruntime.ProviderID(i.Provider), Model: i.Model, AutoStart: i.AutoStart != 0})
+	}
 	vocabulary, err := q.GetVocabulary(ctx)
 	if err != nil {
 		return v, err
@@ -215,7 +216,7 @@ func projectSelectedConnections(ctx context.Context, q *dbgen.Queries, v config.
 		return v, err
 	}
 	for _, row := range rows {
-		d := savedconnection.Details{CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), HealthPath: row.HealthPath, Headers: map[string]string{}}
+		d := savedconnection.Details{ManagedInstanceID: row.ManagedInstanceID.String, CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), HealthPath: row.HealthPath, Headers: map[string]string{}}
 		for _, h := range headers {
 			if h.ConnectionID == row.ID {
 				d.Headers[h.Name] = h.Value

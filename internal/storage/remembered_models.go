@@ -29,6 +29,16 @@ func (s *connectionState) forgetModels(id string) {
 	s.models = slices.DeleteFunc(s.models, func(e modelsettings.Entry) bool { return e.ConnectionID == id })
 }
 func (s connectionState) restoreModel(v config.Settings, p savedconnection.Purpose, id string) config.Settings {
+	if d := s.entries[id].Details; d.ManagedInstanceID != "" {
+		v = savedconnection.QualifyProjection(v, p, d.ManagedInstanceID)
+		for _, e := range s.models {
+			if e.ConnectionID == id && e.Purpose == p && e.Model == modelsettings.Model(v, p) {
+				v = modelsettings.Select(v, p, e.Model, e.Options)
+				break
+			}
+		}
+		return savedconnection.QualifyProjection(v, p, d.ManagedInstanceID)
+	}
 	for _, e := range s.models {
 		if e.ConnectionID == id && e.Purpose == p && e.Selected {
 			return modelsettings.Select(v, p, e.Model, e.Options)
@@ -52,7 +62,7 @@ func readRememberedModels(ctx context.Context, q *dbgen.Queries, state *connecti
 		if !ok || !c.Supports(e.Purpose) || counts[e.ConnectionID+":"+string(e.Purpose)] > modelsettings.MaxPerUse {
 			return errors.New("invalid remembered model owner or count")
 		}
-		if err := modelsettings.Validate(e, c.Details); err != nil {
+		if err := validateRememberedModel(e, c.Details, state.instances); err != nil {
 			return err
 		}
 		state.models = append(state.models, e)
@@ -114,7 +124,7 @@ func rememberActiveModels(state *connectionState, v config.Settings) error {
 			continue
 		}
 		e := modelsettings.Entry{ConnectionID: id, Purpose: p, Model: model, Selected: true, Options: modelsettings.Extract(v, p)}
-		if err := modelsettings.Validate(e, state.entries[id].Details); err != nil {
+		if err := validateRememberedModel(e, state.entries[id].Details, state.instances); err != nil {
 			return err
 		}
 		found := false
@@ -156,7 +166,7 @@ func (s *Store) BeginModelEdits(edits []modelsettings.Edit) error {
 		}
 		seen[key] = true
 		e := modelsettings.Entry{ConnectionID: edit.ConnectionID, Purpose: edit.Purpose, Model: edit.Model, Options: edit.Options}
-		if err := modelsettings.Validate(e, c.Details); err != nil {
+		if err := validateRememberedModel(e, c.Details, state.instances); err != nil {
 			return err
 		}
 		found := false

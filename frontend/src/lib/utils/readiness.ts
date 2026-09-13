@@ -1,4 +1,4 @@
-import type { Status as ManagedStatus } from "$bindings/managedruntime";
+import type { InstanceStatus } from "$bindings/managedruntime";
 import { runtimePresentation } from "$lib/utils/managedRuntime";
 import { platformPresentation } from "$lib/platform";
 import type { SettingsSectionID } from "$lib/navigation";
@@ -50,11 +50,16 @@ export function appReadiness(
   devices: Device[],
   devicesLoading: boolean,
   task: "voice" | "file" = "voice",
-  runtime?: ManagedStatus | null,
+  instance?: InstanceStatus | null,
 ): Readiness {
   const native = platformPresentation(settings.platform);
   const voice = task === "voice";
   const endpoint = voice ? settings.voiceTranscription : settings;
+  const managed = !!endpoint.managedInstanceID;
+  const runtime =
+    instance && instance.instance.id === endpoint.managedInstanceID
+      ? instance.status
+      : undefined;
   const hasCredential = voice
     ? !!settings.savedConnections.entries?.find(
         (c) => c.id === settings.savedConnections.selected?.voice,
@@ -161,7 +166,6 @@ export function appReadiness(
     },
   ];
 
-  const managed = runtime?.enabled ?? settings.managedRuntime?.enabled ?? false;
   if (managed) {
     const view = runtimePresentation(runtime);
     allSteps[0] = {
@@ -205,6 +209,7 @@ export function appReadiness(
   const recoveryKey = JSON.stringify({
     managed: managed
       ? {
+          instanceID: endpoint.managedInstanceID,
           state: runtime?.state,
           supported: runtime?.supported,
           model: runtime?.selectedModel,

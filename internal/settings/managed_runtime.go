@@ -2,29 +2,49 @@ package settings
 
 import (
 	"errors"
+	"net/url"
+	"reflect"
+	"slices"
+	"strconv"
+
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/managedruntime"
-	"github.com/tnware/freehand-stt/internal/modelprofile"
-	"net"
-	"net/url"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
 )
 
-// WithManagedRuntime injects endpoint resolution and a non-persisting apply hook.
-// Resolve receives the committed preferences so a transitioning runtime cannot
-// supply a previous model. Apply runs after commit, outside the settings locks.
-func WithManagedRuntime(resolve func(managedruntime.Preferences) (managedruntime.Endpoint, error), apply func(managedruntime.Preferences)) Option {
+// ErrManagedUnavailable distinguishes runtime admission from credential failure.
+var ErrManagedUnavailable = errors.New("managed runtime is unavailable; start or repair the selected instance")
+
+func WithManagedRuntimes(resolve func(managedruntime.Instance, compatibility.Role) (managedruntime.ResolvedEndpoint, error), apply func([]managedruntime.Instance)) Option {
 	return func(s *Service) { s.managedResolve = resolve; s.managedChanged = apply }
 }
 
-// SaveManagedPreferences is an ordinary Go persistence callback, not a binding.
-// The runtime save handshake holds no runtime lock. Publish the committed
-// preferences outside saveMu but inside publicationMu, so an earlier general
-// settings publication cannot override this commit's staged runtime snapshot.
-func SaveManagedPreferences(s *Service, p managedruntime.Preferences) error {
-	if err := managedruntime.Validate(p); err != nil {
+// WithManagedInventory reserves runtime ownership before durable inventory writes.
+// Publication belongs to the reservation, not the settings-change observer.
+func WithManagedInventory(reserve func([]managedruntime.Instance) (*managedruntime.InventoryReservation, error)) Option {
+	return func(s *Service) { s.managedReserve = reserve }
+}
+
+func (s *Service) reserveManaged(instances []managedruntime.Instance) (*managedruntime.InventoryReservation, error) {
+	if s.managedReserve == nil {
+		return nil, nil
+	}
+	return s.managedReserve(instances)
+}
+
+// SaveManagedInstances is the ordinary Go runtime persistence callback, not a binding.
+// Publication is serialized with all other settings commits, outside saveMu.
+func SaveManagedInstances(s *Service, instances []managedruntime.Instance) error {
+	instances = slices.Clone(instances)
+	if err := managedruntime.ValidateInstances(instances); err != nil {
 		return err
 	}
+	reservation, err := s.reserveManaged(instances)
+	if err != nil {
+		return err
+	}
+	defer reservation.Finish(false)
 	if !s.publicationMu.TryLock() {
 		return errors.New("settings are busy; try again")
 	}
@@ -34,11 +54,42 @@ func SaveManagedPreferences(s *Service, p managedruntime.Preferences) error {
 	}
 	if s.closed.Load() || s.configuration.RecoveryRequired {
 		s.saveMu.Unlock()
-		return errors.New("settings are unavailable; recover settings before changing managed speech")
+		return errors.New("settings are unavailable; recover settings before changing runtimes")
 	}
-	next := s.current()
-	next.ManagedRuntime = p
-	err := s.store.Save(next)
+	old := s.current()
+	next := old
+	next.ManagedRuntimes = instances
+	err = func() error {
+		for _, prev := range old.ManagedRuntimes {
+			for _, i := range instances {
+				if prev.ID == i.ID && prev.Provider != i.Provider {
+					return errors.New("runtime provider cannot change in place")
+				}
+			}
+		}
+		if store, ok := s.store.(interface {
+			ConnectionCatalog() savedconnection.Catalog
+		}); ok {
+			for _, c := range store.ConnectionCatalog().Entries {
+				if c.Details.ManagedInstanceID != "" {
+					for _, p := range c.Uses {
+						if _, _, err := config.ManagedContract(next, c.Details.ManagedInstanceID, roleForPurpose(p)); err != nil {
+							return err
+						}
+					}
+				}
+			}
+		}
+		if store, ok := s.store.(interface {
+			ApplySelectedConnections(config.Settings) config.Settings
+		}); ok {
+			next = store.ApplySelectedConnections(next)
+		}
+		if err := config.Validate(next); err != nil {
+			return err
+		}
+		return s.store.Save(next)
+	}()
 	if err != nil {
 		if failure := config.LoadFailureFor(err); failure.Kind == "commit_uncertain" {
 			s.configuration = ConfigurationStatus{RecoveryRequired: true, ErrorKind: failure.Kind, Message: failure.Message}
@@ -50,80 +101,188 @@ func SaveManagedPreferences(s *Service, p managedruntime.Preferences) error {
 	}
 	result := s.settingsSnapshotLocked()
 	s.saveMu.Unlock()
-	if err == nil && s.managedChanged != nil {
-		s.managedChanged(p)
-	}
-	if s.settingsChanged != nil && (err == nil || result.Configuration.RecoveryRequired) {
+	if err == nil {
+		reservation.Finish(true)
+		s.publishSettingsChange(old, next, result)
+	} else if result.Configuration.RecoveryRequired && s.settingsChanged != nil {
 		s.settingsChanged(result)
 	}
 	return err
 }
 
-// effectiveCurrent is an admission projection, never an editable or persisted
-// snapshot. Failure deliberately clears transcription peers; Capture reports
-// the actionable error and never retries the saved remote endpoint.
+func roleForPurpose(p savedconnection.Purpose) compatibility.Role {
+	switch p {
+	case savedconnection.Cleanup:
+		return compatibility.PostProcessing
+	case savedconnection.Speech:
+		return compatibility.Speech
+	default:
+		return compatibility.Transcription
+	}
+}
+
+func (s *Service) resolveManaged(v config.Settings, id string, role compatibility.Role) (managedruntime.ResolvedEndpoint, error) {
+	i, c, err := config.ManagedContract(v, id, role)
+	if err != nil || s.managedResolve == nil || s.closed.Load() || s.configuration.RecoveryRequired {
+		return managedruntime.ResolvedEndpoint{}, ErrManagedUnavailable
+	}
+	e, err := s.managedResolve(i, role)
+	if err != nil || e.InstanceID != i.ID || e.Provider != i.Provider || e.CatalogModel != i.Model || e.Generation == 0 || e.Model == "" || !reflect.DeepEqual(e.Contract, c) {
+		return managedruntime.ResolvedEndpoint{}, ErrManagedUnavailable
+	}
+	u, err := url.Parse(e.BaseURL)
+	if err != nil || u.Scheme != "http" || u.Hostname() != "127.0.0.1" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" {
+		return managedruntime.ResolvedEndpoint{}, ErrManagedUnavailable
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil || port < 1 || port > 65535 {
+		return managedruntime.ResolvedEndpoint{}, ErrManagedUnavailable
+	}
+	switch role {
+	case compatibility.PostProcessing:
+		err = config.ValidatePostProcessingConnection(e.BaseURL, true, e.Model)
+	case compatibility.Speech:
+		err = config.ValidateTextToSpeechConnection(e.BaseURL, true, config.AuthenticationModeNone, e.Model)
+	default:
+		err = config.ValidateSTTConnection(e.BaseURL, true, config.AuthenticationModeNone, e.Model, "", nil)
+	}
+	if err != nil {
+		return managedruntime.ResolvedEndpoint{}, ErrManagedUnavailable
+	}
+	return e, nil
+}
+
+// Only the requested role is projected. Task-owned options are not reset.
+func (s *Service) managedSettings(v config.Settings, voice bool) (config.Settings, error) {
+	id, role := v.ManagedInstanceID, compatibility.Transcription
+	if voice {
+		id = v.VoiceTranscription.ManagedInstanceID
+		if v.VoiceTranscription.Realtime {
+			role = compatibility.Realtime
+		}
+	}
+	if id == "" {
+		return v, nil
+	}
+	e, err := s.resolveManaged(v, id, role)
+	if err != nil {
+		return config.Settings{}, err
+	}
+	if voice {
+		r := &v.VoiceTranscription
+		r.BaseURL, r.Model = e.BaseURL, e.Model
+		r.CompatibilityProfile, r.ModelProfile = e.Contract.CompatibilityProfile, e.Contract.ModelProfile
+		r.AllowInsecureHTTP = true
+		r.AuthenticationMode = config.AuthenticationModeNone
+		r.Headers = map[string]string{}
+		r.HealthPath = ""
+	} else {
+		v.BaseURL, v.Model = e.BaseURL, e.Model
+		v.CompatibilityProfile, v.ModelProfile = e.Contract.CompatibilityProfile, e.Contract.ModelProfile
+		v.AllowInsecureHTTP = true
+		v.AuthenticationMode = config.AuthenticationModeNone
+		v.Headers = map[string]string{}
+		v.HealthPath = ""
+	}
+	return v, nil
+}
+func (s *Service) managedCleanup(v config.Settings) (config.Settings, error) {
+	p := &v.PostProcessing
+	if !p.Enabled || p.ManagedInstanceID == "" {
+		return v, nil
+	}
+	e, err := s.resolveManaged(v, p.ManagedInstanceID, compatibility.PostProcessing)
+	if err != nil {
+		p.BaseURL = ""
+		return v, err
+	}
+	p.BaseURL, p.Model = e.BaseURL, e.Model
+	p.AllowInsecureHTTP = true
+	p.CompatibilityProfile = e.Contract.CompatibilityProfile
+	p.Preset = config.PostProcessingPreset(e.Contract.ModelProfile)
+	return v, nil
+}
+func (s *Service) managedSpeech(v config.Settings) (config.Settings, error) {
+	p := &v.TextToSpeech
+	if !p.Enabled || p.ManagedInstanceID == "" {
+		return v, nil
+	}
+	e, err := s.resolveManaged(v, p.ManagedInstanceID, compatibility.Speech)
+	if err != nil {
+		p.BaseURL = ""
+		p.AuthenticationMode = config.AuthenticationModeNone
+		return v, err
+	}
+	p.BaseURL, p.Model = e.BaseURL, e.Model
+	p.AllowInsecureHTTP = true
+	p.AuthenticationMode = config.AuthenticationModeNone
+	p.CompatibilityProfile, p.ModelProfile = e.Contract.CompatibilityProfile, e.Contract.ModelProfile
+	return v, nil
+}
+
+// CurrentSource is admission-only; never destroy another task's manual transport.
 func (s *Service) effectiveCurrent() config.Settings {
 	s.saveMu.Lock()
 	defer s.saveMu.Unlock()
 	v := s.current()
-	if !v.ManagedRuntime.Enabled {
-		return v
-	}
-	if !s.configuration.RecoveryRequired && !s.closed.Load() {
-		if next, err := s.managedSettings(v, true); err == nil {
-			return next
+	for _, voice := range []bool{false, true} {
+		next, err := s.managedSettings(v, voice)
+		if err == nil {
+			v = next
+			continue
+		}
+		if voice {
+			r := &v.VoiceTranscription
+			r.BaseURL = ""
+			r.HealthPath = ""
+			r.Headers = map[string]string{}
+			r.AuthenticationMode = config.AuthenticationModeNone
+		} else {
+			v.BaseURL = ""
+			v.HealthPath = ""
+			v.Headers = map[string]string{}
+			v.AuthenticationMode = config.AuthenticationModeNone
 		}
 	}
-	v.BaseURL, v.Model, v.HealthPath = "", "", ""
-	v.AuthenticationMode = config.AuthenticationModeNone
-	v.Headers = map[string]string{}
-	v.VoiceTranscription = config.DefaultVoiceTranscription()
+	v, _ = s.managedCleanup(v)
+	v, _ = s.managedSpeech(v)
 	return v
 }
 
-func (s *Service) managedSettings(v config.Settings, voice bool) (config.Settings, error) {
-	if !v.ManagedRuntime.Enabled {
-		return v, nil
+type connectionResolver struct{ service *Service }
+
+// ConnectionResolver exposes metadata resolution only through an unbound wrapper.
+func ConnectionResolver(s *Service) *connectionResolver { return &connectionResolver{service: s} }
+func (r *connectionResolver) ResolveSavedConnection(id string) (savedconnection.Connection, string, error) {
+	s := r.service
+	s.saveMu.Lock()
+	defer s.saveMu.Unlock()
+	store, ok := s.store.(interface {
+		ResolveSavedConnection(string) (savedconnection.Connection, string, error)
+	})
+	if !ok {
+		return savedconnection.Connection{}, "", errors.New("saved connections are unavailable")
 	}
-	if s.managedResolve == nil {
-		return config.Settings{}, errors.New("local speech runtime is unavailable")
-	}
-	endpoint, err := s.managedResolve(v.ManagedRuntime)
+	c, key, err := store.ResolveSavedConnection(id)
 	if err != nil {
-		return config.Settings{}, errors.New("local speech runtime is not ready")
+		return savedconnection.Connection{}, "", err
 	}
-	if !endpoint.Enabled || endpoint.BaseURL == "" || endpoint.Model == "" {
-		return config.Settings{}, errors.New("local speech runtime is not ready")
+	if c.Details.ManagedInstanceID == "" {
+		return c, key, nil
 	}
-	u, parseErr := url.Parse(endpoint.BaseURL)
-	if parseErr != nil || u.Scheme != "http" || !net.ParseIP(u.Hostname()).IsLoopback() {
-		return config.Settings{}, errors.New("local speech runtime endpoint is invalid")
+	if len(c.Uses) == 0 {
+		return savedconnection.Connection{}, "", ErrManagedUnavailable
 	}
-	if err := config.ValidateSTTConnection(endpoint.BaseURL, true, config.AuthenticationModeNone, endpoint.Model, "", nil); err != nil {
-		return config.Settings{}, errors.New("local speech runtime endpoint is invalid")
+	e, err := s.resolveManaged(s.current(), c.Details.ManagedInstanceID, roleForPurpose(c.Uses[0]))
+	if err != nil {
+		return savedconnection.Connection{}, "", err
 	}
-	v.BaseURL, v.Model = endpoint.BaseURL, endpoint.Model
-	v.ModelProfile = modelprofile.ID(endpoint.Profile)
-	v.CompatibilityProfile = compatibility.NeMoSpeechV1
-	v.AuthenticationMode = config.AuthenticationModeNone
-	v.AllowInsecureHTTP = true // Only the owned loopback peer validated above.
-	v.Headers = map[string]string{}
-	v.HealthPath = ""
-	v.TranscriptionOptions = config.TranscriptionOptions{}
-	if v.Language == "" {
-		v.Language = "auto"
+	c.Details = savedconnection.Details{BaseURL: e.BaseURL, AllowInsecureHTTP: true, AuthenticationMode: config.AuthenticationModeNone, CompatibilityProfile: e.Contract.CompatibilityProfile, Headers: map[string]string{}}
+	c.HasCredential = false
+	for _, p := range c.Uses {
+		if err := savedconnection.Validate(p, c.Details); err != nil {
+			return savedconnection.Connection{}, "", ErrManagedUnavailable
+		}
 	}
-	r := &v.VoiceTranscription
-	r.BaseURL, r.Model = endpoint.BaseURL, endpoint.Model
-	r.ModelProfile, r.CompatibilityProfile = v.ModelProfile, v.CompatibilityProfile
-	r.AuthenticationMode = config.AuthenticationModeNone
-	r.AllowInsecureHTTP = true
-	r.Headers = map[string]string{}
-	r.HealthPath = ""
-	r.TranscriptionOptions = config.TranscriptionOptions{}
-	r.Realtime = voice && endpoint.Realtime
-	if r.Language == "" {
-		r.Language = "auto"
-	}
-	return v, nil
+	return c, "", nil
 }

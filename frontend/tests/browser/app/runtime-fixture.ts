@@ -1,6 +1,13 @@
-import type { Preferences, Status } from "$bindings/managedruntime";
+import type {
+  Instance,
+  InstanceStatus,
+  Status,
+  ProviderDescriptor,
+} from "$bindings/managedruntime";
 import type { ManagedRuntimeService } from "$lib/stores/managed-runtime.svelte";
 import { ID, type Profile } from "$bindings/modelprofile";
+import { ProviderID } from "$bindings/managedruntime";
+import { ID as CompatibilityID, Role } from "$bindings/compatibility";
 
 // Small UI-only contract fixture; production catalog metadata comes from Go.
 const nemotron: Profile = {
@@ -46,155 +53,217 @@ const parakeet: Profile = {
   },
 };
 
-/** Deterministic UI fixture only: no network, installation, or inference. */
+/** UI boundary fixture only; no native installation or inference acceptance. */
 export function createRuntimeFixture(
   supported: boolean,
-  preferencesChanged: (p: Preferences) => void,
-  ready = false,
+  preferencesChanged: (instances: Instance[]) => void,
+  ready = true,
 ) {
-  let status: Status = {
-    supported,
-    state: "not_installed",
-    enabled: false,
-    selectedModel: "nemotron-3.5",
-    realtime: true,
-    backend: "",
-    version: "",
-    progress: -1,
-    phase: "",
-    error: "",
-    models: [
-      {
-        id: "nemotron-3.5",
-        name: "Nemotron 3.5",
-        description: "Live streaming speech recognition",
-        sizeBytes: 1_500_000_000,
-        installed: false,
-        recommended: true,
-        realtime: true,
-        profile: "nemotron-3.5-streaming",
-        behavior: nemotron,
-      },
-      {
-        id: "parakeet-tdt",
-        name: "Parakeet v3",
-        description: "Completed multilingual transcription",
-        sizeBytes: 1_200_000_000,
-        installed: false,
-        recommended: false,
-        realtime: false,
-        profile: "parakeet-tdt-v3",
-        behavior: parakeet,
-      },
-    ],
-  };
-  if (ready) {
-    status = {
-      ...status,
-      enabled: true,
-      state: "running",
-      backend: "cuda",
-      version: "0.1.0",
-      models:
-        status.models?.map((model) => ({ ...model, installed: true })) ?? [],
-    };
-    preferencesChanged({
-      enabled: true,
-      model: status.selectedModel,
+  const models = [
+    {
+      id: "nemotron-3.5",
+      name: "Nemotron 3.5 Streaming",
+      description: "Multilingual speech recognition with realtime dictation.",
+      sizeBytes: 0,
+      installed: false,
+      recommended: true,
       realtime: true,
-    });
-  }
-  let downloading = "";
+      profile: "nemotron-3.5-streaming",
+      behavior: nemotron,
+      contracts: [Role.Transcription, Role.Realtime].map((role) => ({
+        role,
+        compatibilityProfile: CompatibilityID.NeMoSpeechV1,
+        modelProfile: ID.Nemotron35,
+        behavior: nemotron,
+      })),
+    },
+    {
+      id: "parakeet-tdt",
+      name: "Parakeet TDT v3",
+      description: "Multilingual completed speech recognition.",
+      sizeBytes: 0,
+      installed: false,
+      recommended: false,
+      realtime: false,
+      profile: "parakeet-tdt-v3",
+      behavior: parakeet,
+      contracts: [
+        {
+          role: Role.Transcription,
+          compatibilityProfile: CompatibilityID.NeMoSpeechV1,
+          modelProfile: ID.ParakeetTDT,
+          behavior: parakeet,
+        },
+      ],
+    },
+  ];
+  const providers: ProviderDescriptor[] = [
+    {
+      id: ProviderID.NeMoSpeechCPP,
+      name: "NeMo-Speech.cpp",
+      version: "0.1.0",
+      supported,
+      models,
+    },
+  ];
+  const initial = (instance: Instance): InstanceStatus => ({
+    instance,
+    activeModel: "",
+    status: {
+      supported,
+      state: "not_installed",
+      enabled: false,
+      realtime: false,
+      selectedModel: instance.model,
+      backend: "",
+      version: "",
+      progress: -1,
+      phase: "",
+      error: "",
+      models: structuredClone(models),
+    },
+  });
+  let rows: InstanceStatus[] = ready
+    ? [
+        initial({
+          id: "nemo-default",
+          name: "Local speech",
+          provider: providers[0].id,
+          model: "nemotron-3.5",
+          autoStart: false,
+        }),
+      ]
+    : [];
+  if (ready)
+    rows[0] = {
+      ...rows[0],
+      activeModel: "nemotron-3.5",
+      status: {
+        ...rows[0].status,
+        state: "running",
+        backend: "cpu",
+        version: "0.1.0",
+        models: models.map((m) => ({ ...m, installed: true })),
+      },
+    };
+  const preferences = () =>
+    preferencesChanged(structuredClone(rows.map((r) => r.instance)));
+  preferences();
   const calls: string[] = [];
-  const snapshot = () => structuredClone(status);
-  let publish: (status: Status) => void = () => {};
-  const emit = () => publish(snapshot());
-  const change = (patch: Partial<Status>) => {
-    status = { ...status, ...patch };
-    emit();
+  const downloading = new Map<string, string>();
+  let publish: (row: InstanceStatus) => void = () => {};
+  const get = (id: string) => {
+    const row = rows.find((r) => r.instance.id === id);
+    if (!row) throw new Error("Unknown fixture instance");
+    return row;
+  };
+  const change = (id: string, patch: Partial<Status>) => {
+    const row = get(id);
+    row.status = { ...row.status, ...patch };
+    row.activeModel = row.status.state === "running" ? row.instance.model : "";
+    publish(structuredClone(row));
   };
   const service: ManagedRuntimeService = {
-    GetStatus: async () => snapshot(),
-    SetPreferences: async (p) => {
-      calls.push("SetPreferences");
-      const stops = !p.enabled || p.model !== status.selectedModel;
-      change({
-        enabled: p.enabled,
-        selectedModel: p.model,
-        realtime: p.realtime,
-        state: stops && status.version ? "stopped" : status.state,
+    GetInstances: async () => structuredClone(rows),
+    GetProviders: async () => structuredClone(providers),
+    SetInstance: async (instance) => {
+      calls.push(`SetInstance:${instance.id}`);
+      const old = rows.find((r) => r.instance.id === instance.id);
+      const row = old ?? initial(instance);
+      row.status.selectedModel = instance.model;
+      if (old && old.instance.model !== instance.model) {
+        row.status.state = "stopped";
+        row.activeModel = "";
+      }
+      row.instance = structuredClone(instance);
+      if (!old) rows.push(row);
+      preferences();
+      publish(structuredClone(row));
+    },
+    DeleteInstance: async ({ instanceID }) => {
+      calls.push(`DeleteInstance:${instanceID}`);
+      rows = rows.filter((r) => r.instance.id !== instanceID);
+      preferences();
+    },
+    Install: async ({ instanceID }) => {
+      calls.push(`Install:${instanceID}`);
+      change(instanceID, {
+        state: "installed",
+        backend: "cpu",
+        version: "0.1.0",
       });
-      preferencesChanged(p);
     },
-    RefreshCatalog: async () => {
-      calls.push("RefreshCatalog");
+    Start: async ({ instanceID }) => {
+      calls.push(`Start:${instanceID}`);
+      change(instanceID, { state: "running", phase: "", progress: -1 });
     },
-    Install: async () => {
-      calls.push("Install");
-      change({ state: "installed", version: "v0.1.0", backend: "cpu" });
+    Stop: async ({ instanceID }) => {
+      calls.push(`Stop:${instanceID}`);
+      change(instanceID, { state: "stopped", phase: "", progress: -1 });
     },
-    Start: async () => {
-      calls.push("Start");
-      change({ state: "running", phase: "", progress: -1 });
+    Cancel: async ({ instanceID }) => {
+      calls.push(`Cancel:${instanceID}`);
+      downloading.delete(instanceID);
+      change(instanceID, { state: "installed", phase: "", progress: -1 });
     },
-    Stop: async () => {
-      calls.push("Stop");
-      change({ state: "stopped", phase: "", progress: -1 });
+    RefreshCatalog: async ({ instanceID }) => {
+      calls.push(`RefreshCatalog:${instanceID}`);
     },
-    Cancel: async () => {
-      calls.push("Cancel");
-      downloading = "";
-      change({ state: "installed", phase: "", progress: -1 });
-    },
-    Remove: async () => {
-      calls.push("Remove");
-      change({
+    Remove: async ({ instanceID }) => {
+      calls.push(`Remove:${instanceID}`);
+      change(instanceID, {
         state: "not_installed",
-        version: "",
         backend: "",
-        models: (status.models ?? []).map((m) => ({ ...m, installed: false })),
+        version: "",
+        models:
+          get(instanceID).status.models?.map((m) => ({
+            ...m,
+            installed: false,
+          })) ?? [],
       });
     },
-    DownloadModel: async (id) => {
-      calls.push(`DownloadModel:${id}`);
-      downloading = id;
-      change({ state: "installing", phase: "Downloading model", progress: -1 });
+    DownloadModel: async ({ instanceID, model }) => {
+      calls.push(`DownloadModel:${instanceID}:${model}`);
+      downloading.set(instanceID, model);
+      change(instanceID, { phase: "download", progress: -1 });
     },
-    RemoveModel: async (id) => {
-      calls.push(`RemoveModel:${id}`);
-      change({
-        state: id === status.selectedModel ? "installed" : status.state,
-        models: (status.models ?? []).map((m) =>
-          m.id === id ? { ...m, installed: false } : m,
-        ),
+    RemoveModel: async ({ instanceID, model }) => {
+      calls.push(`RemoveModel:${instanceID}:${model}`);
+      change(instanceID, {
+        state: "installed",
+        models:
+          get(instanceID).status.models?.map((m) =>
+            m.id === model ? { ...m, installed: false } : m,
+          ) ?? [],
       });
     },
   };
   const control = {
     calls,
     change,
-    finishDownload: () => {
-      if (!downloading) throw new Error("No pending fixture download");
-      change({
-        models: (status.models ?? []).map((m) =>
-          m.id === downloading ? { ...m, installed: true } : m,
-        ),
-        state: "installed",
+    finishDownload: (instanceID: string) => {
+      const model = downloading.get(instanceID);
+      if (!model) throw new Error("No pending fixture download");
+      change(instanceID, {
         phase: "",
         progress: -1,
+        models:
+          get(instanceID).status.models?.map((m) =>
+            m.id === model ? { ...m, installed: true } : m,
+          ) ?? [],
       });
-      downloading = "";
+      downloading.delete(instanceID);
     },
   };
   return {
     service,
+    providers,
     control,
-    subscribe: (callback: (status: Status) => void) => {
+    subscribe: (callback: (row: InstanceStatus) => void) => {
       publish = callback;
     },
   };
 }
-
 declare global {
   interface Window {
     testRuntime: ReturnType<typeof createRuntimeFixture>["control"];

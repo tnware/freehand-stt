@@ -17,11 +17,14 @@ readiness timeout, port conflicts, and shutdown during install/pull/start/run.
 Windows process tests must prove descendants cannot outlive the owner's Job
 Object, not just that the immediate child receives a kill request.
 
-Real SQLite tests exercise the forward migration from the clean baseline,
-disabled defaults, save/reopen, and failed persistence. Settings tests prove
-managed Voice realtime and completed-file snapshots keep manual endpoint
-credentials/headers out, preserve manual configuration, and reject unavailable
-managed endpoints without remote fallback. Existing realtime fixtures continue
+Real SQLite tests exercise the forward instance migration, fresh empty inventory,
+enabled/disabled checkpoint upgrades, save/reopen, and failed persistence.
+Settings tests prove independent task selection, credential-free managed request
+snapshots, rejected unsupported roles, and unavailable-instance admission without
+remote fallback. Runtime tests exercise independent worker lifetime, retired
+directory ownership, stale endpoint generations, and the shared shutdown bound.
+Assert external behavior at these boundaries rather than source strings, markup
+snapshots, or private call ordering. Existing realtime fixtures continue
 to check loaded-model identity, final-only delivery, and no automatic replay.
 
 `TestManagedEndpointReachesSpeechClients` passes the real adapter's published
@@ -34,7 +37,7 @@ Browser fixtures should cover a fresh installation with no manual connections,
 recommended Nemotron realtime setup, supported catalog browsing without pulls,
 explicit download/cancel/retry, switching models, unsupported realtime, status
 refresh across windows, removal confirmation, and dirty-draft protection.
-At compact desktop sizes, assert that enable, install, selected-model download,
+At compact desktop sizes, assert that instance creation, install, selected-model download,
 progress/cancel, and start/stop remain in view without scrolling or Playwright's
 automatic click scrolling. Download completion must not implicitly start inference.
 Exercise keyboard navigation, narrow layouts, light/dark appearance, and reduced
@@ -44,8 +47,9 @@ Native acceptance uses only the explicitly selected model. Check installation
 from an official verified archive, NeMo's model pull, a real ready listener,
 realtime microphone finals, completed files, Stop/Start, Quit during a model
 download, restart, and complete removal. Verify no listener binds to the LAN,
-no child remains after exit, and manual connections still work after managed
-mode is disabled. No model inventory inference belongs in CI. See the
+no child remains after exit, and manual connections still work when explicitly
+selected again. Browser fixtures are not native inference evidence. No model
+inventory inference belongs in CI. See the
 [Windows checklist](../../safety/native-test-checklist/#managed-local-runtime).
 
 ## Shortcut recovery regression checks

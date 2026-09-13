@@ -35,6 +35,7 @@ Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 w
 
 ## Architecture
 
+- Follow [ADR 0016](site/src/content/docs/docs/decisions/0016-managed-runtime-connections.md) for the multi-adapter cutover: runtime instances own installation, model loading, and process lifetime; saved Connections own independent task selection. Keep runtime inventory management separate but linked from Connections and quick settings. Realtime belongs to Voice; S1-mini belongs to cleanup model behavior, not a separate runtime adapter. Preserve ADR 0015's acquisition/native safeguards, and remove the singleton routing authority rather than maintaining both designs.
 - Go owns runtime state, hotkeys, audio, network requests, credential access, focus-safe insertion, startup registration, native platform adapters, and service shutdown.
 - Wails v3.0.0-beta.16 owns the interactive settings shell, renderer bindings, tray, and single-instance application lifecycle. Svelte 5 owns settings/status presentation. The passive focus-sensitive overlay is native Win32 on Windows and a nonactivating, click-through Cocoa NSPanel on macOS.
 - Keep domain code under `internal/<domain>` and keep root `main.go` as composition/lifecycle wiring.

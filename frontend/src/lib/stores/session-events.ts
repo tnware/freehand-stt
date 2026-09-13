@@ -1,4 +1,4 @@
-import type { Status as ManagedStatus } from "$bindings/managedruntime";
+import type { InstanceStatus } from "$bindings/managedruntime";
 import { Events } from "@wailsio/runtime";
 import {
   FileTranscriptionPhase,
@@ -12,7 +12,7 @@ import {
 import type { Session } from "./session.svelte";
 
 export interface SessionEventMap {
-  "managed-runtime:status": ManagedStatus;
+  "managed-runtime:status": InstanceStatus;
   "dictation:status": Status;
   "file-transcription:status": FileTranscriptionStatus;
   "file-transcription:delta": FileTranscriptionDelta;

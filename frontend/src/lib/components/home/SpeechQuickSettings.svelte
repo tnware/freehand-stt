@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import SpeechModelControls from "../settings/SpeechModelControls.svelte";
   import type { QuickSettingsPatch } from "$lib/stores/editor.svelte";
@@ -14,12 +15,16 @@
 
   let {
     settings,
+    runtime,
+    onManageRuntime = () => {},
     editor,
     disabled,
     onAddConnection,
     onOpenSettings,
   }: {
     settings: Settings;
+    runtime?: ManagedRuntimeState;
+    onManageRuntime?: () => void;
     editor: SettingsEditor;
     disabled: boolean;
     onAddConnection: (purpose: Purpose) => void;
@@ -27,13 +32,19 @@
   } = $props();
   let open = $state(false);
   const speech = $derived(settings.textToSpeech);
-  const busy = $derived(disabled || editor.isQuickSettingsPending("speech-controls"));
+  const busy = $derived(
+    disabled || editor.isQuickSettingsPending("speech-controls"),
+  );
   function update(textToSpeech: QuickSettingsPatch["textToSpeech"]) {
     return editor.updateQuickSettings({ textToSpeech }, "speech-controls");
   }
 </script>
 
-<div class="flex min-w-0 items-center gap-2" role="group" aria-label="Speech quick settings">
+<div
+  class="flex min-w-0 items-center gap-2"
+  role="group"
+  aria-label="Speech quick settings"
+>
   <Popover.Root bind:open>
     <Popover.Trigger
       {disabled}
@@ -48,10 +59,16 @@
       <span class="text-[13px]">Speech</span>
       <ChevronDownIcon class="size-3 text-muted-foreground" />
     </Popover.Trigger>
-    <Popover.Content role="dialog" aria-label="Speech settings" class="space-y-4">
+    <Popover.Content
+      role="dialog"
+      aria-label="Speech settings"
+      class="space-y-4"
+    >
       <h3 class="text-sm font-semibold">Text to speech</h3>
       <div class="space-y-1.5">
-        <label for="home-speech-connection" class="text-xs font-medium">Connection</label>
+        <label for="home-speech-connection" class="text-xs font-medium"
+          >Connection</label
+        >
         <ConnectionSelect
           id="home-speech-connection"
           catalog={settings.savedConnections}
@@ -65,13 +82,20 @@
         />
       </div>
       <SpeechModelControls
-        onEnter={() => void editor.ensureConnectionMetadata(Purpose.Speech, true)}
+        {runtime}
+        onManageRuntime={() => {
+          open = false;
+          onManageRuntime();
+        }}
+        onEnter={() =>
+          void editor.ensureConnectionMetadata(Purpose.Speech, true)}
         metadataStatus={editor.connectionMetadataStatus(Purpose.Speech)}
         {settings}
         compact
         immediate
         busy={busy || !settings.savedConnections.selected?.speech}
-        models={editor.ttsConnectionStale || editor.connectionResultStale(Purpose.Speech, settings)
+        models={editor.ttsConnectionStale ||
+        editor.connectionResultStale(Purpose.Speech, settings)
           ? []
           : (editor.ttsConnection?.modelIDs ?? [])}
         modelsBusy={editor.ttsConnectionTesting}

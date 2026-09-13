@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
+  import ManagedRuntimeControls from "$lib/components/home/ManagedRuntimeControls.svelte";
   import { Purpose } from "$bindings/savedconnection";
   import { rememberedModels } from "$lib/utils/modelSettings";
   import { ID } from "$bindings/compatibility";
@@ -22,6 +24,8 @@
   import RequestSettings from "$lib/components/settings/RequestSettings.svelte";
   let {
     settings = $bindable(),
+    runtime,
+    onManageRuntime = () => {},
     profiles,
     connection,
     busy = false,
@@ -34,6 +38,8 @@
     onTestConnection,
   }: {
     settings: Settings;
+    runtime?: ManagedRuntimeState;
+    onManageRuntime?: () => void;
     profiles: ProfileDescriptor[];
     connection: ConnectionResult | null;
     busy?: boolean;
@@ -51,9 +57,13 @@
       (p) => String(p.id) === (processor.preset || ID.Generic),
     ),
   );
-  const selectedProfile = $derived(processingProfile(profiles, processor.preset));
+  const selectedProfile = $derived(
+    processingProfile(profiles, processor.preset),
+  );
   function updateS1Mini(
-    patch: Partial<Pick<Settings["postProcessing"], "styling" | "structure" | "context">>,
+    patch: Partial<
+      Pick<Settings["postProcessing"], "styling" | "structure" | "context">
+    >,
   ) {
     Object.assign(settings.postProcessing, patch);
   }
@@ -72,31 +82,44 @@
           aria-label="Post-process completed transcripts"
         />{/snippet}</SettingRow
     >
-    <RuntimeModelPicker
-      showProfileName={false}
-      profileName={compatibility?.name ?? processor.preset}
-      id="cleanup-model"
-      value={settings.postProcessing.model}
-      {draftModels}
-      {onEnter}
-      {metadataStatus}
-      onChoose={onChooseModel}
-      onForget={onForgetModel}
-      savedModels={rememberedModels(settings, Purpose.Cleanup).map((e) => e.model)}
-      models={connectionStale ? [] : (connection?.modelIDs ?? [])}
-      {busy}
-      onDiscover={onTestConnection}
-    />
+    {#if processor.managedInstanceID}
+      {#if runtime}
+        <ManagedRuntimeControls
+          {runtime}
+          instanceID={processor.managedInstanceID}
+          disabled={busy}
+          onManage={onManageRuntime}
+        />
+      {/if}
+    {:else}
+      <RuntimeModelPicker
+        showProfileName={false}
+        profileName={compatibility?.name ?? processor.preset}
+        id="cleanup-model"
+        value={settings.postProcessing.model}
+        {draftModels}
+        {onEnter}
+        {metadataStatus}
+        onChoose={onChooseModel}
+        onForget={onForgetModel}
+        savedModels={rememberedModels(settings, Purpose.Cleanup).map(
+          (e) => e.model,
+        )}
+        models={connectionStale ? [] : (connection?.modelIDs ?? [])}
+        {busy}
+        onDiscover={onTestConnection}
+      />
 
-    <ModelProfilePicker
-      id="cleanup-model-profile"
-      value={processor.preset}
-      profiles={settings.modelProfiles.postProcessing ?? []}
-      onChange={(id) => {
-        const profile = profiles.find((p) => String(p.id) === id);
-        if (profile) settings.postProcessing.preset = profile.id;
-      }}
-    />
+      <ModelProfilePicker
+        id="cleanup-model-profile"
+        value={processor.preset}
+        profiles={settings.modelProfiles.postProcessing ?? []}
+        onChange={(id) => {
+          const profile = profiles.find((p) => String(p.id) === id);
+          if (profile) settings.postProcessing.preset = profile.id;
+        }}
+      />
+    {/if}
   </SettingsCard>
 
   {#if selectedProfile?.id === PostProcessingPreset.PostProcessingPresetS1Mini}
@@ -119,7 +142,12 @@
     s1Mini={!!compatibility?.reasoningOffRequired}
   />
 
-  <RequestSettings {connection} stale={connectionStale} {busy} onCheck={onTestConnection}>
+  <RequestSettings
+    {connection}
+    stale={connectionStale}
+    {busy}
+    onCheck={onTestConnection}
+  >
     <ValueRow
       id="cleanup-timeout"
       label="Request timeout"
@@ -134,9 +162,9 @@
         />{/snippet}</ValueRow
     >
     <p class="px-5 py-4 text-xs leading-relaxed text-muted-foreground">
-      Raw transcription completes before cleanup starts. With history enabled, raw and cleaned text
-      are saved together. Connection checks stop after 15 seconds. Cleanup requests are capped at 2
-      MiB and responses at 1 MiB.
+      Raw transcription completes before cleanup starts. With history enabled,
+      raw and cleaned text are saved together. Connection checks stop after 15
+      seconds. Cleanup requests are capped at 2 MiB and responses at 1 MiB.
     </p>
   </RequestSettings>
 </div>

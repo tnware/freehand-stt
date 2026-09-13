@@ -1,4 +1,7 @@
 <script lang="ts">
+  import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
+  import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
+  import VocabularyLink from "../settings/VocabularyLink.svelte";
   import RuntimeModelPicker from "../settings/RuntimeModelPicker.svelte";
   import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import { rememberedModels } from "$lib/utils/modelSettings";
@@ -20,12 +23,23 @@
     type ProfileDescriptor,
     type Settings,
   } from "$lib/state";
-  import type { QuickSettingsField, QuickSettingsPatch } from "$lib/stores/editor.svelte";
-  import { connectionStatusLabel, connectionSucceeded } from "$lib/utils/connection";
+  import type {
+    QuickSettingsField,
+    QuickSettingsPatch,
+  } from "$lib/stores/editor.svelte";
+  import {
+    connectionStatusLabel,
+    connectionSucceeded,
+  } from "$lib/utils/connection";
   import { processingProfileName } from "$lib/utils/processingProfiles";
-  import { readDisclosurePreference, writeDisclosurePreference } from "$lib/utils/viewPreferences";
+  import {
+    readDisclosurePreference,
+    writeDisclosurePreference,
+  } from "$lib/utils/viewPreferences";
 
   let {
+    runtime,
+    onManageRuntime = () => {},
     showCapture = true,
     showTranscription = true,
     embedded = false,
@@ -58,6 +72,8 @@
     disabled = false,
   }: {
     /** Applied settings: every edit in this rack is persisted immediately. */
+    runtime?: ManagedRuntimeState;
+    onManageRuntime?: () => void;
     showCapture?: boolean;
     showTranscription?: boolean;
     embedded?: boolean;
@@ -76,11 +92,15 @@
     sttTesting?: boolean;
     processingTesting?: boolean;
     onChangeConnection: (change: Change) => Promise<boolean>;
-    onUpdate: (patch: QuickSettingsPatch, field: QuickSettingsField) => Promise<boolean>;
+    onUpdate: (
+      patch: QuickSettingsPatch,
+      field: QuickSettingsField,
+    ) => Promise<boolean>;
     onEnterTranscription?: () => void;
     onEnterCleanup?: () => void;
     sttMetadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
-    processingMetadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
+    processingMetadataStatus?:
+      "idle" | "loading" | "ready" | "empty" | "failed";
     onTestConnection: () => Promise<void>;
     onTestProcessingConnection: () => Promise<void>;
     onOpenServerSettings: () => void;
@@ -96,17 +116,27 @@
   const serverLoadedModel = $derived(usesServerLoadedModel(settings));
   const processingEnabled = $derived(settings.postProcessing.enabled);
   const selectedProcessingProfile = $derived(
-    processingProfiles.find((profile) => profile.id === settings.postProcessing.preset),
+    processingProfiles.find(
+      (profile) => profile.id === settings.postProcessing.preset,
+    ),
   );
 
-  function healthDot(result: ConnectionResult | null, enabled = true, stale = false): string {
+  function healthDot(
+    result: ConnectionResult | null,
+    enabled = true,
+    stale = false,
+  ): string {
     if (!enabled) return "bg-border";
     if (stale) return "bg-warning";
     if (!result) return "bg-muted-foreground";
     return connectionSucceeded(result) ? "bg-success" : "bg-destructive";
   }
 
-  function latency(result: ConnectionResult | null, enabled = true, stale = false): string {
+  function latency(
+    result: ConnectionResult | null,
+    enabled = true,
+    stale = false,
+  ): string {
     if (!enabled) return "off";
     if (stale) return "stale";
     if (!result) return "not checked";
@@ -149,13 +179,18 @@
 
   const isPending = (field: QuickSettingsField) => pending.includes(field);
   const sttHealthStale = $derived(sttStale || isPending("stt-model"));
-  const processingHealthStale = $derived(processingStale || isPending("processing-model"));
+  const processingHealthStale = $derived(
+    processingStale || isPending("processing-model"),
+  );
   function chooseProcessingProfile(value: string) {
     if (
       value === PostProcessingPreset.PostProcessingPresetGeneric ||
       value === PostProcessingPreset.PostProcessingPresetS1Mini
     )
-      void onUpdate({ postProcessing: { preset: value } }, "processing-profile");
+      void onUpdate(
+        { postProcessing: { preset: value } },
+        "processing-profile",
+      );
   }
 </script>
 
@@ -208,7 +243,10 @@
       controls="quick-stt-details"
       onToggle={toggleSTT}
     >
-      {#snippet icon()}<ProviderIcon profile={settings.compatibilityProfile} size={20} />{/snippet}
+      {#snippet icon()}<ProviderIcon
+          profile={settings.compatibilityProfile}
+          size={20}
+        />{/snippet}
       <div class="flex min-w-0 flex-col gap-3">
         {#snippet sttEndpointMeta()}{/snippet}
         {#snippet sttEndpointControl()}
@@ -216,33 +254,58 @@
             id="quick-stt-endpoint"
             catalog={settings.savedConnections}
             purpose={Purpose.Transcription}
-            onAdd={onAddConnection ? () => onAddConnection(Purpose.Transcription) : undefined}
+            onAdd={onAddConnection
+              ? () => onAddConnection(Purpose.Transcription)
+              : undefined}
             compact
             disabled={disabled || pending.length > 0}
             onChange={onChangeConnection}
           />
         {/snippet}
-        {@render field("Connection", "quick-stt-endpoint", sttEndpointMeta, sttEndpointControl)}
+        {@render field(
+          "Connection",
+          "quick-stt-endpoint",
+          sttEndpointMeta,
+          sttEndpointControl,
+        )}
 
-        <RuntimeModelPicker
-          id="quick-stt-model"
-          value={settings.model}
-          compact
-          immediate
-          profileName={settings.modelProfiles.transcription?.find(
-            (p) => p.id === settings.modelProfile,
-          )?.name ?? settings.modelProfile}
-          models={sttStale ? [] : (connection?.modelIDs ?? [])}
-          savedModels={rememberedModels(settings, Purpose.Transcription).map((e) => e.model)}
-          serverLoaded={serverLoadedModel}
-          busy={sttTesting}
-          disabled={disabled || pending.length > 0 || !settings.savedConnections.selected?.stt}
-          onChoose={(model) => onUpdate({ model }, "stt-model")}
-          onEnter={onEnterTranscription}
-          metadataStatus={sttMetadataStatus}
-          onDiscover={onTestConnection}
+        {#if settings.managedInstanceID}
+          {#if runtime}<ManagedRuntimeControls
+              {runtime}
+              instanceID={settings.managedInstanceID}
+              {disabled}
+              onManage={onManageRuntime}
+            />{/if}
+          <VocabularyLink {settings} />
+        {:else}<RuntimeModelPicker
+            id="quick-stt-model"
+            value={settings.model}
+            compact
+            immediate
+            profileName={settings.modelProfiles.transcription?.find(
+              (p) => p.id === settings.modelProfile,
+            )?.name ?? settings.modelProfile}
+            models={sttStale ? [] : (connection?.modelIDs ?? [])}
+            savedModels={rememberedModels(settings, Purpose.Transcription).map(
+              (e) => e.model,
+            )}
+            serverLoaded={serverLoadedModel}
+            busy={sttTesting}
+            disabled={disabled ||
+              pending.length > 0 ||
+              !settings.savedConnections.selected?.stt}
+            onChoose={(model) => onUpdate({ model }, "stt-model")}
+            onEnter={onEnterTranscription}
+            metadataStatus={sttMetadataStatus}
+            onDiscover={onTestConnection}
+          />
+        {/if}
+        <QuickSaveStatus
+          fields={["stt-model"]}
+          {pending}
+          saved={savedField}
+          failed={failedField}
         />
-        <QuickSaveStatus fields={["stt-model"]} {pending} saved={savedField} failed={failedField} />
       </div>
     </RackModule>
   {/if}
@@ -251,16 +314,28 @@
     <RackModule
       {embedded}
       label="Cleanup"
-      dot={healthDot(processingConnection, processingEnabled, processingHealthStale)}
+      dot={healthDot(
+        processingConnection,
+        processingEnabled,
+        processingHealthStale,
+      )}
       meta={embedded || cleanupOpen
-        ? latency(processingConnection, processingEnabled, processingHealthStale)
+        ? latency(
+            processingConnection,
+            processingEnabled,
+            processingHealthStale,
+          )
         : collapsedConnectionSummary(
             settings.postProcessing.model,
             processingConnection,
             processingEnabled,
             processingHealthStale,
           )}
-      metaTone={latencyTone(processingConnection, processingEnabled, processingHealthStale)}
+      metaTone={latencyTone(
+        processingConnection,
+        processingEnabled,
+        processingHealthStale,
+      )}
       onSettings={onOpenProcessingSettings}
       settingsLabel="Open cleanup settings"
       open={embedded ? undefined : cleanupOpen}
@@ -274,7 +349,10 @@
       {#snippet actions()}
         <span class="flex shrink-0 items-center gap-1.5">
           {#if isPending("processing-enabled")}
-            <LoaderCircleIcon class="size-3 animate-spin text-ink-quiet" aria-label="Saving" />
+            <LoaderCircleIcon
+              class="size-3 animate-spin text-ink-quiet"
+              aria-label="Saving"
+            />
           {:else if savedField === "processing-enabled"}
             <CheckIcon class="size-3 text-success" aria-label="Saved" />
           {/if}
@@ -284,7 +362,10 @@
             checked={processingEnabled}
             disabled={isPending("processing-enabled")}
             onCheckedChange={(enabled) =>
-              void onUpdate({ postProcessing: { enabled } }, "processing-enabled")}
+              void onUpdate(
+                { postProcessing: { enabled } },
+                "processing-enabled",
+              )}
             aria-label="Post-process transcripts"
           />
         </span>
@@ -297,7 +378,9 @@
             id="quick-processing-endpoint"
             catalog={settings.savedConnections}
             purpose={Purpose.Cleanup}
-            onAdd={onAddConnection ? () => onAddConnection(Purpose.Cleanup) : undefined}
+            onAdd={onAddConnection
+              ? () => onAddConnection(Purpose.Cleanup)
+              : undefined}
             compact
             disabled={disabled || pending.length > 0}
             onChange={onChangeConnection}
@@ -310,22 +393,39 @@
           cleanupEndpointControl,
         )}
 
-        <RuntimeModelPicker
-          id="quick-processing-model"
-          value={settings.postProcessing.model}
-          compact
-          immediate
-          profileName={processingProfileName(processingProfiles, settings.postProcessing.preset)}
-          models={processingStale ? [] : (processingConnection?.modelIDs ?? [])}
-          savedModels={rememberedModels(settings, Purpose.Cleanup).map((e) => e.model)}
-          busy={processingTesting}
-          disabled={disabled || pending.length > 0 || !settings.savedConnections.selected?.cleanup}
-          onChoose={(model) => onUpdate({ postProcessing: { model } }, "processing-model")}
-          onEnter={onEnterCleanup}
-          metadataStatus={processingMetadataStatus}
-          onDiscover={onTestProcessingConnection}
-        />
-
+        {#if settings.postProcessing.managedInstanceID}
+          {#if runtime}<ManagedRuntimeControls
+              {runtime}
+              instanceID={settings.postProcessing.managedInstanceID}
+              {disabled}
+              onManage={onManageRuntime}
+            />{/if}
+        {:else}<RuntimeModelPicker
+            id="quick-processing-model"
+            value={settings.postProcessing.model}
+            compact
+            immediate
+            profileName={processingProfileName(
+              processingProfiles,
+              settings.postProcessing.preset,
+            )}
+            models={processingStale
+              ? []
+              : (processingConnection?.modelIDs ?? [])}
+            savedModels={rememberedModels(settings, Purpose.Cleanup).map(
+              (e) => e.model,
+            )}
+            busy={processingTesting}
+            disabled={disabled ||
+              pending.length > 0 ||
+              !settings.savedConnections.selected?.cleanup}
+            onChoose={(model) =>
+              onUpdate({ postProcessing: { model } }, "processing-model")}
+            onEnter={onEnterCleanup}
+            metadataStatus={processingMetadataStatus}
+            onDiscover={onTestProcessingConnection}
+          />
+        {/if}
         {#snippet profileMeta()}
           {#if isPending("processing-profile")}
             <LoaderCircleIcon class="inline size-3 animate-spin" />
@@ -348,20 +448,30 @@
               class="h-9 w-full min-w-0 bg-well"
             >
               <span class="min-w-0 flex-1 truncate text-left text-[13px]">
-                {processingProfileName(processingProfiles, settings.postProcessing.preset)}
+                {processingProfileName(
+                  processingProfiles,
+                  settings.postProcessing.preset,
+                )}
               </span>
             </Select.Trigger>
             <Select.Content>
               <Select.Group>
                 <Select.Label>Request behavior</Select.Label>
                 {#each processingProfiles as profile (profile.id)}
-                  <Select.Item value={profile.id} label={profile.name}>{profile.name}</Select.Item>
+                  <Select.Item value={profile.id} label={profile.name}
+                    >{profile.name}</Select.Item
+                  >
                 {/each}
               </Select.Group>
             </Select.Content>
           </Select.Root>
         {/snippet}
-        {@render field("Model profile", "quick-processing-profile", profileMeta, profileControl)}
+        {#if !settings.postProcessing.managedInstanceID}{@render field(
+            "Model profile",
+            "quick-processing-profile",
+            profileMeta,
+            profileControl,
+          )}{/if}
 
         {#if settings.postProcessing.preset === PostProcessingPreset.PostProcessingPresetS1Mini && selectedProcessingProfile}
           <div class="min-w-0 border-t border-hairline pt-2.5">
@@ -371,7 +481,8 @@
               idPrefix="quick-s1-mini"
               disabled={isPending("processing-controls") || !processingEnabled}
               compact
-              onChange={(patch) => onUpdate({ postProcessing: patch }, "processing-controls")}
+              onChange={(patch) =>
+                onUpdate({ postProcessing: patch }, "processing-controls")}
             />
           </div>
         {/if}

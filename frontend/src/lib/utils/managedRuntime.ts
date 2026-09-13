@@ -21,7 +21,7 @@ export function runtimePresentation(status: Status | null | undefined) {
         status.state,
       )
     );
-  const ready = supported && status.enabled && status.state === "running";
+  const ready = supported && status.state === "running";
   const selected = status?.models?.find(
     (model) => model.id === status.selectedModel,
   );

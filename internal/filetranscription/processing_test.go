@@ -45,7 +45,7 @@ func (p *processingInput) Copy(_ context.Context, text string) error {
 }
 
 func TestFileProcessingOutcomes(t *testing.T) {
-	for _, mode := range []string{"s1-assumed-english", "language-selected", "language-detected", "raw", "success", "unavailable", "http-error", "empty", "length", "timeout"} {
+	for _, mode := range []string{"s1-assumed-english", "language-selected", "language-detected", "raw", "success", "managed-unavailable", "unavailable", "http-error", "empty", "length", "timeout"} {
 		for _, retention := range []string{"enabled", "disabled", "absent"} {
 			t.Run(mode+"/history-"+retention, func(t *testing.T) {
 				cfg := config.Default()
@@ -137,7 +137,11 @@ func TestFileProcessingOutcomes(t *testing.T) {
 				}
 				input := &processingInput{}
 				service := NewService(settings.Source(func() config.Settings { return cfg }), settings.ProfileSource(func() (settings.RequestProfile, error) {
-					return settings.RequestProfile{Settings: cfg, PostProcessingCredential: "[REDACTED]"}, nil
+					p := settings.RequestProfile{Settings: cfg, PostProcessingCredential: "[REDACTED]"}
+					if mode == "managed-unavailable" {
+						p.PostProcessingUnavailable = settings.ErrManagedUnavailable
+					}
+					return p, nil
 				}), client, processor, transcripts, input, nil, nil, nil, nil, nil)
 				t.Cleanup(func() { _ = service.ServiceShutdown() })
 				path := filepath.Join(t.TempDir(), "recording.wav")
@@ -194,7 +198,7 @@ func TestFileProcessingOutcomes(t *testing.T) {
 					t.Fatalf("explicit copy = %+v", input)
 				}
 				wantCalls := 1
-				if mode == "raw" || mode == "unavailable" || strings.HasPrefix(mode, "language-") {
+				if mode == "raw" || mode == "unavailable" || mode == "managed-unavailable" || strings.HasPrefix(mode, "language-") {
 					wantCalls = 0
 				}
 				if calls != wantCalls {

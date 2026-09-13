@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
+  import ManagedRuntimeControls from "$lib/components/home/ManagedRuntimeControls.svelte";
   import LanguagePicker from "./LanguagePicker.svelte";
   import { ID } from "$bindings/modelprofile";
   import type { Snippet } from "svelte";
@@ -12,6 +14,8 @@
 
   let {
     settings,
+    runtime,
+    onManageRuntime = () => {},
     models = [],
     draftModels = [],
     voices = null,
@@ -33,6 +37,8 @@
     voiceActions,
   }: {
     settings: Settings;
+    runtime?: ManagedRuntimeState;
+    onManageRuntime?: () => void;
     models?: string[];
     draftModels?: string[];
     onEnter?: () => void;
@@ -49,35 +55,50 @@
     onDiscoverVoices: () => void;
     onVoice: (voice: string) => boolean | Promise<boolean>;
     onSpeed: (speed: number) => boolean | Promise<boolean>;
-    onOptions: (options: Settings["textToSpeech"]["options"]) => boolean | Promise<boolean>;
+    onOptions: (
+      options: Settings["textToSpeech"]["options"],
+    ) => boolean | Promise<boolean>;
     modelDetails?: Snippet;
     voiceActions?: Snippet;
   } = $props();
   const speech = $derived(settings.textToSpeech);
   const profile = $derived(
-    settings.modelProfiles.speech?.find((p) => p.id === (speech.modelProfile || ID.Generic)),
+    settings.modelProfiles.speech?.find(
+      (p) => p.id === (speech.modelProfile || ID.Generic),
+    ),
   );
 </script>
 
-<RuntimeModelPicker
-  showProfileName={!modelDetails}
-  id={compact ? "quick-speech-model" : "tts-model"}
-  value={speech.model}
-  profileName={profile?.name ?? speech.modelProfile}
-  {models}
-  {draftModels}
-  {compact}
-  {immediate}
-  savedModels={rememberedModels(settings, Purpose.Speech).map((e) => e.model)}
-  disabled={busy}
-  busy={modelsBusy}
-  {onEnter}
-  {metadataStatus}
-  onChoose={onChooseModel}
-  onForget={onForgetModel}
-  onDiscover={onDiscoverModels}
-/>
-{@render modelDetails?.()}
+{#if speech.managedInstanceID}
+  {#if runtime}
+    <ManagedRuntimeControls
+      {runtime}
+      instanceID={speech.managedInstanceID}
+      disabled={busy}
+      onManage={onManageRuntime}
+    />
+  {/if}
+{:else}
+  <RuntimeModelPicker
+    showProfileName={!modelDetails}
+    id={compact ? "quick-speech-model" : "tts-model"}
+    value={speech.model}
+    profileName={profile?.name ?? speech.modelProfile}
+    {models}
+    {draftModels}
+    {compact}
+    {immediate}
+    savedModels={rememberedModels(settings, Purpose.Speech).map((e) => e.model)}
+    disabled={busy}
+    busy={modelsBusy}
+    {onEnter}
+    {metadataStatus}
+    onChoose={onChooseModel}
+    onForget={onForgetModel}
+    onDiscover={onDiscoverModels}
+  />
+  {@render modelDetails?.()}
+{/if}
 <VoicePicker
   id={compact ? "quick-speech-voice" : "tts-voice"}
   value={speech.voice}
@@ -104,8 +125,9 @@
   <div class={compact ? "space-y-4" : "space-y-4 p-5"}>
     {#if profile.capabilities.speechLanguage}
       <div class="space-y-1.5">
-        <label for={compact ? "quick-speech-language" : "tts-language"} class="text-sm font-medium"
-          >Speech language</label
+        <label
+          for={compact ? "quick-speech-language" : "tts-language"}
+          class="text-sm font-medium">Speech language</label
         >
         <LanguagePicker
           id={compact ? "quick-speech-language" : "tts-language"}
@@ -148,9 +170,11 @@
                 ...speech.options,
                 instructions: event.currentTarget.value,
               });
-          }}></textarea>
+          }}
+        ></textarea>
         <p class="text-xs leading-relaxed text-muted-foreground">
-          Describe tone, emotion, or delivery. Leave empty for the selected voice’s usual style.
+          Describe tone, emotion, or delivery. Leave empty for the selected
+          voice’s usual style.
         </p>
       </div>
     {/if}

@@ -26,7 +26,7 @@ func (f processingTransport) RoundTrip(r *http.Request) (*http.Response, error) 
 // Exercise the real recorder -> Processor -> HTTP client path. The transport
 // can return decoded success after cancellation without relying on socket timing.
 func TestRecorderProcessingOutcomes(t *testing.T) {
-	for _, mode := range []string{"s1-assumed-english", "language-selected", "language-detected", "raw", "success", "unavailable", "http-error", "empty", "length", "timeout", "cancel-late-success", "replacement-late-success"} {
+	for _, mode := range []string{"s1-assumed-english", "language-selected", "language-detected", "raw", "success", "managed-unavailable", "unavailable", "http-error", "empty", "length", "timeout", "cancel-late-success", "replacement-late-success"} {
 		for _, retain := range []bool{true, false} {
 			name := mode + "/history-off"
 			if retain {
@@ -125,7 +125,11 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 				recorder = New(capFake{}, platform, client, nil, staticSettings{value: cfg}, nil)
 				t.Cleanup(func() { _ = recorder.Cancel() })
 				recorder.profiles = settings.ProfileSource(func() (settings.RequestProfile, error) {
-					return settings.RequestProfile{Settings: cfg, PostProcessingCredential: "[REDACTED]"}, nil
+					p := settings.RequestProfile{Settings: cfg, PostProcessingCredential: "[REDACTED]"}
+					if mode == "managed-unavailable" {
+						p.PostProcessingUnavailable = settings.ErrManagedUnavailable
+					}
+					return p, nil
 				})
 				var processingLogs bytes.Buffer
 				if mode != "unavailable" {
@@ -174,7 +178,7 @@ func TestRecorderProcessingOutcomes(t *testing.T) {
 					t.Fatal("timeout fallback notice lost")
 				}
 				wantCalls := 1
-				if mode == "raw" || mode == "unavailable" || strings.HasPrefix(mode, "language-") {
+				if mode == "raw" || mode == "unavailable" || mode == "managed-unavailable" || strings.HasPrefix(mode, "language-") {
 					wantCalls = 0
 				}
 				if calls != wantCalls {

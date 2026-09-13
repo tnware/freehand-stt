@@ -35,18 +35,12 @@
     runtime?: ManagedRuntimeState;
     onManageRuntime?: () => void;
   } = $props();
+  const cfg = $derived(settings.voiceTranscription);
+  const instanceID = $derived(cfg.managedInstanceID ?? "");
+  const managed = $derived(!!instanceID);
+  const row = $derived(runtime?.statusFor(instanceID));
   const localModel = $derived(
-    runtime?.status?.models?.find(
-      (model) => model.id === runtime?.status?.selectedModel,
-    ),
-  );
-  const cfg = $derived(
-    runtime
-      ? {
-          ...settings.voiceTranscription,
-          realtime: runtime.status?.realtime ?? false,
-        }
-      : settings.voiceTranscription,
+    row?.status.models?.find((model) => model.id === row.instance.model),
   );
   let profileNotice = $state("");
   const backend = $derived(
@@ -58,8 +52,11 @@
     backend?.capabilities.serverLoadedModel && !backend?.capabilities.realtime,
   );
   const profile = $derived(
-    runtime
-      ? localModel?.behavior
+    managed
+      ? (localModel?.behavior ??
+          settings.modelProfiles.voiceTranscription?.find(
+            (p) => p.id === cfg.modelProfile,
+          ))
       : settings.modelProfiles.voiceTranscription?.find(
           (p) => p.id === cfg.modelProfile,
         ),
@@ -94,8 +91,7 @@
   );
   const busy = $derived(
     disabled ||
-      runtime?.busy ||
-      runtime?.loading ||
+      (managed && runtime?.isBusy(instanceID)) ||
       editor.saving ||
       editor.isQuickSettingsPending("voice-transcription"),
   );
@@ -127,49 +123,50 @@
   }
   function setRealtime(realtime: boolean) {
     if (busy) return;
-    if (runtime?.status) {
-      void runtime.setPreferences({
-        enabled: runtime.status.enabled,
-        model: runtime.status.selectedModel,
-        realtime,
-      });
-    } else update({ realtime });
+    update({ realtime });
   }
 </script>
 
 <div class={draft ? "flex flex-col gap-5" : "space-y-4"}>
   {#if !draft}
     {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
-    {#if runtime}
+    {#if managed && runtime}
       <ManagedRuntimeControls
+        {instanceID}
         {runtime}
         disabled={disabled ||
           editor.saving ||
           editor.quickSettingsPending.length > 0}
         onManage={onManageRuntime}
       />
-    {:else}<div class="space-y-1.5">
-        <label for="voice-connection" class="text-xs font-medium"
-          >Connection</label
-        >
-        <div class="flex gap-2">
-          <ConnectionSelect
-            id="voice-connection"
-            catalog={settings.savedConnections}
-            purpose={Purpose.Voice}
-            disabled={busy || testing}
-            onChange={(change) => editor.changeConnection(change)}
-            onAdd={() => onAddConnection(Purpose.Voice)}
-          />
-        </div>
-      </div>{/if}
+    {/if}
+    <div class="space-y-1.5">
+      <label for="voice-connection" class="text-xs font-medium"
+        >Connection</label
+      >
+      <div class="flex gap-2">
+        <ConnectionSelect
+          id="voice-connection"
+          catalog={settings.savedConnections}
+          purpose={Purpose.Voice}
+          disabled={busy || testing}
+          onChange={(change) => editor.changeConnection(change)}
+          onAdd={() => onAddConnection(Purpose.Voice)}
+        />
+      </div>
+    </div>
   {/if}
   {#if draft}
     <SettingsCard>
-      {@render modelControls()}
+      {#if managed && runtime}<ManagedRuntimeControls
+          {runtime}
+          {instanceID}
+          {disabled}
+          onManage={onManageRuntime}
+        />{:else if !managed}{@render modelControls()}{/if}
       {@render recognitionControls()}
     </SettingsCard>
-  {:else if !runtime}
+  {:else if !managed}
     {@render modelControls()}
   {/if}
   {#if setup}
@@ -255,7 +252,7 @@
         id="voice-realtime"
         checked={cfg.realtime}
         disabled={busy ||
-          (!runtime && !cfg.realtime && (!connectionID || !cfg.model))}
+          (!managed && !cfg.realtime && (!connectionID || !cfg.model))}
         onCheckedChange={setRealtime}
       />
     </div>

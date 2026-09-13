@@ -1,6 +1,29 @@
 <script lang="ts">
   import { platformPresentation } from "$lib/platform";
-  import { connectionWorkflows } from "$lib/utils/connectionChoices";
+  import {
+    connectionWorkflows,
+    managedConnectionSupports,
+  } from "$lib/utils/connectionChoices";
+  import { getContext, onMount } from "svelte";
+  import { session } from "$lib/stores/session.svelte";
+  import { SETTINGS_NAVIGATION, type SettingsSectionID } from "$lib/navigation";
+  import * as WindowingService from "$bindings/windowing/service";
+  const navigate = getContext<
+    ((section: SettingsSectionID) => void) | undefined
+  >(SETTINGS_NAVIGATION);
+  const runtime = session.runtime;
+  onMount(() => {
+    void runtime.load();
+  });
+  async function openRuntimes() {
+    if (navigate) navigate("local-runtime");
+    else
+      try {
+        await WindowingService.OpenSettings("local-runtime");
+      } catch (cause) {
+        session.messages.fail(cause);
+      }
+  }
   import { Purpose } from "$bindings/savedconnection";
   import { ID } from "$bindings/compatibility";
   import { AuthenticationMode } from "$lib/state";
@@ -36,6 +59,36 @@
   } = $props();
   const form = $derived(editor.connectionDraft);
   const catalog = $derived(editor.applied?.savedConnections);
+  const managed = $derived(form?.details.managedInstanceID != null);
+  const instance = $derived(
+    runtime.statusFor(form?.details.managedInstanceID ?? "")?.instance,
+  );
+  function setTarget(value: string) {
+    if (value === "manual") editor.setConnectionTarget(undefined);
+    else editor.setConnectionTarget("");
+    if (form && managed) form.uses = [];
+  }
+  function chooseInstance(value: string) {
+    editor.setConnectionTarget(value);
+    if (!form) return;
+    const selected = runtime.statusFor(value)?.instance;
+    form.uses = form.uses.filter((purpose) =>
+      managedConnectionSupports(selected, runtime.providers, purpose),
+    );
+    if (
+      activateFor &&
+      !managedConnectionSupports(selected, runtime.providers, activateFor)
+    )
+      activateFor = undefined;
+    if (activateFor && !form.uses.includes(activateFor))
+      form.uses = [...form.uses, activateFor];
+    if (!form.uses.length) {
+      const first = roles.find((role) =>
+        managedConnectionSupports(selected, runtime.providers, role.id),
+      );
+      if (first) form.uses = [first.id];
+    }
+  }
   const busy = $derived(editor.saving || editor.managedConnectionTesting);
   const roles = connectionWorkflows;
   function chooseUse(value: string) {
@@ -78,6 +131,8 @@
     purpose: Purpose,
     profile = form?.details.compatibilityProfile,
   ) {
+    if (managed)
+      return managedConnectionSupports(instance, runtime.providers, purpose);
     const catalog = editor.applied?.compatibilityProfiles;
     const list =
       purpose === Purpose.Voice
@@ -121,7 +176,12 @@
   }
   function changeAuth(value: string) {
     if (!form) return;
-    form.details.authenticationMode = value as AuthenticationMode;
+    if (
+      value !== AuthenticationMode.AuthenticationModeNone &&
+      value !== AuthenticationMode.AuthenticationModeAPIKey
+    )
+      return;
+    form.details.authenticationMode = value;
     if (value === AuthenticationMode.AuthenticationModeNone)
       form.credentialDraft = "";
   }
@@ -156,6 +216,17 @@
       event.preventDefault();
       const purpose = activateFor;
       const name = form.name.trim();
+      if (
+        managed &&
+        (!instance ||
+          !form.uses.length ||
+          form.uses.some((use) => !supports(use)))
+      ) {
+        session.messages.reportInfo(
+          "Choose a runtime with a qualified model for each selected use.",
+        );
+        return;
+      }
       if (await editor.saveConnection(purpose))
         onSaved(
           purpose,
@@ -219,98 +290,180 @@
               placeholder="For example, Office speech server"
             />{/snippet}
         </ValueRow>
-        <CompatibilityProfilePicker
-          id="connection-profile"
-          bind:value={() => form.details.compatibilityProfile, setProfile}
-          {profiles}
-        />
-
-        <ValueRow
-          id="connection-url"
-          label="Base URL"
-          hint={form.details.compatibilityProfile === ID.WhisperCPP
-            ? "Native whisper.cpp server root, without /v1 or /inference."
-            : "The server’s OpenAI-compatible /v1 base URL."}
-        >
-          {#snippet control()}<ValueInput
-              id="connection-url"
-              type="url"
-              bind:value={form.details.baseURL}
-              required
-              disabled={busy}
-              placeholder="https://server.example/v1"
-              spellcheck={false}
-            />{/snippet}
-        </ValueRow>
-        {#if form.details.baseURL
-          .trim()
-          .toLowerCase()
-          .startsWith("http://") || form.details.allowInsecureHTTP}<SettingRow
-            title="Allow HTTP for this connection"
-            description="Required when the server URL starts with http://."
-            >{#snippet control()}<Switch
-                checked={form.details.allowInsecureHTTP}
-                onCheckedChange={(v) => {
-                  if (form) form.details.allowInsecureHTTP = v;
-                }}
-                disabled={busy}
-                aria-label="Allow insecure HTTP"
-              />{/snippet}</SettingRow
-          >{/if}
-        <ValueRow id="connection-auth" label="Authentication"
-          >{#snippet control()}<Select.Root
+        <ValueRow id="connection-target" label="Connection target">
+          {#snippet control()}
+            <Select.Root
               type="single"
-              value={form.details.authenticationMode}
-              onValueChange={changeAuth}
+              value={managed ? "managed" : "manual"}
+              onValueChange={setTarget}
               disabled={busy}
-              ><Select.Trigger id="connection-auth" class="w-full"
-                >{form.details.authenticationMode ===
-                AuthenticationMode.AuthenticationModeAPIKey
-                  ? "API key"
-                  : "None"}</Select.Trigger
-              ><Select.Content
-                ><Select.Item value={AuthenticationMode.AuthenticationModeNone}
-                  >None</Select.Item
-                ><Select.Item
-                  value={AuthenticationMode.AuthenticationModeAPIKey}
-                  >API key</Select.Item
+            >
+              <Select.Trigger id="connection-target" class="w-full"
+                >{managed
+                  ? "Managed local runtime"
+                  : "Manual server"}</Select.Trigger
+              >
+              <Select.Content
+                ><Select.Item value="manual">Manual server</Select.Item
+                ><Select.Item value="managed">Managed local runtime</Select.Item
                 ></Select.Content
-              ></Select.Root
-            >{/snippet}</ValueRow
-        >
-        {#if form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey}
+              >
+            </Select.Root>
+          {/snippet}
+        </ValueRow>
+        {#if managed}
           <ValueRow
-            id="connection-api-key"
-            label="API key"
-            hint={`Stored securely in ${native.credentialStore}.`}
-            >{#snippet control()}<ValueInput
-                id="connection-api-key"
-                type="password"
-                autocomplete="new-password"
-                maxlength={2048}
-                bind:value={form.credentialDraft}
-                disabled={busy || form.clearCredential}
-                placeholder={form.hasCredential
-                  ? "Leave blank to keep the stored key"
-                  : "Enter a key if required"}
-                mono={false}
-              />{/snippet}</ValueRow
+            id="connection-instance"
+            label="Runtime instance"
+            hint="The runtime owns its model and endpoint. No URL or credentials are stored in this connection."
           >
-          {#if form.hasCredential}<SettingRow
-              title="Remove stored key"
-              description="Applies when you save this connection."
+            {#snippet control()}
+              <Select.Root
+                type="single"
+                value={form.details.managedInstanceID ?? ""}
+                onValueChange={chooseInstance}
+                disabled={busy || runtime.loading}
+              >
+                <Select.Trigger id="connection-instance" class="w-full"
+                  >{instance?.name ??
+                    (form.details.managedInstanceID
+                      ? "Unavailable runtime"
+                      : "Choose a runtime")}</Select.Trigger
+                >
+                <Select.Content>
+                  {#each runtime.instances as row (row.instance.id)}
+                    <Select.Item value={row.instance.id}
+                      >{row.instance.name} · {row.status.state ||
+                        "Unavailable"}</Select.Item
+                    >
+                  {/each}
+                  {#if form.details.managedInstanceID && !instance}<Select.Item
+                      value={form.details.managedInstanceID}
+                      >{form.details.managedInstanceID} · Unavailable</Select.Item
+                    >{/if}
+                </Select.Content>
+              </Select.Root>
+            {/snippet}
+          </ValueRow>
+          <div class="space-y-2 px-5 py-3">
+            <p class="text-xs text-muted-foreground">
+              {instance
+                ? `Selected model: ${instance.model}. Stopping this runtime keeps the connection selected; it never falls back to a server.`
+                : "Add an instance in runtime settings, then select it here."}
+            </p>
+            {#if runtime.error}<p role="alert" class="text-xs text-destructive">
+                {runtime.error}
+              </p>{/if}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onclick={openRuntimes}>Manage local runtimes…</Button
+            >
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={busy || runtime.loading}
+              onclick={() => void runtime.load()}>Refresh instances</Button
+            >
+          </div>
+        {:else}
+          <CompatibilityProfilePicker
+            id="connection-profile"
+            bind:value={() => form.details.compatibilityProfile, setProfile}
+            {profiles}
+          />
+
+          <ValueRow
+            id="connection-url"
+            label="Base URL"
+            hint={form.details.compatibilityProfile === ID.WhisperCPP
+              ? "Native whisper.cpp server root, without /v1 or /inference."
+              : "The server’s OpenAI-compatible /v1 base URL."}
+          >
+            {#snippet control()}<ValueInput
+                id="connection-url"
+                type="url"
+                bind:value={form.details.baseURL}
+                required
+                disabled={busy}
+                placeholder="https://server.example/v1"
+                spellcheck={false}
+              />{/snippet}
+          </ValueRow>
+          {#if form.details.baseURL
+            .trim()
+            .toLowerCase()
+            .startsWith("http://") || form.details.allowInsecureHTTP}<SettingRow
+              title="Allow HTTP for this connection"
+              description="Required when the server URL starts with http://."
               >{#snippet control()}<Switch
-                  checked={form.clearCredential}
+                  checked={form.details.allowInsecureHTTP}
                   onCheckedChange={(v) => {
-                    if (form) {
-                      form.clearCredential = v;
-                      if (v) form.credentialDraft = "";
-                    }
+                    if (form) form.details.allowInsecureHTTP = v;
                   }}
                   disabled={busy}
-                  aria-label="Remove stored key"
+                  aria-label="Allow insecure HTTP"
                 />{/snippet}</SettingRow
             >{/if}
+          <ValueRow id="connection-auth" label="Authentication"
+            >{#snippet control()}<Select.Root
+                type="single"
+                value={form.details.authenticationMode}
+                onValueChange={changeAuth}
+                disabled={busy}
+                ><Select.Trigger id="connection-auth" class="w-full"
+                  >{form.details.authenticationMode ===
+                  AuthenticationMode.AuthenticationModeAPIKey
+                    ? "API key"
+                    : "None"}</Select.Trigger
+                ><Select.Content
+                  ><Select.Item
+                    value={AuthenticationMode.AuthenticationModeNone}
+                    >None</Select.Item
+                  ><Select.Item
+                    value={AuthenticationMode.AuthenticationModeAPIKey}
+                    >API key</Select.Item
+                  ></Select.Content
+                ></Select.Root
+              >{/snippet}</ValueRow
+          >
+          {#if form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey}
+            <ValueRow
+              id="connection-api-key"
+              label="API key"
+              hint={`Stored securely in ${native.credentialStore}.`}
+              >{#snippet control()}<ValueInput
+                  id="connection-api-key"
+                  type="password"
+                  autocomplete="new-password"
+                  maxlength={2048}
+                  bind:value={form.credentialDraft}
+                  disabled={busy || form.clearCredential}
+                  placeholder={form.hasCredential
+                    ? "Leave blank to keep the stored key"
+                    : "Enter a key if required"}
+                  mono={false}
+                />{/snippet}</ValueRow
+            >
+            {#if form.hasCredential}<SettingRow
+                title="Remove stored key"
+                description="Applies when you save this connection."
+                >{#snippet control()}<Switch
+                    checked={form.clearCredential}
+                    onCheckedChange={(v) => {
+                      if (form) {
+                        form.clearCredential = v;
+                        if (v) form.credentialDraft = "";
+                      }
+                    }}
+                    disabled={busy}
+                    aria-label="Remove stored key"
+                  />{/snippet}</SettingRow
+              >{/if}
+          {/if}
         {/if}
         <details class="border-t border-hairline" open={!form.uses.length}>
           <summary class="cursor-pointer px-5 py-3 text-sm font-medium"
@@ -320,7 +473,8 @@
           {@render supportedUses()}
         </details>
         {#if !form.creating}<p class="px-5 py-3 text-xs text-muted-foreground">
-            Changing the backend or URL resets this connection’s model choices.
+            Changing the target or backend resets this connection’s model
+            choices.
           </p>{/if}
       </SettingsCard>
       {#if chooseWorkflow && form.creating}
@@ -341,7 +495,7 @@
                   : "Save for later"}</Select.Trigger
               >
               <Select.Content>
-                {#each roles.filter( (role) => supports(role.id) ) as role (role.id)}<Select.Item
+                {#each roles.filter( (role) => supports(role.id), ) as role (role.id)}<Select.Item
                     value={role.id}>Set up {role.label}</Select.Item
                   >{/each}
                 <Select.Separator /><Select.Item value="save-only"
@@ -352,7 +506,7 @@
           </div>
         </div>
       {/if}
-      {#if form.uses.includes(Purpose.Transcription) || form.uses.includes(Purpose.Voice)}
+      {#if !managed && (form.uses.includes(Purpose.Transcription) || form.uses.includes(Purpose.Voice))}
         <details class="border-t border-hairline py-4">
           <summary class="cursor-pointer text-sm font-medium"
             >Transcription connection options</summary

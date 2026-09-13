@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { session } from "$lib/stores/session.svelte";
   import {
     type Catalog,
     type Change,
     type Purpose,
   } from "$bindings/savedconnection";
+  import { connectionTargetLabel } from "$lib/utils/connectionChoices";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Button } from "$lib/components/ui/button";
   let {
@@ -28,7 +30,9 @@
     onAdd: () => void;
   } = $props();
   const entries = $derived(
-    (catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)),
+    (catalog.entries ?? []).filter(
+      (c) => c.uses?.includes(purpose) || c.id === catalog.selected?.[purpose],
+    ),
   );
   const selected = $derived(
     entries.find((c) => c.id === catalog.selected?.[purpose]),
@@ -64,14 +68,14 @@
   </div>
   {#if selected}<p
       class="mt-2 truncate text-xs text-muted-foreground"
-      title={selected.details.baseURL}
+      title={connectionTargetLabel(selected, session.runtime.instances)}
     >
-      {selected.details.baseURL}
+      {connectionTargetLabel(selected, session.runtime.instances)}
     </p>
   {:else}<p class="mt-2 text-[13px] text-muted-foreground">
       {entries.length
         ? "Choose a saved connection to configure this feature."
-        : "Add a server, then choose its model here."}
+        : "Add a server or managed local runtime connection."}
     </p>{/if}
   {#if dirty}<p class="mt-2 text-xs text-muted-foreground">
       Save or discard your edits before switching connections.

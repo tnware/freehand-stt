@@ -8,8 +8,9 @@ audio-file transcription. The recommended model is **Nemotron 3.5 ASR streaming*
 with realtime enabled: words appear while you speak, and the final transcript
 uses the same cleanup and safe insertion rules as other dictation.
 
-You can still connect to your own local, network, or hosted service. Managed
-mode keeps those saved connections intact. macOS uses
+You can still connect to your own local, network, or hosted service. Each task
+selects a Connection; a managed Connection uses a runtime installed by Freehand.
+Your manual connections remain intact. macOS uses
 [manual connections](../connect-a-server/); managed installation is Windows x64
 only.
 
@@ -30,23 +31,28 @@ application-data directory. They are not installed globally or added to PATH.
 ## Set up local transcription
 
 1. Open **Settings → Local runtime**.
-2. Choose **Enable local transcription** to select Nemotron 3.5 with realtime on.
+2. Choose **Add runtime**, give it a name, and keep the recommended Nemotron 3.5
+   Streaming model. Adding it does not download or start anything.
 3. Choose **Install runtime** at the top of the page. Progress and cancellation
    stay in that same area.
 4. When installation finishes, the action changes to **Download selected model**.
    Choose it to download Nemotron, or use the catalog below to choose an alternative.
    Browsing the catalog does not download or load any model.
-5. After downloading, choose **Start runtime** in the same area. Wait for **Running**, then return to Voice and complete
-   the microphone and recording setup.
+5. After downloading, choose **Start runtime** in the same area. Wait for **Running**.
+6. Open **Manage connections**, add a managed Connection referencing this runtime,
+   and select it for Voice. Complete the microphone and recording setup.
+7. In Voice's transcription settings, enable **Realtime transcription** for the
+   recommended live-preview workflow. Captions and language remain Voice options.
 
 Start recording with the intended destination focused. The live preview can
 change; only finalized text can be inserted, copied, or kept in optional
 history. [Live transcription](../live-transcription/) explains captions,
 stop/cancel behavior, and the difference from completed recording.
 
-Your selected managed model also handles audio-file transcription. Files use
+Audio-file transcription selects its own Connection. Choose the same managed
+Connection to share this runtime, or keep a different connection. Files use
 completed requests rather than a live microphone stream. Turning realtime off
-under **Runtime options** keeps the model selected and restores completed Voice behavior.
+in Voice keeps its connection and model selected and uses completed recording.
 
 ## Choose another model
 
@@ -62,19 +68,24 @@ managed cache data; using it again requires another download.
 ## Stop, disable, or remove
 
 Stopping releases the running server; starting it again reloads the selected
-model. An enabled, installed selection can start when Freehand launches.
+model. **Start when Freehand launches**, under **Instance preferences**, enables
+startup for an installed instance without downloading missing files.
 Quitting Freehand stops the processes it owns, including active downloads.
 
-Disable managed mode to return to your saved manual Voice and audio-file
-connections. They retain their URLs, selected models, and stored API keys.
-A local runtime failure does not automatically send audio to those servers.
+To switch back to a manual service, select its saved Connection in the task's
+connection picker. Manual connections retain their URLs, models, and API keys.
+Stopping a runtime does not change any task's selection. A local runtime failure
+does not automatically send audio to another server.
 
-**Remove runtime**, under **Runtime options**, deletes Freehand's managed binaries and model data after
+**Remove runtime files**, under **Instance preferences**, deletes that instance's
+managed binaries and model data after
 confirmation. It does not remove manual connections, their credentials, source
 audio files, or models installed by another application.
 
-Removal leaves managed mode selected, so it cannot silently switch transcription
-to a saved server. Choose **Use my own server** separately if you want to switch.
+File removal leaves its Connections selected but unavailable until repaired;
+it cannot silently switch transcription to a saved server. **Delete instance**
+removes the inventory entry only, not downloaded files. Reassign or remove its
+Connections first. Other runtime instances remain untouched.
 
 ## Privacy and recovery
 

@@ -225,23 +225,37 @@ describe("shared session event composition", () => {
     const events = eventSource();
     const off = subscribeSessionEvents(session, events.on);
     const status: SessionEventMap["managed-runtime:status"] = {
-      supported: true,
-      state: "running",
-      enabled: true,
-      selectedModel: "nemotron-3.5",
-      realtime: true,
-      backend: "cpu",
-      version: "v0.1.0",
-      progress: -1,
-      phase: "",
-      error: "",
-      models: [],
+      instance: {
+        id: "local",
+        name: "Local",
+        provider: ProviderID.NeMoSpeechCPP,
+        model: "nemotron-3.5",
+        autoStart: false,
+      },
+      activeModel: "nemotron-3.5",
+      status: {
+        supported: true,
+        state: "running",
+        enabled: true,
+        selectedModel: "nemotron-3.5",
+        realtime: true,
+        backend: "cpu",
+        version: "v0.1.0",
+        progress: -1,
+        phase: "",
+        error: "",
+        models: [],
+      },
     };
     events.emit("managed-runtime:status", status);
-    expect(session.runtime.status).toEqual(status);
+    expect(session.runtime.statusFor("local")).toEqual(status);
     off();
-    events.emit("managed-runtime:status", { ...status, state: "stopped" });
-    expect(session.runtime.status?.state).toBe("running");
+    events.emit("managed-runtime:status", {
+      ...status,
+      status: { ...status.status, state: "stopped" },
+    });
+    expect(session.runtime.statusFor("local")?.status.state).toBe("running");
     session.dispose();
   });
 });
+import { ProviderID } from "$bindings/managedruntime";

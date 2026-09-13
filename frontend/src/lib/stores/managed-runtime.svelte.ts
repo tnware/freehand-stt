@@ -1,11 +1,17 @@
-import type { Status } from "$bindings/managedruntime";
-import type * as Service from "$bindings/managedruntime/service";
+import type {
+  Instance,
+  InstanceStatus,
+  ProviderDescriptor,
+} from "$bindings/managedruntime";
+import type * as Manager from "$bindings/managedruntime/manager";
 
-/** Promise-returning generated operations, injectable without Wails promises in fixtures. */
 export type ManagedRuntimeService = {
   [
     K in
-      | "GetStatus"
+      | "GetInstances"
+      | "GetProviders"
+      | "SetInstance"
+      | "DeleteInstance"
       | "Install"
       | "Remove"
       | "Start"
@@ -14,154 +20,209 @@ export type ManagedRuntimeService = {
       | "RefreshCatalog"
       | "DownloadModel"
       | "RemoveModel"
-      | "SetPreferences"
   ]: (
-    ...args: Parameters<(typeof Service)[K]>
-  ) => Promise<Awaited<ReturnType<(typeof Service)[K]>>>;
+    ...args: Parameters<(typeof Manager)[K]>
+  ) => Promise<Awaited<ReturnType<(typeof Manager)[K]>>>;
 };
+type Operation = "Install" | "Remove" | "Start" | "Stop" | "RefreshCatalog";
 
 export class ManagedRuntimeState {
-  status = $state<Status | null>(null);
-  pending = $state("");
+  instances = $state<InstanceStatus[]>([]);
+  providers = $state<ProviderDescriptor[]>([]);
   loading = $state(false);
   error = $state("");
+  #pending = $state<Record<string, string>>({});
+  #errors = $state<Record<string, string>>({});
+  #retries = $state<Record<string, (() => Promise<boolean>) | undefined>>({});
   #revision = 0;
+  #events = new Map<string, number>();
+  #deleted = new Set<string>();
+  #loadID = 0;
   #disposed = false;
-  #retry: (() => Promise<boolean>) | null = null;
   constructor(
     private readonly service?: ManagedRuntimeService,
     private readonly canMutate: () => boolean = () => true,
     private readonly preferencesChanged: () => unknown = () => {},
   ) {}
-  get busy() {
+  statusFor(id: string) {
+    return this.instances.find((row) => row.instance.id === id);
+  }
+  pendingFor(id: string) {
+    return this.#pending[id] ?? "";
+  }
+  errorFor(id: string) {
+    return this.#errors[id] ?? "";
+  }
+  isBusy(id: string) {
+    const status = this.statusFor(id)?.status;
     return (
-      !!this.pending ||
-      !!this.status?.phase ||
-      ["installing", "starting", "stopping"].includes(this.status?.state ?? "")
+      !!this.pendingFor(id) ||
+      !!status?.phase ||
+      ["installing", "starting", "stopping"].includes(status?.state ?? "")
     );
   }
-  get canRetry() {
-    return this.#retry !== null;
+  get busy() {
+    return (
+      Object.values(this.#pending).some(Boolean) ||
+      this.instances.some((row) => this.isBusy(row.instance.id))
+    );
   }
-  applyStatus(status: Status) {
-    if (this.#disposed) return;
-    this.#revision++;
-    this.status = status;
+  canRetry(id: string) {
+    return !!this.#retries[id];
   }
-  async load() {
-    if (!this.service || this.#disposed) return;
-    const revision = this.#revision;
+  applyStatus(row: InstanceStatus) {
+    const id = row.instance.id;
+    if (this.#disposed || !id || this.#deleted.has(id)) return;
+    this.#events.set(id, ++this.#revision);
+    this.instances = [
+      ...this.instances.filter((item) => item.instance.id !== id),
+      row,
+    ];
+  }
+  async load(target?: string): Promise<boolean> {
+    if (!this.service || this.#disposed) return false;
+    const revision = this.#revision,
+      request = ++this.#loadID;
     this.loading = true;
     try {
-      const status = await this.service.GetStatus();
-      if (!this.#disposed && revision === this.#revision)
-        this.applyStatus(status);
+      const [rows, providers] = await Promise.all([
+        this.service.GetInstances(),
+        this.service.GetProviders(),
+      ]);
+      if (this.#disposed || request !== this.#loadID) return false;
+      const ids = new Set((rows ?? []).map((row) => row.instance.id));
+      const merged = (rows ?? []).map((row) => {
+        const id = row.instance.id,
+          current = this.statusFor(id);
+        this.#deleted.delete(id);
+        return current &&
+          ((this.#events.get(id) ?? 0) > revision || (target && target !== id))
+          ? current
+          : row;
+      });
+      for (const current of this.instances) {
+        const id = current.instance.id;
+        if (!ids.has(id)) {
+          if ((this.#events.get(id) ?? 0) > revision) merged.push(current);
+          else this.#deleted.add(id);
+        }
+      }
+      this.instances = merged;
+      this.providers = providers ?? [];
+      this.error = "";
+      return true;
     } catch {
-      if (!this.#disposed)
-        this.error = "Could not read local runtime status. Try refreshing.";
+      if (!this.#disposed && request === this.#loadID)
+        this.error = "Could not read runtime inventory. Refresh to try again.";
+      return false;
     } finally {
-      this.loading = false;
+      if (!this.#disposed && request === this.#loadID) this.loading = false;
     }
   }
   async #perform(
+    id: string,
     label: string,
     action: () => Promise<void>,
-    preferences = false,
+    inventory = false,
     cancel = false,
   ): Promise<boolean> {
     if (
       this.#disposed ||
       !this.service ||
-      !this.status?.supported ||
-      (!cancel && this.busy)
+      (!cancel && this.isBusy(id)) ||
+      (cancel && this.pendingFor(id) === "Cancelling")
     )
       return false;
     if (!cancel && !this.canMutate()) {
-      this.error =
-        "Save or discard your settings edits before changing the local runtime.";
+      this.#errors[id] =
+        "Save or discard your settings edits before changing this runtime.";
       return false;
     }
-    this.pending = label;
-    this.error = "";
-    this.#retry = () => this.#perform(label, action, preferences, cancel);
+    if (!inventory && !this.statusFor(id)?.status.supported) return false;
+    this.#pending[id] = label;
+    this.#errors[id] = "";
+    // Destructive retries require a fresh UI confirmation instead of an opaque retry.
+    const retryable = !["Remove", "Remove model", "Delete instance"].includes(
+      label,
+    );
+    this.#retries[id] = undefined;
     try {
       await action();
-      await this.load();
-      if (preferences && !this.#disposed) await this.preferencesChanged();
-      return !this.error;
+      if (this.#disposed) return false;
+      if (inventory) await this.preferencesChanged();
+      return await this.load(inventory ? undefined : id);
     } catch {
-      if (!this.#disposed)
-        this.error =
-          "The local runtime operation did not finish. Retry, or review its status below.";
-      await this.load();
+      if (!this.#disposed) {
+        this.#errors[id] =
+          label === "Delete instance"
+            ? "Could not delete runtime. Remove or reassign its Connections, finish active work, and try again."
+            : "The runtime operation did not finish. Review its status and try again.";
+        if (retryable)
+          this.#retries[id] = () =>
+            this.#perform(id, label, action, inventory, cancel);
+        await this.load(id);
+      }
       return false;
     } finally {
-      this.pending = "";
+      if (!this.#disposed && this.#pending[id] === label)
+        this.#pending[id] = "";
     }
   }
-  run(operation: "Install" | "Remove" | "Start" | "Stop" | "RefreshCatalog") {
-    return this.#perform(
-      operation,
-      () => this.service![operation](),
-      operation === "Remove",
+  run(id: string, operation: Operation) {
+    return this.#perform(id, operation, () =>
+      this.service![operation]({ instanceID: id }),
     );
   }
-  downloadModel(id: string) {
-    return this.#perform("Download model", () =>
-      this.service!.DownloadModel(id),
+  downloadModel(id: string, model: string) {
+    return this.#perform(id, "Download model", () =>
+      this.service!.DownloadModel({ instanceID: id, model }),
     );
   }
-  removeModel(id: string) {
-    return this.#perform("Remove model", () => this.service!.RemoveModel(id));
+  removeModel(id: string, model: string) {
+    return this.#perform(id, "Remove model", () =>
+      this.service!.RemoveModel({ instanceID: id, model }),
+    );
   }
-  cancel() {
+  cancel(id: string) {
     return this.#perform(
+      id,
       "Cancelling",
-      () => this.service!.Cancel(),
+      () => this.service!.Cancel({ instanceID: id }),
       false,
       true,
     );
   }
-  retry() {
-    return this.#retry?.() ?? Promise.resolve(false);
-  }
-  enable() {
-    return this.setPreferences({
-      enabled: true,
-      model: "nemotron-3.5",
-      realtime: true,
-    });
-  }
-  disable() {
-    return this.setPreferences({
-      enabled: false,
-      model: this.status?.selectedModel ?? "nemotron-3.5",
-      realtime: this.status?.realtime ?? true,
-    });
-  }
-  setPreferences(
-    preferences: Parameters<ManagedRuntimeService["SetPreferences"]>[0],
-  ) {
+  saveInstance(instance: Instance) {
     return this.#perform(
-      "Applying preferences",
-      () => this.service!.SetPreferences(preferences),
+      instance.id,
+      "Save instance",
+      () => this.service!.SetInstance(instance),
       true,
     );
   }
-  useModel(id: string) {
-    const model = this.status?.models?.find(
-      (model) => model.id === id && model.installed,
+  deleteInstance(id: string) {
+    return this.#perform(
+      id,
+      "Delete instance",
+      async () => {
+        await this.service!.DeleteInstance({ instanceID: id });
+        if (!this.#disposed) {
+          this.#deleted.add(id);
+          this.#events.set(id, ++this.#revision);
+          this.instances = this.instances.filter(
+            (row) => row.instance.id !== id,
+          );
+        }
+      },
+      true,
     );
-    if (!model || !this.status) return Promise.resolve(false);
-    return this.setPreferences({
-      enabled: this.status.enabled,
-      model: id,
-      realtime: model.realtime && this.status.realtime,
-    });
+  }
+  retry(id: string) {
+    return this.#retries[id]?.() ?? Promise.resolve(false);
   }
   dispose() {
     this.#disposed = true;
-    this.#revision++;
-    this.#retry = null;
+    ++this.#loadID;
+    this.#retries = {};
   }
 }

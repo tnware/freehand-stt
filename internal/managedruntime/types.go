@@ -45,6 +45,8 @@ type Model struct {
 	Recommended bool   `json:"recommended"`
 	Realtime    bool   `json:"realtime"`
 	Profile     string `json:"profile"`
+	// Contracts is the authoritative per-role capability catalog for this model.
+	Contracts []Contract `json:"contracts"`
 	// Behavior is the resolved model/backend contract, independent of manual settings.
 	Behavior *modelprofile.Profile `json:"behavior,omitempty"`
 }
@@ -60,9 +62,4 @@ type Status struct {
 	Phase         string  `json:"phase"`
 	Error         string  `json:"error"`
 	Models        []Model `json:"models"`
-}
-
-var qualified = map[string]Model{
-	"nemotron-3.5": {ID: "nemotron-3.5", Name: "Nemotron 3.5 Streaming", Description: "Multilingual speech recognition with realtime dictation.", Recommended: true, Realtime: true, Profile: "nemotron-3.5-streaming"},
-	"parakeet-tdt": {ID: "parakeet-tdt", Name: "Parakeet TDT v3", Description: "Multilingual completed speech recognition.", Profile: "parakeet-tdt-v3"},
 }

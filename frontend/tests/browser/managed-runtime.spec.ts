@@ -1,4 +1,22 @@
 import { test, expect } from "./fixtures";
+import type { Page } from "@playwright/test";
+
+async function addRuntime(page: Page) {
+  await page.getByRole("button", { name: "Add runtime", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add runtime" });
+  await dialog.getByLabel("Runtime name").fill("Local speech");
+  await dialog
+    .getByRole("button", { name: "Add runtime", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+  return page.evaluate(() => {
+    const call = window.testRuntime.calls.find((c) =>
+      c.startsWith("SetInstance:"),
+    );
+    if (!call) throw new Error("Instance was not saved");
+    return call.slice("SetInstance:".length);
+  });
+}
 
 for (const viewport of [
   { width: 1280, height: 720 },
@@ -10,12 +28,10 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     await page.goto("/tests/browser/app/?runtime");
     await page.locator('[data-settings-section="local-runtime"]').click();
-    const enable = page.getByRole("button", {
-      name: "Enable local transcription",
-      exact: true,
-    });
-    await expect(enable).toBeInViewport();
-    await enable.click();
+    await expect(
+      page.getByRole("button", { name: "Add runtime", exact: true }),
+    ).toBeInViewport();
+    const instanceID = await addRuntime(page);
     const install = page.getByRole("button", {
       name: "Install runtime",
       exact: true,
@@ -32,7 +48,7 @@ for (const viewport of [
     ).toHaveCount(0);
     await download.click();
     await expect(
-      page.getByRole("progressbar", { name: "Runtime operation" }),
+      page.getByRole("progressbar", { name: "Runtime operation progress" }),
     ).toBeInViewport();
     const cancel = page.getByRole("button", {
       name: "Cancel operation",
@@ -42,9 +58,12 @@ for (const viewport of [
     await cancel.click();
     await expect(download).toBeInViewport();
     await download.click();
-    await page.evaluate(() => window.testRuntime.finishDownload());
+    await page.evaluate(
+      (id) => window.testRuntime.finishDownload(id),
+      instanceID,
+    );
     expect(await page.evaluate(() => window.testRuntime.calls)).not.toContain(
-      "Start",
+      `Start:${instanceID}`,
     );
     const start = page.getByRole("button", {
       name: "Start runtime",
@@ -64,84 +83,28 @@ test("local runtime is discoverable and browsing never downloads", async ({
   await page.goto("/tests/browser/app/?runtime");
   await page.locator('[data-settings-section="local-runtime"]').click();
   await expect(
-    page.getByRole("heading", { name: "Live transcription on this PC" }),
-  ).toBeVisible();
-  await expect(page.getByText("Nemotron 3.5", { exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("button", {
-      name: "Enable local transcription",
-      exact: true,
-    }),
+    page.getByRole("heading", { name: "Managed runtimes", exact: true }),
   ).toBeVisible();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+  const instanceID = await addRuntime(page);
+  await expect(
+    page.getByRole("region", { name: "Model catalog" }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Refresh catalog", exact: true })
     .click();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
-    "RefreshCatalog",
+    `SetInstance:${instanceID}`,
+    `RefreshCatalog:${instanceID}`,
   ]);
 });
 
-test("enable, install, download, cancel, retry, use, stop and switch back are explicit", async ({
-  page,
-}) => {
-  await page.goto("/tests/browser/app/?runtime");
-  await page.locator('[data-settings-section="local-runtime"]').click();
-  await page
-    .getByRole("button", { name: "Enable local transcription", exact: true })
-    .click();
-  await expect(page.getByText(/No automatic fallback/).first()).toBeVisible();
-  await page
-    .getByRole("button", { name: "Install runtime", exact: true })
-    .click();
-  const model = page.getByRole("article", { name: "Nemotron 3.5" });
-  await model.getByRole("button", { name: "Download", exact: true }).click();
-  await expect(
-    page.getByRole("progressbar", { name: "Runtime operation" }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Cancel operation", exact: true })
-    .click();
-  await model.getByRole("button", { name: "Download", exact: true }).click();
-  await page.evaluate(() => window.testRuntime.finishDownload());
-  await page
-    .getByRole("button", { name: "Start runtime", exact: true })
-    .click();
-  await expect(
-    page.getByText("Running", { exact: true }).first(),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Stop runtime", exact: true }).click();
-  await expect(
-    page.getByText("Stopped", { exact: true }).first(),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Start runtime", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Use my own server", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "saved Voice connection",
-  );
-  await page
-    .getByRole("button", { name: "Disable local runtime", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", {
-      name: "Enable local transcription",
-      exact: true,
-    }),
-  ).toBeVisible();
-});
-
 test("unsaved drafts guard immediate runtime operations", async ({ page }) => {
-  await page.goto("/tests/browser/app/?runtime");
+  await page.goto("/tests/browser/app/?runtime&runtime-ready");
   await page.locator('[data-settings-section="audio"]').click();
   await page.locator("#max-duration").fill("90");
   await page.locator('[data-settings-section="local-runtime"]').click();
-  await page
-    .getByRole("button", { name: "Enable local transcription", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Stop runtime", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText(
     "Save settings before continuing?",
   );
@@ -157,13 +120,15 @@ test("unsupported hosts never offer an enabled Windows runtime", async ({
   await page.goto("/tests/browser/app/?runtime&platform=darwin");
   await page.locator('[data-settings-section="local-runtime"]').click();
   await expect(
-    page.getByText("Local runtime is available on Windows only."),
+    page.getByText("No managed provider is available on this platform.", {
+      exact: false,
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: "Enable local transcription",
+      name: "Add runtime",
       exact: true,
     }),
-  ).toHaveCount(0);
+  ).toBeDisabled();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });

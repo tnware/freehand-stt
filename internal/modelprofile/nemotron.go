@@ -51,6 +51,12 @@ func ValidateNemotron(language string, options NemotronOptions) error {
 	if !slices.Contains(nemotronLocales, language) {
 		return errors.New("choose a language supported by the Nemotron base model")
 	}
+	return ValidateNemotronOptions(options)
+}
+
+// ValidateNemotronOptions checks bounded recognition hints independently of the
+// task language. ValidateNemotron additionally enforces request language support.
+func ValidateNemotronOptions(options NemotronOptions) error {
 	if !utf8.ValidString(options.Vocabulary) || len(options.Vocabulary) > NemotronVocabularyBytes {
 		return errors.New("vocabulary must be at most 2048 UTF-8 bytes")
 	}

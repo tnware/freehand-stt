@@ -9,36 +9,67 @@ import (
 	"context"
 )
 
-const getManagedRuntime = `-- name: GetManagedRuntime :one
-SELECT enabled, model, realtime FROM managed_runtime_preferences WHERE id = 1
+const deleteManagedInstance = `-- name: DeleteManagedInstance :exec
+DELETE FROM managed_runtime_instances WHERE id=?
 `
 
-type GetManagedRuntimeRow struct {
-	Enabled  int64
-	Model    string
-	Realtime int64
+func (q *Queries) DeleteManagedInstance(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteManagedInstance, id)
+	return err
 }
 
-func (q *Queries) GetManagedRuntime(ctx context.Context) (GetManagedRuntimeRow, error) {
-	row := q.db.QueryRowContext(ctx, getManagedRuntime)
-	var i GetManagedRuntimeRow
-	err := row.Scan(&i.Enabled, &i.Model, &i.Realtime)
-	return i, err
-}
-
-const putManagedRuntime = `-- name: PutManagedRuntime :exec
-INSERT INTO managed_runtime_preferences (id, enabled, model, realtime)
-VALUES (1, ?, ?, ?)
-ON CONFLICT (id) DO UPDATE SET enabled = excluded.enabled, model = excluded.model, realtime = excluded.realtime
+const listManagedInstances = `-- name: ListManagedInstances :many
+SELECT id, name, provider, model, auto_start FROM managed_runtime_instances ORDER BY id LIMIT 9
 `
 
-type PutManagedRuntimeParams struct {
-	Enabled  int64
-	Model    string
-	Realtime int64
+func (q *Queries) ListManagedInstances(ctx context.Context) ([]ManagedRuntimeInstance, error) {
+	rows, err := q.db.QueryContext(ctx, listManagedInstances)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ManagedRuntimeInstance{}
+	for rows.Next() {
+		var i ManagedRuntimeInstance
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Provider,
+			&i.Model,
+			&i.AutoStart,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-func (q *Queries) PutManagedRuntime(ctx context.Context, arg PutManagedRuntimeParams) error {
-	_, err := q.db.ExecContext(ctx, putManagedRuntime, arg.Enabled, arg.Model, arg.Realtime)
+const putManagedInstance = `-- name: PutManagedInstance :exec
+INSERT INTO managed_runtime_instances(id,name,provider,model,auto_start) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,provider=excluded.provider,model=excluded.model,auto_start=excluded.auto_start
+`
+
+type PutManagedInstanceParams struct {
+	ID        string
+	Name      string
+	Provider  string
+	Model     string
+	AutoStart int64
+}
+
+func (q *Queries) PutManagedInstance(ctx context.Context, arg PutManagedInstanceParams) error {
+	_, err := q.db.ExecContext(ctx, putManagedInstance,
+		arg.ID,
+		arg.Name,
+		arg.Provider,
+		arg.Model,
+		arg.AutoStart,
+	)
 	return err
 }

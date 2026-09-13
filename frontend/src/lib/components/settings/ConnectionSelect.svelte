@@ -17,7 +17,10 @@
   } from "$bindings/savedconnection";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Button } from "$lib/components/ui/button";
-  import { connectionMatches } from "$lib/utils/connectionChoices";
+  import {
+    connectionTargetLabel,
+    connectionMatches,
+  } from "$lib/utils/connectionChoices";
   import CheckIcon from "@lucide/svelte/icons/check";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
@@ -44,14 +47,16 @@
     query = $state(""),
     choosing = $state(false);
   const entries = $derived(
-    (catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)),
+    (catalog.entries ?? []).filter(
+      (c) => c.uses?.includes(purpose) || c.id === catalog.selected?.[purpose],
+    ),
   );
   const selected = $derived(
     entries.find((c) => c.id === catalog.selected?.[purpose]),
   );
   const matches = $derived(
     entries
-      .filter((c) => connectionMatches(c, query))
+      .filter((c) => connectionMatches(c, query, session.runtime.instances))
       .sort(
         (a, b) =>
           Number(b.id === selected?.id) - Number(a.id === selected?.id) ||
@@ -167,7 +172,7 @@
             <span class="min-w-0 flex-1"
               ><span class="block truncate text-sm font-medium">{c.name}</span
               ><span class="block truncate text-xs text-muted-foreground"
-                >{c.details.baseURL}</span
+                >{connectionTargetLabel(c, session.runtime.instances)}</span
               ></span
             >
             {#if c.id === selected?.id}<CheckIcon

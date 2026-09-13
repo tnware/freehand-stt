@@ -1,8 +1,6 @@
 <script lang="ts">
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
-  import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
-  import VocabularyLink from "$lib/components/settings/VocabularyLink.svelte";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
   import ServerIcon from "@lucide/svelte/icons/server";
 
@@ -44,15 +42,17 @@
     onOpenAudioSettings: () => void;
     onOpenGeneralSettings: () => void;
   } = $props();
-  const runtime = $derived(runtimeState.status);
-  const managed = $derived(
-    runtime?.enabled ?? settings.managedRuntime?.enabled ?? false,
+  const instanceID = $derived(
+    (showCapture
+      ? settings.voiceTranscription.managedInstanceID
+      : settings.managedInstanceID) ?? "",
   );
-  const local = $derived(runtimePresentation(runtime));
+  const runtime = $derived(runtimeState.statusFor(instanceID));
+  const managed = $derived(!!instanceID);
+  const local = $derived(runtimePresentation(runtime?.status));
   const localModel = $derived(
     local.selected?.name ||
-      runtime?.selectedModel ||
-      settings.managedRuntime?.model ||
+      runtime?.instance.model ||
       "No local model selected",
   );
   type Panel = "audio" | "stt" | "cleanup" | "delivery";
@@ -126,28 +126,13 @@
             {editor}
             {settings}
             {disabled}
-            runtime={managed ? runtimeState : undefined}
+            runtime={runtimeState}
             onManageRuntime={() => openSettings(onOpenLocalRuntime)}
             onAddConnection={(purpose) => {
               activePanel = null;
               onAddConnection(purpose);
             }}
           />
-        {:else if panel === "stt" && managed}
-          <div class="space-y-4">
-            <h3 class="text-sm font-semibold">Transcription</h3>
-            <ManagedRuntimeControls
-              runtime={runtimeState}
-              disabled={disabled ||
-                editor.saving ||
-                editor.quickSettingsPending.length > 0}
-              onManage={() => openSettings(onOpenLocalRuntime)}
-            />
-            <p class="text-xs text-muted-foreground">
-              Audio files use completed transcription.
-            </p>
-            <VocabularyLink {settings} />
-          </div>
         {:else if panel === "audio" || panel === "delivery"}
           <QuickControls
             {settings}
@@ -163,6 +148,8 @@
           />
         {:else}
           <QuickSettings
+            runtime={runtimeState}
+            onManageRuntime={() => openSettings(onOpenLocalRuntime)}
             onEnterTranscription={() =>
               void editor.ensureConnectionMetadata(Purpose.Transcription, true)}
             onEnterCleanup={() =>

@@ -10,6 +10,42 @@ import (
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
+func TestCatalogAndDescriptorExposeQualifiedRoleContracts(t *testing.T) {
+	b, err := os.ReadFile("testdata/catalog-v0.1.0.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := parseCatalog(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, models := range [][]Model{catalog, (nemoProvider{}).descriptor().Models} {
+		b, err := json.Marshal(models)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var wire []struct {
+			ID        string     `json:"id"`
+			Contracts []Contract `json:"contracts"`
+		}
+		if err := json.Unmarshal(b, &wire); err != nil {
+			t.Fatal(err)
+		}
+		for _, model := range wire {
+			var want []Contract
+			for _, role := range []compatibility.Role{compatibility.Transcription, compatibility.Realtime, compatibility.PostProcessing, compatibility.Speech} {
+				c, err := Qualify(NeMoSpeechCPP, model.ID, role)
+				if err == nil {
+					want = append(want, c)
+				}
+			}
+			if !reflect.DeepEqual(model.Contracts, want) {
+				t.Fatalf("%s role contracts: got %+v want %+v", model.ID, model.Contracts, want)
+			}
+		}
+	}
+}
+
 func TestCatalogBehaviorMatchesProductionContracts(t *testing.T) {
 	b, err := os.ReadFile("testdata/catalog-v0.1.0.json")
 	if err != nil {

@@ -48,10 +48,12 @@ Do not delete personal runtime installations or pull every catalog model.
 - Start with no manual connections. Open Local runtime, install the official
   binary, and verify that browsing its speech catalog does not download weights
   or load a model. Download only the explicitly selected Nemotron 3.5 model.
-- Enable the recommended realtime setup. Wait for Running, then use a recording
+- Create a Connection referencing the instance, select it for Voice, and enable
+  realtime in Voice settings. Wait for Running, then use a recording
   shortcut from a disposable editor. Check provisional captions, authoritative
   finals, cancellation, Unicode, and changed-focus copy recovery. Repeat with
-  realtime off and with a selected audio file. Cleanup remains independently
+  realtime off and with a selected audio file using its independently selected
+  Connection. Cleanup remains independently
   configured; local recognition must not be described as local cleanup.
 - Confirm the listener is on `127.0.0.1` only and has no LAN-facing socket. Verify
   the actual selected backend on supported GPU and CPU-only hardware; successful
@@ -64,10 +66,11 @@ Do not delete personal runtime installations or pull every catalog model.
   confirm the server and model-manager descendants exit. Force-close the test
   app and verify Job Object cleanup. A separate manually started NeMo server
   must remain untouched.
-- Preserve a manual connection with a disposable key before enabling managed
-  mode. Confirm local requests carry neither that key nor its custom headers.
-  On local failure, confirm no request reaches the manual server. Disable
-  managed mode explicitly and check the same saved connection still works.
+- Preserve a manual connection with a disposable key before selecting a managed
+  Connection. Confirm local requests carry neither that key nor its custom headers.
+  On local failure, confirm no request reaches the manual server. Select the
+  manual Connection explicitly and check it still works. Stop a files-only
+  runtime and confirm independently configured manual Voice remains usable.
 - Confirm destructive actions explain their scope and protect active work.
   Remove an inactive downloaded model, then remove the runtime and its owned
   model data. Other installations, connections, credentials, and source files

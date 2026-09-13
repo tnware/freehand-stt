@@ -47,6 +47,42 @@ const select = {
 };
 
 describe("saved connection editor", () => {
+  it("clears manual transport and bounded credential drafts when targeting a managed instance", () => {
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
+    editor.applySettingsSnapshot(configured());
+    editor.beginConnection(editor.applied!.savedConnections.entries![0]);
+    editor.connectionDraft!.credentialDraft = "transient-canary";
+    editor.connectionDraft!.details.headers = { "X-Test": "manual" };
+    editor.setConnectionTarget("local-one");
+    expect(editor.connectionDraft!.details).toEqual({
+      managedInstanceID: "local-one",
+      compatibilityProfile: ID.$zero,
+      baseURL: "",
+      allowInsecureHTTP: false,
+      authenticationMode: AuthenticationMode.AuthenticationModeNone,
+      healthPath: "",
+      headers: {},
+    });
+    expect(editor.connectionDraft!.credentialDraft).toBe("");
+    expect(editor.applied!.savedConnections.selected!.stt).toBe("first");
+  });
+  it("rejects a managed credential draft before calling settings", async () => {
+    const SaveSettings = vi.fn(() => CancellablePromise.resolve(configured()));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle), {
+        settings: { SaveSettings },
+      }),
+    );
+    editor.applySettingsSnapshot(configured());
+    editor.beginConnection();
+    editor.connectionDraft!.details.managedInstanceID = "local-one";
+    editor.connectionDraft!.credentialDraft = "transient-canary";
+    expect(await editor.saveConnection()).toBe(false);
+    expect(SaveSettings).not.toHaveBeenCalled();
+    expect(editor.connectionDraft!.credentialDraft).toBe("");
+  });
   it("only marks changed connection fields or credential intent as dirty", () => {
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle)),

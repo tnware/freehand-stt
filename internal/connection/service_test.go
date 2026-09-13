@@ -9,6 +9,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/credential"
 	"github.com/tnware/freehand-stt/internal/inference"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
+	"github.com/tnware/freehand-stt/internal/settings"
 )
 
 type keyFake struct {
@@ -143,5 +144,15 @@ func TestSavedConnectionUsesOnlyItsOwnCredentialAndMetadata(t *testing.T) {
 	result = service.TestSavedConnection("missing-key")
 	if result.ErrorKind != ConnectionErrorCredentialMissing || active.reads != 0 || requests != 2 {
 		t.Fatal("missing saved credential fell back to an active credential or sent a request")
+	}
+	source.err = settings.ErrManagedUnavailable
+	result = service.TestSavedConnection("stopped-local-instance")
+	if result.ErrorKind != "runtime_unavailable" || result.Reachable || active.reads != 0 || requests != 2 {
+		t.Fatal("stopped runtime was treated as a key failure or sent a request")
+	}
+	for _, check := range result.Checks {
+		if check.Kind == CheckAuthentication && check.Status == CheckAttention {
+			t.Fatal("stopped local runtime incorrectly requested credential recovery")
+		}
 	}
 }

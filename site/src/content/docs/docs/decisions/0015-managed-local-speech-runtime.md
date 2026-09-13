@@ -4,6 +4,7 @@ description: Own a bounded Windows NeMo lifecycle while preserving existing spee
 ---
 
 - Status: Accepted
+- Superseded in part by [ADR 0016](../0016-managed-runtime-connections/): runtime instances and ordinary Connections replace the singleton managed-mode routing and persistence described below. Acquisition and native safety requirements remain in force.
 - Supersedes: ADR 0005's prohibition on managed inference and ADR 0008's user-managed-only runtime requirement. ADR 0009's manual Voice/file selections remain independent; managed mode supplies one local model to both workflows.
 
 ## Decision

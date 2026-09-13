@@ -1,4 +1,4 @@
-import * as ManagedRuntimeService from "$bindings/managedruntime/service";
+import * as ManagedRuntimeService from "$bindings/managedruntime/manager";
 import {
   ManagedRuntimeState,
   type ManagedRuntimeService as RuntimeService,

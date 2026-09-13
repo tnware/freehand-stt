@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import { ID } from "$bindings/modelprofile";
   import SpeechModelControls from "../SpeechModelControls.svelte";
   import type { VoicesResult } from "$bindings/inference";
@@ -15,10 +16,17 @@
   import SquareIcon from "@lucide/svelte/icons/square";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
-  import { TTSPhase, type Settings, type ConnectionResult, type TTSStatus } from "$lib/state";
+  import {
+    TTSPhase,
+    type Settings,
+    type ConnectionResult,
+    type TTSStatus,
+  } from "$lib/state";
   import RequestSettings from "$lib/components/settings/RequestSettings.svelte";
   let {
     settings = $bindable(),
+    runtime,
+    onManageRuntime,
     status,
     busy = false,
     connection,
@@ -40,6 +48,8 @@
     onClear,
   }: {
     settings: Settings;
+    runtime?: ManagedRuntimeState;
+    onManageRuntime?: () => void;
     status: TTSStatus;
     busy?: boolean;
     connection: ConnectionResult | null;
@@ -87,6 +97,8 @@
     >
     <SpeechModelControls
       {settings}
+      {runtime}
+      {onManageRuntime}
       {draftModels}
       {voices}
       {voicesBusy}
@@ -133,7 +145,8 @@
             size="sm"
             disabled={busy || !canPreview || !settings.textToSpeech.enabled}
             title="Preview your current edits without saving them"
-            onclick={onPreview}><Volume2Icon data-icon="inline-start" />Preview again</Button
+            onclick={onPreview}
+            ><Volume2Icon data-icon="inline-start" />Preview again</Button
           >
         {:else}
           <Button
@@ -189,10 +202,10 @@
       {#snippet action()}<Badge variant="outline">seconds</Badge>{/snippet}
     </ValueRow>
     <p class="px-5 py-4 text-xs leading-relaxed text-muted-foreground">
-      Generated audio stays in memory unless you choose Save. Clear, new speech, recording, or
-      quitting releases it. Freehand requests WAV · PCM16 audio for native playback. Speech input is
-      limited to 4,096 characters and generated audio to 32 MiB. Connection checks stop after 15
-      seconds.
+      Generated audio stays in memory unless you choose Save. Clear, new speech,
+      recording, or quitting releases it. Freehand requests WAV · PCM16 audio
+      for native playback. Speech input is limited to 4,096 characters and
+      generated audio to 32 MiB. Connection checks stop after 15 seconds.
     </p>
   </RequestSettings>
 </div>

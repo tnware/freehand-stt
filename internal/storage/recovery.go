@@ -271,7 +271,7 @@ func (s *Store) RestoreBackup(path string) error {
 		if err != nil {
 			return failure("corrupt", err)
 		}
-		if err = config.Validate(v); err != nil {
+		if err = config.ValidateStored(v); err != nil {
 			return failure("invalid_values", err)
 		}
 		refs, err := readReferences(ctx, q)

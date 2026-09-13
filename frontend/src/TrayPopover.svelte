@@ -54,16 +54,15 @@
     !!backend?.capabilities.serverLoadedModel &&
       !backend?.capabilities.realtime,
   );
-  const managed = $derived(
-    session.runtime.status?.enabled ??
-      settings?.managedRuntime?.enabled ??
-      false,
+  const instanceID = $derived(
+    settings?.voiceTranscription.managedInstanceID ?? "",
   );
-  const local = $derived(runtimePresentation(session.runtime.status));
+  const managed = $derived(!!instanceID);
+  const runtime = $derived(session.runtime.statusFor(instanceID));
+  const local = $derived(runtimePresentation(runtime?.status));
   const localModel = $derived(
     local.selected?.name ||
-      session.runtime.status?.selectedModel ||
-      settings?.managedRuntime?.model ||
+      runtime?.instance.model ||
       "No local model selected",
   );
   const readiness = $derived(
@@ -74,7 +73,7 @@
           session.editor.devices,
           session.editor.devicesBusy,
           "voice",
-          session.runtime.status,
+          runtime,
         )
       : null,
   );
@@ -223,12 +222,29 @@
   </section>
   {#if settings}
     <section class="configuration space-y-2.5" aria-label="Voice configuration">
+      <div class="flex items-center justify-between">
+        <label for="tray-connection" class="text-xs font-medium"
+          >Voice connection</label
+        ><button
+          class="text-[11px] text-muted-foreground hover:text-foreground"
+          onclick={settingsWindow}>Options ↗</button
+        >
+      </div>
+      <ConnectionSelect
+        id="tray-connection"
+        catalog={settings.savedConnections}
+        purpose={Purpose.Voice}
+        compact
+        disabled={locked}
+        onChange={(change) => session.editor.changeConnection(change)}
+        onAdd={() => connectionWindow(true)}
+        onManage={() => connectionWindow(false)}
+      />
       {#if managed}
         <p class="text-xs font-medium">Local transcription</p>
         <p class="truncate text-sm" title={localModel}>{localModel}</p>
         <p class="text-xs text-muted-foreground">
-          {local.label} · {(session.runtime.status?.realtime ??
-          settings.managedRuntime?.realtime)
+          {local.label} · {settings.voiceTranscription.realtime
             ? "Realtime"
             : "Completed transcription"}
         </p>
@@ -236,24 +252,6 @@
           >Manage local runtime</Button
         >
       {:else}
-        <div class="flex items-center justify-between">
-          <label for="tray-connection" class="text-xs font-medium"
-            >Voice connection</label
-          ><button
-            class="text-[11px] text-muted-foreground hover:text-foreground"
-            onclick={settingsWindow}>Options ↗</button
-          >
-        </div>
-        <ConnectionSelect
-          id="tray-connection"
-          catalog={settings.savedConnections}
-          purpose={Purpose.Voice}
-          compact
-          disabled={locked}
-          onChange={(change) => session.editor.changeConnection(change)}
-          onAdd={() => connectionWindow(true)}
-          onManage={() => connectionWindow(false)}
-        />
         <RuntimeModelPicker
           id="tray-model"
           value={settings.voiceTranscription.model}

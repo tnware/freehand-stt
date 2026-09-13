@@ -696,12 +696,12 @@ func (s *Service) StartFileTranscription(stream bool) error {
 
 	go func() {
 		defer s.workers.Done()
-		s.runFileTranscription(ctx, generation, file, info.Size(), key, processingKey, cfg, effectiveStream, done)
+		s.runFileTranscription(ctx, generation, file, info.Size(), key, processingKey, cfg, effectiveStream, done, profile.PostProcessingUnavailable)
 	}()
 	return nil
 }
 
-func (s *Service) runFileTranscription(ctx context.Context, generation uint64, file *os.File, size int64, key, processingKey string, cfg config.Settings, stream bool, done chan struct{}) {
+func (s *Service) runFileTranscription(ctx context.Context, generation uint64, file *os.File, size int64, key, processingKey string, cfg config.Settings, stream bool, done chan struct{}, processingUnavailable error) {
 	started := time.Now()
 	startedAt := started.UTC()
 	responseMode := history.HistoryResponseCompleted
@@ -835,7 +835,10 @@ func (s *Service) runFileTranscription(ctx context.Context, generation uint64, f
 		if details.Transcription != nil {
 			detectedLanguages = details.Transcription.DetectedLanguages
 		}
-		processingErr = postprocess.ValidateLanguage(cfg.PostProcessing, cfg.Language, detectedLanguages)
+		processingErr = processingUnavailable
+		if processingErr == nil {
+			processingErr = postprocess.ValidateLanguage(cfg.PostProcessing, cfg.Language, detectedLanguages)
+		}
 		if processingErr == nil {
 			if s.processor == nil {
 				processingErr = errors.New("post-processing is unavailable")

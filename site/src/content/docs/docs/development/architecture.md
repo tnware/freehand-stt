@@ -32,24 +32,40 @@ optional Windows managed-runtime exception to ADR 0005's remote-first boundary.
 
 ## Managed local speech
 
-`internal/managedruntime` owns installation, metadata catalog, model downloads,
-and the NeMo child process. It exposes a small intent-based Wails service and
+`internal/managedruntime.Manager` owns the runtime inventory and independent
+per-instance workers. Provider adapters own installation, metadata catalogs,
+model acquisition, and process launch; NeMo is the implemented provider. It
+exposes a small instance-targeted Wails boundary and
 bounded status events, not upstream flags. Official versioned archives are
 checksum-verified before extraction is published. Model downloads use NeMo's
 own manager with a Freehand-owned cache. Listing the catalog never loads models.
 
-The settings owner persists enablement, selected model, and realtime preference
-through the existing SQLite transaction. It projects a ready local endpoint and
-qualified model profile into new Voice/file request snapshots without changing
-saved manual connections. It clears manual authentication and headers from that
-projection; cleanup and TTS retain their own coherent configuration. A failed
-managed runtime blocks admission rather than silently sending audio remotely.
-Explicitly disabling managed mode restores manual routing for subsequent work.
+Following [ADR 0016](../../decisions/0016-managed-runtime-connections/), the
+settings owner persists runtime instance definitions and ordinary Connections
+through the existing SQLite transaction. A managed Connection references an
+instance, not an ephemeral port. Each task independently selects its Connection;
+there is no global managed-mode routing override. Runtime instances own loaded
+models; Voice owns realtime, and task/model option ownership remains unchanged.
+Request admission resolves the selected instance and qualified contract into an
+immutable, credential-free loopback transport. Manual credentials and headers
+are never inherited by managed requests. An unavailable selected instance blocks
+that task without choosing another server. Cleanup remains independently selected
+and retains raw fallback when its captured endpoint is unavailable. Selecting a
+manual Connection is an explicit routing change, not a runtime lifecycle action.
 
 Managed Nemotron setup recommends realtime Voice. Files still use completed
 transcription. The existing STT and NeMo WebSocket clients remain transport
 owners; no runtime install/start logic belongs in them. Readiness must reflect
-managed status rather than require an otherwise unused manual connection.
+the selected task's instance status rather than an unrelated runtime or manual
+connection. Runtime installation/catalog management remains separate from, and
+linked by, Connections and task quick settings.
+
+Task settings and quick settings replace manual model/profile pickers with
+instance-targeted controls when their selected Connection is managed. The shared
+speech controls preserve voice, speed, and qualified language/style options;
+cleanup preserves its instruction and generation controls. These surfaces do not
+register providers or imply managed cleanup/speech qualification: NeMo currently
+qualifies transcription only.
 
 The adapter probes `/ready` and `/v1/models` at the server origin, but publishes
 `http://127.0.0.1:<port>/v1` as the speech API base. Completed microphone/file
@@ -59,7 +75,7 @@ Keep this distinction at the adapter boundary, not in shared client URL handling
 Windows owns children through a Job Object, including model-manager subprocesses.
 The server listens only on `127.0.0.1`; readiness and loaded model metadata are
 verified before the endpoint is admitted. Wails shutdown cancels work and closes
-the owned process tree within a bound. Child output stays in private bounded
+all owned process trees against one overall eight-second bound. Child output stays in private bounded
 memory and is not application log content. Other platforms expose unsupported
 managed-runtime status without changing their native capture or manual endpoints.
 

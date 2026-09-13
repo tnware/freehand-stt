@@ -1,8 +1,13 @@
 <script lang="ts">
+  import { session } from "$lib/stores/session.svelte";
   import { type Catalog, type Connection } from "$bindings/savedconnection";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Button } from "$lib/components/ui/button";
-  import { connectionMatches, connectionWorkflows } from "$lib/utils/connectionChoices";
+  import {
+    connectionTargetLabel,
+    connectionMatches,
+    connectionWorkflows,
+  } from "$lib/utils/connectionChoices";
   import SearchIcon from "@lucide/svelte/icons/search";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -24,7 +29,7 @@
   let query = $state("");
   const entries = $derived(
     (catalog.entries ?? [])
-      .filter((c) => connectionMatches(c, query))
+      .filter((c) => connectionMatches(c, query, session.runtime.instances))
       .sort((a, b) => a.name.localeCompare(b.name)),
   );
 </script>
@@ -52,7 +57,10 @@
       />
     </div>
   </div>
-  <nav aria-label="Saved connections" class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
+  <nav
+    aria-label="Saved connections"
+    class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
+  >
     {#each entries as connection (connection.id)}
       {@const active = connectionWorkflows.filter(
         (role) => catalog.selected?.[role.id] === connection.id,
@@ -64,23 +72,39 @@
         onclick={() => onSelect(connection)}
         class={`flex w-full items-center gap-3 rounded-md px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${connection.id === selected ? "bg-accent text-accent-foreground" : "hover:bg-subtle-fill-hover"}`}
       >
-        <ProviderIcon profile={connection.details.compatibilityProfile} size={22} />
+        <ProviderIcon
+          profile={connection.details.compatibilityProfile}
+          size={22}
+        />
         <span class="min-w-0 flex-1"
-          ><span class="block truncate text-sm font-medium">{connection.name}</span>
+          ><span class="block truncate text-sm font-medium"
+            >{connection.name}</span
+          >
           <span
             class="mt-0.5 block truncate text-xs text-muted-foreground"
-            title={connection.details.baseURL}>{connection.details.baseURL}</span
+            title={connectionTargetLabel(connection, session.runtime.instances)}
+            >{connectionTargetLabel(
+              connection,
+              session.runtime.instances,
+            )}</span
           >
-          {#if active.length}<span class="mt-1 block truncate text-[11px] text-muted-foreground"
+          {#if active.length}<span
+              class="mt-1 block truncate text-[11px] text-muted-foreground"
               >In use · {active.map((role) => role.label).join(" · ")}</span
             >{/if}
-        </span><ChevronRightIcon class="size-3.5 shrink-0 text-muted-foreground" />
+        </span><ChevronRightIcon
+          class="size-3.5 shrink-0 text-muted-foreground"
+        />
       </button>
     {:else}<p class="px-3 py-6 text-center text-sm text-muted-foreground">
-        {query ? "No matching connections." : "Add a server to get started."}
+        {query
+          ? "No matching connections."
+          : "Add a server or local runtime connection to get started."}
       </p>{/each}
   </nav>
-  <p class="shrink-0 border-t border-hairline px-4 py-2 text-xs text-muted-foreground">
+  <p
+    class="shrink-0 border-t border-hairline px-4 py-2 text-xs text-muted-foreground"
+  >
     {catalog.entries?.length ?? 0} saved connections
   </p>
 </div>

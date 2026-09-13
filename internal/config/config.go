@@ -156,6 +156,7 @@ func S1MiniContextValues() []string {
 }
 
 type PostProcessingSettings struct {
+	ManagedInstanceID string                       `json:"managedInstanceID,omitempty"`
 	GenerationOptions compatibility.CleanupOptions `json:"generationOptions"`
 
 	CompatibilityProfile compatibility.ID `json:"compatibilityProfile"`
@@ -173,6 +174,7 @@ type PostProcessingSettings struct {
 }
 
 type TextToSpeechSettings struct {
+	ManagedInstanceID    string                     `json:"managedInstanceID,omitempty"`
 	Options              modelprofile.SpeechOptions `json:"options"`
 	ModelProfile         modelprofile.ID            `json:"modelProfile"`
 	CompatibilityProfile compatibility.ID           `json:"compatibilityProfile"`
@@ -196,7 +198,8 @@ const (
 )
 
 type Settings struct {
-	ManagedRuntime                  managedruntime.Preferences `json:"managedRuntime"`
+	ManagedRuntimes                 []managedruntime.Instance  `json:"managedRuntimes"`
+	ManagedInstanceID               string                     `json:"managedInstanceID,omitempty"`
 	Vocabulary                      VocabularySettings         `json:"vocabulary"`
 	VoiceTranscription              VoiceTranscriptionSettings `json:"voiceTranscription"`
 	ModelProfile                    modelprofile.ID            `json:"modelProfile"`
@@ -253,7 +256,7 @@ type Settings struct {
 
 func Default() Settings {
 	return Settings{
-		ManagedRuntime:       managedruntime.Defaults(),
+		ManagedRuntimes:      []managedruntime.Instance{},
 		Vocabulary:           VocabularySettings{Boost: 3},
 		VoiceTranscription:   DefaultVoiceTranscription(),
 		CompatibilityProfile: compatibility.Generic,
@@ -309,29 +312,28 @@ func (s Settings) EffectiveAppearanceMode() AppearanceMode {
 var headerNameRE = regexp.MustCompile(`^[!#$%&'*+\-.^_` + "`" + `|~0-9A-Za-z]+$`)
 
 func Validate(s Settings) error {
-	if err := managedruntime.Validate(s.ManagedRuntime); err != nil {
-		return fieldError("managedRuntime", "Choose a supported local runtime model and mode.", err)
+	return validate(s, false)
+}
+
+// ValidateStored validates durable settings when reopening a database. Managed
+// task preferences survive a runtime migration even when the selected model
+// cannot execute them. This is not renderer or request admission: those callers
+// must use Validate and the resolved task validators.
+func ValidateStored(s Settings) error {
+	return validate(s, true)
+}
+
+func validate(s Settings, stored bool) error {
+	if err := managedruntime.ValidateInstances(s.ManagedRuntimes); err != nil {
+		return err
 	}
-	if s.ManagedRuntime.Enabled {
-		behavior, err := managedruntime.QualifiedBehavior(s.ManagedRuntime.Model)
-		if err != nil {
-			return fieldError("managedRuntime", "Choose a supported local runtime model and mode.", err)
-		}
-		if err := modelprofile.ValidateTranscription(behavior.ID, compatibility.NeMoSpeechV1, s.VoiceTranscription.Language, compatibility.TranscriptionOptions{}); err != nil {
-			return fieldError("voice-transcription", "Choose a voice transcription language supported by the selected local model.", err)
-		}
-		if err := modelprofile.ValidateTranscription(behavior.ID, compatibility.NeMoSpeechV1, s.Language, compatibility.TranscriptionOptions{}); err != nil {
-			return fieldError("language", "Choose an audio file language supported by the selected local model.", err)
-		}
-		// Task languages belong to managed speech while these saved manual
-		// connections and model options remain independently valid for reuse.
-		s.VoiceTranscription.Language = "auto"
-		s.Language = "auto"
+	if err := validateManagedReferences(s); err != nil {
+		return err
 	}
 	if err := ValidateVocabulary(s.Vocabulary); err != nil {
 		return fieldError("vocabulary", "Check vocabulary text and strength.", err)
 	}
-	if err := ValidateVoiceTranscription(s.VoiceTranscription); err != nil {
+	if err := validateVoiceTranscription(s.VoiceTranscription, stored && s.VoiceTranscription.ManagedInstanceID != ""); err != nil {
 		return fieldError("voice-transcription", "Check the voice transcription connection, model profile, language, and options.", err)
 	}
 	if _, err := compatibility.Resolve(s.CompatibilityProfile, compatibility.Transcription); err != nil {
@@ -360,7 +362,11 @@ func Validate(s Settings) error {
 	default:
 		return fieldError("appearanceMode", "Choose system, light, or dark appearance mode.", errors.New("appearance mode is invalid"))
 	}
-	if err := modelprofile.ValidateTranscription(s.ModelProfile, s.CompatibilityProfile, s.Language, s.TranscriptionOptions.Inference()); err != nil {
+	validateTranscription := modelprofile.ValidateTranscription
+	if stored && s.ManagedInstanceID != "" {
+		validateTranscription = modelprofile.ValidateStoredTranscription
+	}
+	if err := validateTranscription(s.ModelProfile, s.CompatibilityProfile, s.Language, s.TranscriptionOptions.Inference()); err != nil {
 		return fieldError("modelProfile", "Choose a compatible transcription model profile, language, and options.", err)
 	}
 	if err := speechlanguage.Validate(s.Language); err != nil {
@@ -571,6 +577,9 @@ func ValidateOverlayPreferences(preferences OverlayPreferences) error {
 // of Voice setup. Model choice can follow metadata discovery; recording/file
 // request admission enforces the selected backend's model requirement.
 func validatePersistedSTTSettings(s Settings) error {
+	if s.ManagedInstanceID != "" {
+		return validateManagedTransport(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, s.HealthPath, s.Headers)
+	}
 	if s.BaseURL == "" && s.Model == "" {
 		switch s.AuthenticationMode {
 		case AuthenticationModeAPIKey, AuthenticationModeNone:

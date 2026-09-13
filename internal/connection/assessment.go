@@ -44,6 +44,9 @@ func assess(r ConnectionResult, p savedconnection.Purpose, backend compatibility
 		connection.Status = CheckAttention
 		connection.Summary = "Connection needs attention"
 		switch r.ErrorKind {
+		case ConnectionErrorRuntimeUnavailable:
+			connection.Summary = "Local runtime is not ready"
+			connection.Detail = "Open runtime management and start the selected installed model, then check again. No request was sent."
 		case ConnectionErrorCredentialMissing:
 			connection.Summary = "Check not sent"
 			connection.Detail = "Add an API key in Connections, then check again."

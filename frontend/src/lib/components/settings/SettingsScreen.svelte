@@ -34,7 +34,7 @@
   import { cn } from "$lib/utils";
 
   let {
-    session,
+    session = $bindable(),
     visible = true,
     active = $bindable(),
     navigationRef = $bindable(null),
@@ -71,14 +71,6 @@
 
   const section = $derived(sectionByID(active));
   const dirty = $derived(session.editor.dirty);
-  const managed = $derived(
-    session.runtime.status?.enabled ??
-      session.editor.applied?.managedRuntime.enabled ??
-      false,
-  );
-  const managedWorkflow = $derived(
-    managed && (active === "voice-transcription" || active === "server"),
-  );
   const speechWorkBusy = $derived(
     ![State.Idle, State.Failed].includes(session.dictation.status.state) ||
       session.files.starting ||
@@ -328,35 +320,8 @@
         {/if}
 
         {#if session.editor.draft}
-          {#if active === "voice-transcription" || managedWorkflow}
-            <div
-              class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline bg-card p-4"
-            >
-              <div class="min-w-0">
-                <p class="text-sm font-medium">
-                  {managed
-                    ? "Local runtime is selected"
-                    : "Live transcription on this PC"}
-                </p>
-                <p class="mt-1 text-xs text-muted-foreground">
-                  {managed
-                    ? "Your own server settings remain editable below, but are inactive. No automatic fallback."
-                    : "Use managed local speech, or keep using your own server below."}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onclick={() => selectSection("local-runtime")}
-                >{managed
-                  ? "Manage local runtime"
-                  : "Set up local runtime"}</Button
-              >
-            </div>
-          {/if}
           {#if active === "voice-transcription" || active === "server" || active === "processing" || active === "speech"}
             <SavedConnectionPicker
-              inactive={managedWorkflow}
               catalog={session.editor.draft.savedConnections}
               purpose={active === "voice-transcription"
                 ? Purpose.Voice
@@ -418,14 +383,16 @@
               runtime={session.runtime}
               disabled={session.editor.saving}
               workBusy={speechWorkBusy}
+              onConnections={browseConnections}
               onAction={withSavedSettings}
-              onManual={() => selectSection("voice-transcription")}
             />
           {:else if active === "connections"}
             <Button onclick={browseConnections}>Open connections</Button>
           {:else if active === "voice-transcription"}
             {#if session.editor.draft.savedConnections.selected?.voice}
               <VoiceTranscriptionSettings
+                runtime={session.runtime}
+                onManageRuntime={() => selectSection("local-runtime")}
                 editor={session.editor}
                 settings={session.editor.draft}
                 draft
@@ -471,6 +438,8 @@
           {:else if active === "server"}
             {#if session.editor.draft.savedConnections.selected?.stt}
               <ServerSection
+                runtime={session.runtime}
+                onManageRuntime={() => selectSection("local-runtime")}
                 onEnter={() =>
                   void session.editor.ensureConnectionMetadata(
                     Purpose.Transcription,
@@ -498,6 +467,8 @@
           {:else if active === "processing"}
             {#if session.editor.draft.savedConnections.selected?.cleanup}
               <ProcessingSection
+                runtime={session.runtime}
+                onManageRuntime={() => selectSection("local-runtime")}
                 onEnter={() =>
                   void session.editor.ensureConnectionMetadata(
                     Purpose.Cleanup,
@@ -525,6 +496,8 @@
           {:else if active === "speech"}
             {#if session.editor.draft.savedConnections.selected?.speech}
               <SpeechSection
+                runtime={session.runtime}
+                onManageRuntime={() => selectSection("local-runtime")}
                 onEnter={() =>
                   void session.editor.ensureConnectionMetadata(
                     Purpose.Speech,

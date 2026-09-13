@@ -7,6 +7,7 @@ package dbgen
 
 import (
 	"context"
+	"database/sql"
 )
 
 const clearConnectionHeaders = `-- name: ClearConnectionHeaders :exec
@@ -46,7 +47,7 @@ func (q *Queries) DeleteSavedConnection(ctx context.Context, id string) error {
 }
 
 const getSelectedConnectionDetails = `-- name: GetSelectedConnectionDetails :many
-SELECT s.purpose, c.id, c.name, c.compatibility_profile, c.base_url, c.allow_insecure_http, c.authentication_mode, c.health_path, c.credential_account FROM selected_connections s JOIN saved_connections c ON c.id=s.connection_id ORDER BY s.purpose
+SELECT s.purpose, c.id, c.name, c.compatibility_profile, c.base_url, c.allow_insecure_http, c.authentication_mode, c.health_path, c.credential_account, c.managed_instance_id FROM selected_connections s JOIN saved_connections c ON c.id=s.connection_id ORDER BY s.purpose
 `
 
 type GetSelectedConnectionDetailsRow struct {
@@ -59,6 +60,7 @@ type GetSelectedConnectionDetailsRow struct {
 	AuthenticationMode   string
 	HealthPath           string
 	CredentialAccount    string
+	ManagedInstanceID    sql.NullString
 }
 
 func (q *Queries) GetSelectedConnectionDetails(ctx context.Context) ([]GetSelectedConnectionDetailsRow, error) {
@@ -80,6 +82,7 @@ func (q *Queries) GetSelectedConnectionDetails(ctx context.Context) ([]GetSelect
 			&i.AuthenticationMode,
 			&i.HealthPath,
 			&i.CredentialAccount,
+			&i.ManagedInstanceID,
 		); err != nil {
 			return nil, err
 		}
@@ -149,7 +152,7 @@ func (q *Queries) ListConnectionUses(ctx context.Context) ([]SavedConnectionUse,
 }
 
 const listSavedConnections = `-- name: ListSavedConnections :many
-SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account FROM saved_connections ORDER BY name,id LIMIT 129
+SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account,managed_instance_id FROM saved_connections ORDER BY name,id LIMIT 129
 `
 
 func (q *Queries) ListSavedConnections(ctx context.Context) ([]SavedConnection, error) {
@@ -170,6 +173,7 @@ func (q *Queries) ListSavedConnections(ctx context.Context) ([]SavedConnection, 
 			&i.AuthenticationMode,
 			&i.HealthPath,
 			&i.CredentialAccount,
+			&i.ManagedInstanceID,
 		); err != nil {
 			return nil, err
 		}
@@ -241,8 +245,8 @@ func (q *Queries) PutConnectionUse(ctx context.Context, arg PutConnectionUsePara
 }
 
 const putSavedConnection = `-- name: PutSavedConnection :exec
-INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) VALUES(?,?,?,?,?,?,?,?)
-ON CONFLICT(id) DO UPDATE SET name=excluded.name,compatibility_profile=excluded.compatibility_profile,base_url=excluded.base_url,allow_insecure_http=excluded.allow_insecure_http,authentication_mode=excluded.authentication_mode,health_path=excluded.health_path,credential_account=excluded.credential_account
+INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account,managed_instance_id) VALUES(?,?,?,?,?,?,?,?,?)
+ON CONFLICT(id) DO UPDATE SET name=excluded.name,compatibility_profile=excluded.compatibility_profile,base_url=excluded.base_url,allow_insecure_http=excluded.allow_insecure_http,authentication_mode=excluded.authentication_mode,health_path=excluded.health_path,credential_account=excluded.credential_account,managed_instance_id=excluded.managed_instance_id
 `
 
 type PutSavedConnectionParams struct {
@@ -254,6 +258,7 @@ type PutSavedConnectionParams struct {
 	AuthenticationMode   string
 	HealthPath           string
 	CredentialAccount    string
+	ManagedInstanceID    sql.NullString
 }
 
 func (q *Queries) PutSavedConnection(ctx context.Context, arg PutSavedConnectionParams) error {
@@ -266,6 +271,7 @@ func (q *Queries) PutSavedConnection(ctx context.Context, arg PutSavedConnection
 		arg.AuthenticationMode,
 		arg.HealthPath,
 		arg.CredentialAccount,
+		arg.ManagedInstanceID,
 	)
 	return err
 }

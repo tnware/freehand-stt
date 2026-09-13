@@ -1,59 +1,45 @@
 package settings
 
 import (
+	"errors"
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/managedruntime"
-	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"reflect"
 	"testing"
 )
 
-func TestManagedCaptureOverridesWholeTransportWithoutBYOCredentials(t *testing.T) {
-	s, log, _, keys := transactionalService(false)
-	s.cfg.ManagedRuntime.Enabled = true
-	s.cfg.BaseURL = "https://files.example.test/v1"
-	s.cfg.Model = "remote-file"
-	s.cfg.AuthenticationMode = config.AuthenticationModeAPIKey
-	s.cfg.Headers = map[string]string{"X-Private": "file-secret"}
-	s.cfg.HealthPath = "/private-health"
-	s.cfg.Language = "fr-FR"
+func testInstance() managedruntime.Instance {
+	return managedruntime.Instance{ID: "speech", Name: "Local speech", Provider: managedruntime.NeMoSpeechCPP, Model: "nemotron-3.5"}
+}
+func readyManagedEndpoint(i managedruntime.Instance, role compatibility.Role) (managedruntime.ResolvedEndpoint, error) {
+	c, err := managedruntime.Qualify(i.Provider, i.Model, role)
+	return managedruntime.ResolvedEndpoint{InstanceID: i.ID, Provider: i.Provider, CatalogModel: i.Model, Generation: 1, BaseURL: "http://127.0.0.1:43210/v1", Model: "served-model", Contract: c}, err
+}
+func TestManagedFilesDoNotOverrideManualVoice(t *testing.T) {
+	s, _, _, keys := transactionalService(false)
+	i := testInstance()
+	s.cfg.ManagedRuntimes = []managedruntime.Instance{i}
+	s.cfg.ManagedInstanceID = i.ID
 	s.cfg.VoiceTranscription.BaseURL = "https://voice.example.test/v1"
-	s.cfg.VoiceTranscription.Model = "remote-voice"
+	s.cfg.VoiceTranscription.Model = "manual-voice"
 	s.cfg.VoiceTranscription.AuthenticationMode = config.AuthenticationModeAPIKey
-	s.cfg.VoiceTranscription.Headers = map[string]string{"X-Private": "voice-secret"}
-	s.cfg.VoiceTranscription.HealthPath = "/private-health"
-	s.cfg.VoiceTranscription.Language = "en-US"
 	s.voiceKeys = keys
-	before := s.current()
-	endpoint := managedruntime.Endpoint{Enabled: true, BaseURL: "http://127.0.0.1:43210/v1", Model: "server-nemotron-id", Realtime: true, Profile: string(modelprofile.Nemotron35)}
-	WithManagedRuntime(func(managedruntime.Preferences) (managedruntime.Endpoint, error) { return endpoint, nil }, nil)(s)
-	voice, err := DictationProfiles(s).Capture()
+	WithManagedRuntimes(func(managedruntime.Instance, compatibility.Role) (managedruntime.ResolvedEndpoint, error) {
+		return managedruntime.ResolvedEndpoint{}, errors.New("stopped")
+	}, nil)(s)
+	p, err := DictationProfiles(s).Capture()
 	if err != nil {
 		t.Fatal(err)
 	}
-	files, err := RequestProfiles(s).Capture()
-	if err != nil {
-		t.Fatal(err)
+	if p.Settings.BaseURL != s.cfg.VoiceTranscription.BaseURL || p.STTCredential != "old-secret" {
+		t.Fatal("manual Voice was replaced")
 	}
-	for name, p := range map[string]RequestProfile{"voice": voice, "files": files} {
-		if p.Settings.BaseURL != endpoint.BaseURL || p.Settings.Model != endpoint.Model || p.Settings.ModelProfile != modelprofile.Nemotron35 || p.Settings.CompatibilityProfile != compatibility.NeMoSpeechV1 {
-			t.Fatalf("%s wrong managed transport: %#v", name, p.Settings)
-		}
-		if p.STTCredential != "" || p.VoiceCredential != "" || p.Settings.AuthenticationMode != config.AuthenticationModeNone || len(p.Settings.Headers) != 0 || len(p.Settings.VoiceTranscription.Headers) != 0 || p.Settings.HealthPath != "" {
-			t.Fatalf("%s leaked BYO transport", name)
-		}
+	if _, err := RequestProfiles(s).Capture(); !errors.Is(err, ErrManagedUnavailable) {
+		t.Fatalf("stopped files admitted: %v", err)
 	}
-	if !voice.Settings.VoiceTranscription.Realtime || files.Settings.VoiceTranscription.Realtime {
-		t.Fatal("managed realtime must apply only to voice snapshots")
-	}
-	if voice.Settings.Language != "en-US" || files.Settings.Language != "fr-FR" {
-		t.Fatal("source spoken language lost")
-	}
-	if len(*log) != 0 {
-		t.Fatalf("managed capture read BYO credentials: %v", *log)
-	}
-	if !reflect.DeepEqual(s.GetSettings().Settings, before) {
-		t.Fatal("capture changed saved BYO edit settings")
+	effective := CurrentSource(s).Current()
+	if effective.BaseURL != "" || !reflect.DeepEqual(effective.VoiceTranscription, s.cfg.VoiceTranscription) {
+		t.Fatal("failure damaged unrelated Voice")
 	}
 }

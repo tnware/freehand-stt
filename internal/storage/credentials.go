@@ -47,6 +47,9 @@ type credentialView struct {
 func (v *credentialView) Get() (string, error) {
 	v.s.mu.Lock()
 	defer v.s.mu.Unlock()
+	if c := v.s.connections.entries[v.s.connections.selected[savedconnection.Purpose(v.purpose)]]; c.Details.ManagedInstanceID != "" {
+		return "", credential.ErrNotFound
+	}
 	account := v.s.refs[v.purpose]
 	if account == "" {
 		return "", credential.ErrNotFound
@@ -66,6 +69,13 @@ func (v *credentialView) Set(value string) error {
 	}
 	if s.connections.selected[savedconnection.Purpose(v.purpose)] == "" {
 		return errors.New("credential change requires a selected connection")
+	}
+	state := s.connections
+	if s.pendingConnections != nil {
+		state = *s.pendingConnections
+	}
+	if c := state.entries[state.selected[savedconnection.Purpose(v.purpose)]]; c.Details.ManagedInstanceID != "" {
+		return errors.New("managed connections reject credential drafts")
 	}
 	account, err := s.stageCredential(v.purpose, value)
 	if err == nil {

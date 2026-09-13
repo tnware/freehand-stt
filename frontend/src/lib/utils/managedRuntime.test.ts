@@ -43,7 +43,7 @@ describe("local runtime presentation", () => {
       runtimePresentation({ ...status, state: "starting", enabled: true }),
     ).toMatchObject({ label: "Starting", ready: false, step: 2 });
     expect(
-      runtimePresentation({ ...status, state: "running", enabled: true }),
+      runtimePresentation({ ...status, state: "running", enabled: false }),
     ).toMatchObject({ label: "Running", ready: true, step: 3 });
     expect(
       runtimePresentation({
@@ -71,6 +71,7 @@ describe("local runtime presentation", () => {
       {
         id: "b",
         name: "B",
+        contracts: [],
         description: "",
         sizeBytes: 0,
         installed: false,
@@ -81,6 +82,7 @@ describe("local runtime presentation", () => {
       {
         id: "n",
         name: "Nemotron 3.5",
+        contracts: [],
         description: "",
         sizeBytes: 0,
         installed: false,
@@ -91,6 +93,7 @@ describe("local runtime presentation", () => {
       {
         id: "a",
         name: "A",
+        contracts: [],
         description: "",
         sizeBytes: 0,
         installed: true,

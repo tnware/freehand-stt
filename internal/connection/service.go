@@ -73,6 +73,7 @@ type ConnectionErrorKind string
 const (
 	ConnectionErrorCredentialMissing     ConnectionErrorKind = "credential_missing"
 	ConnectionErrorCredentialUnavailable ConnectionErrorKind = "credential_unavailable"
+	ConnectionErrorRuntimeUnavailable    ConnectionErrorKind = "runtime_unavailable"
 	ConnectionErrorDNS                   ConnectionErrorKind = "dns"
 	ConnectionErrorTLS                   ConnectionErrorKind = "tls"
 	ConnectionErrorHTTP                  ConnectionErrorKind = "http"
@@ -501,7 +502,9 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 	c, key, err := s.savedConnections.ResolveSavedConnection(id)
 	if err != nil {
 		result.ErrorKind = ConnectionErrorCredentialUnavailable
-		if errors.Is(err, credential.ErrNotFound) {
+		if errors.Is(err, settings.ErrManagedUnavailable) {
+			result.ErrorKind = ConnectionErrorRuntimeUnavailable
+		} else if errors.Is(err, credential.ErrNotFound) {
 			result.ErrorKind = ConnectionErrorCredentialMissing
 		}
 		return

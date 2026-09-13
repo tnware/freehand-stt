@@ -178,7 +178,7 @@
     {/key}
   {:else}
     <SettingsScreen
-      {session}
+      bind:session
       bind:active={navigation.active}
       onClose={() => requestClose()}
       decisionOpen={pending !== null}

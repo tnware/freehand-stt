@@ -31,12 +31,8 @@ func (m modelSpec) path(root string) string { return filepath.Join(m.directory(r
 // QualifiedBehavior resolves the selected managed model's metadata without
 // requiring an installed runtime, catalog discovery, or a running endpoint.
 func QualifiedBehavior(id string) (modelprofile.Profile, error) {
-	q, ok := qualified[id]
-	if !ok {
-		return modelprofile.Profile{}, errors.New("Choose a supported managed speech model.")
-	}
-	contract, err := modelprofile.Resolve(modelprofile.ID(q.Profile), compatibility.NeMoSpeechV1, compatibility.Transcription)
-	return contract.Profile, err
+	contract, err := Qualify(NeMoSpeechCPP, id, compatibility.Transcription)
+	return contract.Behavior, err
 }
 
 func parseCatalog(b []byte) ([]Model, error) {
@@ -59,13 +55,7 @@ func parseCatalog(b []byte) ([]Model, error) {
 			if m.Revision != spec.revision || !slices.Contains(m.Aliases, id) || !slices.Contains(m.Roles, "asr") || !slices.Contains(m.Commands, "serve") || len(m.Companions) != 0 {
 				return nil, errors.New("The runtime catalog is not qualified for this release. Reinstall the runtime.")
 			}
-			q := qualified[id]
-			behavior, err := QualifiedBehavior(id)
-			if err != nil {
-				return nil, err
-			}
-			q.Behavior = &behavior
-			q.SizeBytes = spec.size
+			q := (nemoProvider{}).model(id)
 			out = append(out, q)
 			break
 		}

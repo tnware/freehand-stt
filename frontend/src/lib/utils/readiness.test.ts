@@ -19,26 +19,37 @@ import {
   type Device,
   type Settings,
 } from "$lib/state";
-import type { Status as ManagedStatus } from "$bindings/managedruntime";
+import { ProviderID, type InstanceStatus } from "$bindings/managedruntime";
 import { appReadiness, readinessVisible } from "$lib/utils/readiness";
 
-it("uses a running managed runtime for fresh Voice setup without touching manual endpoints", () => {
+it("requires the selected Voice instance to be ready, independently of manual files", () => {
   const cfg = settings();
   cfg.voiceTranscription.baseURL = "";
-  cfg.voiceTranscription.model = "";
+  cfg.voiceTranscription.model = "nemotron-3.5";
+  cfg.voiceTranscription.managedInstanceID = "local-voice";
   cfg.savedConnections = { entries: [], selected: {} };
-  const runtime: ManagedStatus = {
-    supported: true,
-    state: "running",
-    enabled: true,
-    selectedModel: "nemotron-3.5",
-    realtime: true,
-    backend: "vulkan",
-    version: "0.1.0",
-    progress: 1,
-    phase: "Ready",
-    error: "",
-    models: [],
+  const runtime: InstanceStatus = {
+    instance: {
+      id: "local-voice",
+      name: "Local Voice",
+      provider: ProviderID.NeMoSpeechCPP,
+      model: "nemotron-3.5",
+      autoStart: false,
+    },
+    activeModel: "nemotron-3.5",
+    status: {
+      supported: true,
+      state: "running",
+      enabled: true,
+      selectedModel: "nemotron-3.5",
+      realtime: true,
+      backend: "vulkan",
+      version: "0.1.0",
+      progress: 1,
+      phase: "Ready",
+      error: "",
+      models: [],
+    },
   };
   const ready = appReadiness(cfg, null, devices, false, "voice", runtime);
   expect(ready.canComplete).toBe(true);
@@ -50,20 +61,29 @@ it("uses a running managed runtime for fresh Voice setup without touching manual
   expect(
     appReadiness(cfg, connection(), devices, false, "voice", {
       ...runtime,
-      state: "stopped",
+      status: { ...runtime.status, state: "stopped" },
     }).canComplete,
   ).toBe(false);
   expect(
     appReadiness(cfg, connection(), devices, false, "voice", {
       ...runtime,
-      supported: false,
+      status: { ...runtime.status, supported: false },
     }).canComplete,
   ).toBe(false);
   expect(
     appReadiness(cfg, null, devices, false, "file", runtime).canTestConnection,
+  ).toBe(true);
+  expect(
+    appReadiness(cfg, null, devices, false, "file", {
+      ...runtime,
+      status: { ...runtime.status, state: "stopped" },
+    }).recoveryNeeded,
   ).toBe(false);
   expect(
-    appReadiness(cfg, null, devices, false, "file", runtime).recoveryNeeded,
+    appReadiness(cfg, null, devices, false, "voice", {
+      ...runtime,
+      instance: { ...runtime.instance, id: "different-instance" },
+    }).canComplete,
   ).toBe(false);
 });
 
@@ -72,7 +92,7 @@ const devices: Device[] = [
 ];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
-  managedRuntime: { enabled: false, model: "nemotron-3.5", realtime: true },
+  managedRuntimes: [],
   vocabulary: { terms: "", voice: false, files: false, boost: 3 },
   savedConnections: {
     entries: [

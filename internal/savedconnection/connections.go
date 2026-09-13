@@ -47,6 +47,7 @@ type Change struct {
 
 // Details are connection-scoped. Model preferences and workflow settings are separate.
 type Details struct {
+	ManagedInstanceID    string                    `json:"managedInstanceID,omitempty"`
 	CompatibilityProfile compatibility.ID          `json:"compatibilityProfile"`
 	BaseURL              string                    `json:"baseURL"`
 	AllowInsecureHTTP    bool                      `json:"allowInsecureHTTP"`
@@ -81,6 +82,9 @@ func ValidateName(name string) error {
 	return nil
 }
 func CloneDetails(v Details) Details {
+	if v.ManagedInstanceID != "" && v.AuthenticationMode == "" {
+		v.AuthenticationMode = config.AuthenticationModeNone
+	}
 	h := map[string]string{}
 	for k, x := range v.Headers {
 		h[k] = x
@@ -92,6 +96,7 @@ func Extract(v config.Settings, p Purpose) Details {
 	d := Details{Headers: map[string]string{}, AuthenticationMode: config.AuthenticationModeNone}
 	switch p {
 	case Voice:
+		d.ManagedInstanceID = v.VoiceTranscription.ManagedInstanceID
 		d.CompatibilityProfile = v.VoiceTranscription.CompatibilityProfile
 		d.BaseURL = v.VoiceTranscription.BaseURL
 		d.AllowInsecureHTTP = v.VoiceTranscription.AllowInsecureHTTP
@@ -101,6 +106,7 @@ func Extract(v config.Settings, p Purpose) Details {
 			d.Headers[k] = x
 		}
 	case Transcription:
+		d.ManagedInstanceID = v.ManagedInstanceID
 		d.CompatibilityProfile = v.CompatibilityProfile
 		d.BaseURL = v.BaseURL
 		d.AllowInsecureHTTP = v.AllowInsecureHTTP
@@ -110,14 +116,19 @@ func Extract(v config.Settings, p Purpose) Details {
 			d.Headers[k] = x
 		}
 	case Cleanup:
+		d.ManagedInstanceID = v.PostProcessing.ManagedInstanceID
 		d.CompatibilityProfile = v.PostProcessing.CompatibilityProfile
 		d.BaseURL = v.PostProcessing.BaseURL
 		d.AllowInsecureHTTP = v.PostProcessing.AllowInsecureHTTP
 	case Speech:
+		d.ManagedInstanceID = v.TextToSpeech.ManagedInstanceID
 		d.CompatibilityProfile = v.TextToSpeech.CompatibilityProfile
 		d.BaseURL = v.TextToSpeech.BaseURL
 		d.AllowInsecureHTTP = v.TextToSpeech.AllowInsecureHTTP
 		d.AuthenticationMode = v.TextToSpeech.AuthenticationMode
+	}
+	if d.ManagedInstanceID != "" {
+		d.CompatibilityProfile = ""
 	}
 	return d
 }
@@ -126,6 +137,7 @@ func Extract(v config.Settings, p Purpose) Details {
 func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 	switch p {
 	case Voice:
+		v.VoiceTranscription.ManagedInstanceID = d.ManagedInstanceID
 		v.VoiceTranscription.CompatibilityProfile = d.CompatibilityProfile
 		v.VoiceTranscription.BaseURL = d.BaseURL
 		v.VoiceTranscription.AllowInsecureHTTP = d.AllowInsecureHTTP
@@ -133,6 +145,7 @@ func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 		v.VoiceTranscription.HealthPath = d.HealthPath
 		v.VoiceTranscription.Headers = CloneDetails(d).Headers
 	case Transcription:
+		v.ManagedInstanceID = d.ManagedInstanceID
 		v.CompatibilityProfile = d.CompatibilityProfile
 		v.BaseURL = d.BaseURL
 		v.AllowInsecureHTTP = d.AllowInsecureHTTP
@@ -140,14 +153,19 @@ func Apply(v config.Settings, p Purpose, d Details) config.Settings {
 		v.HealthPath = d.HealthPath
 		v.Headers = CloneDetails(d).Headers
 	case Cleanup:
+		v.PostProcessing.ManagedInstanceID = d.ManagedInstanceID
 		v.PostProcessing.CompatibilityProfile = d.CompatibilityProfile
 		v.PostProcessing.BaseURL = d.BaseURL
 		v.PostProcessing.AllowInsecureHTTP = d.AllowInsecureHTTP
 	case Speech:
+		v.TextToSpeech.ManagedInstanceID = d.ManagedInstanceID
 		v.TextToSpeech.CompatibilityProfile = d.CompatibilityProfile
 		v.TextToSpeech.BaseURL = d.BaseURL
 		v.TextToSpeech.AllowInsecureHTTP = d.AllowInsecureHTTP
 		v.TextToSpeech.AuthenticationMode = d.AuthenticationMode
+	}
+	if d.ManagedInstanceID != "" {
+		v = QualifyProjection(v, p, d.ManagedInstanceID)
 	}
 	return v
 }
@@ -166,6 +184,12 @@ func Validate(p Purpose, d Details) error {
 		operation = compatibility.Speech
 	default:
 		return errors.New("invalid connection purpose")
+	}
+	if d.ManagedInstanceID != "" {
+		if d.BaseURL != "" || d.CompatibilityProfile != "" || d.HealthPath != "" || len(d.Headers) != 0 || d.AllowInsecureHTTP || (d.AuthenticationMode != "" && d.AuthenticationMode != config.AuthenticationModeNone) {
+			return errors.New("managed connections cannot contain manual transport")
+		}
+		return nil
 	}
 	if _, err := compatibility.Resolve(d.CompatibilityProfile, operation); err != nil {
 		return err

@@ -8,55 +8,39 @@ import (
 	"testing"
 )
 
-func TestGeneralSaveCannotOverwriteManagedPreferences(t *testing.T) {
+func TestGeneralSaveCannotOverwriteManagedInstances(t *testing.T) {
 	s, _, _, _ := transactionalService(false)
 	stale := s.current()
-	s.cfg.ManagedRuntime.Enabled = true
+	s.cfg.ManagedRuntimes = []managedruntime.Instance{testInstance()}
 	stale.HistoryEnabled = true
 	got, err := s.SaveSettings(request(stale, ""))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !got.ManagedRuntime.Enabled || !got.HistoryEnabled {
-		t.Fatal("general save overwrote managed preference from stale DTO")
+	if !reflect.DeepEqual(got.ManagedRuntimes, s.cfg.ManagedRuntimes) || len(got.ManagedRuntimes) != 1 || !got.HistoryEnabled {
+		t.Fatal("stale draft replaced inventory")
 	}
 }
-
-func TestManagedPreferencePersistenceIsNarrowAndPublishesCommittedPreferences(t *testing.T) {
-	s, log, _, _ := transactionalService(false)
-	before := s.current()
-	var applied []managedruntime.Preferences
-	WithManagedRuntime(nil, func(p managedruntime.Preferences) {
-		applied = append(applied, p)
-		_ = s.GetSettings()
-	})(s)
+func TestManagedInstanceCommitPublishesOutsideSaveLock(t *testing.T) {
+	s, _, _, keys := transactionalService(false)
+	keys.getErr = errors.New("locked")
+	instances := []managedruntime.Instance{testInstance()}
 	var published SettingsDTO
-	s.settingsChanged = func(v SettingsDTO) { published = v; _ = s.GetSettings() }
-	p := before.ManagedRuntime
-	p.Enabled = true
-	if err := SaveManagedPreferences(s, p); err != nil {
+	WithManagedRuntimes(nil, func(v []managedruntime.Instance) { published = s.GetSettings(); v[0].Name = "mutated callback" })(s)
+	if err := SaveManagedInstances(s, instances); err != nil {
 		t.Fatal(err)
 	}
-	expected := before
-	expected.ManagedRuntime = p
-	if !reflect.DeepEqual(s.current(), expected) || published.ManagedRuntime != p {
-		t.Fatal("managed preference commit lost unrelated settings or publication")
-	}
-	if len(applied) != 1 || applied[0] != p {
-		t.Fatal("persistence did not publish the authoritative committed preferences")
-	}
-	if !reflect.DeepEqual(*log, []string{"config:save"}) {
-		t.Fatalf("unexpected native/credential writes: %v", *log)
+	instances[0].Name = "mutated caller"
+	if s.current().ManagedRuntimes[0].Name != "Local speech" || published.ManagedRuntimes[0].Name != "Local speech" {
+		t.Fatal("inventory alias escaped")
 	}
 }
-
-func TestManagedPreferencePersistenceGuardsAndFailure(t *testing.T) {
-	for _, mode := range []string{"failure", "recovery", "closed", "publication-busy", "save-busy", "invalid"} {
+func TestManagedInstanceSaveFailureKeepsCommittedSnapshot(t *testing.T) {
+	for _, mode := range []string{"disk", "recovery", "closed", "publication-busy", "save-busy", "invalid"} {
 		t.Run(mode, func(t *testing.T) {
-			s, _, _, _ := transactionalService(mode == "failure")
+			s, _, _, _ := transactionalService(mode == "disk")
 			before := s.current()
-			p := before.ManagedRuntime
-			p.Enabled = true
+			instances := []managedruntime.Instance{testInstance()}
 			switch mode {
 			case "recovery":
 				s.configuration.RecoveryRequired = true
@@ -69,40 +53,37 @@ func TestManagedPreferencePersistenceGuardsAndFailure(t *testing.T) {
 				s.saveMu.Lock()
 				defer s.saveMu.Unlock()
 			case "invalid":
-				p.Model = "invalid"
+				instances[0].Model = "unknown"
 			}
-			if err := SaveManagedPreferences(s, p); err == nil {
+			if err := SaveManagedInstances(s, instances); err == nil {
 				t.Fatal("unsafe save accepted")
 			}
-			if !reflect.DeepEqual(s.current(), before) {
-				t.Fatal("failed save changed active preferences")
+			if !reflect.DeepEqual(before, s.current()) {
+				t.Fatal("failed commit published")
 			}
 		})
 	}
 }
-
-func TestRecoveryReconcilesManagedPreferences(t *testing.T) {
+func TestRecoveryReconcilesManagedInstances(t *testing.T) {
 	s, log, _, _ := transactionalService(false)
 	next := config.Default()
-	next.ManagedRuntime.Enabled = true
-	store := &recoveryStoreFake{storeFake: storeFake{log: log}, settings: next}
-	s.store, s.loader = store, store
-	var applied []managedruntime.Preferences
-	WithManagedRuntime(nil, func(p managedruntime.Preferences) { applied = append(applied, p); _ = s.GetSettings() })(s)
+	next.ManagedRuntimes = []managedruntime.Instance{testInstance()}
+	st := &recoveryStoreFake{storeFake: storeFake{log: log}, settings: next}
+	s.store, s.loader = st, st
+	var applied []managedruntime.Instance
+	WithManagedRuntimes(nil, func(v []managedruntime.Instance) { applied = v; _ = s.GetSettings() })(s)
 	if _, err := s.RetryConfiguration(); err != nil {
 		t.Fatal(err)
 	}
-	if len(applied) != 1 || applied[0] != next.ManagedRuntime {
-		t.Fatal("retry did not reconcile runtime")
+	if !reflect.DeepEqual(applied, next.ManagedRuntimes) {
+		t.Fatal("recovery did not publish inventory")
 	}
-	store.loadErr = errors.New("corrupt")
-	if _, err := s.RetryConfiguration(); err != nil {
-		t.Fatal(err)
-	}
+	st.loadErr = errors.New("corrupt")
+	_, _ = s.RetryConfiguration()
 	if _, err := s.ResetConfiguration(); err != nil {
 		t.Fatal(err)
 	}
-	if len(applied) != 2 || applied[1] != config.Default().ManagedRuntime {
-		t.Fatal("reset did not disable runtime")
+	if len(applied) != 0 {
+		t.Fatal("reset kept runtime inventory")
 	}
 }

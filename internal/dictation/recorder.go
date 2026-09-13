@@ -809,7 +809,10 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		if details.Transcription != nil {
 			detectedLanguages = details.Transcription.DetectedLanguages
 		}
-		processingErr = postprocess.ValidateLanguage(cfg.PostProcessing, cfg.Language, detectedLanguages)
+		processingErr = profile.PostProcessingUnavailable
+		if processingErr == nil {
+			processingErr = postprocess.ValidateLanguage(cfg.PostProcessing, cfg.Language, detectedLanguages)
+		}
 		if processingErr == nil {
 			if processor == nil {
 				processingErr = errors.New("post-processing is unavailable")
