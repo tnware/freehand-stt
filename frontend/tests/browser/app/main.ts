@@ -1,3 +1,4 @@
+import TrayFixture from "./TrayFixture.svelte";
 import VocabularyFixture from "./VocabularyFixture.svelte";
 import TranscriptFixture from "./TranscriptFixture.svelte";
 import { mount } from "svelte";
@@ -7,7 +8,7 @@ import "../../../src/app.css";
 const params = new URLSearchParams(location.search);
 document.documentElement.classList.toggle("dark", params.get("theme") === "dark");
 mount(
-  params.get("view") === "vocabulary"
+  params.get("view") === "tray" ? TrayFixture : params.get("view") === "vocabulary"
     ? VocabularyFixture
     : params.get("view") === "transcript"
       ? TranscriptFixture

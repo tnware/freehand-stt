@@ -14,7 +14,7 @@ func (a *App) installTray(logger *slog.Logger) {
 		Light: a.opts.TrayIcon,
 		Dark:  a.opts.TrayDarkModeIcon,
 	}, traycontroller.Actions{
-		ShowMain:     a.mainWindow.Reveal,
+		ShowMain:     a.showMain,
 		HideMain:     a.mainWindow.Hide,
 		ShowSettings: func() { a.showSettings("general") },
 		ShowAbout:    a.showAbout,

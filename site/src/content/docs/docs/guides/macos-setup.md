@@ -116,9 +116,10 @@ an insertion destination. Use the main app or menu-bar item for actions.
 
 ## Closing, reopening and login startup
 
-Closing an interactive window hides it. Use the menu-bar item or Dock to reopen
-the main window; use **Quit Freehand** or **Command-Q** to exit. A second launch
-reveals the existing instance rather than starting another recorder.
+Closing an interactive window hides it. Click the menu-bar item for the compact
+panel, then **Open Freehand** for the full workspace, or reopen Main from the Dock.
+Right-click the menu-bar item for **Quit Freehand**, or use **Command-Q** to exit.
+A second launch reveals the existing instance rather than starting another recorder.
 
 **Start at login** registers the current bundle executable for your next login; it
 does not immediately start another instance. **Disable Start at login before

@@ -272,7 +272,7 @@ func (a *App) emitShell(event, value string) {
 	}
 }
 func (a *App) navigateShell(event, value string) {
-	a.mainWindow.Reveal()
+	a.showMain()
 	a.shell.request(event, value, a.emitShell)
 }
 func (a *App) requestShellClose() {
@@ -413,6 +413,7 @@ func (a *App) newSettingsWindow() {
 }
 func (a *App) showSettings(section string) { _ = a.windowing.OpenSettings(section) }
 func (a *App) revealSettings(_ string) {
+	a.hideTrayPopover()
 	if window := a.settingsWindow.current(); window != nil && !window.IsVisible() {
 		a.centerAuxiliaryWindow(window)
 	}

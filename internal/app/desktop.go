@@ -46,5 +46,5 @@ func (a *App) configureDesktop() {
 	menu.AddRole(application.EditMenu)
 	menu.AddRole(application.WindowMenu)
 	a.wails.Menu.SetApplicationMenu(menu)
-	a.wails.Event.RegisterApplicationEventHook(events.Mac.ApplicationShouldHandleReopen, func(event *application.ApplicationEvent) { reopenMainWindow(event, a.mainWindow.Reveal) })
+	a.wails.Event.RegisterApplicationEventHook(events.Mac.ApplicationShouldHandleReopen, func(event *application.ApplicationEvent) { reopenMainWindow(event, a.showMain) })
 }

@@ -91,6 +91,7 @@ type App struct {
 	capture         *platform.ShortcutCapturer
 	wails           *application.App
 	mainWindow      *windowController
+	trayPopover     *windowController
 	shell           *shellNavigation
 	settingsWindow  *windowController
 	settingsShell   *shellNavigation
@@ -142,6 +143,7 @@ func New(opts Options) (*App, error) {
 		storage:        store,
 		settings:       settings,
 		mainWindow:     &windowController{},
+		trayPopover:    &windowController{},
 		shell:          &shellNavigation{},
 		settingsWindow: &windowController{},
 		settingsShell:  &shellNavigation{},
@@ -253,6 +255,7 @@ func New(opts Options) (*App, error) {
 		a.aboutWindow.open,
 	)
 	windowing.ConfigureSettings(a.windowing, windowing.SettingsNavigation{Ready: a.settingsReady, Visible: a.settingsWindow.open, Finish: a.finishSettings})
+	windowing.ConfigureTrayPopover(a.windowing, windowing.TrayPopoverNavigation{OpenMain: a.showMain, Hide: a.hideTrayPopover, Visible: a.trayPopover.open})
 	windowing.ConfigureConnections(a.windowing, windowing.ConnectionNavigation{
 		Exists: func(id string) bool {
 			for _, c := range store.ConnectionCatalog().Entries {
@@ -295,7 +298,7 @@ func New(opts Options) (*App, error) {
 		a.persistMainWindowPlacement(a.mainWindow.current())
 		a.tray.Close()
 	})
-	a.shortcuts = shortcut.New(a.wails.GlobalShortcut, a.hold, a.toggleRecording, a.mainWindow.Reveal)
+	a.shortcuts = shortcut.New(a.wails.GlobalShortcut, a.hold, a.toggleRecording, a.showMain)
 	a.wails.Event.OnApplicationEvent(events.Common.ApplicationStarted, a.onStarted)
 	a.installTray(rootLogger.With("component", "tray"))
 
@@ -420,7 +423,7 @@ func (a *App) newWailsApp() {
 				// A second launch reveals the main shell instead of starting another
 				// recorder, unless Windows started it at sign-in.
 				if !StartupRequested(data.Args) {
-					a.mainWindow.Reveal()
+					a.showMain()
 					a.wails.Event.Emit(secondInstanceEvent)
 				}
 			},
@@ -443,6 +446,7 @@ func (a *App) onStarted(*application.ApplicationEvent) {
 	// Creating windows here lets their initial options target a real display
 	// without post-creation movement or a visible placement correction.
 	a.newMainWindow()
+	a.newTrayPopoverWindow()
 	a.newSettingsWindow()
 	a.newAboutWindow()
 	a.newHistoryDetailsWindow()

@@ -28,6 +28,7 @@ type Service struct {
 	navigationMu       sync.Mutex
 	requestMu          sync.Mutex
 	connections        ConnectionNavigation
+	trayPopover        TrayPopoverNavigation
 	settingsRequest    SettingsRequest
 	settingsPending    bool
 	settingsNavigation SettingsNavigation
