@@ -2,7 +2,7 @@
 
 ## Mission
 
-Build Freehand, a lightweight native desktop client for self-hosted and OpenAI-compatible speech infrastructure. The current product is Windows-first: it records speech, sends it to infrastructure the user chose, and safely inserts the result into the application that originally had focus.
+Build Freehand, a lightweight native desktop client for self-hosted and OpenAI-compatible speech infrastructure. The application has native Windows and macOS adapters: it records speech, sends it to infrastructure the user chose, and delivers the result only while the captured application/window remains valid and focused.
 
 The product is intentionally not a meeting recorder, notes workspace, bundled model runner, or account platform.
 
@@ -27,18 +27,18 @@ Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 w
 ## Non-negotiable safety rules
 
 1. Model discovery and endpoint health checks are metadata-only. Use `/health` or `/v1/models`; qualified speech profiles may also read `/v1/audio/voices` for voice discovery.
-2. Never invoke, preload, iterate through, or smoke-test model inventories. The user's desktop GPU can hold only one Ollama model at a time; a prior multi-model probe crashed Windows.
-3. Never paste a completed transcription into a different focused window. Capture the target HWND at recording start and fail closed if focus changed.
-4. Store credentials in Windows Credential Manager. User-entered API keys may exist only as a bounded, transient renderer draft; never persist them in JSON, TOML, SQLite, logs, argv, events, or crash reports, and never return a stored credential to the renderer.
+2. Never invoke, preload, iterate through, or smoke-test model inventories. Live inference checks use only an explicitly selected endpoint/model and must respect its resource limits.
+3. Never paste a completed transcription into a different focused window. Capture the platform target at recording start: HWND/thread/process identity on Windows; NSWorkspace frontmost PID/process-start plus retained AX focused window on macOS. Revalidate before delivery and each chunk. On macOS, field changes within the same window deliver to the current field; editor metadata or element identity is not required. Preserve permission, Secure Input, modifier and cancellation guards, no activation, and explicit-only copy recovery. Secure Input does not guarantee detection of every custom secure field.
+4. Store credentials in Windows Credential Manager or macOS Keychain through native adapters. User-entered API keys may exist only as a bounded, transient renderer draft; never persist them in JSON, TOML, SQLite, logs, argv, events, or crash reports, and never return a stored credential to the renderer.
 5. History is disabled by default. Do not retain audio. Delete temporary audio after each request, including failures and cancellation.
-6. Do not report native Windows behavior from cross-compilation. Windows acceptance requires execution on Windows.
+6. Do not report native behavior from cross-compilation or browser fixtures. Windows and macOS acceptance each require execution on the relevant OS and architecture; macOS permission acceptance uses a packaged app.
 
 ## Architecture
 
 - Go owns runtime state, hotkeys, audio, network requests, credential access, focus-safe insertion, startup registration, native platform adapters, and service shutdown.
-- Wails v3.0.0-beta.16 owns the interactive settings shell, renderer bindings, tray, and single-instance application lifecycle. Svelte 5 owns settings/status presentation. The passive focus-sensitive overlay remains native Win32.
+- Wails v3.0.0-beta.16 owns the interactive settings shell, renderer bindings, tray, and single-instance application lifecycle. Svelte 5 owns settings/status presentation. The passive focus-sensitive overlay is native Win32 on Windows and a nonactivating, click-through Cocoa NSPanel on macOS.
 - Keep domain code under `internal/<domain>` and keep root `main.go` as composition/lifecycle wiring.
-- Keep shared workflow code free of accidental Windows dependencies. Windows remains the only supported runtime today, but future platforms should add native adapters for capture, hotkeys, credentials, windows, overlays, insertion, packaging, and updates rather than weakening the desktop contract to a lowest-common-denominator implementation.
+- Keep shared workflow code platform-neutral. Windows and macOS provide native adapters for capture, hotkeys, credentials, windows, overlays, insertion, packaging, and updates. Share bounded audio/session logic with WASAPI/CoreAudio backend selection; preserve platform-specific safety contracts rather than weakening them to a lowest-common-denominator implementation. Follow ADR 0013 for macOS ownership and permission boundaries.
 - `internal/dictation` owns the live recording state machine. `internal/history` owns transcript retention, and `internal/settings` owns coherent settings/credential snapshots. Platform callbacks and HTTP completions report into their owning feature; they do not mutate UI or insertion state independently.
 - OpenAI compatibility is represented as separate STT, post-processing/chat, realtime, and on-demand TTS capabilities. Keep capability contracts distinct. Voice selects one completed/realtime transcription combination; audio files, cleanup, and speech retain independent selections and coherent credential snapshots. TTS remains explicit and dormant when disabled. History/file playback selects transcript text through backend-owned capabilities; the first-class TTS composer accepts only bounded user-authored text. Synthesized audio never crosses Wails.
 
@@ -81,8 +81,8 @@ The accepted SQLite direction is defined in [ADR 0006](site/src/content/docs/doc
 - Use `modernc.org/sqlite` with `database/sql`, embedded goose SQL migrations, and sqlc-generated application queries. Do not introduce an ORM, a second migration runner, or handwritten application query/scanning paths. Keep infrastructure SQL confined to the documented storage boundary.
 - Pin driver and tool versions. Goose owns migration history; sqlc reads the same migration directory. Released migrations are immutable and normal startup upgrades forward only.
 - Keep generated rows and database handles inside storage. Existing domain owners retain validation, save transaction coordination, immutable request snapshots, and native/credential recovery.
-- Commit generated queries. The implementation must ship reproducible generation and CI checks for stale/untracked generated output, released migration immutability, and query/import boundaries. Test real SQLite migrations, transactions, recovery, and Windows behavior.
-- Credentials remain in Windows Credential Manager; SQLite may store opaque references only. Adding SQLite does not authorize persistent transcript history or audio retention.
+- Commit generated queries. The implementation must ship reproducible generation and CI checks for stale/untracked generated output, released migration immutability, and query/import boundaries. Test real SQLite migrations, transactions, recovery, and platform-specific behavior.
+- Credentials remain in Windows Credential Manager or macOS Keychain; SQLite may store opaque references only. Adding SQLite does not authorize persistent transcript history or audio retention.
 - Change this contract through a superseding ADR and corresponding instruction/check updates, rather than a feature-local bypass.
 
 ## Windows interaction requirements
@@ -92,8 +92,18 @@ The accepted SQLite direction is defined in [ADR 0006](site/src/content/docs/doc
 - Use shared-mode audio capture, handle default-device changes and removal, and normalize capture to mono signed 16-bit PCM WAV.
 - Preserve Unicode text.
 - Clipboard insertion must not destroy unrelated clipboard state or paste into the wrong HWND.
-- Use Wails single-instance ownership with encrypted second-instance messages. A second launch should reveal settings rather than starting another recorder.
+- Use Wails single-instance ownership with encrypted second-instance messages. A second launch should reveal the main window rather than starting another recorder.
 - Tray Quit is the authoritative shutdown path; closing settings hides the window.
+
+## macOS interaction requirements
+
+- Keep Toggle/Show on Wails Carbon shortcuts. Hold-to-talk and temporary shortcut capture use bounded Quartz event-tap/run-loop owners with real press/release semantics.
+- Permission checks never prompt. Request access only through explicit actions; do not manipulate TCC. Microphone or keyboard denial must not disable file transcription or TTS.
+- Keep AppKit work on the main thread and keyboard callbacks free of recorder, network and UI work. Lost input, Secure Input and overflow must cancel/reject rather than latch recording.
+- Do not query editor roles, AXEnabled, protected-content metadata or AXValue settability for insertion admission. Use the app/window boundary above and preserve Unicode surrogate pairs.
+- Use Security.framework for credentials and NSPasteboard only for explicit Copy; never pass credentials or transcript text through shell commands.
+- Preserve close-to-hide, main-window Dock reopen and encrypted single-instance ownership. Quit must stop sources and feature services before releasing retained targets and storage in Wails shutdown hooks.
+- Start at login owns only its per-user LaunchAgent and exact bundle executable. Keep release identity and macOS 13 deployment metadata coherent; ad-hoc signing is not notarization or native release acceptance.
 
 ## Frontend rules
 
@@ -122,8 +132,8 @@ Before publishing:
 - Run focused Go tests and `go test ./...` when practical.
 - Generate Wails bindings with the pinned CLI.
 - Run frontend build and `npm run check`.
-- Compile the Windows executable.
+- Compile the Windows executable and package affected macOS architectures.
 - Run `git diff --check`.
-- Record the native Windows build separately from real interactive Windows runtime acceptance.
+- Record builds and deterministic tests separately from interactive Windows/macOS runtime acceptance and signing/notarization checks.
 
 Do not add automatic inference tests to CI.

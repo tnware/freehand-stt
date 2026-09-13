@@ -34,14 +34,14 @@ static int fake_copy(NSString *text) {
 int main(void) { @autoreleasepool {
  // Retained native ownership without AX queries or permissions.
  fh_input_owner *o = fh_input_create();
- CFMutableStringRef e = CFStringCreateMutable(NULL, 0), w = CFStringCreateMutable(NULL, 0);
- o->element = (AXUIElementRef)CFRetain(e); o->window = (AXUIElementRef)CFRetain(w);
+ CFMutableStringRef w = CFStringCreateMutable(NULL, 0);
+ o->window = (AXUIElementRef)CFRetain(w);
  o->pid = 42; o->started = 99;
- CFIndex er = CFGetRetainCount(e), wr = CFGetRetainCount(w);
+ CFIndex wr = CFGetRetainCount(w);
  fh_input_reset_target(o);
- assert(!o->element && !o->window && !o->pid && !o->started);
- assert(CFGetRetainCount(e) == er-1 && CFGetRetainCount(w) == wr-1);
- fh_input_reset_target(o); fh_input_destroy(o); CFRelease(e); CFRelease(w);
+ assert(!o->window && !o->pid && !o->started);
+ assert(CFGetRetainCount(w) == wr-1);
+ fh_input_reset_target(o); fh_input_destroy(o); CFRelease(w);
  // Main-thread submission is asynchronous, even when AppKit is slow.
  void *q = fh_input_copy_begin("private", 7); assert(q);
  assert(fh_input_copy_status(q) == FH_COPY_QUEUED);

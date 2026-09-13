@@ -61,10 +61,10 @@ func (p Policy) Deliver(ctx context.Context, want Target, text string, mode Mode
 	}
 	got, e := p.Platform.Foreground()
 	if e != nil || !got.Valid() || got != want {
-		return ErrCopyRequired
+		return CopyRequired(e)
 	}
 	if e = p.Platform.InsertUnicode(ctx, want, text); e != nil {
-		return ErrCopyRequired
+		return CopyRequired(e)
 	}
 	return nil
 }

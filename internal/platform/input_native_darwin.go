@@ -27,11 +27,17 @@ func NewInput(_ *slog.Logger) Input {
 
 type nativeDarwinInput struct{ ptr *C.fh_input_owner }
 
+// The native boundary returns static category literals, never AX metadata.
+// The shared constructor independently allowlists them before status publication.
+func (b *nativeDarwinInput) rejection(stage insertion.Stage) error {
+	return insertion.NewRejection(stage, C.GoString(C.fh_input_rejection(b.ptr)))
+}
+
 func (b *nativeDarwinInput) capture() (uint32, uint64, error) {
 	var pid C.uint32_t
 	var started C.uint64_t
 	if C.fh_input_capture(b.ptr, &pid, &started) == 0 {
-		return 0, 0, insertion.ErrCopyRequired
+		return 0, 0, b.rejection(insertion.Capture)
 	}
 	return uint32(pid), uint64(started), nil
 }

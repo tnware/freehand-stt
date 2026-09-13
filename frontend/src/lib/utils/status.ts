@@ -9,10 +9,9 @@ export const canToggleRecording = (status: Status, busy: boolean): boolean =>
 export const isRecording = (status: Status): boolean => status.state === State.Recording;
 
 /**
- * Copy-required is not a failure. The coordinator reports it on the failed
- * state because insertion did not happen, but the transcript is intact and
- * waiting: focus moved, so refusing to type was the correct outcome. It reads
- * as an outcome to act on, never as something that broke.
+ * Copy-required preserves the transcript for explicit action. It may mean
+ * manual copy, rejected capture/validation, or incomplete dispatch. This flag
+ * alone proves neither focus movement nor that no text was posted.
  */
 export const isCopyRequired = (status: Status): boolean =>
   status.state === State.Failed && status.canCopy;
@@ -48,12 +47,15 @@ export const railPhase = (status: Status): RailPhase => {
  * The line for the messages channel, or "" when the transport already says enough.
  *
  * Only two states need more words than the transport has room for: a genuine
- * failure carries the reason, and copy-required has to explain why nothing was
- * typed even though nothing broke.
+ * failure carries the reason, and copy-required preserves the backend's bounded
+ * delivery explanation without inventing a focus or dispatch outcome.
  */
 export const statusMessage = (status: Status): string => {
   if (isCopyRequired(status)) {
-    return "Focus moved before the transcript came back, so nothing was typed. Copy it from here and paste it where you want it.";
+    return (
+      status.message ||
+      "Copy the transcript and paste it where you want it. Check the target for any text already inserted before pasting."
+    );
   }
   if (isFailure(status)) {
     return status.message || "The recording could not be transcribed.";
@@ -62,7 +64,5 @@ export const statusMessage = (status: Status): string => {
 };
 
 /** Shortcut guidance describes how to begin, so it belongs only to idle. */
-export const showIdleShortcutGuidance = (
-  status: Status,
-  shortcut: string,
-): boolean => status.state === State.Idle && shortcut.length > 0;
+export const showIdleShortcutGuidance = (status: Status, shortcut: string): boolean =>
+  status.state === State.Idle && shortcut.length > 0;

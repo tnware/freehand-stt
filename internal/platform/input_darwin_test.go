@@ -28,11 +28,13 @@ type testDarwinInputBackend struct {
 	validHook                         func() bool
 	resets                            int
 	copyHook                          func(context.Context) error
+	captureErr                        error
+	reason                            string
 }
 
 func (b *testDarwinInputBackend) capture() (uint32, uint64, error) {
 	b.captures++
-	return b.pid, b.started, nil
+	return b.pid, b.started, b.captureErr
 }
 func (b *testDarwinInputBackend) valid(pid uint32, start uint64) bool {
 	if b.validHook != nil && !b.validHook() {
@@ -66,7 +68,49 @@ func testDarwinInput() (Input, *testDarwinInputBackend) {
 	b := &testDarwinInputBackend{pid: 42, started: 99, matches: true}
 	return newDarwinInput(b), b
 }
-func (b *testDarwinInputBackend) resetTarget() { b.resets++ }
+func (b *testDarwinInputBackend) resetTarget() { b.resets++; b.reason = "" }
+func (b *testDarwinInputBackend) rejection(stage insertion.Stage) error {
+	return insertion.NewRejection(stage, b.reason)
+}
+
+func TestDarwinRejectionSurvivesTargetReset(t *testing.T) {
+	for _, stage := range []insertion.Stage{insertion.Capture, insertion.Validate, insertion.Send} {
+		t.Run(string(stage), func(t *testing.T) {
+			i, b := testDarwinInput()
+			defer i.Close()
+			want := insertion.NewRejection(stage, "value_not_settable")
+			var err error
+			if stage == insertion.Capture {
+				b.captureErr = want
+				_, err = i.CaptureTarget()
+			} else {
+				target, _ := i.CaptureTarget()
+				if stage == insertion.Validate {
+					b.validHook = func() bool { b.reason = "value_not_settable"; return false }
+					_, err = i.Foreground()
+				} else {
+					b.sendHook = func() bool { b.reason = "value_not_settable"; return false }
+					err = i.InsertUnicode(context.Background(), target, "test")
+				}
+			}
+			if !errors.Is(err, insertion.ErrCopyRequired) || insertion.CopyRequiredMessage(err) != insertion.CopyRequiredMessage(want) {
+				t.Fatalf("lost %s rejection across cleanup: %v", stage, err)
+			}
+			if b.reason != "" || i.state.target.Valid() {
+				t.Fatal("rejection retained native target")
+			}
+			b.captureErr = nil
+			b.validHook = nil
+			b.sendHook = nil
+			if _, err := i.CaptureTarget(); err != nil {
+				t.Fatal("stale reason", err)
+			}
+			if _, err := i.Foreground(); err != nil {
+				t.Fatal("stale reason", err)
+			}
+		})
+	}
+}
 
 func TestDarwinInsertionReleasesTarget(t *testing.T) {
 	for _, mode := range []string{"success", "cancel", "invalid", "focus", "stale"} {

@@ -22,6 +22,7 @@ type Input struct{ state *darwinInputState }
 type darwinInputBackend interface {
 	capture() (uint32, uint64, error)
 	valid(uint32, uint64) bool
+	rejection(insertion.Stage) error
 	modifiersReleased() bool
 	send([]uint16) bool
 	resetTarget()
@@ -71,8 +72,11 @@ func (i Input) CaptureTarget() (insertion.Target, error) {
 	}
 	pid, started, err := s.backend.capture()
 	if err != nil || pid == 0 || pid == uint32(os.Getpid()) || started == 0 {
+		if err == nil {
+			err = insertion.NewRejection(insertion.Capture, "target_invalid")
+		}
 		s.resetTarget()
-		return s.target, insertion.ErrCopyRequired
+		return s.target, insertion.CopyRequired(err)
 	}
 	token := darwinInputGeneration.Add(1)
 	if token == 0 {
@@ -86,15 +90,17 @@ func (s *darwinInputState) resetTarget() {
 	s.target = insertion.Target{}
 	s.backend.resetTarget()
 }
-func (s *darwinInputState) valid(target insertion.Target) bool {
+func (s *darwinInputState) validate(target insertion.Target) error {
 	if s.closed || !target.Valid() || target.DarwinToken == 0 || target != s.target {
-		return false
+		return insertion.NewRejection(insertion.Validate, "target_invalid")
 	}
 	if !s.backend.valid(target.ProcessID, target.ProcessCreationTime) {
+		// Read the bounded reason before reset releases native diagnostic state.
+		err := insertion.CopyRequired(s.backend.rejection(insertion.Validate))
 		s.resetTarget()
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 func (i Input) Foreground() (insertion.Target, error) {
 	if i.state == nil {
@@ -103,8 +109,8 @@ func (i Input) Foreground() (insertion.Target, error) {
 	s := i.state
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.valid(s.target) {
-		return insertion.Target{}, insertion.ErrCopyRequired
+	if err := s.validate(s.target); err != nil {
+		return insertion.Target{}, err
 	}
 	return s.target, nil
 }
@@ -129,8 +135,8 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 			s.resetTarget()
 		}
 	}()
-	if !s.valid(target) {
-		return insertion.ErrCopyRequired
+	if err := s.validate(target); err != nil {
+		return err
 	}
 	if len(text) > darwinInputMaxBytes || !utf8.ValidString(text) || strings.ContainsRune(text, 0) {
 		return insertion.ErrCopyRequired
@@ -146,8 +152,8 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 		if err := s.waitForModifiers(ctx, target); err != nil {
 			return err
 		}
-		if !s.valid(target) {
-			return insertion.ErrCopyRequired
+		if err := s.validate(target); err != nil {
+			return err
 		}
 		if err := s.interrupted(ctx); err != nil {
 			return err
@@ -157,7 +163,7 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 			end--
 		}
 		if !s.backend.send(units[offset:end]) {
-			return insertion.ErrCopyRequired
+			return insertion.CopyRequired(s.backend.rejection(insertion.Send))
 		}
 		offset = end
 	}
@@ -173,8 +179,8 @@ func (s *darwinInputState) waitForModifiers(ctx context.Context, target insertio
 		if err := s.interrupted(ctx); err != nil {
 			return err
 		}
-		if !s.valid(target) {
-			return insertion.ErrCopyRequired
+		if err := s.validate(target); err != nil {
+			return err
 		}
 		if s.backend.modifiersReleased() {
 			return nil
@@ -189,7 +195,7 @@ func (s *darwinInputState) waitForModifiers(ctx context.Context, target insertio
 			return insertion.ErrCopyRequired
 		case <-deadline.C:
 			timer.Stop()
-			return insertion.ErrCopyRequired
+			return insertion.NewRejection(insertion.Send, "modifiers_held")
 		case <-timer.C:
 		}
 	}

@@ -279,7 +279,9 @@
     {#if waiting}
       <span class="caption text-accent-text">Ready to copy</span>
       <p class="mt-1.5 text-[13.5px] font-medium">
-        {manualCopy ? "Manual copy is selected for this profile." : "Focus moved before insertion."}
+        {manualCopy
+          ? "Manual copy is selected for this profile."
+          : "Automatic insertion needs attention."}
       </p>
       <p class="roomy figure mt-1 text-[10.5px] text-muted-foreground">
         The transcript is held in memory · the audio has been discarded

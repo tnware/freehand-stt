@@ -27,15 +27,25 @@ func TestDarwinOpaqueTargetIdentity(t *testing.T) {
 		t.Fatal("Target needs a comparable DarwinToken, not fabricated Windows handles")
 	}
 	field.SetUint(7)
-	if !want.Valid() { t.Fatal("native Darwin identity should be valid") }
+	if !want.Valid() {
+		t.Fatal("native Darwin identity should be valid")
+	}
 	f := &fake{target: want}
-	if err := (Policy{f}).Deliver(context.Background(), want, "text", DirectInput); err != nil || f.inserts != 1 { t.Fatal("matching native identity was rejected", err) }
+	if err := (Policy{f}).Deliver(context.Background(), want, "text", DirectInput); err != nil || f.inserts != 1 {
+		t.Fatal("matching native identity was rejected", err)
+	}
 	field.SetUint(8)
-	if err := (Policy{f}).Deliver(context.Background(), want, "text", DirectInput); err != ErrCopyRequired || f.inserts != 1 { t.Fatal("different native identity must fail closed") }
+	if err := (Policy{f}).Deliver(context.Background(), want, "text", DirectInput); err != ErrCopyRequired || f.inserts != 1 {
+		t.Fatal("different native identity must fail closed")
+	}
 	want.HWND = 1
-	if want.Valid() { t.Fatal("mixed-platform identities must fail closed") }
+	if want.Valid() {
+		t.Fatal("mixed-platform identities must fail closed")
+	}
 	for _, v := range []Target{{ProcessID: 42}, {ProcessCreationTime: 99}, {}} {
-		if v.Valid() { t.Fatal("incomplete identity accepted") }
+		if v.Valid() {
+			t.Fatal("incomplete identity accepted")
+		}
 	}
 }
 

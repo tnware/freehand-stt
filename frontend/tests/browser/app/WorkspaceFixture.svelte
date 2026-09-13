@@ -204,7 +204,10 @@
       },
       files: {
         TryFileStreamingAgain: () => {
-          session.files.applyStatus({ ...session.files.status, streamingUnavailable: false });
+          session.files.applyStatus({
+            ...session.files.status,
+            streamingUnavailable: false,
+          });
           return CancellablePromise.resolve();
         },
         StartFileTranscription: (stream) => {
@@ -370,7 +373,11 @@
   session.editor.applySettingsSnapshot(structuredClone(current));
   session.editor.devices = [{ id: "desk-mic", name: "Desk microphone", default: true }];
   session.editor.connection = structuredClone(connectionResult);
-  session.dictation.status = { ...idle, generation: 7, transcript: "Testing, testing." };
+  session.dictation.status = {
+    ...idle,
+    generation: 7,
+    transcript: "Testing, testing.",
+  };
   session.history.entries = (current.historyEnabled ? [1, 2] : []).map((id) => ({
     ...structuredClone(historyEntry),
     id,
@@ -470,6 +477,25 @@
         ),
     };
   }
+  const copyOutcome = new URLSearchParams(location.search).get("copy-outcome");
+  if (copyOutcome) {
+    const messages: Record<string, string> = {
+      capture:
+        "Automatic insertion unavailable (capture: value_not_settable). Copy the transcript and paste it where you want it.",
+      dispatch:
+        "Automatic insertion could not be confirmed (send: dispatch_failed). Check the target for any text already inserted before pasting.",
+      manual: "Transcript ready to copy",
+      unknown: "Transcript ready—copy required",
+    };
+    session.dictation.status = {
+      ...idle,
+      generation: 9,
+      state: State.Failed,
+      canCopy: true,
+      transcript: "Synthetic insertion diagnostic fixture.",
+      message: messages[copyOutcome] || messages.unknown,
+    };
+  }
   if (diagnosticsScenario) {
     session.editor.connection = null;
     if (diagnosticsScenario === "stale") {
@@ -558,7 +584,9 @@
       onAbout={noop}
       version="Review"
     />
-    {#if openedSettings}<p class="sr-only" role="status">{openedSettings}</p>{/if}
+    {#if openedSettings}<p class="sr-only" role="status">
+        {openedSettings}
+      </p>{/if}
   {:else}
     <footer
       class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"

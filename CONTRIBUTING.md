@@ -1,6 +1,7 @@
 # Contributing to Freehand
 
-Freehand is an early Windows alpha maintained by one person. Bug reports,
+Freehand is an early desktop alpha with Windows releases and macOS source builds,
+maintained by one person. Bug reports,
 compatibility results, documentation fixes, and focused code contributions are
 welcome. For a substantial change, please open an
 [issue](https://github.com/tnware/freehand-stt/issues) before investing in an
@@ -11,12 +12,15 @@ personal paths, or unredacted logs in a public report.
 
 ## Development
 
-Development currently requires:
+Shared development prerequisites:
 
 - Go 1.27 or newer
 - Node.js 22 or newer
 - the Wails CLI version pinned by `go.mod`
-- Windows 11, WebView2, and a compatible C toolchain
+
+### Windows
+
+Use Windows 11, WebView2, and a compatible C toolchain.
 
 ```powershell
 npm ci --prefix frontend
@@ -36,8 +40,16 @@ application, rather than an older auto-selected toolchain:
 export PATH="$HOME/go/bin:$PATH"
 GOTOOLCHAIN=go1.27.0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
 npm ci --prefix frontend
-wails3 task package ARCH=arm64
+wails3 dev -config ./build/config.yml -port 9245
 ```
+
+Use the native `bin/freehand.dev.app` for interactive testing. Frontend edits hot
+reload; Go and native `.m`, `.h`, and `.c` edits rebuild and restart the app.
+The development bundle has a separate permission identity from the packaged app.
+If it is absent from Accessibility or Input Monitoring, add that bundle using
+the **+** button in System Settings. Its display name is still **Freehand**.
+
+Build a distributable bundle separately with `wails3 task package ARCH=arm64`.
 
 Use `ARCH=amd64` for an Intel build. Packaging produces an app bundle and a
 matching-architecture ZIP; launch the bundle, not a bare binary, for native
@@ -49,7 +61,7 @@ separately from unit/browser tests and cross-compilation. Never invoke model
 inventories to qualify a build.
 
 See the [contributor documentation](https://tnware.github.io/freehand-stt/docs/development/)
-for architecture, testing, and native Windows acceptance. Before opening a
+for architecture, testing, and native platform acceptance. Before opening a
 pull request, run the checks relevant to the change. The normal baseline is:
 
 ```powershell
@@ -65,5 +77,5 @@ git diff --check
 
 Use a conventional commit prefix such as `feat:`, `fix:`, `docs:`, or
 `refactor:` because release notes are generated from commit history. In the
-pull request, explain what changed, how it was verified, and any native Windows
+pull request, explain what changed, how it was verified, and any native platform
 behavior that still needs manual validation.

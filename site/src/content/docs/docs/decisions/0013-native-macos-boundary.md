@@ -21,7 +21,7 @@ are added to the app.
 | Microphone permission | AVFoundation authorization, checked without prompting during preparation |
 | Toggle/show shortcut registration | Pinned Wails Carbon GlobalShortcut implementation |
 | Hold edges and temporary shortcut capture | Bounded Quartz event tap and native run-loop owner |
-| Target capture and Unicode delivery | Retained Accessibility identity plus Quartz Unicode events |
+| Target capture and Unicode delivery | NSWorkspace process identity, retained AX focused window and Quartz Unicode events |
 | Explicit copy | NSPasteboard, never a shell command |
 | Passive status overlay | Nonactivating click-through Cocoa NSPanel |
 | Credential persistence | Security.framework generic-password Keychain items |
@@ -43,18 +43,31 @@ are part of the application.
 
 ## Target identity and delivery
 
-A target is a comparable platform-tagged identity, not a fake HWND. On Windows,
-retain HWND/thread/process-start checks. On macOS, retain only the latest captured
-AX focused window and element, identify the process by PID and start time, and
-expose an opaque generation token to the shared insertion policy.
+A target is a comparable platform-tagged identity, not a fake HWND. Windows
+retains HWND/thread/process-start checks. On macOS, NSWorkspace identifies the
+frontmost application; retain its PID and process start time plus its AX focused
+window. Expose an opaque generation token to the shared insertion policy and
+release the retained window on target replacement or shutdown.
 
 Before delivery and each bounded Unicode chunk, verify the same live frontmost
-application, window and element. Reject Freehand itself, missing/secure/stale
-controls and changed focus. Never activate or restore another application. Never
-synthesize modifier-up events to overcome physically held keys. Preserve surrogate
-pairs. Do not retry an ambiguously posted transcript automatically; report recovery
-through the existing copy-required path. Explicit copy is the only path permitted
-to replace the clipboard.
+application and window. Reject Freehand itself, missing or stale targets, changed
+app/window identity, unavailable Accessibility permission and active Secure Input.
+Do not query editor roles, AXEnabled, protected-content metadata or AXValue
+settability, and do not require editor-element identity. Moving between fields
+within the same window is allowed: delivery goes to the field currently focused
+there. Secure Input is a guard, not a promise to recognize every custom secure field.
+
+Never activate or restore another application or synthesize modifier-up events to
+overcome physically held keys. Preserve cancellation and surrogate pairs. Quartz
+event posting has no application-delivery acknowledgement; do not retry partial or
+ambiguous dispatch automatically. Preserve the transcript for explicit copy, the
+only path permitted to replace the clipboard.
+
+Rejections expose only allowlisted capture/validate/send stages and static reasons.
+Keep the first failure through cleanup and scope capture diagnostics to the recording
+generation. Unknown errors reduce to generic copy-required guidance. Neither UI nor
+logs may infer that focus moved or that nothing was typed from a generic rejection;
+no target identity, editor metadata or transcript belongs in diagnostic reasons.
 
 ## Resource and lifecycle ownership
 
@@ -105,4 +118,4 @@ They do not establish permissions, actual microphone/output routing, keyboard ta
 Unicode delivery, focus preservation, Keychain prompts or login startup. Those
 require a real packaged Mac application and disposable native fixtures. Native
 Windows acceptance remains separate. Do not qualify inference by iterating models;
-use only the operator's explicitly selected endpoint and model.
+use only an explicitly selected endpoint and model.

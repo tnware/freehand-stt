@@ -35,11 +35,18 @@ describe("status guidance", () => {
     expect(statusMessage(status(State.Failed))).toContain("could not be transcribed");
   });
 
-  it("explains that copy-required never inserted into the new focus target", () => {
+  it("does not infer focus movement or zero dispatch from copy-required", () => {
     const waiting = status(State.Failed, true);
 
-    expect(statusMessage(waiting)).toContain("Focus moved");
-    expect(statusMessage(waiting)).toContain("nothing was typed");
+    expect(statusMessage(waiting)).toContain("Copy");
+    expect(statusMessage(waiting)).not.toContain("Focus moved");
+    expect(statusMessage(waiting)).not.toContain("nothing was typed");
+  });
+
+  it("preserves the backend's bounded insertion diagnostic", () => {
+    const reason =
+      "Automatic insertion unavailable (capture: value_not_settable). Copy the transcript and paste it where you want it.";
+    expect(statusMessage(status(State.Failed, true, reason))).toBe(reason);
   });
 
   it("says nothing when the transport already accounts for the state", () => {

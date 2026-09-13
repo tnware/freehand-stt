@@ -41,9 +41,10 @@ needed, and complete macOS's own approval flow yourself.
 
 After changing keyboard permissions, quit and reopen Freehand if macOS requests
 it. Refresh the permission status after returning from System Settings. A permission
-being granted does not guarantee every app/control permits insertion: password
-fields, Secure Input, protected apps, changed focus or a closed target can still
-require explicit copy.
+being granted does not guarantee every app/control accepts insertion. Secure
+Input, protected apps, changed app/window focus or a closed target can still
+require explicit copy. Freehand does not classify password fields; custom secure
+fields that do not enable macOS Secure Input are not guaranteed to be detected.
 
 If microphone access is denied, use the Microphone settings pane to enable it;
 repeatedly pressing Record cannot override a denied OS decision. A restricted
@@ -71,10 +72,18 @@ resolving the cause. Merely opening settings or refreshing permissions does not
 rearm the hook or request access.
 
 Start dictation while the intended app and editable field are focused. Freehand
-will not bring that app back to the foreground. If you move to another field or
-window, the result may remain **Copy required** rather than being typed elsewhere.
+will not bring that app back to the foreground. It checks that the same app and
+window are still frontmost, not that the same editor field is focused. Moving to
+another field in that window delivers there; moving to another app or window
+leaves the result **Copy required**. macOS Secure Input blocks delivery while
+active; Freehand does not classify individual editor fields.
 Release physical modifiers before delivery. Use explicit **Copy** to recover the
 transcript; normal Unicode delivery does not replace unrelated clipboard content.
+
+**Copy required** does not always mean focus changed. When available, the message
+includes a bounded capture, validation or send reason. Delivery can be partial;
+check the target for existing text before pasting to avoid duplicates. Freehand
+does not automatically retry ambiguous typing.
 
 The status overlay is passive and click-through. It is not a transcript editor or
 an insertion destination. Use the main app or menu-bar item for actions.

@@ -54,6 +54,9 @@ dev_mode:
       - "*_test.go"
     watched_extension:
       - "*.go"
+      - "*.m" # Native macOS adapters require a rebuild, not frontend HMR.
+      - "*.h"
+      - "*.c"
       - "*.js" # Watch for changes to JS/TS files included using the //wails:include directive.
       - "*.ts" # The frontend directory will be excluded entirely by the setting above.
   git_ignore: true

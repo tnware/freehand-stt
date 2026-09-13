@@ -104,7 +104,7 @@ type recorder struct {
 	history            *history.Store
 	changed            func(Status)
 	closed             atomic.Bool
-	targets            map[uint64]insertion.Target
+	targets            map[uint64]capturedTarget
 	pending            string
 	runProfiles        map[uint64]settings.RequestProfile
 	runDetails         map[uint64]history.HistoryRunDetails
@@ -112,6 +112,13 @@ type recorder struct {
 	scheduleCompletion func(func()) bool
 	newDetector        func(config.VADMode) (audio.VoiceDetector, error)
 	logger             *slog.Logger
+}
+
+// The bounded capture reason has exactly the target's generation and lifetime.
+// Deleting a run's target on any terminal path also discards its diagnostic.
+type capturedTarget struct {
+	target    insertion.Target
+	rejection error
 }
 
 type stoppedRecording struct {
@@ -150,7 +157,7 @@ func newRecorder(cap audio.Capture, p insertion.Platform, client *inference.Clie
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
-	return &recorder{status: Status{State: Idle}, rootContext: context.Background(), capture: cap, targetPlatform: p, policy: insertion.Policy{Platform: p}, client: client, processor: processor, settings: source, profiles: profiles, history: store, changed: changed, targets: make(map[uint64]insertion.Target), runProfiles: make(map[uint64]settings.RequestProfile), runDetails: make(map[uint64]history.HistoryRunDetails), logger: logger, newDetector: func(mode config.VADMode) (audio.VoiceDetector, error) {
+	return &recorder{status: Status{State: Idle}, rootContext: context.Background(), capture: cap, targetPlatform: p, policy: insertion.Policy{Platform: p}, client: client, processor: processor, settings: source, profiles: profiles, history: store, changed: changed, targets: make(map[uint64]capturedTarget), runProfiles: make(map[uint64]settings.RequestProfile), runDetails: make(map[uint64]history.HistoryRunDetails), logger: logger, newDetector: func(mode config.VADMode) (audio.VoiceDetector, error) {
 		nativeMode := webrtcvad.ModeAggressive
 		switch mode {
 		case config.VADModeQuality:
@@ -255,11 +262,12 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 		profile.VoiceCredential = ""
 		profile.PostProcessingCredential = ""
 	}()
-	target, _ := c.targetPlatform.CaptureTarget()
+	target, captureErr := c.targetPlatform.CaptureTarget()
 	// Capture failures deliberately produce an invalid target. Recording may
 	// continue, but final text can only be copied by an explicit user action.
-	if !target.Valid() {
+	if captureErr != nil || !target.Valid() {
 		target = insertion.Target{}
+		captureErr = insertion.CopyRequired(captureErr)
 	}
 	c.mu.Lock()
 	if c.closed.Load() {
@@ -297,7 +305,7 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 		c.status.AutoStopState = AutoStopWaiting
 		c.status.AutoStopDurationMilliseconds = cfg.AutoStopSilenceMS
 	}
-	c.targets[gen] = target
+	c.targets[gen] = capturedTarget{target: target, rejection: captureErr}
 	c.runProfiles[gen] = profile
 	c.runDetails[gen] = history.HistoryRunDetails{
 		Source:                            history.HistorySourceVoice,
@@ -858,11 +866,14 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	target := c.targets[gen]
 	delete(c.targets, gen)
 	deliveryMode := insertionMode(cfg.AutoInsert)
-	e = c.policy.Deliver(ctx, target, text, deliveryMode)
+	e = c.policy.Deliver(ctx, target.target, text, deliveryMode)
+	if errors.Is(e, insertion.ErrCopyRequired) && target.rejection != nil {
+		e = target.rejection
+	}
 	outcome := history.HistoryInserted
 	if errors.Is(e, insertion.ErrCopyRequired) {
 		c.pending = text
-		message := "Transcript ready—copy required"
+		message := insertion.CopyRequiredMessage(e)
 		if deliveryMode == insertion.ManualCopy {
 			message = "Transcript ready to copy"
 			e = nil
@@ -871,7 +882,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		outcome = history.HistoryCopyRequired
 	} else if e != nil {
 		c.pending = text
-		c.status = Status{State: Failed, Generation: gen, Message: "Transcript ready—copy required", CanCopy: true}
+		c.status = Status{State: Failed, Generation: gen, Message: insertion.CopyRequiredMessage(e), CanCopy: true}
 		outcome = history.HistoryFailed
 	} else if processingFallback {
 		message := "Post-processing failed; raw transcript used"
