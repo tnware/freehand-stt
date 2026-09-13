@@ -1,0 +1,19 @@
+---
+import ProductLayout from "../layouts/ProductLayout.astro";
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const href = (path: string) => `${base}${path}`;
+---
+<ProductLayout current="privacy" title="Privacy & safety — Freehand" description="What Freehand sends, retains, stores, and inserts on Windows and macOS. Audio, history, credentials, network checks, and text delivery." path="privacy/">
+  <div class="reading-page">
+    <header class="page-heading"><h1>Privacy & safety</h1><p class="lede">Freehand sends audio and text to the services you configure. Their own privacy and retention policies apply, whether they run locally, on your network, or with a hosted provider.</p></header>
+    <section class="privacy-row"><h2>Audio & text</h2><div><p>Microphone and selected-file audio goes to the transcription endpoint. Optional cleanup sends the transcript to a separate chat endpoint. Speech generation sends the text you enter or select to the speech endpoint.</p><p>Captured audio is released when the request ends, including failure or cancellation. Selecting an existing audio file does not change or delete the original.</p></div></section>
+    <section class="privacy-row"><h2>Results & history</h2><div><p>Current results remain available in memory until cleared, replaced, or Freehand exits. Recovery and explicit copying do not require history.</p><p>History is off by default. When enabled, it is memory-only, limited to 20 entries and 2 MiB, and cleared on exit. It does not contain audio or credentials.</p></div></section>
+    <section class="privacy-row"><h2>Generated speech</h2><p>Generated audio stays in memory until cleared or replaced, a recording begins, or Freehand exits. Saving the generated audio to a file is an explicit action.</p></section>
+    <section class="privacy-row"><h2>Keys & settings</h2><div><p>Saved API keys use Windows Credential Manager or macOS Keychain. Stored keys are not returned to the interface or written to the settings database.</p><p>Non-secret configuration is stored locally in SQLite. That database is not encrypted; treat it and its backups as private configuration.</p></div></section>
+    <section class="privacy-row"><h2>Connections</h2><p>HTTPS is required by default. You can explicitly allow HTTP for a trusted local or network endpoint, but it sends data without transport encryption. Inference and connection-check requests do not follow redirects.</p></section>
+    <section class="privacy-row"><h2>Text insertion</h2><div><p>Freehand captures the destination before recording. Windows checks the original application, process, and focused control. macOS checks the application and window; moving between fields in that same window is allowed.</p><p>If validation fails, Freehand does not activate another app and leaves the result ready to copy. Delivery can be partial, so check for existing text before copying again. Automatic delivery does not silently replace the clipboard.</p><p>macOS Secure Input blocks delivery when active, but not every custom secure field can be detected.</p></div></section>
+    <section class="privacy-row"><h2>Checks & updates</h2><p>Connection checks read health or model metadata without running inference. Automatic update checks contact GitHub release metadata and can be disabled in Settings. They do not send recordings or transcripts to GitHub.</p></section>
+    <section class="privacy-row"><h2>Diagnostics</h2><p>Operational logs exclude audio, transcript text, credentials, private headers, full paths, model IDs, URL paths and queries, and destination-window identity.</p></section>
+    <a class="text-link" href={href("/docs/guides/privacy-and-safety/")}>Detailed storage, retention & transport reference →</a>
+  </div>
+</ProductLayout>

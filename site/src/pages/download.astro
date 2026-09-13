@@ -1,89 +1,19 @@
 ---
+import ProductLayout from "../layouts/ProductLayout.astro";
 import mark from "../assets/freehand-mark.svg";
-import SiteFooter from "../components/SiteFooter.astro";
-import SiteHeader from "../components/SiteHeader.astro";
-import CustomPageMetadata from "../components/CustomPageMetadata.astro";
-import ParticleBackground from "../components/ParticleBackground.astro";
 import { ASSETS, RELEASES_URL } from "../lib/downloads.mjs";
-import "../styles/home.css";
-import "../styles/download.css";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const href = (path: string) => `${base}${path}`;
 ---
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <CustomPageMetadata title="Download Freehand for Windows and macOS" description="Freehand public alpha for Windows 11 x64 and macOS 13+. Check release availability for Windows installer, portable, Apple Silicon and Intel builds." path="download/" />
-    <meta name="theme-color" content="#070a12" />
-    <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
-  </head>
-  <body>
-    <ParticleBackground />
-    <a class="skip-link" href="#main">Skip to content</a>
-    <SiteHeader current="download" />
-    <main id="main" class="download-page">
-      <section class="download-hero" aria-labelledby="download-title">
-        <div class="download-copy">
-          <p class="kicker"><span></span> Windows + macOS · Public alpha</p>
-          <h1 id="download-title">Your voice.<br /><em>Your stack.</em><br />Freehand.</h1>
-          <p class="download-lede">A compact Windows and macOS client for speech services you run locally, across your network, or through a compatible provider—with no bundled inference runtime.</p>
-          <p class="freehand-promise"><strong>Free forever.</strong> Open source, with no Freehand subscription. Your chosen provider or hosting may have its own costs.</p>
-          <div class="download-actions">
-            <a class="button button-dark download-primary" href="#all-downloads" data-primary-download>Choose your desktop build</a>
-          </div>
-          <p data-platform-message>Choose Windows, Apple Silicon, or Intel below. Check GitHub for published assets; not every release includes every platform.</p>
-          <div class="release-facts" aria-label="System requirements"><span>Windows 11 · x64</span><span>macOS 13+ · Apple Silicon / Intel</span><span>No bundled models</span></div>
-          <div class="download-guides">
-            <a class="text-action" href={href("/docs/guides/windows-installer/")}>Windows installation →</a>
-            <a class="text-action" href={href("/docs/guides/macos-setup/")}>macOS setup →</a>
-          </div>
-        </div>
-        <aside class="release-card" aria-label="Latest Freehand release">
-          <div class="release-card-glow" aria-hidden="true"></div>
-          <div class="release-card-head">
-            <div class="release-app-icon"><img src={mark.src} alt="" /></div>
-            <div><span>Freehand for Windows and macOS</span><strong data-release-version>Check release availability</strong></div>
-            <span class="alpha-badge">Alpha</span>
-          </div>
-          <div class="release-preview" aria-hidden="true">
-            <div class="preview-top"><i></i><span>Ready to dictate</span><small>Freehand</small></div>
-            <div class="preview-wave">{[24, 42, 67, 35, 78, 52, 88, 44, 63, 31, 72, 48, 26, 57, 39, 69, 32, 50].map((height) => <i style={`--height:${height}%`}></i>)}</div>
-            <div class="preview-status"><span></span>Connected to your speech service</div>
-          </div>
-          <div data-recommendation aria-label="Recommended downloads"></div>
-          <p class="release-status" data-release-status role="status">Availability has not been checked. macOS assets may not yet be published. Use GitHub Releases to see the actual files.</p>
-          <noscript><p>JavaScript is off. All platform links below open GitHub Releases; choose only a file actually listed there.</p></noscript>
-          <a class="all-releases" href={RELEASES_URL}>Release notes, SHA256SUMS, and older builds ↗</a>
-        </aside>
-      </section>
-      <section id="all-downloads" class="download-options" aria-labelledby="choose-title">
-        <div class="download-section-heading"><p class="section-index">All supported alternatives</p><h2 id="choose-title">Choose your platform.<br /><em>Make it yours.</em></h2></div>
-        <div class="option-grid">
-          {Object.entries(ASSETS).map(([key, asset], index) => <article>
-            <span class="option-number">0{index + 1}</span>
-            <div class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14"/></svg></div>
-            <h3>{asset.label}</h3><p>{asset.detail}</p>
-            <p>{key === 'installer' ? 'Recommended on Windows. Installs for your account with a Start Menu shortcut; no administrator access required.' : key === 'portable' ? 'Keep the executable in a stable, user-writable folder. No shortcuts or uninstaller.' : 'Choose the ZIP matching your Mac. Ad-hoc signed, not notarized. Read the macOS setup guide before opening.'}</p>
-            <a href={RELEASES_URL} data-asset={key}>{asset.label} — Check GitHub availability</a>
-          </article>)}
-        </div>
-      </section>
-      <section class="before-install" aria-labelledby="before-title">
-        <div class="before-copy"><p class="section-index">Before you begin</p><h2 id="before-title">Freehand is the client.<br />You choose the service.</h2><p>Freehand does not bundle a speech model. Have the URL and model name for an OpenAI-compatible transcription endpoint ready, then connect it during first launch.</p><a class="button button-light" href={href("/docs/guides/connect-a-server/")}>Connect a speech server →</a></div>
-        <ol class="setup-steps">
-          <li><span>1</span><div><strong>Choose a published build</strong><p>Windows: installer or portable. macOS: Apple Silicon or Intel ZIP, when present in the release.</p></div></li>
-          <li><span>2</span><div><strong>Verify and open</strong><p>Verify SHA-256 against SHA256SUMS from the same release. Windows alpha builds are unsigned. Mac builds are ad-hoc signed, not notarized; follow the macOS setup guide for Gatekeeper and permissions.</p></div></li>
-          <li><span>3</span><div><strong>Connect</strong><p>Enter your endpoint, model, and optional API key in Freehand’s guided setup.</p></div></li>
-        </ol>
-      </section>
-      <section class="download-note" aria-label="Alpha release note"><span class="note-mark"><img src={mark.src} alt="" /></span><div><strong>Built in the open, still in alpha.</strong><p>Expect active development. Release assets are the source of truth for availability.</p></div><a href="https://github.com/tnware/freehand-stt">View the source ↗</a></section>
-    </main>
-    <SiteFooter />
-    <script>
-      import { enhanceDownloads } from "../lib/downloads-client.mjs";
-      enhanceDownloads();
-    </script>
-  </body>
-</html>
+<ProductLayout current="download" title="Download Freehand for Windows and macOS" description="Freehand public alpha for Windows 11 x64 and macOS 13+. Windows installer, portable, Apple Silicon, and Intel release availability." path="download/">
+  <section class="download-intro" aria-labelledby="download-title">
+    <div><p class="eyebrow">Windows & macOS · Public alpha</p><h1 id="download-title">Download Freehand</h1><p class="lede">Free and open source. Connect a compatible speech server or provider; models and inference runtimes are not bundled.</p><div class="actions"><a class="button" href="#all-downloads" data-primary-download>Choose your desktop build</a></div><p data-platform-message>Choose Windows, Apple Silicon, or Intel below. Not every release includes every platform.</p><p class="fine-print">Windows 11 x64 · macOS 13+<br />Your chosen provider or hosting may have its own costs.</p></div>
+    <aside class="release-summary" aria-label="Latest release"><header><img src={mark.src} alt="" /><div><p>Latest public release</p><strong data-release-version>Check release availability</strong></div></header><div data-recommendation aria-label="Recommended downloads"></div><p class="release-status" data-release-status role="status">Availability has not been checked. Use GitHub Releases to see the actual files.</p><noscript><p class="fine-print">JavaScript is off. Platform links open GitHub Releases; choose a file actually listed there.</p></noscript><a class="text-link" href={RELEASES_URL}>Release notes & checksums ↗</a></aside>
+  </section>
+  <section id="all-downloads" class="download-options" aria-labelledby="platform-title"><h2 id="platform-title">Desktop builds</h2><div class="download-grid">{Object.entries(ASSETS).map(([key, asset]) => <article class="download-option"><h3>{asset.label}</h3><p>{asset.detail}</p><p>{key === "installer" ? "Recommended on Windows. Installs for your account with a Start Menu shortcut; no administrator access required." : key === "portable" ? "Keep the executable in a stable, user-writable folder. No shortcuts or uninstaller." : "Choose the ZIP matching your Mac. Ad-hoc signed, not notarized; read the setup guide before opening."}</p><a class="text-link" href={RELEASES_URL} data-asset={key}>{asset.label} — Check GitHub availability</a></article>)}</div></section>
+  <section class="install-notes" aria-label="Installation notes"><article><h2>Installation & permissions</h2><p>Windows alpha builds are unsigned. Mac builds are ad-hoc signed, not notarized. Follow the platform guide for installation and permissions.</p><a class="text-link" href={href("/docs/guides/windows-installer/")}>Windows installation →</a><br /><a class="text-link" href={href("/docs/guides/macos-setup/")}>macOS setup →</a></article><article><h2>Verify & connect</h2><p>Check SHA-256 against SHA256SUMS from the same release. After opening Freehand, configure the connection and model for the task you want to use.</p><a class="text-link" href={href("/docs/getting-started/")}>Setup guide →</a></article></section>
+  <script>
+    import { enhanceDownloads } from "../lib/downloads-client.mjs";
+    enhanceDownloads();
+  </script>
+</ProductLayout>

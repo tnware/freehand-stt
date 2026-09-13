@@ -24,7 +24,7 @@ automatically need separate Freehand profiles.
 Whisper-family runtimes such as faster-whisper and whisper.cpp are different
 implementations of the same recognition family. A GGUF, ONNX, or MLX conversion
 also describes packaging rather than a new Freehand behavior profile. The server
-can run on any machine reachable from the Windows client.
+can run on any machine reachable from the Windows or macOS client.
 
 ## Other families to consider
 

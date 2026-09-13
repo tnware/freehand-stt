@@ -102,6 +102,7 @@ export const supportLabel: Record<Support, string> = {
 export const features = [
   { key: "microphone", label: "Dictation" },
   { key: "files", label: "Audio files" },
+  { key: "realtime", label: "Live dictation" },
   { key: "streaming", label: "File streaming" },
   { key: "language", label: "Language selection" },
   { key: "prompt", label: "STT context" },
@@ -125,6 +126,7 @@ export const backends = ids.map((id) => {
   const stt = catalog.transcription.find((entry) => entry.id === id);
   const chat = catalog.postProcessing.find((entry) => entry.id === id);
   const speech = catalog.speech.find((entry) => entry.id === id);
+  const realtime = catalog.realtime.find((entry) => entry.id === id);
   const entries = roles.flatMap(({ key, label }) => {
     const profile = catalog[key].find((entry) => entry.id === id);
     return profile ? [{ ...profile, role: label }] : [];
@@ -139,6 +141,7 @@ export const backends = ids.map((id) => {
     features: {
       microphone: status(stt),
       files: status(stt),
+      realtime: realtime?.available && realtime.capabilities.realtime ? "available" : "none",
       streaming: stt?.available ? (stt.capabilities.fileStreaming ? "available" : "none") : "none",
       language: stt?.available && stt.capabilities.languageHint ? "available" : "none",
       prompt: stt?.available && stt.capabilities.transcriptionPrompt ? "available" : "none",

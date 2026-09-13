@@ -1,0 +1,69 @@
+---
+import transcription from "../assets/app-transcription-review.png";
+import speech from "../assets/app-speech-review.png";
+import DictationDemo from "./DictationDemo.astro";
+const previews = [
+  { id: "transcription", label: "Audio file", image: transcription, alt: "Freehand audio-file workspace showing a completed sample transcript and session history." },
+  { id: "speech", label: "Text to speech", image: speech, alt: "Freehand text-to-speech workspace with sample text and generated audio playback." },
+];
+---
+<freehand-app-preview class="app-preview">
+  <div class="preview-controls" hidden>
+    <div class="sr-only" id="preview-label">App demonstration and screenshots</div>
+    <button type="button" data-preview="dictation" aria-pressed="true" aria-controls="preview-dictation">Dictation</button>
+    {previews.map((preview) => <button type="button" data-preview={preview.id} aria-pressed="false" aria-controls={`preview-${preview.id}`}>{preview.label}</button>)}
+    <button type="button" class="preview-enlarge">Enlarge ↗</button>
+  </div>
+  <div id="preview-dictation" data-preview-panel="dictation"><DictationDemo /></div>
+  {previews.map((preview, index) => <figure id={`preview-${preview.id}`} data-preview-panel={preview.id} hidden>
+    <img src={preview.image.src} width={preview.image.width} height={preview.image.height} alt={preview.alt} loading={index === 0 ? "eager" : "lazy"} />
+    <figcaption>{preview.label} · UI review capture with sample data</figcaption>
+  </figure>)}
+  <dialog class="preview-dialog" aria-label="Enlarged app preview">
+    <header><span data-dialog-title>Freehand · Dictation demonstration</span><button type="button" data-close autofocus>Close ×</button></header>
+    <div data-dialog-demo hidden><DictationDemo /></div>
+    <img src={transcription.src} width={transcription.width} height={transcription.height} alt={previews[0].alt} />
+  </dialog>
+</freehand-app-preview>
+<script>
+  class FreehandAppPreview extends HTMLElement {
+    private listeners?: AbortController;
+    connectedCallback() {
+      this.listeners?.abort();
+      this.listeners = new AbortController();
+      const options = { signal: this.listeners.signal };
+      const controls = this.querySelector<HTMLElement>(".preview-controls");
+      const dialog = this.querySelector<HTMLDialogElement>("dialog");
+      if (!controls || !dialog) return;
+      controls.hidden = false;
+      this.querySelectorAll<HTMLButtonElement>("[data-preview]").forEach((button) => {
+        button.addEventListener("click", () => {
+          this.querySelectorAll("[data-preview]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+          this.querySelectorAll<HTMLElement>("[data-preview-panel]").forEach((panel) => { panel.hidden = panel.dataset.previewPanel !== button.dataset.preview; });
+        }, options);
+      });
+      this.querySelector(".preview-enlarge")?.addEventListener("click", () => {
+        const panel = this.querySelector<HTMLElement>("[data-preview-panel]:not([hidden])");
+        const current = panel?.querySelector<HTMLImageElement>("img");
+        const enlarged = dialog.querySelector("img");
+        const demo = dialog.querySelector<HTMLElement>("[data-dialog-demo]");
+        const title = dialog.querySelector<HTMLElement>("[data-dialog-title]");
+        if (!panel || !enlarged || !demo || !title) return;
+        const isDemo = panel.dataset.previewPanel === "dictation";
+        demo.hidden = !isDemo;
+        enlarged.hidden = isDemo;
+        title.textContent = isDemo ? "Freehand · Dictation demonstration" : "Freehand · UI review capture";
+        if (current) {
+          enlarged.src = current.src;
+          enlarged.alt = current.alt;
+          enlarged.width = current.width;
+          enlarged.height = current.height;
+        }
+        dialog.showModal();
+      }, options);
+      this.querySelector("[data-close]")?.addEventListener("click", () => dialog.close(), options);
+    }
+    disconnectedCallback() { this.listeners?.abort(); }
+  }
+  if (!customElements.get("freehand-app-preview")) customElements.define("freehand-app-preview", FreehandAppPreview);
+</script>

@@ -1,85 +1,75 @@
 ---
+import ProductLayout from "../layouts/ProductLayout.astro";
 import ProviderIcon from "../components/ProviderIcon.astro";
-import mark from "../assets/freehand-mark.svg";
-import SiteHeader from "../components/SiteHeader.astro";
-import SiteFooter from "../components/SiteFooter.astro";
-import CustomPageMetadata from "../components/CustomPageMetadata.astro";
-import ParticleBackground from "../components/ParticleBackground.astro";
 import { availableBackends, plannedBackends, features, supportLabel } from "../data/backends";
-import "../styles/home.css";
-import "../styles/backends.css";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const href = (path: string) => `${base}${path}`;
+const overview = [
+  { key: "microphone", label: "Transcription" },
+  { key: "realtime", label: "Live dictation" },
+  { key: "cleanup", label: "Cleanup" },
+  { key: "playback", label: "Speech" },
+] as const;
 ---
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <CustomPageMetadata title="Backends & compatibility — Freehand" description="Compare Freehand's server profiles for dictation, audio files, transcript cleanup, and speech playback. Find setup guides and supported features." path="backends/" />
-    <meta name="theme-color" content="#070a12" />
-    <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
-  </head>
-  <body>
-    <ParticleBackground />
-    <a class="skip-link" href="#main">Skip to content</a>
-    <SiteHeader current="backends" />
-    <main id="main" class="backends-page">
-      <section class="backends-hero" aria-labelledby="backends-title">
-        <div>
-          <p class="kicker"><span></span> Backend directory</p>
-          <h1 id="backends-title">Your models.<br /><em>Connected.</em></h1>
-          <p class="backends-lede">Find the right connection for your speech stack. Compare transcription, cleanup, and speech features, then connect your server. Explore <a href={href("/models/")}>model profiles</a> for the controls each model adds.</p>
-          <nav class="backend-jump-links" aria-label="On this page">
-            <a class="button button-dark" href="#compare">Compare capabilities <span aria-hidden="true">↓</span></a>
-            <a class="text-action" href="#planned">Planned profiles <span aria-hidden="true">↘</span></a>
-          </nav>
-        </div>
-        <aside class="connection-map" aria-label="Choose a separate backend for each operation">
-          <div class="map-label">One client. Your connections.</div>
-          <div class="map-origin"><span class="map-mark" aria-hidden="true"><img src={mark.src} alt="" width="26" height="26" /></span><strong>Freehand</strong><span>Windows client</span></div>
-          <ol>
-            <li><span class="map-step">01</span><div><strong>Speech → text</strong><small>Dictation & audio files</small></div><span class="map-pill">STT</span></li>
-            <li><span class="map-step">02</span><div><strong>Text → polished text</strong><small>Optional transcript cleanup</small></div><span class="map-pill">Chat</span></li>
-            <li><span class="map-step">03</span><div><strong>Text → speech</strong><small>On-demand playback</small></div><span class="map-pill">TTS</span></li>
-          </ol>
-          <p>Use one server or a different endpoint for each.</p>
-        </aside>
-      </section>
-      <div class="catalog-note"><span>Current development</span><p>This directory follows Freehand’s main branch. Your installed release may have fewer options. Model support and server versions still matter.</p></div>
-      <section id="available" class="backend-section" aria-labelledby="available-title">
-        <div class="backend-section-head"><div><p class="section-index">01 / Connect today</p><h2 id="available-title">Available profiles</h2></div><p>Choose your server below for setup instructions and supported features.</p></div>
-        <div class="backend-grid">
-          {availableBackends.map((backend) => <article class="backend-card">
-            <div class="backend-card-top"><ProviderIcon profile={backend.id} size={42} /><span class="backend-status">Available profile</span></div>
-            <h3>{backend.name}</h3><p class="backend-summary">{backend.summary}</p>
-            <ul class="backend-roles" aria-label="Available operations">{backend.entries.filter((entry) => entry.available).map((entry) => <li>{entry.role}</li>)}</ul>
-            <div class="backend-details"><strong>{backend.highlight}</strong><p>{backend.detail}</p></div>
-            <a class="backend-guide-link" href={href(backend.guide)}>Setup & capabilities <span aria-hidden="true">↗</span></a>
-          </article>)}
-        </div>
-      </section>
-      <section id="compare" class="backend-section" aria-labelledby="compare-title">
-        <div class="backend-section-head"><div><p class="section-index">02 / Find your fit</p><h2 id="compare-title">What can you connect?</h2></div><p>Compare the features available with each profile. Model-specific options appear when you select a compatible model profile.</p></div>
-        <div class="matrix-scroll" role="region" aria-label="Backend capability comparison; scroll horizontally on small screens" tabindex="0">
-          <table class="backend-matrix">
-            <caption>Available profiles in the current development build</caption>
-            <thead><tr><th scope="col">Compatibility profile</th>{features.map((feature) => <th scope="col">{feature.label}</th>)}</tr></thead>
-            <tbody>{availableBackends.map((backend) => <tr><th scope="row"><a class="backend-identity" href={href(backend.guide)}><ProviderIcon profile={backend.id} size={24} />{backend.name}</a></th>{features.map((feature) => <td><span class:list={["support-cell", backend.features[feature.key]]}><span aria-hidden="true">{backend.features[feature.key] === "available" ? "✓" : supportLabel[backend.features[feature.key]]}</span><span class="sr-only">{backend.features[feature.key] === "none" ? "Not part of this profile" : supportLabel[backend.features[feature.key]]}</span></span></td>)}</tr>)}</tbody>
-          </table>
-        </div>
-        <div class="matrix-notes"><p><strong>File streaming</strong> shows results as an uploaded file is transcribed. Live transcription shows text while you speak.</p><p><strong>Speech playback</strong> plays after the audio has finished generating. Speaches and Kokoro-FastAPI offer browsable voice lists; you can also enter a voice ID.</p><p><strong>Model options</strong> vary by server and model profile. See each setup guide for languages, vocabulary, and generation controls. S1-mini cleanup supports English only. A dash means the feature is unavailable with that profile.</p></div>
-      </section>
-      <section class="backend-section setup-section" aria-labelledby="setup-title">
-        <div><p class="section-index">03 / Make it yours</p><h2 id="setup-title">One app.<br />Your speech stack.</h2><p>Use a local server, a machine on your network, or a hosted service. Each workflow can have its own connection and model.</p><a class="text-action" href={href("/docs/guides/connect-a-server/")}>Set up a connection <span aria-hidden="true">→</span></a></div>
-        <dl class="setup-list"><div><dt>Choose a connection</dt><dd>Select your server profile and enter its URL. Reuse it across workflows or keep separate connections.</dd></div><div><dt>Choose a model</dt><dd>Browse the server’s model list or enter an ID. <a href={href("/models/")}>Model profiles</a> bring the relevant options into Settings.</dd></div><div><dt>Set it up your way</dt><dd>Choose a language, add vocabulary, select a voice, or enable optional cleanup.</dd></div></dl>
-      </section>
-      <section id="planned" class="backend-section" aria-labelledby="planned-title">
-        <div class="backend-section-head"><div><p class="section-index">04 / Room to grow</p><h2 id="planned-title">Planned profiles</h2></div><p>These dedicated profiles are not available yet. Some services may already connect through Generic OpenAI-compatible.</p></div>
-        <div class="planned-grid">{plannedBackends.map((backend) => <article class="planned-card"><div class="planned-card-head"><div class="backend-identity"><ProviderIcon profile={backend.id} size={28} /><h3>{backend.name}</h3></div><span>Planned</span></div><p>{backend.summary}</p><ul class="planned-roles" aria-label="Planned operation scope">{backend.entries.map((entry) => <li>{entry.role}</li>)}</ul><a href={href(backend.guide)}>About this integration <span aria-hidden="true">→</span></a></article>)}</div>
-      </section>
-      <section class="backend-next" aria-label="Get connected"><div><h2>Have your endpoint ready?</h2><p>Choose your profile, enter your server URL, and connect the model you want to use.</p></div><a class="button button-light" href={href("/docs/guides/connect-a-server/")}>Connect a server <span aria-hidden="true">→</span></a></section>
-    </main>
-    <SiteFooter />
-  </body>
-</html>
+<ProductLayout current="backends" title="Supported backends — Freehand" description="Compare Freehand server profiles for transcription, live dictation, transcript cleanup, and speech generation." path="backends/">
+  <header class="page-heading"><h1>Supported backends</h1><p class="lede">Compare server profiles by capability. Setup guides cover connection details, server versions, and supported models.</p></header>
+  <p class="catalog-note"><strong>Current development</strong> These profiles follow Freehand’s main branch. Your installed release may have fewer options.</p>
+  <freehand-backend-directory>
+    <div class="catalog-toolbar" hidden>
+      <label>Capability <select aria-label="Filter by capability"><option value="all">All capabilities</option>{overview.map((feature) => <option value={feature.key}>{feature.label}</option>)}</select></label>
+      <input type="search" placeholder="Find a backend…" aria-label="Find a backend" />
+    </div>
+    <div class="catalog-scroll" role="region" aria-label="Backend comparison; scroll horizontally on small screens" tabindex="0">
+      <table class="backend-table">
+        <caption data-directory-status aria-live="polite">Available backend profiles</caption>
+        <thead><tr><th scope="col">Backend</th>{overview.map((feature) => <th scope="col">{feature.label}</th>)}<th scope="col">Guide</th></tr></thead>
+        <tbody>{availableBackends.map((backend) => <tr data-backend-name={backend.name.toLowerCase()} data-capabilities={overview.filter((feature) => backend.features[feature.key] === "available").map((feature) => feature.key).join(" ")}>
+          <td><div class="backend-identity"><ProviderIcon profile={backend.id} size={42} /><div><strong>{backend.name}</strong><p>{backend.summary}</p></div></div></td>
+          {overview.map((feature) => <td><span class={backend.features[feature.key] === "available" ? "supported" : "unavailable"}>{backend.features[feature.key] === "available" ? "Supported" : "—"}</span><span class="sr-only">{backend.features[feature.key] === "none" ? "Not supported" : ""}</span></td>)}
+          <td><a class="text-link" href={href(backend.guide)} aria-label={`Set up ${backend.name}`}>Setup ↗</a></td>
+        </tr>)}</tbody>
+      </table>
+      <p class="catalog-empty" hidden>No matching backends. Try another name or capability.</p>
+    </div>
+  </freehand-backend-directory>
+  <div class="catalog-help"><p><strong>Support is profile-specific.</strong> The server version and model still determine what works. Live dictation requires an explicitly qualified model profile.</p><p><strong>Transcription includes Voice and audio files.</strong> Streamed file results are separate from live microphone dictation. <a class="text-link" href={href("/models/")}>Model profiles →</a></p></div>
+  <details class="disclosure" id="compare"><summary>Detailed capability comparison</summary>
+    <p>Language, vocabulary, cleanup, and voice-discovery support by backend. See the setup guide for model-specific restrictions.</p>
+    <div class="catalog-scroll" role="region" aria-label="Detailed backend capabilities; scroll horizontally" tabindex="0"><table class="backend-table"><caption>Detailed profile capabilities in the current development build</caption><thead><tr><th scope="col">Backend</th>{features.map((feature) => <th scope="col">{feature.label}</th>)}</tr></thead><tbody>{availableBackends.map((backend) => <tr><td><a class="backend-identity" href={href(backend.guide)}><ProviderIcon profile={backend.id} size={26} />{backend.name}</a></td>{features.map((feature) => <td>{supportLabel[backend.features[feature.key]]}</td>)}</tr>)}</tbody></table></div>
+  </details>
+  <details class="disclosure" id="planned"><summary>Planned dedicated profiles</summary><div class="planned-list">{plannedBackends.map((backend) => <article><div class="backend-identity"><ProviderIcon profile={backend.id} size={34} /><h3>{backend.name}</h3></div><p>{backend.summary}</p><a class="text-link" href={href(backend.guide)}>Planned scope →</a></article>)}</div><p>These dedicated profiles are not available. Some services may work through Generic OpenAI-compatible where their API matches that contract.</p></details>
+  <a class="text-link" href={href("/docs/guides/connect-a-server/")}>Connection setup guide →</a>
+  <script>
+    class FreehandBackendDirectory extends HTMLElement {
+      private listeners?: AbortController;
+      connectedCallback() {
+        this.listeners?.abort();
+        this.listeners = new AbortController();
+        const options = { signal: this.listeners.signal };
+        const toolbar = this.querySelector<HTMLElement>(".catalog-toolbar");
+        const select = this.querySelector("select");
+        const search = this.querySelector("input");
+        const status = this.querySelector("[data-directory-status]");
+        const empty = this.querySelector<HTMLElement>(".catalog-empty");
+        const rows = [...this.querySelectorAll<HTMLTableRowElement>("[data-backend-name]")];
+        if (!toolbar || !select || !search || !status || !empty) return;
+        toolbar.hidden = false;
+        const filter = () => {
+          const query = search.value.trim().toLowerCase();
+          let visible = 0;
+          for (const row of rows) {
+            row.hidden = !(row.dataset.backendName?.includes(query) && (select.value === "all" || row.dataset.capabilities?.split(" ").includes(select.value)));
+            if (!row.hidden) visible++;
+          }
+          status.textContent = `${visible} of ${rows.length} available profiles`;
+          empty.hidden = visible > 0;
+        };
+        select.addEventListener("change", filter, options);
+        search.addEventListener("input", filter, options);
+        filter();
+      }
+      disconnectedCallback() { this.listeners?.abort(); }
+    }
+    if (!customElements.get("freehand-backend-directory")) customElements.define("freehand-backend-directory", FreehandBackendDirectory);
+  </script>
+</ProductLayout>

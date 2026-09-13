@@ -87,6 +87,21 @@ All supported alternatives remain visible. Synthetic release assets establish
 selection behavior, not public availability or native application acceptance.
 The test preview uses its own port and bypasses Astro's development preview lock.
 
+## Website app preview
+
+After building the site, run `cd site && node tests/app-preview.browser.mjs`.
+It uses the frontend's pinned Playwright installation and a separate production
+preview port. It checks the default dictation scene, short recording beats,
+three cumulative insertions and automatic replay, pause, screenshot switching,
+enlargement and Escape, narrow layouts, reduced motion, and the no-JavaScript
+fallback. Use `SITE_TEST_BASE=/freehand-stt/` after a Pages-base build.
+
+The macOS-style scene is an explicitly labelled illustration with sample text,
+not a native recording. It never requests microphone access or runs inference.
+Reduced motion initially shows the completed document without autoplay;
+offscreen and hidden-page playback pauses. The other preview tabs use labelled
+UI-review captures. None of these assets establish native acceptance.
+
 ## CI workflow acceptance
 
 Run the dependency-free selection/gate regressions and workflow wiring checks:

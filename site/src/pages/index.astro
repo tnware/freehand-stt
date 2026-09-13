@@ -1,232 +1,57 @@
 ---
+import ProductLayout from "../layouts/ProductLayout.astro";
+import AppPreview from "../components/AppPreview.astro";
 import ProviderIcon from "../components/ProviderIcon.astro";
 import { availableBackends } from "../data/backends";
-import mark from "../assets/freehand-mark.svg";
-import SiteFooter from "../components/SiteFooter.astro";
-import SiteHeader from "../components/SiteHeader.astro";
-import CustomPageMetadata from "../components/CustomPageMetadata.astro";
-import ParticleBackground from "../components/ParticleBackground.astro";
-import "../styles/home.css";
-
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const href = (path: string) => `${base}${path}`;
-
-const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86, 44, 68, 32, 52, 22, 40, 30, 18];
+const capabilities = [
+  { title: "Transcription", feature: "microphone", description: "Dictate into an app with a shortcut, or select an audio file and copy the result. Use completed transcription or live dictation with a qualified model.", detail: "Microphone & audio files · Optional live captions", guide: "/docs/guides/using-freehand/", link: "Transcription guide" },
+  { title: "Transcript cleanup", feature: "cleanup", description: "Process completed transcripts with a separate chat model. Use custom instructions or S1-mini’s English controls; raw text remains the fallback if cleanup fails.", detail: "Optional stage · Separate connection & model", guide: "/docs/guides/post-processing/", link: "Cleanup guide" },
+  { title: "Text to speech", feature: "playback", description: "Enter text, generate audio, then listen or save it. Choose a voice and adjust the speaking options supported by the server and model.", detail: "Playback & export · Independent of dictation", guide: "/docs/getting-started/#generate-speech", link: "Speech setup" },
+] as const;
 ---
-
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
-    <CustomPageMetadata
-      title="Freehand — Speech to text and text to speech for Windows and macOS"
-      description="Dictate into apps, transcribe recordings, and generate spoken audio with speech services you choose. A lightweight Windows and macOS client for local, LAN, or hosted models."
-      path=""
-    />
-    <meta name="theme-color" content="#070a12" />
-    <link rel="icon" type="image/svg+xml" href={href("/favicon.svg")} />
-  </head>
-  <body>
-    <ParticleBackground />
-    <a class="skip-link" href="#main">Skip to content</a>
-
-    <SiteHeader current="home" />
-
-    <main id="main" class="home-page">
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="kicker"><span></span> Your speech services. Your desktop apps.</p>
-          <h1 id="hero-title">Think it.<br />Say it.<br /><em>It’s there.</em></h1>
-          <p class="hero-lede">Dictate into apps, transcribe recordings, or turn text into spoken audio. Freehand is a lightweight Windows and macOS client for speech services you choose—on your computer, your network, or a compatible hosted service.</p>
-          <p class="freehand-promise"><strong>Free forever.</strong> Open source. No Freehand subscription.</p>
-          <div class="hero-actions">
-            <a class="button button-dark" data-home-download href={href("/download/")}>Choose your download <span aria-hidden="true">→</span></a>
-            <a class="text-action" href="#workflow">See how it works <span aria-hidden="true">↓</span></a>
-          </div>
-        </div>
-
-        <div class="hero-stage" aria-label="A Freehand dictation becoming text">
-          <div class="dictation-state">
-            <div class="state-topline">
-              <span class="live-dot"></span>
-              <strong>Listening</strong>
-              <time>00:08</time>
-            </div>
-            <div class="waveform" aria-hidden="true">
-              {waveform.map((height, index) => <i style={`--height:${height}%;--delay:${index * -55}ms`}></i>)}
-            </div>
-          </div>
-
-          <div class="transcript-state">
-            <div class="field-chrome">
-              <span>Transcription output</span>
-              <span class="field-actions" aria-hidden="true">— □ ×</span>
-            </div>
-            <p>The release notes are ready for review<span class="caret" aria-hidden="true"></span></p>
-          </div>
-        </div>
-
-        <div class="hero-foot">
-          <span>Windows 11 x64 · macOS 13+</span><span>Public alpha · Availability varies by release</span><span>Local, LAN, or remote endpoints</span><span>No bundled models</span>
-        </div>
-      </section>
-
-      <section class="compatibility" aria-labelledby="compatibility-title">
-        <div class="compatibility-copy">
-          <p class="section-index">01 / Compatibility</p>
-          <h2 id="compatibility-title">Your endpoint.<br />Your choice.</h2>
-          <p>Connect to speech services on your PC, across your network, or in the cloud. Choose a connection and model for each workflow, and switch whenever you want.</p>
-          <div class="compatibility-actions">
-            <a class="button button-light" href={href("/backends/")}>Compare backends <span aria-hidden="true">→</span></a>
-            <a class="text-action" href={href("/models/")}>Explore model profiles <span aria-hidden="true">→</span></a>
-          </div>
-        </div>
-        <nav class="provider-list" aria-label="Available backend guides">
-          {availableBackends.map((backend) => <a href={href(backend.guide)}><ProviderIcon profile={backend.id} size={34} /><span>{backend.name}</span><span aria-hidden="true">↗</span></a>)}
-          <p>Capabilities vary by profile, server, and model.</p>
-        </nav>
-      </section>
-
-      <section class="statement" aria-labelledby="statement-title">
-        <p class="section-index">02 / Purpose</p>
-        <div>
-          <h2 id="statement-title">Keep your computer<br /><em>free for your work.</em></h2>
-          <div class="statement-copy"><p>No room for a speech model? Or a powerful GPU you’d rather use for something else? Connect Freehand to another computer on your network or a compatible hosted service. Model memory and inference stay on that server.</p><p>Prefer to run everything on your own PC? That works too. Choose transcription, optional cleanup, and text-to-speech services independently.</p><p class="service-cost-note">Freehand is free forever. Your chosen provider or hosting may have its own costs.</p></div>
-        </div>
-      </section>
-
-      <section id="workflow" class="workflow" aria-labelledby="workflow-title">
-        <div class="section-intro">
-          <p class="section-index">03 / Your task</p>
-          <h2 id="workflow-title">Speech and text.<br />Your way.</h2>
-          <p>Start with the task you need. Dictation is the default, but file transcription and text-to-speech work without completing dictation setup.</p>
-        </div>
-
-        <section class="workflow-options" aria-labelledby="task-choice-title">
-          <h3 id="task-choice-title">Choose your task</h3>
-          <p>Configure only what that task needs. Voice, audio files, and text to speech each have their own connection and model settings.</p>
-          <ul class="task-choices">
-            <li>
-              <h4>Dictate into apps</h4>
-              <p>Use a microphone and global shortcut. Freehand inserts your words into the app you started in, or leaves them ready to copy.</p>
-              <a href={href("/docs/getting-started/#run-your-first-dictation")}>Start dictating <span aria-hidden="true">→</span></a>
-            </li>
-            <li>
-              <h4>Transcribe a recording</h4>
-              <p>Choose an audio file, start transcription, and copy the result. No microphone or recording shortcut is required.</p>
-              <a href={href("/docs/getting-started/#transcribe-a-stored-audio-file")}>Start with a file <span aria-hidden="true">→</span></a>
-            </li>
-            <li>
-              <h4>Turn text into speech</h4>
-              <p>Enable text-to-speech, enter your text, then listen or explicitly save the generated audio. No transcription connection is required.</p>
-              <a href={href("/docs/getting-started/#generate-speech")}>Set up text-to-speech <span aria-hidden="true">→</span></a>
-            </li>
-          </ul>
-        </section>
-
-        <section class="workflow-options" aria-labelledby="dictation-path-title">
-          <h3 id="dictation-path-title">Dictation, from shortcut to text</h3>
-          <p>Speak where you work. Freehand handles capture, transcription, and safe delivery.</p>
-          <ol class="workflow-track">
-            <li>
-              <span class="track-number">01</span>
-              <div class="track-copy"><small>Begin anywhere</small><h4>Press your shortcut</h4><p>Toggle recording or hold to talk. Start recording from the app you’re using.</p></div>
-              <div class="track-art hotkey-art" aria-hidden="true"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd></div>
-            </li>
-            <li>
-              <span class="track-number">02</span>
-              <div class="track-copy"><small>Choose your model</small><h4>Use your speech stack</h4><p>Your selected speech model transcribes the audio. Keep that result or send it to a separate chat model for optional cleanup.</p></div>
-              <div class="track-art route-art" aria-hidden="true"><span>voice</span><i></i><span>text</span></div>
-            </li>
-            <li>
-              <span class="track-number">03</span>
-              <div class="track-copy"><small>Finish safely</small><h4>Your words, in place</h4><p>If the original target still owns focus, Freehand inserts the text. If anything changed, it stops and leaves the result ready to copy.</p></div>
-              <div class="track-art result-art" aria-hidden="true"><span>Original target</span><b>Verified</b></div>
-            </li>
-          </ol>
-        </section>
-      </section>
-
-      <section class="feature-story" aria-labelledby="feature-title">
-        <div class="story-heading">
-          <p class="section-index">04 / In practice</p>
-          <h2 id="feature-title">A quiet utility with the right depth.</h2>
-        </div>
-
-        <article class="story story-primary">
-          <div class="story-copy">
-            <span class="story-label">Natural capture</span>
-            <h3>Speak at your<br />own pace.</h3>
-            <p>Built-in local voice detection shows when you’re speaking. Enable silence trimming, automatic stop for toggle recordings, or pause-aware checkpoints for longer dictation. Hold-to-talk stays active until you release the shortcut.</p>
-            <a href={href("/docs/guides/using-freehand/")}>Explore voice workflows <span aria-hidden="true">→</span></a>
-          </div>
-          <div class="silence-study" aria-hidden="true">
-            <div class="study-head"><span>Silence detected</span><b>1.8s</b></div>
-            <div class="study-wave">
-              {[62, 34, 74, 48, 88, 54, 26, 20, 16, 12, 10, 8, 8, 8].map((height) => <i style={`--height:${height}%`}></i>)}
-            </div>
-            <div class="study-rule"><i></i><span>finishing at the pause</span></div>
-          </div>
-        </article>
-
-        <div class="story-pair">
-          <article class="story story-copyedit">
-            <span class="story-label">Optional cleanup</span>
-            <h3>Clean up the result.<br />On your terms.</h3>
-            <div class="edit-example" aria-label="An example transcript before and after optional cleanup">
-              <p><del>um can you send that to tyler tomorrow</del></p>
-              <p><ins>Can you send that to Tyler tomorrow?</ins></p>
-            </div>
-            <p>For dictation and audio files, keep the transcript unchanged or add cleanup with custom instructions or the S1-mini by Superwhisper English profile. Cleanup uses a separately chosen chat model. If it fails or returns empty text, Freehand falls back to the raw transcript.</p>
-            <a href={href("/docs/guides/post-processing/")}>Choose transcript cleanup <span aria-hidden="true">→</span></a>
-          </article>
-
-          <article class="story story-file">
-            <span class="story-label">Stored audio</span>
-            <h3>Already recorded?<br />Bring the file.</h3>
-            <div class="file-progress" aria-hidden="true">
-              <div><span class="file-glyph">♪</span><p><strong>field-note.wav</strong><small>Streaming transcript</small></p><b>68%</b></div>
-              <i><span></span></i>
-            </div>
-            <p>Select common audio formats with the native picker, transcribe them, then copy the result explicitly.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="principles" class="principles" aria-labelledby="principles-title">
-        <div class="principles-heading">
-          <p class="section-index">05 / Trust</p>
-          <h2 id="principles-title">Know what happens<br />to your data.</h2>
-          <p>Freehand makes its handling of audio, credentials, connection checks, and text insertion explicit.</p>
-          <a href={href("/docs/guides/privacy-and-safety/")}>Read the privacy and safety guide <span aria-hidden="true">↗</span></a>
-        </div>
-
-        <ol class="principle-list">
-          <li><span>01</span><div><h3>Recordings released after use</h3><p>Freehand releases captured audio after transcription completes, fails, or is cancelled. Your chosen server’s retention policy still applies.</p></div></li>
-          <li><span>02</span><div><h3>Original target checked</h3><p>Freehand revalidates the destination before insertion. If the check fails, the result stays available to copy.</p></div></li>
-          <li><span>03</span><div><h3>Keys stored by your OS</h3><p>Saved API keys use Windows Credential Manager or macOS Keychain. HTTPS is required unless you explicitly allow an HTTP endpoint.</p></div></li>
-          <li><span>04</span><div><h3>No Freehand account</h3><p>Connect the speech services you already use without another sign-in.</p></div></li>
-        </ol>
-      </section>
-
-      <section class="closing" aria-labelledby="closing-title">
-        <img src={mark.src} alt="" />
-        <p class="kicker"><span></span> Freehand for Windows and macOS</p>
-        <h2 id="closing-title">Give your hands<br />a little less to do.</h2>
-        <p>Free forever. Open source. Your speech services, wherever they run.</p>
-        <div class="closing-actions">
-          <a class="button button-dark" href={href("/download/")}>Download Freehand <span aria-hidden="true">→</span></a>
-          <a class="text-action" href={href("/docs/getting-started/")}>Browse documentation <span aria-hidden="true">↗</span></a>
-        </div>
-      </section>
-    </main>
-
-    <SiteFooter />
-    <script>
-      import { enhanceDownloads } from "../lib/downloads-client.mjs";
-      enhanceDownloads();
-    </script>
-
-  </body>
-</html>
+<ProductLayout current="home" title="Freehand — Speech tools for Windows and macOS" description="Dictate into apps, transcribe audio files, and generate speech. A native Windows and macOS client for local, network, and hosted speech services.">
+  <section class="compact-hero" aria-labelledby="hero-title">
+    <div>
+      <p class="eyebrow"><span>Windows & macOS</span><span>Free & open source</span></p>
+      <h1 id="hero-title">Speech tools<br /><span>for your desktop.</span></h1>
+      <p class="lede">Dictate into apps, transcribe audio files, and generate speech. Connect a local, network, or hosted speech service.</p>
+      <div class="actions">
+        <a class="button" data-home-download href={href("/download/")}>Choose your download →</a>
+        <a class="text-link" href={href("/docs/getting-started/")}>Setup guide →</a>
+      </div>
+      <p class="fine-print">Windows 11 x64 · macOS 13+ · Public alpha<br />Requires a compatible server or provider. Models are not bundled.</p>
+    </div>
+    <AppPreview />
+  </section>
+  <section class="product-section" aria-labelledby="capabilities-title">
+    <div class="section-heading">
+      <div><h2 id="capabilities-title">Capabilities & backends</h2><p>Choose connections independently for Voice, audio files, cleanup, and speech generation.</p></div>
+      <a class="text-link" href={href("/backends/")}>Compare support →</a>
+    </div>
+    <div class="capability-grid">
+      {capabilities.map((capability) => <article class="capability-panel">
+        <h3>{capability.title}</h3>
+        <p>{capability.description}</p>
+        <div class="capability-detail">{capability.detail}</div>
+        <ul class="provider-links" aria-label={`${capability.title} backends`}>
+          {availableBackends.filter((backend) => backend.features[capability.feature] === "available").map((backend) => <li><a href={href(backend.guide)}><ProviderIcon profile={backend.id} size={30} /><span>{backend.name}</span><span aria-hidden="true">↗</span></a></li>)}
+        </ul>
+        <a class="text-link" href={href(capability.guide)}>{capability.link} →</a>
+      </article>)}
+    </div>
+    <p class="fine-print">Available profiles in the current development build; your release may have fewer options. Capabilities depend on the server version and <a class="text-link" href={href("/models/")}>model profile →</a></p>
+  </section>
+  <section class="platform-section product-section" aria-labelledby="desktop-title">
+    <div><h2 id="desktop-title">Native desktop integration</h2><p>Global shortcuts, microphone capture, and a passive status overlay. Dictation is delivered only while the original app and window remain valid and focused; otherwise the result stays ready to copy.</p><a class="text-link" href={href("/privacy/")}>Privacy & safety →</a></div>
+    <div class="platform-details">
+      <article><h3>Windows</h3><p>Windows 11, x64. Saved keys use Credential Manager. Choose an installer or a portable build.</p><a class="text-link" href={href("/docs/guides/windows-installer/")}>Windows installation →</a></article>
+      <article><h3>macOS</h3><p>macOS 13+, Apple Silicon or Intel. Saved keys use Keychain. Microphone and keyboard access are granted through system permissions.</p><a class="text-link" href={href("/docs/guides/macos-setup/")}>macOS setup →</a></article>
+    </div>
+  </section>
+  <script>
+    import { enhanceDownloads } from "../lib/downloads-client.mjs";
+    enhanceDownloads();
+  </script>
+</ProductLayout>
