@@ -115,13 +115,47 @@ try {
   await page.locator('[data-preview="realtime"]').click();
   assert.equal(await realtime.locator('[data-demo-text]').textContent(), liveTranscript);
   assert.equal(await realtime.getAttribute('data-paused'), 'true', 'realtime reduced motion starts static');
+  await page.goto(origin + base + 'features/');
+  await page.waitForFunction(() => customElements.get('freehand-overlay-explorer'));
+  assert.equal(await page.locator('.desktop-navigation a[aria-current="page"]').textContent(), 'Features');
+  const layouts = await page.locator('[data-layout]').evaluateAll(elements => elements.map(e => e.dataset.layout));
+  const positions = await page.locator('[data-position-control] option').evaluateAll(elements => elements.map(e => e.value));
+  assert.equal(layouts.length, 4);
+  assert.equal(positions.length, 6);
+  for (const width of [1440, 800, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    for (const layout of layouts) {
+      await page.locator(`[data-layout="${layout}"]`).click();
+      assert.equal(await page.locator('[data-layout-panel]:not([hidden])').count(), 1);
+      assert.equal(await page.locator('[data-layout-panel]:not([hidden])').getAttribute('data-layout-panel'), layout);
+      for (const position of positions) {
+        await page.locator('[data-position-control]').selectOption(position);
+        const bounds = await page.locator('freehand-overlay-explorer').evaluate(element => {
+          const stage = element.querySelector('.overlay-stage').getBoundingClientRect();
+          const overlay = element.querySelector('[data-layout-panel]:not([hidden])').getBoundingClientRect();
+          return { inside: overlay.left >= stage.left && overlay.right <= stage.right && overlay.top >= stage.top && overlay.bottom <= stage.bottom, overflow: document.documentElement.scrollWidth > innerWidth };
+        });
+        assert.ok(bounds.inside && !bounds.overflow, `${width}: ${layout} at ${position} fits`);
+      }
+    }
+  }
+  const featureLinks = await page.locator('main a').evaluateAll(elements => elements.map(e => e.href));
+  for (const link of featureLinks) {
+    const response = await page.request.get(link);
+    assert.ok(response.ok(), `feature guide reachable: ${link}`);
+    const hash = new URL(link).hash;
+    if (hash) assert.ok(await page.evaluate(({ html, hash }) => Boolean(new DOMParser().parseFromString(html, 'text/html').getElementById(decodeURIComponent(hash.slice(1)))), { html: await response.text(), hash }), `guide section exists: ${link}`);
+  }
   assert.deepEqual(errors, [], 'no uncaught browser errors');
   const noJS = await browser.newContext({ javaScriptEnabled: false });
   const staticPage = await noJS.newPage();
   await staticPage.goto(origin + base);
   assert.equal(await staticPage.locator('#preview-dictation [data-demo-text]').textContent(), transcript);
   assert.ok(!(await staticPage.locator('.preview-controls').isVisible()));
-  console.log('PASS tab order/default, completed and realtime loops, live captions/overflow, final-only faster illustrative insertion, pause, enlargement/Escape, capability row alignment, responsive widths, reduced motion, no-JS fallback, browser errors');
+  await staticPage.goto(origin + base + 'features/');
+  assert.ok(await staticPage.locator('[data-layout-panel="capsule"]').isVisible());
+  assert.ok(!(await staticPage.locator('.explorer-controls').isVisible()));
+  console.log('PASS app previews, capability alignment, responsive layouts, Features overlay layouts/positions and guide links, reduced motion, no-JS fallback, browser errors');
 } finally {
   await browser?.close();
   server.kill();

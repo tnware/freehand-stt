@@ -106,6 +106,11 @@ Reduced motion initially shows the completed document without autoplay;
 offscreen and hidden-page playback pauses. The other preview tabs use labelled
 UI-review captures. None of these assets establish native acceptance.
 
+The Features page adds a static overlay-appearance explorer. Check each layout
+at every position on desktop and narrow screens, selected controls, no-JavaScript
+fallback, and the linked guide anchors. It illustrates layout choices only;
+it does not change application settings or establish native rendering acceptance.
+
 ## CI workflow acceptance
 
 Run the dependency-free selection/gate regressions and workflow wiring checks:

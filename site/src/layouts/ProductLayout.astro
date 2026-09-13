@@ -9,7 +9,7 @@ interface Props {
   title: string;
   description: string;
   path?: string;
-  current?: "home" | "download" | "backends" | "models" | "privacy";
+  current?: "home" | "features" | "download" | "backends" | "models" | "privacy";
 }
 const { title, description, path = "", current } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
