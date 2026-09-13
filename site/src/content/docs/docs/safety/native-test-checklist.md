@@ -5,7 +5,7 @@ description: Interactive acceptance checks that must run on a real Windows deskt
 
 Cross-compilation is not acceptance. Run these checks on a non-elevated Windows desktop with a disposable API credential and one explicitly selected STT route.
 
-- Confirm one mark-only tray icon, one main window, and reusable Settings, About, and Transcription details windows. Switch Windows between light and dark modes and inspect the purpose-drawn tray family at 100%, 125%, 150%, and 200% scale; the waveform and caret must remain distinct without a miniature application tile. Confirm the executable, taskbar, Explorer, installer, uninstaller, Installed apps, and Start Menu retain the tiled application family. During microphone and stored-file workflows, confirm the tray tooltip and its disabled status/detail rows distinguish recording, VAD silence, checkpoints, transcription, cleanup, upload/streaming, cancellation, success, attention, and failure without displaying transcript text, file identity, model, endpoint, or raw errors. Show/Hide Freehand, Settings, About, active cancellation, available transcript copy, and authoritative Quit must remain state-correct. Repeated Settings or About actions must focus/reuse their existing native window; Settings must open at General. A second launch and a tray-icon click must reveal the main window; closing a window hides it, with Settings first resolving any unsaved draft. The tray must not offer a recording-start action that could replace the captured insertion target.
+- Confirm one mark-only tray icon, one main window, and reusable Settings, About, and Transcription details windows. Switch Windows between light and dark modes and inspect the purpose-drawn tray family at 100%, 125%, 150%, and 200% scale; the waveform and caret must remain distinct without a miniature application tile. Confirm the executable, taskbar, Explorer, installer, uninstaller, Installed apps, and Start Menu retain the tiled application family. During microphone and stored-file workflows, confirm the tray tooltip and its disabled status/detail rows distinguish recording, VAD silence, checkpoints, transcription, cleanup, upload/streaming, cancellation, success, attention, and failure without displaying transcript text, file identity, model, endpoint, or raw errors. Show/Hide Freehand, Settings, About, active cancellation, available transcript copy, and authoritative Quit must remain state-correct. Repeated Settings or About actions must focus/reuse their existing native window; Settings must open at General. A second launch must reveal the main window; left-click opens the compact dictation panel and right-click opens the native menu. Closing a window hides it, with Settings first resolving any unsaved draft. The native menu must not offer a recording-start action.
 - Confirm the credential persists in Windows Credential Manager and never appears in SQLite, legacy JSON, logs, process arguments, events, or returned renderer DTOs. Confirm the transient password draft clears after save and when settings are left or hidden.
 - Enumerate the default and an explicit microphone; record, stop, cancel, reach the configured duration bound, unplug a device, and deny microphone privacy permission. After at least five seconds idle, confirm a shortcut does not publish Recording until native capture has actually started and that a prepared device is reused safely.
 - In Settings, confirm each shortcut row explains its required or optional forms before capture. Capture modifier-plus-letter, Space, F1/F11, and an unmodified programmable F13-F24 key; verify live keycaps, Escape cancellation, restore-default/clear behavior, saved state, and consistent spoken names. Confirm incomplete, F12, unsupported, duplicate-Freehand, Windows-owned, and attempted toggle/show-swap outcomes are distinct and preserve every prior binding. Repeat modifier ordering with Win/Super aliases, one representative AltGr layout, and Sticky Keys/Filter Keys both enabled and disabled; ordinary input and injected input must not trigger capture actions.
@@ -39,6 +39,27 @@ Check that neutral black/white surfaces and the brand-blue accent extend to Sett
 connection dialogs, native captions, and the passive overlay. Verify the local
 heading font loads without a network request, and that idle, recording,
 processing, copy recovery, and error states retain usable controls.
+
+## Windows tray panel
+
+- Left-click repeatedly: reuse one 360 × 500 panel with no taskbar entry. Check
+  the 8-DIP spacing, taskbar overflow, supported taskbar edges, and mixed-DPI
+  monitors. Escape, focus loss, Alt+F4, and Main/Settings navigation hide the
+  panel without cancelling work. Right-click must dismiss it before opening the
+  native menu, including authoritative Quit.
+- Use the connection and model pickers by mouse and keyboard. Verify committed
+  changes, metadata-only discovery, failed-save feedback, and disabled controls
+  while work or a conflicting Settings draft is active.
+- Start and stop from the panel with Notepad and a browser field as destinations,
+  then repeat with other Freehand windows visible and with the tray overflow
+  open. Observe the actual foreground window and focused control after native
+  dismissal and before recording begins. No automatic activation or cached
+  target may substitute for the normal recording-start capture. Change focus
+  during processing and verify explicit-copy recovery rather than insertion
+  into the new target. Check latest-result Copy and failed clipboard feedback.
+- Browser fixtures verify command ordering and presentation only. Run these
+  native focus checks separately; neither a successful build nor a mock hide
+  proves which application Windows focuses after the panel closes.
 
 ## SQLite settings acceptance
 

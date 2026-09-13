@@ -79,7 +79,11 @@
       {#if recording}<SquareIcon class="size-5" fill="currentColor" />{:else}<MicIcon class="size-5" />{/if}
       {recording ? "Stop recording" : "Start recording"}
     </button>
-    <p class="text-center text-[11px] leading-relaxed text-muted-foreground">{recording ? "Close this panel to keep recording." : "Returns to your app before recording."}</p>
+    <p class="text-center text-[11px] leading-relaxed text-muted-foreground">
+      {recording
+        ? "Close this panel to keep recording."
+        : "Hides this panel before recording."}
+    </p>
   </section>
   {#if settings}
     <section class="configuration space-y-2.5" aria-label="Voice configuration">

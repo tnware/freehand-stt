@@ -4,6 +4,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -42,8 +43,21 @@ func TestTrayPopoverRetainedNativeLifecycle(t *testing.T) {
 	}
 }
 
-func TestTrayPopoverOptions(t *testing.T) {
+func TestTrayPopoverWindowsOptions(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows window options")
+	}
 	o := trayPopoverWindowOptions(config.AppearanceModeDark, true)
+	if !o.Windows.HiddenOnTaskbar {
+		t.Fatal("tray panel must not create a taskbar entry")
+	}
+	if o.Mac.WindowClass == application.MacWindowClassPanel || o.Mac.PanelPreferences.NonActivating {
+		t.Fatal("Windows must not use Mac panel preferences")
+	}
+}
+
+func TestTrayPopoverOptions(t *testing.T) {
+	o := trayPopoverWindowOptionsForPlatform("darwin", config.AppearanceModeDark, true)
 	if o.Name != "tray-popover" || o.URL != "/?window=tray-popover" {
 		t.Fatalf("identity %q %q", o.Name, o.URL)
 	}

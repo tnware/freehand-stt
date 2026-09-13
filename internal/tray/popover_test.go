@@ -11,6 +11,7 @@ type popoverTrayFixture struct {
 	click    func()
 	right    func()
 	attached application.Window
+	offset   int
 }
 
 func (f *popoverTrayFixture) AttachWindow(w application.Window) *application.SystemTray {
@@ -29,9 +30,46 @@ func (f *popoverTrayFixture) OnRightClick(fn func()) *application.SystemTray {
 	return nil
 }
 func (f *popoverTrayFixture) ToggleWindow() { f.calls = append(f.calls, "toggle") }
+func (f *popoverTrayFixture) HideWindow()   { f.calls = append(f.calls, "hide") }
+func (f *popoverTrayFixture) ShowMenu()     { f.calls = append(f.calls, "menu") }
 
-func TestAttachPopoverMacOnly(t *testing.T) {
-	for _, osName := range []string{"darwin", "windows", "linux"} {
+func (f *popoverTrayFixture) WindowOffset(offset int) *application.SystemTray {
+	f.offset = offset
+	return nil
+}
+
+func TestAttachPopoverWindowsEdgeSpacing(t *testing.T) {
+	for _, osName := range []string{"windows", "darwin", "linux"} {
+		t.Run(osName, func(t *testing.T) {
+			f := &popoverTrayFixture{}
+			attachPopover(osName, f, &application.WebviewWindow{})
+			want := 0
+			if osName == "windows" {
+				want = 8
+			}
+			if f.offset != want {
+				t.Fatalf("window offset = %d, want %d", f.offset, want)
+			}
+		})
+	}
+}
+
+func TestAttachPopoverWindowsDismissesBeforeNativeMenu(t *testing.T) {
+	f := &popoverTrayFixture{}
+	w := &application.WebviewWindow{}
+	attachPopover("windows", f, w)
+	if f.attached != w || f.click == nil || f.right == nil {
+		t.Fatal("Windows must attach the panel and retain both click actions")
+	}
+	f.click()
+	f.right()
+	if !reflect.DeepEqual(f.calls, []string{"attach", "left", "right", "toggle", "hide", "menu"}) {
+		t.Fatalf("panel/menu ordering = %v", f.calls)
+	}
+}
+
+func TestAttachPopoverMacAndUnsupportedPlatform(t *testing.T) {
+	for _, osName := range []string{"darwin", "linux"} {
 		t.Run(osName, func(t *testing.T) {
 			f := &popoverTrayFixture{right: func() {}}
 			w := &application.WebviewWindow{}

@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+test("recording guidance promises dismissal, not external focus restoration", async ({ page }) => {
+  await page.goto("/tests/browser/app/?view=tray");
+  await expect(page.getByText("Hides this panel before recording.", { exact: true })).toBeVisible();
+});
+
 test("compact task surface dismisses before start and stop", async ({ page }) => {
   await page.goto("/tests/browser/app/?view=tray");
   await page.getByRole("button", {name:"Start recording", exact:true}).click();
@@ -8,7 +13,7 @@ test("compact task surface dismisses before start and stop", async ({ page }) =>
   await expect(page.getByRole("button", {name:"Start recording", exact:true})).toBeDisabled();
 });
 
-test("bounded result, native copy, and task-scoped navigation", async ({page}) => {
+test("bounded result, native copy, and task-scoped navigation", async ({page}, testInfo) => {
   await page.goto("/tests/browser/app/?view=tray&result");
   await page.getByRole("button", {name:"Copy", exact:true}).click();
   await expect(page.getByRole("button", {name:"Copied", exact:true})).toBeVisible();
@@ -17,7 +22,7 @@ test("bounded result, native copy, and task-scoped navigation", async ({page}) =
   await expect.poll(() => page.evaluate(() => (window as any).trayCalls)).toEqual(["copy", "settings:voice-transcription", "main"]);
   expect(await page.evaluate(() => ({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}))).toEqual({width:360,height:500});
   expect((await page.locator(".tray header").boundingBox())!.y).toBeGreaterThanOrEqual(12);
-  await page.screenshot({path:"/tmp/freehand-tray-popover.png"});
+  await page.screenshot({path:testInfo.outputPath("tray-popover.png")});
 });
 test("loading and clipboard errors stay explicit", async ({page}) => {
   await page.goto("/tests/browser/app/?view=tray&loading");

@@ -10,7 +10,7 @@ import (
 // The panel is independent of main and created only after Wails owns screens
 // and the status item. Closing hides it; only application shutdown destroys it.
 func (a *App) newTrayPopoverWindow() {
-	if runtime.GOOS != "darwin" || a.trayPopover.current() != nil {
+	if (runtime.GOOS != "darwin" && runtime.GOOS != "windows") || a.trayPopover.current() != nil {
 		return
 	}
 	window := a.wails.Window.NewWithOptions(trayPopoverWindowOptions(a.settings.AppearanceMode, a.wails.Env.IsDarkMode()))
@@ -31,12 +31,23 @@ func (a *App) showMain() {
 }
 
 func trayPopoverWindowOptions(appearance config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
-	o := baseWindowOptionsForPlatform("darwin", "tray-popover", "Freehand", "/?window=tray-popover", 360, 500, 360, 500, true, false, appearance, systemDark)
+	return trayPopoverWindowOptionsForPlatform(runtime.GOOS, appearance, systemDark)
+}
+
+func trayPopoverWindowOptionsForPlatform(osName string, appearance config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
+	o := baseWindowOptionsForPlatform(osName, "tray-popover", "Freehand", "/?window=tray-popover", 360, 500, 360, 500, true, false, appearance, systemDark)
 	o.Frameless = true
 	o.DisableResize = true
 	o.HideOnEscape = true
 	o.HideOnFocusLost = true
-	o.Mac.WindowClass = application.MacWindowClassPanel
-	o.Mac.PanelPreferences = application.MacPanelPreferences{NonActivating: true, BecomesKeyOnlyIfNeeded: true, FloatingPanel: true}
+	if osName == "darwin" {
+		o.Mac.WindowClass = application.MacWindowClassPanel
+		o.Mac.PanelPreferences = application.MacPanelPreferences{NonActivating: true, BecomesKeyOnlyIfNeeded: true, FloatingPanel: true}
+	}
+	if osName == "windows" {
+		// This is a keyboard-interactive popup, not the passive status overlay.
+		// Keep native activation; recording awaits Hide before target capture.
+		o.Windows.HiddenOnTaskbar = true
+	}
 	return o
 }
