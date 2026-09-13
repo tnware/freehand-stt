@@ -6,7 +6,7 @@ export const modelProfiles = [
     name: "S1-mini",
     family: "Superwhisper · Transcript cleanup",
     icon: "s1-mini",
-    summary: "Turn spoken English into text with the style and structure you want.",
+    summary: "Format English transcripts with the style and structure you want.",
     guide: "/docs/models/s1-mini/",
     backends: [
       { name: "llama.cpp", guide: "/docs/backends/llama-cpp/" },
@@ -19,7 +19,7 @@ export const modelProfiles = [
       { name: "Context", detail: "General or email" },
     ],
     inApp:
-      "The Cleanup panel shows trained output controls and builds the model's fixed prompt for you. llama.cpp and vLLM requests enforce reasoning off; Generic requires it on the server.",
+      "Choose style, structure, and context in Cleanup. Freehand requests reasoning off with llama.cpp and vLLM; with Generic, you must turn it off on the server.",
     note: "English cleanup after transcription. The raw transcript remains the fallback if cleanup fails.",
   },
   {
@@ -84,7 +84,7 @@ export const modelProfiles = [
       },
     ],
     inApp:
-      "Choose Parakeet TDT v3 in Voice or Audio-file transcription. Its profile keeps the completed workflow and hides unsupported recognition hints and realtime controls.",
+      "Choose Parakeet TDT v3 in Voice or Audio-file transcription for completed recordings. Language and punctuation are automatic; recognition hints and live mode are unavailable.",
     note: "This profile covers the TDT v3 checkpoint on NeMo-Speech.cpp.",
   },
   {
@@ -116,7 +116,7 @@ export const modelProfiles = [
     ],
     inApp:
       "The Transcription panel shows Cohere’s language choices and temperature control. Punctuation follows vLLM’s model adapter.",
-    note: "Context and vocabulary controls are absent because this adapter does not apply them.",
+    note: "Cohere Transcribe on vLLM does not support context or vocabulary hints.",
   },
   {
     id: "voxtral-realtime",
@@ -146,7 +146,7 @@ export const modelProfiles = [
       },
     ],
     inApp:
-      "Select Voxtral Mini Realtime and enable Realtime transcription within Voice’s existing Transcription panel. Stop to finalize and apply your usual cleanup and delivery.",
+      "Select Voxtral Mini Realtime and enable Realtime transcription in Voice’s Transcription panel. Stop recording to finalize the text and apply your usual cleanup and delivery settings.",
     note: "Uses the Voxtral Mini 4B Realtime checkpoint. Audio files retain their own selection.",
   },
   {
@@ -178,6 +178,6 @@ export const modelProfiles = [
     ],
     inApp:
       "Text to speech and its quick settings show language and voice-style controls. Preview uses your current edits before saving, including the selected voice and speaking speed.",
-    note: "CustomVoice 1.7B behavior. Voice cloning and VoiceDesign use different model contracts.",
+    note: "Requires the 1.7B CustomVoice checkpoint. Voice cloning and VoiceDesign are not supported by this profile.",
   },
 ] as const;

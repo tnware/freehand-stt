@@ -13,8 +13,8 @@ export const modelFamilies = [
       { name: "Vocabulary", detail: "Speaches hotwords; context hints on whisper.cpp" },
       { name: "Audio files", detail: "Completed results; optional streaming on Speaches" },
     ],
-    note: "Choose Generic model behavior with the appropriate backend profile. Checkpoint and language support belong to the server. whisper.cpp uses its server-loaded model and does not support file streaming or live dictation in Freehand.",
-    guide: "/docs/models/families/#whisper",
+    note: "Choose Generic model behavior with the appropriate backend profile. Available checkpoints and languages depend on your server. whisper.cpp uses its server-loaded model and does not support file streaming or live dictation in Freehand.",
+    guide: "/docs/models/families/",
     backends: [
       { name: "Speaches", guide: "/docs/backends/speaches/" },
       { name: "whisper.cpp", guide: "/docs/backends/whisper-cpp/" },
@@ -33,7 +33,7 @@ export const modelFamilies = [
       { name: "Output", detail: "Generation controls provided by the backend" },
       { name: "Recovery", detail: "Raw transcript on cleanup failure" },
     ],
-    note: "Use an instruction-following model behind a compatible chat API. Generic does not apply S1-mini’s trained style controls or establish compatibility for every advertised model.",
+    note: "Use an instruction-following model behind a compatible chat API. Check that your server and model support the options you choose. Generic does not apply S1-mini’s trained style controls.",
     guide: "/docs/guides/post-processing/",
     backends: [
       { name: "llama.cpp", guide: "/docs/backends/llama-cpp/" },
@@ -53,7 +53,7 @@ export const modelFamilies = [
       { name: "Speaking speed", detail: "Adjust speed before generation" },
       { name: "Audio", detail: "Listen or explicitly save the generated WAV" },
     ],
-    note: "Choose Generic model behavior with Speaches or Kokoro-FastAPI. Voice availability depends on the server and model. Language overrides, voice-style instructions, and cloning are not exposed by these profiles.",
+    note: "Choose Generic model behavior with Speaches or Kokoro-FastAPI. Voice availability depends on the server and model. These profiles do not offer language overrides, voice-style instructions, or cloning.",
     guide: "/docs/backends/kokoro-fastapi/",
     backends: [
       { name: "Speaches", guide: "/docs/backends/speaches/" },

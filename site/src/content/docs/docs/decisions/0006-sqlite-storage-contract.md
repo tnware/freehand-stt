@@ -127,6 +127,12 @@ this contract. See [the storage maintenance guide](../../development/storage/)
 for the concrete layout and validation commands. Saved connections subsequently use this foundation; reusable model preferences
 remain separate feature work.
 
+> Subsequent implementation: migration `00007_remembered_models.sql` adds
+> remembered model preferences through this same storage contract. Selection
+> ownership follows [ADR 0007](../0007-task-state-and-preference-ownership/)
+> and its [shared-vocabulary superseding note](../0010-shared-vocabulary/).
+> Transcript history remains memory-only; this does not authorize persistent transcripts.
+
 ## References
 
 - [modernc SQLite driver and platform support](https://pkg.go.dev/modernc.org/sqlite)

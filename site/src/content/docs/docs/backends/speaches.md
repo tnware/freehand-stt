@@ -3,14 +3,15 @@ title: Speaches
 description: Connect Speaches for transcription and on-demand speech playback.
 ---
 
-**Status:** available for transcription and speech playback.
+Use **Speaches** for microphone and audio-file transcription, or for text to
+speech when the server has a TTS model installed.
 
 ## Run Speaches with Docker
 
 Use PowerShell and Docker Desktop with Linux containers. This NVIDIA example
-follows [upstream installation](https://speaches.ai/installation/); its moving
-`latest-cuda` tag is not the same as a pinned compatibility test. Record the
-image digest when reporting results. For CPU-only setup, use the alternative
+follows [upstream installation](https://speaches.ai/installation/). The
+`latest-cuda` tag changes; pin a release tag or image digest for a repeatable
+deployment. For CPU-only setup, use the alternative
 below instead of starting a second server.
 
 ```powershell
@@ -38,7 +39,8 @@ for the models supported by your running release.
 
 Set Freehand's transcription profile to **Speaches**, base URL to
 **`http://127.0.0.1:8000/v1`**, model to **`Systran/faster-whisper-large-v3`**,
-authentication to **None**, and allow local HTTP. Save, then try a short recording.
+authentication to **None**, and enable **Allow HTTP for this connection**.
+Save, then try a short recording.
 
 ### CPU alternative
 
@@ -60,10 +62,10 @@ Invoke-RestMethod -Method Post `
 ```
 
 Set the Freehand model to
-`Systran/faster-distil-whisper-small.en` and Language to English; the remaining
-connection values stay the same. This smaller model is a CPU example, not a
-quality recommendation for a GPU workstation. These launch recipes follow
-upstream contracts; they have not each received independent Windows acceptance.
+`Systran/faster-distil-whisper-small.en` and the spoken language to English; the
+remaining connection values stay the same. Compare results with a larger model
+if you have the memory and processing capacity for it. These upstream
+launch recipes have not been separately tested on Windows with every image.
 
 ### Stop, restart, and optional playback
 
@@ -81,21 +83,22 @@ Installing an STT model alone does not provision voices or a TTS model.
 
 ## Configure Freehand
 
-Under **Settings → Connections**, create a **Transcription** connection with the
-**Speaches** profile, base URL including `/v1`, authentication, and HTTP permission.
-Choose **Save connection**, then select it in **Settings → Transcription** and
-choose an installed model. Save feature settings.
+Under **Settings → Connections**, create a **Speaches** connection and enable
+**Voice transcription**, **Audio-file transcription**, or both under **Used for**.
+Enter the base URL including `/v1`, authentication, and HTTP permission.
+Choose **Save connection**, then select it in the corresponding transcription
+settings and choose an installed model. Save your changes.
 
-For playback on the same server, edit that connection and enable **Speech
-playback** under **Used for**. Save it, then select the same entry in **Settings →
-Speech playback**, choose the installed TTS model and voice, enable playback, and
-save before explicitly previewing a voice. Both features share the connection
+For playback on the same server, edit that connection and enable **Text to speech**
+under **Used for**. Save it, then select the same entry in **Settings → Text to speech**,
+choose the installed TTS model and voice, and enable text to speech. Preview the
+voice and save your changes. Both features share the connection
 and key while retaining separate models and options. Create another connection
 when the playback endpoint or credentials differ.
 
 The [connection guide](../../guides/connect-a-server/) explains deployment
-topologies and shared settings. Freehand neither installs models nor loads all
-models during a connection test.
+topologies and shared settings. Freehand's connection checks read metadata only;
+they do not install, load, or run models.
 
 ## Implemented capabilities
 
@@ -106,16 +109,14 @@ models during a connection test.
 | Streaming dialects       | Typed transcript delta/done events and legacy untyped text segments.                                |
 | Language hint            | Optional `language` request field; effect depends on the model.                                     |
 | Recognition context      | Optional `prompt`, at most 8,192 UTF-8 bytes.                                                       |
-| Hotwords                 | Optional `hotwords`, at most 2,048 UTF-8 bytes; Speaches-specific field.                            |
+| Shared vocabulary        | Sent as `hotwords`, at most 2,048 UTF-8 bytes; Speaches-specific field.                            |
 | Decoding temperature     | Optional `temperature` from 0 to 1; explicit zero is supported.                                     |
 | Speech playback          | Voice ID, speed request, and buffered PCM16 WAV.                                                    |
 | Voice discovery          | Model-associated voices from `/v1/models`, with a labelled server-wide `/v1/audio/voices` fallback. |
 | Transcript cleanup       | Configure a separate Generic, llama.cpp, or vLLM chat connection.                                   |
 
-Generic retains these compatible response shapes for older Freehand settings.
-Selecting Speaches identifies the dedicated contract without changing the model,
-URL or authentication. Optional controls are omitted until configured; selecting
-Speaches alone adds no fields.
+Context, vocabulary, and temperature are optional. Freehand omits their request
+fields until you configure or enable them.
 
 ## Streaming formats
 
@@ -125,10 +126,10 @@ PCM16 WAV before playing.
 
 ## Choose a voice
 
-In **Settings → Speech playback**, select the Speaches connection and TTS model,
+In **Settings → Text to speech**, select the Speaches connection and TTS model,
 then use **Refresh voices** beside the voice field. Search the list by ID, name,
 or language when the server supplies it. You can also type a custom voice ID.
-The selection is saved with this connection and model's existing settings.
+The voice selection is remembered for this connection and model.
 
 Freehand first reads `/v1/models` and uses the selected model's `voices` field.
 If it is absent, it reads `/v1/audio/voices` and labels the result as server-wide;
@@ -156,6 +157,11 @@ Provider limits and Freehand's bounded-buffer limits still apply; consult the
 Whisper-family models support context hints, hotwords, and temperature through
 Speaches. These controls are available for completed and streaming transcription.
 
+For Voice, set **Context hint** in **Settings → Voice transcription**. For files,
+set context in **Audio-file transcription → Transcription controls**. Keep shared
+terms in **Settings → Vocabulary**, and enable them for Voice, audio files, or
+both. Freehand sends those terms as `hotwords`.
+
 Context supplies expected subject matter or wording. Hotwords supply terms to
 favor; neither is a strict replacement dictionary. Both may be supplied, but
 model prompt budgets and decoding behavior can limit their effect. Freehand's
@@ -166,8 +172,8 @@ Keep these options unset if the selected model does not support them. A rejected
 request fails normally; Freehand does not silently drop hints and repeat inference.
 See [Transcription controls](../../guides/connect-a-server/#transcription-controls).
 
-Server-side VAD is intentionally not exposed: v0.8.3 accepts `vad_filter`, while
-the inspected v0.9.0-rc.3 route runs VAD internally with fixed options. Local
+Freehand does not offer a server-side VAD control: v0.8.3 accepts `vad_filter`,
+while the v0.9.0-rc.3 route runs VAD internally with fixed options. Local
 microphone VAD settings remain independent. Library settings such as beam size
 are not automatically fields on the Speaches HTTP request.
 

@@ -24,10 +24,10 @@ description: Contributor requirements for focus, insertion, credentials, audio, 
 - History is disabled by default and retains nothing until a saved setting enables it.
 - Retain only finalized raw/processed transcript text and bounded non-secret run details in the history-owned 20-entry, 2 MiB in-memory ring.
 - Enforce both limits after every mutation, including completion and post-processing updates; a single entry may not exceed the total byte budget.
-- Never retain audio, provisional or cancelled text, target application identity, credentials, headers, or full file paths.
+- Never retain audio, provisional text, target application identity, credentials, headers, or full file paths. Cancellation discards unfinished text; a finalized raw transcript already retained before cleanup may remain in enabled history, without authorizing insertion or current-result copy after cancellation.
 - Reapply the 20-entry/2-MiB budget after every history mutation. Prefer an explicitly marked raw-only fallback when processed output causes overflow; remove an entry rather than truncate transcript text or silently exceed the budget when raw cannot fit.
 - Release an individually removed entry immediately. Clear the ring when history is disabled, when the user clears it, and during shutdown.
-- Do not put transcript content in logs, crash reports, status events, or the native overlay.
+- Never put transcript content in logs or crash reports. Do not put historical text in generic status/overlay events. Current-result DTOs and opt-in realtime captions are separate bounded presentation contracts; captions never authorize history, copy, cleanup, or insertion.
 
 ## Keyboard hooks and hotkeys
 
@@ -45,7 +45,7 @@ The complete action matrix and normalization rules are documented in
 - Treat endpoint settings and their credential as one coherent operation snapshot. Do not pair an endpoint/model captured before a settings save with a credential loaded after that save.
 - Capture the complete request profile, including both applicable credentials, under the settings transaction lock before microphone or stored-audio work starts. Allow later settings changes, but apply them only to later operations.
 - Derive microphone, stored-file, connection-test, shortcut-capture, and preparation work from the Wails application context and give each operation an explicit timeout or cancellation path.
-- Shutdown stops accepting work before cancelling the application root, suppresses late publication, closes stored-file and dictation work before history, and waits no longer than the shared five-second deadline. Native capture checks its closed fence around preparation so no late warmup may recreate a resource after close.
+- Shutdown stops accepting work before cancelling active work, suppresses late publication, and closes stored-file and dictation work before history. Dictation and stored-file services each have a five-second teardown wait budget; speech has two seconds. These are not a shared process-exit deadline or a guarantee that every native call is interruptible. Native capture checks its closed fence around preparation so no late warmup may recreate a resource after close. See [shutdown ownership](../../development/architecture/#shutdown-and-audio-export-ownership).
 
 ## WebView boundary
 
@@ -87,6 +87,7 @@ Safe automatic checks:
 ```text
 GET /health
 GET /v1/models
+GET /v1/audio/voices  # qualified speech-profile metadata only
 ```
 
 Forbidden automatic checks:

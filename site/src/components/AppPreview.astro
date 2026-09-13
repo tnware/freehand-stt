@@ -19,7 +19,7 @@ const previews = [
   <div id="preview-realtime" data-preview-panel="realtime" hidden><DictationDemo realtime /></div>
   {previews.map((preview, index) => <figure id={`preview-${preview.id}`} data-preview-panel={preview.id} hidden>
     <img src={preview.image.src} width={preview.image.width} height={preview.image.height} alt={preview.alt} loading={index === 0 ? "eager" : "lazy"} />
-    <figcaption>{preview.label} · UI review capture with sample data</figcaption>
+    <figcaption>{preview.label} · Interface preview with sample data</figcaption>
   </figure>)}
   <dialog class="preview-dialog" aria-label="Enlarged app preview">
     <header><span data-dialog-title>Freehand · Dictation demonstration</span><button type="button" data-close autofocus>Close ×</button></header>
@@ -58,7 +58,7 @@ const previews = [
         demo.hidden = !isCompleted;
         realtime.hidden = !isRealtime;
         enlarged.hidden = isCompleted || isRealtime;
-        title.textContent = isRealtime ? "Freehand · Realtime dictation demonstration" : isCompleted ? "Freehand · Dictation demonstration" : "Freehand · UI review capture";
+        title.textContent = isRealtime ? "Freehand · Realtime dictation demonstration" : isCompleted ? "Freehand · Dictation demonstration" : "Freehand · Interface preview with sample data";
         if (current) {
           enlarged.src = current.src;
           enlarged.alt = current.alt;

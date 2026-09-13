@@ -4,8 +4,8 @@ description: What Freehand sends, retains, stores, and inserts on Windows and ma
 ---
 
 Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
-services you choose. Audio and text are sent only as required by a capability
-you configured: transcription, optional transcript cleanup, or on-demand speech
+services you choose. Audio and text are sent for the workflows you use:
+transcription, optional transcript cleanup, or on-demand speech
 generation from your text or retained transcripts.
 The destination may be localhost, a private server, or a hosted provider, so
 that server's own privacy and retention policy still applies.
@@ -17,20 +17,16 @@ that server's own privacy and retention policy still applies.
 | Microphone or selected-file audio | Your configured speech-to-text endpoint | Audio for the active request; released afterward. Existing source files are unchanged. |
 | Transcript sent for cleanup | Your separate cleanup endpoint, when enabled | Keeping both versions after successful cleanup requires enabled session history. Raw failure fallback does not require history. |
 | API keys | The configured capability endpoint when authentication is enabled | Saved keys in Windows Credential Manager or macOS Keychain. |
-| Transcript history | Memory on your PC | Off by default; at most 20 entries and 2 MiB, cleared on exit. |
+| Transcript history | Memory on your computer | Off by default; at most 20 entries and 2 MiB, cleared on exit. |
 | Speech playback text and audio | Your playback endpoint receives text and returns audio | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit. |
 | Update checks | GitHub release service | Update metadata and any downloaded update; no recordings or transcripts are sent. |
-
-The details below describe the lifetime of each kind of data. Your chosen
-server's retention policy applies to anything sent to it.
 
 ## Audio
 
 Microphone and selected-file audio is kept only for the active transcription
-request. Freehand does not retain audio in history or write predictable audio
-files to disk. Active audio is released after completion, failure,
-cancellation, replacement, or shutdown. Selecting an existing audio file does
-not delete or modify the original file.
+request. Freehand does not retain audio in history. It releases active audio and
+deletes temporary audio after completion, failure, or cancellation. Selecting an
+existing audio file does not delete or modify the original file.
 
 Optional text-to-speech is separate: generated playback audio remains in
 memory until cleared or replaced, a recording begins, or Freehand exits. You
@@ -54,38 +50,39 @@ bounded to 20 entries and 2 MiB, and cleared when Freehand exits. It stores
 raw and cleaned transcript text and limited non-secret run details—not audio,
 credentials, request headers, full file paths, or destination-window identity.
 
-The information button on a completed history entry opens **Transcription details**
-in a separate, resizable window. You can keep it open while using Freehand; opening
-another entry updates the same window. Removing the entry, clearing or disabling
-history, or reaching its retention limit also removes those details. Closing the
-details window leaves Freehand running.
+The **Transcription details** for a history entry are removed with that entry,
+including when you clear or disable history or the entry reaches its retention
+limit. An open details window does not preserve a separate copy.
 
 Stored-audio results require an explicit Copy action. Voice dictation can use
 focus-safe direct insertion or manual copy, according to your settings.
 
 ## Safe text insertion
 
-Freehand records the destination when voice capture begins. Windows validates
-application/process identity and the focused control. macOS validates the
-NSWorkspace frontmost app PID and process start time plus its AX focused window;
-it does not inspect editor metadata or require the same field. Switching fields
-within that window is allowed. Active Secure Input blocks delivery, but custom
-secure fields that do not enable it may not be detected. If validation fails,
-Freehand does not activate another app; the transcript remains available to copy.
-Delivery can be partial, so check for existing text before pasting.
+Start dictation with the intended app and text field focused, and keep them
+focused until delivery finishes. Freehand will not bring an app to the foreground
+to insert text.
+
+- On Windows, the original app, window, and focused control must still match.
+- On macOS, the same app and window must remain focused. If you move to another
+  field in that window, Freehand delivers to the currently focused field.
+
+macOS Secure Input blocks delivery while active. Freehand does not identify
+every password field: custom secure fields that do not enable Secure Input may
+not be detected. Avoid dictating sensitive text into an uncertain destination.
+
+If the destination changes or Freehand cannot safely deliver, the transcript
+stays available for explicit **Copy**. A failed delivery may have inserted some
+text already; check before pasting to avoid duplicates.
 
 Clipboard-paste insertion is not enabled. Freehand does not silently replace
 the clipboard as part of automatic delivery.
-
-Named connections also store their non-secret endpoint details locally. Inactive
-connections retain credential references; deleting an entry removes its key only
-when no saved connection uses that reference. See [saved connections](../saved-connections/).
 
 ## Saved settings and backups
 
 On Windows, non-secret settings are stored in
 `%LOCALAPPDATA%\Freehand\settings.db`. They include server addresses, model
-choices, custom instructions, and request headers. Database access is restricted
+choices, vocabulary, custom instructions, and request headers. Database access is restricted
 to your Windows user and SYSTEM; the database is not encrypted. Treat it and its
 backups as private configuration. API keys remain in Windows Credential Manager or macOS Keychain,
 and transcript history remains memory-only. Window size and position are kept
@@ -106,7 +103,9 @@ restoring or removing these files.
 ## Credentials and transport
 
 API keys are stored in Windows Credential Manager or macOS Keychain. They are not written to the
-SQLite settings database or returned to the interface after saving.
+settings database or displayed again after saving. Inactive connections keep
+their saved keys. Deleting a connection removes its key only when no saved
+connection still uses it. See [saved connections](../saved-connections/).
 
 HTTPS is required by default. You can explicitly allow HTTP for a trusted local
 or LAN endpoint, but doing so sends audio, transcript text, and credentials
@@ -117,12 +116,10 @@ another path on the same server. Configure the final base URL instead of a
 redirecting alias; Freehand will not forward your key, audio, or text to the
 redirect destination.
 
-If a server echoes the request's API key literally in optional response details
-or discovered model IDs, Freehand removes those values before returning them
-to the interface or session history. Valid transcript text and unrelated
-details remain available. Text containing the key is rejected. This is a guard
-against literal reflection, not protection against a malicious server encoding
-or otherwise transforming a key it already received.
+Freehand filters literal copies of your API key from server response details
+and rejects transcript text containing the key. This does not make an untrusted
+server safe: the server has already received the key and could misuse or
+transform it. Only connect to services you trust.
 
 ## Connection checks
 
@@ -147,6 +144,6 @@ send recordings or transcripts to GitHub.
 
 ## Diagnostics
 
-Operational logs include bounded state, timing, and failure categories. They
+Operational logs include status, timing, and failure categories. They
 exclude audio, transcript text, credentials, private headers, full paths,
 model IDs, URL paths and queries, and destination-window identity.

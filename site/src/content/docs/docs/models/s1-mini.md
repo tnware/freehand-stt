@@ -23,13 +23,14 @@ the effective prompt for review. Temperature stays at zero, and reasoning must
 be off. The optional output-token limit and timeout remain available.
 
 These controls also appear in the **Cleanup** quick settings popover. Quick
-changes apply immediately; full Settings edits apply when you choose **Save settings**.
+changes apply immediately; full Settings edits apply when you choose **Save**
+or **Save and return**.
 Switching models preserves your cleanup style, structure, and context choices.
 
 ## Choose a backend
 
-- **[llama.cpp](../../backends/llama-cpp/#run-llamacpp-on-windows)** provides a native Windows launch recipe. Freehand enforces reasoning off for S1-mini requests.
-- **[vLLM](../../backends/vllm/#start-s1-mini-cleanup)** provides a Docker launch recipe. Freehand also enforces reasoning off for S1-mini requests.
+- **[llama.cpp](../../backends/llama-cpp/#run-llamacpp-on-windows)** provides a native Windows launch recipe. Freehand sends `reasoning_effort: "none"` for S1-mini; the server and model template must honor it. Keep `--reasoning off` in the launch command.
+- **[vLLM](../../backends/vllm/#start-s1-mini-cleanup)** provides a Docker launch recipe. Freehand sends `reasoning_effort: "none"` for S1-mini; use the qualified server version and a template that honors it.
 - **[Generic OpenAI-compatible](../../backends/generic/)** can connect an existing chat endpoint. Configure reasoning off on that server; Settings shows **Disable on server**.
 
 Select the saved connection in **Settings → Cleanup**, enable cleanup, choose

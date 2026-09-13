@@ -5,26 +5,17 @@ description: Voice dictation, stored audio, transcript history, cleanup, and spe
 
 import { Steps } from "@astrojs/starlight/components";
 
-Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
-services you choose. Choose **Voice** (the default) to dictate into another
-application, **Audio file** to transcribe a recording, or optional **Text to
-speech** to generate audio from your own text or listen to retained transcripts.
-Each task can be used independently; the tabs remain available before dictation
-setup is complete. Voice and audio files have independent transcription connections and models.
-TTS has its own settings.
+Choose a task at the top of the window:
 
-New installations use a capsule overlay with an envelope visualizer, minimal
-surface, bottom-center position, 85% opacity, and 70% glow. Adjust these under
-**Settings → Overlay**. The optional **Show Freehand** shortcut starts unassigned;
-open the app from its tray icon or assign a shortcut in Settings.
+- **Voice** dictates into another application.
+- **Audio file** transcribes a recording you select.
+- **Text to speech** generates audio from text you enter. You can also listen to
+  completed transcripts when text to speech is enabled.
 
-The main window places recording and playback controls above the transcript
-workspace. With history enabled, wider windows show adjoining result and history
-panes; drag their divider to resize them. In compact windows, use **Result** and
-**History** to switch views. Quick settings stay in the result toolbar.
-Choose **Voice**, **Audio file**, or **Text to speech** in the mode selector
-at the top. The selected mode is highlighted. Opening a quick setting highlights
-its toolbar button; transcript actions sit to the right of the divider.
+Each task has its own connection and model settings. You can transcribe files or
+generate speech without setting up a microphone or recording shortcut.
+
+For initial setup, see [Get started](../../getting-started/).
 
 ## Check the active connection
 
@@ -34,14 +25,8 @@ reads server metadata using your applied settings. It does not record, upload
 audio, or run a model. The panel explains failed checks; **Technical details**
 expands the individual checks and HTTP status.
 
-**Edit connection** opens that saved connection in the connection manager. If
-none is selected, **Choose connection** opens the manager for the current task.
-Voice, Audio file, and Text to speech show their own connections and check
-results. A check of unsaved Settings edits is not presented as a check of the
-active connection. When text to speech is off, the panel links to **Speech
-settings** instead of offering a check.
-
-Escape closes the panel and returns keyboard focus to the footer status.
+Choose **Edit connection** to change the server details or **Choose connection**
+to select a server. Checks use the saved connection, not unsaved edits.
 
 ## Voice dictation
 
@@ -64,19 +49,18 @@ Choose a recording style:
 2. **Start recording** with your toggle or hold-to-talk shortcut. Wait for
    Freehand to show that recording has started, then speak.
 3. **Stop recording** with the same shortcut or by releasing the held chord.
-4. **Wait for transcription and any enabled cleanup.** Keep the original text
-   field focused for direct insertion. The timer holds the recording duration;
-   time spent waiting for transcription or cleanup does not increase it.
+4. **Wait for transcription and any enabled cleanup.** Keep the destination
+   focused until the result appears.
 
 </Steps>
 
 :::note[When to copy the result]
-Windows requires the original application and focused control. macOS requires
-the original frontmost application/process and focused window, not the same
-editor field; moving between fields in that window is allowed. Secure Input
-blocks delivery but does not identify every custom secure field. Failed
-validation leaves the transcript available to copy. Check for partial text
-before pasting. Manual-copy delivery always requires an explicit copy action.
+If you switch applications or windows, Freehand leaves the result available to
+copy rather than inserting it elsewhere. On Windows, keep the original text
+field focused too; on macOS, you can move between fields in the same window.
+Check for partially inserted text before pasting a recovery transcript.
+See [Privacy and safety](../privacy-and-safety/#safe-text-insertion) for delivery
+restrictions, including macOS Secure Input.
 :::
 
 ### Toggle recording
@@ -93,18 +77,24 @@ Press and hold the configured chord, speak, then release it to stop. Automatic
 silence ending does not stop a hold-to-talk recording before you release the
 shortcut.
 
-A hold-to-talk chord may use the normal modifier-plus-key forms or a supported modifier-only combination. See [Shortcut policy](../../reference/shortcuts/) for the exact accepted key grammar and default bindings.
+A hold-to-talk shortcut can combine modifiers with a key, or use a supported
+modifier-only combination. See [Shortcut policy](../../reference/shortcuts/) for
+supported combinations.
 
 ### Long dictation and VAD
 
-Voice activity detection (VAD) identifies speech and silence locally using WebRTC. It is built in and enabled by default. Silence trimming, automatic stop, and checkpoints are separate options that start disabled. Together they can provide:
+Voice activity detection (VAD) identifies speech and silence on your computer.
+It is enabled by default. Under **Settings → Audio**, you can also enable:
 
-- stable live speech/silence feedback;
-- leading and trailing silence trimming with retained context;
-- speech-armed automatic stop for toggle recordings;
-- pause-aware checkpoints for longer dictation.
+- **Trim silence** removes silence at the start and end of a recording.
+- **Stop after I finish speaking** ends a toggle recording after a pause.
+- **Split long dictation on silence** creates checkpoints to transcribe segments
+  while you continue recording. Segments prefer pauses but can split at the
+  duration limit.
 
-Checkpoints prefer natural pauses but still enforce a hard segment limit; they do not guarantee a boundary only between thoughts. Checkpoint requests are sequential and assembled in order. Freehand still performs one final focus-safe insertion rather than pasting partial segments while you speak.
+These three options start off. Checkpoint transcripts are assembled in order
+and inserted together when you finish, not pasted while you speak.
+For words that appear as you speak, see [Live transcription](../live-transcription/).
 
 ## Audio files
 
@@ -114,23 +104,16 @@ microphone, recording shortcut, or completed dictation setup.
 <Steps>
 
 1. **Open Audio file** and choose **Choose** to select a recording.
-2. **Choose the response mode.** Enable **Show text as it arrives** for streaming when supported, or disable
-   it for completed output. Your choice stays selected when you switch tasks, choose
-   another file, or change connections, until the window reloads or Freehand exits.
-   The control remains in place while a file is processed.
+2. **Choose the response mode.** Enable **Show text as it arrives** for streaming
+   when supported, or leave it off to receive the completed transcript.
 3. **Select Transcribe** and wait for the result. Use **Cancel** to stop active work.
-   **Starting…** appears while Freehand accepts the request. File selection, clearing,
-   and response-mode changes pause during this step; **Cancel** becomes available
-   once the request is active. If starting fails, the selected file stays available
-   for another attempt.
 4. **Copy the completed transcript** explicitly into the application you want.
    Use **Change** to select another file, or **Again** to transcribe the current file again.
 
 </Steps>
 
-If transcription fails, choose **Details** beside the error to read the full
-explanation. Escape closes the popover and returns focus to Details; **Retry**
-starts another attempt with the selected file.
+If transcription fails, choose **Details** beside the error for an explanation.
+Correct the problem, then choose **Retry** to transcribe the selected file again.
 
 Selecting a file does not upload it until you start transcription. File
 results never insert automatically because no destination was captured.
@@ -139,59 +122,46 @@ If streaming is rejected or its response is incompatible, the request stops.
 Freehand remembers that streaming is unavailable for that endpoint and model;
 choose **Retry** to submit a new request in completed mode. This may repeat
 server work or incur another charge, so Freehand never resubmits automatically.
-A completed JSON response returned to the original streaming request is used
-immediately without another upload.
+A server may also return the complete transcript without text updates.
 
-An unsupported connection temporarily shows **Completed transcript** without changing
-your preference. Returning to a compatible connection restores your choice.
-**Try streaming**, when available, clears the remembered rejection and selects text
-updates for the next transcription. Choose **Transcribe**, **Retry**, or **Again**
-to start that request; choosing **Try streaming** alone does not upload the file.
+**Completed transcript** means text updates are unavailable for the current
+selection. Use **Try streaming**, when offered, to enable them for the next
+request after changing or fixing your server. It does not upload the file until
+you start transcription.
 
-If a typed transcript stream ends before its final transcript arrives, the job
-fails and any accepted partial text remains available to copy. Cleanup does not
-run on a failed partial transcript. Older Speaches streams signal completion
-by closing the response, so their completeness cannot be checked with a final
-event.
+If a stream fails, any partial text Freehand received is available to copy, but
+is not sent for cleanup. Review it for missing words. Some servers cannot signal
+whether a stream is complete; see [file streaming compatibility](../../reference/protocol/).
 
 - Supported formats: FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, and WebM.
-- Jobs can be cancelled.
-- File work and microphone capture are mutually exclusive.
-- Completed JSON and compatible server-sent-event responses are supported.
-
-The interface shows the file name, size, progress, status, and transcript. It
-does not expose the full path to page content.
+- Maximum file size: 2 GiB; your server may accept less. Freehand does not split
+  oversized files for upload.
+- Finish or cancel file transcription before recording with the microphone.
 
 ## Current result and task settings
 
-Home centers on the selected task and its **Current result**. Dictation keeps the
-latest delivered transcript here too; Copy, Clear, and Listen work with history off.
-Listen appears when text to speech is enabled. A new
-recording replaces that result. File results stay available until cleared or
-replaced. If insertion could not complete, the result explains that copying is
-needed; enabling history is not required for recovery.
+**Current result** holds your latest transcript, including dictation that was
+inserted into another application. **Copy** and **Clear** work with history off;
+**Listen** is available when text to speech is enabled. A new recording replaces
+the dictation result. Clear or replace an audio file to remove its result.
+You do not need history to copy a transcript after failed insertion.
 
-The toolbar at the top of **Current result** keeps quick settings close at hand.
-The microphone icon opens audio controls; the **Transcription** and **Cleanup**
+In the **Current result** toolbar, the microphone icon opens audio controls;
+the **Transcription** and **Cleanup**
 provider buttons open connection, model, and processing options. In Voice, the delivery
 icon opens direct-input and history controls. Audio file shows only its transcription
 and cleanup controls. These changes apply immediately.
-Copy briefly confirms success, then returns to its normal label. Hover over or
-focus the history and playback action icons to see what they do.
 
 Each popover links to its full Settings page. Press Escape to close it and return
-to its toolbar button. Text to speech uses the same compact header: its **Speech** provider button opens
+to its toolbar button. In Text to speech, the **Speech** button opens
 connection, model, voice, and supported speaking-speed controls. These changes apply
 immediately to the next generation; **All speech settings** opens the full page.
 
 With history enabled, wider windows show result and history side by side. Drag
 the divider to change their widths, or focus it with Tab and use the arrow keys.
-Freehand remembers the split. Each pane scrolls independently; opening quick
-settings does not move the transcript. Long transcripts use a comfortable reading width.
+Freehand remembers the split.
 Live text follows new words until you scroll back to read earlier text. Choose
-**Jump to latest**, or scroll to the bottom, to resume following; finalization preserves
-your position when you are reading back. The jump button sits below the scroll area
-so it does not cover transcript text. Narrow windows use **Result** and
+**Jump to latest**, or scroll to the bottom, to resume following. Narrow windows use **Result** and
 **History** view buttons to give each view the full width.
 
 Focus a transcript and use **Ctrl+A** to select its text, then **Ctrl+C** to copy.
@@ -202,21 +172,18 @@ While text is selected, its displayed text stays still through incoming updates;
 clearing the selection shows the latest text. **Jump to latest** clears a result
 selection and resumes following. A new recording replaces the previous result.
 
-Endpoint and credential changes belong in **Settings → Connections**. Feature
-pages choose an active connection and model. Settings-page edits use **Save
-settings**; switching an active connection applies immediately. Running jobs keep
-their captured settings and credentials.
+Edit server addresses and API keys under **Settings → Connections**. Choose the
+connection and model for each task in that task's settings. Changes do not affect
+requests already running.
 
 ## Transcript cleanup
 
 For either dictation or audio files, optional **Settings → Cleanup** can send the
-raw transcript to an independently configured OpenAI-compatible chat endpoint
-after speech recognition. This is an optional STT stage, not a separate task or
-a prerequisite for TTS.
+raw transcript to a separate chat service after speech recognition.
 
 - **Raw mode** leaves transcription untouched.
-- **Custom instructions** use a bounded user-authored system instruction.
-- **S1-mini** uses the model's exact trained v1 prompt and control vocabulary.
+- **Custom instructions** tell your cleanup model how to edit the transcript.
+- **S1-mini** offers preset style, structure, and context choices for English text.
 
 Freehand delivers raw text when cleanup is disabled or falls back to it when cleanup fails, times out, or returns empty output. Retaining both versions after successful cleanup requires history to be enabled before the run and the text to fit its memory limits. Read [Transcript post-processing](../post-processing/) before configuring S1-mini or a local llama.cpp route.
 
@@ -228,11 +195,7 @@ History is off by default, stays in memory, holds at most 20 entries and 2 MiB,
 and is cleared when Freehand exits. Copy anything you want to keep before quitting.
 :::
 
-The newest transcript opens in full in both recent history and Settings > History.
-Older entries start as single-line previews; select their header or preview to
-expand them. When a new transcript arrives, it opens and older entries collapse.
-Cleanup updates to the same transcript keep your current reading view. An audio-file
-result shown above retained history is also displayed in full.
+Select an older entry to expand it. The latest transcript opens automatically.
 
 Retained entries keep **Listen** and **Copy** directly available. Open the
 ellipsis **Transcript actions** menu for **Transcription details** or **Remove
@@ -244,20 +207,15 @@ details. Each copy action is explicit.
 
 ## Finding and adjusting settings
 
-Settings opens in one dedicated window; Connections is a page inside it, not
-another window. The main workspace remains focused on Voice, files, and speech.
-Task-specific **Save and return** applies changes, closes Settings, and reveals
-the originating task. General preferences use **Save** to apply without closing.
-**Done** closes Settings immediately when there are no edits. Leaving a dirty form offers
-**Save**, **Discard**, or **Keep editing**. A failed save keeps the draft available
-for correction and retry rather than navigating away. Model pickers automatically
-request metadata for the selected connection and share results with full Settings.
-Empty lists allow manual model IDs; failed checks can be retried explicitly or by
-deliberately reopening the picker. Discovery never runs inference or enables a feature.
+Open Settings from the tray or from a task's quick settings. Choose **Save** to
+apply edits, or **Save and return** when setting up a task to apply them and return
+to it. **Done** closes Settings; if you have unsaved edits, choose **Save**,
+**Discard**, or **Keep editing**. If saving fails, correct the indicated field and
+try again.
 
 In a full-width Settings window, **Find settings** filters the sidebar by page
 name or terms such as “padding,” “glow,” and “hotkey.” Enter opens the first match;
-Escape clears the filter. Searching and changing pages keep your unsaved edits.
+Escape clears the filter.
 
 **Audio** keeps microphone selection, the recording limit, and the main silence
 switches together. Open **Speech detection tuning** for sensitivity, padding,
@@ -266,41 +224,24 @@ control beside the switch.
 
 **Overlay** keeps preview, layout, position, and size up front. Open **Appearance
 and behavior** for surface, visualizer, visible phases, motion, spacing, opacity,
-and glow. Minimal surfaces disable glow adjustment while keeping its saved value.
-Preview uses your unsaved choices; **Save settings** applies them.
+and glow. Preview shows your changes before you save them. Glow is unavailable
+with a Minimal surface.
 
-Model and model-profile fields have help buttons for their detailed explanations.
-Profile menus show each profile's description before you select it. Voice uses
-the same profile and language pickers in quick settings and the full Settings page.
-Language pickers search by name or code; unrestricted lists keep **Custom server
-value** available even when your search has no match. Restricted profiles offer
-only their supported languages. Required restrictions and unavailable options
-remain explained beside the affected controls.
+Model pickers list models advertised by your server; you can also enter an exact
+model ID. Listing models does not run them. Choose the matching
+[model profile](../../models/) to see the options Freehand supports for that model.
+Language pickers search by name or code; see [Languages](../languages/) for custom
+server values and model restrictions.
 
-The four workflow pages keep model selection and everyday options up front.
-Open **Request settings** for timeouts and connection diagnostics; connection
-warnings remain visible in its summary. **Transcription controls** groups context
-and temperature for audio files, and **Generation controls** groups cleanup's
-output and reasoning options. Voice transcription keeps context hints visible
-and places its completed-recording timeout and temperature in **Request settings**.
-Text to speech keeps **Preview** beside the voice selector, using your current
-edits without saving them.
-
-You can click a switch’s label to change it. Collapsing a tuning section keeps
-its values, and a rejected save opens the section containing the affected field.
+Open **Request settings** to adjust timeouts or view connection diagnostics.
+Audio-file **Transcription controls** include context and temperature; Voice
+keeps context hints visible and temperature under **Request settings**.
+Cleanup's **Generation controls** include output limits and reasoning options.
 
 ## Text to speech
 
-In **Settings → Text to speech**, **Preview** beside the voice selector uses your current model,
-model profile, voice, speed, and timeout edits before you click **Save settings**.
-Turn on the draft **Enable text to speech** switch to preview even when the saved
-feature is disabled. Preview generates only the fixed sample phrase; it does not
-save your edits or enable playback elsewhere. Each preview keeps the options it
-started with. Stop it and preview again to hear further changes.
-
-Optional text to speech uses its own endpoint, model, voice ID, credential,
-transport policy, and request budget. It is off by default and does not require
-a microphone, recording shortcut, STT connection, or completed dictation setup.
+Text to speech is off by default. Configure a speech service, model, and voice
+to generate audio from your own text or listen to transcripts.
 
 <Steps>
 
@@ -308,15 +249,12 @@ a microphone, recording shortcut, STT connection, or completed dictation setup.
    a saved connection or **Add connection…**, then choose the model and voice directly.
    **Refresh models** and supported **Refresh voices** read metadata without generating
    audio; manual IDs work too. For initial setup, open **All speech settings**, choose
-   the model profile, turn on **Enable text to speech**, and choose **Save settings**.
+   the model profile, turn on **Enable text to speech**, and save your changes.
 2. **Return to Text to speech** and enter the text you want to hear. Your unsent text
    survives switching tasks or visiting Settings, and is cleared when the window
    reloads or Freehand exits.
 3. **Choose Speak** or press **Ctrl+Enter** in the editor to generate and play the audio.
-   **Enter** on its own adds a new line. Playback and save controls
-   occupy a permanent area below the editor, so the editor stays the same size
-   as generation and playback progress. **Creating audio** appears until audio is ready;
-   elapsed time and duration appear when playback begins.
+   **Enter** on its own adds a new line.
 4. **Use the playback controls** to pause, resume, seek, restart, stop, or explicitly
    **Save generated speech** to a file.
 
@@ -325,21 +263,19 @@ a microphone, recording shortcut, STT connection, or completed dictation setup.
 Text to speech accepts up to 4,096 Unicode characters. Longer drafts remain
 editable; shorten the text to enable Speak.
 
+To try a voice before saving settings, turn on **Enable text to speech** in the
+form and choose **Preview** beside the voice selector. This sends a fixed sample
+phrase to the selected speech service using your unsaved choices. It does not
+save settings or enable playback elsewhere. Stop and preview again to hear changes.
+
 You can edit, select, copy, or clear the draft while speech is being generated,
 playing, or paused. Those edits do not change the current audio. Once generation
 finishes, **Speak** or **Ctrl+Enter** generates the text currently in the editor and
 replaces the previous audio, including when playback is paused. Playback controls
 and **Save generated speech** continue to operate on the existing audio until then.
 
-Transcript playback uses a single compact row with play/pause, the seek track,
-elapsed time, and Stop. Open **Playback actions** for Restart or Save, or to clear
+Open **Playback actions** for Restart or Save, or to clear
 completed audio from memory. Completed audio also has a direct replay button.
-
-Save shows a spinner while you choose a location and the audio is written. In
-compact playback, the spinner appears on **Playback actions**. Save stays disabled
-until that operation finishes; pause, resume, and seeking remain available.
-Cancelling the dialog quietly restores Save. A failed save shows an error and
-lets you try again.
 
 Drag the playback slider to choose a position; playback moves there when you release it.
 With the slider focused, use the arrow keys to adjust the position, **Home** for the
@@ -352,11 +288,7 @@ You can also choose **Listen** on a completed Voice or Audio-file result, even
 with history off, or on a retained history entry. Generated audio remains in memory until you clear or replace it, start a
 recording, or exit Freehand.
 
-Listen shows a spinner as soon as you request speech. Listen controls remain
-unavailable while that request is starting or generating, so repeated clicks do
-not restart it. You can still select and copy transcripts. Once generation
-finishes, you can choose another transcript; if the request fails, Listen becomes
-available again. Use the player's Stop control to cancel active generation.
+Use the player's **Stop** control to cancel active speech generation.
 
 Playback starts on demand. Freehand does not automatically read every transcript aloud or provide a voice conversation mode.
 
@@ -370,15 +302,16 @@ request does not erase your draft. File and dictation errors also provide
 microphone recording cannot be retried; **Record again** starts a new recording
 after you correct the problem.
 
-Shared errors and confirmations appear above the footer without moving the
-workspace. Speech-composer notices span the panel above its action and playback controls.
-Long errors have expandable details. Confirmations disappear automatically;
-errors can be dismissed. Copy confirmation stays on the copy control, and
-clearing generated audio simply returns the player to its empty state.
+See [Troubleshooting](../troubleshooting/) for connection, microphone, and
+delivery problems.
 
 ## Status overlay and tray
 
-The native overlay is enabled by default and can be disabled under **Settings → Overlay**. It mirrors bounded operational state such as recording, speech/silence, checkpoints, processing, and copy-required outcomes. With qualified realtime transcription, optional live captions show one row of provisional text. The overlay never changes focus.
+The recording overlay shows when Freehand is recording, processing, or waiting
+for you to copy a result. It is enabled by default and does not take focus from
+your application. Change its layout, position, appearance, and visibility under
+**Settings → Overlay**. [Live transcription](../live-transcription/) can also
+show captions as you speak.
 
 The tray can show or hide Freehand, open Settings or About, cancel active work,
 copy an available recovery transcript, and quit.
@@ -392,12 +325,6 @@ finish before quitting; an interrupted export can leave a partial WAV file.
 
 ## Appearance
 
-Under **Settings → General**, choose System, Light, or Dark. Dark uses Freehand’s
-navy backgrounds and cobalt accents, matching the website across the main window,
-Settings, and About. The recording overlay uses the same navy and cobalt palette;
-red, green, and amber still identify recording and status.
-
-Windows Mica is optional. It follows Windows appearance and uses a translucent
-navy tint in dark mode, so the underlying system material can still affect the
-result. Appearance changes that affect native windows apply after quitting from
-the tray and reopening Freehand.
+Under **Settings → General**, choose System, Light, or Dark. On Windows, you can
+also enable Mica for a translucent window background. Native window appearance
+changes take effect after quitting from the tray and reopening Freehand.

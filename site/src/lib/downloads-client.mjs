@@ -32,7 +32,7 @@ export async function enhanceDownloads() {
   } catch { /* Static links remain usable on timeout, rate limits and malformed JSON. */ }
   finally { clearTimeout(timer); }
   const status = document.querySelector('[data-release-status]');
-  status.textContent = release ? `Latest public release: ${release.version}. Availability below is for this release only.` : 'Release availability could not be verified. Check GitHub Releases for published assets; macOS downloads may not yet be published.';
+  status.textContent = release ? `Latest public release: ${release.version}. Availability below is for this release only.` : 'Release availability could not be checked. Open GitHub Releases to see the available downloads.';
   document.querySelector('[data-release-version]').textContent = release?.version ?? 'Check release availability';
   for (const link of document.querySelectorAll('[data-asset]')) {
     const key = link.dataset.asset;

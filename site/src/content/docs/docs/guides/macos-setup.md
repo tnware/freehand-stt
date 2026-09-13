@@ -37,15 +37,10 @@ whether your Mac has an Apple chip (Apple Silicon) or an Intel processor.
 5. Review the permissions below, then follow [Get started](../../getting-started/).
    Open About to confirm the installed version matches the chosen release.
 
-For source builds, see the
-[contributor instructions](https://github.com/tnware/freehand-stt/blob/main/CONTRIBUTING.md).
-The development bundle has a separate `.dev` permission identity but still
-appears as **Freehand**; grant permissions to the bundle you actually run.
-
-Keep the bundle in a stable location before
-enabling permissions or **Start at login**. Rebuilding, changing identity/signature,
-or moving a bundle can require permission review. macOS, not Freehand, owns these
-permissions and any password or approval prompts.
+Keep the app in a stable location before enabling permissions or **Start at
+login**. Moving or replacing it can require permission approval again. If you
+also use a development build, it has separate permissions even though both
+apps display **Freehand**. Grant access to the app you actually run.
 
 ## Choose a workflow
 
@@ -55,9 +50,9 @@ permissions and any password or approval prompts.
 - **Text to speech** needs its own enabled speech service. It does not require
   microphone, transcription, or keyboard permissions.
 
-API credentials are kept in your macOS Keychain. The app does not return stored
-keys to the renderer, store them in its settings database, or fall back to plaintext
-if Keychain access is denied. Enter credentials only in Freehand's connection editor;
+API credentials are kept in your macOS Keychain, not in the settings database.
+Freehand does not display saved keys or store them in plaintext if Keychain access
+is denied. Enter credentials only in Freehand's connection editor;
 never include them in logs, commands or bug reports.
 
 ## Native permissions
@@ -69,8 +64,8 @@ needed, and complete macOS's own approval flow yourself.
 | Permission | What uses it | Recovery |
 | --- | --- | --- |
 | Microphone | Recording and microphone preview | Privacy & Security → Microphone |
-| Accessibility | Safe target inspection, Unicode delivery and shortcut capture | Privacy & Security → Accessibility |
-| Input Monitoring | Hold-to-talk press/release and shortcut capture | Privacy & Security → Input Monitoring |
+| Accessibility | Checking the destination, inserting text, and capturing shortcuts | Privacy & Security → Accessibility |
+| Input Monitoring | Hold-to-talk and capturing shortcuts | Privacy & Security → Input Monitoring |
 
 After changing keyboard permissions, quit and reopen Freehand if macOS requests
 it. Refresh the permission status after returning from System Settings. A permission
@@ -86,23 +81,21 @@ merely displaying permission status.
 
 ## Shortcuts and delivery
 
-Mac shortcut labels use **Command** and **Option**. The native shortcut backend
-uses physical ANSI/QWERTY key positions; check behavior on your keyboard layout.
-Avoid system-reserved combinations. Hold-to-talk needs both press and release
-observation, not just a toggle shortcut.
+Mac shortcut labels use **Command** and **Option**. Shortcuts use physical
+ANSI/QWERTY key positions; check the combination on your keyboard layout and
+avoid system-reserved combinations.
 
-Toggle and Show Freehand use Carbon global shortcuts and do not require
-Accessibility or Input Monitoring. Recording a new chord needs both permissions;
-clearing an optional shortcut does not. If a saved hold shortcut cannot start,
-Freehand keeps the saved preference and the independent Toggle/Show bindings.
+The saved **Toggle** and **Show Freehand** shortcuts do not require Accessibility
+or Input Monitoring. Capturing a new shortcut needs both permissions; clearing
+an optional shortcut does not. If hold-to-talk is unavailable, Freehand keeps
+your saved shortcut and the separate Toggle and Show Freehand shortcuts.
 
 After unlocking the session, leaving Secure Input, or restoring Input Monitoring,
 release all keys and choose **Settings → Shortcuts → Retry hold-to-talk**. This
-explicit, bounded action rearms the saved chord even when settings are unchanged;
-it does not save or discard your draft. Save shortcut edits first if you want to
-retry a different chord. Failed attempts remain visible and can be retried after
-resolving the cause. Merely opening settings or refreshing permissions does not
-rearm the hook or request access.
+action restores the saved shortcut without saving or discarding draft edits.
+Save shortcut changes first if you want to retry a different combination.
+If it fails, resolve the reported cause and try again. Opening Settings or
+refreshing permissions alone does not restore hold-to-talk.
 
 Start dictation while the intended app and editable field are focused. Freehand
 will not bring that app back to the foreground. It checks that the same app and
@@ -114,7 +107,7 @@ Release physical modifiers before delivery. Use explicit **Copy** to recover the
 transcript; normal Unicode delivery does not replace unrelated clipboard content.
 
 **Copy required** does not always mean focus changed. When available, the message
-includes a bounded capture, validation or send reason. Delivery can be partial;
+explains why delivery stopped. Delivery can be partial;
 check the target for existing text before pasting to avoid duplicates. Freehand
 does not automatically retry ambiguous typing.
 
@@ -139,8 +132,8 @@ per-user registration, not unrelated login items.
 ## Update
 
 The in-app updater selects the matching-architecture ZIP, verifies it against
-the release’s `SHA256SUMS`, extracts the app, and uses the Wails helper to replace
-the app bundle when you choose Restart. This is checksum verification, not
+the release's `SHA256SUMS`, and replaces the app when you choose **Restart**.
+This is checksum verification, not
 Developer ID trust or notarization. If an in-app update fails, use manual
 replacement:
 
@@ -176,7 +169,6 @@ do not delete unrelated credentials.
 ## Reporting a native problem
 
 Include macOS version, Apple Silicon or Intel, app version, affected workflow,
-permission states, whether the app was moved/rebuilt, and exact non-secret steps.
-Distinguish local build success from native behavior you actually observed. Do not
-attach API keys, transcripts, microphone recordings, endpoint URLs or unredacted
-window/target identifiers.
+permission states, whether the app was moved or replaced, and steps to reproduce
+what happened. Do not attach API keys, transcripts, microphone recordings,
+private endpoint URLs, full file paths, or unredacted diagnostics.

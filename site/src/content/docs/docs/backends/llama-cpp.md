@@ -1,9 +1,9 @@
 ---
 title: llama.cpp
-description: Configure llama.cpp for text cleanup, including the separate S1-mini prompt preset.
+description: Connect llama.cpp for transcript cleanup with S1-mini or your own instruction.
 ---
 
-**Status:** available for text post-processing.
+Use **llama.cpp** to clean up completed transcripts with a text model you host.
 
 ## Run llama.cpp on Windows
 
@@ -13,8 +13,7 @@ Install the Windows package, then open a new PowerShell window:
 winget install --exact --id ggml.llamacpp
 ```
 
-Start S1-mini with explicit host and port, so a future change
-to the server's default port does not change the Freehand endpoint:
+Start S1-mini on loopback port 8080:
 
 ```powershell
 llama-server.exe `
@@ -38,11 +37,12 @@ Invoke-RestMethod http://127.0.0.1:8080/health
 Invoke-RestMethod http://127.0.0.1:8080/v1/models
 ```
 
-In Freehand's post-processing settings, choose compatibility profile
-**llama.cpp**, base URL **`http://127.0.0.1:8080/v1`**, authentication **None**,
-local HTTP allowed, and the model returned by **Test**. Choose **S1-mini** as the
-separate prompt preset. It requires reasoning off even though it is optional
-for other cleanup models. Save, then review cleanup of a short transcript.
+In **Settings → Connections**, create a **llama.cpp** connection for **Cleanup**
+with base URL **`http://127.0.0.1:8080/v1`**, authentication **None**, and
+**Allow HTTP for this connection** enabled. Save the connection. In **Settings → Cleanup**, select it, enable
+cleanup, and use **Refresh models** to select the served model. Choose
+**S1-mini by Superwhisper** as the model profile. It requires reasoning off.
+Save, then review cleanup of a short transcript.
 
 Press **Ctrl+C** in the server terminal to stop it. Rerun the launch command to
 restart; the downloaded model is cached. Idle sleeping releases model memory
@@ -50,7 +50,8 @@ after 60 seconds and reloads on the next inference request, so waking can add
 latency. Omit that flag if you prefer to keep the model loaded.
 
 For a custom cleanup model, use its own GGUF and template requirements, then
-select **Custom instruction** in Freehand. S1-mini's fixed prompt is not a
+select the **Generic** model profile and enter your cleanup instruction.
+S1-mini's fixed prompt is not a
 general chat prompt. The [post-processing guide](../../guides/post-processing/)
 explains raw fallback and the trained S1-mini controls.
 
@@ -69,21 +70,20 @@ including its exact prompt and required thinking-disabled behavior.
 
 ## Implemented contract
 
-This profile shares the Generic non-streaming `chat/completions` adapter.
+Cleanup uses non-streaming `POST /chat/completions` beneath the base URL.
 Freehand sends the model, system/user string messages, temperature zero, and
 `stream=false`, plus the configured generation controls described below. It expects a string message in the first choice. A response
-reporting `finish_reason=length` is a failed cleanup and cannot expose partial
-cleaned text as a successful result.
+reporting `finish_reason=length` causes Freehand to use the raw transcript
+instead of incomplete cleanup output.
 
-The **compatibility profile** selects the server contract. The **prompt preset**
-selects how the transcript and instruction are prepared. Selecting llama.cpp
-does not force S1-mini, and S1-mini can also use a Generic connection that meets
-the same contract.
+Choose the **model profile** separately: Generic uses your instruction; S1-mini
+uses its fixed prompt and trained controls. Selecting llama.cpp does not select
+or load a cleanup model for you.
 
 ## Scope and limits
 
-- This Freehand profile qualifies text cleanup only. It makes no claim about
-  transcription, speech synthesis, or other modalities supported by a runtime.
+- This Freehand profile supports text cleanup only, even if your llama.cpp
+  deployment offers other operations.
 - Sampling, context size, and template selection remain server configuration.
   Freehand supports only the output-limit and disable-reasoning controls below.
 - Cleanup uses one request. There is no automatic long-input chunking or replay.
@@ -95,18 +95,16 @@ See [protocol details](../../reference/protocol/) and the
 
 ## Cleanup generation controls
 
-In **Settings → Post-processing → Generation controls**:
+In **Settings → Cleanup → Generation controls**:
 
 | Control                               | Request behavior                                                                                                        |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Limit output tokens                   | Sends `max_tokens` only when enabled, from 1 to 65,536. Off omits the field; a valid number is retained locally.        |
-| Disable reasoning, Custom instruction | Sends `reasoning_effort: "none"` when enabled. Off leaves reasoning to the server.                                      |
-| Disable reasoning, S1-mini            | Required and automatically sent on every cleanup request through this profile. It cannot be turned off for this preset. |
+| Disable reasoning, Generic            | Sends `reasoning_effort: "none"` when enabled. Off leaves reasoning to the server.                                      |
+| Disable reasoning, S1-mini            | Required and automatically sent on every cleanup request through this backend. It cannot be turned off for this model profile. |
 
-The optional controls start off in older settings. S1-mini's required override
-is derived from the preset and qualified compatibility profile; it does not
-change the saved optional override for Custom instruction. Prompts, trained S1
-controls, and temperature zero are preserved.
+S1-mini always requests reasoning off through this backend. This does not change
+the optional reasoning setting saved for a Generic cleanup model.
 
 The reasoning field requests thinking-disabled generation; it is not
 `reasoning_format: "none"`, which controls parsing of generated reasoning. A
@@ -117,8 +115,8 @@ field cannot be detected by a successful model-list check; keep server-side
 `--reasoning off` for S1-mini and explicitly check the chosen model's behavior.
 
 An output limit is a token budget, not a context-window setting or an automatic
-long-input strategy. A low limit may cause raw fallback; no sentence chunking or
-input-relative budget is added. See [generation controls](../../guides/post-processing/#generation-controls).
+long-input strategy. A low limit may cause raw fallback. See
+[generation controls](../../guides/post-processing/#generation-controls).
 
 ## Language selection
 

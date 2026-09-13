@@ -3,18 +3,19 @@ title: Troubleshooting
 description: Diagnose setup, connection, recording, delivery, cleanup, and playback problems.
 ---
 
-Start with the status shown in Freehand. Connection checks are metadata-only:
-they report what a health or model-list endpoint accepted and validate model
-options locally. They do not submit audio or prove that inference will succeed.
+Start with the status shown in Freehand. Connection checks read server metadata
+and check your settings without submitting audio or text to a model. A successful
+check does not guarantee that a transcription, cleanup, or speech request will work.
 
 ## macOS installation or permissions
 
 Use the matching-architecture ZIP and same-release checksums in the
 [macOS setup guide](../macos-setup/). Launch the installed app bundle from a
 stable location. For microphone denial, review Privacy & Security → Microphone;
-for capture or hold-to-talk, review Accessibility and Input Monitoring. Quit and
-reopen after permission changes when requested. The `.dev` and packaged apps
-have separate permission identities even though both display **Freehand**.
+for text insertion, review Accessibility; for shortcut capture or hold-to-talk,
+review Accessibility and Input Monitoring. Quit and reopen after permission
+changes when requested. Development and installed apps have separate permissions
+even though both display **Freehand**.
 Release all keys and use **Retry hold-to-talk** after recovering keyboard access.
 Keychain denial requires the OS approval/recovery flow, not plaintext storage.
 
@@ -31,8 +32,9 @@ or **Text to speech** without finishing dictation setup.
 | Text to speech | Its own connection, model and voice ID, authentication if required, and **Enable text to speech**; no STT connection required |
 
 For **Voice**, open the unfinished readiness item, correct its settings, and
-choose **Save settings** for Settings-page edits. Return to **Voice**, select
-**Test connection**, then choose **Finish setup** once all dictation requirements
+choose **Save** (or **Save and return** when opened from a task).
+Return to **Voice**, select
+**Check connection** or **Check again**, then choose **Finish setup** once all dictation requirements
 are ready. Home quick controls apply immediately.
 
 For transcription setup:
@@ -42,8 +44,8 @@ For transcription setup:
 - Enter the exact transcription model ID expected by the server. If model
   discovery is available, select an ID from the returned list. whisper.cpp
   uses its server-loaded model instead.
-- If the endpoint requires a key, select **Authentication → API key** under
-  **Settings → Connections**, edit the selected connection, then enter it. Leave authentication at **None**
+- If the endpoint requires a key, open **Settings → Connections**, edit the
+  selected connection, then choose **Authentication → API key** and enter it. Leave authentication at **None**
   only for an endpoint that does not require a key.
 - Enable insecure HTTP only when you intentionally use a trusted plaintext
   local or LAN endpoint.
@@ -52,9 +54,8 @@ For transcription setup:
 
 ## Understand connection-check results
 
-The home footer names the capability it describes: **Transcription** for Voice
-and Audio file, or **Text to speech** for the speech composer. A successful check
-of one does not check the other. **Ready to generate** on the composer describes
+Check the connection for the task you are using: Voice, Audio file, Cleanup, or
+Text to speech. Success for one does not check the others. **Ready to generate** on the composer describes
 local configuration, not server reachability. **Not checked** and **Settings
 changed** are not successful connection checks; refresh metadata explicitly.
 
@@ -67,7 +68,7 @@ repeats it explicitly. The panel distinguishes four things:
 | Connection | Whether the configured metadata route returned a usable response. Failures include the next setting or server condition to check. |
 | Authentication | Whether that metadata request was accepted. A public health endpoint does not prove that the key works on inference routes. |
 | Selected model | Whether the requested ID appears in the model list. Health-only checks cannot identify models; whisper.cpp reports a server-loaded model. |
-| Configuration | Whether the selected model profile and options satisfy Freehand's backend/model contracts. Speech needs a voice ID; Generic S1-mini connections need reasoning disabled on the server. |
+| Configuration | Whether the selected model profile and options are supported by Freehand. Speech needs a voice ID; Generic S1-mini connections need reasoning disabled on the server. |
 
 An unlisted model is a reason to review the ID, not proof that it cannot run: some
 servers accept aliases they do not advertise. A listed model may also be unsuitable
@@ -76,10 +77,9 @@ languages or voices, cleanup behavior, or inference permissions.
 
 When you change the connection, model, or relevant model options, previous results
 are marked as applying to older settings or cleared. Run another check to assess
-the current draft. Changing capture duration or unrelated application preferences
-does not invalidate a model-options check.
+the current settings.
 
-The **Test connection** action on the Connections page checks only that saved
+The **Check connection** action on the Connections page checks only that saved
 server and its authentication, without selecting it. Open a feature page to check
 its model and options. Actual audio or text requests happen only through your
 explicit transcription, cleanup, or speech workflow.
@@ -88,13 +88,11 @@ explicit transcription, cleanup, or speech workflow.
 
 ### An edited value was rejected
 
-On **Save settings**, Freehand marks the relevant section and opens the invalid
-control when it can identify one. Correct the value using the nearby guidance,
-then save again. Other draft edits are retained and rejected values never replace
-the applied settings. For example, **Audio → Maximum duration** shows the limit
+If saving fails, correct the marked setting using its error message, then save
+again. Freehand keeps your other draft edits and leaves the applied settings
+unchanged. For example, **Settings → Audio → Maximum duration** shows the limit
 for the current recording mode: 1–262 seconds without splitting, or 1–3,600 seconds
-with splitting. Request mechanics are available in the settings' details
-disclosures without hiding raw-fallback, language, or retention warnings.
+with splitting.
 
 ### Saved configuration cannot be loaded
 
@@ -106,10 +104,10 @@ replace your settings with defaults.
   and available disk space, then choose **Retry loading**.
 - **Newer database:** update Freehand to a compatible version. Older builds do
   not downgrade a newer settings database.
-- **Legacy import (Windows):** the first SQLite launch reads
-  `%APPDATA%\Freehand\settings.json`. Invalid values or unknown newer fields
-  block import without changing the file. Repair it or use a compatible version,
-  then retry. Once `settings.db` exists, changes to the old JSON file have no effect.
+- **Older Windows settings could not be imported:** Freehand leaves
+  `%APPDATA%\Freehand\settings.json` unchanged. Correct the reported value or use
+  a compatible version, then retry. Once `settings.db` exists, editing the old
+  JSON file no longer changes your settings.
 - **Reset:** choose **Reset to defaults** only when you want a fresh setup.
   Freehand archives an existing database and its sidecars in a
   `settings-recovery-*` folder, then starts with safe defaults. Native credentials
@@ -133,14 +131,14 @@ The app retains the newest three backups made before schema upgrades. Explicit
 reset archives are retained until you remove them. Keep any recovery files private:
 they can contain endpoint addresses, headers, and custom instructions.
 
-Older alpha builds still read the preserved JSON file, which may be stale after
-you save settings in a SQLite build. Returning to an older binary does not convert
-the database back to JSON.
+Downgrading does not convert settings to an older format. An older alpha may
+read stale settings or refuse to open the newer database. Review release notes
+before returning to an older version.
 
 ## Connection and request failures
 
-**Match the visible failure to the table below, correct the cause, and retry
-deliberately.** Test speech, cleanup, and playback connections independently.
+Match the visible failure to the table below, correct the cause, and retry.
+Check transcription, cleanup, and text-to-speech connections independently.
 
 | Result | What it usually means | What to check |
 | --- | --- | --- |
@@ -184,9 +182,9 @@ the shortcut does not itself mean that the microphone is ready.
 **Copy the available transcript into the intended text field.** For your next
 voice dictation, keep the original field focused until processing finishes.
 
-Windows checks the original application and focused control. macOS checks the
-frontmost application/process and focused window, not the editor field: changing
-fields within that window is allowed. Secure Input blocks delivery, but not all
+Windows checks the original app, window, and focused control. macOS checks the
+app and focused window, not the editor field: changing fields within that window
+delivers to the currently focused field. macOS Secure Input blocks delivery, but not all
 custom secure fields enable it. A stale target or unavailable permission requires
 Copy; a generic failure does not prove focus changed or that no text was typed.
 Check for partial delivery before pasting to avoid duplicates.
@@ -239,7 +237,7 @@ Automatic long-file segmentation is not currently provided.
 
 **Check the system output device and volume, then review Settings → Text to speech.**
 
-- Turn on **Enable text to speech**, choose **Save settings**, and confirm its
+- Turn on **Enable text to speech**, save your settings, and confirm its
   endpoint implements `POST /v1/audio/speech`.
 - Check the configured model and voice ID expected by that endpoint.
 - Verify the system default output device and system volume.

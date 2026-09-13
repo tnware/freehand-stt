@@ -234,7 +234,7 @@ internal/tts               on-demand synthesis and single-session playback state
 internal/config            non-secret profiles and validation
 internal/credential        credential interface
 internal/insertion         focus-safe insertion policy
-internal/platform          Windows implementations plus non-Windows stubs
+internal/platform          Windows and macOS native adapters; unsupported-platform stubs
 internal/postprocess       transcript-cleanup request and outcome policy
 internal/tray              native status, last-activity, recovery, and window actions
 internal/updates           persisted polling policy and Wails updater lifecycle
@@ -257,7 +257,7 @@ The renderer sees small Wails services registered from the package that owns eac
 | Bound package       | Renderer responsibility                                                                                                                                                     | Backend authority                                                    |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | `settings`          | Renderer-safe snapshot and one atomic settings/credential/startup/shortcut save request                                                                                     | Settings transaction owner                                           |
-| `input`             | Microphone inventory and native shortcut capture                                                                                                                            | Audio and Windows keyboard adapters                                  |
+| `input`             | Microphone inventory, permission status, and native shortcut capture                                                                                                         | Audio and platform keyboard/permission adapters                       |
 | `connection`        | Focused STT and post-processing health/model probes                                                                                                                         | Inference metadata capability                                        |
 | `dictation`         | Live commands and status snapshot                                                                                                                                           | Package-owned recorder                                               |
 | `history`           | Bounded history queries, copy, delete, and clear                                                                                                                            | Package-owned synchronized store                                     |
@@ -490,30 +490,30 @@ decorative container frames do not own workflow or scrolling behavior.
 The shared switch uses a pill track and an inset circular thumb, retaining
 Bits UI state, keyboard semantics, and visible focus indicators.
 
-Task-local creation uses `ConnectionSetupDialog` over the existing Home or Settings
-page, preserving the originating task and returning there on save/cancel. Home's
-first-run STT panel reuses quick connection/model controls. Settings connections
-apply immediately; model/task drafts apply with Save settings. Switching, adding,
+Task-local connection creation opens the inline Connections editor in the reusable
+Settings window, preserving the originating task for Save and return. Home's
+first-run Voice panel reuses quick connection/model controls. Connection changes
+use their own save action; model/task drafts apply with Save. Switching, adding,
 or editing a connection with a dirty runtime draft requires Save and continue,
 Discard and continue, or Keep editing. Failed saves retain the draft and do not
-continue the action. Guarded dialogs intercept Escape and outside interactions
-before Bits UI closes them; `onOpenChange` is a notification, not a dismissal veto.
-The connection editor remains mounted during discard confirmation, and pending
-saves keep their error/retry prompt available.
+continue the action. Guarded confirmation dialogs intercept dismissal before
+Bits UI closes them; `onOpenChange` is a notification, not a dismissal veto.
+The connection editor retains its draft during confirmation, and failed saves
+keep their error/retry prompt available.
 
 Library connection editor navigation is owned by `SettingsScreen`: it remembers the originating
 feature and returns there after Back or save. The editor compares non-credential fields
 with its opening snapshot; credential presence/removal is checked separately without
 copying a password into that snapshot. Opening a form alone is not dirty, but still
-reserves the draft against external-window updates. The editor retains the latest non-secret external snapshot and adopts it after drafts are discarded, so cancelling task-local creation does not leave Home on an obsolete selection. Navigation confirms before
+reserves the draft against external-window updates. The editor retains the latest non-secret external snapshot and adopts it after drafts are discarded, so cancelling task-local creation does not leave an obsolete selection. Navigation confirms before
 discarding changed connection fields and clears the transient key on exit. Settings
-groups separate Capture, Features, and Application; visual and keyboard section order
-match.
+groups separate workflows, shared connections/vocabulary, capture, and application
+preferences; visual and keyboard section order match.
 
 The content scroll offset resets on section/editor transitions and Settings
 re-entry without changing sidebar focus or draft ownership. Library connection
 actions live in the persistent footer, with the submit button associated with
-the connection form; task-local dialogs reuse the same actions inside their form.
+the connection form; task-originated setup reuses those actions in the same editor.
 Connection saves remain independent of runtime settings saves.
 
 Go configuration validation returns a `FieldError` containing bounded guidance
@@ -610,7 +610,7 @@ new sink, persistence, export binding, or renderer logging facility.
 
 Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS retain independent runtime models and selections. Selecting the same reusable connection explicitly shares its endpoint, HTTP policy, backend profile, and credential reference; selecting separate connections keeps those identities independent. Stored credentials remain in Windows Credential Manager or macOS Keychain; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
 
-`internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. Current Voice playback passes only the displayed dictation generation. The dictation owner rejects stale, active, cleared, and closed results, then supplies an immutable text snapshot through the injected `tts.TranscriptSources` collaboration boundary; history retention is not required. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata, but voice remains an explicit provider ID because the compatible API defines no voice-list operation. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation immediately and serializes native output teardown within the service wait budget described below.
+`internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. Current Voice playback passes only the displayed dictation generation. The dictation owner rejects stale, active, cleared, and closed results, then supplies an immutable text snapshot through the injected `tts.TranscriptSources` collaboration boundary; history retention is not required. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata. Generic has no portable voice-list operation; qualified speech profiles add metadata-only voice discovery, and model profiles may restrict selectable voices. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation immediately and serializes native output teardown within the service wait budget described below.
 
 `WorkspaceSplit` owns the main renderer's result/history presentation. PaneForge
 provides pointer and keyboard resizing at desktop widths; its local-storage
@@ -637,9 +637,9 @@ Windows Mica is an explicit persisted opt-in applied when all four native window
 
 `internal/app` owns four named Wails windows: `main`, `settings`, `about`, and `transcription-details`. Settings is one reusable native configuration window; its Connections page never opens another window. Main and Settings have independent renderer Sessions synchronized by the transactional settings service. Windows are created from Wails' `ApplicationStarted` event after screen initialization. `internal/windowstate` persists only main-window normal bounds relative to its display work area, independently of product settings. Saved display matching, work-area clamping, and missing-display fallback remain native responsibilities. Settings, About, and transcription details retain owner-relative centering and no persisted auxiliary placement. Settings installs listeners before its readiness handshake, retains guarded drafts on repeated reveals, and clears transient editor state on hide. General saves stay in preferences; task completion closes Settings and explicitly restores the originating Main task. About uses `internal/windowing`; `internal/history.Service` validates completed entry IDs and owns the selected ID while `internal/app` owns the details handle. About and Transcription details have no editable state and hide immediately from either their native close action or footer. Opening another history entry updates and focuses the same details window. Details subscribes before fetching its selection, ignores superseded responses, and refreshes after history actions, settings changes, and workflow status events. Deleting, clearing, disabling, or evicting history makes details unavailable; closing the window clears its selection. No details snapshot is retained separately by Go or persisted.
 
-The native status overlay is enabled by default but has an independent persisted opt-out plus curated layout, work-area anchor, phase visibility, motion, surface, visualizer, proportional-size, opacity, edge-distance, and glow settings. `internal/overlay` owns that feature lifecycle: the settings transaction supplies applied configuration, dictation supplies authoritative status, and the package translates both into a narrow `platform.OverlayOptions`/`platform.OverlayStatus` contract. Enabling creates one native surface and bounded level tap; disabling releases its native surface, timers and graphics resources instead of retaining a hidden renderer. Windows additionally owns its HWND/message-loop thread; macOS dispatches AppKit work to the main thread. Capsule/glass/bars/top-center remains the compatibility default.
+The native status overlay is enabled by default but has an independent persisted opt-out plus curated layout, work-area anchor, phase visibility, motion, surface, visualizer, proportional-size, opacity, edge-distance, and glow settings. `internal/overlay` owns that feature lifecycle: the settings transaction supplies applied configuration, dictation supplies authoritative status, and the package translates both into a narrow `platform.OverlayOptions`/`platform.OverlayStatus` contract. Enabling creates one native surface and bounded level tap; disabling releases its native surface, timers and graphics resources instead of retaining a hidden renderer. Windows additionally owns its HWND/message-loop thread; macOS dispatches AppKit work to the main thread. New settings default to Capsule/minimal/envelope/bottom-center. Existing saved appearance remains authoritative.
 
-The Win32 renderer queues all changes onto its locked message-loop thread, uses the foreground application's monitor work area captured at the start of a recording, and does not chase later focus changes. Windows Animation Effects and the saved Reduced policy control decorative frames, while the coordinator-owned silence deadline remains live. The overlay draws from the window's own palette rather than one of its own: a single ground, one accent hue, and the shared status colours, with each visible state kept distinguishable by glyph and stage rather than by colour alone. Windows contrast themes force a system palette, solid opaque surface, and no glow. Detailed may render only fixed Freehand labels and bounded operational values (normalized shortcut, elapsed time, checkpoint count); transcript text and provider/user metadata never enter the native contract.
+The Win32 renderer queues all changes onto its locked message-loop thread, uses the foreground application's monitor work area captured at the start of a recording, and does not chase later focus changes. Windows Animation Effects and the saved Reduced policy control decorative frames, while the coordinator-owned silence deadline remains live. The overlay draws from the window's own palette rather than one of its own: a single ground, one accent hue, and the shared status colours, with each visible state kept distinguishable by glyph and stage rather than by colour alone. Windows contrast themes force a system palette, solid opaque surface, and no glow. Detailed may render only fixed Freehand labels and bounded operational values (normalized shortcut, elapsed time, checkpoint count); provider/user metadata never enter the status-label contract. Optional realtime captions are a separate bounded, transient text projection and never become a delivery source.
 
 Settings can request a presentation-only native preview through a narrow Wails binding. Draft presentation changes update the same renderer, real dictation preempts preview, Settings close stops it, and the applied saved configuration is restored. Preview can temporarily create a surface while the applied feature is disabled, but stopping it destroys that surface. Overlay creation remains a degraded optional capability: native failure is logged without failing dictation or rolling back the saved preference.
 
@@ -710,7 +710,7 @@ metadata.
 
 The reusable CI workflow owns source selection and the final validation gate.
 Release Please supplies the tag and expected version; CI resolves that tag once,
-validates the same commit across all jobs, and packages it on Windows. The release
+validates the same commit across all jobs, and packages it on native Windows and macOS runners. The release
 publisher consumes only that run's validated artifacts before attestation and
 publication. PR validation and Pages deployment share site build checks but not
 deployment concurrency or write permissions. See [GitHub Actions](../github-actions/).
@@ -836,17 +836,18 @@ STT -> raw transcript -> selected processing profile -> clean transcript -> inse
 
 Raw STT remains first-class and selectable. The processor is orchestrated by the client through a separately configured OpenAI-compatible `/chat/completions` endpoint; it is never hidden inside Speaches and is never bundled into the Windows executable. The default custom-instruction profile works with an ordinary compatible chat model. S1-mini by Superwhisper is a separate purpose-built profile whose styling, structure, context, and fixed request contract apply only when explicitly selected. All failures fall back to raw text. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/).
 
-## Shelved realtime transcription research
+<span id="shelved-realtime-transcription-research"></span>
 
-Realtime transcription is not part of the active product direction. ADR 0002
-preserves the explored boundary in case live captions or provisional editing
-later provide value that pause-aware checkpoints do not. It remains a separate
-capability with its own transport, URL, credential reference, audio format,
-model, and event codec; it must never be folded implicitly into completed STT.
+## Historical Speaches realtime research
 
-The application normalizes provider messages into correlated speech, provisional-delta, and finalized-transcript events. Current Speaches v0.8.2 provides VAD plus finalized transcription events but not the newer OpenAI input-transcription delta event, so the UI must work well both with completed utterance chunks and true incremental text.
-
-Audio capture accepts a requested format specification: file STT currently uses 16 kHz PCM16 WAV, while Speaches realtime uses 24 kHz mono PCM16 chunks. Only finalized raw text may proceed to optional S1-mini and insertion. See [ADR 0002](../../decisions/0002-realtime-transcription/).
+[ADR 0002](../../decisions/0002-realtime-transcription/) preserves the original
+Speaches v0.8.2 investigation, including 24 kHz PCM16 audio and item-correlation
+requirements. It is not the implemented realtime adapter. The
+[qualified realtime boundary](#optional-realtime-dictation) uses distinct NeMo
+and vLLM protocols under the unified Voice selection. Their audio formats,
+configuration, and finalization rules must not be inferred from the historical
+Speaches contract. Only authoritative final text may proceed to cleanup and
+focus-safe insertion.
 
 ### Transcription option snapshots
 
@@ -902,8 +903,10 @@ renderer-safe settings snapshot and validates bounded custom values. The catalog
 is compiled reference data, not a list of verified model capabilities or a
 persisted settings collection. `compatibility.Contract.TranscriptionLanguage`
 owns provider mapping, consumed before both microphone and file multipart bodies
-are built. The existing `config.Settings.Language` string preserves selections;
-no new database or reusable model/connection records are introduced.
+are built. `config.Settings.VoiceTranscription.Language` and `config.Settings.Language`
+preserve independent Voice/file selections. Model profiles further restrict
+language support and defaults; model selection preserves task language under
+ADR 0007 rather than restoring a historical model-row language.
 
 The existing S1-mini profile descriptor declares English. Each workflow owner
 uses `postprocess.ValidateLanguage` after transcription and before cleanup, with

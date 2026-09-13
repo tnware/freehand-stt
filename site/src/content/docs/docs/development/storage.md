@@ -5,8 +5,9 @@ description: Maintain the schema, generated queries, credential references, and 
 
 Freehand persists non-secret settings in SQLite. Follow
 [ADR 0006](../../decisions/0006-sqlite-storage-contract/) and the repository's
-`AGENTS.md` for every storage change. Saved connections use stable server records with explicit capability memberships. Reusable model
-preferences and persistent history are separate features. Disposable window
+`AGENTS.md` for every storage change. Saved connections use stable server records
+with explicit capability memberships. Remembered model preferences share the
+settings transaction; transcript history remains optional and memory-only. Disposable window
 placement remains in `window-state.json`, independent of settings recovery.
 
 ## Ownership and tools

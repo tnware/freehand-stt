@@ -16,7 +16,7 @@ const backendIcon = (guide: string) => availableBackends.find((backend) => backe
 ---
 <ProductLayout current="models" title="Models & model families — Freehand" description="Whisper, Kokoro, and dedicated model profiles for transcription, cleanup, and speech. Compare controls and compatible backends by task." path="models/">
   <header class="page-heading"><h1>Models</h1><p class="lede">Speech and text models you can use with Freehand. Some use Generic model behavior; others have a dedicated profile for model-specific controls.</p></header>
-  <p class="catalog-note"><strong>Current development</strong> Support depends on the backend, server version, and checkpoint. Each entry identifies which model behavior to select in Freehand.</p>
+  <p class="catalog-note"><strong>Check your release.</strong> Some profiles listed here may not yet be in your installed version. Support also depends on the backend, server version, and checkpoint. Each entry identifies which model behavior to select in Freehand.</p>
   {groups.map((group) => <section class="model-section" aria-label={group.title}>
     <h2>{group.title}</h2>
     <div class="model-grid">{[...modelFamilies.filter((family) => family.task === group.title), ...group.profiles.map((profile) => ({ ...profile, behavior: "Dedicated model profile" }))].map((model) => <article class="model-profile" id={model.id}>

@@ -5,7 +5,10 @@ description: Choose custom cleanup or S1-mini by Superwhisper, with raw fallback
 
 import { Steps } from "@astrojs/starlight/components";
 
-The app can optionally pass each successful raw speech-to-text result to a separate OpenAI-compatible `POST /chat/completions` endpoint before delivery. Speech recognition and cleanup have independent endpoints, models, and credentials. The raw transcript is retained first when history is enabled.
+Turn on **Cleanup** to edit a transcript before Freehand delivers it. Cleanup
+uses a chat model on a service you choose, separate from speech recognition.
+It sends transcript text to that service, not the original audio. You can use
+your own instructions or S1-mini's English cleanup controls.
 
 If post-processing fails, is unavailable, or returns empty text, the run falls
 back to the raw transcript. Delivery still follows the normal destination
@@ -29,23 +32,33 @@ history.
 
 ## Custom-instruction processor
 
-First create a **Cleanup** connection under **Settings → Connections**:
+Set up a connection for cleanup, then choose the model and instruction:
 
 <Steps>
 
-1. Choose **New connection**, name it, select **Cleanup**, and choose the server profile.
+1. Open **Settings → Cleanup** and choose **Add connection…** in the connection picker.
+   Name the connection and choose its backend profile.
 2. Enter the processor's OpenAI-compatible base URL, normally ending in `/v1`.
-3. Enable **Allow insecure HTTP** only for a trusted local or LAN server using `http://`.
-4. Add the processor's API key when that endpoint requires one.
-5. Choose **Save connection**. Open **Settings → Cleanup**, select that active connection, enable cleanup, and list models or enter the exact model ID. Model listing reads metadata; it does not test cleanup quality.
-6. Choose **Generic** and write the system instruction for the selected model. Freehand shows the UTF-8 storage limit, validates empty or oversized instructions, and can restore the recommended instruction.
-7. Choose **Save settings**. Dictate a short example and review the result before using cleanup for longer text.
+3. Enable **Allow HTTP for this connection** only for a trusted local or LAN server
+   using `http://`. HTTP sends text and credentials without transport encryption.
+4. Select **Authentication → API key** and enter the key if the endpoint requires one.
+5. Choose **Save and return**, then enable cleanup. Use **Refresh models** or enter
+   the exact model ID. Refreshing reads metadata; it does not test cleanup quality.
+6. Choose **Generic** under **Model profile** and write the **Custom system instruction**.
+   You can restore the recommended instruction if you need a starting point.
+7. Choose **Save** (or **Save and return** when opened from a task). Dictate a short example and review the result before
+   using cleanup for longer text.
 
 </Steps>
 
-The system instruction is stored with the rest of the ordinary Freehand settings; the API key remains in Windows Credential Manager or macOS Keychain. The app sends a non-streaming chat completion with temperature `0`. The raw transcript is the separate user message, so the instruction does not need a transcript placeholder. Freehand does not send the speech-to-text credential to the processor.
+The instruction is saved locally in settings; the API key stays in Windows
+Credential Manager or macOS Keychain. Write instructions for how to edit the
+text, without a transcript placeholder. Freehand supplies the raw transcript
+separately and uses the selected cleanup connection's credentials.
 
-Endpoint model IDs and request behavior are deliberately independent. A local or remote server may assign any model ID, so Freehand never guesses that a model needs the S1-mini contract from its name. Switching profiles preserves each profile's stored controls so switching back does not discard the custom instruction or S1-mini choices.
+Select the model profile explicitly. Freehand does not recognize S1-mini from
+the model's name. Switching profiles preserves your custom instruction and
+S1-mini choices for when you switch back.
 
 ## S1-mini by Superwhisper with llama.cpp
 
@@ -57,8 +70,8 @@ For an existing Generic endpoint, disable reasoning on the server.
 ## Generation controls
 
 Open **Settings → Cleanup → Generation controls**. Save before starting a
-new recording or stored-file job; an active job keeps the settings captured at
-its start, even if cleanup runs later.
+new recording or audio-file job; changes do not affect work already running,
+even if cleanup has not started yet.
 
 **Limit output tokens** is optional for Generic, llama.cpp, and vLLM. Turning it on
 initially supplies 2,048 tokens; adjust this for your selected model and the
@@ -68,29 +81,27 @@ number for later. This setting neither enlarges the model's context window nor
 splits long inputs. The request timeout remains independent. A limit that is too
 small can cause an incomplete response and raw-transcript fallback.
 
-**Disable reasoning** is optional for Generic cleanup under the llama.cpp or vLLM
-profile. It asks the model to return its result without a thinking phase, using
-a supported server/template contract. Off retains the server's configured behavior.
+**Disable reasoning** is optional for the Generic model profile with a llama.cpp
+or vLLM backend. It asks the model to return its result without a thinking phase.
+Support depends on your server and model template. Leaving it off uses the
+server's configured behavior.
 
-For **S1-mini**, thinking disabled is a requirement, not a preference. Under
-llama.cpp or vLLM, the control is marked **Required off** and cannot be switched off; each
-request enforces it independently of the optional custom-model setting. Under
-Generic, Settings shows **Disable on server**, and the server must enforce it.
-The exact S1 prompt, trained styling/structure/context values, and temperature
-zero stay fixed. No extra sampling controls are introduced.
+For **S1-mini**, reasoning must be off. With a llama.cpp or vLLM backend,
+**Required off** means Freehand requests this automatically. With a Generic
+backend, **Disable on server** means you must configure the server to turn it off.
 
 When switching from llama.cpp or vLLM to Generic with the custom reasoning override
 saved, turn that override off before saving. A provider rejection or reported
 output truncation uses the existing raw-text fallback; Freehand does not silently
-retry with different controls. Optional controls remain off for older settings,
-while S1-mini through llama.cpp or vLLM gains its required reasoning-off request.
+retry with different controls. Review cleaned output against the raw transcript:
+Freehand cannot detect omissions that the server does not report.
 
 Consult [llama.cpp generation controls](../../backends/llama-cpp/#cleanup-generation-controls)
-for the inspected server revision and model/template limits.
+for supported server versions and model limits.
 
 ## vLLM cleanup
 
-Select **vLLM** as the post-processing compatibility profile to use a qualified
+Select **vLLM** as the cleanup connection's backend profile for a supported
 v0.28.0 server. Configure its `/v1` endpoint and chosen text model separately from
 transcription. The generation controls above also apply, including mandatory
 reasoning off for the S1-mini preset. See the [vLLM guide](../../backends/vllm/)
@@ -103,6 +114,4 @@ languages use raw text instead. With no known language, S1-mini runs assuming
 English, as stated in its controls. Custom cleanup depends on the selected
 model and instruction. See [language selection](../languages/).
 
-The **Model profile** field uses the same model-behavior contract as transcription
-and speech playback. See [model profiles](../../models/) for how it differs
-from a connection’s backend profile.
+See [model profiles](../../models/) if you are unsure which cleanup profile to choose.

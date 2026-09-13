@@ -10,18 +10,20 @@ WAV audio. It does not provide transcription or transcript cleanup.
 ## Connect an existing server
 
 1. Open **Settings → Connections**, create a connection, and select
-   **Kokoro-FastAPI** with **Speech playback** enabled.
+   **Kokoro-FastAPI** with **Text to speech** enabled.
 2. Enter the server's API base URL, including `/v1`. For the local Docker example
    below, use `http://127.0.0.1:8880/v1`. For a remote server, use its HTTPS URL
    and the authentication supplied by its administrator.
-3. Save the connection. In **Settings → Text to speech**, select it and choose
+3. For the local HTTP example, enable **Allow HTTP for this connection**, then
+   save. In **Settings → Text to speech**, select the connection and choose
    the model ID advertised by your server, normally `kokoro`.
 4. Click **Refresh voices**, then search or choose a voice such as `af_heart`.
    Manual IDs remain available, including administrator-provided aliases.
-5. Enable text to speech and preview the voice. Save settings when you are happy with your choices.
+5. Enable text to speech and preview the voice. Choose **Save** or **Save and return** to apply your choices.
 
-Voice and speed are remembered for the selected connection and model. Refreshing
-models or voices performs metadata requests only; it does not synthesize samples.
+The voice is remembered for the selected connection and model. Speaking speed
+stays the same when you switch models or connections. Refreshing models or voices
+performs metadata requests only; it does not synthesize samples.
 A server-wide voice list does not establish that every voice works with every
 model ID. Failed discovery leaves the selected voice and manual entry intact.
 
@@ -58,7 +60,7 @@ separate server. Freehand does not start or manage the container.
 
 ## Supported API
 
-| Capability      | Contract                                                                                                        |
+| Capability      | Request and response                                                                                            |
 | --------------- | --------------------------------------------------------------------------------------------------------------- |
 | Model discovery | `GET /v1/models`; listed IDs may be compatibility aliases.                                                      |
 | Voice discovery | `GET /v1/audio/voices`; current ID/name objects and legacy strings.                                             |
@@ -68,6 +70,5 @@ separate server. Freehand does not start or manage the container.
 ## Limits
 
 Language overrides, server normalization, voice-blend creation, cloning inputs,
-captioned audio, and progressive playback are not exposed by this profile.
-These need separate request contracts and model qualifications. The existing
-request timeout and 32 MiB speech response limit still apply.
+captioned audio, and progressive playback are not available in this profile.
+Speech requests use your configured timeout and a 32 MiB response limit.

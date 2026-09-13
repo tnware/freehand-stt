@@ -37,17 +37,20 @@ then follow [Windows installation](../guides/windows-installer/) or
 
 ## First launch
 
-Freehand opens **Voice**, its default task, with a **Set up dictation** screen.
-The **Audio file** and **Text to speech** tabs remain available before you finish
-dictation setup. Choose the task you want; **Finish setup** belongs to dictation,
-not to every workflow.
+Freehand opens **Voice** with a **Set up voice transcription** screen. To work
+with a recording or generate speech instead, choose **Audio file** or **Text to
+speech** at the top. You can set up each task independently.
 
 To connect a service from your chosen task:
 
 <Steps>
 
-1. **Add a server** — open the task's connection picker and choose **Add connection…**. Name it, select its compatibility profile, and enter the base URL. The task's use is preselected. Configure authentication and HTTP permission as required, then choose **Save and return**. Keys use Windows Credential Manager or macOS Keychain. Configuration stays inside one Settings window; saving the connection resumes the task's model settings there.
-2. **Choose a model** — opening the task's model picker or model settings automatically reads metadata for the selected connection. Choose a listed model or enter its exact ID. Retry failed discovery explicitly or by reopening the picker; discovery never runs a model. Home quick controls apply immediately; whisper.cpp uses its server-loaded model. For Text to speech, open **Model and voice settings** to configure its model, voice, and enable switch. Settings-page edits apply with **Save and return**.
+1. **Add a server.** Open the task's connection picker and choose **Add connection…**.
+   Name it, choose its **Backend**, and enter its base URL and authentication
+   details. Choose **Save and return** to continue to model settings.
+2. **Choose a model.** Select a model listed by your server or enter its exact ID.
+   With whisper.cpp, Freehand uses the model already loaded by the server.
+   Review the [model profile](../models/) and choose **Save and return**.
 
 </Steps>
 
@@ -56,15 +59,14 @@ The connection check never submits audio and never invokes a discovered model.
 A successful check does not test transcription quality.
 :::
 
-Voice and Audio file have independent speech-to-text connection and model
-selections; they can choose the same saved connection. Optional
-cleanup is a separate stage after transcription; Text to speech has its own
-connection and settings and can be used without either STT or cleanup.
+Voice and Audio file keep separate model and connection choices. To use the
+same server for both, [enable both uses on the saved connection](../guides/saved-connections/#reuse-a-server),
+then select it in each task.
 
 ## Choose the recording language
 
-For dictation and audio files, under **Settings → Transcription → Language**,
-search by name or code, or choose
+Under **Settings → Voice transcription** or **Audio-file transcription**, search
+the language picker by name or code, or choose
 **Server default** or **Automatic detection**. Your model must support the
 language. If you use S1-mini cleanup, its only supported language is English.
 See [language selection](../guides/languages/) for detection and fallback behavior.
@@ -78,22 +80,18 @@ the base URL, typically:
 https://speech.example.com/v1
 ```
 
-It joins the transcription route as:
-
-```http title="Request route built by Freehand"
-POST https://speech.example.com/v1/audio/transcriptions
-```
-
-Set the exact model ID expected by your gateway. Model discovery is bounded metadata; selecting a discovered ID does not run it.
+Enter the base URL, not the full `/audio/transcriptions` address. Freehand adds
+the route for you.
 
 For whisper.cpp, use the server root without `/v1`; Freehand uses `/inference`
 and the server-loaded model instead.
 
-HTTPS is required by default. **Allow insecure HTTP** is an explicit opt-in for a trusted local or LAN service. It sends credentials and audio without transport encryption, so do not enable it for an untrusted network.
+HTTPS is required by default. Enable **Allow HTTP for this connection** only for
+a trusted local or LAN service. HTTP sends credentials and audio without
+encryption, so do not enable it for an untrusted network.
 
-See [Connect a speech server](../guides/connect-a-server/) for shared-gateway
-and separate-service layouts, a [CPU speech-server example](../guides/connect-a-server/#example-speaches-on-your-pc), the evidence-labeled compatibility list, and a
-failure guide.
+See [Connect a speech server](../guides/connect-a-server/) for other backends,
+local and remote server setup, and connection checks.
 
 ## Choose your transcript workflow
 
@@ -112,23 +110,15 @@ In **Voice**, choose your connection and model in the setup screen. Changes ther
 apply immediately. Expand **Transcription options** for language, realtime, and
 recognition hints supported by your selected model profile.
 
-The **Next step** card leads you through anything still needed. Ready checks are
-collapsed together; expand them to review your microphone or shortcut and open
-its settings. **Ctrl+Shift+Space** is the default toggle shortcut. Save any edits
-with **Save and return** to close Settings and resume Voice in the main window. **Done** also
-returns; a dirty form offers **Save**, **Discard**, or **Keep editing**. A failed
-save retains the draft and error for correction and retry.
+Follow **Next step** to check your microphone and recording shortcut. On macOS,
+also grant the requested [permissions](../guides/macos-setup/#native-permissions).
+**Ctrl+Shift+Space** is the default toggle shortcut. Save any settings edits
+with **Save and return**.
 
 Choose **Check connection** to test access without running a model. If the check
 fails, correct the problem and choose **Check again**. **Finish setup** appears
 once the required checks pass; recording becomes available after that change is
 saved.
-
-After setup, recovery names the problem and offers a relevant action. Connection
-controls are available under **Connection and model** when needed. **Back to
-workspace** dismisses that recovery notice; it does not fix the problem or
-bypass first-run setup. Audio-file transcription and text to speech remain
-available independently from the tabs above.
 
 Now dictate into another application:
 
@@ -142,12 +132,11 @@ Now dictate into another application:
 
 </Steps>
 
-Freehand inserts with Unicode input only while the captured target remains valid.
-Windows checks the original application and focused control. macOS checks the
-frontmost app PID/process start and AX focused window, not editor-field identity;
-a field change within the same window is allowed. Secure Input blocks macOS
-delivery but does not identify every custom secure field. If validation fails,
-use explicit Copy and check for partial text before pasting.
+Keep the destination focused until your text appears. If Freehand cannot safely
+insert it, choose **Copy** on the result and paste it yourself. Check for partially
+inserted text first. Windows requires the original text field; macOS allows you
+to move between fields in the same window. See
+[safe text insertion](../guides/privacy-and-safety/#safe-text-insertion) for details.
 
 ## Transcribe a stored audio file
 
@@ -155,18 +144,17 @@ You do not need a microphone, recording shortcut, or completed dictation setup.
 
 <Steps>
 
-1. **Open Audio file** and configure the STT connection and model as above, if
-   you have not already done so for Voice.
-2. **Choose audio** to select a FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, or
-   WebM file through the native picker. Selecting it does not upload it.
+1. **Open Audio file** and select its speech-to-text connection and model.
+   This selection is separate from Voice, even when you use the same server.
+2. **Select Choose** to open a FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, or
+   WebM file. Selecting it does not upload it.
 3. **Choose Transcribe** and wait for the result. Start with completed output;
    compatible streaming is optional.
 4. **Copy** the completed transcript into the application you want.
 
 </Steps>
 
-Stored-audio transcription never inserts automatically because no destination
-was captured at recording start.
+File transcripts are available to copy; Freehand does not insert them automatically.
 
 ## Generate speech
 
@@ -176,17 +164,17 @@ connection, not a microphone, recording shortcut, or STT setup.
 <Steps>
 
 1. **Open Text to speech** and add or select its connection as above.
-2. **Open Model and voice settings**. Choose the model and voice ID, turn on
-   **Enable text to speech**, and choose **Save settings**.
+2. **Open Speech → All speech settings**. Choose the model and voice ID, turn on
+   **Enable text to speech**, and choose **Save and return**.
 3. **Enter your text**, then choose **Speak** to generate and play audio.
 4. **Use the playback controls** to pause, resume, restart, stop, or explicitly
    **Save generated speech** to a file.
 
 </Steps>
 
-You can also use **Listen** on retained completed transcripts. Freehand does not
-automatically read transcripts aloud. See [Text to speech](../guides/using-freehand/#text-to-speech)
-for playback and text lifetimes.
+You can also use **Listen** on completed transcripts, with or without history.
+See [Text to speech](../guides/using-freehand/#text-to-speech) for playback,
+previewing voices, and saving audio.
 
 ## Optional features
 
@@ -199,9 +187,9 @@ enable automatic stop, silence trimming, or checkpoints.
 | Local voice detection and status overlay | On |
 | Silence trimming, automatic stop, and pause-aware checkpoints | Off |
 | Transcript cleanup and memory-only history | Off |
-| Stored-audio response | Completed JSON; compatible streaming is selectable |
+| Audio-file transcript | Shown when complete; text updates are optional |
 | Text-to-speech playback and Windows Mica material | Off |
-| Direct insertion into the checked original target | On |
+| Insert dictation into the original application | On, when the destination is still focused and safe |
 | Automatic update checks | On; configurable under **Settings → General** |
 
 ## Where to go next

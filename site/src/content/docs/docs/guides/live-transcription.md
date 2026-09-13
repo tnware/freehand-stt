@@ -1,12 +1,13 @@
 ---
 title: Live transcription
-description: See words in the results pane and an optional single-row overlay while you speak.
+description: Set up realtime microphone transcription and review words while you speak.
 ---
 
-Live transcription is an optional microphone mode. Words appear in the results
-pane while you speak; an optional single-row overlay shows the newest words
-without taking focus. Stop recording to finalize the transcript, run any enabled
-cleanup, and insert the result when the original target still owns focus.
+Live transcription streams microphone audio to your selected server while you
+speak. Review the words in Freehand or turn on overlay captions to see them
+without leaving your app. Stop recording to finalize the transcript and run any
+enabled cleanup. Automatic insertion still requires the original destination
+to be focused; manual-copy mode leaves the result ready to copy.
 
 ## Choose a model and backend
 
@@ -16,8 +17,8 @@ cleanup, and insert the result when the original target still owns focus.
 | [Qwen3-ASR](../../models/qwen3-asr/)                 | [vLLM](../../backends/vllm/)                   | Automatic language detection                                   |
 | [Voxtral Mini Realtime](../../models/voxtral-realtime/) | [vLLM](../../backends/vllm/) | Automatic language detection |
 
-Follow the model guide for setup. These combinations use the same Voice
-transcription panel, results pane, overlay, and recording shortcuts.
+Follow the model guide for server setup and supported versions. Freehand does
+not install or start the server for you.
 
 ## Enable live mode
 
@@ -25,7 +26,7 @@ transcription panel, results pane, overlay, and recording shortcuts.
 2. Select your connection, the loaded model, and its model profile.
 3. Enable **Realtime transcription**, which appears for a compatible combination.
 4. Enable **Live overlay captions** if you want the caption strip. The main **Overlay** preference must also be enabled.
-5. Save if you are using full Settings. Quick settings changes apply immediately.
+5. In full Settings, choose **Save** or **Save and return**. Quick settings changes apply immediately.
 
 Language and vocabulary controls follow the selected model profile. Completed
 settings remain saved when a control is unavailable in realtime. Shared terms
@@ -33,9 +34,10 @@ stay in **Settings → Vocabulary**.
 
 ## While recording
 
+Keep the intended destination focused and use your recording shortcut to begin.
 The preview can change as speech is recognized. The final transcript replaces
-it when recording stops. The overlay stays one row tall and reveals the latest
-text as older words leave the visible area.
+it when recording stops. Overlay captions show the newest words, not the full
+transcript.
 
 Only finalized text can be cleaned up, kept in optional history, copied, or
 inserted. Cancellation or a disconnected stream discards its preview. Start a

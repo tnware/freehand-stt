@@ -13,6 +13,13 @@ description: Keep the passive focus-sensitive status surface native and non-acti
 > implementation and historical rationale below remain intact; macOS uses
 > native adapters under the same shared policy boundaries.
 
+> Caption scope: [ADR 0008](../0008-qualified-realtime-dictation/) adds an
+> optional bounded realtime caption strip. This supersedes the blanket exclusion
+> of transcript content from the overlay below only for that presentation-only
+> caption path. Status labels retain their fixed allowlist, and neither captions
+> nor status presentation acquire copy, cleanup, history, or insertion authority.
+> This extension does not establish native no-activation acceptance.
+
 ## Context
 
 The client is one Windows GUI executable and one Go process. Wails is embedded into that process; it is not a second application runtime or a daemon. It currently supplies:

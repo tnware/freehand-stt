@@ -1,9 +1,10 @@
 ---
 title: Generic OpenAI-compatible
-description: Configure the default Freehand contract for a compatible server.
+description: Connect an OpenAI-compatible server for transcription, cleanup, or text to speech.
 ---
 
-**Status:** available for transcription, post-processing, and speech playback.
+Use **Generic OpenAI-compatible** when your server supports the request and
+response formats below and has no matching dedicated backend profile.
 
 ## Obtain an endpoint
 
@@ -11,23 +12,22 @@ Generic is a protocol baseline, not a server program to install. Use the
 URL, model ID, and authentication supplied by your server operator or hosted
 provider. If you want to run a server yourself, start with the
 [backend launch guides](../#run-a-backend) and choose its qualified profile.
-Each operation still needs a model and route that implement that contract.
+Check that the selected model supports the operation you want to use.
 
 ## Configure a connection
 
-1. Open **Settings → Connections → New connection**, choose its purpose and **Generic OpenAI-compatible** profile.
+1. Open **Settings → Connections → Add connection**, choose its purpose and **Generic OpenAI-compatible** profile.
 2. Name it and enter the API base URL, normally ending in `/v1`.
-3. Configure authentication and HTTP permission, then choose **Save connection**.
-4. Select the connection on its feature page. List models or enter the exact model ID, then save feature settings. Tests read metadata only.
+3. Configure authentication. For an HTTP URL, enable **Allow HTTP for this connection** only if you trust the network. Choose **Save connection**.
+4. Select the connection in **Voice transcription**, **Audio-file transcription**, **Cleanup**, or **Text to speech**. Choose **Refresh models** or enter the exact model ID, then save. Model discovery reads metadata only.
 5. Explicitly try one operation with the model you chose and review the result.
 
-See [Connect a speech server](../../guides/connect-a-server/) for trusted HTTP,
-independent endpoints, and credential configuration. Existing settings default
-to Generic when no compatibility profile was previously stored.
+See [Connect a speech server](../../guides/connect-a-server/) for HTTP permission,
+separate servers, and credential configuration.
 
 ## Implemented capabilities
 
-| Operation                               | Freehand's contract                                                                                                                         |
+| Operation                               | Request and response                                                                                                                        |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Microphone and audio-file transcription | Multipart `file`, `model`, `response_format=json`, and optional `language`, `prompt`, and `temperature`; completed JSON with string `text`. |
 | Optional file streaming                 | `stream=true`; typed transcript delta/done events or legacy per-segment text events. A server may return completed JSON instead.            |
@@ -36,8 +36,8 @@ to Generic when no compatibility profile was previously stored.
 
 The base URL is a prefix: Freehand appends `audio/transcriptions`,
 `chat/completions`, or `audio/speech`. Entering a complete operation URL would
-append the path again. Generic describes these particular contracts, rather
-than every feature of the OpenAI API or every implementation using that name.
+append the path again. An OpenAI-compatible label alone does not guarantee that
+the server accepts these fields or returns these formats.
 
 ## Available options
 
@@ -61,11 +61,14 @@ failure handling.
 
 ## Optional transcription controls
 
-In **Settings → Transcription → Transcription controls**, context is sent as
+In **Settings → Voice transcription**, use **Context hint** and the temperature
+override under **Request settings**. For **Audio-file transcription**, open
+**Transcription controls**. Context is sent as
 `prompt`; temperature is sent only when its override is enabled. These are
 optional common request fields, not a guarantee that every compatible model
-honors them. Leave them unset to keep the original request shape. Generic does
-not send `hotwords`; that field requires the Speaches profile.
+honors them. Leave them unset to use server defaults. Generic does not send
+`hotwords`; when you enable [shared vocabulary](../../guides/vocabulary/),
+Freehand appends those terms to `prompt` instead.
 
 See [Transcription controls](../../guides/connect-a-server/#transcription-controls)
 for limits, persistence, and the difference between recognition hints and cleanup.

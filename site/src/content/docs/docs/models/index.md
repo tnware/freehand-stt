@@ -5,15 +5,16 @@ description: Choose model behavior independently of your server connection.
 
 A **connection** tells Freehand where your server is and which backend API it
 uses. A **model** is the ID that server should run. A **model profile** tells
-Freehand how to use that model, including its languages, recognition hints, and output controls. These choices stay separate because servers can expose custom
-model names and the same model can run behind different backends.
+Freehand how to use that model, including its languages, recognition hints, and
+output controls. Select the profile yourself, even when the server uses a
+familiar model name or a custom alias.
 
 ## Choose a model profile
 
 Open **Settings → Voice transcription**, **Audio-file transcription**, **Cleanup**, or **Text to speech**.
 Choose an active connection, choose or enter the model, and review **Model
 profile** directly beneath it. Choose a specialized profile only when you know
-that is the model your server is running, then **Save settings**.
+that is the model your server is running, then choose **Save** or **Save and return**.
 
 | Feature            | Available model profiles                                                               | Behavior                                                                                                                                                                                    |
 | ------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -21,8 +22,7 @@ that is the model your server is running, then **Save settings**.
 | Cleanup            | Generic; [S1-mini by Superwhisper](./s1-mini/)                                         | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                             |
 | Text to speech | Generic; [Qwen3-TTS](./qwen3-tts/) on vLLM-Omni | WAV speech with a voice ID and speed. Qwen3-TTS adds preset voices, language, and style instructions. |
 
-Where only Generic is available, the redundant profile row is hidden. The standard
-backend contract still applies; there is no extra choice to make.
+If a backend offers only Generic, Freehand uses it without a profile selector.
 
 Use **Generic** for standard backend options, including Whisper transcription,
 Kokoro speech, and cleanup with your own instructions. A dedicated model profile
@@ -33,13 +33,21 @@ Model discovery reads metadata only. Freehand does not infer a model profile
 from a name, download a model, or run one to detect its capabilities. For
 whisper.cpp, the model remains the one already loaded by the server.
 
-Voice’s **Transcription** quick controls also expose the model profile. With NeMo-Speech.cpp/Nemotron or vLLM/Qwen3-ASR or Voxtral Mini Realtime selected, **Realtime transcription** appears inside that panel. Its caption control appears when enabled; shared terminology is managed in **Settings → Vocabulary**, and turning it off keeps the same connection/model. Audio file remains independent.
+Voice's **Transcription** quick settings also let you choose a model profile.
+With NeMo-Speech.cpp/Nemotron, vLLM/Qwen3-ASR, or vLLM/Voxtral Mini Realtime,
+enable **Realtime transcription** for live results and optional overlay captions.
+Turning realtime off keeps the same connection and model for completed
+recordings. Audio-file transcription has its own selection.
 
 ## Dedicated model guides
 
 - [S1-mini by Superwhisper](./s1-mini/): English cleanup with styling, structure, and context controls.
 - [Nemotron 3.5 ASR streaming](./nemotron/): completed and live transcription with language selection and vocabulary boosting.
 - [Qwen3-ASR](./qwen3-asr/): completed transcription with context hints, plus optional live dictation on vLLM.
+- [Parakeet TDT v3](./parakeet/): completed transcription with automatic language detection.
+- [Cohere Transcribe](./cohere-transcribe/): completed recordings and streamed file results with a selected language.
+- [Voxtral Mini Realtime](./voxtral-realtime/): live or completed transcription with automatic language detection.
+- [Qwen3-TTS](./qwen3-tts/): text to speech with preset voices, languages, and style instructions.
 
 ## Remember settings for each model
 
@@ -53,12 +61,12 @@ without refreshing models; discovery never chooses a profile for you.
 
 Quick panels show **Saving…**, **Saved**, or a failed-save message beside their
 controls. A failed save keeps the previously applied settings active; retry the
-change to save it. Full Settings pages continue to use **Save settings**.
+change to save it. In Settings, choose **Save** or **Save and return** to apply edits.
 
 Freehand remembers your choices separately for each **connection, feature, and
 model ID**. Choose a saved model from the searchable **Model** picker to restore those options
 without listing models on the server. A new model ID starts with Generic and
-Freehand's default engine options; its name never selects a specialized profile.
+Freehand's default model options; its name never selects a specialized profile.
 
 | Feature        | Remembered model options                                    |
 | -------------- | ----------------------------------------------------------- |
@@ -66,15 +74,14 @@ Freehand's default engine options; its name never selects a specialized profile.
 | Cleanup        | Model profile, output limit, and reasoning override         |
 | Text to speech | Model profile, voice, speech language, and voice-style instructions |
 
-**Task intent stays in place when you change models or connections:** transcription
-language, the custom cleanup instruction, S1-mini style/structure/context choices,
-and speaking speed. Switching engines does not replace these with an older model's
-values. Prose context hints remain model options because their meaning
-and availability depend on the backend. Specialized profiles still constrain what
-can run: S1-mini's English-only behavior never changes the transcription language.
+Changing models or connections keeps your transcription language, custom cleanup
+instruction, S1-mini style/structure/context choices, and speaking speed.
+Context hints are remembered per model. Review language compatibility after a
+switch: selecting S1-mini does not change the transcription language, and it
+skips cleanup for known non-English input.
 
 Search or enter a model ID in the **Model** picker, select it, then review its options.
-**Save feature settings** saves the current selection and all edited model options together.
+**Save** or **Save and return** saves the current selection and all edited model options together.
 Switching models in Settings changes your draft; **Discard** restores the applied
 selection. You can switch freely: unsaved options stay in this editing session for each
 model, and returning to that model restores your edits. Discard clears all of
@@ -94,7 +101,7 @@ forget an unused model if you reach that limit.
 
 Renaming a connection or changing its authentication keeps remembered models.
 Changing its URL or backend profile clears its remembered models and active model
-choices, because the previous options may describe a different server contract.
+choices. Select the model and review its options again after such a change.
 Duplicating a connection starts a separate set of model preferences. Deleting a
 connection, or removing one of its inactive uses, removes the corresponding
 remembered preferences.
@@ -103,9 +110,9 @@ For whisper.cpp, options belong to the connection's **Server-loaded model** slot
 Freehand cannot identify a replacement model loaded by that server; review its
 language and options yourself when changing it. The server still owns model loading.
 
-Upgrades retain current model selections and seed their remembered preferences.
 No credentials or generated transcripts are included in model preferences.
 
-Shared vocabulary terms and Voice/file opt-ins live in [Vocabulary](../guides/vocabulary/), independently of remembered models.
+Shared vocabulary terms, Voice/file opt-ins, and Nemotron vocabulary strength
+live in [Vocabulary](../guides/vocabulary/), independently of remembered models.
 
 For Qwen setup, supported languages, and completed versus realtime controls, see [Qwen3-ASR](./qwen3-asr/).

@@ -32,14 +32,14 @@ Audio-file settings remain independent.
 2. In the workflow's settings, select that connection and the loaded model ID.
 3. Select **Nemotron 3.5 ASR streaming** as the model profile, then choose automatic detection or your spoken language.
 4. For live dictation, enable **Realtime transcription**. Enable **Live overlay captions** for the caption strip; the main Overlay preference must also be on.
-5. Choose **Save settings**. Quick settings changes apply immediately.
+5. Choose **Save** or **Save and return**. Quick settings changes apply immediately.
 
 ## Vocabulary and output
 
 Keep names and terminology in **Settings → Vocabulary**, then enable the list
 for Voice, audio files, or both. Nemotron accepts up to 32 phrases, each up to
 128 UTF-8 bytes, with 2048 bytes total. **Vocabulary strength** runs from 0 to 5.
-The same list can be reused with other supported adapters; see [Vocabulary](../../guides/vocabulary/).
+Reuse the list with other supported models; see [Vocabulary](../../guides/vocabulary/).
 
 Freehand requests verbatim output with the model's native punctuation and
 removes the terminal language tag from displayed text. Vocabulary guides

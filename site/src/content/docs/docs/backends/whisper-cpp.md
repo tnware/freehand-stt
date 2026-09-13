@@ -4,13 +4,13 @@ description: Connect the native whisper.cpp HTTP server for microphone and file 
 ---
 
 The **whisper.cpp** transcription profile supports completed microphone and
-file uploads to the native HTTP server. Model loading and acceleration belong
-to your server. Freehand never calls its model-loading route.
+file uploads to the native HTTP server. Load the model and configure acceleration
+on that server. Freehand never calls its model-loading route.
 
 ## Choose a deployment
 
 whisper.cpp runs natively on Windows. Docker is optional. Both expose the same
-HTTP contract to Freehand, so choose the deployment that suits your server.
+HTTP API to Freehand, so choose the deployment that suits your server.
 The instructions below use PowerShell and the same model folder and local port.
 
 ## Download a model
@@ -39,7 +39,7 @@ executable or container.
 If you already have `whisper-server.exe`, use that installation. Otherwise,
 download and extract an appropriate x64 package from the
 [official releases](https://github.com/ggml-org/whisper.cpp/releases). Keep the
-executable with its DLLs. The inspected **b4938** Windows archive contains
+executable with its DLLs. The **b4938** Windows archive contains
 `Release/whisper-server.exe`; run from that extracted `Release` folder.
 
 - `whisper-bin-x64.zip` provides the CPU build.
@@ -47,10 +47,10 @@ executable with its DLLs. The inspected **b4938** Windows archive contains
   compatible with your NVIDIA GPU and driver.
 
 A CUDA package label alone does not establish support for every GPU generation.
-The inspected release's CUDA archives are labeled 11.8 and 12.4; for an RTX 50
+The b4938 release's CUDA archives are labeled 11.8 and 12.4; for an RTX 50
 series system, use a build known to support that GPU or build with a suitable
-current toolkit as described below. The inspected GGML build configuration
-identifies CUDA 12.8 or later for native Blackwell architecture support.
+current toolkit as described below. Native Blackwell architecture support
+requires CUDA 12.8 or later.
 
 In the PowerShell session with `$modelDirectory` set, change to the folder
 containing your executable and launch:
@@ -70,7 +70,8 @@ Invoke-RestMethod http://127.0.0.1:8051/health
 Check startup output for the selected backend: a GPU-capable build should
 identify CUDA and the chosen device. A successful health check alone does not
 prove GPU offload. In Freehand, choose **whisper.cpp**, base URL
-**`http://127.0.0.1:8051`**, authentication **None**, and allow local HTTP.
+**`http://127.0.0.1:8051`**, authentication **None**, and enable
+**Allow HTTP for this connection**.
 The model is **Server-loaded**. Save, then test a short recording.
 
 Press **Ctrl+C** in the server terminal to stop. Run the same command to
@@ -96,13 +97,13 @@ With the Visual Studio generator, the executable is normally under
 `build/bin/Release`. Keep its generated DLLs alongside it. Follow the
 [upstream CUDA build instructions](https://github.com/ggml-org/whisper.cpp#nvidia-gpu-support)
 and [GPU architecture configuration](https://github.com/ggml-org/whisper.cpp/blob/master/ggml/src/ggml-cuda/CMakeLists.txt)
-for your toolchain. Package contents and source instructions were checked;
-this native installation recipe has not received separate live acceptance.
+for your toolchain. This native build recipe has not been tested separately on
+Windows; verify the backend in startup output before trying a recording.
 
 ## Run whisper.cpp with Docker
 
 This alternative uses Docker Desktop's WSL2 Linux backend and an NVIDIA GPU.
-Use the model directory from [Download a model](#download-a-model). The pinned
+Use the model directory from [Download a model](#download-a-model). The
 CUDA image below is pinned for a repeatable installation.
 It runs the same HTTP server inside a container.
 
@@ -127,9 +128,10 @@ Invoke-RestMethod http://127.0.0.1:8051/health
 ```
 
 Connect with profile **whisper.cpp**, base URL **`http://127.0.0.1:8051`**,
-and authentication **None**. Allow local HTTP. The model is **Server-loaded**;
+and authentication **None**. Enable **Allow HTTP for this connection**.
+The model is **Server-loaded**;
 do not enter a Hugging Face model ID. For an English test, choose English in
-Freehand's existing Language setting. Save, then try your own short dictation.
+the spoken-language setting. Save, then try your own short dictation.
 A healthy server is not yet proof of recognition quality.
 
 ```powershell
@@ -146,20 +148,19 @@ for native builds, other accelerators, and optional format conversion.
 ## Connect
 
 1. Start `whisper-server` with the model you want to use.
-2. In **Settings → Connections**, create a named **Transcription** connection with the **whisper.cpp** profile.
+2. In **Settings → Connections**, create a named **whisper.cpp** connection. Enable **Voice transcription**, **Audio-file transcription**, or both under **Used for**.
 3. Set the Base URL to the server root, for example `http://127.0.0.1:8081`.
    Omit `/v1` and `/inference`. A reverse-proxy prefix can be included.
 4. Choose the authentication mode required by your deployment and permit HTTP
    only where appropriate. The native server may need a proxy for authentication.
-5. Choose **Save connection**, then select it in **Settings → Transcription**.
+5. Choose **Save connection**, then select it in **Settings → Voice transcription** or **Audio-file transcription**.
    Use **Check server** for metadata. The model field shows **Server-loaded model**;
-   no client model ID is required or sent. Save feature settings and finish setup.
+   no client model ID is required or sent. Save your changes.
 
 The default test reads `/health` beneath that root/prefix. An explicit custom
 health path overrides the default. A successful health check establishes server
 availability, not model identity or transcription quality. Freehand does not
-invent a model inventory. A model ID retained from another profile remains saved
-but is ignored by this adapter.
+list models for this backend; change the loaded model on the server.
 
 The default `/inference` route is qualified. If your server changes
 `--inference-path`, expose the default route through a proxy. The base URL is a
@@ -169,16 +170,15 @@ root/prefix setting, not a full request URL.
 
 - Language, transcription context (`prompt`), and optional temperature use the
   server's multipart fields. Blank hints and disabled temperature are omitted,
-  preserving server defaults. Model/language compatibility remains server-owned.
+  preserving server defaults. Choose a language supported by the loaded model.
 - Dedicated `hotwords` are unavailable. You can supply context through `prompt`.
-- File transcription uses completed JSON. The streaming control and retry are
-  unavailable for this profile; a stored streaming preference cannot cause a
-  failed first upload or automatic resubmission.
+- File transcription uses completed JSON. File-response streaming is unavailable,
+  and Freehand does not automatically repeat a failed upload.
 - Microphone audio is Freehand's normalized WAV. WAV is the conservative file
   baseline; other formats depend on the server's decoder build or its optional
   FFmpeg conversion. Freehand does not transcode selected files for this adapter.
-- Both workflows retain their existing size limits, timeouts, cancellation,
-  optional cleanup, history policy, and delivery behavior.
+- [File limits and timeouts](../../reference/protocol/) still apply. Optional
+  cleanup, history, and cancellation work as they do with other backends.
 
 ## Supported API
 

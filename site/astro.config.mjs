@@ -68,7 +68,7 @@ export default defineConfig({
           ],
         },
         {
-          label: "Backend profiles",
+          label: "Backend reference",
           items: [
             { label: "Compare backends", link: "/backends/" },
             { slug: "docs/backends" },
@@ -84,7 +84,7 @@ export default defineConfig({
           ],
         },
         {
-          label: "Model profiles",
+          label: "Model reference",
           items: [
             { label: "Explore models", link: "/models/" },
             { slug: "docs/models/families" },
@@ -109,9 +109,27 @@ export default defineConfig({
           label: "Contribute",
           items: [
             { slug: "docs/development" },
+            { slug: "docs/development/architecture" },
+            { slug: "docs/development/testing" },
             { slug: "docs/development/backend-compatibility" },
             { slug: "docs/development/storage" },
-            { slug: "docs/decisions/0007-task-state-and-preference-ownership" },
+            { slug: "docs/development/brand-assets" },
+          ],
+        },
+        {
+          label: "Maintainer records",
+          collapsed: true,
+          items: [
+            { slug: "docs/development/releases" },
+            { slug: "docs/development/github-actions" },
+            { slug: "docs/safety/logging" },
+            { slug: "docs/safety/windows" },
+            { slug: "docs/safety/native-test-checklist" },
+            {
+              label: "Architecture decisions",
+              collapsed: true,
+              items: [{ autogenerate: { directory: "docs/decisions" } }],
+            },
           ],
         },
       ],

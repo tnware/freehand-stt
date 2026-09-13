@@ -8,6 +8,20 @@
   task-oriented installation and usage in the user guide, advanced endpoint
   behavior in Reference, and repository internals in Contribute or Maintainer
   records. Do not mix build/release instructions into an end-user task page.
+- Write user documentation about the product as it works today. Lead with the
+  task, prerequisites, steps, expected result, and recovery. Use current UI labels
+  checked against source; do not copy issue acceptance criteria into the guide.
+- Remove development chronology, rejected-design comparisons (such as "not a
+  separate window"), migration internals, and commentary about layout fixes from
+  user pages. Keep an upgrade note only when a user must act or understand a
+  change to their data; put implementation history in maintainer records or ADRs.
+- Explain safety and compatibility through user consequences and actions. Keep
+  important limits, data lifetimes, costs, permission restrictions, and versioned
+  backend requirements, but reserve process IDs, state ownership, wire formats,
+  and validation machinery for the relevant technical reference.
+- Give each topic one primary home and link to it instead of accumulating repeated
+  setup instructions or capability tables. Preserve public heading anchors when
+  editing; check rendered internal links and fragments after structural changes.
 - Prefer Astro components and static HTML. Add a client framework only when a
   real interactive island requires it.
 - Extend Starlight through supported configuration, custom CSS, or component

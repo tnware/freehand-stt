@@ -109,15 +109,18 @@ Automatic update checks are enabled by default and can be disabled under
 downloads and verifies the standalone executable and waits for you to restart.
 The in-app updater replaces the executable; it does not run the installer.
 
-Installing an older alpha is not blocked. Check the release notes before
-deliberately downgrading.
+The installer does not block installing an older alpha, but an older app cannot
+downgrade a newer settings database. Read the release notes and
+[settings recovery guidance](../troubleshooting/#saved-settings-need-attention)
+before downgrading.
 
 ## Portable executable
 
 Use the **Portable** tab under [Install](#install) for the download and
 verification steps. The executable runs without installation and has no Start
 Menu registration or uninstaller. Keep its folder writable if you use in-app
-updates.
+updates. Portable Freehand still saves settings in your Windows user profile,
+not beside the executable; see [saved settings and backups](../privacy-and-safety/#saved-settings-and-backups).
 
 ## Uninstall
 
@@ -130,6 +133,8 @@ updates.
 
 Uninstall removes the installed executable, third-party notice, uninstaller,
 registration, and Start Menu shortcut.
+
+For the portable version, quit Freehand and delete its executable instead.
 
 :::note[Settings and keys remain]
 Uninstall retains settings, interface preferences, and Windows Credential

@@ -22,7 +22,8 @@ vllm serve CohereLabs/cohere-transcribe-03-2026
 
 In Freehand, add a **vLLM** connection, select its model in **Voice transcription**
 or **Audio-file transcription**, and choose **Cohere Transcribe** as the model
-profile. Custom server model aliases work too; profile selection is explicit.
+profile, then save. If your server uses a custom alias, select that ID and choose
+the same model profile.
 
 ## Language and recognition controls
 
@@ -31,10 +32,10 @@ Polish, Chinese, Japanese, Korean, Vietnamese, or Arabic. **Server default
 (English)** leaves the language field unset. It does not ask the model to detect
 the language automatically.
 
-The temperature override is available. vLLM's Cohere adapter builds its own
-recognition prefix with punctuation enabled. Freehand does not show a punctuation
-switch, context box, or vocabulary toggle for fields that this adapter does not
-apply. Its punctuation behavior differs from the direct Transformers API.
+You can override temperature. vLLM enables punctuation automatically for this
+model; Freehand has no punctuation switch. Context hints and shared vocabulary
+are unavailable because this vLLM integration does not apply them. Settings for
+the direct Transformers API do not necessarily apply to this server.
 
 Microphone requests complete after a recording or checkpoint. The profile does
 not enable realtime microphone streaming. Cleanup and delivery use your existing

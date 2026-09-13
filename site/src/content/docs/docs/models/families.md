@@ -3,9 +3,10 @@ title: Speech model families
 description: Understand speech model families, their serving runtimes, and their place in Freehand.
 ---
 
-A model family describes speech behavior. A backend describes the server API
-Freehand connects to. Different sizes, quantizations, and server aliases do not
-automatically need separate Freehand profiles.
+A model family groups related recognition or speech-generation models. Choose
+both a model and a backend that can serve it, then select the matching Freehand
+profile from the table below. A different size, quantization, or server alias
+does not automatically change the profile; check the model guide's requirements.
 
 ## Families with a Freehand path
 
@@ -28,8 +29,8 @@ can run on any machine reachable from the Windows or macOS client.
 
 ## Other families to consider
 
-These are pointers into the broader ecosystem, **not additional implemented
-Freehand model profiles**. Check the serving API before choosing a connection;
+These families have **no dedicated Freehand model profile**. Check the serving
+API before choosing a connection;
 a Hugging Face model download is not itself an API endpoint.
 
 | Recognition family | Distinct behavior to explore |
@@ -48,9 +49,9 @@ voice, and language controls. XTTS, F5-TTS, CosyVoice, Piper, VoxCPM, and Higgs 
 also distinct families worth considering when choosing a speech server.
 
 Some servers can already provide ordinary transcription or speech generation
-through a [Generic connection](../../backends/generic/). Model-specific behavior
-needs an adapter that actually transmits the relevant fields and handles the
-response. Selecting Generic does not add support for an unrelated streaming API.
+through a [Generic connection](../../backends/generic/) if they accept its request
+fields and response formats. Generic does not enable a model's specialized
+controls or an unrelated streaming API.
 
 ## Reading model directories
 

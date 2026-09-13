@@ -24,7 +24,7 @@ When a contract changes:
 5. Run the affected Go fixtures and the site build. The Go catalog test rejects
    a stale export; site rendering rejects missing or extra directory entries.
 6. Record validation evidence and limitations in contributor documentation and the PR. Do not promote
-   a source review or fixture result into a claim of live Windows interoperability.
+   a source review or fixture result into a claim of native Windows or macOS interoperability.
 
 Run `go test ./internal/compatibility` to check the app/site catalog boundary.
 Local site-only builds consume the committed export and need no Go runtime.
@@ -64,7 +64,7 @@ Separate these kinds of evidence:
   completion semantics.
 - Tagged upstream source or documentation with the inspected version.
 - Reported live behavior for a particular setup.
-- Native interactive acceptance performed on Windows.
+- Native interactive acceptance performed separately on Windows and macOS.
 
 Existing Speaches and llama.cpp reports have limited version information. Keep
 that limitation visible until a more specific report replaces it. A model list
@@ -158,8 +158,9 @@ fallback when no suitable brand asset is available. Icons remain decorative
 beside text; availability and connection health are separate signals.
 
 The Svelte and Astro `ProviderIcon` wrappers use the same CSS tile and local
-assets. Provider guide frontmatter sets `provider` to the catalog ID, rendered
-through Starlight's supported PageTitle override. Full third-party notices ship
+assets. Starlight's supported PageTitle override resolves guide paths against
+`site/src/data/backends.ts` and `site/src/data/models.ts`; do not add a second
+identity mapping in page frontmatter. Full third-party notices ship
 in About and [Provider icon credits](../../reference/provider-icons/).
 
 For changes, run the actual Svelte autofixer on edited components, frontend

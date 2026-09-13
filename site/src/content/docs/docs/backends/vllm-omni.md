@@ -5,28 +5,31 @@ description: Connect vLLM-Omni for text to speech with Qwen3-TTS preset voices a
 
 Freehand supports **vLLM-Omni v0.18.0** for buffered WAV speech generation.
 Choose this backend separately from the **vLLM** transcription or cleanup
-backend; it serves a different speech API implementation.
+backend. For text to speech, select **vLLM-Omni** in Connections.
 
 ## Run the server
 
 Follow the runtime's [installation and Qwen3-TTS serving guide](https://docs.vllm.ai/projects/vllm-omni/en/v0.18.0/user_guide/examples/online_serving/qwen3_tts/)
 on your inference machine. Load **Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice** and
-expose its HTTP API. The runtime owns model loading and device configuration.
+expose its HTTP API. Configure model loading and the GPU on that server.
 
 ## Connect Freehand
 
-1. Open **Settings → Connections → New connection**.
-2. Choose **vLLM-Omni**, enable **Text to speech**, and enter the HTTP API root,
+1. Open **Settings → Connections → Add connection**.
+2. Choose **vLLM-Omni**, select **Text to speech** under **Used for**, and enter the HTTP API root,
    such as `http://127.0.0.1:8091/v1` for a local service on port 8091.
-3. Configure HTTP permission and authentication for your endpoint, then save.
+3. Configure authentication. If using HTTP on a trusted network, enable
+   **Allow HTTP for this connection**, then save.
 4. In **Text to speech**, select the connection and model.
 5. Choose the [Qwen3-TTS model profile](../../models/qwen3-tts/) to use its preset
    speakers, ten languages, and voice-style instructions.
+6. Turn on **Enable text to speech**, choose a preset voice, and use **Preview**
+   to hear it. Choose **Save** (or **Save and return** when opened from a task).
 
 Connection checks use model metadata. **Refresh voices** reads `/v1/audio/voices`.
-Speech generation sends `/v1/audio/speech` with `response_format: "wav"` and
+Speech generation uses `POST /v1/audio/speech` with `response_format: "wav"` and
 `stream: false` for native playback. The Qwen profile additionally sends its
-CustomVoice task, language name, and optional style instructions.
+`task_type: "CustomVoice"`, language name, and optional `instructions`.
 
 Generic model behavior offers the standard voice-ID and speed fields when
 your loaded speech model accepts them. Choose the dedicated Qwen profile only

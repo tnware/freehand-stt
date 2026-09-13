@@ -1,14 +1,14 @@
 ---
 title: Planned backend profiles
-description: Upcoming backend integrations and alternatives.
+description: Profiles that are not available and when to use a Generic connection instead.
 ---
 
 import ProviderIcon from "../../../../components/ProviderIcon.astro";
 import { plannedBackends } from "../../../../data/backends";
 
-These profiles appear disabled in Freehand. A compatible endpoint may already
-work through **Generic OpenAI-compatible**. Planned describes dedicated profile
-work; it is not a promise of a release date or every feature of a provider.
+These dedicated profiles are not available in Freehand. A compatible endpoint may already
+work through **Generic OpenAI-compatible** if it accepts Freehand's request
+fields and response formats. No release date is promised for these profiles.
 
 {plannedBackends.map((backend) => (
 
@@ -29,6 +29,6 @@ work; it is not a promise of a release date or every feature of a provider.
 
 ## Use a compatible endpoint today
 
-If the service offers OpenAI-compatible transcription, chat, or speech routes,
-try the **Generic OpenAI-compatible** profile for that operation. Dedicated
-provider features will appear when their profiles become available.
+Compare the service's transcription, chat, or speech API with the
+[Generic profile requirements](../generic/) before connecting. Generic does not
+enable provider-specific features or unrelated realtime protocols.

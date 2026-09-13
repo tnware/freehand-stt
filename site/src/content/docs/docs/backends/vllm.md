@@ -1,11 +1,12 @@
 ---
 title: vLLM
-description: Configure vLLM for completed transcription, Qwen realtime, and text cleanup.
+description: Connect vLLM for completed transcription, Qwen or Voxtral realtime dictation, and transcript cleanup.
 ---
 
-The **vLLM** profiles cover speech transcription and text cleanup independently.
-Choose a speech model for transcription and a text model for cleanup; each
-operation has its own endpoint, model ID, and credential settings. Your servers
+The **vLLM** backend supports speech transcription and text cleanup.
+Choose a speech model for transcription and a text model for cleanup. Each
+workflow has its own model selection and can share a connection or use a
+different endpoint and credentials. Your servers
 can run locally, on another machine, or behind a compatible hosted deployment.
 
 For **Qwen3-ASR-1.7B**, including optional realtime microphone results and
@@ -66,10 +67,13 @@ Invoke-RestMethod http://127.0.0.1:8052/health
 Invoke-RestMethod http://127.0.0.1:8052/v1/models
 ```
 
-In Freehand, choose **vLLM**, base URL **`http://127.0.0.1:8052/v1`**,
-model **`Qwen/Qwen3-ASR-0.6B`**, authentication **None**, and allow local HTTP.
-Save, then test a short recording. Automatic language behavior depends on the
-model; explicit English is also available for an English test.
+In **Settings → Connections**, create a **vLLM** connection for
+**Voice transcription** with base URL **`http://127.0.0.1:8052/v1`**,
+authentication **None**, and **Allow HTTP for this connection** enabled.
+Save it, then select it in
+**Settings → Voice transcription** with model **`Qwen/Qwen3-ASR-0.6B`** and
+the **Qwen3-ASR** model profile. Leave realtime off for this completed-audio
+recipe. Save, then try a short recording with automatic detection or English.
 
 ```powershell
 docker stop freehand-vllm-stt
@@ -97,11 +101,13 @@ docker run --detach --name freehand-vllm-cleanup `
   --enforce-eager --no-async-scheduling --no-enable-log-requests
 ```
 
-Check `/health` and `/v1/models` at port **8053**. Enable Freehand
-post-processing with profile **vLLM**, base URL **`http://127.0.0.1:8053/v1`**,
-model **`superwhisper/s1-mini`**, authentication **None**, local HTTP allowed,
-and the **S1-mini** prompt preset. The preset forces reasoning off. The
-2,048-token context in this example is intended for short transcripts.
+Check `/health` and `/v1/models` at port **8053**. Create a **vLLM** connection
+for **Cleanup** with base URL **`http://127.0.0.1:8053/v1`**, authentication
+**None**, and **Allow HTTP for this connection** enabled. In **Settings → Cleanup**, select that
+connection, enable cleanup, and choose model **`superwhisper/s1-mini`** with
+the **S1-mini by Superwhisper** model profile. Save your changes. Freehand
+requests reasoning off for this profile. The 2,048-token context in this
+example is intended for short transcripts.
 
 ```powershell
 docker logs --tail 30 freehand-vllm-cleanup
@@ -111,19 +117,20 @@ docker start freehand-vllm-cleanup
 
 To change a container's launch options, stop and remove that named container,
 then repeat its `docker run` command with the new options. The named model
-volume remains. This workflow changes the server, not Freehand's saved
-credentials or connections.
+volume remains.
 
 ## Connect
 
 Use a Base URL ending in `/v1`, such as `http://127.0.0.1:8000/v1`, and the
 model ID advertised by that server. In **Settings → Connections**, create an
-entry with the **vLLM** profile and enable Transcription and/or Post-processing
-under **Used for**, according to the routes your deployment exposes. Set its URL,
+entry with the **vLLM** profile and enable **Voice transcription**,
+**Audio-file transcription**, or **Cleanup** under **Used for**, according to
+the routes your deployment exposes. Set its URL,
 authentication, and HTTP permission, then **Save connection**. Select that entry
-on its feature page, choose the model, and save feature settings. Connection
+on its feature page, choose the model and model profile, and save. Connection
 tests read `/models` beneath the base URL without inference.
-An explicit transcription health path retains the existing base-relative rules.
+If you configure a custom transcription health path, Freehand appends it to the
+base URL's path.
 
 On Windows, upstream recommends WSL for vLLM's Linux runtime;
 Freehand itself is a native Windows and macOS application. See the
@@ -141,16 +148,18 @@ compatibility. Keep these options in the server launch configuration.
 
 ## Transcription
 
-Microphone requests use completed `POST /audio/transcriptions` JSON. Files can
+With realtime off, microphone requests use `POST /audio/transcriptions` and
+return completed JSON. Files can
 use completed JSON or vLLM's server-sent transcription chunks. The file is
 uploaded once; streaming describes the arriving result, not realtime microphone
 transcription.
 
 Language, context (`prompt`), and optional temperature are supported request
-fields. v0.28.0's Whisper and Qwen3-ASR implementations consume the context;
-model-specific interpretation and language support still vary. Dedicated
-hotwords are not available with this profile. Sampling, VAD, translation,
-timestamp, and diarization options are not exposed.
+fields where the model profile supports them. v0.28.0's Whisper and Qwen3-ASR
+implementations use context; interpretation and language support vary by model.
+Shared vocabulary is appended to `prompt` for these models, rather than sent as
+a separate `hotwords` field. VAD, translation, timestamp, diarization, and
+sampling controls other than temperature are not available.
 
 A vLLM stream carries `object: "transcription.chunk"` and
 `choices[].delta.content`. Each server-side audio chunk can finish separately.
@@ -158,12 +167,12 @@ Freehand preserves deltas exactly and requires a successful final chunk plus
 `[DONE]` for the entire request. Length-limited or aborted chunks, malformed
 payloads, provider errors, and premature disconnects remain failures. Accepted
 partial text is available for manual recovery and never treated as a successful
-transcript for automatic cleanup. There is no automatic replay. Completed JSON
-returned to a streaming request uses the existing completed-result handling.
+transcript for automatic cleanup. Freehand does not automatically repeat the
+request. It also accepts completed JSON returned to a streaming request.
 
 Supported audio formats, upload ceilings, server-side audio splitting, and
-language behavior depend on the deployed vLLM/model combination. Existing
-Freehand file and response bounds still apply.
+language behavior depend on the deployed vLLM/model combination. Freehand's
+[file and response limits](../../reference/protocol/) also apply.
 
 ## Cleanup
 
@@ -171,17 +180,16 @@ Cleanup uses non-streaming `POST /chat/completions`, with the configured model,
 string system/user messages, and temperature zero.
 
 - Optional output limits send `max_tokens` (1–65,536). Off omits the field.
-- For **Custom instruction**, **Disable reasoning** optionally sends
+- For the **Generic** model profile, **Disable reasoning** optionally sends
   `reasoning_effort: "none"`.
-- **S1-mini requires reasoning off.** Its preset always sends that override
+- **S1-mini requires reasoning off.** Its model profile always sends that override
   through this profile, independently of the saved custom-model switch.
 - A compatible runtime and model template must honor the reasoning setting.
   Freehand does not rewrite arbitrary templates or infer support from model IDs.
 - Rejected requests, empty output, and `finish_reason: "length"` use the
-  existing raw-transcript fallback without retry.
+  raw-transcript fallback without retry.
 
-The fixed S1-mini instruction and trained controls remain unchanged. An output
-limit does not implement long-input chunking or enlarge the context window.
+An output limit does not split long transcripts or enlarge the context window.
 
 ## Server version
 

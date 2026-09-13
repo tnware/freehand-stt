@@ -4,21 +4,22 @@ description: Use Qwen3-ASR on vLLM for completed audio and optional realtime mic
 ---
 
 Choose **vLLM** for the connection and **Qwen3-ASR** for the model profile.
-They describe different things: vLLM supplies the server API; the explicit model
-profile provides Qwen's language and context controls. Freehand does not infer
-the profile from a model name or download models itself.
+The model profile enables Qwen's language and context controls. Select it
+yourself; Freehand does not infer it from a model name or download models.
 
 ## Connect Freehand
 
 1. Create a connection with backend **vLLM**, base URL such as
    `http://127.0.0.1:8089/v1`, and **Voice transcription** or **Audio-file transcription** enabled under **Used for**.
-   A local unauthenticated server uses **None** and requires permission for HTTP.
+   A local unauthenticated server uses **None** and requires
+   **Allow HTTP for this connection** to be enabled.
    Remote deployments use their own address and authentication.
 2. In **Voice → Transcription**, select that connection, check its model list,
    choose **Qwen/Qwen3-ASR-1.7B**, then choose the **Qwen3-ASR** model profile.
 3. Enable **Realtime transcription** inside this same panel for live results.
-   **Live overlay captions** shows the latest text in the existing single-row
-   overlay. Stop recording to finalize, optionally clean up, and safely insert.
+   **Live overlay captions** shows the latest text in the single-row overlay
+   when the main Overlay preference is also on. Stop recording to finalize,
+   optionally clean up, and safely insert.
 4. Turn realtime off for completed recordings and pause-aware checkpoints.
    Select the connection and model separately in **Audio file** to use files.
 
@@ -38,8 +39,8 @@ Metadata checks only read the server's health/model endpoints. These checks do n
 
 The model card lists 30 languages and Chinese dialect recognition. The vLLM
 0.28.0 language map supports only 28 matching explicit hints: Cantonese and
-Filipino must use automatic detection. Freehand does not substitute an
-unqualified Tagalog prompt. Dialects, translation, forced alignment, timestamps,
+Filipino must use automatic detection; do not substitute a Tagalog hint.
+Dialects, translation, forced alignment, timestamps,
 diarization, and model training have no controls in this profile.
 
 Context and vocabulary are recognition hints, not a chat instruction or a

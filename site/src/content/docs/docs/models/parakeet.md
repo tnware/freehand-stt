@@ -25,13 +25,13 @@ In Freehand:
 
 ## What appears in Freehand
 
-This pairing uses completed transcription. Voice retains its recording,
-checkpoint, cleanup, and insertion controls. Audio files retain their separate
-selection and explicit copy workflow.
+Microphone transcription completes when you stop recording or at a pause-aware
+checkpoint. You can use cleanup and focus-safe insertion as usual. Select the
+model separately for audio-file transcription, then copy the result when ready.
 
 The profile uses automatic language detection. It does not offer language hints,
-context, vocabulary boosting, temperature overrides, or the realtime toggle:
-those controls are not part of this model's NeMo-Speech.cpp API contract.
+context, vocabulary boosting, temperature overrides, or realtime microphone
+streaming with NeMo-Speech.cpp.
 Shared vocabulary remains saved for other compatible selections.
 
 This profile describes the **TDT v3** checkpoint. Parakeet CTC and RNNT variants

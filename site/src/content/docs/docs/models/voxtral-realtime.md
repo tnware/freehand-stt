@@ -19,6 +19,7 @@ vllm serve mistralai/Voxtral-Mini-4B-Realtime-2602
 2. In **Voice transcription**, choose the connection and the served model ID.
 3. Choose **Voxtral Mini Realtime** as the model profile.
 4. Enable **Realtime transcription** and optionally **Live overlay captions**.
+   Captions also require the main Overlay preference to be on. Save your changes.
 
 Freehand derives `/v1/realtime` from the same connection. The recording shortcut
 starts microphone streaming; provisional words appear in Current result and,
@@ -33,8 +34,8 @@ file uploads return completed text. This profile uses automatic language detecti
 and does not expose context, vocabulary, or temperature controls.
 
 Interrupted realtime sessions do not insert their provisional text. This profile
-is specifically for the Mini 4B Realtime checkpoint; other Voxtral variants have
-different contracts.
+is specifically for the Mini 4B Realtime checkpoint; do not select it for other
+Voxtral variants.
 
 See [vLLM's realtime example](https://docs.vllm.ai/en/v0.28.0/examples/speech_to_text/realtime/)
 for the server's microphone protocol.

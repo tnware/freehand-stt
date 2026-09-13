@@ -12,9 +12,9 @@ Freehand connects to infrastructure you choose. Start with the
 a guide below to get connected. For model-specific recognition, cleanup, and voice controls,
 visit the separate [model directory](../../models/) and [model profile guides](../models/).
 
-:::note[Development documentation]
-This directory follows the main branch. Your installed release may have fewer
-options. Each guide lists the features and server requirements for that profile.
+:::note[Version compatibility]
+Your installed release may have fewer options than these guides. Check each
+guide's server version and model requirements before configuring a connection.
 :::
 
 <div class="provider-guide-grid">
@@ -37,9 +37,8 @@ options. Each guide lists the features and server requirements for that profile.
 
 ## Run a backend
 
-Each provider page below is also listed under **Backend profiles** in the docs
-sidebar. The main site's **Backends** navigation opens the capability directory,
-whose cards link to these same guides.
+Choose a server for the operation you need. Freehand does not install or manage
+inference servers or model downloads.
 
 | Server                    | Launch instructions                                                                                             | Freehand operation                         |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
@@ -49,6 +48,7 @@ whose cards link to these same guides.
 | Kokoro-FastAPI            | [Docker CPU or GPU](./kokoro-fastapi/#run-kokoro-fastapi-with-docker)                                           | Speech playback with voice discovery       |
 | llama.cpp                 | [Native Windows server](./llama-cpp/#run-llamacpp-on-windows)                                                   | S1-mini or compatible custom cleanup       |
 | NeMo-Speech.cpp           | [Runtime installation](./nemo-speech/#run-the-server)                                                           | Completed and live transcription           |
+| vLLM-Omni                | [Qwen3-TTS serving guide](./vllm-omni/#run-the-server)                                                         | Text to speech with preset voices          |
 | Generic OpenAI-compatible | [Connect an existing endpoint](./generic/)                                                                      | The operations implemented by your server  |
 
 These local examples use PowerShell and loopback ports. Docker recipes require
@@ -58,7 +58,8 @@ if `docker run --gpus ...` cannot access the card. First use downloads the image
 and the selected model. Model weights stay in the recipe's folder or named
 volume when a container stops.
 
-Each recipe includes stop and restart commands. If you run several models on
+The launch examples include stop and restart commands; guides that link to
+upstream setup use that runtime's instructions. If you run several models on
 one GPU, leave enough memory for each or stop an unused server first.
 
 For a remote or hosted server, use the same profile with the administrator's
@@ -83,13 +84,15 @@ Freehand remembers those options for each connection and model.
 
 ## Beyond the current contract
 
-Optional transcription context and temperature are available through Generic
-and the qualified Speaches, whisper.cpp, and vLLM transcription profiles, with hotwords through Speaches. Language selection is documented in the [language guide](../guides/languages/). Translation, timestamps, diarization, voice
-instructions, reference-audio inputs, and progressive speech playback need
-explicit client support and model qualifications. Selecting a provider profile
-does not enable those features automatically.
+Transcription context and temperature depend on the selected backend and model
+profile. [Vocabulary](../guides/vocabulary/) supplies recognition terms through
+the supported request fields. See the [language guide](../guides/languages/)
+for language selection.
+
+Voice-style instructions are available with [Qwen3-TTS](../models/qwen3-tts/)
+on vLLM-Omni. Translation, timestamps, diarization, reference-audio inputs, and
+progressive speech playback are not available. A server may offer these features
+without Freehand exposing them.
 
 Use the [protocol reference](../reference/protocol/) for exact request fields
-and safety limits. Contributors should follow the
-[catalog maintenance process](../development/backend-compatibility/) when adding
-a profile, capability, or new validation evidence.
+and safety limits.

@@ -39,14 +39,14 @@ const editorial = [
     summary: "A dedicated profile for OpenAI's hosted service and model-specific rules.",
     guide: "/docs/backends/planned/#openai-hosted",
     highlight: "Planned integration",
-    detail: "Qualify model-specific fields, limits, and response formats.",
+    detail: "Not yet available. Compatibility through Generic depends on the selected model's request options, limits, and response format.",
   },
   {
     id: "localai",
-    summary: "An operation-aware profile for LocalAI's different inference backends.",
+    summary: "A planned profile for transcription, cleanup, and speech through LocalAI.",
     guide: "/docs/backends/planned/#localai",
     highlight: "Planned integration",
-    detail: "Qualify the selected backend's request fields, streaming, and audio output.",
+    detail: "Not yet available. Compatibility through Generic depends on your LocalAI backend's request options, streaming support, and audio format.",
   },
   {
     id: "whisper-cpp",
@@ -61,11 +61,11 @@ const editorial = [
     guide: "/docs/backends/vllm/",
     highlight: "Qwen, Cohere, and Voxtral",
     detail:
-      "Use the Qwen3-ASR model profile for live dictation, or choose completed transcription, streaming file results, and optional cleanup.",
+      "Use Qwen3-ASR or Voxtral Mini Realtime for live dictation. Completed transcription, streamed file results, and cleanup depend on the selected model profile.",
   },
   {
     id: "vllm-omni",
-    summary: "A speech playback profile with explicit model and voice requirements.",
+    summary: "Generate speech with Qwen3-TTS preset voices, languages, and style instructions.",
     guide: "/docs/backends/vllm-omni/",
     highlight: "Qwen3-TTS voice and style",
     detail:
@@ -84,7 +84,7 @@ const editorial = [
     summary: "A speech profile for endpoints with server-configured voice aliases.",
     guide: "/docs/backends/planned/#openedai-speech",
     highlight: "Planned integration",
-    detail: "Qualify the voice configuration and the returned audio encoding.",
+    detail: "Not yet available. Compatibility through Generic requires a supported voice ID and PCM16 WAV output from the server.",
   },
 ];
 
