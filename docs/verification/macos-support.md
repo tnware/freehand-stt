@@ -9,6 +9,21 @@ acceptance. No push, pull request, release publication, or remote CI run was mad
 
 Working branch: `feat/macos-support`.
 
+## Manual-testing checkpoint: focus issue remains open
+
+The user initially reported that everything seemed to work, then clarified:
+“except the focus thing actually, seems to always think focus changed.”
+Testing is continuing; this is not full acceptance or authorization to push.
+
+- **Open defect:** reported repeated focus-changed rejection during native
+  insertion. Root cause is not yet established; automated fixture passes do not
+  disprove this runtime report.
+- The exact target application, trigger sequence, and displayed error have not
+  yet been captured. Investigate with a targeted reproduction and privacy-safe
+  focus/identity diagnostics before changing the fail-closed insertion policy.
+- Implementation and packaged binaries are unchanged at this checkpoint.
+  Existing automated/build evidence below remains separate from manual results.
+
 ## Implemented boundaries
 
 - CoreAudio capture/playback; explicit device selection, cancellation-aware
