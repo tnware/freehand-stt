@@ -45,6 +45,55 @@ func (q *Queries) DeleteSavedConnection(ctx context.Context, id string) error {
 	return err
 }
 
+const getSelectedConnectionDetails = `-- name: GetSelectedConnectionDetails :many
+SELECT s.purpose, c.id, c.name, c.compatibility_profile, c.base_url, c.allow_insecure_http, c.authentication_mode, c.health_path, c.credential_account FROM selected_connections s JOIN saved_connections c ON c.id=s.connection_id ORDER BY s.purpose
+`
+
+type GetSelectedConnectionDetailsRow struct {
+	Purpose              string
+	ID                   string
+	Name                 string
+	CompatibilityProfile string
+	BaseUrl              string
+	AllowInsecureHttp    int64
+	AuthenticationMode   string
+	HealthPath           string
+	CredentialAccount    string
+}
+
+func (q *Queries) GetSelectedConnectionDetails(ctx context.Context) ([]GetSelectedConnectionDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSelectedConnectionDetails)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetSelectedConnectionDetailsRow{}
+	for rows.Next() {
+		var i GetSelectedConnectionDetailsRow
+		if err := rows.Scan(
+			&i.Purpose,
+			&i.ID,
+			&i.Name,
+			&i.CompatibilityProfile,
+			&i.BaseUrl,
+			&i.AllowInsecureHttp,
+			&i.AuthenticationMode,
+			&i.HealthPath,
+			&i.CredentialAccount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listConnectionHeaders = `-- name: ListConnectionHeaders :many
 SELECT connection_id,name,value FROM saved_connection_headers ORDER BY connection_id,name LIMIT 4097
 `
@@ -218,78 +267,6 @@ func (q *Queries) PutSavedConnection(ctx context.Context, arg PutSavedConnection
 		arg.HealthPath,
 		arg.CredentialAccount,
 	)
-	return err
-}
-
-const seedCleanupConnection = `-- name: SeedCleanupConnection :exec
-INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) SELECT 'initial-cleanup','Post-processing',s.compatibility_profile,s.base_url,s.allow_insecure_http,CASE WHEN c.account<>'' THEN 'api-key' ELSE 'none' END,'',c.account FROM cleanup_settings s JOIN credential_refs c ON c.purpose='cleanup' WHERE s.base_url <> '' AND NOT EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-cleanup')
-`
-
-func (q *Queries) SeedCleanupConnection(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, seedCleanupConnection)
-	return err
-}
-
-const seedConnectionHeaders = `-- name: SeedConnectionHeaders :exec
-INSERT INTO saved_connection_headers(connection_id,name,value) SELECT 'initial-stt',name,value FROM request_headers WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT(connection_id,name) DO NOTHING
-`
-
-func (q *Queries) SeedConnectionHeaders(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, seedConnectionHeaders)
-	return err
-}
-
-const seedConnectionUses = `-- name: SeedConnectionUses :exec
-INSERT INTO saved_connection_uses(connection_id,purpose) SELECT id,CASE id WHEN 'initial-stt' THEN 'stt' WHEN 'initial-cleanup' THEN 'cleanup' ELSE 'speech' END FROM saved_connections WHERE id IN ('initial-stt','initial-cleanup','initial-speech') ON CONFLICT DO NOTHING
-`
-
-func (q *Queries) SeedConnectionUses(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, seedConnectionUses)
-	return err
-}
-
-const seedSelectedConnections = `-- name: SeedSelectedConnections :exec
-INSERT INTO selected_connections(purpose,connection_id) SELECT purpose,connection_id FROM saved_connection_uses WHERE connection_id IN ('initial-stt','initial-cleanup','initial-speech') ON CONFLICT(purpose) DO NOTHING
-`
-
-func (q *Queries) SeedSelectedConnections(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, seedSelectedConnections)
-	return err
-}
-
-const seedSpeechConnection = `-- name: SeedSpeechConnection :exec
-INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) SELECT 'initial-speech','Speech playback',s.compatibility_profile,s.base_url,s.allow_insecure_http,s.authentication_mode,'',c.account FROM speech_settings s JOIN credential_refs c ON c.purpose='speech' WHERE s.base_url <> '' AND NOT EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-speech')
-`
-
-func (q *Queries) SeedSpeechConnection(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, seedSpeechConnection)
-	return err
-}
-
-const seedTranscriptionConnection = `-- name: SeedTranscriptionConnection :exec
-INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) SELECT 'initial-stt','Transcription',s.compatibility_profile,s.base_url,s.allow_insecure_http,s.authentication_mode,s.health_path,c.account FROM transcription_settings s JOIN credential_refs c ON c.purpose='stt' WHERE s.base_url <> '' AND NOT EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt')
-`
-
-func (q *Queries) SeedTranscriptionConnection(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, seedTranscriptionConnection)
-	return err
-}
-
-const seedVoiceSelection = `-- name: SeedVoiceSelection :exec
-INSERT INTO selected_connections(purpose,connection_id) SELECT 'voice','initial-stt' WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT DO NOTHING
-`
-
-func (q *Queries) SeedVoiceSelection(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, seedVoiceSelection)
-	return err
-}
-
-const seedVoiceUse = `-- name: SeedVoiceUse :exec
-INSERT INTO saved_connection_uses(connection_id,purpose) SELECT 'initial-stt','voice' WHERE EXISTS(SELECT 1 FROM saved_connections WHERE id='initial-stt') ON CONFLICT DO NOTHING
-`
-
-func (q *Queries) SeedVoiceUse(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, seedVoiceUse)
 	return err
 }
 

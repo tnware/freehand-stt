@@ -1,19 +1,12 @@
 package config
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"reflect"
 	"regexp"
-	"sort"
 	"strings"
-	"sync"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/hotkey"
@@ -31,8 +24,6 @@ const (
 	MaxPromptBytes        = 8 * 1024
 	MaxTTSInputBytes      = 256 * 1024
 	MaxTTSInputCharacters = 4096
-	MaxSettingsFileBytes  = 1 << 20
-	MaxReportedFields     = 16
 
 	MinRequestTimeoutSeconds               = 10
 	MaxRequestTimeoutSeconds               = 3600
@@ -171,8 +162,7 @@ type PostProcessingSettings struct {
 	BaseURL              string           `json:"baseURL"`
 	AllowInsecureHTTP    bool             `json:"allowInsecureHTTP"`
 	Model                string           `json:"model"`
-	// Preset is the cleanup model-profile ID. Keep the persisted/wire key so
-	// existing alpha settings and legacy JSON imports retain their selection.
+	// Preset selects the cleanup model profile and its supported behavior.
 	Preset         PostProcessingPreset `json:"preset"`
 	SystemPrompt   string               `json:"systemPrompt"`
 	Styling        string               `json:"styling"`
@@ -256,7 +246,7 @@ type Settings struct {
 	PostProcessing                  PostProcessingSettings     `json:"postProcessing"`
 	TextToSpeech                    TextToSpeechSettings       `json:"textToSpeech"`
 
-	TranscriptionOptions compatibility.TranscriptionOptions `json:"transcriptionOptions"`
+	TranscriptionOptions TranscriptionOptions `json:"transcriptionOptions"`
 }
 
 func Default() Settings {
@@ -348,7 +338,7 @@ func Validate(s Settings) error {
 	default:
 		return fieldError("appearanceMode", "Choose system, light, or dark appearance mode.", errors.New("appearance mode is invalid"))
 	}
-	if err := modelprofile.ValidateTranscription(s.ModelProfile, s.CompatibilityProfile, s.Language, s.TranscriptionOptions); err != nil {
+	if err := modelprofile.ValidateTranscription(s.ModelProfile, s.CompatibilityProfile, s.Language, s.TranscriptionOptions.Inference()); err != nil {
 		return fieldError("modelProfile", "Choose a compatible transcription model profile, language, and options.", err)
 	}
 	if err := speechlanguage.Validate(s.Language); err != nil {
@@ -734,166 +724,12 @@ type LoadFailure struct {
 	Message string `json:"message"`
 }
 
-type LoadReport struct {
-	PreservedFieldCount int      `json:"preservedFieldCount"`
-	PreservedFields     []string `json:"preservedFields"`
-}
-
-type loadError struct {
-	failure LoadFailure
-	cause   error
-}
-
-func (e *loadError) Error() string { return e.failure.Message }
-func (e *loadError) Unwrap() error { return e.cause }
-
+// LoadFailureFor keeps classified database errors renderer-safe and masks
+// unclassified causes, which may contain paths or driver diagnostics.
 func LoadFailureFor(err error) LoadFailure {
 	var classified interface{ ConfigurationFailure() LoadFailure }
 	if errors.As(err, &classified) {
 		return classified.ConfigurationFailure()
 	}
-	var loadErr *loadError
-	if errors.As(err, &loadErr) {
-		return loadErr.failure
-	}
 	return LoadFailure{Kind: "unavailable", Message: "The saved configuration could not be loaded."}
-}
-
-func newLoadError(kind, message string, cause error) error {
-	return &loadError{failure: LoadFailure{Kind: kind, Message: message}, cause: cause}
-}
-
-// LegacyReader is the bounded, read-only importer for pre-SQLite settings.
-type LegacyReader struct {
-	Path string
-
-	mu     sync.Mutex
-	report LoadReport
-}
-
-func (s *LegacyReader) Load() (Settings, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.report = LoadReport{}
-	v := Default()
-	f, e := os.Open(s.Path)
-	if os.IsNotExist(e) {
-		return v, nil
-	}
-	if e != nil {
-		return Default(), newLoadError("unreadable", "The saved configuration could not be read.", e)
-	}
-	b, readErr := io.ReadAll(io.LimitReader(f, MaxSettingsFileBytes+1))
-	closeErr := f.Close()
-	if readErr != nil {
-		return Default(), newLoadError("unreadable", "The saved configuration could not be read.", readErr)
-	}
-	if closeErr != nil {
-		return Default(), newLoadError("unreadable", "The saved configuration could not be closed after reading.", closeErr)
-	}
-	if len(b) > MaxSettingsFileBytes {
-		return Default(), newLoadError("too_large", fmt.Sprintf("The settings file exceeds the %d KiB safety limit.", MaxSettingsFileBytes/1024), nil)
-	}
-	d := json.NewDecoder(bytes.NewReader(b))
-	if e = d.Decode(&v); e != nil {
-		return Default(), newLoadError("invalid_json", jsonLoadFailureMessage(e), e)
-	}
-	var trailing any
-	if e = d.Decode(&trailing); !errors.Is(e, io.EOF) {
-		return Default(), newLoadError("invalid_json", "The settings file contains content after the configuration object.", e)
-	}
-	if e = Validate(v); e != nil {
-		return Default(), newLoadError("invalid_values", "A saved setting is invalid: "+e.Error()+".", e)
-	}
-	var document map[string]json.RawMessage
-	if e = json.Unmarshal(b, &document); e != nil || document == nil {
-		return Default(), newLoadError("invalid_json", "The settings file must contain one JSON object.", e)
-	}
-	s.report = loadReport(document, reflect.TypeOf(v))
-	return v, nil
-}
-
-func (s *LegacyReader) LoadReport() LoadReport {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return LoadReport{
-		PreservedFieldCount: s.report.PreservedFieldCount,
-		PreservedFields:     append([]string(nil), s.report.PreservedFields...),
-	}
-}
-
-func jsonLoadFailureMessage(err error) string {
-	var typeErr *json.UnmarshalTypeError
-	if errors.As(err, &typeErr) && typeErr.Field != "" {
-		return fmt.Sprintf("The saved value for %q has the wrong type.", typeErr.Field)
-	}
-	var syntaxErr *json.SyntaxError
-	if errors.As(err, &syntaxErr) {
-		return fmt.Sprintf("The settings file contains invalid JSON near byte %d.", syntaxErr.Offset)
-	}
-	return "The settings file is not valid JSON."
-}
-
-func unknownFieldPaths(document map[string]json.RawMessage, valueType reflect.Type, prefix string) []string {
-	known := make(map[string]reflect.Type)
-	for index := 0; index < valueType.NumField(); index++ {
-		field := valueType.Field(index)
-		if name := jsonFieldName(field); name != "" {
-			known[name] = field.Type
-		}
-	}
-	paths := make([]string, 0)
-	for name, raw := range document {
-		path := name
-		if prefix != "" {
-			path = prefix + "." + name
-		}
-		fieldType, found := known[name]
-		if !found {
-			paths = append(paths, safeSettingsPath(path))
-			continue
-		}
-		if fieldType.Kind() == reflect.Struct {
-			var child map[string]json.RawMessage
-			if json.Unmarshal(raw, &child) == nil {
-				paths = append(paths, unknownFieldPaths(child, fieldType, path)...)
-			}
-		}
-	}
-	sort.Strings(paths)
-	return paths
-}
-
-func loadReport(document map[string]json.RawMessage, valueType reflect.Type) LoadReport {
-	paths := unknownFieldPaths(document, valueType, "")
-	report := LoadReport{PreservedFieldCount: len(paths), PreservedFields: paths}
-	if len(report.PreservedFields) > MaxReportedFields {
-		report.PreservedFields = append([]string(nil), report.PreservedFields[:MaxReportedFields]...)
-	}
-	return report
-}
-
-func jsonFieldName(field reflect.StructField) string {
-	tag := strings.Split(field.Tag.Get("json"), ",")[0]
-	if tag == "-" {
-		return ""
-	}
-	if tag != "" {
-		return tag
-	}
-	return field.Name
-}
-
-func safeSettingsPath(path string) string {
-	if len(path) > 128 {
-		return "unrecognized setting"
-	}
-	for _, character := range path {
-		if (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
-			(character >= '0' && character <= '9') || character == '.' || character == '_' || character == '-' {
-			continue
-		}
-		return "unrecognized setting"
-	}
-	return path
 }

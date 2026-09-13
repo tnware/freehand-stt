@@ -104,25 +104,24 @@ replace your settings with defaults.
   and available disk space, then choose **Retry loading**.
 - **Newer database:** update Freehand to a compatible version. Older builds do
   not downgrade a newer settings database.
-- **Older Windows settings could not be imported:** Freehand leaves
-  `%APPDATA%\Freehand\settings.json` unchanged. Correct the reported value or use
-  a compatible version, then retry. Once `settings.db` exists, editing the old
-  JSON file no longer changes your settings.
 - **Reset:** choose **Reset to defaults** only when you want a fresh setup.
   Freehand archives an existing database and its sidecars in a
-  `settings-recovery-*` folder, then starts with safe defaults. Native credentials
-  are not deleted, but keys may need entering again if their references could
-  not be recovered.
+  `freehand-recovery-*` folder, then starts with safe defaults. Native credentials
+  are not automatically purged. Reconfigure your connections and enter keys again.
 
-To restore a database backup:
+Earlier alpha settings are not imported. If your connections are missing after
+upgrading, follow the [first-launch reset notice](../../getting-started/#first-launch).
+Do not rename an old alpha database to use it with this version.
+
+To restore a backup made by this new settings lineage:
 
 1. **Quit Freehand from the tray or macOS menu bar.** Closing a window alone leaves it running.
 2. Open `%LOCALAPPDATA%\Freehand` in File Explorer (Windows), or
-   `~/Library/Application Support/Freehand` using Finder → Go to Folder (macOS). Copy `settings.db` and any
-   matching `settings.db-journal`, `settings.db-wal`, or `settings.db-shm` files
+   `~/Library/Application Support/Freehand` using Finder → Go to Folder (macOS). Copy `freehand.db` and any
+   matching `freehand.db-journal`, `freehand.db-wal`, or `freehand.db-shm` files
    together into a separate recovery folder before removing them from this folder.
-3. Copy a known-good `.db` file from `backups` into the Freehand folder and name
-   the copy `settings.db`. Keep the original backup. Do not mix old sidecars with
+3. Copy a known-good `.db` file from `freehand-backups` into the Freehand folder and name
+   the copy `freehand.db`. Keep the original backup. Do not mix old sidecars with
    the restored database.
 4. Reopen Freehand and review settings and authentication. Backups contain
    configuration, not keys; replaced keys may need entering again.

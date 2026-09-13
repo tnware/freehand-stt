@@ -3,6 +3,11 @@ title: "ADR 0012: Explicit speech family contracts"
 description: Extend existing transcription transports and add Qwen3-TTS speech options without conflating models and backends.
 ---
 
+> Storage policy superseded by [ADR 0014](../0014-clean-settings-baseline/):
+> the alpha migration chain, JSON import, and historical-field compatibility
+> described below are historical, not supported upgrade paths. Current settings
+> start in a distinct `freehand.db` lineage; other product decisions remain intact.
+
 - Status: Accepted
 - Date: 2026-09-08
 - Extends: ADRs 0007, 0009, and 0011; preserves the remote-first boundary.

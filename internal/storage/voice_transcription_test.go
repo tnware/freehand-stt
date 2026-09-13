@@ -1,64 +1,53 @@
 package storage
 
 import (
-	"github.com/tnware/freehand-stt/internal/config"
+	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"reflect"
 	"testing"
 )
 
-func TestVersionEightUpgradeSelectsOneVoiceProvider(t *testing.T) {
-	for _, live := range []bool{false, true} {
-		t.Run(map[bool]string{false: "completed", true: "realtime"}[live], func(t *testing.T) {
+func TestCurrentVoiceAndFileSelectionsAreIndependent(t *testing.T) {
+	for _, realtime := range []bool{false, true} {
+		t.Run(map[bool]string{false: "completed", true: "realtime"}[realtime], func(t *testing.T) {
 			s := testStore(t)
-			initial := config.Default()
-			initial.BaseURL = "https://file.example.test/v1"
-			initial.Model = "file-model"
-			initial.Language = "de"
-			initial.Headers["X-Route"] = "file"
-			writeLegacy(t, s, initial)
-			before := loadStore(t, s)
-			// Reconstruct the retained v8 layout and configured realtime slot, then let
-			// normal startup apply v9 with backup, integrity, and domain validation.
-			old, err := embeddedMigrations.ReadFile("migrations/00008_realtime.sql")
-			if err != nil {
+			v := loadStore(t, s)
+			d := savedconnection.Extract(v, savedconnection.Transcription)
+			d.BaseURL = "https://file.example.test/v1"
+			d.Headers["X-Route"] = "file"
+			v = createSelectedConnection(t, s, v, "Files", savedconnection.Transcription, d)
+			v.Model = "file-model"
+			v.Language = "de"
+			if err := s.Save(v); err != nil {
 				t.Fatal(err)
 			}
-			_, err = s.db.Exec(`ALTER TABLE speech_settings DROP COLUMN speech_language; ALTER TABLE speech_settings DROP COLUMN speech_instructions; ALTER TABLE remembered_models DROP COLUMN speech_language; ALTER TABLE remembered_models DROP COLUMN speech_instructions; DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers;
-   DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DELETE FROM remembered_models WHERE purpose='voice';` + string(old) + `DELETE FROM goose_db_version WHERE version_id>=9;
-   INSERT INTO saved_connections(id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account) VALUES('live-fixture','Live fixture','nemo-speech-v1','https://live.example.test/v1',0,'none','','');
-   INSERT INTO saved_connection_uses VALUES('live-fixture','realtime'); INSERT INTO selected_connections VALUES('realtime','live-fixture');
-   UPDATE realtime_settings SET base_url='https://live.example.test/v1',model='live-model',language='fr-FR',vocabulary='Freehand',boost=2.5;
-   INSERT INTO remembered_models(connection_id,purpose,model,selected,profile,language,vocabulary,boost) VALUES('live-fixture','realtime','live-model',1,'nemotron-3.5-streaming','fr-FR','Freehand',2.5);`)
-			if err != nil {
-				t.Fatal(err)
+			before := v
+			d = savedconnection.Extract(v, savedconnection.Voice)
+			d.BaseURL = "https://voice.example.test/v1"
+			if realtime {
+				d.CompatibilityProfile = compatibility.NeMoSpeechV1
 			}
-			if live {
-				if _, err = s.db.Exec(`UPDATE realtime_settings SET enabled=1`); err != nil {
-					t.Fatal(err)
-				}
+			v = createSelectedConnection(t, s, v, "Voice", savedconnection.Voice, d)
+			v.VoiceTranscription.Model = "voice-model"
+			if realtime {
+				v.VoiceTranscription.ModelProfile = modelprofile.Nemotron35
+			}
+			v.VoiceTranscription.Realtime = realtime
+			v.VoiceTranscription.Language = "auto"
+			if err := s.Save(v); err != nil {
+				t.Fatal(err)
 			}
 			s = reopen(t, s)
 			got := loadStore(t, s)
-			if got.BaseURL != before.BaseURL || got.Model != before.Model || !reflect.DeepEqual(got.Headers, before.Headers) {
-				t.Fatal("migration changed audio-file selection")
+			if !reflect.DeepEqual(got, v) {
+				t.Fatalf("voice selection did not survive restart: got %#v want %#v", got.VoiceTranscription, v.VoiceTranscription)
 			}
-			selected := s.ConnectionCatalog().Selected[savedconnection.Voice]
-			if live {
-				if !got.SetupCompleted || !got.VoiceTranscription.Realtime || got.VoiceTranscription.Model != "live-model" || got.VoiceTranscription.Language != "fr-FR" || got.Vocabulary.Terms != "Freehand" || selected != "live-fixture" {
-					t.Fatal("migration lost active realtime selection")
-				}
-			} else if !reflect.DeepEqual(got.VoiceTranscription, config.VoiceFromCompleted(before)) || selected != s.ConnectionCatalog().Selected[savedconnection.Transcription] {
-				t.Fatal("migration lost completed microphone configuration")
+			if got.BaseURL != before.BaseURL || got.Model != before.Model || got.Language != before.Language || !reflect.DeepEqual(got.Headers, before.Headers) {
+				t.Fatal("voice selection changed file task")
 			}
-			found := false
-			for _, e := range s.connections.models {
-				if e.Purpose == savedconnection.Voice && e.Model == "live-model" {
-					found = true
-				}
-			}
-			if !found {
-				t.Fatal("inactive realtime model choices were discarded")
+			if s.ConnectionCatalog().Selected[savedconnection.Voice] == s.ConnectionCatalog().Selected[savedconnection.Transcription] {
+				t.Fatal("distinct tasks share wrong selection")
 			}
 		})
 	}

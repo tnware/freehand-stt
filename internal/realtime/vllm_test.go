@@ -109,10 +109,9 @@ func testVLLMProtocol(t *testing.T, profile modelprofile.ID) {
 			cfg.CompatibilityProfile = compatibility.VLLM
 			cfg.ModelProfile = profile
 			cfg.Language = "auto"
-			cfg.Options = modelprofile.NemotronOptions{}
 			// Completed hints are saved but must never leak into realtime messages.
 			if profile == modelprofile.Qwen3ASR {
-				cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "private context", TemperatureOverride: true, Temperature: .3}
+				cfg.TranscriptionOptions = config.TranscriptionOptions{Prompt: "private context", TemperatureOverride: true, Temperature: .3}
 			}
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()

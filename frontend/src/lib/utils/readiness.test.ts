@@ -48,7 +48,6 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   },
   transcriptionOptions: {
     prompt: "",
-    hotwords: "",
     temperatureOverride: false,
     temperature: 0,
   },
@@ -77,8 +76,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     timeoutSeconds: 120,
     transcriptionOptions: {
       prompt: "",
-      hotwords: "",
-      temperatureOverride: false,
+        temperatureOverride: false,
       temperature: 0,
     },
     compatibilityProfile: overrides.compatibilityProfile ?? ID.Generic,
@@ -91,7 +89,6 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     model: overrides.model ?? "speech/stt",
     language: "auto",
     captions: true,
-    options: { vocabulary: "", boost: 0 },
   },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
@@ -167,7 +164,6 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   },
   configuration: {
     recoveryRequired: false,
-    preservedFields: [],
   },
   credentialConfigured: true,
   postProcessingCredentialConfigured: false,

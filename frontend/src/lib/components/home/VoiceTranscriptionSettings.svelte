@@ -62,13 +62,8 @@
       language,
       modelProfile: selected.id,
       realtime: cfg.realtime && selected.capabilities.realtime,
-      options:
-        selected.id === ID.Nemotron35
-          ? { vocabulary: "", boost: 3 }
-          : { vocabulary: "", boost: 0 },
       transcriptionOptions: {
         prompt: "",
-        hotwords: "",
         temperatureOverride: false,
         temperature: 0,
       },

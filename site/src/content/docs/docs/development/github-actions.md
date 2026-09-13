@@ -97,7 +97,9 @@ and macOS; packaging and cross-compilation do not certify hardware behavior.
 ## Storage enforcement
 
 The storage job runs the pinned sqlc command, rejects stale or untracked generated
-queries, compares existing migrations against the PR base (or previous main
-revision), and checks import/query ownership. Real SQLite tests cover migrations,
+queries, compares published `internal/storage/schema/` migrations against the PR
+base (or previous main revision), and checks import/query ownership. ADR 0014
+permits an alpha-only base to introduce the new lineage, not to mutate a
+published new-baseline migration. Real SQLite tests cover migrations,
 recovery, constraints, and file locking; fixtures never use personal settings or
 credentials. See [SQLite storage](../storage/) for the matching local commands.

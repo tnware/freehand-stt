@@ -5,6 +5,7 @@ package storage
 import (
 	"errors"
 	"github.com/tnware/freehand-stt/internal/config"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/settings"
 	"reflect"
 	"testing"
@@ -25,14 +26,18 @@ func (f *fixtureStartup) Set(v bool) error {
 
 func TestSettingsServiceUsesCommittedSQLiteAndCredentialSnapshot(t *testing.T) {
 	s := testStore(t)
-	initial := config.Default()
+	initial := loadStore(t, s)
 	initial.BaseURL = "https://example.test/v1"
 	initial.Model = "fixture"
 	initial.AuthenticationMode = config.AuthenticationModeAPIKey
-	writeLegacy(t, s, initial)
-	initial = loadStore(t, s)
+	d := savedconnection.Extract(initial, savedconnection.Transcription)
+	initial = createSelectedConnection(t, s, loadStore(t, s), "Transcription", savedconnection.Transcription, d)
+	initial.Model = "fixture"
+	if err := s.Save(initial); err != nil {
+		t.Fatal(err)
+	}
 	startup := &fixtureStartup{}
-	service := settings.NewService(s, initial, s.STTCredentials(), s.CleanupCredentials(), startup, func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil, config.LoadReport{}))
+	service := settings.NewService(s, initial, s.STTCredentials(), s.CleanupCredentials(), startup, func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil))
 	defer service.ServiceShutdown()
 	next := initial
 	next.BaseURL = "https://example.test/v1"
@@ -91,7 +96,7 @@ func TestUncertainCommitBlocksJobsAndPublishesRecovery(t *testing.T) {
 	initial := loadStore(t, s)
 	startup := &fixtureStartup{}
 	var published settings.SettingsDTO
-	service := settings.NewService(s, initial, s.STTCredentials(), s.CleanupCredentials(), startup, func() (bool, string) { return true, "" }, nil, nil, nil, nil, func(v settings.SettingsDTO) { published = v }, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil, config.LoadReport{}))
+	service := settings.NewService(s, initial, s.STTCredentials(), s.CleanupCredentials(), startup, func() (bool, string) { return true, "" }, nil, nil, nil, nil, func(v settings.SettingsDTO) { published = v }, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil))
 	defer service.ServiceShutdown()
 	if _, err := s.db.Exec(`CREATE TABLE fixture_deferred(id INTEGER REFERENCES preferences_settings(id) DEFERRABLE INITIALLY DEFERRED); CREATE TRIGGER fixture_commit_failure AFTER UPDATE ON cleanup_settings BEGIN INSERT INTO fixture_deferred VALUES(2); END;`); err != nil {
 		t.Fatal(err)

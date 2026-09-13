@@ -2,11 +2,11 @@ package storage
 
 import (
 	"context"
-	"sort"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/storage/dbgen"
 )
 
@@ -21,17 +21,8 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 		return err
 	}
 	r := v.VoiceTranscription
-	if err := q.PutVoiceTranscription(ctx, dbgen.PutVoiceTranscriptionParams{Realtime: boolean(r.Realtime), CompatibilityProfile: string(r.CompatibilityProfile), ModelProfile: string(r.ModelProfile), BaseUrl: r.BaseURL, AllowInsecureHttp: boolean(r.AllowInsecureHTTP), AuthenticationMode: string(r.AuthenticationMode), Model: r.Model, Language: r.Language, Captions: boolean(r.Captions), Vocabulary: r.Options.Vocabulary, Boost: r.Options.Boost, HealthPath: r.HealthPath, TimeoutSeconds: int64(r.TimeoutSeconds), Prompt: r.TranscriptionOptions.Prompt, Hotwords: r.TranscriptionOptions.Hotwords, TemperatureOverride: boolean(r.TranscriptionOptions.TemperatureOverride), Temperature: r.TranscriptionOptions.Temperature}); err != nil {
+	if err := q.PutVoiceTranscription(ctx, dbgen.PutVoiceTranscriptionParams{Realtime: boolean(r.Realtime), ModelProfile: string(r.ModelProfile), Model: r.Model, Language: r.Language, Captions: boolean(r.Captions), TimeoutSeconds: int64(r.TimeoutSeconds), Prompt: r.TranscriptionOptions.Prompt, TemperatureOverride: boolean(r.TranscriptionOptions.TemperatureOverride), Temperature: r.TranscriptionOptions.Temperature}); err != nil {
 		return err
-	}
-
-	if err := q.ClearVoiceHeaders(ctx); err != nil {
-		return err
-	}
-	for name, value := range r.Headers {
-		if err := q.PutVoiceHeader(ctx, dbgen.PutVoiceHeaderParams{Name: name, Value: value}); err != nil {
-			return err
-		}
 	}
 
 	if err := q.PutPreferences(ctx, dbgen.PutPreferencesParams{
@@ -75,17 +66,11 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 	}
 	if err := q.PutTranscription(ctx, dbgen.PutTranscriptionParams{
 		ModelProfile:                            string(modelprofile.Effective(v.ModelProfile)),
-		CompatibilityProfile:                    string(v.CompatibilityProfile),
-		BaseUrl:                                 v.BaseURL,
-		AllowInsecureHttp:                       boolean(v.AllowInsecureHTTP),
-		AuthenticationMode:                      string(v.AuthenticationMode),
 		Model:                                   v.Model,
 		Language:                                v.Language,
-		HealthPath:                              v.HealthPath,
 		TranscriptionTimeoutSeconds:             int64(v.TranscriptionTimeoutSeconds),
 		FileTranscriptionTimeoutSeconds:         int64(v.FileTranscriptionTimeoutSeconds),
 		TranscriptionOptionsPrompt:              v.TranscriptionOptions.Prompt,
-		TranscriptionOptionsHotwords:            v.TranscriptionOptions.Hotwords,
 		TranscriptionOptionsTemperatureOverride: boolean(v.TranscriptionOptions.TemperatureOverride),
 		TranscriptionOptionsTemperature:         v.TranscriptionOptions.Temperature,
 	}); err != nil {
@@ -95,10 +80,7 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 		GenerationOptionsLimitOutputTokens: boolean(v.PostProcessing.GenerationOptions.LimitOutputTokens),
 		GenerationOptionsMaxOutputTokens:   int64(v.PostProcessing.GenerationOptions.MaxOutputTokens),
 		GenerationOptionsDisableReasoning:  boolean(v.PostProcessing.GenerationOptions.DisableReasoning),
-		CompatibilityProfile:               string(v.PostProcessing.CompatibilityProfile),
 		Enabled:                            boolean(v.PostProcessing.Enabled),
-		BaseUrl:                            v.PostProcessing.BaseURL,
-		AllowInsecureHttp:                  boolean(v.PostProcessing.AllowInsecureHTTP),
 		Model:                              v.PostProcessing.Model,
 		Preset:                             string(v.PostProcessing.Preset),
 		SystemPrompt:                       v.PostProcessing.SystemPrompt,
@@ -110,33 +92,16 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 		return err
 	}
 	if err := q.PutSpeech(ctx, dbgen.PutSpeechParams{
-		SpeechLanguage:       v.TextToSpeech.Options.Language,
-		SpeechInstructions:   v.TextToSpeech.Options.Instructions,
-		ModelProfile:         string(modelprofile.Effective(v.TextToSpeech.ModelProfile)),
-		CompatibilityProfile: string(v.TextToSpeech.CompatibilityProfile),
-		Enabled:              boolean(v.TextToSpeech.Enabled),
-		BaseUrl:              v.TextToSpeech.BaseURL,
-		AllowInsecureHttp:    boolean(v.TextToSpeech.AllowInsecureHTTP),
-		AuthenticationMode:   string(v.TextToSpeech.AuthenticationMode),
-		Model:                v.TextToSpeech.Model,
-		Voice:                v.TextToSpeech.Voice,
-		Speed:                v.TextToSpeech.Speed,
-		TimeoutSeconds:       int64(v.TextToSpeech.TimeoutSeconds),
+		SpeechLanguage:     v.TextToSpeech.Options.Language,
+		SpeechInstructions: v.TextToSpeech.Options.Instructions,
+		ModelProfile:       string(modelprofile.Effective(v.TextToSpeech.ModelProfile)),
+		Enabled:            boolean(v.TextToSpeech.Enabled),
+		Model:              v.TextToSpeech.Model,
+		Voice:              v.TextToSpeech.Voice,
+		Speed:              v.TextToSpeech.Speed,
+		TimeoutSeconds:     int64(v.TextToSpeech.TimeoutSeconds),
 	}); err != nil {
 		return err
-	}
-	if err := q.ClearHeaders(ctx); err != nil {
-		return err
-	}
-	names := make([]string, 0, len(v.Headers))
-	for name := range v.Headers {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		if err := q.PutHeader(ctx, dbgen.PutHeaderParams{Name: name, Value: v.Headers[name]}); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -147,9 +112,6 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 		return v, err
 	}
 	v.Vocabulary = config.VocabularySettings{Terms: config.VocabularyTerms(vocabulary.Terms), Voice: vocabulary.Voice != 0, Files: vocabulary.Files != 0, Boost: vocabulary.Boost}
-	if _, err := q.GetInitialization(ctx); err != nil {
-		return v, err
-	}
 	rPreferences, err := q.GetPreferences(ctx)
 	if err != nil {
 		return v, err
@@ -193,18 +155,12 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	if err != nil {
 		return v, err
 	}
-	v.CompatibilityProfile = compatibility.ID(rTranscription.CompatibilityProfile)
-	v.BaseURL = rTranscription.BaseUrl
-	v.AllowInsecureHTTP = rTranscription.AllowInsecureHttp != 0
-	v.AuthenticationMode = config.AuthenticationMode(rTranscription.AuthenticationMode)
 	v.ModelProfile = modelprofile.ID(rTranscription.ModelProfile)
 	v.Model = rTranscription.Model
 	v.Language = rTranscription.Language
-	v.HealthPath = rTranscription.HealthPath
 	v.TranscriptionTimeoutSeconds = int(rTranscription.TranscriptionTimeoutSeconds)
 	v.FileTranscriptionTimeoutSeconds = int(rTranscription.FileTranscriptionTimeoutSeconds)
 	v.TranscriptionOptions.Prompt = rTranscription.TranscriptionOptionsPrompt
-	v.TranscriptionOptions.Hotwords = rTranscription.TranscriptionOptionsHotwords
 	v.TranscriptionOptions.TemperatureOverride = rTranscription.TranscriptionOptionsTemperatureOverride != 0
 	v.TranscriptionOptions.Temperature = rTranscription.TranscriptionOptionsTemperature
 	rCleanup, err := q.GetCleanup(ctx)
@@ -214,10 +170,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	v.PostProcessing.GenerationOptions.LimitOutputTokens = rCleanup.GenerationOptionsLimitOutputTokens != 0
 	v.PostProcessing.GenerationOptions.MaxOutputTokens = int(rCleanup.GenerationOptionsMaxOutputTokens)
 	v.PostProcessing.GenerationOptions.DisableReasoning = rCleanup.GenerationOptionsDisableReasoning != 0
-	v.PostProcessing.CompatibilityProfile = compatibility.ID(rCleanup.CompatibilityProfile)
 	v.PostProcessing.Enabled = rCleanup.Enabled != 0
-	v.PostProcessing.BaseURL = rCleanup.BaseUrl
-	v.PostProcessing.AllowInsecureHTTP = rCleanup.AllowInsecureHttp != 0
 	v.PostProcessing.Model = rCleanup.Model
 	v.PostProcessing.Preset = config.PostProcessingPreset(rCleanup.Preset)
 	v.PostProcessing.SystemPrompt = rCleanup.SystemPrompt
@@ -229,37 +182,39 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	if err != nil {
 		return v, err
 	}
-	v.TextToSpeech.CompatibilityProfile = compatibility.ID(rSpeech.CompatibilityProfile)
 	v.TextToSpeech.Enabled = rSpeech.Enabled != 0
-	v.TextToSpeech.BaseURL = rSpeech.BaseUrl
-	v.TextToSpeech.AllowInsecureHTTP = rSpeech.AllowInsecureHttp != 0
-	v.TextToSpeech.AuthenticationMode = config.AuthenticationMode(rSpeech.AuthenticationMode)
 	v.TextToSpeech.ModelProfile = modelprofile.ID(rSpeech.ModelProfile)
 	v.TextToSpeech.Options = modelprofile.SpeechOptions{Language: rSpeech.SpeechLanguage, Instructions: rSpeech.SpeechInstructions}
 	v.TextToSpeech.Model = rSpeech.Model
 	v.TextToSpeech.Voice = rSpeech.Voice
 	v.TextToSpeech.Speed = rSpeech.Speed
 	v.TextToSpeech.TimeoutSeconds = int(rSpeech.TimeoutSeconds)
-	headers, err := q.GetHeaders(ctx)
-	if err != nil {
-		return v, err
-	}
-	v.Headers = map[string]string{}
-	for _, h := range headers {
-		v.Headers[h.Name] = h.Value
-	}
 	r, err := q.GetVoiceTranscription(ctx)
 	if err != nil {
 		return v, err
 	}
-	v.VoiceTranscription = config.VoiceTranscriptionSettings{Realtime: r.Realtime != 0, CompatibilityProfile: compatibility.ID(r.CompatibilityProfile), ModelProfile: modelprofile.ID(r.ModelProfile), BaseURL: r.BaseUrl, AllowInsecureHTTP: r.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(r.AuthenticationMode), Model: r.Model, Language: r.Language, Captions: r.Captions != 0, Options: modelprofile.NemotronOptions{Vocabulary: r.Vocabulary, Boost: r.Boost}, HealthPath: r.HealthPath, Headers: map[string]string{}, TimeoutSeconds: int(r.TimeoutSeconds), TranscriptionOptions: compatibility.TranscriptionOptions{Prompt: r.Prompt, Hotwords: r.Hotwords, TemperatureOverride: r.TemperatureOverride != 0, Temperature: r.Temperature}}
-	voiceHeaders, err := q.GetVoiceHeaders(ctx)
+	v.VoiceTranscription = config.VoiceTranscriptionSettings{CompatibilityProfile: v.VoiceTranscription.CompatibilityProfile, AuthenticationMode: v.VoiceTranscription.AuthenticationMode, Realtime: r.Realtime != 0, ModelProfile: modelprofile.ID(r.ModelProfile), Model: r.Model, Language: r.Language, Captions: r.Captions != 0, Headers: map[string]string{}, TimeoutSeconds: int(r.TimeoutSeconds), TranscriptionOptions: config.TranscriptionOptions{Prompt: r.Prompt, TemperatureOverride: r.TemperatureOverride != 0, Temperature: r.Temperature}}
+	return projectSelectedConnections(ctx, q, v)
+}
+
+// projectSelectedConnections materializes runtime transport from its single SQL owner.
+func projectSelectedConnections(ctx context.Context, q *dbgen.Queries, v config.Settings) (config.Settings, error) {
+	rows, err := q.GetSelectedConnectionDetails(ctx)
 	if err != nil {
 		return v, err
 	}
-	for _, h := range voiceHeaders {
-		v.VoiceTranscription.Headers[h.Name] = h.Value
+	headers, err := q.ListConnectionHeaders(ctx)
+	if err != nil {
+		return v, err
 	}
-
+	for _, row := range rows {
+		d := savedconnection.Details{CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), HealthPath: row.HealthPath, Headers: map[string]string{}}
+		for _, h := range headers {
+			if h.ConnectionID == row.ID {
+				d.Headers[h.Name] = h.Value
+			}
+		}
+		v = savedconnection.Apply(v, savedconnection.Purpose(row.Purpose), d)
+	}
 	return v, nil
 }

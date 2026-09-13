@@ -60,14 +60,6 @@ func (s *Store) ConnectionCatalog() savedconnection.Catalog {
 	}
 	return catalog
 }
-func seedConnections(ctx context.Context, q *dbgen.Queries) error {
-	for _, seed := range []func(context.Context) error{q.SeedTranscriptionConnection, q.SeedCleanupConnection, q.SeedSpeechConnection, q.SeedConnectionUses, q.SeedSelectedConnections, q.SeedConnectionHeaders, q.SeedVoiceUse, q.SeedVoiceSelection} {
-		if err := seed(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, refs map[string]string) (connectionState, error) {
 	state := connectionState{entries: map[string]storedConnection{}, selected: map[savedconnection.Purpose]string{}}
 	rows, err := q.ListSavedConnections(ctx)
@@ -98,11 +90,6 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 		c.Uses = append(c.Uses, p)
 		state.entries[c.ID] = c
 	}
-	for _, c := range state.entries {
-		if len(c.Uses) == 0 {
-			return state, errors.New("connection has no supported uses")
-		}
-	}
 	headers, err := q.ListConnectionHeaders(ctx)
 	if err != nil {
 		return state, err
@@ -121,6 +108,11 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 		}
 		state.entries[h.ConnectionID] = c
 	}
+	for _, c := range state.entries {
+		if savedconnection.ValidateUses(c.Uses, c.Details) != nil {
+			return state, errors.New("connection has no supported uses")
+		}
+	}
 	selected, err := q.ListSelectedConnections(ctx)
 	if err != nil {
 		return state, err
@@ -131,16 +123,12 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	for _, row := range selected {
 		p := savedconnection.Purpose(row.Purpose)
 		c, ok := state.entries[row.ConnectionID]
-		if !ok || !c.Supports(p) || c.account != refs[row.Purpose] || !reflect.DeepEqual(savedconnection.Project(c.Details, p), savedconnection.Extract(v, p)) {
+		if !ok || !c.Supports(p) || c.account != refs[row.Purpose] {
 			return state, errors.New("connection selection does not match committed settings")
 		}
 		state.selected[p] = row.ConnectionID
 	}
 	if err := readRememberedModels(ctx, q, &state); err != nil {
-		return state, err
-	}
-	// Legacy import creates connections after schema migration; capture active choices too.
-	if err := rememberActiveModels(&state, v); err != nil {
 		return state, err
 	}
 
@@ -299,10 +287,67 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	s.pendingConnectionTarget = target
 	return v, nil
 }
+
+// reconcileTransport commits runtime transport edits to their selected owner.
+// A shared connection must have coherent projections in every selected task;
+// transport without an owner is rejected rather than silently lost on reload.
+func (state *connectionState) reconcileTransport(v config.Settings) error {
+	updated := state.clone()
+	for _, purpose := range purposes {
+		p := savedconnection.Purpose(purpose)
+		d := savedconnection.Extract(v, p)
+		id := state.selected[p]
+		c, ok := state.entries[id]
+		if !ok {
+			if !reflect.DeepEqual(d, savedconnection.Extract(config.Default(), p)) {
+				return errors.New("transport requires a selected connection")
+			}
+			continue
+		}
+		if reflect.DeepEqual(d, savedconnection.Project(c.Details, p)) {
+			continue
+		}
+		next := updated.entries[id]
+		next.Details.CompatibilityProfile = d.CompatibilityProfile
+		next.Details.BaseURL = d.BaseURL
+		next.Details.AllowInsecureHTTP = d.AllowInsecureHTTP
+		if p != savedconnection.Cleanup {
+			next.Details.AuthenticationMode = d.AuthenticationMode
+		}
+		if p == savedconnection.Transcription || p == savedconnection.Voice {
+			next.Details.HealthPath = d.HealthPath
+			next.Details.Headers = d.Headers
+		}
+		updated.entries[id] = next
+	}
+	for _, purpose := range purposes {
+		p := savedconnection.Purpose(purpose)
+		if c, ok := updated.entries[state.selected[p]]; ok {
+			if !reflect.DeepEqual(savedconnection.Extract(v, p), savedconnection.Project(c.Details, p)) {
+				return errors.New("shared connection transport projections conflict")
+			}
+		}
+	}
+	for id, c := range updated.entries {
+		if err := savedconnection.ValidateUses(c.Uses, c.Details); err != nil {
+			return err
+		}
+		old := state.entries[id]
+		if old.Details.BaseURL != c.Details.BaseURL || old.Details.CompatibilityProfile != c.Details.CompatibilityProfile {
+			updated.forgetModels(id)
+		}
+	}
+	*state = updated
+	return nil
+}
+
 func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config.Settings) (connectionState, error) {
 	state := s.connections.clone()
 	if s.pendingConnections != nil {
 		state = s.pendingConnections.clone()
+	}
+	if err := state.reconcileTransport(v); err != nil {
+		return state, err
 	}
 	for _, purpose := range purposes {
 		p := savedconnection.Purpose(purpose)

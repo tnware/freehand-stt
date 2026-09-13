@@ -198,6 +198,13 @@ func vocabularyPrompt(context, terms string) string {
 // WithVocabulary projects into an immutable request snapshot. Unsupported
 // adapters omit hints; supported adapters reject excess text rather than truncate.
 func WithVocabulary(v Settings, voice bool) (Settings, error) {
+	// Always rebuild request-only hints, including disabled/unsupported paths.
+	options := &v.TranscriptionOptions
+	if voice {
+		options = &v.VoiceTranscription.TranscriptionOptions
+		v.VoiceTranscription.realtimeOptions = modelprofile.NemotronOptions{}
+	}
+	options.hotwords, options.vocabulary, options.vocabularyBoost = "", "", 0
 	enabled := v.Vocabulary.Files
 	s := VocabularySelection{Backend: v.CompatibilityProfile, ModelProfile: v.ModelProfile, Context: v.TranscriptionOptions.Prompt}
 	if voice {
@@ -216,21 +223,17 @@ func WithVocabulary(v Settings, voice bool) (Settings, error) {
 		return v, errors.New("Vocabulary: " + support.Problem)
 	}
 	terms := VocabularyTerms(v.Vocabulary.Terms)
-	options := &v.TranscriptionOptions
-	if voice {
-		options = &v.VoiceTranscription.TranscriptionOptions
-	}
 	switch support.Mode {
 	case "hotwords":
-		options.Hotwords = terms
+		options.hotwords = terms
 	case "prompt":
 		options.Prompt = vocabularyPrompt(options.Prompt, terms)
 	case "speech-contexts":
 		if voice && s.Realtime {
-			v.VoiceTranscription.Options = modelprofile.NemotronOptions{Vocabulary: terms, Boost: v.Vocabulary.Boost}
+			v.VoiceTranscription.realtimeOptions = modelprofile.NemotronOptions{Vocabulary: terms, Boost: v.Vocabulary.Boost}
 		} else {
-			options.Vocabulary = terms
-			options.VocabularyBoost = v.Vocabulary.Boost
+			options.vocabulary = terms
+			options.vocabularyBoost = v.Vocabulary.Boost
 		}
 	}
 	return v, nil

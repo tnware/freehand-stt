@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/credential"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
 )
 
 type memoryVault struct {
@@ -45,7 +45,7 @@ func (v *memoryVault) Delete(a string) error {
 func testStore(t *testing.T) *Store {
 	t.Helper()
 	dir := t.TempDir()
-	s := newStore(filepath.Join(dir, "settings.db"), filepath.Join(dir, "settings.json"), &memoryVault{values: map[string]string{}})
+	s := newStore(filepath.Join(dir, "freehand.db"), &memoryVault{values: map[string]string{}})
 	t.Cleanup(func() { s.Close() })
 	return s
 }
@@ -60,26 +60,39 @@ func loadStore(t *testing.T, s *Store) config.Settings {
 func reopen(t *testing.T, s *Store) *Store {
 	t.Helper()
 	s.Close()
-	next := newStore(s.path, s.legacy, s.vault)
+	next := newStore(s.path, s.vault)
 	t.Cleanup(func() { next.Close() })
 	return next
 }
-func writeLegacy(t *testing.T, s *Store, v config.Settings) {
+
+// selectStorageConnection exercises the real saved-connection transaction before
+// tests mutate transport settings or credentials; neither can have an orphan owner.
+func selectStorageConnection(t *testing.T, s *Store, v config.Settings) config.Settings {
 	t.Helper()
-	b, err := json.Marshal(v)
+	details := savedconnection.Extract(v, savedconnection.Transcription)
+	details.BaseURL = "https://speech.example.test/v1"
+	details.AuthenticationMode = config.AuthenticationModeNone
+	next, err := s.BeginConnectionChange(savedconnection.Change{
+		Action: savedconnection.Create, Name: "Test speech", Uses: []savedconnection.Purpose{savedconnection.Transcription},
+		ActivateFor: savedconnection.Transcription, Details: &details,
+	}, v)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(s.legacy, b, 0600); err != nil {
+	defer s.DiscardCredentialChanges()
+	if err := s.Save(next); err != nil {
 		t.Fatal(err)
 	}
+	return next
 }
+
 func TestFreshDatabaseAndRoundTrip(t *testing.T) {
 	s := testStore(t)
 	want := config.Default()
 	if got := loadStore(t, s); !reflect.DeepEqual(got, want) {
 		t.Fatalf("defaults changed: %#v", got)
 	}
+	want = selectStorageConnection(t, s, want)
 	want.Language = "ja"
 	want.Headers = map[string]string{"X-Request-Mode": "unicode-æ—¥æœ¬èªž"}
 	want.MicrophoneID = "device-id"
@@ -93,54 +106,18 @@ func TestFreshDatabaseAndRoundTrip(t *testing.T) {
 	}
 	s = reopen(t, s)
 	if got := loadStore(t, s); !reflect.DeepEqual(got, want) {
-		t.Fatal("settings round trip lost a value")
+		actual, expected := reflect.ValueOf(got), reflect.ValueOf(want)
+		for i := 0; i < actual.NumField(); i++ {
+			if !reflect.DeepEqual(actual.Field(i).Interface(), expected.Field(i).Interface()) {
+				t.Errorf("round trip %s: got %#v, want %#v", actual.Type().Field(i).Name, actual.Field(i).Interface(), expected.Field(i).Interface())
+			}
+		}
 	}
-	if _, err := os.Stat(s.legacy); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(filepath.Dir(s.path), "settings.json")); !os.IsNotExist(err) {
 		t.Fatal("created a parallel JSON store")
 	}
 	if err := checkIntegrity(context.Background(), s.db); err != nil {
 		t.Fatal(err)
-	}
-}
-func TestLegacyImportOnceAndInvalidImportRetry(t *testing.T) {
-	s := testStore(t)
-	if err := os.WriteFile(s.legacy, []byte("{"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.Load(); config.LoadFailureFor(err).Kind != "legacy_invalid" {
-		t.Fatalf("wrong failure: %v", err)
-	}
-	if _, err := os.Stat(s.path); !os.IsNotExist(err) {
-		t.Fatal("failed import published a database")
-	}
-	want := config.Default()
-	want.Language = "es"
-	writeLegacy(t, s, want)
-	original, _ := os.ReadFile(s.legacy)
-	s.vault.(*memoryVault).values[credential.STTAccount] = "legacy-secret"
-	if got := loadStore(t, s); got.Language != "es" {
-		t.Fatal("legacy selection lost")
-	}
-	if got, err := s.STTCredentials().Get(); err != nil || got != "legacy-secret" {
-		t.Fatal("legacy credential reference lost")
-	}
-	if current, _ := os.ReadFile(s.legacy); string(current) != string(original) {
-		t.Fatal("legacy file modified")
-	}
-	want.Language = "fr"
-	if err := s.Save(want); err != nil {
-		t.Fatal(err)
-	}
-	s = reopen(t, s)
-	if got := loadStore(t, s); got.Language != "fr" {
-		t.Fatal("legacy file imported again")
-	}
-}
-func TestUnknownLegacyFieldsBlockImport(t *testing.T) {
-	s := testStore(t)
-	os.WriteFile(s.legacy, []byte(`{"futureSetting":true}`), 0600)
-	if _, err := s.Load(); config.LoadFailureFor(err).Kind != "legacy_newer" {
-		t.Fatalf("unknown setting discarded: %v", err)
 	}
 }
 func TestFailedSaveIsAtomic(t *testing.T) {
@@ -165,7 +142,7 @@ func TestReadOnlyAndDiskFullSavePreserveSettings(t *testing.T) {
 	for _, mode := range []string{"readonly", "full"} {
 		t.Run(mode, func(t *testing.T) {
 			s := testStore(t)
-			old := loadStore(t, s)
+			old := selectStorageConnection(t, s, loadStore(t, s))
 			if mode == "readonly" {
 				s.db.Exec("PRAGMA query_only=ON")
 			} else {
@@ -195,7 +172,7 @@ func fmtInt(v int) string { return fmt.Sprintf("%d", v) }
 func TestDatabaseLockAndBoundedSQLBusy(t *testing.T) {
 	s := testStore(t)
 	v := loadStore(t, s)
-	other := newStore(s.path, s.legacy, s.vault)
+	other := newStore(s.path, s.vault)
 	defer other.Close()
 	if _, err := other.Load(); config.LoadFailureFor(err).Kind != "locked" {
 		t.Fatalf("missing ownership lock: %v", err)
@@ -247,7 +224,7 @@ func TestForeignAndNewerDatabaseNotMutated(t *testing.T) {
 }
 func TestCredentialsCommitRollbackAndCrashCleanup(t *testing.T) {
 	s := testStore(t)
-	v := loadStore(t, s)
+	v := selectStorageConnection(t, s, loadStore(t, s))
 	vault := s.vault.(*memoryVault)
 	if err := s.BeginCredentialChanges(); err != nil {
 		t.Fatal(err)
@@ -307,12 +284,12 @@ func TestSchemaConstraintsAndHeaders(t *testing.T) {
 }
 func withUpgrade(s *Store, sql string) {
 	migrations := fstest.MapFS{}
-	entries, _ := embeddedMigrations.ReadDir("migrations")
+	entries, _ := embeddedMigrations.ReadDir("schema")
 	for _, entry := range entries {
-		data, _ := embeddedMigrations.ReadFile("migrations/" + entry.Name())
+		data, _ := embeddedMigrations.ReadFile("schema/" + entry.Name())
 		migrations[entry.Name()] = &fstest.MapFile{Data: data}
 	}
-	migrations["00012_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
+	migrations["00002_fixture.sql"] = &fstest.MapFile{Data: []byte("-- +goose Up\n" + sql)}
 	s.migrations = migrations
 }
 func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
@@ -335,7 +312,7 @@ func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
 			if !fail && got.Language != "ja" {
 				t.Fatal("upgrade lost settings")
 			}
-			backups, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "backups", "settings-*.db"))
+			backups, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "freehand-backups", "freehand-*.db"))
 			if len(backups) != 1 {
 				t.Fatal("missing pre-upgrade backup")
 			}
@@ -344,10 +321,10 @@ func TestUpgradeBackupRollbackAndRestore(t *testing.T) {
 			var current int
 			db.QueryRow("SELECT max(version_id) FROM goose_db_version").Scan(&current)
 			db.Close()
-			if fail && current != 11 {
+			if fail && current != 1 {
 				t.Fatal("failed migration advanced version")
 			}
-			restore := newStore(s.path, s.legacy, s.vault)
+			restore := newStore(s.path, s.vault)
 			defer restore.Close()
 			if err = restore.RestoreBackup(backups[0]); err != nil {
 				t.Fatal(err)
@@ -366,28 +343,47 @@ func TestBackupRetentionAndResetPreserveEvidence(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	files, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "backups", "*.db"))
+	files, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "freehand-backups", "*.db"))
 	if len(files) != retainedBackups {
 		t.Fatal("backup retention unbounded")
 	}
-	s.BeginCredentialChanges()
-	s.STTCredentials().Set("keep-secret")
-	s.Save(config.Default())
+	v := selectStorageConnection(t, s, loadStore(t, s))
+	if err := s.BeginCredentialChanges(); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.STTCredentials().Set("keep-secret"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Save(v); err != nil {
+		t.Fatal(err)
+	}
 	s.DiscardCredentialChanges()
+	account := s.refs["stt"]
 	if err := s.Reset(config.Default()); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := s.STTCredentials().Get(); got != "keep-secret" {
-		t.Fatal("reset lost credential reference")
+	if _, err := s.STTCredentials().Get(); !errors.Is(err, credential.ErrNotFound) {
+		t.Fatal("reset retained an unowned credential reference")
 	}
-	archived, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "settings-recovery-*", "settings.db"))
+	if s.vault.(*memoryVault).values[account] != "keep-secret" {
+		t.Fatal("reset deleted credential needed by the recovery archive")
+	}
+	archived, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "freehand-recovery-*", "freehand.db"))
 	if len(archived) != 1 {
 		t.Fatal("reset did not preserve previous database")
 	}
 	s = reopen(t, s)
-	loadStore(t, s)
-	if got, _ := s.STTCredentials().Get(); got != "keep-secret" {
-		t.Fatal("reset credential reference was not durable")
+	if got := loadStore(t, s); !reflect.DeepEqual(got, config.Default()) {
+		t.Fatal("reset defaults did not survive reopen")
+	}
+	if _, err := s.STTCredentials().Get(); !errors.Is(err, credential.ErrNotFound) {
+		t.Fatal("reset reused a credential after reopen")
+	}
+	if err := s.RestoreBackup(archived[0]); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.STTCredentials().Get(); err != nil || got != "keep-secret" {
+		t.Fatal("explicit restore lost archived credential reference")
 	}
 }
 func TestClosedStoreRejectsWork(t *testing.T) {
@@ -415,7 +411,7 @@ func TestZeroSpeedForDisabledUnconfiguredSpeechIsPreserved(t *testing.T) {
 }
 func TestInvalidCredentialReferenceBlocksRestoreBeforeReplacement(t *testing.T) {
 	s := testStore(t)
-	v := loadStore(t, s)
+	v := selectStorageConnection(t, s, loadStore(t, s))
 	v.Language = "ja"
 	if err := s.Save(v); err != nil {
 		t.Fatal(err)
@@ -428,7 +424,7 @@ func TestInvalidCredentialReferenceBlocksRestoreBeforeReplacement(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Exec("UPDATE credential_refs SET account='unrelated-native-account' WHERE purpose='stt'")
+	_, err = db.Exec("UPDATE saved_connections SET credential_account='unrelated-native-account'")
 	db.Close()
 	if err != nil {
 		t.Fatal(err)
@@ -438,128 +434,5 @@ func TestInvalidCredentialReferenceBlocksRestoreBeforeReplacement(t *testing.T) 
 	}
 	if got := loadStore(t, s); got.Language != "ja" {
 		t.Fatal("failed restore replaced settings")
-	}
-}
-
-func TestVersionOneUpgradePreservesSettingsAndReferences(t *testing.T) {
-	s := testStore(t)
-	want := loadStore(t, s)
-	want.Language = "ja"
-	want.VADActivitySilenceMS = 500
-	if err := s.Save(want); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.BeginCredentialChanges(); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.STTCredentials().Set("v1-fixture-key"); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Save(want); err != nil {
-		t.Fatal(err)
-	}
-	// Recreate the retained v1 layout, including its original speech constraint.
-	initial, err := embeddedMigrations.ReadFile("migrations/00001_initial.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sql := string(initial)
-	start := strings.Index(sql, "CREATE TABLE speech_settings (")
-	end := strings.Index(sql[start:], ") STRICT;") + len(") STRICT;")
-	_, err = s.db.Exec(`ALTER TABLE speech_settings DROP COLUMN speech_language; ALTER TABLE speech_settings DROP COLUMN speech_instructions; ALTER TABLE remembered_models DROP COLUMN speech_language; ALTER TABLE remembered_models DROP COLUMN speech_instructions; DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models; ALTER TABLE transcription_settings DROP COLUMN model_profile;
- ALTER TABLE preferences_settings RENAME COLUMN vad_enabled TO vadenabled;
- ALTER TABLE preferences_settings RENAME COLUMN vad_mode TO vadmode;
- ALTER TABLE preferences_settings RENAME COLUMN vad_activity_silence_ms TO vadactivity_silence_ms;
- ALTER TABLE speech_settings RENAME TO speech_fixture;` + sql[start:start+end] + `
- INSERT INTO speech_settings(id,compatibility_profile,enabled,base_url,allow_insecure_http,authentication_mode,model,voice,speed,timeout_seconds)
- SELECT id,compatibility_profile,enabled,base_url,allow_insecure_http,authentication_mode,model,voice,speed,timeout_seconds FROM speech_fixture;
- DROP TABLE speech_fixture; DROP TABLE saved_connection_headers; DROP TABLE selected_connections; DROP TABLE saved_connection_uses; DROP TABLE saved_connections; DELETE FROM goose_db_version WHERE version_id>=2;`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s = reopen(t, s)
-	want.VoiceTranscription = config.VoiceFromCompleted(want)
-	if got := loadStore(t, s); !reflect.DeepEqual(got, want) {
-		t.Fatal("v1 upgrade lost settings")
-	}
-	if key, err := s.STTCredentials().Get(); err != nil || key != "v1-fixture-key" {
-		t.Fatal("v1 upgrade lost credential reference")
-	}
-	backups, _ := filepath.Glob(filepath.Join(filepath.Dir(s.path), "backups", "*.db"))
-	if len(backups) != 1 {
-		t.Fatal("v1 upgrade missing backup")
-	}
-}
-
-func TestVersionThreeUpgradeKeepsRuntimeModelsAndConnectionKeys(t *testing.T) {
-	s := testStore(t)
-	initial := config.Default()
-	initial.BaseURL = "https://stt.example.test/v1"
-	initial.Model = "current-stt"
-	initial.PostProcessing.BaseURL = "https://cleanup.example.test/v1"
-	initial.PostProcessing.Model = "current-cleanup"
-	writeLegacy(t, s, initial)
-	want := loadStore(t, s)
-	if err := s.BeginCredentialChanges(); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.STTCredentials().Set("migration-fixture"); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Save(want); err != nil {
-		t.Fatal(err)
-	}
-	before := s.ConnectionCatalog()
-	restoreConnectionSchema(t, s, 3)
-	s = reopen(t, s)
-	if got := loadStore(t, s); !reflect.DeepEqual(got, want) {
-		t.Fatal("upgrade changed runtime choices")
-	}
-	if !reflect.DeepEqual(s.ConnectionCatalog(), before) {
-		t.Fatal("upgrade changed connection selections")
-	}
-	if key, err := s.STTCredentials().Get(); err != nil || key != "migration-fixture" {
-		t.Fatal("upgrade lost key reference")
-	}
-}
-
-func restoreConnectionSchema(t *testing.T, s *Store, version int) {
-	t.Helper()
-	old, err := embeddedMigrations.ReadFile("migrations/00003_saved_connections.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = s.db.Exec(`ALTER TABLE speech_settings DROP COLUMN speech_language; ALTER TABLE speech_settings DROP COLUMN speech_instructions; ALTER TABLE remembered_models DROP COLUMN speech_language; ALTER TABLE remembered_models DROP COLUMN speech_instructions; DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models; ALTER TABLE transcription_settings DROP COLUMN model_profile; ALTER TABLE speech_settings DROP COLUMN model_profile; DROP TABLE selected_connections; DROP TABLE saved_connection_headers; DROP TABLE saved_connection_uses; DROP TABLE saved_connections;` + string(old)); err != nil {
-		t.Fatal(err)
-	}
-	// Recreate the configured-only catalog used by this fixture, without v3 bootstrap rows.
-	if _, err = s.db.Exec(`DELETE FROM selected_connections WHERE connection_id IN(SELECT id FROM saved_connections WHERE base_url=''); DELETE FROM saved_connections WHERE base_url='';`); err != nil {
-		t.Fatal(err)
-	}
-	if version == 4 {
-		next, _ := embeddedMigrations.ReadFile("migrations/00004_connection_manager.sql")
-		if _, err = s.db.Exec(string(next)); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if _, err = s.db.Exec("DELETE FROM goose_db_version WHERE version_id>?", version); err != nil {
-		t.Fatal(err)
-	}
-}
-func TestVersionFourUpgradePreservesConnectionUses(t *testing.T) {
-	s := testStore(t)
-	initial := config.Default()
-	initial.BaseURL = "https://speech.example.test/v1"
-	initial.Model = "chosen-model"
-	writeLegacy(t, s, initial)
-	want := loadStore(t, s)
-	before := s.ConnectionCatalog()
-	restoreConnectionSchema(t, s, 4)
-	s = reopen(t, s)
-	if got := loadStore(t, s); !reflect.DeepEqual(got, want) {
-		t.Fatal("upgrade changed runtime settings")
-	}
-	if !reflect.DeepEqual(s.ConnectionCatalog(), before) {
-		t.Fatal("upgrade changed original connection use or selection")
 	}
 }

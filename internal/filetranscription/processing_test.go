@@ -52,7 +52,9 @@ func TestFileProcessingOutcomes(t *testing.T) {
 				cfg.BaseURL = "https://stt.example/v1"
 				cfg.Model = "speech"
 				cfg.CompatibilityProfile = compatibility.Speaches
-				cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "workflow context", Hotwords: "workflow terms", TemperatureOverride: true}
+				cfg.TranscriptionOptions = config.TranscriptionOptions{Prompt: "workflow context", TemperatureOverride: true}
+				cfg.Vocabulary = config.VocabularySettings{Terms: "workflow terms", Files: true, Boost: 3}
+				cfg, _ = config.WithVocabulary(cfg, false)
 				cfg.AuthenticationMode = config.AuthenticationModeNone
 				cfg.SetupCompleted = true
 				cfg.PostProcessing.Enabled = mode != "raw"

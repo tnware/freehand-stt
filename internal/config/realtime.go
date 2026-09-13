@@ -12,27 +12,27 @@ import (
 // VoiceTranscriptionSettings owns the one active microphone provider/model.
 // Realtime selects a transport for that same combination; files are independent.
 type VoiceTranscriptionSettings struct {
-	Realtime             bool                               `json:"realtime"`
-	CompatibilityProfile compatibility.ID                   `json:"compatibilityProfile"`
-	ModelProfile         modelprofile.ID                    `json:"modelProfile"`
-	BaseURL              string                             `json:"baseURL"`
-	AllowInsecureHTTP    bool                               `json:"allowInsecureHTTP"`
-	AuthenticationMode   AuthenticationMode                 `json:"authenticationMode"`
-	Model                string                             `json:"model"`
-	Language             string                             `json:"language"`
-	HealthPath           string                             `json:"healthPath"`
-	Headers              map[string]string                  `json:"headers"`
-	TimeoutSeconds       int                                `json:"timeoutSeconds"`
-	TranscriptionOptions compatibility.TranscriptionOptions `json:"transcriptionOptions"`
-	Captions             bool                               `json:"captions"`
-	Options              modelprofile.NemotronOptions       `json:"options"`
+	Realtime             bool                 `json:"realtime"`
+	CompatibilityProfile compatibility.ID     `json:"compatibilityProfile"`
+	ModelProfile         modelprofile.ID      `json:"modelProfile"`
+	BaseURL              string               `json:"baseURL"`
+	AllowInsecureHTTP    bool                 `json:"allowInsecureHTTP"`
+	AuthenticationMode   AuthenticationMode   `json:"authenticationMode"`
+	Model                string               `json:"model"`
+	Language             string               `json:"language"`
+	HealthPath           string               `json:"healthPath"`
+	Headers              map[string]string    `json:"headers"`
+	TimeoutSeconds       int                  `json:"timeoutSeconds"`
+	TranscriptionOptions TranscriptionOptions `json:"transcriptionOptions"`
+	Captions             bool                 `json:"captions"`
+	realtimeOptions      modelprofile.NemotronOptions
 }
 
 func DefaultVoiceTranscription() VoiceTranscriptionSettings {
 	return VoiceTranscriptionSettings{CompatibilityProfile: compatibility.Generic, ModelProfile: modelprofile.Generic, AuthenticationMode: AuthenticationModeNone, Language: "auto", Headers: map[string]string{}, TimeoutSeconds: DefaultTranscriptionTimeoutSeconds, Captions: true}
 }
 func ValidateVoiceTranscription(v VoiceTranscriptionSettings) error {
-	if err := modelprofile.ValidateTranscription(v.ModelProfile, v.CompatibilityProfile, v.Language, v.TranscriptionOptions); err != nil {
+	if err := modelprofile.ValidateTranscription(v.ModelProfile, v.CompatibilityProfile, v.Language, v.TranscriptionOptions.Inference()); err != nil {
 		return err
 	}
 	if err := validatePersistedSTTSettings(WithVoiceTranscription(Settings{VoiceTranscription: v})); err != nil {
@@ -48,10 +48,10 @@ func ValidateVoiceTranscription(v VoiceTranscriptionSettings) error {
 		return errors.New("voice transcription timeout is out of range")
 	}
 	if v.ModelProfile == modelprofile.Nemotron35 {
-		if err := modelprofile.ValidateNemotron(v.Language, v.Options); err != nil {
+		if err := modelprofile.ValidateNemotron(v.Language, v.RealtimeOptions()); err != nil {
 			return err
 		}
-	} else if v.Options != (modelprofile.NemotronOptions{}) {
+	} else if v.RealtimeOptions() != (modelprofile.NemotronOptions{}) {
 		return errors.New("vocabulary strength requires the Nemotron model profile")
 	}
 	if v.Realtime {
@@ -81,22 +81,6 @@ func WithVoiceTranscription(v Settings) Settings {
 	v.TranscriptionOptions = s.TranscriptionOptions
 	v.TranscriptionTimeoutSeconds = s.TimeoutSeconds
 	return v
-}
-
-func VoiceFromCompleted(v Settings) VoiceTranscriptionSettings {
-	s := DefaultVoiceTranscription()
-	s.CompatibilityProfile = v.CompatibilityProfile
-	s.ModelProfile = v.ModelProfile
-	s.BaseURL = v.BaseURL
-	s.AllowInsecureHTTP = v.AllowInsecureHTTP
-	s.AuthenticationMode = v.AuthenticationMode
-	s.Model = v.Model
-	s.Language = v.Language
-	s.HealthPath = v.HealthPath
-	s.Headers = maps.Clone(v.Headers)
-	s.TimeoutSeconds = v.TranscriptionTimeoutSeconds
-	s.TranscriptionOptions = v.TranscriptionOptions
-	return s
 }
 
 func VoiceRealtimeEligible(v VoiceTranscriptionSettings) bool {

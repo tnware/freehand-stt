@@ -412,7 +412,13 @@ successful native cleanup, and inspect an interrupted export before using it.
 Run `go run ./build/scripts/storage -check -base main` and
 `go test ./internal/storage ./internal/settings ./build/scripts/storage`.
 Storage fixtures use temporary files and real modernc/goose/sqlc paths, including
-abrupt subprocess exits during import, writes, and upgrades. Check backups,
+abrupt subprocess exits during initialization, writes, and forward upgrades.
+Prove the alpha hard reset on both platforms: old `settings.db` and `settings.json`
+remain untouched, legacy credentials are never read or deleted, and `freehand.db`
+starts with defaults and no connections. Renamed alpha databases must fail identity
+validation. Temporary Git fixtures permit the alpha-only base transition but
+reject edits, removal, or renaming of published `schema/` migrations, as well as
+invalid or nontransactional migrations. Check backups,
 constraints, lock waits, read-only/full-disk failures, incompatible history, and
 staged credential consistency. Run the storage/settings race tests on Windows;
 CI also checks portable storage fixtures on Linux. Native service fixtures use a
@@ -420,7 +426,7 @@ fake vault/startup adapter and do not establish interactive Windows acceptance.
 
 ## Unit and deterministic integration tests
 
-- Configuration validation, URL joining, header filtering, read-only legacy import with unknown-field rejection, and explicit database recovery without implicit replacement.
+- Configuration validation, URL joining, header filtering, fresh initialization with alpha-file isolation, and explicit database recovery without implicit replacement.
 - OpenAI multipart transcription request shape against an in-process HTTP server.
 - Inference redirect denial through the production constructor: 301/302/303/307/308 across STT, chat, completed/streamed file upload, speech generation, models, and health routes. Local fake transports assert exactly one request with canary credentials/payload, covering same-origin, cross-origin, and HTTPS-to-HTTP targets; failures expose neither Location nor peer body.
 - Successful-response credential canaries across completed STT/chat/file, SSE and buffered-SSE terminal metadata, all retained request-ID headers, nested languages/usage type, and discovered model IDs. Check before truncation (including straddling and long credentials), preserve benign text/metrics and unauthenticated controls, and serialize the real history service DTO to prove safe publication. Preserve text-reflection rejection, including split-stream guard behavior. These fixtures never contact inference infrastructure or invoke models.
@@ -519,7 +525,7 @@ list is an acceptance procedure, not a claim that the checks have passed:
 35. Move and resize the main window on a non-primary display, open Settings, About, and Transcription details, and confirm each hidden auxiliary window opens centered over the main window without leaving that display's usable work area. Move an already-open auxiliary window and invoke it again; confirm it is focused without jumping. Hide and reopen it; confirm it returns relative to the main window rather than retaining independent placement. Choose tray Quit, relaunch, and confirm only the main window restores its normal size and screen-relative position. Then disconnect the saved display and relaunch; confirm the main window is fully visible and centered on the primary work area.
 36. In direct-input mode, compare short, long, multiline, and non-ASCII transcripts in Notepad, a Chromium text field, VS Code or another editor, a terminal, and an Office-style rich-text target. Ordinary text should appear in one immediate update; long text should complete without visible fixed-delay stepping, truncation, or broken surrogate pairs. Change focus during a long insertion and confirm delivery stops before the next dispatch rather than redirecting its remainder. Confirm the terminal records only UTF-16 unit count, batch count, duration, strategy, and bounded failure stage—never text or target identity.
 37. Resize the result/history divider by dragging and with the keyboard, quit through the tray, and relaunch. Confirm the split restores and both panes scroll independently. At the 560x560 minimum window size, verify Result/History view switching and that audio, transcription, cleanup, and delivery popovers stay within the window without moving the transcript. Exercise nested selectors, Escape focus return, pending saves, and failed-save recovery. Check both light/dark palettes and opaque/Mica modes. Clearing WebView site data may reset pane widths but must not alter Go-owned settings or transcript history.
-38. In an isolated user-data directory, import a valid old JSON file, save settings, and reopen. Confirm only SQLite changes and the legacy file stays intact. Unknown legacy fields must block initial import. Exercise corrupt/newer SQLite, locked files, and uncertain save recovery: both windows must pause new work and ordinary saves; Retry reloads committed state, and only explicit Reset archives and replaces the database. Restore an upgrade backup with Freehand closed. Verify credential references, setup review, native shortcuts/startup, and no transcript/audio persistence; never reset personal data as a fixture. See [the storage guide](../storage/).
+38. In an isolated user-data directory, place alpha settings files and launch the new build. Confirm first-run defaults and an empty connection catalog, with alpha files and credentials untouched. Save and reopen `freehand.db`. Exercise corrupt/newer SQLite, foreign alpha identity, locked files, and uncertain save recovery: both windows must pause new work and ordinary saves; Retry reloads committed state, and only explicit Reset archives and replaces the current database. Restore a new-lineage upgrade backup with Freehand closed. Verify credential references remain coherent without exposing keys.
 39. Configure a dedicated local or remote `/v1/audio/speech` endpoint under **Speech playback**. Press **Test**, confirm the authenticated `GET /v1/models` result populates the model picker, enter the provider's voice ID, and save. Then press **Preview**. Verify the fixed preview phrase plays, pause/resume preserve progress, restart begins at zero, and stop releases the session.
 40. Enable History, create raw-only and successfully cleaned entries, and verify Listen reads the selected final version. Complete a stored-audio transcript with History off and verify its result can still be listened to. Start a toggle or hold recording during playback and confirm playback stops before capture begins without transcript/history mutation.
 41. Under **Voice**, **Audio file**, **Cleanup**, and **Text to speech**, confirm the saved microphone/checkpoint, stored-audio, cleanup, and speech-generation budgets reload exactly and the fixed safety ceilings remain visible but not editable. Against a deliberately slow endpoint, set each budget low and confirm the affected phase reports a timeout, logs bounded `error_kind=timeout`, and records the budget in opt-in History details. A cleanup timeout must still insert or expose the raw transcript and mark the fallback. A stored-file request configured above 90 seconds must remain active beyond 90 seconds; Cancel must still end immediately as cancellation rather than timeout. Exercise the streamed transcript safety ceiling with a deterministic fixture and confirm accepted text remains copyable under an explicit partial-result message rather than stopping silently.
@@ -535,7 +541,7 @@ Request fixtures cover microphone, completed-file, and typed-streamed-file
 requests with omitted controls, explicit zero temperature, Unicode context, and
 Speaches hotwords. They verify exact fields, unchanged audio, Content-Length,
 and one request per operation. Invalid controls must fail before transport or
-file reads. Persistence fixtures cover migration from absent options and an
+file reads. Persistence fixtures cover clean-baseline defaults and an
 inactive retained temperature. Workflow fixtures verify forwarding through the
 recorder and file service, and checkpoint snapshots after settings changes.
 Frontend coverage protects separation of unsaved and applied nested options.
@@ -623,12 +629,12 @@ while running requests keep the old one. Unselecting one feature must leave the
 other active. Removing an active use or deleting an active shared connection must
 fail without changes. Duplicate and independently replace its key; deleting one
 entry must retain a key referenced by the other. Check failed SQL writes, restart,
-and v3/v4 upgrades. A vLLM deployment may implement one or both offered operations;
+and clean-baseline round trips. A vLLM deployment may implement one or both offered operations;
 no automatic inference checks may be used to discover that.
 
 ## Saved connection acceptance
 
-Fixtures cover forward migration, empty initialization, inactive create/duplicate,
+Fixtures cover the clean schema, empty initialization, inactive create/duplicate,
 independent selections, model reset on switching, runtime/connection save boundaries,
 inactive-key isolation, stale editors, SQL rollback, durable reopen, and credential
 retention until the last referencing entry is deleted. Metadata tests must use
@@ -687,8 +693,8 @@ not infer or select a model profile. Check home labels and model profile selecti
 
 Automated tests cover backend/model capability intersection, wrong-role and
 unknown IDs while features are disabled, rejection before HTTP, immutable request
-selection, S1-mini prompt/reasoning/language regressions, and migration from v5
-with existing selections and credential references. New specialized model
+selection, S1-mini prompt/reasoning/language regressions, and baseline round trips
+with independent selections and credential references. New specialized model
 profiles need per-role request fixtures and explicit runtime qualification; a
 catalog entry alone does not establish support. Do not probe model inventories.
 
@@ -698,8 +704,8 @@ catalog entry alone does not establish support. Do not probe model inventories.
   shared connection. Switch away and back; verify engine options, model profile,
   and voice restore only for the matching use and model. Language, cleanup
   instructions, trained S1-mini controls, speaking speed, and shared vocabulary
-  must preserve the current task settings rather than restore historical model
-  values (ADRs 0007 and 0010).
+  must preserve current task settings, which are absent from remembered-model
+  rows (ADRs 0007, 0010, and 0014).
 - A new model ID starts from Generic defaults. Verify changing a name does not
   infer S1-mini, and model edits leave capture settings and timeouts unchanged.
 - Switch freely between modified model drafts, save all edited options together,
@@ -710,7 +716,7 @@ catalog entry alone does not establish support. Do not probe model inventories.
 - Switch connections, restart, rename, rotate a key, change the URL/backend,
   duplicate, remove an inactive use, and delete: check the documented retention
   rules. Forgetting must clear active selection and survive restart.
-- Exercise version-six upgrades, failed SQL saves, stale forget requests, role
+- Exercise baseline round trips, failed SQL saves, stale forget requests, role
   validation, and the model count bound with real SQLite. Previously captured
   request settings and credentials must remain unchanged.
 
@@ -811,7 +817,7 @@ or window behavior. Never load inventories or add automatic inference to CI.
 
 ### Unified Voice transcription
 
-Migration fixtures exercise old realtime-enabled and completed configurations, preserving the file selection and inactive remembered realtime models. Completed Voice profile tests isolate endpoint, model, options, headers, and credential snapshots from Audio file. Backend eligibility tests must reject realtime on Generic or a mismatched server/profile.
+Fresh-baseline fixtures exercise completed and realtime Voice configurations, independent file selection, and remembered model options without importing alpha data. Completed Voice profile tests isolate endpoint, model, options, headers, and credential snapshots from Audio file. Backend eligibility tests must reject realtime on Generic or a mismatched server/profile.
 
 For native acceptance, open Voice → Transcription: there must be no separate Live button. Choose NeMo-Speech.cpp, its loaded model, and the explicit Nemotron profile; enable Realtime inside that panel. Verify live results and one-row captions. Turn realtime off and record using the same connection/model. Switch to an ineligible model/connection and verify mode is disabled. Configure Audio file separately, switch between tasks, and verify independent connection/model/language settings and truthful footer status. Restart and repeat. Test Voice-only first-run setup with Audio file unconfigured. These native checks are separate from successful builds and deterministic tests.
 
@@ -819,7 +825,7 @@ Language dropdown acceptance: check the searchable language picker and the quali
 
 ### Shared vocabulary acceptance
 
-Check Vocabulary at regular and small Settings window sizes in both themes. Edit names, independently toggle Voice/files, save, and reopen. Follow Vocabulary links from a dirty Voice/file settings draft and verify that edits survive navigation. Confirm the NVIDIA mark appears for NeMo in quick controls, connections, and the Vocabulary page. Switch supported/unsupported models and preserve the list and use preferences. For NeMo, verify limits and strength, then test completed Voice, audio files, and realtime against only the explicitly selected model when native inference acceptance is authorized. Backend fixtures cover migration, immutable workflow projections, Unicode limits, omission, and multipart speech contexts without automatic inference.
+Check Vocabulary at regular and small Settings window sizes in both themes. Edit names, independently toggle Voice/files, save, and reopen. Follow Vocabulary links from a dirty Voice/file settings draft and verify that edits survive navigation. Confirm the NVIDIA mark appears for NeMo in quick controls, connections, and the Vocabulary page. Switch supported/unsupported models and preserve the list and use preferences. For NeMo, verify limits and strength, then test completed Voice, audio files, and realtime against only the explicitly selected model when native inference acceptance is authorized. Backend fixtures cover fresh-schema round trips, immutable workflow projections, Unicode limits, omission, and multipart speech contexts without automatic inference.
 
 ## Qwen3-ASR and vLLM realtime
 
@@ -991,8 +997,8 @@ Fixtures in `internal/modelprofile`, `internal/inference`, and `internal/realtim
 cover the Parakeet, Cohere, Voxtral, and Qwen3-TTS contracts. HTTP fixtures assert
 request fields and voice metadata; both Qwen and Voxtral run the vLLM final,
 disconnect, error, cancellation, oversized-text, and premature-final scenarios.
-SQLite fixtures reconstruct alpha.4's schema and test upgrade, Unicode speech
-options, restart, and transaction rollback. Preview tests prove unsaved language
+SQLite fixtures exercise the clean baseline, Unicode speech options, restart,
+and transaction rollback. Preview tests prove unsaved language
 and instructions are captured without saving or forwarding transport fields.
 
 Native acceptance, with one explicitly selected model at a time:

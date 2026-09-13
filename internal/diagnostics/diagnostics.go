@@ -78,8 +78,6 @@ func knownErrorKind(kind string) string {
 		"invalid_file",
 		"invalid_settings",
 		"invalid_values",
-		"legacy_invalid",
-		"legacy_newer",
 		"locked",
 		"malformed_response",
 		"migration_failed",

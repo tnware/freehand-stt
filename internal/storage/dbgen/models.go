@@ -9,10 +9,7 @@ type CleanupSetting struct {
 	GenerationOptionsLimitOutputTokens int64
 	GenerationOptionsMaxOutputTokens   int64
 	GenerationOptionsDisableReasoning  int64
-	CompatibilityProfile               string
 	Enabled                            int64
-	BaseUrl                            string
-	AllowInsecureHttp                  int64
 	Model                              string
 	Preset                             string
 	SystemPrompt                       string
@@ -24,16 +21,6 @@ type CleanupSetting struct {
 
 type CredentialGc struct {
 	Account string
-}
-
-type CredentialRef struct {
-	Purpose string
-	Account string
-}
-
-type Initialization struct {
-	ID     int64
-	Source string
 }
 
 type PreferencesSetting struct {
@@ -80,31 +67,16 @@ type RememberedModel struct {
 	Purpose             string
 	Model               string
 	Selected            int64
-	Vocabulary          string
-	Boost               float64
 	Profile             string
-	Language            string
 	Prompt              string
-	Hotwords            string
 	TemperatureOverride int64
 	Temperature         float64
 	LimitOutputTokens   int64
 	MaxOutputTokens     int64
 	DisableReasoning    int64
-	SystemPrompt        string
-	Styling             string
-	Structure           string
-	Context             string
 	Voice               string
-	Speed               float64
 	SpeechLanguage      string
 	SpeechInstructions  string
-}
-
-type RequestHeader struct {
-	SettingsID int64
-	Name       string
-	Value      string
 }
 
 type SavedConnection struct {
@@ -135,34 +107,24 @@ type SelectedConnection struct {
 }
 
 type SpeechSetting struct {
-	ID                   int64
-	CompatibilityProfile string
-	Enabled              int64
-	BaseUrl              string
-	AllowInsecureHttp    int64
-	AuthenticationMode   string
-	Model                string
-	Voice                string
-	Speed                float64
-	TimeoutSeconds       int64
-	ModelProfile         string
-	SpeechLanguage       string
-	SpeechInstructions   string
+	ID                 int64
+	Enabled            int64
+	Model              string
+	Voice              string
+	Speed              float64
+	TimeoutSeconds     int64
+	ModelProfile       string
+	SpeechLanguage     string
+	SpeechInstructions string
 }
 
 type TranscriptionSetting struct {
 	ID                                      int64
-	CompatibilityProfile                    string
-	BaseUrl                                 string
-	AllowInsecureHttp                       int64
-	AuthenticationMode                      string
 	Model                                   string
 	Language                                string
-	HealthPath                              string
 	TranscriptionTimeoutSeconds             int64
 	FileTranscriptionTimeoutSeconds         int64
 	TranscriptionOptionsPrompt              string
-	TranscriptionOptionsHotwords            string
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
 	ModelProfile                            string
@@ -176,28 +138,15 @@ type VocabularySetting struct {
 	Boost float64
 }
 
-type VoiceRequestHeader struct {
-	Name  string
-	Value string
-}
-
 type VoiceTranscriptionSetting struct {
-	ID                   int64
-	Realtime             int64
-	CompatibilityProfile string
-	ModelProfile         string
-	BaseUrl              string
-	AllowInsecureHttp    int64
-	AuthenticationMode   string
-	Model                string
-	Language             string
-	HealthPath           string
-	TimeoutSeconds       int64
-	Prompt               string
-	Hotwords             string
-	TemperatureOverride  int64
-	Temperature          float64
-	Captions             int64
-	Vocabulary           string
-	Boost                float64
+	ID                  int64
+	Realtime            int64
+	ModelProfile        string
+	Model               string
+	Language            string
+	TimeoutSeconds      int64
+	Prompt              string
+	TemperatureOverride int64
+	Temperature         float64
+	Captions            int64
 }

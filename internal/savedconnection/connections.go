@@ -236,10 +236,7 @@ func Project(d Details, p Purpose) Details {
 	return d
 }
 
-// Voice can inherit both former completed and realtime connection inventories.
-func Limit(p Purpose) int {
-	if p == Voice {
-		return MaxPerPurpose * 2
-	}
+// Limit bounds the number of saved connections for each purpose.
+func Limit(_ Purpose) int {
 	return MaxPerPurpose
 }

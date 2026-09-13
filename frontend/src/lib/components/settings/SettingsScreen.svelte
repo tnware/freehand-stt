@@ -212,21 +212,6 @@
   // both outcomes of whatever you just pressed.
   const messages = $derived.by(() => {
     const out: Message[] = [];
-    const configuration = session.editor.applied?.configuration;
-    const preservedFields = configuration?.preservedFields ?? [];
-    if (preservedFields.length > 0) {
-      const remaining = Math.max(
-        0,
-        (configuration?.preservedFieldCount ?? preservedFields.length) -
-          preservedFields.length,
-      );
-      out.push({
-        id: "configuration-compatibility",
-        tone: "info",
-        source: "system",
-        text: `Settings from a newer Freehand version are preserved but cannot be edited here: ${preservedFields.join(", ")}${remaining > 0 ? `, and ${remaining} more` : ""}.`,
-      });
-    }
     if (session.messages.info) {
       out.push({
         id: "system-info",

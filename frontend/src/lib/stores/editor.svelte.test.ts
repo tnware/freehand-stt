@@ -23,8 +23,8 @@ describe("SettingsEditor configuration recovery", () => {
     ...settings,
     configuration: {
       recoveryRequired: true,
-      errorKind: "invalid_json",
-      message: "The settings file contains invalid JSON.",
+      errorKind: "database_corrupt",
+      message: "The settings database could not be loaded.",
     },
   };
 
@@ -39,13 +39,13 @@ describe("SettingsEditor configuration recovery", () => {
     expect(editor.apiKey).toBe("");
   });
 
-  it("keeps the recovery state visible when retry still cannot load the file", async () => {
+  it("keeps the recovery state visible when retry still cannot load the database", async () => {
     const RetryConfiguration: SessionServices["settings"]["RetryConfiguration"] = vi.fn(() =>
       CancellablePromise.resolve({
         ...invalidSettings,
         configuration: {
           ...invalidSettings.configuration,
-          message: "The saved value for appearanceMode has the wrong type.",
+          message: "The settings database is still unavailable.",
         },
       }),
     );
@@ -61,7 +61,7 @@ describe("SettingsEditor configuration recovery", () => {
     await session.editor.load();
     expect(await session.editor.retryConfiguration()).toBe(false);
     expect(session.editor.applied?.configuration.recoveryRequired).toBe(true);
-    expect(session.editor.applied?.configuration.message).toContain("appearanceMode");
+    expect(session.editor.applied?.configuration.message).toContain("database");
     expect(session.editor.configurationRetrying).toBe(false);
   });
 
@@ -72,7 +72,6 @@ describe("SettingsEditor configuration recovery", () => {
         model: "restored-model",
         configuration: {
           recoveryRequired: false,
-          preservedFields: ["realtime"],
         },
       }),
     );
@@ -96,7 +95,7 @@ describe("SettingsEditor configuration recovery", () => {
     await session.editor.load();
     expect(await session.editor.retryConfiguration()).toBe(true);
     expect(session.editor.applied?.model).toBe("restored-model");
-    expect(session.editor.applied?.configuration.preservedFields).toEqual(["realtime"]);
+    expect(session.editor.applied?.configuration).toEqual({ recoveryRequired: false });
     expect(ListMicrophones).toHaveBeenCalledOnce();
     expect(TranscriptHistory).toHaveBeenCalledOnce();
   });
@@ -724,7 +723,7 @@ describe("Transcription control drafts", () => {
     await session.editor.load();
     if (!session.editor.draft || !session.editor.applied) throw new Error("settings missing");
     session.editor.draft.transcriptionOptions.prompt = "unsaved context";
-    session.editor.draft.transcriptionOptions.hotwords = "unsaved terms";
+    session.editor.draft.vocabulary.terms = "unsaved terms";
     session.editor.draft.transcriptionOptions.temperatureOverride = true;
     expect(session.editor.applied.transcriptionOptions).toEqual(settings.transcriptionOptions);
   });

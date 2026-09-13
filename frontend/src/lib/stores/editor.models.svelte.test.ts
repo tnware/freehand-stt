@@ -4,7 +4,12 @@ import { Purpose } from "$bindings/savedconnection";
 import { ID } from "$bindings/modelprofile";
 import { PostProcessingPreset } from "$lib/state";
 import { applyModel, modelOptions } from "$lib/utils/modelSettings";
-import { createEditor, settings, idle, serviceWithStatus } from "./session-fixtures";
+import {
+  createEditor,
+  settings,
+  idle,
+  serviceWithStatus,
+} from "./session-fixtures";
 
 function configured() {
   const v = structuredClone(settings);
@@ -22,7 +27,6 @@ function configured() {
       options: {
         ...modelOptions(v, Purpose.Cleanup),
         profile: ID.S1Mini,
-        styling: "formal",
       },
     },
     {
@@ -30,7 +34,7 @@ function configured() {
       purpose: Purpose.Transcription,
       model: "whisper",
       selected: false,
-      options: { ...modelOptions(v, Purpose.Transcription), language: "ja" },
+      options: modelOptions(v, Purpose.Transcription),
     },
     {
       connectionID: "shared",
@@ -40,7 +44,6 @@ function configured() {
       options: {
         ...modelOptions(v, Purpose.Speech),
         voice: "voice-a",
-        speed: 1.4,
       },
     },
     {
@@ -51,7 +54,6 @@ function configured() {
       options: {
         ...modelOptions(v, Purpose.Cleanup),
         profile: ID.Generic,
-        styling: "casual",
       },
     },
   ];
@@ -63,7 +65,9 @@ describe("remembered model settings", () => {
     const connections = structuredClone(v.savedConnections);
     const timeout = v.postProcessing.timeoutSeconds;
     expect(applyModel(v, Purpose.Cleanup, "s1")).toBe(true);
-    expect(v.postProcessing.preset).toBe(PostProcessingPreset.PostProcessingPresetS1Mini);
+    expect(v.postProcessing.preset).toBe(
+      PostProcessingPreset.PostProcessingPresetS1Mini,
+    );
     expect(v.postProcessing.styling).toBe(settings.postProcessing.styling);
     expect(applyModel(v, Purpose.Transcription, "whisper")).toBe(true);
     expect(v.language).toBe(settings.language);
@@ -73,17 +77,25 @@ describe("remembered model settings", () => {
     expect(v.savedConnections).toEqual(connections);
     expect(v.postProcessing.timeoutSeconds).toBe(timeout);
     v.transcriptionOptions.prompt = "draft";
-    expect(v.rememberedModels.entries![1].options.transcription.prompt).not.toBe("draft");
+    expect(
+      v.rememberedModels.entries![1].options.transcription.prompt,
+    ).not.toBe("draft");
   });
   it("new models use defaults and never infer S1 behavior from their names", () => {
     const v = configured();
     applyModel(v, Purpose.Cleanup, "s1");
     applyModel(v, Purpose.Cleanup, "superwhisper/s1-mini-new");
-    expect(v.postProcessing.preset).toBe(PostProcessingPreset.PostProcessingPresetGeneric);
-    expect(modelOptions(v, Purpose.Cleanup)).toEqual(v.rememberedModels.defaults![Purpose.Cleanup]);
+    expect(v.postProcessing.preset).toBe(
+      PostProcessingPreset.PostProcessingPresetGeneric,
+    );
+    expect(modelOptions(v, Purpose.Cleanup)).toEqual(
+      v.rememberedModels.defaults![Purpose.Cleanup],
+    );
   });
   it("preserves modified options while switching and discards all model drafts", () => {
-    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
     editor.applySettingsSnapshot(configured());
     expect(editor.chooseModel(Purpose.Cleanup, "s1")).toBe(true);
     editor.draft!.postProcessing.styling = "casual";
@@ -92,7 +104,9 @@ describe("remembered model settings", () => {
     expect(editor.draft!.postProcessing.styling).toBe("casual");
     expect(editor.draft!.postProcessing.model).toBe("s1");
     editor.discardSettingsDraft();
-    expect(editor.draft!.postProcessing.model).toBe(settings.postProcessing.model);
+    expect(editor.draft!.postProcessing.model).toBe(
+      settings.postProcessing.model,
+    );
   });
   it("quick model selection saves restored options rather than previous model options", async () => {
     const bindings = serviceWithStatus(() => CancellablePromise.resolve(idle));
@@ -102,17 +116,24 @@ describe("remembered model settings", () => {
     const { editor } = createEditor(bindings);
     editor.applySettingsSnapshot(configured());
     expect(
-      await editor.updateQuickSettings({ postProcessing: { model: "s1" } }, "processing-model"),
+      await editor.updateQuickSettings(
+        { postProcessing: { model: "s1" } },
+        "processing-model",
+      ),
     ).toBe(true);
     const request = vi.mocked(bindings.settings.SaveSettings).mock.calls[0][0];
-    expect(request.settings.postProcessing.styling).toBe(settings.postProcessing.styling);
+    expect(request.settings.postProcessing.styling).toBe(
+      settings.postProcessing.styling,
+    );
     expect(request.settings.postProcessing.preset).toBe(
       PostProcessingPreset.PostProcessingPresetS1Mini,
     );
   });
   it("forgets using the current connection identity and refuses dirty drafts", async () => {
     const bindings = serviceWithStatus(() => CancellablePromise.resolve(idle));
-    bindings.settings.SaveSettings = vi.fn(() => CancellablePromise.resolve(configured()));
+    bindings.settings.SaveSettings = vi.fn(() =>
+      CancellablePromise.resolve(configured()),
+    );
     const { editor } = createEditor(bindings);
     editor.applySettingsSnapshot(configured());
     editor.draft!.language = "ja";
@@ -121,7 +142,8 @@ describe("remembered model settings", () => {
     editor.discardSettingsDraft();
     expect(await editor.forgetModel(Purpose.Cleanup)).toBe(true);
     expect(
-      vi.mocked(bindings.settings.SaveSettings).mock.calls[0][0].forgetModel?.connectionID,
+      vi.mocked(bindings.settings.SaveSettings).mock.calls[0][0].forgetModel
+        ?.connectionID,
     ).toBe("shared");
   });
   it("saves edits from multiple models together without changing their connection", async () => {
@@ -132,13 +154,28 @@ describe("remembered model settings", () => {
     const { editor } = createEditor(bindings);
     editor.applySettingsSnapshot(configured());
     editor.chooseModel(Purpose.Cleanup, "s1");
-    editor.draft!.postProcessing.styling = "casual";
+    editor.draft!.postProcessing.generationOptions = {
+      limitOutputTokens: true,
+      maxOutputTokens: 512,
+      disableReasoning: true,
+    };
     editor.chooseModel(Purpose.Cleanup, "another-model");
-    editor.draft!.postProcessing.systemPrompt = "Preserve punctuation.";
+    editor.draft!.postProcessing.generationOptions = {
+      limitOutputTokens: true,
+      maxOutputTokens: 256,
+      disableReasoning: false,
+    };
     expect(await editor.save()).toBe(true);
-    const edits = vi.mocked(bindings.settings.SaveSettings).mock.calls[0][0].modelEdits!;
+    const edits = vi.mocked(bindings.settings.SaveSettings).mock.calls[0][0]
+      .modelEdits!;
     expect(edits).toHaveLength(2);
-    expect(edits.find((e) => e.model === "s1")?.options.styling).toBe("casual");
+    expect(
+      edits.find((e) => e.model === "s1")?.options.cleanup.maxOutputTokens,
+    ).toBe(512);
+    expect(
+      edits.find((e) => e.model === "another-model")?.options.cleanup
+        .maxOutputTokens,
+    ).toBe(256);
     expect(edits.every((e) => e.connectionID === "shared")).toBe(true);
   });
 });
@@ -162,7 +199,9 @@ describe("speech quick settings", () => {
     const request = vi.mocked(bindings.settings.SaveSettings).mock.calls[0][0];
     expect(request.settings.textToSpeech.model).toBe("voice-model");
     expect(request.settings.textToSpeech.voice).toBe("voice-a");
-    expect(request.settings.textToSpeech.speed).toBe(settings.textToSpeech.speed);
+    expect(request.settings.textToSpeech.speed).toBe(
+      settings.textToSpeech.speed,
+    );
     expect(request.settings.language).toBe(settings.language);
     expect(request.textToSpeechCredentialDraft).toBe("");
     expect(request.clearTextToSpeechCredential).toBe(false);
@@ -189,7 +228,9 @@ describe("speech quick settings", () => {
         "speech-controls",
       ),
     ).toBe(false);
-    expect(editor.applied!.textToSpeech.voice).toBe(settings.textToSpeech.voice);
+    expect(editor.applied!.textToSpeech.voice).toBe(
+      settings.textToSpeech.voice,
+    );
     expect(editor.isQuickSettingsPending("speech-controls")).toBe(false);
     bindings.settings.SaveSettings = vi.fn((request) =>
       CancellablePromise.resolve({ ...configured(), ...request.settings }),

@@ -19,66 +19,31 @@ func (q *Queries) ClearRememberedModels(ctx context.Context) error {
 }
 
 const listRememberedModels = `-- name: ListRememberedModels :many
-SELECT connection_id,purpose,model,selected,profile,language,prompt,hotwords,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,system_prompt,styling,structure,context,voice,speed,vocabulary,boost,speech_language,speech_instructions FROM remembered_models ORDER BY connection_id,purpose,model LIMIT 16385
+SELECT connection_id,purpose,model,selected,profile,prompt,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,voice,speech_language,speech_instructions FROM remembered_models ORDER BY connection_id,purpose,model LIMIT 16385
 `
 
-type ListRememberedModelsRow struct {
-	ConnectionID        string
-	Purpose             string
-	Model               string
-	Selected            int64
-	Profile             string
-	Language            string
-	Prompt              string
-	Hotwords            string
-	TemperatureOverride int64
-	Temperature         float64
-	LimitOutputTokens   int64
-	MaxOutputTokens     int64
-	DisableReasoning    int64
-	SystemPrompt        string
-	Styling             string
-	Structure           string
-	Context             string
-	Voice               string
-	Speed               float64
-	Vocabulary          string
-	Boost               float64
-	SpeechLanguage      string
-	SpeechInstructions  string
-}
-
-func (q *Queries) ListRememberedModels(ctx context.Context) ([]ListRememberedModelsRow, error) {
+func (q *Queries) ListRememberedModels(ctx context.Context) ([]RememberedModel, error) {
 	rows, err := q.db.QueryContext(ctx, listRememberedModels)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListRememberedModelsRow{}
+	items := []RememberedModel{}
 	for rows.Next() {
-		var i ListRememberedModelsRow
+		var i RememberedModel
 		if err := rows.Scan(
 			&i.ConnectionID,
 			&i.Purpose,
 			&i.Model,
 			&i.Selected,
 			&i.Profile,
-			&i.Language,
 			&i.Prompt,
-			&i.Hotwords,
 			&i.TemperatureOverride,
 			&i.Temperature,
 			&i.LimitOutputTokens,
 			&i.MaxOutputTokens,
 			&i.DisableReasoning,
-			&i.SystemPrompt,
-			&i.Styling,
-			&i.Structure,
-			&i.Context,
 			&i.Voice,
-			&i.Speed,
-			&i.Vocabulary,
-			&i.Boost,
 			&i.SpeechLanguage,
 			&i.SpeechInstructions,
 		); err != nil {
@@ -96,7 +61,7 @@ func (q *Queries) ListRememberedModels(ctx context.Context) ([]ListRememberedMod
 }
 
 const putRememberedModel = `-- name: PutRememberedModel :exec
-INSERT INTO remembered_models (connection_id,purpose,model,selected,profile,language,prompt,hotwords,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,system_prompt,styling,structure,context,voice,speed,vocabulary,boost,speech_language,speech_instructions) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+INSERT INTO remembered_models (connection_id,purpose,model,selected,profile,prompt,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,voice,speech_language,speech_instructions) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type PutRememberedModelParams struct {
@@ -105,22 +70,13 @@ type PutRememberedModelParams struct {
 	Model               string
 	Selected            int64
 	Profile             string
-	Language            string
 	Prompt              string
-	Hotwords            string
 	TemperatureOverride int64
 	Temperature         float64
 	LimitOutputTokens   int64
 	MaxOutputTokens     int64
 	DisableReasoning    int64
-	SystemPrompt        string
-	Styling             string
-	Structure           string
-	Context             string
 	Voice               string
-	Speed               float64
-	Vocabulary          string
-	Boost               float64
 	SpeechLanguage      string
 	SpeechInstructions  string
 }
@@ -132,22 +88,13 @@ func (q *Queries) PutRememberedModel(ctx context.Context, arg PutRememberedModel
 		arg.Model,
 		arg.Selected,
 		arg.Profile,
-		arg.Language,
 		arg.Prompt,
-		arg.Hotwords,
 		arg.TemperatureOverride,
 		arg.Temperature,
 		arg.LimitOutputTokens,
 		arg.MaxOutputTokens,
 		arg.DisableReasoning,
-		arg.SystemPrompt,
-		arg.Styling,
-		arg.Structure,
-		arg.Context,
 		arg.Voice,
-		arg.Speed,
-		arg.Vocabulary,
-		arg.Boost,
 		arg.SpeechLanguage,
 		arg.SpeechInstructions,
 	)

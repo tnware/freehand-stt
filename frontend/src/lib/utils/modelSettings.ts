@@ -1,7 +1,8 @@
 import { Purpose } from "$bindings/savedconnection";
 import { ID } from "$bindings/modelprofile";
 import { PostProcessingPreset } from "$bindings/config";
-import type { Options } from "$bindings/modelsettings";
+import type { Options, TranscriptionOptions } from "$bindings/modelsettings";
+import type { TranscriptionOptions as InferenceTranscriptionOptions } from "$bindings/config";
 import type { Settings } from "$lib/state";
 
 export function modelFor(settings: Settings, purpose: Purpose): string {
@@ -19,15 +20,22 @@ export function rememberedModels(settings: Settings, purpose: Purpose) {
     (e) => e.connectionID === connection && e.purpose === purpose,
   );
 }
+function transcriptionOptions(
+  options: InferenceTranscriptionOptions,
+): TranscriptionOptions {
+  return {
+    prompt: options.prompt,
+    temperatureOverride: options.temperatureOverride,
+    temperature: options.temperature,
+  };
+}
+
 export function modelOptions(settings: Settings, purpose: Purpose): Options {
   const base: Options = {
     speech: { language: "", instructions: "" },
-    realtime: { vocabulary: "", boost: 0 },
     profile: ID.Generic,
-    language: "",
     transcription: {
       prompt: "",
-      hotwords: "",
       temperatureOverride: false,
       temperature: 0,
     },
@@ -36,39 +44,31 @@ export function modelOptions(settings: Settings, purpose: Purpose): Options {
       maxOutputTokens: 0,
       disableReasoning: false,
     },
-    systemPrompt: "",
-    styling: "",
-    structure: "",
-    context: "",
     voice: "",
-    speed: 0,
   };
   if (purpose === Purpose.Voice)
     return {
       ...base,
       profile: settings.voiceTranscription.modelProfile,
-      language: settings.voiceTranscription.language,
-      realtime: { ...settings.voiceTranscription.options },
-      transcription: { ...settings.voiceTranscription.transcriptionOptions },
+      transcription: transcriptionOptions(
+        settings.voiceTranscription.transcriptionOptions,
+      ),
     };
   if (purpose === Purpose.Transcription)
     return {
       ...base,
       profile: settings.modelProfile || ID.Generic,
-      language: settings.language ?? "",
-      transcription: { ...settings.transcriptionOptions },
+      transcription: transcriptionOptions(settings.transcriptionOptions),
     };
   if (purpose === Purpose.Cleanup) {
     const p = settings.postProcessing;
     return {
       ...base,
       profile:
-        p.preset === PostProcessingPreset.PostProcessingPresetS1Mini ? ID.S1Mini : ID.Generic,
+        p.preset === PostProcessingPreset.PostProcessingPresetS1Mini
+          ? ID.S1Mini
+          : ID.Generic,
       cleanup: { ...p.generationOptions },
-      systemPrompt: p.systemPrompt,
-      styling: p.styling,
-      structure: p.structure,
-      context: p.context,
     };
   }
   return {
@@ -76,7 +76,6 @@ export function modelOptions(settings: Settings, purpose: Purpose): Options {
     profile: settings.textToSpeech.modelProfile || ID.Generic,
     speech: { ...settings.textToSpeech.options },
     voice: settings.textToSpeech.voice,
-    speed: settings.textToSpeech.speed,
   };
 }
 export function savedModelOptions(
@@ -85,11 +84,15 @@ export function savedModelOptions(
   model: string,
 ): Options | undefined {
   return (
-    rememberedModels(settings, purpose).find((e) => e.model === model)?.options ??
-    settings.rememberedModels?.defaults?.[purpose]
+    rememberedModels(settings, purpose).find((e) => e.model === model)
+      ?.options ?? settings.rememberedModels?.defaults?.[purpose]
   );
 }
-export function applyModel(settings: Settings, purpose: Purpose, model: string): boolean {
+export function applyModel(
+  settings: Settings,
+  purpose: Purpose,
+  model: string,
+): boolean {
   const options = savedModelOptions(settings, purpose, model);
   if (!options) return false;
   applyModelOptions(settings, purpose, model, options);
@@ -101,8 +104,7 @@ export function applyModelOptions(
   model: string,
   options: Options,
 ) {
-  // Restore engine options while preserving task intent. Historical task fields
-  // remain in the saved snapshot format, but do not control model selection.
+  // The remembered DTO represents model behavior only; task state stays in place.
   const o = {
     ...options,
     transcription: { ...options.transcription },
@@ -112,17 +114,23 @@ export function applyModelOptions(
     Object.assign(settings.voiceTranscription, {
       model,
       modelProfile: o.profile,
-      options: { ...o.realtime, vocabulary: "" },
-      transcriptionOptions: { ...o.transcription, hotwords: "" },
+      transcriptionOptions: {
+        ...settings.voiceTranscription.transcriptionOptions,
+        ...o.transcription,
+      },
       realtime:
         settings.voiceTranscription.realtime &&
-        !!settings.modelProfiles.voiceTranscription?.find((p) => p.id === o.profile)?.capabilities
-          .realtime,
+        !!settings.modelProfiles.voiceTranscription?.find(
+          (p) => p.id === o.profile,
+        )?.capabilities.realtime,
     });
   } else if (purpose === Purpose.Transcription) {
     settings.model = model;
     settings.modelProfile = o.profile;
-    settings.transcriptionOptions = { ...o.transcription, hotwords: "" };
+    settings.transcriptionOptions = {
+      ...settings.transcriptionOptions,
+      ...o.transcription,
+    };
   } else if (purpose === Purpose.Cleanup) {
     Object.assign(settings.postProcessing, {
       model,

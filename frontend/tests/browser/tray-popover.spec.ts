@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+// This surface has native fixed dimensions, including in the full browser suite.
+test.use({ viewport: { width: 360, height: 500 } });
 test("recording guidance promises dismissal, not external focus restoration", async ({ page }) => {
   await page.goto("/tests/browser/app/?view=tray");
   await expect(page.getByText("Hides this panel before recording.", { exact: true })).toBeVisible();

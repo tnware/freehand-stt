@@ -754,7 +754,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		}()
 		transcriptionStarted := time.Now()
 		requestCtx, requestCancel := context.WithTimeout(ctx, time.Duration(cfg.TranscriptionTimeoutSeconds)*time.Second)
-		transcription, transcriptionErr := c.client.WithCompatibility(cfg.CompatibilityProfile).WithModelProfile(cfg.ModelProfile).WithTranscriptionOptions(cfg.TranscriptionOptions).Transcribe(requestCtx, cfg.BaseURL, cfg.Model, cfg.Language, profile.STTCredential, cfg.Headers, wav)
+		transcription, transcriptionErr := c.client.WithCompatibility(cfg.CompatibilityProfile).WithModelProfile(cfg.ModelProfile).WithTranscriptionOptions(cfg.TranscriptionOptions.Inference()).Transcribe(requestCtx, cfg.BaseURL, cfg.Model, cfg.Language, profile.STTCredential, cfg.Headers, wav)
 		requestCancel()
 		text = transcription.Text
 		e = transcriptionErr

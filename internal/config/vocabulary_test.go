@@ -30,7 +30,7 @@ func TestVocabularyUsesQualifiedFieldsAndImmutableWorkflowChoices(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got.TranscriptionOptions != v.TranscriptionOptions || v.VoiceTranscription.Options.Vocabulary != "" {
+			if got.TranscriptionOptions != v.TranscriptionOptions || v.VoiceTranscription.RealtimeOptions().Vocabulary != "" {
 				t.Fatal("projection mutated file settings or its input")
 			}
 			switch mode {
@@ -39,19 +39,19 @@ func TestVocabularyUsesQualifiedFieldsAndImmutableWorkflowChoices(t *testing.T) 
 					t.Fatal("context lost")
 				}
 			case "hotwords":
-				if got.VoiceTranscription.TranscriptionOptions.Hotwords != "Freehand\n東京" {
+				if got.VoiceTranscription.TranscriptionOptions.Inference().Hotwords != "Freehand\n東京" {
 					t.Fatal("missing hotwords")
 				}
 			case "completed-nemo":
-				if got.VoiceTranscription.TranscriptionOptions.Vocabulary != "Freehand\n東京" || got.VoiceTranscription.TranscriptionOptions.VocabularyBoost != 2.5 {
+				if got.VoiceTranscription.TranscriptionOptions.Inference().Vocabulary != "Freehand\n東京" || got.VoiceTranscription.TranscriptionOptions.Inference().VocabularyBoost != 2.5 {
 					t.Fatal("missing completed speech contexts")
 				}
 			case "realtime-nemo":
-				if got.VoiceTranscription.Options.Vocabulary != "Freehand\n東京" || got.VoiceTranscription.Options.Boost != 2.5 {
+				if got.VoiceTranscription.RealtimeOptions().Vocabulary != "Freehand\n東京" || got.VoiceTranscription.RealtimeOptions().Boost != 2.5 {
 					t.Fatal("missing realtime speech contexts")
 				}
 			case "unsupported":
-				if got.VoiceTranscription.Options.Vocabulary != "" || got.VoiceTranscription.TranscriptionOptions != v.VoiceTranscription.TranscriptionOptions {
+				if got.VoiceTranscription.RealtimeOptions().Vocabulary != "" || got.VoiceTranscription.TranscriptionOptions != v.VoiceTranscription.TranscriptionOptions {
 					t.Fatal("unsupported profile received hints")
 				}
 			}

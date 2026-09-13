@@ -49,8 +49,8 @@ Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 w
   Generic is a baseline, not proof of support by every deployed model. Follow ADR 0012 for Parakeet, Cohere, Voxtral, and Qwen3-TTS contracts; Qwen speech language and style are remembered model options and preview snapshots.
 - `internal/modelsettings` owns the non-secret per-connection/use/model option
   subset. Follow ADR 0007 for task-versus-model ownership: selection preserves language,
-  cleanup intent, and speaking speed; historical task fields in saved model snapshots
-  are not selection authority. Persist it with active settings through the existing settings transaction
+  cleanup intent, and speaking speed; remembered-model rows contain only their
+  current model-owned subset, not historical task fields. Persist it with active settings through the existing settings transaction
   and sqlc queries; never store transport or credentials in model preferences.
 - Shared vocabulary follows ADR 0010: task-owned phrases and Voice/file opt-ins, qualified adapter projection into immutable requests, and no restoration of historical per-model phrase fields. Cleanup instructions and prose context remain separate.
 - Model profiles belong to feature settings, independently of reusable server
@@ -76,10 +76,10 @@ Optional realtime microphone dictation is qualified for NeMo-Speech.cpp v0.1.0 w
 
 ## SQLite persistence contract
 
-The accepted SQLite direction is defined in [ADR 0006](site/src/content/docs/docs/decisions/0006-sqlite-storage-contract.md). It governs the implemented SQLite store and every subsequent persistence change. The legacy JSON reader is import-only.
+The current SQLite contract is [ADR 0014](site/src/content/docs/docs/decisions/0014-clean-settings-baseline.md), superseding ADR 0006's alpha lineage/import policy. Use `freehand.db` with its distinct application identity. Start from defaults and an empty connection catalog; never read, import, convert, or delete alpha `settings.db`, `settings.json`, or legacy native credentials.
 
 - Use `modernc.org/sqlite` with `database/sql`, embedded goose SQL migrations, and sqlc-generated application queries. Do not introduce an ORM, a second migration runner, or handwritten application query/scanning paths. Keep infrastructure SQL confined to the documented storage boundary.
-- Pin driver and tool versions. Goose owns migration history; sqlc reads the same migration directory. Released migrations are immutable and normal startup upgrades forward only.
+- Pin driver and tool versions. Goose's version table is the sole migration authority. Goose and sqlc both read `internal/storage/schema/`, beginning with `00001_initial.sql`. Published migrations in this lineage are immutable and startup upgrades forward only; the alpha reset is not a general immutability bypass.
 - Keep generated rows and database handles inside storage. Existing domain owners retain validation, save transaction coordination, immutable request snapshots, and native/credential recovery.
 - Commit generated queries. The implementation must ship reproducible generation and CI checks for stale/untracked generated output, released migration immutability, and query/import boundaries. Test real SQLite migrations, transactions, recovery, and platform-specific behavior.
 - Credentials remain in Windows Credential Manager or macOS Keychain; SQLite may store opaque references only. Adding SQLite does not authorize persistent transcript history or audio retention.

@@ -78,8 +78,11 @@ func TestFinalReplacesPartialAndConfigurationUsesVocabulary(t *testing.T) {
 	}, opts)
 	defer server.Close()
 	cfg := fixtureConfig(server)
-	cfg.Options.Vocabulary = "Freehand\nNemotron"
-	cfg.Options.Boost = 3
+	snapshot, err := config.WithVocabulary(config.Settings{VoiceTranscription: cfg, Vocabulary: config.VocabularySettings{Terms: "Freehand\nNemotron", Voice: true, Boost: 3}}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg = snapshot.VoiceTranscription
 	var updates []Update
 	session, err := Open(t.Context(), cfg, "fixture-key", func(u Update) { updates = append(updates, u) })
 	if err != nil {

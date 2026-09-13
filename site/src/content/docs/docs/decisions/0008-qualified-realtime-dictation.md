@@ -3,6 +3,11 @@ title: "ADR 0008: Qualified realtime dictation"
 description: Add an optional Nemotron streaming transport without expanding Freehand into an inference runtime.
 ---
 
+> Storage policy superseded by [ADR 0014](../0014-clean-settings-baseline/):
+> the alpha migration chain, JSON import, and historical-field compatibility
+> described below are historical, not supported upgrade paths. Current settings
+> start in a distinct `freehand.db` lineage; other product decisions remain intact.
+
 - Status: Accepted
 - Date: 2026-09-07
 

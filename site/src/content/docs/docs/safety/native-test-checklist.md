@@ -64,12 +64,13 @@ processing, copy recovery, and error states retain usable controls.
 ## SQLite settings acceptance
 
 Use a separate test user or isolated data directories, not personal settings.
-Confirm one-time JSON import, save/reopen persistence, new-key replacement and
-clear, and restart reconciliation of startup and shortcuts. Test a denied write
+Confirm first-run defaults and an empty connection catalog while alpha files and
+credentials remain untouched. Check save/reopen persistence, new-key replacement
+and clear, and restart reconciliation of startup and shortcuts. Test a denied write
 and a deliberately newer/corrupt fixture: both windows must expose recovery,
 new jobs must stop, and existing captured profiles must remain coherent. Retry
-a repaired import, explicitly reset, and restore a backup with the app fully
-closed. Inspect only synthetic credential accounts and confirm no secret reaches
+a repaired current database, explicitly reset and reconfigure connections/keys,
+and restore a new-lineage backup with the app fully closed. Inspect only synthetic credential accounts and confirm no secret reaches
 the database, backups, renderer snapshots, or logs. Native temporary-database
 tests and a successful executable build do not replace these interactive checks.
 

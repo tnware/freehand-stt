@@ -375,7 +375,9 @@ func TestSegmentedDictationUsesCredentialCapturedBeforeFirstCheckpoint(t *testin
 	cfg := segmentedSettings(server.URL)
 	cfg.AuthenticationMode = config.AuthenticationModeAPIKey
 	cfg.CompatibilityProfile = compatibility.Speaches
-	cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "captured context", Hotwords: "captured terms", TemperatureOverride: true}
+	cfg.TranscriptionOptions = config.TranscriptionOptions{Prompt: "captured context", TemperatureOverride: true}
+	cfg.Vocabulary = config.VocabularySettings{Terms: "captured terms", Files: true, Boost: 3}
+	cfg, _ = config.WithVocabulary(cfg, false)
 	credentials := &mutableCredential{value: "credential-at-start"}
 	recorder := New(capture, platform, nil, credentials, staticSettings{value: cfg}, nil)
 	recorder.client = newTestClient(server.Client())
@@ -390,7 +392,7 @@ func TestSegmentedDictationUsesCredentialCapturedBeforeFirstCheckpoint(t *testin
 	if err := recorder.Start(); err != nil {
 		t.Fatal(err)
 	}
-	cfg.TranscriptionOptions = compatibility.TranscriptionOptions{Prompt: "edited context", Temperature: 1}
+	cfg.TranscriptionOptions = config.TranscriptionOptions{Prompt: "edited context", Temperature: 1}
 	if err := credentials.Set("credential-edited-before-checkpoint"); err != nil {
 		t.Fatal(err)
 	}

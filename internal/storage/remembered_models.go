@@ -43,7 +43,10 @@ func readRememberedModels(ctx context.Context, q *dbgen.Queries, state *connecti
 	}
 	counts := map[string]int{}
 	for _, r := range rows {
-		e := modelsettings.Entry{ConnectionID: r.ConnectionID, Purpose: savedconnection.Purpose(r.Purpose), Model: r.Model, Selected: r.Selected != 0, Options: modelsettings.Options{Speech: modelprofile.SpeechOptions{Language: r.SpeechLanguage, Instructions: r.SpeechInstructions}, Realtime: modelprofile.NemotronOptions{Vocabulary: r.Vocabulary, Boost: r.Boost}, Profile: modelprofile.ID(r.Profile), Language: r.Language, Transcription: compatibility.TranscriptionOptions{Prompt: r.Prompt, Hotwords: r.Hotwords, TemperatureOverride: r.TemperatureOverride != 0, Temperature: r.Temperature}, Cleanup: compatibility.CleanupOptions{LimitOutputTokens: r.LimitOutputTokens != 0, MaxOutputTokens: int(r.MaxOutputTokens), DisableReasoning: r.DisableReasoning != 0}, SystemPrompt: r.SystemPrompt, Styling: r.Styling, Structure: r.Structure, Context: r.Context, Voice: r.Voice, Speed: r.Speed}}
+		e := modelsettings.Entry{ConnectionID: r.ConnectionID, Purpose: savedconnection.Purpose(r.Purpose), Model: r.Model, Selected: r.Selected != 0, Options: modelsettings.Options{Speech: modelprofile.SpeechOptions{Language: r.SpeechLanguage, Instructions: r.SpeechInstructions}, Profile: modelprofile.ID(r.Profile), Cleanup: compatibility.CleanupOptions{LimitOutputTokens: r.LimitOutputTokens != 0, MaxOutputTokens: int(r.MaxOutputTokens), DisableReasoning: r.DisableReasoning != 0}, Voice: r.Voice}}
+		e.Options.Transcription.Prompt = r.Prompt
+		e.Options.Transcription.TemperatureOverride = r.TemperatureOverride != 0
+		e.Options.Transcription.Temperature = r.Temperature
 		c, ok := state.entries[e.ConnectionID]
 		counts[e.ConnectionID+":"+string(e.Purpose)]++
 		if !ok || !c.Supports(e.Purpose) || counts[e.ConnectionID+":"+string(e.Purpose)] > modelsettings.MaxPerUse {
@@ -69,7 +72,7 @@ func writeRememberedModels(ctx context.Context, q *dbgen.Queries, state *connect
 	}
 	for _, e := range state.models {
 		o := e.Options
-		if err := q.PutRememberedModel(ctx, dbgen.PutRememberedModelParams{SpeechLanguage: o.Speech.Language, SpeechInstructions: o.Speech.Instructions, ConnectionID: e.ConnectionID, Purpose: string(e.Purpose), Model: e.Model, Selected: boolean(e.Selected), Profile: string(o.Profile), Language: o.Language, Prompt: o.Transcription.Prompt, Hotwords: o.Transcription.Hotwords, TemperatureOverride: boolean(o.Transcription.TemperatureOverride), Temperature: o.Transcription.Temperature, LimitOutputTokens: boolean(o.Cleanup.LimitOutputTokens), MaxOutputTokens: int64(o.Cleanup.MaxOutputTokens), DisableReasoning: boolean(o.Cleanup.DisableReasoning), SystemPrompt: o.SystemPrompt, Styling: o.Styling, Structure: o.Structure, Context: o.Context, Voice: o.Voice, Speed: o.Speed, Vocabulary: o.Realtime.Vocabulary, Boost: o.Realtime.Boost}); err != nil {
+		if err := q.PutRememberedModel(ctx, dbgen.PutRememberedModelParams{SpeechLanguage: o.Speech.Language, SpeechInstructions: o.Speech.Instructions, ConnectionID: e.ConnectionID, Purpose: string(e.Purpose), Model: e.Model, Selected: boolean(e.Selected), Profile: string(o.Profile), Prompt: o.Transcription.Prompt, TemperatureOverride: boolean(o.Transcription.TemperatureOverride), Temperature: o.Transcription.Temperature, LimitOutputTokens: boolean(o.Cleanup.LimitOutputTokens), MaxOutputTokens: int64(o.Cleanup.MaxOutputTokens), DisableReasoning: boolean(o.Cleanup.DisableReasoning), Voice: o.Voice}); err != nil {
 			return err
 		}
 	}

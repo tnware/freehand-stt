@@ -9,15 +9,6 @@ import (
 	"context"
 )
 
-const clearHeaders = `-- name: ClearHeaders :exec
-DELETE FROM request_headers WHERE settings_id=1
-`
-
-func (q *Queries) ClearHeaders(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, clearHeaders)
-	return err
-}
-
 const completeCredentialGC = `-- name: CompleteCredentialGC :exec
 DELETE FROM credential_gc WHERE account=?
 `
@@ -28,7 +19,7 @@ func (q *Queries) CompleteCredentialGC(ctx context.Context, account string) erro
 }
 
 const countCredentialGC = `-- name: CountCredentialGC :one
-SELECT count(*) FROM credential_gc WHERE account NOT IN (SELECT account FROM credential_refs) AND account NOT IN (SELECT credential_account FROM saved_connections)
+SELECT count(*) FROM credential_gc WHERE account NOT IN (SELECT credential_account FROM saved_connections)
 `
 
 func (q *Queries) CountCredentialGC(ctx context.Context) (int64, error) {
@@ -39,17 +30,14 @@ func (q *Queries) CountCredentialGC(ctx context.Context) (int64, error) {
 }
 
 const getCleanup = `-- name: GetCleanup :one
-SELECT generation_options_limit_output_tokens, generation_options_max_output_tokens, generation_options_disable_reasoning, compatibility_profile, enabled, base_url, allow_insecure_http, model, preset, system_prompt, styling, structure, context, timeout_seconds FROM cleanup_settings WHERE id=1
+SELECT generation_options_limit_output_tokens, generation_options_max_output_tokens, generation_options_disable_reasoning, enabled, model, preset, system_prompt, styling, structure, context, timeout_seconds FROM cleanup_settings WHERE id=1
 `
 
 type GetCleanupRow struct {
 	GenerationOptionsLimitOutputTokens int64
 	GenerationOptionsMaxOutputTokens   int64
 	GenerationOptionsDisableReasoning  int64
-	CompatibilityProfile               string
 	Enabled                            int64
-	BaseUrl                            string
-	AllowInsecureHttp                  int64
 	Model                              string
 	Preset                             string
 	SystemPrompt                       string
@@ -66,10 +54,7 @@ func (q *Queries) GetCleanup(ctx context.Context) (GetCleanupRow, error) {
 		&i.GenerationOptionsLimitOutputTokens,
 		&i.GenerationOptionsMaxOutputTokens,
 		&i.GenerationOptionsDisableReasoning,
-		&i.CompatibilityProfile,
 		&i.Enabled,
-		&i.BaseUrl,
-		&i.AllowInsecureHttp,
 		&i.Model,
 		&i.Preset,
 		&i.SystemPrompt,
@@ -82,18 +67,23 @@ func (q *Queries) GetCleanup(ctx context.Context) (GetCleanupRow, error) {
 }
 
 const getCredentialRefs = `-- name: GetCredentialRefs :many
-SELECT purpose, account FROM credential_refs ORDER BY purpose
+SELECT s.purpose, c.credential_account AS account FROM selected_connections s JOIN saved_connections c ON c.id=s.connection_id ORDER BY s.purpose
 `
 
-func (q *Queries) GetCredentialRefs(ctx context.Context) ([]CredentialRef, error) {
+type GetCredentialRefsRow struct {
+	Purpose string
+	Account string
+}
+
+func (q *Queries) GetCredentialRefs(ctx context.Context) ([]GetCredentialRefsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getCredentialRefs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []CredentialRef{}
+	items := []GetCredentialRefsRow{}
 	for rows.Next() {
-		var i CredentialRef
+		var i GetCredentialRefsRow
 		if err := rows.Scan(&i.Purpose, &i.Account); err != nil {
 			return nil, err
 		}
@@ -106,49 +96,6 @@ func (q *Queries) GetCredentialRefs(ctx context.Context) ([]CredentialRef, error
 		return nil, err
 	}
 	return items, nil
-}
-
-const getHeaders = `-- name: GetHeaders :many
-SELECT name, value FROM request_headers ORDER BY name LIMIT 33
-`
-
-type GetHeadersRow struct {
-	Name  string
-	Value string
-}
-
-func (q *Queries) GetHeaders(ctx context.Context) ([]GetHeadersRow, error) {
-	rows, err := q.db.QueryContext(ctx, getHeaders)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetHeadersRow{}
-	for rows.Next() {
-		var i GetHeadersRow
-		if err := rows.Scan(&i.Name, &i.Value); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getInitialization = `-- name: GetInitialization :one
-SELECT source FROM initialization WHERE id=1
-`
-
-func (q *Queries) GetInitialization(ctx context.Context) (string, error) {
-	row := q.db.QueryRowContext(ctx, getInitialization)
-	var source string
-	err := row.Scan(&source)
-	return source, err
 }
 
 const getPreferences = `-- name: GetPreferences :one
@@ -237,22 +184,18 @@ func (q *Queries) GetPreferences(ctx context.Context) (GetPreferencesRow, error)
 }
 
 const getSpeech = `-- name: GetSpeech :one
-SELECT model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds, speech_language, speech_instructions FROM speech_settings WHERE id=1
+SELECT model_profile, enabled, model, voice, speed, timeout_seconds, speech_language, speech_instructions FROM speech_settings WHERE id=1
 `
 
 type GetSpeechRow struct {
-	ModelProfile         string
-	CompatibilityProfile string
-	Enabled              int64
-	BaseUrl              string
-	AllowInsecureHttp    int64
-	AuthenticationMode   string
-	Model                string
-	Voice                string
-	Speed                float64
-	TimeoutSeconds       int64
-	SpeechLanguage       string
-	SpeechInstructions   string
+	ModelProfile       string
+	Enabled            int64
+	Model              string
+	Voice              string
+	Speed              float64
+	TimeoutSeconds     int64
+	SpeechLanguage     string
+	SpeechInstructions string
 }
 
 func (q *Queries) GetSpeech(ctx context.Context) (GetSpeechRow, error) {
@@ -260,11 +203,7 @@ func (q *Queries) GetSpeech(ctx context.Context) (GetSpeechRow, error) {
 	var i GetSpeechRow
 	err := row.Scan(
 		&i.ModelProfile,
-		&i.CompatibilityProfile,
 		&i.Enabled,
-		&i.BaseUrl,
-		&i.AllowInsecureHttp,
-		&i.AuthenticationMode,
 		&i.Model,
 		&i.Voice,
 		&i.Speed,
@@ -276,22 +215,16 @@ func (q *Queries) GetSpeech(ctx context.Context) (GetSpeechRow, error) {
 }
 
 const getTranscription = `-- name: GetTranscription :one
-SELECT model_profile, compatibility_profile, base_url, allow_insecure_http, authentication_mode, model, language, health_path, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_hotwords, transcription_options_temperature_override, transcription_options_temperature FROM transcription_settings WHERE id=1
+SELECT model_profile, model, language, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_temperature_override, transcription_options_temperature FROM transcription_settings WHERE id=1
 `
 
 type GetTranscriptionRow struct {
 	ModelProfile                            string
-	CompatibilityProfile                    string
-	BaseUrl                                 string
-	AllowInsecureHttp                       int64
-	AuthenticationMode                      string
 	Model                                   string
 	Language                                string
-	HealthPath                              string
 	TranscriptionTimeoutSeconds             int64
 	FileTranscriptionTimeoutSeconds         int64
 	TranscriptionOptionsPrompt              string
-	TranscriptionOptionsHotwords            string
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
 }
@@ -301,34 +234,19 @@ func (q *Queries) GetTranscription(ctx context.Context) (GetTranscriptionRow, er
 	var i GetTranscriptionRow
 	err := row.Scan(
 		&i.ModelProfile,
-		&i.CompatibilityProfile,
-		&i.BaseUrl,
-		&i.AllowInsecureHttp,
-		&i.AuthenticationMode,
 		&i.Model,
 		&i.Language,
-		&i.HealthPath,
 		&i.TranscriptionTimeoutSeconds,
 		&i.FileTranscriptionTimeoutSeconds,
 		&i.TranscriptionOptionsPrompt,
-		&i.TranscriptionOptionsHotwords,
 		&i.TranscriptionOptionsTemperatureOverride,
 		&i.TranscriptionOptionsTemperature,
 	)
 	return i, err
 }
 
-const initialize = `-- name: Initialize :exec
-INSERT INTO initialization(id,source) VALUES(1,?)
-`
-
-func (q *Queries) Initialize(ctx context.Context, source string) error {
-	_, err := q.db.ExecContext(ctx, initialize, source)
-	return err
-}
-
 const pendingCredentialGC = `-- name: PendingCredentialGC :many
-SELECT account FROM credential_gc WHERE account NOT IN (SELECT account FROM credential_refs) AND account NOT IN (SELECT credential_account FROM saved_connections) ORDER BY account LIMIT 128
+SELECT account FROM credential_gc WHERE account NOT IN (SELECT credential_account FROM saved_connections) ORDER BY account LIMIT 128
 `
 
 func (q *Queries) PendingCredentialGC(ctx context.Context) ([]string, error) {
@@ -355,19 +273,16 @@ func (q *Queries) PendingCredentialGC(ctx context.Context) ([]string, error) {
 }
 
 const putCleanup = `-- name: PutCleanup :exec
-INSERT INTO cleanup_settings (id, generation_options_limit_output_tokens, generation_options_max_output_tokens, generation_options_disable_reasoning, compatibility_profile, enabled, base_url, allow_insecure_http, model, preset, system_prompt, styling, structure, context, timeout_seconds)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET generation_options_limit_output_tokens=excluded.generation_options_limit_output_tokens, generation_options_max_output_tokens=excluded.generation_options_max_output_tokens, generation_options_disable_reasoning=excluded.generation_options_disable_reasoning, compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, model=excluded.model, preset=excluded.preset, system_prompt=excluded.system_prompt, styling=excluded.styling, structure=excluded.structure, context=excluded.context, timeout_seconds=excluded.timeout_seconds
+INSERT INTO cleanup_settings (id, generation_options_limit_output_tokens, generation_options_max_output_tokens, generation_options_disable_reasoning, enabled, model, preset, system_prompt, styling, structure, context, timeout_seconds)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET generation_options_limit_output_tokens=excluded.generation_options_limit_output_tokens, generation_options_max_output_tokens=excluded.generation_options_max_output_tokens, generation_options_disable_reasoning=excluded.generation_options_disable_reasoning, enabled=excluded.enabled, model=excluded.model, preset=excluded.preset, system_prompt=excluded.system_prompt, styling=excluded.styling, structure=excluded.structure, context=excluded.context, timeout_seconds=excluded.timeout_seconds
 `
 
 type PutCleanupParams struct {
 	GenerationOptionsLimitOutputTokens int64
 	GenerationOptionsMaxOutputTokens   int64
 	GenerationOptionsDisableReasoning  int64
-	CompatibilityProfile               string
 	Enabled                            int64
-	BaseUrl                            string
-	AllowInsecureHttp                  int64
 	Model                              string
 	Preset                             string
 	SystemPrompt                       string
@@ -382,10 +297,7 @@ func (q *Queries) PutCleanup(ctx context.Context, arg PutCleanupParams) error {
 		arg.GenerationOptionsLimitOutputTokens,
 		arg.GenerationOptionsMaxOutputTokens,
 		arg.GenerationOptionsDisableReasoning,
-		arg.CompatibilityProfile,
 		arg.Enabled,
-		arg.BaseUrl,
-		arg.AllowInsecureHttp,
 		arg.Model,
 		arg.Preset,
 		arg.SystemPrompt,
@@ -394,34 +306,6 @@ func (q *Queries) PutCleanup(ctx context.Context, arg PutCleanupParams) error {
 		arg.Context,
 		arg.TimeoutSeconds,
 	)
-	return err
-}
-
-const putCredentialRef = `-- name: PutCredentialRef :exec
-INSERT INTO credential_refs(purpose,account) VALUES(?,?) ON CONFLICT(purpose) DO UPDATE SET account=excluded.account
-`
-
-type PutCredentialRefParams struct {
-	Purpose string
-	Account string
-}
-
-func (q *Queries) PutCredentialRef(ctx context.Context, arg PutCredentialRefParams) error {
-	_, err := q.db.ExecContext(ctx, putCredentialRef, arg.Purpose, arg.Account)
-	return err
-}
-
-const putHeader = `-- name: PutHeader :exec
-INSERT INTO request_headers(settings_id,name,value) VALUES(1,?,?)
-`
-
-type PutHeaderParams struct {
-	Name  string
-	Value string
-}
-
-func (q *Queries) PutHeader(ctx context.Context, arg PutHeaderParams) error {
-	_, err := q.db.ExecContext(ctx, putHeader, arg.Name, arg.Value)
 	return err
 }
 
@@ -511,34 +395,26 @@ func (q *Queries) PutPreferences(ctx context.Context, arg PutPreferencesParams) 
 }
 
 const putSpeech = `-- name: PutSpeech :exec
-INSERT INTO speech_settings (id, model_profile, compatibility_profile, enabled, base_url, allow_insecure_http, authentication_mode, model, voice, speed, timeout_seconds, speech_language, speech_instructions)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, compatibility_profile=excluded.compatibility_profile, enabled=excluded.enabled, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, voice=excluded.voice, speed=excluded.speed, timeout_seconds=excluded.timeout_seconds, speech_language=excluded.speech_language, speech_instructions=excluded.speech_instructions
+INSERT INTO speech_settings (id, model_profile, enabled, model, voice, speed, timeout_seconds, speech_language, speech_instructions)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, enabled=excluded.enabled, model=excluded.model, voice=excluded.voice, speed=excluded.speed, timeout_seconds=excluded.timeout_seconds, speech_language=excluded.speech_language, speech_instructions=excluded.speech_instructions
 `
 
 type PutSpeechParams struct {
-	ModelProfile         string
-	CompatibilityProfile string
-	Enabled              int64
-	BaseUrl              string
-	AllowInsecureHttp    int64
-	AuthenticationMode   string
-	Model                string
-	Voice                string
-	Speed                float64
-	TimeoutSeconds       int64
-	SpeechLanguage       string
-	SpeechInstructions   string
+	ModelProfile       string
+	Enabled            int64
+	Model              string
+	Voice              string
+	Speed              float64
+	TimeoutSeconds     int64
+	SpeechLanguage     string
+	SpeechInstructions string
 }
 
 func (q *Queries) PutSpeech(ctx context.Context, arg PutSpeechParams) error {
 	_, err := q.db.ExecContext(ctx, putSpeech,
 		arg.ModelProfile,
-		arg.CompatibilityProfile,
 		arg.Enabled,
-		arg.BaseUrl,
-		arg.AllowInsecureHttp,
-		arg.AuthenticationMode,
 		arg.Model,
 		arg.Voice,
 		arg.Speed,
@@ -550,24 +426,18 @@ func (q *Queries) PutSpeech(ctx context.Context, arg PutSpeechParams) error {
 }
 
 const putTranscription = `-- name: PutTranscription :exec
-INSERT INTO transcription_settings (id, model_profile, compatibility_profile, base_url, allow_insecure_http, authentication_mode, model, language, health_path, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_hotwords, transcription_options_temperature_override, transcription_options_temperature)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, compatibility_profile=excluded.compatibility_profile, base_url=excluded.base_url, allow_insecure_http=excluded.allow_insecure_http, authentication_mode=excluded.authentication_mode, model=excluded.model, language=excluded.language, health_path=excluded.health_path, transcription_timeout_seconds=excluded.transcription_timeout_seconds, file_transcription_timeout_seconds=excluded.file_transcription_timeout_seconds, transcription_options_prompt=excluded.transcription_options_prompt, transcription_options_hotwords=excluded.transcription_options_hotwords, transcription_options_temperature_override=excluded.transcription_options_temperature_override, transcription_options_temperature=excluded.transcription_options_temperature
+INSERT INTO transcription_settings (id, model_profile, model, language, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_temperature_override, transcription_options_temperature)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, model=excluded.model, language=excluded.language, transcription_timeout_seconds=excluded.transcription_timeout_seconds, file_transcription_timeout_seconds=excluded.file_transcription_timeout_seconds, transcription_options_prompt=excluded.transcription_options_prompt, transcription_options_temperature_override=excluded.transcription_options_temperature_override, transcription_options_temperature=excluded.transcription_options_temperature
 `
 
 type PutTranscriptionParams struct {
 	ModelProfile                            string
-	CompatibilityProfile                    string
-	BaseUrl                                 string
-	AllowInsecureHttp                       int64
-	AuthenticationMode                      string
 	Model                                   string
 	Language                                string
-	HealthPath                              string
 	TranscriptionTimeoutSeconds             int64
 	FileTranscriptionTimeoutSeconds         int64
 	TranscriptionOptionsPrompt              string
-	TranscriptionOptionsHotwords            string
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
 }
@@ -575,17 +445,11 @@ type PutTranscriptionParams struct {
 func (q *Queries) PutTranscription(ctx context.Context, arg PutTranscriptionParams) error {
 	_, err := q.db.ExecContext(ctx, putTranscription,
 		arg.ModelProfile,
-		arg.CompatibilityProfile,
-		arg.BaseUrl,
-		arg.AllowInsecureHttp,
-		arg.AuthenticationMode,
 		arg.Model,
 		arg.Language,
-		arg.HealthPath,
 		arg.TranscriptionTimeoutSeconds,
 		arg.FileTranscriptionTimeoutSeconds,
 		arg.TranscriptionOptionsPrompt,
-		arg.TranscriptionOptionsHotwords,
 		arg.TranscriptionOptionsTemperatureOverride,
 		arg.TranscriptionOptionsTemperature,
 	)

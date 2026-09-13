@@ -36,7 +36,7 @@ func TestRememberedModelsPersistAndForgetAtomically(t *testing.T) {
 	for _, e := range second.RememberedModels.Entries {
 		if e.ConnectionID == id && e.Purpose == savedconnection.Cleanup {
 			count++
-			if e.Model == "s1-alias" && (e.Options.Styling != "formal" || e.Options.Profile != "s1-mini") {
+			if e.Model == "s1-alias" && (e.Options.Profile != "s1-mini" || second.PostProcessing.Styling != "formal") {
 				t.Fatal("specialized model overwritten")
 			}
 		}
@@ -58,12 +58,12 @@ func TestRememberedModelsPersistAndForgetAtomically(t *testing.T) {
 	if forgotten.PostProcessing.Model != "generic-alias" {
 		t.Fatal("forget changed another model")
 	}
-	path, legacy, vault := s.path, s.legacy, s.vault
+	path, vault := s.path, s.vault
 	s.Close()
-	reopened := newStore(path, legacy, vault)
+	reopened := newStore(path, vault)
 	defer reopened.Close()
 	got := loadStore(t, reopened)
-	if got.PostProcessing.Model != "generic-alias" {
+	if got.PostProcessing.Model != "generic-alias" || got.PostProcessing.Styling != "formal" || got.PostProcessing.SystemPrompt != "Custom cleanup instruction." {
 		t.Fatal("restart lost model")
 	}
 	for _, e := range reopened.RememberedModels().Entries {
@@ -87,38 +87,6 @@ func TestFailedSaveRollsBackRememberedOptions(t *testing.T) {
 	got := svc.GetSettings()
 	if !reflect.DeepEqual(before.RememberedModels, got.RememberedModels) || got.Model != before.Model {
 		t.Fatal("rollback lost active or saved options")
-	}
-}
-func TestVersionSixUpgradePreservesCurrentModelOptions(t *testing.T) {
-	s, svc := connectionService(t)
-	v := svc.GetSettings().Settings
-	v.Model = "asr-model"
-	v.Language = "ja"
-	if _, err := svc.SaveSettings(settings.SaveSettingsRequest{Settings: v}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := s.db.Exec(`ALTER TABLE speech_settings DROP COLUMN speech_language; ALTER TABLE speech_settings DROP COLUMN speech_instructions; ALTER TABLE remembered_models DROP COLUMN speech_language; ALTER TABLE remembered_models DROP COLUMN speech_instructions; DROP TABLE vocabulary_settings; DROP TABLE voice_transcription_settings; DROP TABLE voice_request_headers; DELETE FROM selected_connections WHERE purpose='voice'; DELETE FROM saved_connection_uses WHERE purpose='voice'; DELETE FROM credential_refs WHERE purpose='voice'; DROP TABLE remembered_models;DELETE FROM goose_db_version WHERE version_id>=7;`); err != nil {
-		t.Fatal(err)
-	}
-	path, legacy, vault := s.path, s.legacy, s.vault
-	s.Close()
-	next := newStore(path, legacy, vault)
-	defer next.Close()
-	got := loadStore(t, next)
-	if got.Model != "asr-model" || got.Language != "ja" {
-		t.Fatal("migration changed active options")
-	}
-	found := false
-	for _, e := range next.RememberedModels().Entries {
-		if e.Purpose == savedconnection.Transcription && e.Model == "asr-model" {
-			found = true
-			if e.Options.Language != "ja" {
-				t.Fatal("migration lost model language")
-			}
-		}
-	}
-	if !found {
-		t.Fatal("migration did not seed preferences")
 	}
 }
 
@@ -183,10 +151,14 @@ func TestModelDraftBatchIsAtomicAndRestrictedToSelectedConnections(t *testing.T)
 	before := svc.GetSettings()
 	id := before.SavedConnections.Selected[savedconnection.Cleanup]
 	a := modelsettings.Defaults()[savedconnection.Cleanup]
-	a.Styling = "formal"
+	a.Cleanup.LimitOutputTokens = true
+	a.Cleanup.MaxOutputTokens = 512
 	a.Profile = "s1-mini"
 	b := modelsettings.Defaults()[savedconnection.Cleanup]
-	b.SystemPrompt = "Preserve punctuation."
+	b.Cleanup.LimitOutputTokens = true
+	b.Cleanup.MaxOutputTokens = 1024
+	before.Settings.PostProcessing.SystemPrompt = "Preserve punctuation."
+	before.Settings.PostProcessing.Styling = "formal"
 	edits := []modelsettings.Edit{{ConnectionID: id, Purpose: savedconnection.Cleanup, Model: "edited-s1", Options: a}, {ConnectionID: id, Purpose: savedconnection.Cleanup, Model: "edited-generic", Options: b}}
 	bad := append([]modelsettings.Edit{}, edits...)
 	bad[1].ConnectionID = "stale"
@@ -205,13 +177,13 @@ func TestModelDraftBatchIsAtomicAndRestrictedToSelectedConnections(t *testing.T)
 	for _, e := range got.RememberedModels.Entries {
 		if e.Model == "edited-s1" {
 			found++
-			if e.Options.Styling != "formal" || e.Selected {
+			if e.Options.Cleanup != a.Cleanup || e.Options.Profile != a.Profile || e.Selected {
 				t.Fatal("inactive model edit lost")
 			}
 		}
 		if e.Model == "edited-generic" {
 			found++
-			if !e.Selected || e.Options.SystemPrompt != b.SystemPrompt {
+			if !e.Selected || e.Options.Cleanup != b.Cleanup || got.PostProcessing.SystemPrompt != before.PostProcessing.SystemPrompt || got.PostProcessing.Styling != before.PostProcessing.Styling {
 				t.Fatal("active model edit lost")
 			}
 		}

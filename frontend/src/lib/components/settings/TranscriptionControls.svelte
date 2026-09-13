@@ -1,6 +1,7 @@
 <script lang="ts">
   import SettingsDisclosure from "./SettingsDisclosure.svelte";
-  import type { Capabilities, TranscriptionOptions } from "$bindings/compatibility";
+  import type { Capabilities } from "$bindings/compatibility";
+  import type { TranscriptionOptions } from "$bindings/config";
   import { Switch } from "$lib/components/ui/switch";
   import { Textarea } from "$lib/components/ui/textarea";
   import SettingRow from "$lib/components/settings/SettingRow.svelte";

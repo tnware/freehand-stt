@@ -3,6 +3,11 @@ title: "ADR 0006: SQLite storage with goose and sqlc"
 description: Define the required storage tooling, ownership boundaries, and validation contract.
 ---
 
+> Storage policy superseded by [ADR 0014](../0014-clean-settings-baseline/):
+> the alpha migration chain, JSON import, and historical-field compatibility
+> described below are historical, not supported upgrade paths. Current settings
+> start in a distinct `freehand.db` lineage; other product decisions remain intact.
+
 - Status: Accepted; implemented
 - Date: 2026-09-05
 

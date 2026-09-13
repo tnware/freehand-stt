@@ -34,17 +34,6 @@ const maxPendingCredentials = 128
 
 var purposes = []string{"stt", "cleanup", "speech", "voice"}
 
-func legacyAccount(purpose string) string {
-	switch purpose {
-	case "stt":
-		return credential.STTAccount
-	case "cleanup":
-		return credential.PostProcessingAccount
-	case "speech":
-		return credential.TextToSpeechAccount
-	}
-	return ""
-}
 func (s *Store) STTCredentials() credential.Store     { return &credentialView{s, "stt"} }
 func (s *Store) CleanupCredentials() credential.Store { return &credentialView{s, "cleanup"} }
 func (s *Store) VoiceCredentials() credential.Store   { return &credentialView{s, "voice"} }
@@ -75,6 +64,9 @@ func (v *credentialView) Set(value string) error {
 	if s.pending == nil || s.db == nil || s.closed {
 		return errors.New("credential change requires a settings transaction")
 	}
+	if s.connections.selected[savedconnection.Purpose(v.purpose)] == "" {
+		return errors.New("credential change requires a selected connection")
+	}
 	account, err := s.stageCredential(v.purpose, value)
 	if err == nil {
 		s.setPendingCredential(v.purpose, account)
@@ -98,7 +90,7 @@ func (s *Store) stageCredential(purpose, value string) (string, error) {
 	if _, err := rand.Read(id[:]); err != nil {
 		return "", err
 	}
-	account := "sqlite-" + purpose + "-" + hex.EncodeToString(id[:])
+	account := "freehand-" + purpose + "-" + hex.EncodeToString(id[:])
 	// Persist cleanup intent first, so a crash after the keyring write leaves a reclaimable secret.
 	if err := dbgen.New(s.db).QueueCredentialGC(ctx, account); err != nil {
 		return "", failure("write_failed", err)
@@ -155,10 +147,13 @@ func readReferences(ctx context.Context, q *dbgen.Queries) (map[string]string, e
 	if err != nil {
 		return nil, err
 	}
-	if len(rows) != len(purposes) {
-		return nil, errors.New("missing credential references")
+	if len(rows) > len(purposes) {
+		return nil, errors.New("invalid credential reference count")
 	}
 	refs := map[string]string{}
+	for _, purpose := range purposes {
+		refs[purpose] = ""
+	}
 	for _, r := range rows {
 		if !savedconnection.ValidPurpose(savedconnection.Purpose(r.Purpose)) || (r.Account != "" && !connectionAccount(r.Account)) {
 			return nil, errors.New("invalid credential reference")
@@ -179,7 +174,7 @@ func (s *Store) collectCredentials(ctx context.Context) {
 		}
 		owned := ownedAccount("connection", account)
 		for _, p := range purposes {
-			owned = owned || ownedAccount(p, account) || account == legacyAccount(p)
+			owned = owned || ownedAccount(p, account)
 		}
 		if !owned {
 			continue
@@ -191,7 +186,7 @@ func (s *Store) collectCredentials(ctx context.Context) {
 }
 
 func ownedAccount(purpose, account string) bool {
-	prefix := "sqlite-" + purpose + "-"
+	prefix := "freehand-" + purpose + "-"
 	if !strings.HasPrefix(account, prefix) {
 		return false
 	}
@@ -208,14 +203,14 @@ func connectionAccount(account string) bool {
 		return true
 	}
 	for _, p := range purposes {
-		if account == legacyAccount(p) || ownedAccount(p, account) {
+		if ownedAccount(p, account) {
 			return true
 		}
 	}
 	return false
 }
 
-// Legacy credential adapters still publish a coherent reference for every active use.
+// Task credential views publish a coherent reference for every active use.
 func (s *Store) setPendingCredential(purpose, account string) {
 	s.pending[purpose] = account
 	id := s.connections.selected[savedconnection.Purpose(purpose)]

@@ -121,8 +121,6 @@ func New(opts Options) (*App, error) {
 		settingsFailure = &failure
 		logger.Warn("settings load failed; recovery required", "error_kind", failure.Kind)
 		settings = config.Default()
-	} else if report := store.LoadReport(); report.PreservedFieldCount > 0 {
-		logger.Warn("newer settings preserved", "unknown_field_count", report.PreservedFieldCount)
 	}
 	windowState, err := windowstate.NewStore()
 	if err != nil {
@@ -197,7 +195,7 @@ func New(opts Options) (*App, error) {
 		func(next config.Settings) { filetranscription.ApplySettings(a.files, next) },
 		a.publishSettings,
 		rootLogger,
-		settingsservice.WithConfigurationLoad(store, settingsFailure, store.LoadReport()),
+		settingsservice.WithConfigurationLoad(store, settingsFailure),
 		settingsservice.WithHoldRetry(func() error {
 			if err := admission.CheckShortcutCapture(); err != nil {
 				return err

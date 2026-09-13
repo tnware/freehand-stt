@@ -108,8 +108,11 @@ and overlay preview, not Go-owned jobs. No separate connection window exists.
 
 ## Durable settings storage
 
-[ADR 0006](../../decisions/0006-sqlite-storage-contract/) governs the implemented
-SQLite store: modernc, embedded goose migrations, and sqlc-generated queries.
+[ADR 0014](../../decisions/0014-clean-settings-baseline/) governs the current
+SQLite store: modernc, embedded Goose migrations in `internal/storage/schema/`,
+and sqlc-generated queries. The distinct `freehand.db` identity starts from safe
+defaults and an empty catalog, without reading, importing, or deleting alpha
+settings or native credentials. Goose alone owns schema versions.
 `internal/storage` owns the database lifecycle and adapters; `internal/settings`
 retains coherent saves and immutable request profiles. See the
 [storage maintenance guide](../storage/) for schema changes and recovery.
@@ -187,7 +190,7 @@ these provider contracts with their endpoint and opaque credential reference.
 | Native tray presentation/actions                                                                  | `internal/tray` consuming bounded domain snapshots                      |
 | Tray ownership, startup, single instance                                                          | Go/Wails platform lifecycle                                              |
 | Task, settings, and status rendering                                                              | Svelte through generated Wails bindings                                 |
-| Durable non-secret configuration                                                                  | Platform configuration directory + `settings.db` (SQLite)                          |
+| Durable non-secret configuration                                                                  | Platform configuration directory + `freehand.db` (SQLite)                          |
 | Structured runtime diagnostics                                                                    | One Wails default logger hierarchy, injected by `internal/app`          |
 | Release identity and version                                                                      | `build/config.yml`, parsed by `internal/releaseinfo`                    |
 | Release discovery and staged executable updates                                                   | `internal/updates` + Wails updater GitHub provider                      |
@@ -300,15 +303,17 @@ Ordinary Go collaborators remain ordinary types: `history.Store`, the inference 
 
 The storage package opens one connection with a per-process file lock, validates
 Freehand database identity and goose history, and upgrades forward before
-settings-dependent services start. Four typed singleton tables hold preferences,
-transcription, cleanup, and playback; related tables hold bounded request headers,
-credential references, deferred credential deletion, and initialization state.
-The read-only legacy JSON importer runs only when no database exists. It rejects
-unknown fields or invalid input and leaves the original file untouched.
+settings-dependent services start. Typed tables hold preferences, Voice/file
+transcription, cleanup, playback, vocabulary, connections, remembered models, and
+deferred credential deletion. Saved connections are the durable authority for
+transport, headers, and opaque native credential references. Fresh initialization
+writes defaults transactionally; there is no JSON importer or import marker.
 
 A load failure or uncertain commit creates an explicit recovery state: ordinary
 saves and new request profiles are blocked. Retry validates and reloads committed
-settings; explicit Reset archives the database and sidecars before replacing it.
+settings; explicit Reset archives the current database and sidecars before
+replacing it with fresh settings. Users reconfigure connections and keys; native
+credential records are not automatically purged.
 An upgrade requires a successful SQLite backup first. No API key or transcript is
 stored in these tables. Credentials are staged under new native accounts; settings
 and account references commit together, then obsolete accounts are reclaimed.
@@ -590,10 +595,9 @@ checkpoint, file, and speech request paths carry model-profile selection in thei
 existing immutable settings snapshot. Model-specific fields never become
 connection credentials or connection-owned settings.
 
-SQLite migration 00006 adds transcription and speech `model_profile` columns with
-Generic defaults. Cleanup's existing `preset` column and JSON key already hold
-its model-profile ID; retaining those names preserves legacy import and saved
-choices without a second source of truth. The existing cleanup descriptor service
+The initial schema persists feature-owned model-profile IDs with Generic
+defaults. Cleanup's `preset` field holds its model-profile ID, not a second
+source of truth or an alpha compatibility adapter. The cleanup descriptor service
 supplies prompt/control metadata; shared catalog metadata supplies behavior names,
 capabilities, and requirements.
 
@@ -1017,13 +1021,13 @@ current result is persisted in SQLite or browser storage.
 [ADR 0007](../../decisions/0007-task-state-and-preference-ownership/) defines the
 selection contract shared by `modelsettings.Select` and the renderer model editor.
 Language, cleanup intent, and speaking speed survive model/connection switches;
-engine options and voice remain scoped to a model. The existing SQLite snapshot
-format stays readable without changing released migrations. Historical task fields
-in model rows are not restored over the current task.
+engine options and voice remain scoped to a model. The clean baseline stores
+only the current model-owned subset in remembered-model rows; historical task
+fields are absent, not retained for compatibility.
 
 ### Shared vocabulary
 
-Following [ADR 0010](../../decisions/0010-shared-vocabulary/), `config.VocabularySettings` owns task-level terminology and Voice/file opt-ins. `modelprofile.VocabularyMode` resolves qualified hint fields; the renderer preview and request projection share Go validation. `settings.captureProfile` projects only into immutable workflow snapshots. Completed NeMo speech contexts use request-only transcription fields, excluded from JSON/model preferences. SQLite migration 00010 and sqlc queries persist the shared settings in the existing transaction. Historical model terms cannot replace the shared list on selection.
+Following [ADR 0010](../../decisions/0010-shared-vocabulary/), `config.VocabularySettings` owns task-level terminology and Voice/file opt-ins. `modelprofile.VocabularyMode` resolves qualified hint fields; the renderer preview and request projection share Go validation. `settings.captureProfile` projects only into immutable workflow snapshots. Completed NeMo speech contexts use request-only transcription fields, excluded from JSON/model preferences. The baseline vocabulary table and sqlc queries persist the shared settings in the same transaction. Remembered-model rows do not store the shared phrase list.
 
 ## File and speech workspace presentation
 
@@ -1116,8 +1120,8 @@ realtime transport, and vLLM-Omni speech with Qwen3-TTS CustomVoice options.
 that resolved metadata. Only Qwen realtime output passes through the Qwen header
 parser. Voxtral finals remain ordinary text under the same stop/final authority.
 
-Speech language and delivery instructions are value-only model options. SQLite
-migration 11 stores them with active speech settings and remembered models through
+Speech language and delivery instructions are value-only model options. The
+baseline stores them with active speech settings and remembered models through
 the same transaction. `settings.TextToSpeechPreview` accepts the same options as
 the ordinary request and validates before reading credentials. Previews remain
 unsaved; running jobs retain their immutable settings and credential snapshot.
