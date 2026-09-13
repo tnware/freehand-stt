@@ -1,5 +1,3 @@
-//go:build windows
-
 package storage
 
 import (
@@ -94,6 +92,12 @@ func TestSettingsServiceUsesCommittedSQLiteAndCredentialSnapshot(t *testing.T) {
 func TestUncertainCommitBlocksJobsAndPublishesRecovery(t *testing.T) {
 	s := testStore(t)
 	initial := loadStore(t, s)
+	// Credentials require a selected connection in the clean baseline. Without
+	// this owner, SaveSettings rejects the draft before reaching SQL COMMIT.
+	details := savedconnection.Extract(initial, savedconnection.Transcription)
+	details.BaseURL = "https://example.test/v1"
+	details.AuthenticationMode = config.AuthenticationModeAPIKey
+	initial = createSelectedConnection(t, s, initial, "Transcription", savedconnection.Transcription, details)
 	startup := &fixtureStartup{}
 	var published settings.SettingsDTO
 	service := settings.NewService(s, initial, s.STTCredentials(), s.CleanupCredentials(), startup, func() (bool, string) { return true, "" }, nil, nil, nil, nil, func(v settings.SettingsDTO) { published = v }, nil, settings.WithTextToSpeechCredential(s.SpeechCredentials()), settings.WithConfigurationLoad(s, nil))
@@ -104,8 +108,12 @@ func TestUncertainCommitBlocksJobsAndPublishesRecovery(t *testing.T) {
 	next := initial
 	next.Language = "de"
 	next.StartWithWindows = true
-	if _, err := service.SaveSettings(settings.SaveSettingsRequest{Settings: next, STTCredentialDraft: "uncommitted-fixture-key"}); err == nil {
+	_, saveErr := service.SaveSettings(settings.SaveSettingsRequest{Settings: next, STTCredentialDraft: "uncommitted-fixture-key"})
+	if saveErr == nil {
 		t.Fatal("commit failure accepted")
+	}
+	if kind := config.LoadFailureFor(saveErr).Kind; kind != "commit_uncertain" {
+		t.Fatalf("save did not reach uncertain commit: kind=%q, err=%v", kind, saveErr)
 	}
 	if !published.Configuration.RecoveryRequired || published.Configuration.ErrorKind != "commit_uncertain" {
 		t.Fatal("uncertain outcome not published")
