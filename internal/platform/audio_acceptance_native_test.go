@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows || darwin
 
 package platform
 
@@ -13,7 +13,7 @@ import (
 // playback uses silence. No endpoint, inference, user settings or file is used.
 func TestNativeAudioShutdown(t *testing.T) {
 	if os.Getenv("FREEHAND_NATIVE_AUDIO_ACCEPTANCE") != "1" {
-		t.Skip("set FREEHAND_NATIVE_AUDIO_ACCEPTANCE=1 to exercise the default Windows audio devices")
+		t.Skip("set FREEHAND_NATIVE_AUDIO_ACCEPTANCE=1 to exercise the default native audio devices")
 	}
 	closeWithin := func(t *testing.T, closeAudio func() error) {
 		t.Helper()
@@ -33,7 +33,7 @@ func TestNativeAudioShutdown(t *testing.T) {
 		if _, err := capture.Start(context.Background(), "", 1); err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(100 * time.Millisecond) // Allow actual WASAPI callbacks to run.
+		time.Sleep(100 * time.Millisecond) // Allow actual native callbacks to run.
 		closeWithin(t, capture.Close)
 		if capture.dev != nil || capture.ctx != nil || len(capture.pcm) != 0 {
 			t.Fatal("microphone retained resources after Close")

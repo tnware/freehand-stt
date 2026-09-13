@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows || darwin
 
 package platform
 
@@ -35,7 +35,7 @@ func (d *restartDevice) Uninit()  { d.closes.Add(1) }
 func (d *restartDevice) unblock() { d.releaseOnce.Do(func() { close(d.release) }) }
 
 // Only device construction is replaced. Rewind/Play/Stop/Unload/Close below
-// run the actual Windows adapter under the actual speech service's control.
+// run the actual native adapter under the actual speech service's control.
 type restartPlayback struct {
 	Playback
 	device *restartDevice

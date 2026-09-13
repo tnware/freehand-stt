@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { windowMaterial } from "$lib/platform";
   import { onMount } from "svelte";
   import { Events } from "@wailsio/runtime";
   import { ModeWatcher, setMode } from "mode-watcher";
@@ -27,18 +28,26 @@
   // the one build-info source rather than restated here.
   let version = $state("");
   let now = $state(Date.now());
-  const footerConnection = $derived(taskConnectionDetails(inputMode, session.editor));
-  const footerStatus = $derived(taskConnectionStatus(inputMode, session.editor, now));
+  const footerConnection = $derived(
+    taskConnectionDetails(inputMode, session.editor),
+  );
+  const footerStatus = $derived(
+    taskConnectionStatus(inputMode, session.editor, now),
+  );
   $effect(() => {
     const timer = setInterval(() => (now = Date.now()), 30_000);
     return () => clearInterval(timer);
   });
 
   const fileWorking = $derived(
-    session.files.status.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
-      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
-      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
-      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
+    session.files.status.phase ===
+      FileTranscriptionPhase.FileTranscriptionUploading ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionProcessing ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionStreaming ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionCancelling,
   );
   const voiceActive = $derived(
     session.dictation.status.state !== State.Idle &&
@@ -46,9 +55,9 @@
   );
 
   $effect(() => {
-    document.documentElement.dataset.material = session.editor.applied?.micaActive
-      ? "mica"
-      : "solid";
+    document.documentElement.dataset.material = windowMaterial(
+      session.editor.applied,
+    );
   });
 
   // A bounded metadata-only probe makes readiness real rather than requiring
@@ -87,10 +96,17 @@
   onMount(() => {
     setMode("system");
 
-    const offSession = subscribeSessionEvents(session, Events.On, (status, previous) => {
-      if ((status.state === State.Recording) !== (previous.state === State.Recording))
-        levels.reset();
-    });
+    const offSession = subscribeSessionEvents(
+      session,
+      Events.On,
+      (status, previous) => {
+        if (
+          (status.state === State.Recording) !==
+          (previous.state === State.Recording)
+        )
+          levels.reset();
+      },
+    );
     // Go only sends these while recording and while this window is on screen,
     // so there is no stream to pay for the rest of the time.
     const offLevel = Events.On("dictation:level", (event: { data: number }) => {
@@ -104,12 +120,18 @@
         "Freehand is already running — that launch revealed this window instead of starting a second recorder.",
       );
     });
-    const offSettingsVisibility = Events.On("settings:visibility", (event: { data: boolean }) => {
-      settingsOpen = event.data;
-    });
-    const offAboutVisibility = Events.On("about:visibility", (event: { data: boolean }) => {
-      aboutOpen = event.data;
-    });
+    const offSettingsVisibility = Events.On(
+      "settings:visibility",
+      (event: { data: boolean }) => {
+        settingsOpen = event.data;
+      },
+    );
+    const offAboutVisibility = Events.On(
+      "about:visibility",
+      (event: { data: boolean }) => {
+        aboutOpen = event.data;
+      },
+    );
     void BuildInfoService.Current()
       .then((info) => (version = info.version))
       .catch(() => (version = ""));
@@ -119,7 +141,9 @@
     void WindowingService.AboutVisible()
       .then((visible) => (aboutOpen = visible))
       .catch((cause) => session.messages.reportFailure(String(cause)));
-    void session.load().finally(() => setMode(activeAppearanceMode(session.editor.applied)));
+    void session
+      .load()
+      .finally(() => setMode(activeAppearanceMode(session.editor.applied)));
     return () => {
       offSession();
       session.dispose();
@@ -151,7 +175,9 @@
 
 <ConfigurationRecoveryDialog {session} />
 
-<div class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground">
+<div
+  class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground"
+>
   <AppHeader
     bind:inputMode
     settings={session.editor.applied ?? session.editor.draft}
@@ -180,7 +206,8 @@
     disabled={session.editor.saving ||
       session.editor.quickSettingsPending.length > 0 ||
       !!session.editor.applied?.configuration.recoveryRequired}
-    onCheck={() => session.editor.testAppliedConnection(footerConnection.purpose)}
+    onCheck={() =>
+      session.editor.testAppliedConnection(footerConnection.purpose)}
     onEdit={() => {
       void WindowingService.OpenConnectionManager({
         id: footerConnection.selected?.id ?? "",
@@ -190,7 +217,11 @@
     }}
     onSettings={() =>
       openSettings(
-        inputMode === "tts" ? "speech" : inputMode === "file" ? "server" : "voice-transcription",
+        inputMode === "tts"
+          ? "speech"
+          : inputMode === "file"
+            ? "server"
+            : "voice-transcription",
       )}
     {version}
     {aboutOpen}

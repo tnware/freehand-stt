@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { AppearanceMode, type Settings } from "$lib/state";
-import { activeAppearanceMode, appearanceRestartRequired } from "$lib/appearance";
+import {
+  activeAppearanceMode,
+  appearanceRestartRequired,
+} from "$lib/appearance";
 
 const appearance = (
   overrides: Partial<
-    Pick<Settings, "useMica" | "micaActive" | "appearanceMode" | "appearanceModeActive">
+    Pick<
+      Settings,
+      "useMica" | "micaActive" | "appearanceMode" | "appearanceModeActive"
+    >
   > = {},
 ) => ({
+  platform: "windows",
   useMica: false,
   micaActive: false,
   appearanceMode: AppearanceMode.AppearanceModeSystem,
@@ -15,11 +22,31 @@ const appearance = (
 });
 
 describe("appearance", () => {
+  it("ignores imported Mica flags on macOS without hiding solid-mode changes", () => {
+    expect(
+      appearanceRestartRequired({
+        ...appearance({ useMica: true }),
+        platform: "darwin",
+      }),
+    ).toBe(false);
+    expect(
+      appearanceRestartRequired({
+        ...appearance({
+          useMica: true,
+          micaActive: true,
+          appearanceMode: AppearanceMode.AppearanceModeDark,
+        }),
+        platform: "darwin",
+      }),
+    ).toBe(true);
+  });
   it("maps the backend's applied mode to mode-watcher", () => {
     expect(activeAppearanceMode(appearance())).toBe("system");
     expect(
       activeAppearanceMode(
-        appearance({ appearanceModeActive: AppearanceMode.AppearanceModeLight }),
+        appearance({
+          appearanceModeActive: AppearanceMode.AppearanceModeLight,
+        }),
       ),
     ).toBe("light");
     expect(

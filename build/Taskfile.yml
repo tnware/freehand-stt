@@ -257,13 +257,13 @@ tasks:
       - go run ./scripts/releaseinfo -root .. sync
 
   check:release-info:
-    summary: Verifies generated Windows version assets against build/config.yml
+    summary: Verifies Windows version assets and macOS bundle metadata against build/config.yml
     run: once
     cmds:
       - go run ./build/scripts/releaseinfo check
 
   sync:release-info:
-    summary: Synchronizes generated Windows version assets before a native build
+    summary: Synchronizes Windows version assets and macOS bundle metadata
     run: once
     cmds:
       - go run ./build/scripts/releaseinfo sync

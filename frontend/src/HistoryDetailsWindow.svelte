@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { windowMaterial } from "$lib/platform";
   import { onMount } from "svelte";
   import { Events } from "@wailsio/runtime";
   import { ModeWatcher, setMode } from "mode-watcher";
@@ -16,7 +17,7 @@
 
   function applyAppearance(settings: Settings) {
     setMode(activeAppearanceMode(settings));
-    document.documentElement.dataset.material = settings.micaActive ? "mica" : "solid";
+    document.documentElement.dataset.material = windowMaterial(settings);
   }
 
   async function closeDetails() {
@@ -94,7 +95,9 @@
 
 <ModeWatcher defaultMode="system" disableTransitions />
 
-<div class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground">
+<div
+  class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground"
+>
   {#if error}
     <p
       role="alert"
@@ -103,26 +106,39 @@
       {error}
     </p>
   {/if}
-  <main class="flex min-h-0 flex-1 flex-col" aria-label="Transcription details" aria-busy={loading}>
+  <main
+    class="flex min-h-0 flex-1 flex-col"
+    aria-label="Transcription details"
+    aria-busy={loading}
+  >
     {#if entry}
       {#key entry.id}
         <HistoryDetails {entry} />
       {/key}
     {:else}
-      <div class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+      <div
+        class="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center"
+      >
         <h1 class="text-base font-semibold">
           {loading ? "Loading details…" : "Details unavailable"}
         </h1>
         {#if !loading}
           <p class="max-w-sm text-sm text-muted-foreground">
-            This run is no longer in session history. Open another entry to view its details.
+            This run is no longer in session history. Open another entry to view
+            its details.
           </p>
         {/if}
       </div>
     {/if}
   </main>
-  <footer class="flex shrink-0 justify-end border-t border-hairline bg-layer-fill px-5 py-3.5">
-    <Button variant="outline" disabled={closing} onclick={() => void closeDetails()}>
+  <footer
+    class="flex shrink-0 justify-end border-t border-hairline bg-layer-fill px-5 py-3.5"
+  >
+    <Button
+      variant="outline"
+      disabled={closing}
+      onclick={() => void closeDetails()}
+    >
       {closing ? "Closing…" : "Close"}
     </Button>
   </footer>

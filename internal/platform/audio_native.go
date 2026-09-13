@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows || darwin
 
 package platform
 
@@ -13,6 +13,8 @@ import (
 )
 
 type Capture struct {
+	// authorize is a test seam; nil uses the native permission boundary.
+	authorize  func(context.Context, bool) error
 	mu         sync.Mutex
 	ctx        *malgo.AllocatedContext
 	dev        captureDevice
@@ -82,7 +84,7 @@ func (c *Capture) publishLevel(buffer []byte) {
 }
 
 func newContext() (*malgo.AllocatedContext, error) {
-	return malgo.InitContext([]malgo.Backend{malgo.BackendWasapi}, malgo.ContextConfig{}, nil)
+	return malgo.InitContext([]malgo.Backend{nativeAudioBackend}, malgo.ContextConfig{}, nil)
 }
 func (c *Capture) List(_ context.Context) ([]audio.Device, error) {
 	ctx, e := newContext()
@@ -124,7 +126,20 @@ func (c *Capture) Prepare(ctx context.Context, id string) error {
 	if c.active {
 		return nil
 	}
-	return c.prepareDeviceLocked(id)
+	if err := c.checkAuthorization(ctx, false); err != nil {
+		return err
+	}
+	return c.prepareDeviceLocked(ctx, id)
+}
+
+func (c *Capture) checkAuthorization(ctx context.Context, request bool) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if c.authorize != nil {
+		return c.authorize(ctx, request)
+	}
+	return authorizeMicrophone(ctx, request)
 }
 
 func (c *Capture) Start(ctx context.Context, id string, seconds int) (<-chan error, error) {
@@ -138,7 +153,10 @@ func (c *Capture) StartStream(ctx context.Context, id string, seconds int, sink 
 	return c.start(ctx, id, seconds, sink)
 }
 
-func (c *Capture) start(_ context.Context, id string, seconds int, sink audio.PCMStreamSink) (<-chan error, error) {
+func (c *Capture) start(ctx context.Context, id string, seconds int, sink audio.PCMStreamSink) (<-chan error, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if c.closed.Load() {
 		return nil, errors.New("audio capture is closed")
 	}
@@ -172,7 +190,26 @@ func (c *Capture) start(_ context.Context, id string, seconds int, sink audio.PC
 		}
 		maxBytes = int64(seconds) * audio.SampleRate * 2
 	}
-	if e := c.prepareDeviceLocked(id); e != nil {
+	// Permission can wait on the user. Never hold capture ownership while
+	// waiting: shutdown must remain able to close admission.
+	c.mu.Unlock()
+	if err := c.checkAuthorization(ctx, true); err != nil {
+		return nil, err
+	}
+	c.mu.Lock()
+	if err := ctx.Err(); err != nil {
+		c.mu.Unlock()
+		return nil, err
+	}
+	if c.closed.Load() {
+		c.mu.Unlock()
+		return nil, errors.New("audio capture is closed")
+	}
+	if c.active {
+		c.mu.Unlock()
+		return nil, errors.New("capture already active")
+	}
+	if e := c.prepareDeviceLocked(ctx, id); e != nil {
 		c.mu.Unlock()
 		return nil, e
 	}
@@ -221,9 +258,12 @@ func (c *Capture) start(_ context.Context, id string, seconds int, sink audio.PC
 
 // prepareDeviceLocked retains an initialized, stopped device between
 // recordings. malgo explicitly supports Stop followed by Start; avoiding
-// repeated WASAPI context/device creation keeps the hotkey path warm without
+// repeated native context/device creation keeps the hotkey path warm without
 // capturing audio while the app is idle.
-func (c *Capture) prepareDeviceLocked(id string) error {
+func (c *Capture) prepareDeviceLocked(ctx context.Context, id string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if c.dev != nil && c.deviceID == id {
 		return nil
 	}
@@ -240,35 +280,36 @@ func (c *Capture) prepareDeviceLocked(id string) error {
 		}
 		c.ctx = ctx
 	}
-	cfg := malgo.DefaultDeviceConfig(malgo.Capture)
-	cfg.SampleRate = audio.SampleRate
-	cfg.Capture.Format = malgo.FormatS16
-	cfg.Capture.Channels = 1
-	cfg.Capture.ShareMode = malgo.Shared
-	name := "System default"
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	var devices []malgo.DeviceInfo
 	if id != "" {
-		var selected *malgo.DeviceID
-		ds, err := c.ctx.Devices(malgo.Capture)
-		if err == nil {
-			for i := range ds {
-				if id == ds[i].ID.String() {
-					deviceID := ds[i].ID
-					selected = &deviceID
-					name = ds[i].Name()
-					break
-				}
-			}
+		var err error
+		devices, err = c.ctx.Devices(malgo.Capture)
+		if err != nil {
+			return err
 		}
-		if selected == nil {
-			return errors.New("selected microphone is unavailable")
-		}
-		cfg.Capture.DeviceID = selected.Pointer()
+	}
+	cfg, name, releaseID, err := captureDeviceConfig(id, devices)
+	if err != nil {
+		return err
+	}
+	defer releaseID()
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	dev, err := malgo.InitDevice(c.ctx.Context, cfg, malgo.DeviceCallbacks{
 		Data: c.captureData,
 		Stop: c.onDeviceStopped,
 	})
 	if err != nil {
+		return err
+	}
+	// Native initialization is synchronous and cannot be interrupted safely.
+	// Never publish or start the device if cancellation arrived while it ran.
+	if err := ctx.Err(); err != nil {
+		dev.Uninit()
 		return err
 	}
 	if c.closed.Load() {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { session } from "$lib/stores/session.svelte";
   import { CheckKind, CheckStatus } from "$bindings/connection";
   import type { ConnectionResult } from "$lib/state";
   import { connectionDescription } from "$lib/utils/connection";
@@ -8,10 +9,17 @@
   import CircleHelpIcon from "@lucide/svelte/icons/circle-help";
   let {
     result,
+    platform = session.editor.applied?.platform ?? "windows",
     stale = false,
     busy = false,
     onCheck,
-  }: { result: ConnectionResult; stale?: boolean; busy?: boolean; onCheck?: () => void } = $props();
+  }: {
+    result: ConnectionResult;
+    platform?: string;
+    stale?: boolean;
+    busy?: boolean;
+    onCheck?: () => void;
+  } = $props();
   const labels: Record<CheckKind, string> = {
     [CheckKind.$zero]: "Check",
     connection: "Connection",
@@ -21,7 +29,11 @@
   };
 </script>
 
-<section class="space-y-3" aria-label="Connection check results" aria-live="polite">
+<section
+  class="space-y-3"
+  aria-label="Connection check results"
+  aria-live="polite"
+>
   <div class="flex items-center justify-between gap-3">
     <div>
       <p class="text-sm font-medium">Connection check</p>
@@ -31,20 +43,27 @@
           : "Metadata only. No model was invoked."}
       </p>
     </div>
-    {#if onCheck}<Button variant="ghost" size="sm" onclick={onCheck} disabled={busy}
-        >{busy ? "Checking…" : "Check again"}</Button
+    {#if onCheck}<Button
+        variant="ghost"
+        size="sm"
+        onclick={onCheck}
+        disabled={busy}>{busy ? "Checking…" : "Check again"}</Button
       >{/if}
   </div>
   {#if stale}<p class="text-xs text-muted-foreground">
       Previous results apply to the settings that were tested.
     </p>
   {:else if result.checks?.length}<dl class="space-y-3">
-      {#each result.checks as check (check.kind)}<div class="grid grid-cols-[18px_1fr] gap-x-2">
+      {#each result.checks as check (check.kind)}<div
+          class="grid grid-cols-[18px_1fr] gap-x-2"
+        >
           {#if check.status === CheckStatus.CheckPassed}<CircleCheckIcon
               class="mt-0.5 size-4 text-success"
             />{:else if check.status === CheckStatus.CheckAttention}<CircleAlertIcon
               class="mt-0.5 size-4 text-warning"
-            />{:else}<CircleHelpIcon class="mt-0.5 size-4 text-muted-foreground" />{/if}
+            />{:else}<CircleHelpIcon
+              class="mt-0.5 size-4 text-muted-foreground"
+            />{/if}
           <div>
             <dt class="text-xs text-muted-foreground">{labels[check.kind]}</dt>
             <dd class="mt-0.5 text-sm">{check.summary}</dd>
@@ -55,7 +74,9 @@
               </dd>{/if}
           </div>
         </div>{/each}
-    </dl>{:else}<p class="text-xs text-muted-foreground">{connectionDescription(result)}</p>{/if}
+    </dl>{:else}<p class="text-xs text-muted-foreground">
+      {connectionDescription(result, platform)}
+    </p>{/if}
   {#if !stale}
     <div
       class="space-y-1 border-t border-hairline pt-3 text-[11px] leading-relaxed text-muted-foreground"

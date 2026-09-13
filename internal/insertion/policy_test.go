@@ -2,6 +2,7 @@ package insertion
 
 import (
 	"context"
+	"reflect"
 	"testing"
 )
 
@@ -19,6 +20,25 @@ func (f *fake) InsertUnicode(_ context.Context, target Target, _ string) error {
 	return nil
 }
 func (f *fake) Copy(context.Context, string) error { f.copies++; return nil }
+func TestDarwinOpaqueTargetIdentity(t *testing.T) {
+	want := Target{ProcessID: 42, ProcessCreationTime: 99}
+	field := reflect.ValueOf(&want).Elem().FieldByName("DarwinToken")
+	if !field.IsValid() || field.Kind() != reflect.Uint64 {
+		t.Fatal("Target needs a comparable DarwinToken, not fabricated Windows handles")
+	}
+	field.SetUint(7)
+	if !want.Valid() { t.Fatal("native Darwin identity should be valid") }
+	f := &fake{target: want}
+	if err := (Policy{f}).Deliver(context.Background(), want, "text", DirectInput); err != nil || f.inserts != 1 { t.Fatal("matching native identity was rejected", err) }
+	field.SetUint(8)
+	if err := (Policy{f}).Deliver(context.Background(), want, "text", DirectInput); err != ErrCopyRequired || f.inserts != 1 { t.Fatal("different native identity must fail closed") }
+	want.HWND = 1
+	if want.Valid() { t.Fatal("mixed-platform identities must fail closed") }
+	for _, v := range []Target{{ProcessID: 42}, {ProcessCreationTime: 99}, {}} {
+		if v.Valid() { t.Fatal("incomplete identity accepted") }
+	}
+}
+
 func TestFocusPolicy(t *testing.T) {
 	want := Target{HWND: 1, FocusHWND: 2, ThreadID: 3, ProcessID: 4, ProcessCreationTime: 5}
 	f := &fake{target: Target{HWND: 9, FocusHWND: 2, ThreadID: 3, ProcessID: 4, ProcessCreationTime: 5}}

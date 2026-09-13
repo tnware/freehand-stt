@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { platformPresentation } from "$lib/platform";
   import { connectionWorkflows } from "$lib/utils/connectionChoices";
   import { Purpose } from "$bindings/savedconnection";
   import { ID } from "$bindings/compatibility";
@@ -38,11 +39,15 @@
   const busy = $derived(editor.saving || editor.managedConnectionTesting);
   const roles = connectionWorkflows;
   function chooseUse(value: string) {
-    activateFor = value === "save-only" ? undefined : roles.find((role) => role.id === value)?.id;
+    activateFor =
+      value === "save-only"
+        ? undefined
+        : roles.find((role) => role.id === value)?.id;
     if (activateFor && form && !form.uses.includes(activateFor))
       form.uses = [...form.uses, activateFor];
   }
-  const roleLabel = (p: Purpose) => roles.find((r) => r.id === p)?.label ?? "Connection";
+  const roleLabel = (p: Purpose) =>
+    roles.find((r) => r.id === p)?.label ?? "Connection";
   const profiles = $derived.by(() => {
     const catalog = editor.applied?.compatibilityProfiles;
     const all =
@@ -69,7 +74,10 @@
         : p.description,
     }));
   });
-  function supports(purpose: Purpose, profile = form?.details.compatibilityProfile) {
+  function supports(
+    purpose: Purpose,
+    profile = form?.details.compatibilityProfile,
+  ) {
     const catalog = editor.applied?.compatibilityProfiles;
     const list =
       purpose === Purpose.Voice
@@ -90,8 +98,12 @@
       if (first) form.uses = [first.id];
     }
     if (activateFor && !supports(activateFor, profile))
-      activateFor = form.uses[0] ?? roles.find((role) => supports(role.id, profile))?.id;
-    if (!form.uses.includes(Purpose.Transcription) && !form.uses.includes(Purpose.Voice)) {
+      activateFor =
+        form.uses[0] ?? roles.find((role) => supports(role.id, profile))?.id;
+    if (
+      !form.uses.includes(Purpose.Transcription) &&
+      !form.uses.includes(Purpose.Voice)
+    ) {
       form.details.healthPath = "";
       form.details.headers = {};
     }
@@ -99,7 +111,10 @@
   function setUse(p: Purpose, enabled: boolean) {
     if (!form) return;
     form.uses = enabled ? [...form.uses, p] : form.uses.filter((x) => x !== p);
-    if (!form.uses.includes(Purpose.Transcription) && !form.uses.includes(Purpose.Voice)) {
+    if (
+      !form.uses.includes(Purpose.Transcription) &&
+      !form.uses.includes(Purpose.Voice)
+    ) {
       form.details.healthPath = "";
       form.details.headers = {};
     }
@@ -107,7 +122,8 @@
   function changeAuth(value: string) {
     if (!form) return;
     form.details.authenticationMode = value as AuthenticationMode;
-    if (value === AuthenticationMode.AuthenticationModeNone) form.credentialDraft = "";
+    if (value === AuthenticationMode.AuthenticationModeNone)
+      form.credentialDraft = "";
   }
   function renameHeader(old: string, next: string) {
     if (!form || old === next) return;
@@ -130,6 +146,7 @@
     while (key in (form.details.headers ?? {})) key = `X-Custom-Header-${++n}`;
     form.details.headers = { ...form.details.headers, [key]: "" };
   }
+  const native = $derived(platformPresentation(editor.applied?.platform));
 </script>
 
 {#if form}
@@ -142,8 +159,9 @@
       if (await editor.saveConnection(purpose))
         onSaved(
           purpose,
-          editor.applied?.savedConnections.entries?.find((connection) => connection.name === name)
-            ?.id,
+          editor.applied?.savedConnections.entries?.find(
+            (connection) => connection.name === name,
+          )?.id,
         );
     }}
     class="flex min-h-0 flex-col gap-3.5"
@@ -154,13 +172,18 @@
           <div class="space-y-3 px-5 py-4">
             <h4 class="text-sm font-medium">Used for</h4>
             <p class="text-xs text-muted-foreground">
-              Choose where this connection appears. Each workflow keeps its own model and options.
+              Choose where this connection appears. Each workflow keeps its own
+              model and options.
             </p>
             {#each roles as role (role.id)}
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <label for={`connection-use-${role.id}`} class="text-sm">{role.label}</label>
-                  {#if !supports(role.id)}<p class="text-xs text-muted-foreground">
+                  <label for={`connection-use-${role.id}`} class="text-sm"
+                    >{role.label}</label
+                  >
+                  {#if !supports(role.id)}<p
+                      class="text-xs text-muted-foreground"
+                    >
                       Unavailable with this backend.
                     </p>{/if}
                   {#if catalog?.selected?.[role.id] === form.id}<p
@@ -241,12 +264,15 @@
               onValueChange={changeAuth}
               disabled={busy}
               ><Select.Trigger id="connection-auth" class="w-full"
-                >{form.details.authenticationMode === AuthenticationMode.AuthenticationModeAPIKey
+                >{form.details.authenticationMode ===
+                AuthenticationMode.AuthenticationModeAPIKey
                   ? "API key"
                   : "None"}</Select.Trigger
               ><Select.Content
-                ><Select.Item value={AuthenticationMode.AuthenticationModeNone}>None</Select.Item
-                ><Select.Item value={AuthenticationMode.AuthenticationModeAPIKey}
+                ><Select.Item value={AuthenticationMode.AuthenticationModeNone}
+                  >None</Select.Item
+                ><Select.Item
+                  value={AuthenticationMode.AuthenticationModeAPIKey}
                   >API key</Select.Item
                 ></Select.Content
               ></Select.Root
@@ -256,7 +282,7 @@
           <ValueRow
             id="connection-api-key"
             label="API key"
-            hint="Stored securely in Windows Credential Manager."
+            hint={`Stored securely in ${native.credentialStore}.`}
             >{#snippet control()}<ValueInput
                 id="connection-api-key"
                 type="password"
@@ -299,7 +325,9 @@
       </SettingsCard>
       {#if chooseWorkflow && form.creating}
         <div class="flex flex-wrap items-center gap-3 px-1">
-          <label for="connection-start-workflow" class="text-xs font-medium">After saving</label>
+          <label for="connection-start-workflow" class="text-xs font-medium"
+            >After saving</label
+          >
           <div class="min-w-48 flex-1">
             <Select.Root
               type="single"
@@ -313,10 +341,12 @@
                   : "Save for later"}</Select.Trigger
               >
               <Select.Content>
-                {#each roles.filter((role) => supports(role.id)) as role (role.id)}<Select.Item
+                {#each roles.filter( (role) => supports(role.id) ) as role (role.id)}<Select.Item
                     value={role.id}>Set up {role.label}</Select.Item
                   >{/each}
-                <Select.Separator /><Select.Item value="save-only">Save for later</Select.Item>
+                <Select.Separator /><Select.Item value="save-only"
+                  >Save for later</Select.Item
+                >
               </Select.Content>
             </Select.Root>
           </div>
@@ -329,7 +359,8 @@
           >
           <div class="mt-4 space-y-4">
             <div class="space-y-2">
-              <label for="connection-health" class="text-xs font-medium">Custom health path</label
+              <label for="connection-health" class="text-xs font-medium"
+                >Custom health path</label
               ><ValueInput
                 id="connection-health"
                 bind:value={form.details.healthPath}
@@ -337,7 +368,8 @@
                 disabled={busy}
               />
               <p class="text-xs text-muted-foreground">
-                Appended to the base URL. Leave blank for the profile’s default metadata route.
+                Appended to the base URL. Leave blank for the profile’s default
+                metadata route.
               </p>
             </div>
             <div class="space-y-2">
@@ -373,7 +405,8 @@
                 variant="outline"
                 size="sm"
                 onclick={addHeader}
-                disabled={busy || Object.keys(form.details.headers ?? {}).length >= 32}
+                disabled={busy ||
+                  Object.keys(form.details.headers ?? {}).length >= 32}
                 >Add header</Button
               >
             </div>

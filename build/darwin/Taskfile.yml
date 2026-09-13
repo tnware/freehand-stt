@@ -43,16 +43,17 @@ tasks:
     cmds:
       - '{{if eq .OBFUSCATED "true"}}garble {{.GARBLE_ARGS}} build{{else}}go build{{end}} {{.BUILD_FLAGS}} -o "{{.OUTPUT}}"'
     vars:
-      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s"{{end}}'
+      # extldflags is last at the external linker, after Wails' legacy 10.13 flag.
+      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l" -ldflags="-extldflags=-mmacosx-version-min=13.0"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -extldflags=-mmacosx-version-min=13.0"{{end}}'
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
     env:
       GOOS: darwin
       CGO_ENABLED: 1
       GOARCH: '{{.ARCH | default ARCH}}'
-      CGO_CFLAGS: "-mmacosx-version-min=12.0"
-      CGO_LDFLAGS: "-mmacosx-version-min=12.0"
-      MACOSX_DEPLOYMENT_TARGET: "12.0"
+      CGO_CFLAGS: "-mmacosx-version-min=13.0"
+      CGO_LDFLAGS: "-mmacosx-version-min=13.0"
+      MACOSX_DEPLOYMENT_TARGET: "13.0"
 
   build:docker:
     summary: Cross-compiles for macOS using Docker (for Linux/Windows hosts)
@@ -114,11 +115,36 @@ tasks:
       - rm -f "{{.BIN_DIR}}/{{.APP_NAME}}-amd64" "{{.BIN_DIR}}/{{.APP_NAME}}-arm64"
 
   package:
-    summary: Packages the application into a `.app` bundle
+    summary: Packages a production `.app` and architecture-specific updater ZIP
+    platforms: [darwin]
+    preconditions:
+      - sh: 'test "{{.DEV}}" != "true"'
+        msg: 'Updater packages require a production build; omit DEV=true.'
     deps:
       - task: build
     cmds:
       - task: create:app:bundle
+      - task: create:archive
+
+  create:archive:
+    summary: Verifies and archives an existing production bundle for the updater
+    platforms: [darwin]
+    vars:
+      TARGET_ARCH: '{{.ARCH | default ARCH}}'
+      MACH_ARCH: '{{if eq .TARGET_ARCH "amd64"}}x86_64{{else}}{{.TARGET_ARCH}}{{end}}'
+    preconditions:
+      - sh: 'test "{{.TARGET_ARCH}}" = arm64 || test "{{.TARGET_ARCH}}" = amd64'
+        msg: 'Updater archives require ARCH=arm64 or ARCH=amd64 (not universal).'
+      - sh: 'test "{{.DEV}}" != "true"'
+        msg: 'Development bundles are not updater releases.'
+    cmds:
+      - plutil -lint "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Info.plist"
+      - cmp build/darwin/Info.plist "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Info.plist"
+      - codesign --verify --deep --strict --verbose=2 "{{.BIN_DIR}}/{{.APP_NAME}}.app"
+      - lipo "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS/freehand" -verify_arch {{.MACH_ARCH}}
+      - test "$(lipo -archs "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS/freehand")" = "{{.MACH_ARCH}}"
+      - rm -f "{{.BIN_DIR}}/freehand-darwin-{{.TARGET_ARCH}}.zip"
+      - ditto -c -k --sequesterRsrc --keepParent "{{.BIN_DIR}}/{{.APP_NAME}}.app" "{{.BIN_DIR}}/freehand-darwin-{{.TARGET_ARCH}}.zip"
 
   package:universal:
     summary: Packages darwin universal binary (arm64 + amd64)
@@ -158,6 +184,7 @@ tasks:
   create:app:bundle:
     summary: Creates an `.app` bundle
     cmds:
+      - task: common:sync:release-info
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS"
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Resources"
       - cp build/darwin/icons.icns "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Resources"
@@ -166,7 +193,7 @@ tasks:
           cp build/darwin/Assets.car "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Resources"
         fi
       - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS"
-      - cp build/darwin/Info.plist "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents"
+      - cp "build/darwin/Info{{if eq .DEV "true"}}.dev{{end}}.plist" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Info.plist"
       - task: '{{if eq OS "darwin"}}codesign:adhoc{{else}}codesign:skip{{end}}'
 
   codesign:adhoc:
@@ -174,6 +201,7 @@ tasks:
     internal: true
     cmds:
       - codesign --force --deep --sign - "{{.BIN_DIR}}/{{.APP_NAME}}.app"
+      - codesign --verify --deep --strict --verbose=2 "{{.BIN_DIR}}/{{.APP_NAME}}.app"
 
   codesign:skip:
     summary: Skips codesigning when cross-compiling
@@ -183,6 +211,7 @@ tasks:
 
   run:
     cmds:
+      - task: common:sync:release-info
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS"
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/Resources"
       - cp build/darwin/icons.icns "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/Resources"
@@ -193,6 +222,7 @@ tasks:
       - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS"
       - cp "build/darwin/Info.dev.plist" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/Info.plist"
       - codesign --force --deep --sign - "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
+      - codesign --verify --deep --strict --verbose=2 "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
       - '"{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS/{{.APP_NAME}}"'
 
   sign:

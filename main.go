@@ -1,4 +1,4 @@
-// Command freehand is the Freehand Windows application entry point. It embeds
+// Command freehand is the Freehand desktop application entry point. It embeds
 // the frontend and the tray icon, which must be embedded from
 // the module root, and hands everything else to internal/app.
 package main
@@ -7,6 +7,7 @@ import (
 	"embed"
 	"log"
 	"os"
+	"runtime"
 
 	"github.com/tnware/freehand-stt/internal/app"
 	"github.com/tnware/freehand-stt/internal/buildinfo"
@@ -23,6 +24,9 @@ var trayIcon []byte
 //go:embed build/windows/tray-dark.ico
 var trayDarkModeIcon []byte
 
+//go:embed build/darwin/tray-template.png
+var trayTemplateIcon []byte
+
 //go:embed build/config.yml
 var releaseConfig []byte
 
@@ -34,6 +38,9 @@ var instanceKey = [32]byte{
 }
 
 func main() {
+	if runtime.GOOS == "darwin" {
+		trayIcon, trayDarkModeIcon = trayTemplateIcon, nil
+	}
 	release, err := releaseinfo.Parse(releaseConfig)
 	if err != nil {
 		// The embedded release source contains no user data. Keep the failure

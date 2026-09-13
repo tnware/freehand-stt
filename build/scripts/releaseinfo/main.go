@@ -1,6 +1,5 @@
-// Command releaseinfo synchronizes the generated Windows version assets with
-// build/config.yml. It deliberately owns only version fields; Wails remains
-// responsible for generating the surrounding platform/package templates.
+// Command releaseinfo synchronizes Windows version fields and macOS bundle
+// plists with build/config.yml. Windows template generation stays with Wails.
 package main
 
 import (
@@ -49,7 +48,14 @@ func main() {
 		fatal(err)
 	}
 
+	mac, err := parseMacInfo(config)
+	if err != nil {
+		fatal(err)
+	}
+
 	assets := []asset{
+		{path: filepath.Join(*root, "build", "darwin", "Info.plist"), transform: func([]byte) ([]byte, error) { return macPlist(mac, false) }},
+		{path: filepath.Join(*root, "build", "darwin", "Info.dev.plist"), transform: func([]byte) ([]byte, error) { return macPlist(mac, true) }},
 		{
 			path: filepath.Join(*root, "build", "windows", "info.json"),
 			transform: func(data []byte) ([]byte, error) {
@@ -104,7 +110,7 @@ func main() {
 	if len(stale) > 0 {
 		fatal(fmt.Errorf("release version assets are stale: %s; run wails3 task common:update:build-assets", strings.Join(stale, ", ")))
 	}
-	fmt.Printf("release identity %s (Windows %s) is synchronized\n", info.Version, info.WindowsVersion)
+	fmt.Printf("release identity %s (Windows %s, macOS build %s) is synchronized\n", info.Version, info.WindowsVersion, mac.BuildNumber)
 }
 
 func versionedJSON(data []byte, info releaseinfo.Info) ([]byte, error) {

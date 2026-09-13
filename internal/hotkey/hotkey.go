@@ -3,6 +3,7 @@ package hotkey
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -54,11 +55,23 @@ type ShortcutAssignments struct {
 }
 
 func Policies() []ShortcutPolicy {
-	return []ShortcutPolicy{
+	return policiesForPlatform(runtime.GOOS)
+}
+
+func policiesForPlatform(platform string) []ShortcutPolicy {
+	policies := []ShortcutPolicy{
 		policy(ToggleRecording, true, 0, "Ctrl+Shift+Space", "CmdOrCtrl+Shift+Space"),
 		policy(ShowFreehand, false, 0, ""),
 		policy(HoldToTalk, false, minModifierOnly, ""),
 	}
+	if platform == "darwin" {
+		for i := range policies {
+			policies[i].ModifiedPrimaryGroups = []string{"A-Z", "0-9", "Space", "F1-F20"}
+			policies[i].DedicatedPrimaryGroups = []string{"F13-F20"}
+		}
+		policies[0].DefaultShortcut = "Shift+Super+Space"
+	}
+	return policies
 }
 
 func policy(action ShortcutAction, required bool, modifierOnlyMinimum int, defaultShortcut string, aliases ...string) ShortcutPolicy {
@@ -75,7 +88,11 @@ func policy(action ShortcutAction, required bool, modifierOnlyMinimum int, defau
 }
 
 func PolicyFor(action ShortcutAction) (ShortcutPolicy, bool) {
-	for _, item := range Policies() {
+	return policyForPlatform(action, runtime.GOOS)
+}
+
+func policyForPlatform(action ShortcutAction, platform string) (ShortcutPolicy, bool) {
+	for _, item := range policiesForPlatform(platform) {
 		if item.Action == action {
 			return item, true
 		}
@@ -175,9 +192,7 @@ var keyCodes = func() map[string]uint32 {
 		m[string(r)] = uint32(r)
 	}
 	for i := 1; i <= 24; i++ {
-		if i == 12 {
-			continue
-		}
+
 		m[fmt.Sprintf("F%d", i)] = uint32(0x6F + i)
 	}
 	return m
@@ -191,7 +206,11 @@ func Parse(value string) (Chord, error) { return ParseFor(ToggleRecording, value
 func ParseHold(value string) (Chord, error) { return ParseFor(HoldToTalk, value) }
 
 func ParseFor(action ShortcutAction, value string) (Chord, error) {
-	policy, ok := PolicyFor(action)
+	return parseForPlatform(action, value, runtime.GOOS)
+}
+
+func parseForPlatform(action ShortcutAction, value, platform string) (Chord, error) {
+	policy, ok := policyForPlatform(action, platform)
 	if !ok {
 		return Chord{}, reject(RejectionInvalidAction, action, "shortcut action is invalid")
 	}
@@ -203,7 +222,7 @@ func ParseFor(action ShortcutAction, value string) (Chord, error) {
 		return Chord{}, reject(RejectionIncomplete, action, ActionLabel(action)+" requires a shortcut")
 	}
 	parts := strings.Split(value, "+")
-	if chord, onlyModifiers := parseModifierOnly(parts); onlyModifiers {
+	if chord, onlyModifiers := parseModifierOnlyForPlatform(parts, platform); onlyModifiers {
 		if policy.ModifierOnlyMinimum == 0 {
 			return Chord{}, reject(RejectionIncomplete, action, ActionLabel(action)+" needs a primary key; use "+Requirement(policy))
 		}
@@ -221,7 +240,7 @@ func ParseFor(action ShortcutAction, value string) (Chord, error) {
 		}
 		last := i == len(parts)-1
 		if !last {
-			mod := modifierForName(part)
+			mod := modifierForPlatform(part, platform)
 			if mod == 0 {
 				return Chord{}, reject(RejectionUnsupported, action, fmt.Sprintf("%q is not a supported modifier; use Ctrl, Alt, Shift, or Win", raw))
 			}
@@ -233,10 +252,10 @@ func ParseFor(action ShortcutAction, value string) (Chord, error) {
 			continue
 		}
 		key, ok := keyCodes[part]
-		if !ok {
-			if part == "F12" {
-				return Chord{}, reject(RejectionReserved, action, "F12 is reserved by Windows and cannot be used; use "+Requirement(policy))
-			}
+		if part == "F12" && platform != "darwin" {
+			return Chord{}, reject(RejectionReserved, action, "F12 is reserved by Windows and cannot be used; use "+Requirement(policy))
+		}
+		if !ok || !primaryForPlatform(key, platform) {
 			return Chord{}, reject(RejectionUnsupported, action, fmt.Sprintf("%q is not supported; use %s", raw, Requirement(policy)))
 		}
 		out.Key = key
@@ -245,20 +264,20 @@ func ParseFor(action ShortcutAction, value string) (Chord, error) {
 		return Chord{}, reject(RejectionIncomplete, action, "shortcut needs a primary key")
 	}
 	if out.Modifiers == 0 && !dedicatedPrimary(out.Key) {
-		return Chord{}, reject(RejectionIncomplete, action, ActionLabel(action)+" needs a modifier with that key; only F13-F24 may be used on their own")
+		return Chord{}, reject(RejectionIncomplete, action, ActionLabel(action)+" needs a modifier with that key; only "+strings.Join(policy.DedicatedPrimaryGroups, ", ")+" may be used on their own")
 	}
 	return out, nil
 }
 
 // parseModifierOnly succeeds only when every part is a modifier.
-func parseModifierOnly(parts []string) (Chord, bool) {
+func parseModifierOnlyForPlatform(parts []string, platform string) (Chord, bool) {
 	var out Chord
 	for _, raw := range parts {
 		part := strings.ToUpper(strings.TrimSpace(raw))
 		if part == "" {
 			return Chord{}, false
 		}
-		mod := modifierForName(part)
+		mod := modifierForPlatform(part, platform)
 		if mod == 0 || out.Modifiers&mod != 0 {
 			return Chord{}, false
 		}
@@ -267,9 +286,14 @@ func parseModifierOnly(parts []string) (Chord, bool) {
 	return out, true
 }
 
-func modifierForName(part string) Modifier {
+func modifierForPlatform(part, platform string) Modifier {
 	switch part {
-	case "CTRL", "CONTROL", "CMDORCTRL":
+	case "CMDORCTRL":
+		if platform == "darwin" {
+			return Meta
+		}
+		return Ctrl
+	case "CTRL", "CONTROL":
 		return Ctrl
 	case "ALT", "OPTION", "OPTIONORALT":
 		return Alt
@@ -491,14 +515,14 @@ func (r *CaptureReducer) Event(vk uint32, down bool) CaptureResult {
 	if r.primary != 0 {
 		return CaptureResult{State: CaptureWaiting}
 	}
-	if vk == 0x7B { // F12 is reserved by Windows.
+	if vk == 0x7B && runtime.GOOS != "darwin" { // Windows reserves F12.
 		return CaptureResult{State: CaptureRejected, Err: reject(RejectionReserved, policy.Action, "F12 is reserved by Windows and cannot be used; use "+Requirement(policy))}
 	}
-	if !supportedPrimary(vk) {
+	if !supportedPrimary(vk) || !primaryForPlatform(vk, runtime.GOOS) {
 		return CaptureResult{State: CaptureRejected, Err: reject(RejectionUnsupported, policy.Action, "That key is not supported; use "+Requirement(policy))}
 	}
 	if r.modifiers == 0 && !dedicatedPrimary(vk) {
-		return CaptureResult{State: CaptureRejected, Err: reject(RejectionIncomplete, policy.Action, "Add Ctrl, Alt, Shift, or Win; only F13-F24 may be used on their own")}
+		return CaptureResult{State: CaptureRejected, Err: reject(RejectionIncomplete, policy.Action, "Add Ctrl, Alt, Shift, or Win; only "+strings.Join(policy.DedicatedPrimaryGroups, ", ")+" may be used on their own")}
 	}
 	r.primary = vk
 	r.candidate = Chord{Modifiers: r.modifiers, Key: vk}

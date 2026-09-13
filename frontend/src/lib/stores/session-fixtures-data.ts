@@ -92,6 +92,7 @@ const settings: Settings = {
   transcriptionTimeoutSeconds: 120,
   fileTranscriptionTimeoutSeconds: 21600,
   autoInsert: true,
+  platform: "windows",
   startWithWindows: false,
   showWindowOnLaunch: true,
   checkForUpdates: true,
@@ -280,7 +281,8 @@ const serviceWithStatus = (
   },
   settings: {
     GetSettings: () => CancellablePromise.resolve(settings),
-    GetPostProcessingProfiles: () => CancellablePromise.resolve(processingProfiles),
+    GetPostProcessingProfiles: () =>
+      CancellablePromise.resolve(processingProfiles),
     RetryConfiguration: () => CancellablePromise.resolve(settings),
     ResetConfiguration: () => CancellablePromise.resolve(settings),
     SaveSettings: () => CancellablePromise.resolve(settings),
@@ -302,8 +304,10 @@ const serviceWithStatus = (
       }),
     TestSavedConnection: () => CancellablePromise.resolve(connectionResult),
     TestConnection: () => CancellablePromise.resolve(connectionResult),
-    TestPostProcessingConnection: () => CancellablePromise.resolve(connectionResult),
-    TestTextToSpeechConnection: () => CancellablePromise.resolve(connectionResult),
+    TestPostProcessingConnection: () =>
+      CancellablePromise.resolve(connectionResult),
+    TestTextToSpeechConnection: () =>
+      CancellablePromise.resolve(connectionResult),
     ...overrides.connection,
   },
   history: {

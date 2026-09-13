@@ -6,6 +6,7 @@ import {
   type Settings,
 } from "$lib/state";
 
+import { platformPresentation } from "$lib/platform";
 import { endpointHost } from "$lib/utils/endpoint";
 import { Purpose } from "$bindings/savedconnection";
 import type { SettingsEditor } from "$lib/stores/editor.svelte";
@@ -32,10 +33,17 @@ type TaskConnectionSource = Pick<
   | "connectionResultStale"
 >;
 
-export function taskConnectionDetails(mode: string, source: TaskConnectionSource) {
+export function taskConnectionDetails(
+  mode: string,
+  source: TaskConnectionSource,
+) {
   const speech = mode === "tts";
   const voice = mode === "voice";
-  const purpose = speech ? Purpose.Speech : voice ? Purpose.Voice : Purpose.Transcription;
+  const purpose = speech
+    ? Purpose.Speech
+    : voice
+      ? Purpose.Voice
+      : Purpose.Transcription;
   const settings = source.applied;
   const endpoint = speech
     ? settings?.textToSpeech
@@ -44,7 +52,12 @@ export function taskConnectionDetails(mode: string, source: TaskConnectionSource
       : settings;
   return {
     purpose,
-    task: speech ? "Text to speech" : voice ? "Voice transcription" : "Audio-file transcription",
+    platform: settings?.platform ?? "windows",
+    task: speech
+      ? "Text to speech"
+      : voice
+        ? "Voice transcription"
+        : "Audio-file transcription",
     loading: !settings,
     enabled: !speech || !!settings?.textToSpeech.enabled,
     selected: settings?.savedConnections.entries?.find(
@@ -64,7 +77,11 @@ export function taskConnectionDetails(mode: string, source: TaskConnectionSource
         : source.sttConnectionTesting,
     stale:
       !!settings &&
-      ((speech ? source.ttsConnectionStale : voice ? false : source.sttConnectionStale) ||
+      ((speech
+        ? source.ttsConnectionStale
+        : voice
+          ? false
+          : source.sttConnectionStale) ||
         source.connectionResultStale(purpose, settings)),
   };
 }
@@ -131,7 +148,9 @@ export const shouldAutomaticallyTestConnection = (
 export const connectionSucceeded = (result: ConnectionResult): boolean =>
   result.errorKind === ConnectionErrorKind.$zero;
 
-export const connectionStatusLabel = (result: ConnectionResult | null): string => {
+export const connectionStatusLabel = (
+  result: ConnectionResult | null,
+): string => {
   if (!result) return "Not checked";
   if (connectionSucceeded(result)) {
     return result.probe === ConnectionProbe.ConnectionProbeHealth
@@ -164,7 +183,10 @@ export const connectionStatusLabel = (result: ConnectionResult | null): string =
   }
 };
 
-export const connectionDescription = (result: ConnectionResult): string => {
+export const connectionDescription = (
+  result: ConnectionResult,
+  platform = "windows",
+): string => {
   if (connectionSucceeded(result)) {
     return result.probe === ConnectionProbe.ConnectionProbeHealth
       ? "The configured health endpoint responded successfully. No model was invoked; inference compatibility is unverified."
@@ -174,7 +196,7 @@ export const connectionDescription = (result: ConnectionResult): string => {
     case ConnectionErrorKind.ConnectionErrorCredentialMissing:
       return "Enter an API key before checking this endpoint.";
     case ConnectionErrorKind.ConnectionErrorCredentialUnavailable:
-      return "The stored API credential could not be read from Windows Credential Manager.";
+      return `The stored API credential could not be read from ${platformPresentation(platform).credentialStore}.`;
     case ConnectionErrorKind.ConnectionErrorDNS:
       return "The endpoint name could not be resolved.";
     case ConnectionErrorKind.ConnectionErrorTLS:
@@ -201,10 +223,14 @@ export const connectionDescription = (result: ConnectionResult): string => {
 };
 
 export const connectionProbeLabel = (result: ConnectionResult): string =>
-  result.probe === ConnectionProbe.ConnectionProbeHealth ? "GET /health" : "GET /models";
+  result.probe === ConnectionProbe.ConnectionProbeHealth
+    ? "GET /health"
+    : "GET /models";
 
 export const modelPresenceLabel = (result: ConnectionResult): string => {
-  if (result.modelPresence === ModelPresence.ModelPresenceListed) return "Listed";
-  if (result.modelPresence === ModelPresence.ModelPresenceNotListed) return "Not listed";
+  if (result.modelPresence === ModelPresence.ModelPresenceListed)
+    return "Listed";
+  if (result.modelPresence === ModelPresence.ModelPresenceNotListed)
+    return "Not listed";
   return "Unavailable";
 };

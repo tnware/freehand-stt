@@ -3,6 +3,7 @@ package settings
 import (
 	"errors"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -248,8 +249,13 @@ func TestAppearanceSnapshotKeepsLaunchStateUntilRestart(t *testing.T) {
 		func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil,
 	)
 	micaSnapshot := micaService.GetSettings()
-	if !micaSnapshot.MicaActive || micaSnapshot.AppearanceModeActive != config.AppearanceModeSystem {
-		t.Fatalf("Mica active appearance = mica %v mode %q, want true/system", micaSnapshot.MicaActive, micaSnapshot.AppearanceModeActive)
+	wantMica := runtime.GOOS == "windows"
+	wantMode := config.AppearanceModeDark
+	if wantMica {
+		wantMode = config.AppearanceModeSystem
+	}
+	if micaSnapshot.MicaActive != wantMica || micaSnapshot.AppearanceModeActive != wantMode {
+		t.Fatalf("Mica active appearance = mica %v mode %q, want %v/%s", micaSnapshot.MicaActive, micaSnapshot.AppearanceModeActive, wantMica, wantMode)
 	}
 }
 
@@ -708,5 +714,36 @@ func TestCompletedVoiceProfileIsIndependentAndImmutable(t *testing.T) {
 	}
 	if service.GetSettings().BaseURL != "https://files.example.test/v1" {
 		t.Fatal("capturing Voice changed file settings")
+	}
+}
+
+func TestHoldRetryRefreshesWithoutSavingAndRejectsBusy(t *testing.T) {
+	available := false
+	published := 0
+	s := &Service{cfg: config.Default(), keys: &keyFake{}, hold: func() (bool, string) { return available, "tap state" }, settingsChanged: func(v SettingsDTO) {
+		published++
+		if v.HoldAvailable != available {
+			t.Error("stale publication")
+		}
+	}}
+	s.cfg.HoldShortcut = "F13"
+	WithHoldRetry(func() error { available = true; return nil })(s)
+	got, err := s.RetryHoldShortcut()
+	if err != nil || !got.HoldAvailable || got.HoldShortcut != "F13" || published != 1 {
+		t.Fatalf("retry: %+v %v published=%d", got, err, published)
+	}
+	s.saveMu.Lock()
+	if _, err := s.RetryHoldShortcut(); err == nil {
+		t.Error("busy retry accepted")
+	}
+	s.saveMu.Unlock()
+	s.holdRetry = func() error { available = false; return errors.New("Secure Input active") }
+	got, err = s.RetryHoldShortcut()
+	if err == nil || got.HoldAvailable || published != 2 || got.HoldShortcut != "F13" {
+		t.Fatalf("failed retry lost refreshed availability or saved preference: %+v %v publications=%d", got, err, published)
+	}
+	s.closed.Store(true)
+	if _, err := s.RetryHoldShortcut(); err == nil {
+		t.Error("closed retry accepted")
 	}
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { windowMaterial } from "$lib/platform";
   import { onMount } from "svelte";
   import { Events } from "@wailsio/runtime";
   import { ModeWatcher, setMode } from "mode-watcher";
@@ -47,7 +48,9 @@
   $effect(() => {
     if (!overlayPreviewing || !session.editor.draft) return;
     const version = ++overlayPreviewRequestVersion;
-    void OverlayService.StartPreview(overlayPreviewRequest(session.editor.draft)).catch((cause) => {
+    void OverlayService.StartPreview(
+      overlayPreviewRequest(session.editor.draft),
+    ).catch((cause) => {
       if (version !== overlayPreviewRequestVersion) return;
       overlayPreviewing = false;
       session.messages.reportFailure(String(cause));
@@ -55,9 +58,9 @@
   });
 
   $effect(() => {
-    document.documentElement.dataset.material = session.editor.applied?.micaActive
-      ? "mica"
-      : "solid";
+    document.documentElement.dataset.material = windowMaterial(
+      session.editor.applied,
+    );
   });
 
   function settingsSection(value: string): SettingsSectionID {
@@ -68,7 +71,9 @@
 
   function focusActiveSection() {
     queueMicrotask(() => {
-      navigationRef?.querySelector<HTMLElement>(`[data-settings-section="${active}"]`)?.focus();
+      navigationRef
+        ?.querySelector<HTMLElement>(`[data-settings-section="${active}"]`)
+        ?.focus();
     });
   }
 
@@ -150,10 +155,16 @@
     const offOpen = Events.On("settings:open", (event: { data: string }) => {
       void prepareSettings(event.data);
     });
-    const offClose = Events.On("settings:close-requested", requestSettingsClose);
-    const offVisibility = Events.On("settings:visibility", (event: { data: boolean }) => {
-      windowVisible = event.data;
-    });
+    const offClose = Events.On(
+      "settings:close-requested",
+      requestSettingsClose,
+    );
+    const offVisibility = Events.On(
+      "settings:visibility",
+      (event: { data: boolean }) => {
+        windowVisible = event.data;
+      },
+    );
     const offSession = subscribeSessionEvents(session, Events.On, (status) => {
       if (status.state !== State.Idle && status.state !== State.Failed) {
         overlayPreviewing = false;
@@ -162,7 +173,8 @@
     });
     const offShortcutCapture = Events.On(
       "shortcut:capture-progress",
-      (event: { data: ShortcutCaptureProgress }) => shortcutCapture.applyProgress(event.data),
+      (event: { data: ShortcutCaptureProgress }) =>
+        shortcutCapture.applyProgress(event.data),
     );
     const offHide = Events.On("common:WindowHide", cleanUpSettings);
     void WindowingService.SettingsVisible()
@@ -206,18 +218,29 @@
   />
 </div>
 
-<Dialog.Root open={discardSettingsOpen} onOpenChange={(open) => (discardSettingsOpen = open)}>
-  <Dialog.Content class="gap-0 bg-dialog-surface p-0 shadow-xl ring-dialog-stroke sm:max-w-[420px]">
+<Dialog.Root
+  open={discardSettingsOpen}
+  onOpenChange={(open) => (discardSettingsOpen = open)}
+>
+  <Dialog.Content
+    class="gap-0 bg-dialog-surface p-0 shadow-xl ring-dialog-stroke sm:max-w-[420px]"
+  >
     <Dialog.Header class="border-b border-hairline px-5 py-4 pr-14">
-      <Dialog.Title class="text-base font-semibold">Discard unsaved changes?</Dialog.Title>
+      <Dialog.Title class="text-base font-semibold"
+        >Discard unsaved changes?</Dialog.Title
+      >
       <Dialog.Description class="mt-1 text-[13px] leading-relaxed">
-        Settings you changed in this window have not been applied. Closing now will restore the last
-        saved configuration.
+        Settings you changed in this window have not been applied. Closing now
+        will restore the last saved configuration.
       </Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer class="border-t-0 px-5 py-4">
-      <Button variant="outline" onclick={() => (discardSettingsOpen = false)}>Keep editing</Button>
-      <Button variant="destructive" onclick={discardAndCloseSettings}>Discard changes</Button>
+      <Button variant="outline" onclick={() => (discardSettingsOpen = false)}
+        >Keep editing</Button
+      >
+      <Button variant="destructive" onclick={discardAndCloseSettings}
+        >Discard changes</Button
+      >
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

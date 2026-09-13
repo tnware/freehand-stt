@@ -83,6 +83,11 @@ publisher as unknown. Verify manual downloads against the published
 Follow [Get started](https://tnware.github.io/freehand-stt/docs/getting-started/)
 to choose a task, connect its service, and complete your first run.
 
+macOS source builds use native CoreAudio, Keychain and Cocoa adapters. See the
+[macOS setup guide](site/src/content/docs/docs/guides/macos-setup.md) and
+[contributor instructions](CONTRIBUTING.md). Do not use Windows release artifacts
+on a Mac; source-build verification is separate from signed/notarized distribution.
+
 ## Documentation
 
 - [Install and update Freehand](https://tnware.github.io/freehand-stt/docs/guides/windows-installer/)

@@ -21,7 +21,9 @@ import {
 } from "$lib/state";
 import { appReadiness, readinessVisible } from "$lib/utils/readiness";
 
-const devices: Device[] = [{ id: "mic-1", name: "Desk microphone", default: true }];
+const devices: Device[] = [
+  { id: "mic-1", name: "Desk microphone", default: true },
+];
 
 const settings = (overrides: Partial<Settings> = {}): Settings => ({
   vocabulary: { terms: "", voice: false, files: false, boost: 3 },
@@ -83,7 +85,9 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     modelProfile: ModelProfileID.Generic,
     baseURL: overrides.baseURL ?? "https://example.test/v1",
     allowInsecureHTTP: false,
-    authenticationMode: overrides.authenticationMode ?? AuthenticationMode.AuthenticationModeAPIKey,
+    authenticationMode:
+      overrides.authenticationMode ??
+      AuthenticationMode.AuthenticationModeAPIKey,
     model: overrides.model ?? "speech/stt",
     language: "auto",
     captions: true,
@@ -100,6 +104,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   transcriptionTimeoutSeconds: 120,
   fileTranscriptionTimeoutSeconds: 21600,
   autoInsert: true,
+  platform: "windows",
   startWithWindows: false,
   showWindowOnLaunch: true,
   checkForUpdates: true,
@@ -174,7 +179,9 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   ...overrides,
 });
 
-const connection = (errorKind = ConnectionErrorKind.$zero): ConnectionResult => ({
+const connection = (
+  errorKind = ConnectionErrorKind.$zero,
+): ConnectionResult => ({
   reachable: errorKind === ConnectionErrorKind.$zero,
   probe: ConnectionProbe.ConnectionProbeModels,
   requestedURL: "https://example.test/v1/models",
@@ -197,23 +204,25 @@ describe("app readiness", () => {
     };
     const readiness = appReadiness(settings(), value, devices, false);
     expect(readiness.canComplete).toBe(false);
-    expect(readiness.steps.find((step) => step.id === "connection")?.detail).toContain(
-      "Invalid response",
-    );
+    expect(
+      readiness.steps.find((step) => step.id === "connection")?.detail,
+    ).toContain("Invalid response");
   });
 
   it("states what the successful setup check verified", () => {
     const readiness = appReadiness(settings(), connection(), devices, false);
-    expect(readiness.steps.find((step) => step.id === "connection")?.detail).toBe(
-      "Model list received in 18 ms. No model was invoked.",
-    );
+    expect(
+      readiness.steps.find((step) => step.id === "connection")?.detail,
+    ).toBe("Model list received in 18 ms. No model was invoked.");
   });
 
   it("requires one successful metadata check before initial setup can finish", () => {
     const before = appReadiness(settings(), null, devices, false);
     expect(before.show).toBe(true);
     expect(before.canComplete).toBe(false);
-    expect(before.steps.find((step) => step.id === "connection")?.status).toBe("pending");
+    expect(before.steps.find((step) => step.id === "connection")?.status).toBe(
+      "pending",
+    );
 
     const after = appReadiness(settings(), connection(), devices, false);
     expect(after.canComplete).toBe(true);
@@ -221,7 +230,12 @@ describe("app readiness", () => {
   });
 
   it("does not nag a completed setup merely because this session has not probed the server", () => {
-    const readiness = appReadiness(settings({ setupCompleted: true }), null, devices, false);
+    const readiness = appReadiness(
+      settings({ setupCompleted: true }),
+      null,
+      devices,
+      false,
+    );
     expect(readiness.show).toBe(false);
   });
 
@@ -234,7 +248,9 @@ describe("app readiness", () => {
     );
     expect(readiness.show).toBe(true);
     expect(readiness.recoveryNeeded).toBe(true);
-    expect(readiness.steps.find((step) => step.id === "connection")?.status).toBe("attention");
+    expect(
+      readiness.steps.find((step) => step.id === "connection")?.status,
+    ).toBe("attention");
   });
 
   it("lets an established user dismiss one recovery state without bypassing first-run setup", () => {
@@ -270,8 +286,12 @@ describe("app readiness", () => {
 
   it("requires a credential only for API-key authentication", () => {
     expect(
-      appReadiness(settings({ credentialConfigured: false }), null, devices, false)
-        .canTestConnection,
+      appReadiness(
+        settings({ credentialConfigured: false }),
+        null,
+        devices,
+        false,
+      ).canTestConnection,
     ).toBe(false);
     expect(
       appReadiness(
@@ -294,7 +314,9 @@ describe("app readiness", () => {
       false,
     );
     expect(readiness.show).toBe(true);
-    expect(readiness.steps.find((step) => step.id === "microphone")?.status).toBe("attention");
+    expect(
+      readiness.steps.find((step) => step.id === "microphone")?.status,
+    ).toBe("attention");
   });
 });
 
@@ -327,10 +349,14 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
     },
   ];
   const native = appReadiness(cfg, null, devices, false);
-  expect(native.steps.find((step) => step.id === "server")?.status).toBe("complete");
+  expect(native.steps.find((step) => step.id === "server")?.status).toBe(
+    "complete",
+  );
   cfg.voiceTranscription.compatibilityProfile = ID.Generic;
   expect(
-    appReadiness(cfg, null, devices, false).steps.find((step) => step.id === "server")?.status,
+    appReadiness(cfg, null, devices, false).steps.find(
+      (step) => step.id === "server",
+    )?.status,
   ).toBe("attention");
 });
 
@@ -359,6 +385,9 @@ describe("task-specific prerequisites", () => {
       "file",
     );
     expect(file.recoveryNeeded).toBe(true);
-    expect(file.steps.filter((s) => s.blocking).map((s) => s.id)).toEqual(["server", "credential"]);
+    expect(file.steps.filter((s) => s.blocking).map((s) => s.id)).toEqual([
+      "server",
+      "credential",
+    ]);
   });
 });

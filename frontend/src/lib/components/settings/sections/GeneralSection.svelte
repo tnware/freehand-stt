@@ -1,4 +1,6 @@
 <script lang="ts">
+  import NativePermissionsCard from "$lib/components/settings/NativePermissionsCard.svelte";
+  import { platformPresentation } from "$lib/platform";
   import { Badge } from "$lib/components/ui/badge";
   import { Label } from "$lib/components/ui/label";
   import * as RadioGroup from "$lib/components/ui/radio-group";
@@ -9,20 +11,23 @@
 
   let { settings = $bindable() }: { settings: Settings } = $props();
 
+  const native = $derived(platformPresentation(settings.platform));
+  const mica = $derived(native.supportsMica && settings.useMica);
+
   let deliveryMode = $derived(
     settings.autoInsert ? InsertionMode.DirectInput : InsertionMode.ManualCopy,
   );
   let appearanceRestartRequired = $derived(
-    !settings.useMica &&
-      settings.useMica === settings.micaActive &&
+    !mica &&
+      (!native.supportsMica || settings.useMica === settings.micaActive) &&
       settings.appearanceMode !== settings.appearanceModeActive,
   );
 
-  const appearanceModes = [
+  const appearanceModes = $derived([
     {
       value: AppearanceMode.AppearanceModeSystem,
       label: "System",
-      description: "Follow Windows",
+      description: native.followSystem,
     },
     {
       value: AppearanceMode.AppearanceModeLight,
@@ -34,11 +39,11 @@
       label: "Dark",
       description: "Always dark",
     },
-  ];
+  ]);
 
   const chooseAppearanceMode = (value: string) => {
     const selected = appearanceModes.find((mode) => mode.value === value);
-    if (selected && !settings.useMica) settings.appearanceMode = selected.value;
+    if (selected && !mica) settings.appearanceMode = selected.value;
   };
 
   const chooseDeliveryMode = (value: string) => {
@@ -47,17 +52,19 @@
   };
 </script>
 
+{#if native.mac}<NativePermissionsCard />{/if}
+
 <SettingsCard>
   <SettingRow
     controlID="start-with-windows"
-    title="Start with Windows"
-    description="Launch quietly in the tray when you sign in."
+    title={native.startTitle}
+    description={native.startDescription}
   >
     {#snippet control()}
       <Switch
         id="start-with-windows"
         bind:checked={settings.startWithWindows}
-        aria-label="Start with Windows"
+        aria-label={native.startTitle}
       />
     {/snippet}
   </SettingRow>
@@ -65,7 +72,7 @@
   <SettingRow
     controlID="show-window-on-launch"
     title="Show window when launched"
-    description="Open this window on a normal manual launch. Windows sign-in launches always remain tray-only."
+    description={native.launchDescription}
   >
     {#snippet control()}
       <Switch
@@ -94,9 +101,9 @@
 <SettingsCard>
   <SettingRow
     title="Color mode"
-    description={settings.useMica
+    description={mica
       ? "Mica follows the Windows light or dark setting. Your solid-window preference is preserved for when Mica is off."
-      : "Follow Windows or keep Freehand independently light or dark. Applies after restarting the app."}
+      : `${native.followSystem} or keep Freehand independently light or dark. Applies after restarting the app.`}
   >
     {#snippet control()}
       {#if appearanceRestartRequired}
@@ -104,24 +111,29 @@
       {/if}
     {/snippet}
 
-    <div class="@container/appearance" class:opacity-60={settings.useMica}>
+    <div class="@container/appearance" class:opacity-60={mica}>
       <RadioGroup.Root
         class="grid-cols-1 gap-2 @min-[360px]/appearance:grid-cols-3"
         value={settings.appearanceMode}
         onValueChange={chooseAppearanceMode}
-        disabled={settings.useMica}
+        disabled={mica}
         aria-label="Color mode"
       >
         {#each appearanceModes as mode (mode.value)}
           <Label
             for={`appearance-${mode.value}`}
-            class={settings.useMica
+            class={mica
               ? "flex cursor-not-allowed items-center gap-2.5 rounded-lg bg-transparent px-3 py-2.5 has-data-checked:bg-accent-wash"
               : "flex cursor-pointer items-center gap-2.5 rounded-lg bg-transparent px-3 py-2.5 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"}
           >
-            <RadioGroup.Item id={`appearance-${mode.value}`} value={mode.value} />
+            <RadioGroup.Item
+              id={`appearance-${mode.value}`}
+              value={mode.value}
+            />
             <span class="min-w-0">
-              <span class="block text-xs font-medium text-foreground">{mode.label}</span>
+              <span class="block text-xs font-medium text-foreground"
+                >{mode.label}</span
+              >
               <span class="block text-xs leading-relaxed text-muted-foreground">
                 {mode.description}
               </span>
@@ -132,24 +144,26 @@
     </div>
   </SettingRow>
 
-  <SettingRow
-    controlID="use-mica"
-    title="Use Windows Mica backdrop"
-    description="Show the Windows system material through the app shell where supported. Mica always follows the Windows light or dark setting and applies after restarting the app."
-  >
-    {#snippet control()}
-      <div class="flex items-center gap-3">
-        {#if settings.useMica !== settings.micaActive}
-          <Badge variant="secondary">Restart required</Badge>
-        {/if}
-        <Switch
-          id="use-mica"
-          bind:checked={settings.useMica}
-          aria-label="Use Windows Mica backdrop"
-        />
-      </div>
-    {/snippet}
-  </SettingRow>
+  {#if native.supportsMica}
+    <SettingRow
+      controlID="use-mica"
+      title="Use Windows Mica backdrop"
+      description="Show the Windows system material through the app shell where supported. Mica always follows the Windows light or dark setting and applies after restarting the app."
+    >
+      {#snippet control()}
+        <div class="flex items-center gap-3">
+          {#if settings.useMica !== settings.micaActive}
+            <Badge variant="secondary">Restart required</Badge>
+          {/if}
+          <Switch
+            id="use-mica"
+            bind:checked={settings.useMica}
+            aria-label="Use Windows Mica backdrop"
+          />
+        </div>
+      {/snippet}
+    </SettingRow>
+  {/if}
 </SettingsCard>
 
 <SettingsCard>
@@ -174,10 +188,15 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-xs font-medium text-foreground">Direct input</span>
-          <span class="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-            Type Unicode directly into the application that was focused when recording started. This
-            is the default and does not touch the clipboard.
+          <span class="block text-xs font-medium text-foreground"
+            >Direct input</span
+          >
+          <span
+            class="mt-0.5 block text-xs leading-relaxed text-muted-foreground"
+          >
+            Type Unicode directly into the application that was focused when
+            recording started. This is the default and does not touch the
+            clipboard.
           </span>
         </span>
       </Label>
@@ -192,10 +211,14 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-xs font-medium text-foreground">Manual copy</span>
-          <span class="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-            Keep every completed transcript in Freehand until you explicitly choose Copy transcript.
-            Nothing is inserted or copied automatically.
+          <span class="block text-xs font-medium text-foreground"
+            >Manual copy</span
+          >
+          <span
+            class="mt-0.5 block text-xs leading-relaxed text-muted-foreground"
+          >
+            Keep every completed transcript in Freehand until you explicitly
+            choose Copy transcript. Nothing is inserted or copied automatically.
           </span>
         </span>
       </Label>

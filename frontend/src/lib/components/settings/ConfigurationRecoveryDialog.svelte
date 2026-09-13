@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { platformPresentation } from "$lib/platform";
   import FileWarningIcon from "@lucide/svelte/icons/file-warning";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import RefreshCcwIcon from "@lucide/svelte/icons/refresh-ccw";
@@ -12,6 +13,9 @@
 
   const configuration = $derived(session.editor.applied?.configuration);
   const recoveryRequired = $derived(configuration?.recoveryRequired ?? false);
+  const native = $derived(
+    platformPresentation(session.editor.applied?.platform),
+  );
 </script>
 
 <Dialog.Root open={recoveryRequired} onOpenChange={() => {}}>
@@ -29,10 +33,13 @@
           <FileWarningIcon class="size-5" aria-hidden="true" />
         </div>
         <div class="min-w-0">
-          <Dialog.Title class="text-base font-semibold">Saved settings need attention</Dialog.Title>
+          <Dialog.Title class="text-base font-semibold"
+            >Saved settings need attention</Dialog.Title
+          >
           <Dialog.Description class="mt-1 text-[13px] leading-relaxed">
-            Freehand did not replace your configuration with defaults. Transcription and settings
-            changes are paused until saved settings can be loaded or you explicitly reset them.
+            Freehand did not replace your configuration with defaults.
+            Transcription and settings changes are paused until saved settings
+            can be loaded or you explicitly reset them.
           </Dialog.Description>
         </div>
       </div>
@@ -42,7 +49,8 @@
       <Alert.Root variant="destructive">
         <Alert.Title>Configuration could not be loaded</Alert.Title>
         <Alert.Description
-          >{configuration?.message ?? "The saved configuration is invalid."}</Alert.Description
+          >{configuration?.message ??
+            "The saved configuration is invalid."}</Alert.Description
         >
       </Alert.Root>
 
@@ -54,16 +62,20 @@
       {/if}
 
       <p class="text-xs leading-relaxed text-muted-foreground">
-        Close Freehand before restoring a database backup, then reopen it. Retry loading after
-        fixing file access or a legacy import. Resetting archives the existing database and starts
-        with safe defaults; credentials stored by Windows are not deleted.
+        Close Freehand before restoring a database backup, then reopen it. Retry
+        loading after fixing file access or a legacy import. Resetting archives
+        the existing database and starts with safe defaults; credentials stored
+        in {native.credentialStore} are not deleted.
       </p>
     </div>
 
-    <Dialog.Footer class="border-t border-hairline bg-layer-fill px-5 py-4 sm:justify-between">
+    <Dialog.Footer
+      class="border-t border-hairline bg-layer-fill px-5 py-4 sm:justify-between"
+    >
       <Button
         variant="destructive"
-        disabled={session.editor.configurationRetrying || session.editor.configurationResetting}
+        disabled={session.editor.configurationRetrying ||
+          session.editor.configurationResetting}
         onclick={() => session.editor.resetConfiguration()}
       >
         {#if session.editor.configurationResetting}
@@ -74,10 +86,13 @@
         {:else}
           <RotateCcwIcon data-icon="inline-start" />
         {/if}
-        {session.editor.configurationResetting ? "Resetting…" : "Reset to defaults"}
+        {session.editor.configurationResetting
+          ? "Resetting…"
+          : "Reset to defaults"}
       </Button>
       <Button
-        disabled={session.editor.configurationRetrying || session.editor.configurationResetting}
+        disabled={session.editor.configurationRetrying ||
+          session.editor.configurationResetting}
         onclick={() => session.editor.retryConfiguration()}
       >
         {#if session.editor.configurationRetrying}

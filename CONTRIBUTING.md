@@ -26,6 +26,28 @@ wails3 generate bindings -clean=true -ts -i
 wails3 task dev
 ```
 
+### macOS source build
+
+Use macOS 13 or newer with Xcode Command Line Tools, Go 1.27, Node.js 22+
+and cgo enabled. Build the pinned Wails CLI with the same Go toolchain as the
+application, rather than an older auto-selected toolchain:
+
+```sh
+export PATH="$HOME/go/bin:$PATH"
+GOTOOLCHAIN=go1.27.0 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
+npm ci --prefix frontend
+wails3 task package ARCH=arm64
+```
+
+Use `ARCH=amd64` for an Intel build. Packaging produces an app bundle and a
+matching-architecture ZIP; launch the bundle, not a bare binary, for native
+permission tests. A local ad-hoc signature is not Developer ID signing or
+notarization. See the [macOS setup guide](site/src/content/docs/docs/guides/macos-setup.md)
+and [ADR 0013](site/src/content/docs/docs/decisions/0013-native-macos-boundary.md).
+Record real microphone, keyboard, insertion, Keychain, overlay and login behavior
+separately from unit/browser tests and cross-compilation. Never invoke model
+inventories to qualify a build.
+
 See the [contributor documentation](https://tnware.github.io/freehand-stt/docs/development/)
 for architecture, testing, and native Windows acceptance. Before opening a
 pull request, run the checks relevant to the change. The normal baseline is:

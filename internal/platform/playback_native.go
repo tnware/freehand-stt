@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows || darwin
 
 package platform
 
@@ -11,7 +11,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/audio"
 )
 
-// miniaudio can submit the final PCM frames to WASAPI before the hardware has
+// miniaudio can submit the final PCM frames to the backend before the hardware has
 // rendered them. Keep the device alive briefly after the audible duration so
 // short previews do not get stopped while their only buffer is still queued.
 const playbackDrainGrace = 100 * time.Millisecond
@@ -200,8 +200,8 @@ func (p *Playback) Position() (int64, int64, bool) {
 	return positionValue.Milliseconds(), durationValue.Milliseconds(), p.position >= len(p.data) && played >= durationValue+playbackDrainGrace
 }
 
-// OutputName identifies the Windows default playback endpoint selected when
-// the current device was created. Windows may still apply a per-app output
+// OutputName identifies the system-default playback endpoint selected when
+// the current device was created. The OS may still apply a per-app output
 // override, but this makes the native selection visible in diagnostics.
 func (p *Playback) OutputName() string {
 	p.mu.Lock()

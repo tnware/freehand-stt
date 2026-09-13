@@ -48,7 +48,11 @@ func normalize(settings config.Settings) (config.Settings, error) {
 	return settings, nil
 }
 
-func (c *Controller) Configure(next config.Settings) error {
+// Start tolerates an unavailable optional hold hook without dropping independent
+// global bindings or forgetting the saved preference. Explicit changes stay atomic.
+func (c *Controller) Start(next config.Settings) error     { return c.configure(next, true) }
+func (c *Controller) Configure(next config.Settings) error { return c.configure(next, false) }
+func (c *Controller) configure(next config.Settings, startup bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var err error
@@ -93,16 +97,20 @@ func (c *Controller) Configure(next config.Settings) error {
 			for i := len(registered) - 1; i >= 0; i-- {
 				_ = c.global.Unregister(registered[i].value)
 			}
-			return fmt.Errorf("%s shortcut %q was rejected by Windows; it may be reserved or already used by another application: %w", hotkey.ActionLabel(item.action), item.value, err)
+			return fmt.Errorf("%s shortcut %q was rejected by the operating system; it may be reserved or already used by another application: %w", hotkey.ActionLabel(item.action), item.value, err)
 		}
 		registered = append(registered, item)
 	}
+	var holdErr error
 	if c.hold != nil && (!c.hasState || next.HoldShortcut != old.HoldShortcut) {
 		if err := c.hold.Configure(next.HoldShortcut); err != nil {
-			for i := len(registered) - 1; i >= 0; i-- {
-				_ = c.global.Unregister(registered[i].value)
+			holdErr = fmt.Errorf("hold-to-talk is unavailable: %w", err)
+			if !startup || c.hasState {
+				for i := len(registered) - 1; i >= 0; i-- {
+					_ = c.global.Unregister(registered[i].value)
+				}
+				return holdErr
 			}
-			return fmt.Errorf("hold shortcut was not changed: %w", err)
 		}
 	}
 	for _, item := range oldBindings {
@@ -121,7 +129,23 @@ func (c *Controller) Configure(next config.Settings) error {
 	}
 	c.active = next
 	c.hasState = true
-	return nil
+	return holdErr
+}
+
+// RetryHold is explicit, serialized with capture/settings, and never changes
+// preferences or global registrations. Native Configure performs a bounded rearm.
+func (c *Controller) RetryHold() error {
+	if !c.mu.TryLock() {
+		return errors.New("shortcuts are busy; try again")
+	}
+	defer c.mu.Unlock()
+	if !c.hasState || c.suspended {
+		return errors.New("hold-to-talk cannot be retried during startup or shortcut capture")
+	}
+	if c.hold == nil {
+		return errors.New("hold-to-talk is unavailable")
+	}
+	return c.hold.Configure(c.active.HoldShortcut)
 }
 
 func (c *Controller) Suspend() error {
@@ -181,9 +205,12 @@ func (c *Controller) Resume() error {
 	if bindings[1].value == "" {
 		bindings = bindings[:1]
 	}
+	// Capture has ended even if held keys or lost permission prevent the optional
+	// hook from rearming. Restore the independent globals before reporting that.
+	var holdErr error
 	if c.hold != nil {
 		if err := c.hold.Configure(c.active.HoldShortcut); err != nil {
-			return fmt.Errorf("hold-to-talk could not be restored after shortcut capture: %w", err)
+			holdErr = fmt.Errorf("hold-to-talk could not be restored after shortcut capture: %w", err)
 		}
 	}
 	registered := 0
@@ -196,12 +223,12 @@ func (c *Controller) Resume() error {
 			if c.hold != nil {
 				rollback = errors.Join(rollback, c.hold.Configure(""))
 			}
-			return errors.Join(fmt.Errorf("shortcut capture ended but the %s shortcut %q could not be restored: %w", hotkey.ActionLabel(binding.action), binding.value, err), rollback)
+			return errors.Join(fmt.Errorf("shortcut capture ended but the %s shortcut %q could not be restored: %w", hotkey.ActionLabel(binding.action), binding.value, err), holdErr, rollback)
 		}
 		registered++
 	}
 	if registered == len(bindings) {
 		c.suspended = false
 	}
-	return nil
+	return holdErr
 }

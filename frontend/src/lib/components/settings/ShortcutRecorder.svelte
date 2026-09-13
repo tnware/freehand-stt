@@ -9,6 +9,7 @@
 
   let {
     id,
+    platform = "windows",
     title,
     description,
     requirement,
@@ -16,6 +17,7 @@
     preview = "",
     capturing = false,
     disabled = false,
+    captureUnavailable = false,
     clearable = false,
     restorable = false,
     feedback = null,
@@ -25,6 +27,7 @@
     onRestore,
   }: {
     id: string;
+    platform?: string;
     title: string;
     description: string;
     requirement: string;
@@ -32,6 +35,7 @@
     preview?: string;
     capturing?: boolean;
     disabled?: boolean;
+    captureUnavailable?: boolean;
     clearable?: boolean;
     restorable?: boolean;
     feedback?: ShortcutFeedback | null;
@@ -60,7 +64,9 @@
   aria-labelledby={`${id}-title`}
   aria-describedby={`${id}-description`}
 >
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div
+    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+  >
     <div class="min-w-0">
       <div class="flex items-center gap-2">
         <p id={`${id}-title`} class="text-sm font-medium">{title}</p>
@@ -76,11 +82,14 @@
       >
         {description}
       </p>
-      <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground/90">{requirement}</p>
+      <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground/90">
+        {requirement}
+      </p>
     </div>
     <div class="flex shrink-0 flex-wrap items-center gap-2">
-      <div id={id} class="mr-1" aria-live="polite">
+      <div {id} class="mr-1" aria-live="polite">
         <ShortcutKeys
+          {platform}
           value={displayedValue}
           label={`${title} shortcut`}
           emptyLabel={capturing ? "Waiting for keys" : "Not configured"}
@@ -91,7 +100,7 @@
           variant="ghost"
           size="icon-sm"
           onclick={onRestore}
-          disabled={disabled}
+          {disabled}
           aria-label={`Restore recommended ${title} shortcut`}
           title="Restore recommended shortcut"
         >
@@ -103,7 +112,7 @@
           variant="ghost"
           size="icon-sm"
           onclick={onClear}
-          disabled={disabled}
+          {disabled}
           aria-label={`Clear ${title} shortcut`}
           title="Clear shortcut"
         >
@@ -114,7 +123,7 @@
         variant={capturing ? "default" : "secondary"}
         size="sm"
         onclick={capturing ? onCancel : onRecord}
-        disabled={disabled}
+        disabled={disabled || (!capturing && captureUnavailable)}
       >
         {#if capturing}
           <LoaderCircleIcon class="animate-spin" />
@@ -126,13 +135,21 @@
       </Button>
     </div>
   </div>
-  <div class="mt-2.5 min-h-5 text-xs font-medium" aria-live="polite" aria-atomic="true">
+  <div
+    class="mt-2.5 min-h-5 text-xs font-medium"
+    aria-live="polite"
+    aria-atomic="true"
+  >
     {#if capturing}
       <p class="text-primary" role="status">
-        Listening for this chord. Press Escape to cancel; captured keys will not trigger an action.
+        Listening for this chord. Press Escape to cancel; captured keys will not
+        trigger an action.
       </p>
     {:else if feedback}
-      <p class={feedbackTone} role={feedback.state === "error" ? "alert" : "status"}>
+      <p
+        class={feedbackTone}
+        role={feedback.state === "error" ? "alert" : "status"}
+      >
         {feedback.message}
       </p>
     {/if}

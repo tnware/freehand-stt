@@ -4,9 +4,11 @@ package app
 
 import (
 	"errors"
+	"io"
 	"io/fs"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tnware/freehand-stt/internal/activity"
@@ -65,6 +67,9 @@ type Options struct {
 // App holds the assembled application. Construction is ordered so that nothing
 // observable exists before the thing that publishes to it.
 type App struct {
+	nativeInput       io.Closer
+	shutdownOnce      sync.Once
+	sourcesOnce       sync.Once
 	storage           *storage.Store
 	opts              Options
 	settings          config.Settings
@@ -166,6 +171,9 @@ func New(opts Options) (*App, error) {
 	client := inference.New()
 	processor := postprocess.New(client, rootLogger.With("component", "postprocess"))
 	nativeInput := platform.NewInput(rootLogger.With("component", "insertion"))
+	if closer, ok := any(nativeInput).(io.Closer); ok {
+		a.nativeInput = closer
+	}
 	admission := activity.New(activity.Sources{
 		DictationActive: func() bool { return dictation.Active(a.dictation) },
 		FileActive:      func() bool { return filetranscription.Active(a.files) },
@@ -186,6 +194,15 @@ func New(opts Options) (*App, error) {
 		a.publishSettings,
 		rootLogger,
 		settingsservice.WithConfigurationLoad(store, settingsFailure, store.LoadReport()),
+		settingsservice.WithHoldRetry(func() error {
+			if err := admission.CheckShortcutCapture(); err != nil {
+				return err
+			}
+			if a.shortcuts == nil {
+				return errors.New("shortcut controller is not ready")
+			}
+			return a.shortcuts.RetryHold()
+		}),
 		settingsservice.WithTextToSpeechCredential(ttsKeys),
 		settingsservice.WithVoiceCredential(store.VoiceCredentials()),
 		settingsservice.WithUpdateChecks(func(enabled bool) { updates.ApplyEnabled(a.updates, enabled) }),
@@ -265,12 +282,15 @@ func New(opts Options) (*App, error) {
 	)
 
 	a.newWailsApp()
+	a.configureNativePermissions()
+	a.configureDesktop()
 	if err := a.configureUpdater(); err != nil {
 		_ = store.Close()
 		return nil, err
 	}
 	a.wails.OnShutdown(func() {
 		admission.Close()
+		a.stopNativeSources()
 		a.persistMainWindowPlacement(a.mainWindow.current())
 		a.tray.Close()
 	})
@@ -311,7 +331,16 @@ func (a *App) configureUpdater() error {
 }
 
 func freehandReleaseAsset(request updater.CheckRequest, assets []wailsgithub.ReleaseAsset) int {
-	expected := "freehand-" + strings.ToLower(request.Platform) + "-" + strings.ToLower(request.Arch) + ".exe"
+	extension := ""
+	switch strings.ToLower(request.Platform) {
+	case "windows":
+		extension = ".exe"
+	case "darwin":
+		extension = ".zip"
+	default:
+		return -1
+	}
+	expected := "freehand-" + strings.ToLower(request.Platform) + "-" + strings.ToLower(request.Arch) + extension
 	for index, asset := range assets {
 		if strings.EqualFold(asset.Name, expected) {
 			return index
@@ -352,16 +381,11 @@ const updaterWindowCSS = `
 // Run starts the application and blocks until it quits, then unwinds the
 // resources that outlive the Wails run loop.
 func (a *App) Run() error {
-	defer a.storage.Close()
+	defer a.closeResources()
+	defer a.stopNativeSources()
 	started := time.Now()
 	a.logger.Info("application run started")
 	runErr := a.wails.Run()
-	if a.levels != nil {
-		a.levels.stop()
-	}
-	if err := a.hold.Close(); err != nil {
-		a.logger.Warn("hold-to-talk shutdown failed", "error_kind", diagnostics.ErrorKind(err))
-	}
 	if runErr != nil {
 		a.logger.Error("application run failed", "duration_ms", time.Since(started).Milliseconds(), "error_kind", diagnostics.ErrorKind(runErr))
 	} else {
@@ -385,7 +409,9 @@ func (a *App) newWailsApp() {
 			Handler:        application.AssetFileServerFS(a.opts.Assets),
 			DisableLogging: true,
 		},
-		Windows: application.WindowsOptions{DisableQuitOnLastWindowClosed: true},
+		Windows:      application.WindowsOptions{DisableQuitOnLastWindowClosed: true},
+		Mac:          application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: false},
+		PostShutdown: a.closeResources,
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID:      a.opts.Release.ProductIdentifier,
 			EncryptionKey: a.opts.InstanceKey,
@@ -425,10 +451,7 @@ func (a *App) onStarted(*application.ApplicationEvent) {
 	overlayservice.Start(a.overlay)
 	a.levels = newLevelPump(a.audio.NewLevelTap(), a.emitLevel, a.levelsWanted)
 	go a.levels.run()
-	if err := a.hold.Start(a.settings.HoldShortcut); err != nil {
-		a.logger.Warn("hold-to-talk unavailable", "error_kind", diagnostics.ErrorKind(err))
-	}
-	if err := a.shortcuts.Configure(a.settings); err != nil {
+	if err := a.shortcuts.Start(a.settings); err != nil {
 		a.logger.Warn("global shortcut unavailable", "error_kind", diagnostics.ErrorKind(err))
 	}
 }

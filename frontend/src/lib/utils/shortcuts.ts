@@ -3,6 +3,7 @@ import {
   type ShortcutAssignments,
   type ShortcutPolicy,
 } from "$bindings/hotkey";
+import { platformPresentation } from "$lib/platform";
 import { State, type Settings, type Status } from "$lib/state";
 
 export { ShortcutAction };
@@ -37,19 +38,49 @@ const KEY_LABELS: Record<string, string> = {
   win: "Win",
 };
 
-/** Converts a backend-normalized shortcut chord into Windows-facing labels. */
-export const shortcutKeyLabels = (value: string): string[] =>
+/** Spoken names only: persisted native chords remain unchanged. */
+const shortcutKeyNames = (value: string, platform = "windows"): string[] =>
   value
     .split("+")
     .map((part) => part.trim())
     .filter(Boolean)
-    .map((part) => KEY_LABELS[part.toLowerCase()] ?? part);
+    .map((part) => {
+      const key = part.toLowerCase();
+      const native = platformPresentation(platform);
+      if (["cmd", "command", "meta", "super", "win"].includes(key))
+        return native.command;
+      if (key === "cmdorctrl") return native.primaryModifier;
+      if (key === "alt" || key === "option") return native.option;
+      if (native.mac && (key === "ctrl" || key === "control")) return "Control";
+      return KEY_LABELS[key] ?? part;
+    });
+
+const MAC_GLYPHS: Record<string, string> = {
+  Command: "⌘",
+  Option: "⌥",
+  Control: "⌃",
+  Shift: "⇧",
+};
+
+/** Native visual labels, separate from the accessible spoken names. */
+export const shortcutKeyLabels = (
+  value: string,
+  platform = "windows",
+): string[] =>
+  shortcutKeyNames(value, platform).map((name) =>
+    platformPresentation(platform).mac ? (MAC_GLYPHS[name] ?? name) : name,
+  );
 
 /** Screen-reader wording shared by every visual shortcut renderer. */
-export const shortcutSpokenLabel = (value: string): string =>
-  shortcutKeyLabels(value).join(" plus ");
+export const shortcutSpokenLabel = (
+  value: string,
+  platform = "windows",
+): string => shortcutKeyNames(value, platform).join(" plus ");
 
-export const shortcutValue = (settings: Settings, action: ShortcutAction): string => {
+export const shortcutValue = (
+  settings: Settings,
+  action: ShortcutAction,
+): string => {
   if (action === ShortcutAction.ToggleRecording) return settings.toggleShortcut;
   if (action === ShortcutAction.ShowFreehand) return settings.showShortcut;
   return settings.holdShortcut ?? "";
@@ -60,12 +91,16 @@ export const setShortcutValue = (
   action: ShortcutAction,
   value: string,
 ): void => {
-  if (action === ShortcutAction.ToggleRecording) settings.toggleShortcut = value;
-  else if (action === ShortcutAction.ShowFreehand) settings.showShortcut = value;
+  if (action === ShortcutAction.ToggleRecording)
+    settings.toggleShortcut = value;
+  else if (action === ShortcutAction.ShowFreehand)
+    settings.showShortcut = value;
   else settings.holdShortcut = value;
 };
 
-export const shortcutAssignments = (settings: Settings): ShortcutAssignments => ({
+export const shortcutAssignments = (
+  settings: Settings,
+): ShortcutAssignments => ({
   toggleRecording: settings.toggleShortcut,
   showFreehand: settings.showShortcut,
   holdToTalk: settings.holdShortcut ?? "",
@@ -85,12 +120,18 @@ export const shortcutRequirement = (policy: ShortcutPolicy): string => {
   return `${policy.required ? "Required" : "Optional"}: ${forms.join("; or ")}.`;
 };
 
-export const isRecommendedShortcut = (policy: ShortcutPolicy, value: string): boolean =>
-  value === policy.defaultShortcut || (policy.defaultAliases ?? []).includes(value);
+export const isRecommendedShortcut = (
+  policy: ShortcutPolicy,
+  value: string,
+): boolean =>
+  value === policy.defaultShortcut ||
+  (policy.defaultAliases ?? []).includes(value);
 
 /**
  * Recording a chord suspends the global shortcuts, so it is only offered when
  * no dictation is in flight.
  */
-export const shortcutEditingAllowed = (status: Status, busy: boolean): boolean =>
-  !busy && [State.Idle, State.Failed].includes(status.state);
+export const shortcutEditingAllowed = (
+  status: Status,
+  busy: boolean,
+): boolean => !busy && [State.Idle, State.Failed].includes(status.state);

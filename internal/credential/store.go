@@ -2,7 +2,6 @@ package credential
 
 import (
 	"errors"
-	keyring "github.com/zalando/go-keyring"
 )
 
 const service = "Freehand"
@@ -31,8 +30,8 @@ func (k Keyring) account() string {
 }
 
 func (k Keyring) Get() (string, error) {
-	v, e := keyring.Get(service, k.account())
-	if errors.Is(e, keyring.ErrNotFound) {
+	v, e := backendGet(k.account())
+	if errors.Is(e, ErrNotFound) {
 		return "", ErrNotFound
 	}
 	return v, e
@@ -41,11 +40,11 @@ func (k Keyring) Set(v string) error {
 	if v == "" {
 		return errors.New("credential cannot be empty")
 	}
-	return keyring.Set(service, k.account(), v)
+	return backendSet(k.account(), v)
 }
 func (k Keyring) Delete() error {
-	e := keyring.Delete(service, k.account())
-	if errors.Is(e, keyring.ErrNotFound) {
+	e := backendDelete(k.account())
+	if errors.Is(e, ErrNotFound) {
 		return nil
 	}
 	return e

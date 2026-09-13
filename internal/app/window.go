@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -87,6 +88,11 @@ func appearanceIsDark(mode config.AppearanceMode, systemDark bool) bool {
 }
 
 func baseWindowOptions(name, title, url string, width, height, minWidth, minHeight int, hidden, useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
+	return baseWindowOptionsForPlatform(runtime.GOOS, name, title, url, width, height, minWidth, minHeight, hidden, useMica, appearanceMode, systemDark)
+}
+
+func baseWindowOptionsForPlatform(osName, name, title, url string, width, height, minWidth, minHeight int, hidden, useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
+	useMica = useMica && osName == "windows"
 	effectiveAppearance := config.EffectiveAppearanceMode(useMica, appearanceMode)
 	options := application.WebviewWindowOptions{
 		Name:      name,
@@ -107,6 +113,7 @@ func baseWindowOptions(name, title, url string, width, height, minWidth, minHeig
 		BackgroundColour: application.NewRGB(244, 244, 244),
 		BackgroundType:   application.BackgroundTypeSolid,
 		Frameless:        false,
+		Mac:              application.MacWindow{Appearance: macAppearance(effectiveAppearance), TabbingMode: application.MacWindowTabbingModeDisallowed},
 		Windows: application.WindowsWindow{
 			BackdropType:                      application.None,
 			DisableIcon:                       true,

@@ -16,6 +16,12 @@ info:
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"
 
+# Numeric, monotonically increasing macOS bundle build number. Increment for
+# each published Mac build (including prereleases); display version is info.version.
+# releaseinfo generates both plists; development uses productIdentifier + ".dev".
+macos:
+  buildNumber: "5"
+
 # iOS build configuration (uncomment to customise iOS project generation)
 # Note: Keys under `ios` OVERRIDE values under `info` when set.
 # ios:

@@ -5,31 +5,37 @@
 		<key>CFBundleExecutable</key>
 		<string>freehand</string>
 		<key>CFBundleGetInfoString</key>
-		<string>Focus-safe Windows speech to text for local or remote endpoints.</string>
+		<string>Speech to text, anywhere you type.</string>
 		<key>CFBundleIconFile</key>
 		<string>icons</string>
 		<key>CFBundleIconName</key>
 		<string>appicon</string>
 		<key>CFBundleIdentifier</key>
-		<string>io.github.tnware.freehand</string>
+		<string>io.github.tnware.freehand.dev</string>
 		<key>CFBundleName</key>
+		<string>Freehand</string>
+		<key>CFBundleDisplayName</key>
 		<string>Freehand</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
-		<string>0.1.0-alpha.1</string>
+		<string>0.1.0</string>
 		<key>CFBundleVersion</key>
-		<string>0.1.0-alpha.1</string>
+		<string>5</string>
+		<key>FreehandReleaseVersion</key>
+		<string>0.1.0-alpha.5</string>
 		<key>LSMinimumSystemVersion</key>
-		<string>12.0.0</string>
+		<string>13.0</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Freehand records your microphone only when you start dictation and sends audio to your chosen speech endpoint.</string>
+		<key>NSHumanReadableCopyright</key>
+		<string>Copyright 2026 Tyler Woods</string>
+		<key>NSHighResolutionCapable</key>
+		<true/>
 		<key>NSAppTransportSecurity</key>
 		<dict>
 			<key>NSAllowsLocalNetworking</key>
 			<true/>
 		</dict>
-		<key>NSHighResolutionCapable</key>
-		<string>true</string>
-		<key>NSHumanReadableCopyright</key>
-		<string>Copyright 2026 Tyler Woods</string>
 	</dict>
 </plist>

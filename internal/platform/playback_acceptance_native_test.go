@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows || darwin
 
 package platform
 
@@ -13,7 +13,7 @@ import (
 // It does not capture a microphone or contact an inference server.
 func TestNativePlaybackSeek(t *testing.T) {
 	if os.Getenv("FREEHAND_NATIVE_PLAYBACK_ACCEPTANCE") != "1" {
-		t.Skip("set FREEHAND_NATIVE_PLAYBACK_ACCEPTANCE=1 to exercise Windows audio output")
+		t.Skip("set FREEHAND_NATIVE_PLAYBACK_ACCEPTANCE=1 to exercise native audio output")
 	}
 	player := &Playback{}
 	t.Cleanup(func() { _ = player.Close() })

@@ -62,6 +62,8 @@ type ShortcutCaptureGuard interface {
 }
 
 type Service struct {
+	permissions     PermissionAccess
+	permissionMu    sync.Mutex
 	capture         audio.Capture
 	shortcutCapture ShortcutCapturer
 	shortcutGuard   ShortcutCaptureGuard
@@ -305,7 +307,7 @@ func (s *Service) CaptureShortcut(request ShortcutCaptureRequest) (result Shortc
 		Outcome:  ShortcutCaptured,
 		Shortcut: shortcut,
 		Changed:  true,
-		Message:  "Captured. Save changes to let Windows register this shortcut.",
+		Message:  "Captured. Save changes to register this shortcut with the operating system.",
 	}, nil
 }
 

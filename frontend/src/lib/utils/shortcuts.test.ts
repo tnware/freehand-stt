@@ -7,6 +7,17 @@ import {
 } from "$lib/utils/shortcuts";
 
 describe("shortcut rendering", () => {
+  it("separates native macOS glyphs from spoken modifier names", () => {
+    expect(
+      shortcutKeyLabels("CmdOrCtrl+Alt+Ctrl+Shift+Space", "darwin"),
+    ).toEqual(["⌘", "⌥", "⌃", "⇧", "Space"]);
+    expect(shortcutSpokenLabel("Ctrl+Super+Alt+Shift+F13", "darwin")).toBe(
+      "Control plus Command plus Option plus Shift plus F13",
+    );
+    expect(shortcutKeyLabels("Meta+Win+Cmd+Command", "darwin")).toEqual(
+      Array(4).fill("⌘"),
+    );
+  });
   it("normalizes persisted aliases to Windows-facing key labels", () => {
     expect(shortcutKeyLabels("CmdOrCtrl+Meta+Space")).toEqual([
       "Ctrl",
@@ -16,7 +27,9 @@ describe("shortcut rendering", () => {
   });
 
   it("ignores empty chord segments and creates consistent spoken text", () => {
-    expect(shortcutSpokenLabel(" Ctrl + Shift + D ")).toBe("Ctrl plus Shift plus D");
+    expect(shortcutSpokenLabel(" Ctrl + Shift + D ")).toBe(
+      "Ctrl plus Shift plus D",
+    );
     expect(shortcutKeyLabels(" ")).toEqual([]);
   });
 

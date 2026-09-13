@@ -2,6 +2,7 @@ package tray
 
 import (
 	"log/slog"
+	"runtime"
 	"sync"
 	"time"
 
@@ -74,8 +75,7 @@ func New(app *application.App, icons Icons, actions Actions, logger *slog.Logger
 		},
 	}
 	controller.tray = app.SystemTray.New()
-	controller.tray.SetIcon(icons.Light)
-	controller.tray.SetDarkModeIcon(icons.Dark)
+	installIcons(controller.tray, icons, runtime.GOOS)
 	controller.installMenu(app)
 	initial := present(controller.state)
 	controller.lastPresentation = initial

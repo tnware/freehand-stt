@@ -169,7 +169,7 @@ func TestMainWindowCanOverrideSystemAppearanceWithoutMica(t *testing.T) {
 }
 
 func TestMainWindowUsesMicaOnlyAfterOptIn(t *testing.T) {
-	options := mainWindowOptions(false, true, true, config.AppearanceModeDark, true)
+	options := baseWindowOptionsForPlatform("windows", mainWindowName, "Freehand", mainWindowURL, mainWindowWidth, mainWindowHeight, mainWindowMinWidth, mainWindowMinHeight, false, true, config.AppearanceModeDark, true)
 	if options.BackgroundType != application.BackgroundTypeTranslucent {
 		t.Fatal("opted-in main window does not use a translucent backdrop")
 	}

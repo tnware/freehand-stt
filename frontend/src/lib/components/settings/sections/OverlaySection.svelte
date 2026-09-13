@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { platformPresentation } from "$lib/platform";
   import EyeIcon from "@lucide/svelte/icons/eye";
   import SquareIcon from "@lucide/svelte/icons/square";
   import { Badge } from "$lib/components/ui/badge";
@@ -34,13 +35,21 @@
   } = $props();
 
   const layoutChoices = [
-    { value: OverlayLayout.OverlayLayoutMinimal, label: "Minimal", shape: "size-3 rounded-full" },
+    {
+      value: OverlayLayout.OverlayLayoutMinimal,
+      label: "Minimal",
+      shape: "size-3 rounded-full",
+    },
     {
       value: OverlayLayout.OverlayLayoutCapsule,
       label: "Capsule",
       shape: "h-2.5 w-7 rounded-full",
     },
-    { value: OverlayLayout.OverlayLayoutMeter, label: "Meter", shape: "h-2.5 w-9 rounded-full" },
+    {
+      value: OverlayLayout.OverlayLayoutMeter,
+      label: "Meter",
+      shape: "h-2.5 w-9 rounded-full",
+    },
     {
       value: OverlayLayout.OverlayLayoutDetailed,
       label: "Detailed",
@@ -62,7 +71,8 @@
   }
 
   function chooseVisualizer(value: string) {
-    if (value) settings.overlayVisualizer = value as Settings["overlayVisualizer"];
+    if (value)
+      settings.overlayVisualizer = value as Settings["overlayVisualizer"];
   }
 
   function chooseSurface(value: string) {
@@ -74,12 +84,14 @@
   }
 
   function chooseVisibility(value: string) {
-    if (value) settings.overlayVisibility = value as Settings["overlayVisibility"];
+    if (value)
+      settings.overlayVisibility = value as Settings["overlayVisibility"];
   }
 
   function chooseMotion(value: string) {
     if (value) settings.overlayMotion = value as Settings["overlayMotion"];
   }
+  const native = $derived(platformPresentation(settings.platform));
 </script>
 
 <div class="flex flex-col gap-4">
@@ -116,7 +128,11 @@
     </SettingRow>
   </SettingsCard>
   <SettingsCard>
-    <SettingRow compact title="Layout" description="Choose how much status detail to show.">
+    <SettingRow
+      compact
+      title="Layout"
+      description="Choose how much status detail to show."
+    >
       <ToggleGroup.Root
         class="grid w-full grid-cols-4 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
         type="single"
@@ -128,8 +144,13 @@
         disabled={!settings.overlayEnabled && !previewing}
       >
         {#each layoutChoices as choice (choice.value)}
-          <ToggleGroup.Item value={choice.value} class="h-11 min-w-0 flex-col gap-1 px-1 text-xs">
-            <span class={`border border-current bg-current/15 ${choice.shape}`} aria-hidden="true"
+          <ToggleGroup.Item
+            value={choice.value}
+            class="h-11 min-w-0 flex-col gap-1 px-1 text-xs"
+          >
+            <span
+              class={`border border-current bg-current/15 ${choice.shape}`}
+              aria-hidden="true"
             ></span>
             {choice.label}
           </ToggleGroup.Item>
@@ -152,12 +173,19 @@
         disabled={!settings.overlayEnabled && !previewing}
       >
         {#each anchorChoices as choice (choice.value)}
-          <ToggleGroup.Item value={choice.value} class="min-w-0">{choice.label}</ToggleGroup.Item>
+          <ToggleGroup.Item value={choice.value} class="min-w-0"
+            >{choice.label}</ToggleGroup.Item
+          >
         {/each}
       </ToggleGroup.Root>
     </SettingRow>
-    <SettingRow compact title="Size" description="Make the overlay smaller or larger.">
-      {#snippet control()}<Badge variant="secondary">{settings.overlaySizePercent}%</Badge
+    <SettingRow
+      compact
+      title="Size"
+      description="Make the overlay smaller or larger."
+    >
+      {#snippet control()}<Badge variant="secondary"
+          >{settings.overlaySizePercent}%</Badge
         >{/snippet}
       <Slider.Root
         id="overlay-size"
@@ -176,7 +204,11 @@
     title="Appearance and behavior"
     description="Surface, visualizer, visibility, motion and spacing"
   >
-    <SettingRow compact title="Surface" description="Choose a glass, solid or minimal background.">
+    <SettingRow
+      compact
+      title="Surface"
+      description="Choose a glass, solid or minimal background."
+    >
       <ToggleGroup.Root
         class="grid w-full grid-cols-3 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
         type="single"
@@ -187,9 +219,15 @@
         aria-label="Overlay surface"
         disabled={!settings.overlayEnabled && !previewing}
       >
-        <ToggleGroup.Item value={OverlaySurface.OverlaySurfaceGlass}>Glass</ToggleGroup.Item>
-        <ToggleGroup.Item value={OverlaySurface.OverlaySurfaceSolid}>Solid</ToggleGroup.Item>
-        <ToggleGroup.Item value={OverlaySurface.OverlaySurfaceMinimal}>Minimal</ToggleGroup.Item>
+        <ToggleGroup.Item value={OverlaySurface.OverlaySurfaceGlass}
+          >Glass</ToggleGroup.Item
+        >
+        <ToggleGroup.Item value={OverlaySurface.OverlaySurfaceSolid}
+          >Solid</ToggleGroup.Item
+        >
+        <ToggleGroup.Item value={OverlaySurface.OverlaySurfaceMinimal}
+          >Minimal</ToggleGroup.Item
+        >
       </ToggleGroup.Root>
     </SettingRow>
     <SettingRow
@@ -207,8 +245,12 @@
         aria-label="Recording visualizer"
         disabled={!settings.overlayEnabled && !previewing}
       >
-        <ToggleGroup.Item value={OverlayVisualizer.OverlayVisualizerBars}>Bars</ToggleGroup.Item>
-        <ToggleGroup.Item value={OverlayVisualizer.OverlayVisualizerPulse}>Pulse</ToggleGroup.Item>
+        <ToggleGroup.Item value={OverlayVisualizer.OverlayVisualizerBars}
+          >Bars</ToggleGroup.Item
+        >
+        <ToggleGroup.Item value={OverlayVisualizer.OverlayVisualizerPulse}
+          >Pulse</ToggleGroup.Item
+        >
         <ToggleGroup.Item value={OverlayVisualizer.OverlayVisualizerEnvelope}
           >Envelope</ToggleGroup.Item
         >
@@ -246,7 +288,7 @@
     <SettingRow
       compact
       title="Motion"
-      description="Reduce animation or follow your Windows preference."
+      description={`Reduce animation or follow your ${native.name} preference.`}
     >
       <ToggleGroup.Root
         class="grid w-full grid-cols-2 rounded-lg bg-well p-1 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
@@ -258,9 +300,12 @@
         aria-label="Overlay motion"
         disabled={!settings.overlayEnabled && !previewing}
       >
-        <ToggleGroup.Item value={OverlayMotion.OverlayMotionSystem}>Follow Windows</ToggleGroup.Item
+        <ToggleGroup.Item value={OverlayMotion.OverlayMotionSystem}
+          >{native.followSystem}</ToggleGroup.Item
         >
-        <ToggleGroup.Item value={OverlayMotion.OverlayMotionReduced}>Reduced</ToggleGroup.Item>
+        <ToggleGroup.Item value={OverlayMotion.OverlayMotionReduced}
+          >Reduced</ToggleGroup.Item
+        >
       </ToggleGroup.Root>
     </SettingRow>
     <SettingRow
@@ -268,7 +313,8 @@
       title="Edge distance"
       description="Space between the overlay and the screen edge."
     >
-      {#snippet control()}<Badge variant="secondary">{settings.overlayTopOffset} px</Badge
+      {#snippet control()}<Badge variant="secondary"
+          >{settings.overlayTopOffset} px</Badge
         >{/snippet}
       <Slider.Root
         id="overlay-edge-offset"
@@ -285,9 +331,12 @@
     <SettingRow
       compact
       title="Opacity"
-      description="Adjust transparency. Windows high contrast keeps full opacity."
+      description={native.mac
+        ? "Adjust transparency. macOS Reduce Transparency keeps full opacity."
+        : "Adjust transparency. Windows high contrast keeps full opacity."}
     >
-      {#snippet control()}<Badge variant="secondary">{settings.overlayOpacityPercent}%</Badge
+      {#snippet control()}<Badge variant="secondary"
+          >{settings.overlayOpacityPercent}%</Badge
         >{/snippet}
       <Slider.Root
         id="overlay-opacity"
@@ -306,7 +355,8 @@
       title="Glow strength"
       description="Adjust the glow around status colors. Minimal surfaces do not use glow."
     >
-      {#snippet control()}<Badge variant="secondary">{settings.overlayGlowPercent}%</Badge
+      {#snippet control()}<Badge variant="secondary"
+          >{settings.overlayGlowPercent}%</Badge
         >{/snippet}
       <Slider.Root
         id="overlay-glow"

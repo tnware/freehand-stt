@@ -3,6 +3,50 @@ title: Testing contract
 description: Deterministic, integration, and native acceptance responsibilities.
 ---
 
+## Shortcut recovery regression checks
+
+Run `go test -race ./internal/shortcut ./internal/settings ./internal/input ./internal/platform ./internal/app`
+and `npx playwright test --config shortcut-recovery.config.ts` from `frontend`
+(for the browser command only). The browser fixture uses the real generated retry
+binding and Wails request envelope with a mocked transport, not native keyboard or
+permission access. It covers failure/success refresh, no mount retry, pending/busy
+disabling, clearing unavailable hold, and preserving a dirty draft. Native-hook
+unit tests cover unchanged-chord rearm, loss cancellation, fresh reducer edges,
+released-key checks around tap creation, and failed replacement preservation.
+These checks do not substitute for packaged-app keyboard/permission acceptance.
+
+## Native macOS acceptance
+
+[ADR 0013](../../decisions/0013-native-macos-boundary/) defines the Mac boundary.
+Run the deterministic Go and frontend suites on macOS, then exercise a packaged
+app with a stable bundle identity. Tests guarded by `FREEHAND_NATIVE_*` are opt-in:
+a skipped acceptance test proves nothing about native behavior. Do not prompt, type
+into arbitrary user apps, record audio, or access a live credential account in CI.
+
+Native verification must separately cover:
+
+- First launch, menu-bar icon, native titlebars/Edit menu, close-to-hide, Dock reopen
+  (main window only), encrypted second launch and bounded Quit cleanup.
+- Denied/authorized microphone behavior, explicit-device/default routing, unplug,
+  repeated start/stop/cancel, live PCM format, output pause/seek/restart and close.
+- Toggle/show and hold press/release, repeat suppression, modifier-only chords,
+  both physical modifier sides, Secure Input, tap disablement and shortcut capture
+  cancellation. Re-test after granting/revoking Input Monitoring/Accessibility.
+- Disposable editable target: Unicode/emoji/newlines, unchanged clipboard, changed
+  field/window/process and closed/password targets, cancellation during delivery,
+  and explicit copy-required recovery. Never restore target focus automatically.
+- Overlay first show/update/hide/close without key-window or target changes; every
+  layout, anchor and visualizer, multi-monitor placement, reduced motion/contrast,
+  bounded captions, hidden timers and shutdown.
+- Disposable Keychain account set/get/update/delete, denial mapping and no plaintext
+  fallback. Start-at-login exact bundle path, disable/removal and actual next login.
+- Real bundle/signature/entitlement inspection; Intel execution and signed update
+  application are distinct from an Apple Silicon build or a local ad-hoc signature.
+
+Record commands, actual results and unverified cases in the work item. Live inference
+uses only the operator-selected endpoint/model; do not qualify a model inventory.
+Microphone or keyboard denial must leave file transcription and TTS independently usable.
+
 ## CI workflow acceptance
 
 Run the dependency-free selection/gate regressions and workflow wiring checks:

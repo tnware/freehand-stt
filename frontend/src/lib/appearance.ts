@@ -1,3 +1,4 @@
+import { platformPresentation } from "$lib/platform";
 import { AppearanceMode, type Settings } from "$lib/state";
 
 export type RendererAppearanceMode = "system" | "light" | "dark";
@@ -16,10 +17,21 @@ export function activeAppearanceMode(
 }
 
 export function appearanceRestartRequired(
-  settings: Pick<Settings, "useMica" | "micaActive" | "appearanceMode" | "appearanceModeActive">,
+  settings: Pick<
+    Settings,
+    | "platform"
+    | "useMica"
+    | "micaActive"
+    | "appearanceMode"
+    | "appearanceModeActive"
+  >,
 ): boolean {
+  if (platformPresentation(settings.platform).mac) {
+    return settings.appearanceMode !== settings.appearanceModeActive;
+  }
   return (
     settings.useMica !== settings.micaActive ||
-    (!settings.useMica && settings.appearanceMode !== settings.appearanceModeActive)
+    (!settings.useMica &&
+      settings.appearanceMode !== settings.appearanceModeActive)
   );
 }

@@ -181,9 +181,10 @@ func TestCancelWaitsForCaptureStartTransition(t *testing.T) {
 		t.Fatal("cancel raced microphone startup")
 	case <-time.After(25 * time.Millisecond):
 	}
+	waitForState(t, c, Cancelling)
 	close(cap.release)
-	if err := <-startDone; err != nil {
-		t.Fatal(err)
+	if err := <-startDone; err == nil {
+		t.Fatal("cancelled microphone startup succeeded")
 	}
 	if err := <-cancelDone; err != nil {
 		t.Fatal(err)

@@ -7,10 +7,27 @@
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Textarea } from "$lib/components/ui/textarea";
-  import { TTSPhase, TTSSource, type Settings, type TTSStatus } from "$lib/state";
+  import {
+    TTSPhase,
+    TTSSource,
+    type Settings,
+    type TTSStatus,
+  } from "$lib/state";
   import { cn } from "$lib/utils";
 
+  import { session } from "$lib/stores/session.svelte";
+  import { shortcutKeyLabels, shortcutSpokenLabel } from "$lib/utils/shortcuts";
+
   const maximumCharacters = 4096;
+  // Preserve the functional Control+Enter chord on both platforms.
+  const composeShortcut = "Ctrl+Enter";
+  const platform = $derived(session.editor.applied?.platform);
+  const shortcutVisual = $derived(
+    shortcutKeyLabels(composeShortcut, platform).join("+"),
+  );
+  const shortcutSpoken = $derived(
+    shortcutSpokenLabel(composeShortcut, platform),
+  );
 
   let {
     text = $bindable(""),
@@ -60,11 +77,17 @@
   );
   const generating = $derived(status.phase === TTSPhase.Generating);
   const showPlayback = $derived(
-    isOwnSession && status.phase !== TTSPhase.Idle && status.phase !== TTSPhase.Cancelled,
+    isOwnSession &&
+      status.phase !== TTSPhase.Idle &&
+      status.phase !== TTSPhase.Cancelled,
   );
   const configured = $derived(
     settings.enabled &&
-      Boolean(settings.baseURL.trim() && settings.model.trim() && settings.voice.trim()),
+      Boolean(
+        settings.baseURL.trim() &&
+        settings.model.trim() &&
+        settings.voice.trim(),
+      ),
   );
   const canSpeak = $derived(
     configured &&
@@ -106,11 +129,13 @@
   class="@container flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-hairline bg-card"
   aria-label="Speech composer"
 >
-  <div class="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-3">
+  <div
+    class="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-3"
+  >
     <h2 class="sr-only">Text to speech</h2>
     <div class="min-w-0 flex-1">
-      {#if quickSettings}{@render quickSettings()}{:else}<span class="text-sm font-medium"
-          >Text to speech</span
+      {#if quickSettings}{@render quickSettings()}{:else}<span
+          class="text-sm font-medium">Text to speech</span
         >{/if}
     </div>
     <span
@@ -141,8 +166,9 @@
     />
   </div>
   <p id="speech-compose-shortcut" class="sr-only">
-    Press Ctrl+Enter to speak. Enter adds a new line. Editing or clearing this draft does not change
-    the current audio. Speak generates this draft and replaces the current audio.
+    Press {shortcutSpoken} to speak. Enter adds a new line. Editing or clearing this
+    draft does not change the current audio. Speak generates this draft and replaces
+    the current audio.
   </p>
   <div
     class="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline px-4 py-3"
@@ -151,7 +177,9 @@
       id="speech-character-count"
       class={cn(
         "text-xs tabular-nums",
-        characterCount > maximumCharacters ? "text-destructive" : "text-muted-foreground",
+        characterCount > maximumCharacters
+          ? "text-destructive"
+          : "text-muted-foreground",
       )}
       aria-label="Character count"
     >
@@ -161,7 +189,12 @@
         >{/if}
     </span>
     <div class="ml-auto flex shrink-0 items-center gap-2">
-      <Button variant="ghost" size="sm" disabled={!text} onclick={() => (text = "")}>Clear</Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={!text}
+        onclick={() => (text = "")}>Clear</Button
+      >
       {#if !configured}
         <Button
           variant="outline"
@@ -187,7 +220,8 @@
               : "Speak"}
           {#if !working}<kbd
               aria-hidden="true"
-              class="ml-1 hidden text-[10px] opacity-70 @sm:inline">Ctrl+Enter</kbd
+              class="ml-1 hidden text-[10px] opacity-70 @sm:inline"
+              >{shortcutVisual}</kbd
             >{/if}
         </Button>
       {/if}
@@ -217,7 +251,9 @@
         <Volume2Icon class="size-4 shrink-0 text-muted-foreground" />
         <div class="min-w-0 space-y-1">
           <p class="text-sm font-medium">
-            {configured ? "Ready when you are" : "Choose a connection and voice"}
+            {configured
+              ? "Ready when you are"
+              : "Choose a connection and voice"}
           </p>
           <p class="text-xs text-muted-foreground">
             {configured

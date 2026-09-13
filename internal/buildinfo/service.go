@@ -13,6 +13,7 @@ const wailsModule = "github.com/wailsapp/wails/v3"
 
 // Info is the bounded build identity shown in About.
 type Info struct {
+	Platform       string `json:"platform"`
 	ProductName    string `json:"productName"`
 	Version        string `json:"version"`
 	WindowsVersion string `json:"windowsVersion"`
@@ -27,6 +28,7 @@ type Service struct {
 
 func NewService(productName, version, windowsVersion string, development bool) *Service {
 	return &Service{info: Info{
+		Platform:       runtime.GOOS,
 		ProductName:    productName,
 		Version:        version,
 		WindowsVersion: windowsVersion,

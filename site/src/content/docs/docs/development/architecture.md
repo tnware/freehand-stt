@@ -5,7 +5,7 @@ description: Runtime ownership, platform boundaries, and application data flow.
 
 ## Product boundary
 
-Freehand is a lightweight native Windows speech client for user-chosen,
+Freehand is a lightweight native desktop speech client for user-chosen,
 self-hosted and OpenAI-compatible infrastructure. Dictation is the default;
 file transcription is independently usable, and the optional TTS composer is
 a third, on-demand workflow:
@@ -29,6 +29,30 @@ or completed dictation setup, and the TTS composer needs its own enabled speech
 configuration but neither STT nor a microphone. These are client workflows, not
 bundled inference or conversation mode. The remote-first boundary and non-goals
 in [ADR 0005](../../decisions/0005-remote-first-product-direction/) remain unchanged.
+
+## macOS platform boundary
+
+[ADR 0013](../../decisions/0013-native-macos-boundary/) extends the Windows-first
+architecture with native macOS adapters while preserving the existing feature owners.
+Shared audio selects CoreAudio or WASAPI. Quartz/Accessibility own Mac keyboard and
+safe delivery, Security.framework owns Keychain, and a nonactivating Cocoa panel
+owns the passive overlay. Wails retains the interactive shell, tray and single instance.
+
+`shortcut.Controller.Start` tolerates an unavailable saved hold hook without
+rolling back independent Carbon Toggle/Show registrations; explicit `Configure`
+changes remain transactional. The settings service's `RetryHoldShortcut` binding
+serializes with settings publication/saves and invokes the injected controller
+retry after activity admission. It returns/publishes refreshed availability without
+writing preferences. Native rearm checks released keys before and after opening a
+fresh tap and starts a fresh reducer; a failed replacement leaves the previous
+working hook intact. The Shortcuts UI retries only on an explicit click and
+refreshes availability after a rejected Wails call without overwriting dirty drafts.
+
+`internal/input` exposes non-secret permission status and explicit recovery actions.
+`internal/settings` and `internal/buildinfo` publish native platform metadata; renderer
+labels do not infer permissions from a user agent. Mica is Windows-only. AppKit
+operations belong to the main thread, and `internal/app` releases native target state
+and SQLite after feature shutdown through Wails `PostShutdown`.
 
 ## Optional realtime dictation
 

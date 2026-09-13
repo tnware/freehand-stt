@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -244,9 +245,13 @@ func TestTextToSpeechConnectionValidationAllowsModelDiscovery(t *testing.T) {
 }
 
 func TestShortcutAndDurationValidation(t *testing.T) {
+	unsupported := "Ctrl+F12" // Windows reserves F12 for the debugger.
+	if runtime.GOOS == "darwin" {
+		unsupported = "Ctrl+F24"
+	} // Carbon supports F1-F20.
 	for _, mutate := range []func(*Settings){
 		func(s *Settings) { s.HoldShortcut = s.ToggleShortcut },
-		func(s *Settings) { s.HoldShortcut = "Ctrl+F12" },
+		func(s *Settings) { s.HoldShortcut = unsupported },
 		func(s *Settings) { s.MaxDurationSeconds = 263 },
 		func(s *Settings) { s.MicrophoneID = string(make([]byte, 1025)) },
 	} {
@@ -492,6 +497,9 @@ func TestDedicatedFunctionKeysAndWindowsAliasesAreValidShortcuts(t *testing.T) {
 	settings := Default()
 	settings.ToggleShortcut = "F13"
 	settings.ShowShortcut = "Win+F24"
+	if runtime.GOOS == "darwin" {
+		settings.ShowShortcut = "Win+F20"
+	}
 	settings.HoldShortcut = "Control+Command"
 	if err := Validate(settings); err != nil {
 		t.Fatalf("supported shortcut policy was rejected: %v", err)

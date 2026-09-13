@@ -3,6 +3,7 @@ package shortcut
 import (
 	"errors"
 	"github.com/tnware/freehand-stt/internal/config"
+	"runtime"
 	"testing"
 )
 
@@ -76,11 +77,16 @@ func TestDedicatedAndAliasedChordsNormalizeBeforeNativeRegistration(t *testing.T
 	cfg := config.Default()
 	cfg.ToggleShortcut = "F13"
 	cfg.ShowShortcut = "Win+F24"
+	expectedShow := "Super+F24"
+	if runtime.GOOS == "darwin" {
+		cfg.ShowShortcut = "Command+F20"
+		expectedShow = "Super+F20"
+	}
 	cfg.HoldShortcut = "Control+Command"
 	if err := c.Configure(cfg); err != nil {
 		t.Fatal(err)
 	}
-	if !f.active["F13"] || !f.active["Super+F24"] || h.value != "Ctrl+Super" {
+	if !f.active["F13"] || !f.active[expectedShow] || h.value != "Ctrl+Super" {
 		t.Fatalf("normalized bindings = globals=%v hold=%q", f.active, h.value)
 	}
 }
@@ -90,6 +96,7 @@ func TestCaptureSuspendAndResumeRestoreWorkingBindings(t *testing.T) {
 	h := &holdFake{}
 	c := New(f, h, func() {}, func() {})
 	cfg := config.Default()
+	cfg.ToggleShortcut = "Ctrl+Shift+Space"
 	cfg.HoldShortcut = "Ctrl+Space"
 	cfg.ShowShortcut = "Ctrl+Shift+D"
 	if err := c.Configure(cfg); err != nil {
@@ -117,6 +124,7 @@ func TestCaptureResumeDoesNotLeavePartialBindingsOnConflict(t *testing.T) {
 	h := &holdFake{}
 	c := New(f, h, func() {}, func() {})
 	cfg := config.Default()
+	cfg.ToggleShortcut = "Ctrl+Shift+Space"
 	cfg.HoldShortcut = "Ctrl+Space"
 	cfg.ShowShortcut = "Ctrl+Shift+D"
 	if err := c.Configure(cfg); err != nil {
@@ -132,12 +140,23 @@ func TestCaptureResumeDoesNotLeavePartialBindingsOnConflict(t *testing.T) {
 	if len(f.active) != 0 || h.value != "" {
 		t.Fatalf("partial binding survived failed resume: globals=%v hold=%q", f.active, h.value)
 	}
+	if !c.suspended || !c.hasState || c.active.HoldShortcut != cfg.HoldShortcut {
+		t.Fatal("failed global restoration lost recoverable suspension or preference")
+	}
+	f.fail = ""
+	if err := c.Resume(); err != nil {
+		t.Fatal(err)
+	}
+	if c.suspended || !f.active[cfg.ToggleShortcut] || !f.active[cfg.ShowShortcut] || h.value != cfg.HoldShortcut {
+		t.Fatal("resume did not recover after global conflict resolved")
+	}
 }
 
 func TestShowShortcutCanBeUnassignedAndCleared(t *testing.T) {
 	f := &globalFake{active: map[string]bool{}}
 	c := New(f, &holdFake{}, func() {}, func() {})
 	cfg := config.Default()
+	cfg.ToggleShortcut = "Ctrl+Shift+Space"
 	if cfg.ShowShortcut != "" {
 		t.Fatal("Show Freehand default must be unassigned")
 	}
@@ -166,5 +185,60 @@ func TestShowShortcutCanBeUnassignedAndCleared(t *testing.T) {
 	}
 	if len(f.active) != 1 || !f.active["Ctrl+Shift+Space"] {
 		t.Fatal("capture failed to preserve optional shortcut state")
+	}
+}
+
+type failingHold struct {
+	value string
+	fail  bool
+	calls int
+}
+
+func (h *failingHold) Configure(v string) error {
+	h.calls++
+	if h.fail && v != "" {
+		return errors.New("Input Monitoring denied")
+	}
+	h.value = v
+	return nil
+}
+func TestStartupHoldFailurePreservesIndependentGlobalsAndPreference(t *testing.T) {
+	f := &globalFake{active: map[string]bool{}}
+	h := &failingHold{fail: true}
+	c := New(f, h, func() {}, func() {})
+	cfg := config.Default()
+	cfg.HoldShortcut = "Ctrl+Alt"
+	cfg.ToggleShortcut = "Ctrl+Shift+Space"
+	cfg.ShowShortcut = "Ctrl+Shift+D"
+	if err := c.Start(cfg); err == nil {
+		t.Fatal("missing degraded startup error")
+	}
+	if !f.active[cfg.ToggleShortcut] || !f.active[cfg.ShowShortcut] {
+		t.Fatalf("independent globals lost: %v", f.active)
+	}
+	if c.active.HoldShortcut != cfg.HoldShortcut {
+		t.Fatal("saved hold preference lost")
+	}
+	next := cfg
+	next.ToggleShortcut = "Ctrl+Alt+A"
+	next.HoldShortcut = "F13"
+	if err := c.Configure(next); err == nil {
+		t.Fatal("explicit change accepted")
+	}
+	if !f.active[cfg.ToggleShortcut] || f.active[next.ToggleShortcut] {
+		t.Fatal("transaction did not roll back")
+	}
+	h.fail = false
+	if err := c.RetryHold(); err != nil {
+		t.Fatal(err)
+	}
+	if h.value != cfg.HoldShortcut {
+		t.Fatal("retry did not use unchanged saved preference")
+	}
+	if err := c.Suspend(); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.RetryHold(); err == nil {
+		t.Fatal("retry during capture accepted")
 	}
 }

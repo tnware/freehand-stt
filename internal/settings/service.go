@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -26,6 +27,7 @@ import (
 // SettingsDTO is the renderer-safe settings snapshot. It reports credential
 // presence and native capability state but never returns credential values.
 type SettingsDTO struct {
+	Platform               string                  `json:"platform"`
 	RememberedModels       modelsettings.Catalog   `json:"rememberedModels"`
 	ModelProfiles          modelprofile.Catalog    `json:"modelProfiles"`
 	SavedConnections       savedconnection.Catalog `json:"savedConnections"`
@@ -132,6 +134,7 @@ type Service struct {
 	voiceKeys              credential.Store
 	startup                Startup
 	hold                   HoldInfo
+	holdRetry              func() error
 	shortcutChanged        func(config.Settings) error
 	overlaySettingsChanged func(config.Settings)
 	historyEnabledChanged  func(bool)
@@ -156,8 +159,8 @@ func NewService(st ConfigStore, cfg config.Settings, k credential.Store, process
 		fileSettingsChanged:    fileSettingsChanged,
 		settingsChanged:        settingsChanged,
 		logger:                 logger.With("component", "settings"),
-		micaActive:             cfg.UseMica,
-		appearanceModeActive:   cfg.EffectiveAppearanceMode(),
+		micaActive:             cfg.UseMica && runtime.GOOS == "windows",
+		appearanceModeActive:   config.EffectiveAppearanceMode(cfg.UseMica && runtime.GOOS == "windows", cfg.AppearanceMode),
 	}
 	for _, option := range options {
 		option(service)
@@ -379,6 +382,36 @@ func rollback(primary error, steps ...rollbackStep) error {
 // Settings and profile bindings. This section owns the single transaction for
 // durable settings, native shortcuts, startup registration, and credentials.
 
+// WithHoldRetry injects a bounded native rearm operation; never runs on mount/save.
+func WithHoldRetry(retry func() error) Option {
+	return func(s *Service) { s.holdRetry = retry }
+}
+
+// RetryHoldShortcut retries the saved assignment without editing or persisting it.
+func (s *Service) RetryHoldShortcut() (SettingsDTO, error) {
+	if s.closed.Load() {
+		return SettingsDTO{}, errors.New("application is shutting down")
+	}
+	if !s.publicationMu.TryLock() {
+		return SettingsDTO{}, errors.New("settings are busy; try again")
+	}
+	defer s.publicationMu.Unlock()
+	if !s.saveMu.TryLock() {
+		return SettingsDTO{}, errors.New("settings are busy; try again")
+	}
+	if s.holdRetry == nil {
+		s.saveMu.Unlock()
+		return SettingsDTO{}, errors.New("hold-to-talk retry is unavailable")
+	}
+	err := s.holdRetry()
+	result := s.settingsSnapshotLocked()
+	s.saveMu.Unlock()
+	if s.settingsChanged != nil {
+		s.settingsChanged(result)
+	}
+	return result, err
+}
+
 // GetSettings returns a renderer-safe snapshot of the active runtime profile.
 func (s *Service) GetSettings() SettingsDTO {
 	s.saveMu.Lock()
@@ -402,6 +435,7 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 		models = store.RememberedModels()
 	}
 	return SettingsDTO{
+		Platform:                           runtime.GOOS,
 		RememberedModels:                   models,
 		SavedConnections:                   catalog,
 		CompatibilityProfiles:              compatibility.Profiles(),

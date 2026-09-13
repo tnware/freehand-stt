@@ -1,4 +1,4 @@
-//go:build windows
+//go:build windows || darwin
 
 package platform
 
@@ -26,7 +26,7 @@ func (d *captureDeviceFake) Uninit()     { d.uninit++ }
 
 func TestCaptureReusesStoppedDevice(t *testing.T) {
 	device := &captureDeviceFake{}
-	capture := &Capture{dev: device}
+	capture := &Capture{dev: device, authorize: func(context.Context, bool) error { return nil }}
 	for run := 1; run <= 2; run++ {
 		if _, err := capture.Start(context.Background(), "", 1); err != nil {
 			t.Fatalf("start %d: %v", run, err)
