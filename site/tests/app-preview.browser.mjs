@@ -122,8 +122,12 @@ try {
   const positions = await page.locator('[data-position-control] option').evaluateAll(elements => elements.map(e => e.value));
   assert.equal(layouts.length, 4);
   assert.equal(positions.length, 6);
+  assert.equal(await page.locator('.overlay-setting-icon svg[aria-hidden="true"]').count(), 3, 'hero settings retain decorative icons');
+  assert.equal(await page.locator('.feature-list article').count(), 6, 'supporting features remain text-first');
+  assert.equal(await page.locator('.feature-list svg, .page-heading svg').count(), 0, 'no competing illustrations or one-off title icon');
   for (const width of [1440, 800, 390, 320]) {
     await page.setViewportSize({ width, height: 1000 });
+    for (const icon of await page.locator('.overlay-setting-icon').all()) assert.ok(await icon.isVisible(), `hero icon visible at ${width}`);
     for (const layout of layouts) {
       await page.locator(`[data-layout="${layout}"]`).click();
       assert.equal(await page.locator('[data-layout-panel]:not([hidden])').count(), 1);
@@ -155,6 +159,7 @@ try {
   await staticPage.goto(origin + base + 'features/');
   assert.ok(await staticPage.locator('[data-layout-panel="capsule"]').isVisible());
   assert.ok(!(await staticPage.locator('.explorer-controls').isVisible()));
+  assert.equal(await staticPage.locator('.overlay-setting-icon svg').count(), 3, 'hero icons work without JavaScript');
   console.log('PASS app previews, capability alignment, responsive layouts, Features overlay layouts/positions and guide links, reduced motion, no-JS fallback, browser errors');
 } finally {
   await browser?.close();

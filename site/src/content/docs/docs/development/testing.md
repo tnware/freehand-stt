@@ -138,6 +138,11 @@ at every position on desktop and narrow screens, selected controls, no-JavaScrip
 fallback, and the linked guide anchors. It illustrates layout choices only;
 it does not change application settings or establish native rendering acceptance.
 
+The Features hero uses decorative neutral icons alongside its overlay-setting
+descriptions. Keep page titles consistent and supporting feature sections
+text-first. The app-preview suite checks hero icon visibility on narrow screens
+and without JavaScript, while preserving the explanatory text and guide links.
+
 ## CI workflow acceptance
 
 Run the dependency-free selection/gate regressions and workflow wiring checks:
