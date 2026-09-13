@@ -1,4 +1,10 @@
 .download-page { overflow: hidden; }
+.download-guides { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 22px; }
+[data-platform-message], .release-status { color: #a4afbf; font-size: 14px; line-height: 1.6; }
+[data-recommendation] .release-row { display: block; font-size: 13px; }
+#all-downloads .option-grid article { display: flex; flex-direction: column; min-height: 420px; }
+#all-downloads .option-grid a { position: relative; bottom: auto; left: auto; margin-top: auto; padding-top: 24px; }
+#all-downloads { scroll-margin-top: 90px; }
 
 .download-hero { position: relative; display: grid; grid-template-columns: minmax(0,.92fr) minmax(470px,.78fr); gap: clamp(65px,8vw,130px); align-items: center; width: min(1180px,calc(100% - 40px)); min-height: 840px; margin: 0 auto; padding: 145px 0 90px; }
 .download-hero::before { content: ""; position: absolute; top: -360px; right: -420px; z-index: -2; width: 940px; height: 940px; border-radius: 50%; background: radial-gradient(circle,rgba(52,115,230,.24),rgba(27,67,142,.09) 42%,transparent 69%); filter: blur(10px); }

@@ -18,7 +18,7 @@ placement remains in `window-state.json`, independent of settings recovery.
 | Database, backups, typed adapters, credential-reference lifecycle | `internal/storage` |
 | Schema and version history | Embedded goose migrations in `internal/storage/migrations` |
 | Application SQL | `internal/storage/queries`; sqlc output in `internal/storage/dbgen` |
-| Actual API keys | Windows Credential Manager |
+| Actual API keys | Windows Credential Manager or macOS Keychain |
 
 The initial dependency pins are `modernc.org/sqlite v1.58.0`, its required
 `modernc.org/libc v1.75.6`, `goose/v3 v3.28.0`, and `sqlc v1.31.1`.
@@ -64,6 +64,11 @@ inspection, integrity checks, and backup work. Application queries require sqlc.
 A different driver, ORM, migration runner, or boundary requires a superseding ADR.
 
 ## Connection and durability policy
+
+On macOS, the directory is `~/Library/Application Support/Freehand`, with
+per-user file permissions. `settings.db`, backups, legacy `settings.json`, and
+`window-state.json` live there. Credentials remain in Keychain. The Windows
+paths and ACL details below apply only to Windows.
 
 On Windows, the database is `%LOCALAPPDATA%\Freehand\settings.db`, with a
 protected directory ACL for the current user and SYSTEM. SQLite sidecars and
@@ -125,7 +130,7 @@ replacements stop if the pending queue reaches 128 until cleanup can succeed.
 Existing jobs already hold their private credential string and settings snapshot.
 
 This is crash reconciliation across two stores, not an atomic transaction with
-Windows Credential Manager. If the database commit outcome is uncertain, keep
+Windows Credential Manager or macOS Keychain. If the database commit outcome is uncertain, keep
 both credential versions until the committed references can be reloaded. Startup
 and shortcut state likewise reconcile from the database after restart.
 

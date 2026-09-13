@@ -6,6 +6,11 @@ description: Define the required storage tooling, ownership boundaries, and vali
 - Status: Accepted; implemented
 - Date: 2026-09-05
 
+> Platform scope: [ADR 0013](../0013-native-macos-boundary/) supersedes the
+> Windows-only runtime assumptions in this record. The accepted Windows
+> implementation and historical rationale below remain intact; macOS uses
+> native adapters under the same shared policy boundaries.
+
 ## Context
 
 At the time of this decision, Freehand stored non-secret configuration in `settings.json` and kept

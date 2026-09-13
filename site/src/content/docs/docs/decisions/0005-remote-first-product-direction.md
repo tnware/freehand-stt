@@ -10,6 +10,11 @@ description: Keep Freehand focused on native access to user-selected speech infr
 
 > Update (2026-09-07): [ADR 0008](../0008-qualified-realtime-dictation/) admits optional qualified Nemotron realtime dictation. The historical decision below remains preserved; conversation mode and bundled inference remain outside scope.
 
+> Platform scope: [ADR 0013](../0013-native-macos-boundary/) supersedes the
+> Windows-only runtime assumptions in this record. The accepted Windows
+> implementation and historical rationale below remain intact; macOS uses
+> native adapters under the same shared policy boundaries.
+
 ## Context
 
 Freehand began because the desired speech models and gateways did not need to

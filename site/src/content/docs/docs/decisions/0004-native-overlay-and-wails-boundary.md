@@ -8,6 +8,11 @@ description: Keep the passive focus-sensitive status surface native and non-acti
 - Supersedes: the overlay ownership in ADR 0003
 - Related issues: #4, #6
 
+> Platform scope: [ADR 0013](../0013-native-macos-boundary/) supersedes the
+> Windows-only runtime assumptions in this record. The accepted Windows
+> implementation and historical rationale below remain intact; macOS uses
+> native adapters under the same shared policy boundaries.
+
 ## Context
 
 The client is one Windows GUI executable and one Go process. Wails is embedded into that process; it is not a second application runtime or a daemon. It currently supplies:

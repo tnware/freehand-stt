@@ -7,6 +7,17 @@ Start with the status shown in Freehand. Connection checks are metadata-only:
 they report what a health or model-list endpoint accepted and validate model
 options locally. They do not submit audio or prove that inference will succeed.
 
+## macOS installation or permissions
+
+Use the matching-architecture ZIP and same-release checksums in the
+[macOS setup guide](../macos-setup/). Launch the installed app bundle from a
+stable location. For microphone denial, review Privacy & Security → Microphone;
+for capture or hold-to-talk, review Accessibility and Input Monitoring. Quit and
+reopen after permission changes when requested. The `.dev` and packaged apps
+have separate permission identities even though both display **Freehand**.
+Release all keys and use **Retry hold-to-talk** after recovering keyboard access.
+Keychain denial requires the OS approval/recovery flow, not plaintext storage.
+
 ## Setup does not complete
 
 **Check the requirements for the task you selected.** The **Voice** readiness
@@ -95,20 +106,21 @@ replace your settings with defaults.
   and available disk space, then choose **Retry loading**.
 - **Newer database:** update Freehand to a compatible version. Older builds do
   not downgrade a newer settings database.
-- **Legacy import:** the first SQLite launch reads
+- **Legacy import (Windows):** the first SQLite launch reads
   `%APPDATA%\Freehand\settings.json`. Invalid values or unknown newer fields
   block import without changing the file. Repair it or use a compatible version,
   then retry. Once `settings.db` exists, changes to the old JSON file have no effect.
 - **Reset:** choose **Reset to defaults** only when you want a fresh setup.
   Freehand archives an existing database and its sidecars in a
-  `settings-recovery-*` folder, then starts with safe defaults. Windows credentials
+  `settings-recovery-*` folder, then starts with safe defaults. Native credentials
   are not deleted, but keys may need entering again if their references could
   not be recovered.
 
 To restore a database backup:
 
-1. **Quit Freehand from the tray.** Closing a window alone leaves it running.
-2. Open `%LOCALAPPDATA%\Freehand` in File Explorer. Copy `settings.db` and any
+1. **Quit Freehand from the tray or macOS menu bar.** Closing a window alone leaves it running.
+2. Open `%LOCALAPPDATA%\Freehand` in File Explorer (Windows), or
+   `~/Library/Application Support/Freehand` using Finder → Go to Folder (macOS). Copy `settings.db` and any
    matching `settings.db-journal`, `settings.db-wal`, or `settings.db-shm` files
    together into a separate recovery folder before removing them from this folder.
 3. Copy a known-good `.db` file from `backups` into the Freehand folder and name
@@ -172,10 +184,12 @@ the shortcut does not itself mean that the microphone is ready.
 **Copy the available transcript into the intended text field.** For your next
 voice dictation, keep the original field focused until processing finishes.
 
-Freehand inserts voice text only when the application and focused control that
-were active at recording start are still the destination at completion. If the
-target changed, Freehand keeps the result available for explicit copying
-instead of typing into another window.
+Windows checks the original application and focused control. macOS checks the
+frontmost application/process and focused window, not the editor field: changing
+fields within that window is allowed. Secure Input blocks delivery, but not all
+custom secure fields enable it. A stale target or unavailable permission requires
+Copy; a generic failure does not prove focus changed or that no text was typed.
+Check for partial delivery before pasting to avoid duplicates.
 
 Stored-audio results always require an explicit **Copy** action. Also check the
 configured delivery mode: manual copy never inserts automatically.
@@ -223,12 +237,12 @@ Automatic long-file segmentation is not currently provided.
 
 ## Speech playback produces no sound
 
-**Check the Windows output device and volume, then review Settings → Text to speech.**
+**Check the system output device and volume, then review Settings → Text to speech.**
 
 - Turn on **Enable text to speech**, choose **Save settings**, and confirm its
   endpoint implements `POST /v1/audio/speech`.
 - Check the configured model and voice ID expected by that endpoint.
-- Verify the Windows default output device and system volume.
+- Verify the system default output device and system volume.
 - Choose **Speak** for text you enter, or **Listen** on a retained completed
   transcript. Playback never starts automatically after transcription.
 - Generate the speech again after changing endpoint or output settings.

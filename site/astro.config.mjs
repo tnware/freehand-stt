@@ -19,7 +19,7 @@ export default defineConfig({
     starlight({
       title: "Freehand",
       description:
-        "A lightweight Windows client for speech-to-text and text-to-speech services you choose.",
+        "A lightweight Windows and macOS client for speech-to-text and text-to-speech services you choose.",
       // Starlight applies Astro's configured base path to root-relative
       // assets. Supplying basePath here would double-prefix GitHub Pages.
       favicon: "/favicon.svg",
@@ -49,6 +49,7 @@ export default defineConfig({
             { slug: "docs/getting-started" },
             { label: "Download Freehand", link: "/download/" },
             { slug: "docs/guides/windows-installer" },
+            { slug: "docs/guides/macos-setup" },
             { slug: "docs/guides/connect-a-server" },
             { slug: "docs/guides/saved-connections" },
             { slug: "docs/models", label: "Choosing a model profile" },

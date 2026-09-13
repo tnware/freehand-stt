@@ -1,15 +1,48 @@
 ---
 title: macOS setup and permissions
-description: Run a macOS source build and recover native microphone, keyboard and insertion access.
+description: Install and verify the macOS ZIP, manage permissions, update, and uninstall Freehand.
 ---
 
-The macOS build requires macOS 13 or newer. Use a packaged `Freehand.app`
-built for your Mac's architecture; running a bare executable from Terminal gives
-macOS a different permission/signing context. See the contributor build instructions
-for source builds. Windows release downloads are not macOS applications.
+## Download, verify, and install
 
-A local ad-hoc-signed build is not notarized or a trusted Developer ID release.
-Do not disable Gatekeeper globally. Keep the bundle in a stable location before
+Freehand requires macOS 13 or newer. In **Apple menu → About This Mac**, check
+whether your Mac has an Apple chip (Apple Silicon) or an Intel processor.
+
+1. Open the official [GitHub Releases](https://github.com/tnware/freehand-stt/releases).
+   Choose `freehand-darwin-arm64.zip` for Apple Silicon or
+   `freehand-darwin-amd64.zip` for Intel. Download `SHA256SUMS` from that **same
+   release**, not another tag or a third-party download site. Older releases may
+   have no macOS assets; choose a release that includes your architecture.
+2. Before opening the ZIP, open Terminal in its download folder and compute its
+   SHA-256 hash:
+
+   ```sh
+   shasum -a 256 freehand-darwin-arm64.zip
+   ```
+
+   For Intel, substitute `freehand-darwin-amd64.zip`. Compare the entire hash
+   with the entry for that exact filename in `SHA256SUMS`. If the entry is
+   missing or the hashes differ, stop and download again from the official
+   release. A checksum verifies matching bytes, not publisher identity.
+3. Double-click the verified ZIP in Finder. Move the extracted **Freehand.app**
+   to **Applications** (or your account's Applications folder) before enabling
+   permissions or login startup. Run the app bundle, not its internal executable.
+4. Open **Freehand** from Applications. The alpha is **ad-hoc-signed, not
+   Developer ID-signed or notarized**, so Gatekeeper may block its first launch.
+   If you trust the verified official download, use **System Settings → Privacy
+   & Security → Open Anyway** after the blocked attempt, then confirm macOS's
+   prompt. If that option is unavailable or macOS reports malware, stop rather
+   than bypassing the protection. Never disable Gatekeeper globally or remove
+   quarantine recursively as a routine installation step.
+5. Review the permissions below, then follow [Get started](../../getting-started/).
+   Open About to confirm the installed version matches the chosen release.
+
+For source builds, see the
+[contributor instructions](https://github.com/tnware/freehand-stt/blob/main/CONTRIBUTING.md).
+The development bundle has a separate `.dev` permission identity but still
+appears as **Freehand**; grant permissions to the bundle you actually run.
+
+Keep the bundle in a stable location before
 enabling permissions or **Start at login**. Rebuilding, changing identity/signature,
 or moving a bundle can require permission review. macOS, not Freehand, owns these
 permissions and any password or approval prompts.
@@ -102,6 +135,43 @@ different executable. If you already moved the bundle, move it back temporarily
 and disable startup there before relocating it. macOS can also disable
 background/login items in System Settings. Disabling startup in Freehand removes only its own safe,
 per-user registration, not unrelated login items.
+
+## Update
+
+The in-app updater selects the matching-architecture ZIP, verifies it against
+the release’s `SHA256SUMS`, extracts the app, and uses the Wails helper to replace
+the app bundle when you choose Restart. This is checksum verification, not
+Developer ID trust or notarization. If an in-app update fails, use manual
+replacement:
+
+1. Read the newer release notes and download the matching-architecture ZIP plus
+   its same-release `SHA256SUMS`. Verify it using the installation steps above.
+2. Disable **Start at login** before replacing or moving the app, then choose
+   **Quit Freehand** or **Command-Q**. Closing its window is not quitting.
+3. Extract the new ZIP and replace the old app in the same Applications location.
+   Keep private settings backups before an upgrade; do not delete application data.
+4. Open the replacement, check its version in About, and review microphone,
+   Accessibility, and Input Monitoring access. Signature changes can require
+   permission approval again. Re-enable **Start at login** if desired.
+
+An older binary cannot downgrade a newer settings database. Review release notes
+and [settings recovery](../troubleshooting/#saved-settings-need-attention) before
+attempting a downgrade.
+
+## Uninstall
+
+1. Disable **Start at login** while the app is still at its registered location.
+2. Choose **Quit Freehand**, then move **Freehand.app** to Trash in Finder.
+3. Optionally remove Freehand from Accessibility and Input Monitoring in
+   **System Settings → Privacy & Security**.
+
+Removing the app does not remove saved settings, backups, or Keychain entries.
+For a deliberate data reset, first remove saved connections/credentials in the
+app, then quit it and remove only `~/Library/Application Support/Freehand` in
+Finder (**Go → Go to Folder**). Keep any configuration you want to restore;
+removal is destructive and history is already memory-only. If credentials
+remain after removing the app, review only Freehand's entries in Keychain Access;
+do not delete unrelated credentials.
 
 ## Reporting a native problem
 

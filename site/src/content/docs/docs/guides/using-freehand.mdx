@@ -5,7 +5,7 @@ description: Voice dictation, stored audio, transcript history, cleanup, and spe
 
 import { Steps } from "@astrojs/starlight/components";
 
-Freehand is a lightweight Windows client for speech-to-text and text-to-speech
+Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
 services you choose. Choose **Voice** (the default) to dictate into another
 application, **Audio file** to transcribe a recording, or optional **Text to
 speech** to generate audio from your own text or listen to retained transcripts.
@@ -71,9 +71,12 @@ Choose a recording style:
 </Steps>
 
 :::note[When to copy the result]
-If the original application or focused control changes, Freehand leaves the
-transcript available to copy. Manual-copy delivery also requires an explicit
-copy action, even if the original field remains focused.
+Windows requires the original application and focused control. macOS requires
+the original frontmost application/process and focused window, not the same
+editor field; moving between fields in that window is allowed. Secure Input
+blocks delivery but does not identify every custom secure field. Failed
+validation leaves the transcript available to copy. Check for partial text
+before pasting. Manual-copy delivery always requires an explicit copy action.
 :::
 
 ### Toggle recording

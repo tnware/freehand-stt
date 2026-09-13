@@ -115,7 +115,7 @@ STT model: speech/stt
 Language: auto/unset
 ```
 
-If the endpoint requires authentication, select **API key** and enter its credential in Freehand. The key is stored in Windows Credential Manager; no particular gateway is required.
+If the endpoint requires authentication, select **API key** and enter its credential in Freehand. The key is stored in Windows Credential Manager or macOS Keychain; no particular gateway is required.
 
 ## Headers
 

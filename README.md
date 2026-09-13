@@ -6,7 +6,7 @@
   </picture>
 </p>
 
-Freehand is a lightweight Windows client for speech-to-text and text-to-speech
+Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
 services you choose. Dictate into apps, transcribe recordings, or generate
 spoken audio—with models running on your PC, your network, or a compatible
 hosted service.
@@ -16,11 +16,9 @@ provider or hosting may have its own costs. You do not need a dedicated local
 GPU: send inference to another machine to keep this PC's memory and GPU
 available for your other work, or run your models locally if you prefer.
 
-The current alpha is about an 8 MB installer or a 15 MB portable executable.
 Freehand stays compact by leaving model inference and model storage on the
-speech infrastructure you choose. These download sizes exclude WebView2 and
-your inference services; transcription time depends on the model, hardware,
-network, and optional cleanup stage.
+speech infrastructure you choose. Download sizes vary by platform and release;
+transcription time depends on the model, hardware, network, and optional cleanup stage.
 
 [Download the latest alpha](https://github.com/tnware/freehand-stt/releases) ·
 [Get started](https://tnware.github.io/freehand-stt/docs/getting-started/) ·
@@ -56,7 +54,7 @@ empty text, Freehand falls back to the raw transcript.
 
 ## Highlights
 
-- Toggle recording or hold to talk from any Windows application.
+- Toggle recording or hold to talk across Windows and macOS applications.
 - Use independent OpenAI-compatible endpoints for speech recognition,
   optional transcript cleanup, and optional speech playback.
 - Keep the current transcript available to copy with history disabled.
@@ -71,10 +69,12 @@ runtime.
 
 ## Install
 
-Freehand requires Windows 11 with WebView2 and a reachable service compatible
-with the task you want to use. Only dictation needs a microphone and recording
-shortcut. Download the per-user installer from
-[GitHub Releases](https://github.com/tnware/freehand-stt/releases).
+Freehand supports Windows 11 x64 with WebView2 and macOS 13 or newer on Apple
+Silicon or Intel. A reachable compatible service is required for your task; only
+dictation needs a microphone and recording shortcut. Download the Windows
+installer/portable executable or matching-architecture macOS ZIP from
+[GitHub Releases](https://github.com/tnware/freehand-stt/releases). Older releases
+may not include macOS assets; check the assets attached to the selected release.
 
 The current alpha is not Authenticode-signed, so Windows may identify its
 publisher as unknown. Verify manual downloads against the published
@@ -83,14 +83,14 @@ publisher as unknown. Verify manual downloads against the published
 Follow [Get started](https://tnware.github.io/freehand-stt/docs/getting-started/)
 to choose a task, connect its service, and complete your first run.
 
-macOS source builds use native CoreAudio, Keychain and Cocoa adapters. See the
-[macOS setup guide](site/src/content/docs/docs/guides/macos-setup.md) and
-[contributor instructions](CONTRIBUTING.md). Do not use Windows release artifacts
-on a Mac; source-build verification is separate from signed/notarized distribution.
+macOS ZIPs contain an ad-hoc-signed app, not a Developer ID-signed or notarized
+release. Verify against `SHA256SUMS` from the same release before opening. Follow
+the [macOS install, permissions, and update guide](https://tnware.github.io/freehand-stt/docs/guides/macos-setup/).
+Source-build instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Documentation
 
-- [Install and update Freehand](https://tnware.github.io/freehand-stt/docs/guides/windows-installer/)
+- [Install and update on Windows](https://tnware.github.io/freehand-stt/docs/guides/windows-installer/)
 - [Connect a speech server](https://tnware.github.io/freehand-stt/docs/guides/connect-a-server/)
 - [Use Freehand](https://tnware.github.io/freehand-stt/docs/guides/using-freehand/)
 - [Privacy and safety](https://tnware.github.io/freehand-stt/docs/guides/privacy-and-safety/)

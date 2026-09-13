@@ -109,7 +109,10 @@ microphone usage text and a consistent minimum deployment target are mandatory.
 Development and release identity must be deliberate. A local ad-hoc signature is
 not Developer ID signing, notarization or Gatekeeper acceptance. macOS update assets
 are matching-architecture app archives, not Windows executables; released update
-application requires native signed-bundle verification.
+application uses the pinned Wails checksum-verification and app-bundle replacement
+path. No Freehand update public key is configured; this is not Developer ID
+trust, notarization, or evidence of native install/relaunch acceptance. Manual
+verified ZIP replacement remains the fallback.
 
 ## Verification boundary
 

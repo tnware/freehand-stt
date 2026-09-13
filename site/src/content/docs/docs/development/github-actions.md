@@ -1,6 +1,6 @@
 ---
 title: GitHub Actions
-description: Public continuous integration, Windows packaging, and Pages deployment.
+description: Public continuous integration, Windows and macOS packaging, and Pages deployment.
 ---
 
 Freehand uses small, explicit GitHub Actions workflows rather than a custom CI
@@ -11,7 +11,8 @@ container:
   emits one stable **Validation** result. Linux jobs validate Go, the SQLite
   contract, generated branding, Wails bindings, and the Svelte frontend. The
   Windows job runs native Go tests, builds the CGo executable and per-user NSIS
-  installer, and verifies the packaged artifacts. Browser regressions remain
+  installer, and verifies the packaged artifacts. The native macOS job produces and
+  validates arm64 and amd64 app-bundle ZIPs. Browser regressions remain
   available as optional local checks and do not gate packaging or release.
 - **Site validation** is a reusable workflow shared by CI and Pages. Relevant
   PR changes run it inside CI; they do not start a deployment workflow.
@@ -23,8 +24,13 @@ container:
   SemVer tag, and draft GitHub release. When a release is created, it calls the
   complete CI workflow for that tag. Selection resolves the tag to one commit
   used by every validation job; release version checks precede packaging.
-  Publication downloads the Windows artifacts from that same trusted workflow
-  run, emits `SHA256SUMS`, creates GitHub artifact attestations, and only then
+  Publication downloads the complete Windows and macOS artifacts from that same trusted workflow
+  run, selects the four canonical deliverables (CI checksum sidecars are allowed
+  inputs but are not published), and emits one `SHA256SUMS` covering them.
+  Before publication, it checks the draft's remote asset names are exactly those
+  four deliverables plus `SHA256SUMS`: missing, unexpected, duplicate, or malformed
+  names block publication without automatically deleting unknown remote assets.
+  It reads back and verifies uploaded checksums, creates GitHub artifact attestations, and only then
   makes the release public. It neither rebuilds the validated executable nor
   downloads artifacts from a PR or another workflow run. Ordinary main pushes
   run Release Please bookkeeping without building release artifacts.
@@ -85,7 +91,8 @@ for the upstream dependency matrix and runner guidance.
 
 CI never invokes a configured speech, post-processing, or text-to-speech model.
 Those operations could consume private resources or unexpectedly load large
-models. Native runtime acceptance remains a deliberate local Windows step.
+models. Native runtime acceptance remains deliberate and platform-specific on Windows
+and macOS; packaging and cross-compilation do not certify hardware behavior.
 
 ## Storage enforcement
 

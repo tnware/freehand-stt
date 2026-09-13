@@ -7,6 +7,8 @@ Freehand exposes three global shortcut actions. Configure them under
 **Settings → Shortcuts** by choosing a field and pressing the combination you
 want to use.
 
+## Windows
+
 | Action | Required | Accepted forms | Default |
 | --- | --- | --- | --- |
 | Toggle recording | Yes | One or more modifiers plus a supported primary key; or F13-F24 alone | `Ctrl+Shift+Space` |
@@ -18,7 +20,23 @@ F12 is rejected because Windows reserves it for the debugger. F13-F24 are the
 only unmodified keys accepted: they are intended as dedicated programmable
 keys and avoid taking over ordinary typing or navigation.
 
-## Deliberately excluded inputs
+## macOS
+
+Toggle recording defaults to **Control+Shift+Space**. Show Freehand and Hold to
+talk are optional and initially unassigned. Labels use **Command** and **Option**.
+Supported primary keys are A–Z, 0–9, Space, and **F1–F20, including F12**.
+**F21–F24 are not mapped on macOS**. Toggle/Show accept a modifier plus a
+supported primary key, or an unmodified F13–F20 key. Hold to talk also accepts
+two or more modifiers alone. Native mappings use physical ANSI/QWERTY positions;
+check your layout and avoid system-reserved combinations. Fn itself is not a
+recordable modifier; hardware may use it to produce a function-key event.
+
+Toggle/Show use Carbon global shortcuts without Accessibility or Input Monitoring.
+Capturing a new shortcut needs both permissions; hold-to-talk needs keyboard
+observation. After restoring access or leaving Secure Input, release all keys
+and choose **Retry hold-to-talk**. See [macOS permissions and shortcut recovery](../../guides/macos-setup/).
+
+## Deliberately excluded inputs (Windows)
 
 - Navigation and editing keys are not accepted because a failed or delayed
   global registration could interfere with ordinary document use.
@@ -38,7 +56,7 @@ does not describe a locally valid chord as universally safe or available. The
 settings UI explains the accepted shape, while native acceptance testing must
 cover the user's representative layouts and accessibility-key configuration.
 
-## Conflicts and capture results
+## Conflicts and capture results (Windows)
 
 Freehand can identify incomplete, unsupported, Windows-reserved, duplicate,
 timed-out, and locally unavailable capture outcomes before a settings save.

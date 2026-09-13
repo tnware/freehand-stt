@@ -64,6 +64,29 @@ responses to check copy-required explanations and recovery presentation. These
 fixtures do not establish delivery into another application. Rerun the integrated
 suites after policy changes; focused race passes do not qualify the full build.
 
+## Public download selection
+
+Run the pure release/OS-selection tests with `npm --prefix site test`. Browser
+checks reuse the frontend's pinned Playwright installation and never download or
+execute release binaries:
+
+```sh
+npm ci --prefix frontend
+npm exec --prefix frontend -- playwright install chromium
+npm --prefix site run build
+npm --prefix site run test:browser
+CI=true npm --prefix site run build
+CI=true SITE_TEST_BASE=/freehand-stt/ npm --prefix site run test:browser
+```
+
+The second build/run pair exercises the production GitHub Pages base path.
+Keep the preview environment consistent with the build. Browser fixtures cover
+Windows, both known Mac architectures, ambiguous Mac architecture, unsupported
+platforms, partial/missing/malformed releases, API failure/timeout and no JavaScript.
+All supported alternatives remain visible. Synthetic release assets establish
+selection behavior, not public availability or native application acceptance.
+The test preview uses its own port and bypasses Astro's development preview lock.
+
 ## CI workflow acceptance
 
 Run the dependency-free selection/gate regressions and workflow wiring checks:

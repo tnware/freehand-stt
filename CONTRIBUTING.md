@@ -1,6 +1,6 @@
 # Contributing to Freehand
 
-Freehand is an early desktop alpha with Windows releases and macOS source builds,
+Freehand is an early desktop alpha for Windows and macOS,
 maintained by one person. Bug reports,
 compatibility results, documentation fixes, and focused code contributions are
 welcome. For a substantial change, please open an
@@ -30,7 +30,7 @@ wails3 generate bindings -clean=true -ts -i
 wails3 task dev
 ```
 
-### macOS source build
+### macOS
 
 Use macOS 13 or newer with Xcode Command Line Tools, Go 1.27, Node.js 22+
 and cgo enabled. Build the pinned Wails CLI with the same Go toolchain as the
@@ -74,6 +74,12 @@ npm --prefix site run build
 wails3 task build CGO_ENABLED=1 ARCH=amd64
 git diff --check
 ```
+
+Use `ARCH=arm64` for Apple Silicon native builds. Windows and macOS packaging
+run on their respective native CI runners; deterministic checks do not establish
+hardware acceptance. Release publication must use the complete Windows and macOS
+artifacts from the same validated tagged run, with one complete `SHA256SUMS`.
+See the [release contract](https://tnware.github.io/freehand-stt/docs/development/releases/).
 
 Use a conventional commit prefix such as `feat:`, `fix:`, `docs:`, or
 `refactor:` because release notes are generated from commit history. In the

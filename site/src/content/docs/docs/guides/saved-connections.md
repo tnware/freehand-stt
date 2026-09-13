@@ -133,7 +133,7 @@ for interpreting advertised models, health-only checks, and stale results.
 A successful metadata check does not establish inference compatibility or
 inference authorization.
 
-Keys stay in Windows Credential Manager. The app never displays a stored key;
+Keys stay in Windows Credential Manager or macOS Keychain. The app never displays a stored key;
 leave its password field blank to keep it, enter a replacement, or explicitly
 remove it. Canceling or leaving settings clears the transient key draft.
 SQLite and backups contain opaque credential references only. A duplicate

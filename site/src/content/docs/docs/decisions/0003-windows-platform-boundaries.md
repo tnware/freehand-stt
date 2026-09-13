@@ -8,6 +8,11 @@ description: Assign Windows responsibilities between Wails and focused native ad
 - Wails version: v3.0.0-beta.16
 - Go version family: 1.27
 
+> Platform scope: [ADR 0013](../0013-native-macos-boundary/) supersedes the
+> Windows-only runtime assumptions in this record. The accepted Windows
+> implementation and historical rationale below remain intact; macOS uses
+> native adapters under the same shared policy boundaries.
+
 ## Decision summary
 
 Use framework-owned behavior where Wails already has a tested Windows implementation, and keep custom Win32 code narrow:

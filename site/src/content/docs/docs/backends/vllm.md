@@ -126,7 +126,7 @@ tests read `/models` beneath the base URL without inference.
 An explicit transcription health path retains the existing base-relative rules.
 
 On Windows, upstream recommends WSL for vLLM's Linux runtime;
-Freehand itself remains a native Windows application. See the
+Freehand itself is a native Windows and macOS application. See the
 [upstream installation guide](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/).
 
 ## Local runtime setup notes

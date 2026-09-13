@@ -20,8 +20,8 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <CustomPageMetadata
-      title="Freehand — Speech to text and text to speech for Windows"
-      description="Dictate into apps, transcribe recordings, and generate spoken audio with speech services you choose. A lightweight Windows client for local, LAN, or hosted models."
+      title="Freehand — Speech to text and text to speech for Windows and macOS"
+      description="Dictate into apps, transcribe recordings, and generate spoken audio with speech services you choose. A lightweight Windows and macOS client for local, LAN, or hosted models."
       path=""
     />
     <meta name="theme-color" content="#070a12" />
@@ -36,12 +36,12 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
     <main id="main" class="home-page">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="kicker"><span></span> Your speech services. Your Windows apps.</p>
+          <p class="kicker"><span></span> Your speech services. Your desktop apps.</p>
           <h1 id="hero-title">Think it.<br />Say it.<br /><em>It’s there.</em></h1>
-          <p class="hero-lede">Dictate into apps, transcribe recordings, or turn text into spoken audio. Freehand is a lightweight Windows client for speech services you choose—on your PC, your network, or a compatible hosted service.</p>
+          <p class="hero-lede">Dictate into apps, transcribe recordings, or turn text into spoken audio. Freehand is a lightweight Windows and macOS client for speech services you choose—on your computer, your network, or a compatible hosted service.</p>
           <p class="freehand-promise"><strong>Free forever.</strong> Open source. No Freehand subscription.</p>
           <div class="hero-actions">
-            <a class="button button-dark" href={href("/download/")}>Download for Windows <span aria-hidden="true">→</span></a>
+            <a class="button button-dark" data-home-download href={href("/download/")}>Choose your download <span aria-hidden="true">→</span></a>
             <a class="text-action" href="#workflow">See how it works <span aria-hidden="true">↓</span></a>
           </div>
         </div>
@@ -68,7 +68,7 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
         </div>
 
         <div class="hero-foot">
-          <span>Windows 11 alpha</span><span>About an 8 MB installer</span><span>Local, LAN, or remote endpoints</span><span>No bundled models</span>
+          <span>Windows 11 x64 · macOS 13+</span><span>Public alpha · Availability varies by release</span><span>Local, LAN, or remote endpoints</span><span>No bundled models</span>
         </div>
       </section>
 
@@ -205,14 +205,14 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
         <ol class="principle-list">
           <li><span>01</span><div><h3>Recordings released after use</h3><p>Freehand releases captured audio after transcription completes, fails, or is cancelled. Your chosen server’s retention policy still applies.</p></div></li>
           <li><span>02</span><div><h3>Original target checked</h3><p>Freehand revalidates the destination before insertion. If the check fails, the result stays available to copy.</p></div></li>
-          <li><span>03</span><div><h3>Keys stored by Windows</h3><p>Saved API keys use Windows Credential Manager. HTTPS is required unless you explicitly allow an HTTP endpoint.</p></div></li>
+          <li><span>03</span><div><h3>Keys stored by your OS</h3><p>Saved API keys use Windows Credential Manager or macOS Keychain. HTTPS is required unless you explicitly allow an HTTP endpoint.</p></div></li>
           <li><span>04</span><div><h3>No Freehand account</h3><p>Connect the speech services you already use without another sign-in.</p></div></li>
         </ol>
       </section>
 
       <section class="closing" aria-labelledby="closing-title">
         <img src={mark.src} alt="" />
-        <p class="kicker"><span></span> Freehand for Windows</p>
+        <p class="kicker"><span></span> Freehand for Windows and macOS</p>
         <h2 id="closing-title">Give your hands<br />a little less to do.</h2>
         <p>Free forever. Open source. Your speech services, wherever they run.</p>
         <div class="closing-actions">
@@ -223,6 +223,10 @@ const waveform = [18, 34, 64, 42, 82, 54, 28, 72, 92, 61, 38, 76, 48, 26, 58, 86
     </main>
 
     <SiteFooter />
+    <script>
+      import { enhanceDownloads } from "../lib/downloads-client.mjs";
+      enhanceDownloads();
+    </script>
 
   </body>
 </html>

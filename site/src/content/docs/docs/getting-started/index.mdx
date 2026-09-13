@@ -5,7 +5,7 @@ description: Install Freehand and start voice dictation, audio-file transcriptio
 
 import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 
-Freehand is a lightweight Windows client for speech-to-text and text-to-speech
+Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
 services you choose. Start with voice dictation, transcribe an audio file, or
 generate speech from text. It does not install or run a model for you.
 
@@ -16,7 +16,7 @@ service if your PC lacks the resources, or you want to keep them for other work.
 
 ## What you need
 
-- Windows 11 with WebView2.
+- Windows 11 x64 with WebView2, or macOS 13+ on Apple Silicon or Intel.
 - A reachable compatible service for your task (see the [backend guides](../backends/)).
 - Its base URL, model ID (except whisper.cpp's server-loaded model), and API key
   when authentication is required.
@@ -28,13 +28,12 @@ service if your PC lacks the resources, or you want to keep them for other work.
 | Text to speech (optional) | Speech synthesis service, model and voice ID, and text to speak; no transcription setup | [Generate speech](#generate-speech) |
 
 :::caution[Alpha distribution]
-Freehand's GitHub Releases provide an unsigned executable and per-user Windows installer. Download only from the official project, verify the corresponding entry in `SHA256SUMS`, and expect Windows to identify the publisher as unknown until Authenticode signing is introduced.
+Choose the Windows installer/portable executable or the macOS ZIP matching your architecture. Download only from the official project and verify against `SHA256SUMS` from the same release. Windows assets are not Authenticode-signed; macOS apps are ad-hoc-signed, not Developer ID-signed or notarized. Older releases may lack macOS assets.
 :::
 
-Download the latest Windows alpha from the
-[Releases page](https://github.com/tnware/freehand-stt/releases). The installer
-is the normal first-install path. The bare executable exists for portable use
-and for Freehand's in-app updater.
+Download from the [Releases page](https://github.com/tnware/freehand-stt/releases),
+then follow [Windows installation](../guides/windows-installer/) or
+[macOS installation and permissions](../guides/macos-setup/).
 
 ## First launch
 
@@ -47,7 +46,7 @@ To connect a service from your chosen task:
 
 <Steps>
 
-1. **Add a server** — open the task's connection picker and choose **Add connection…**. Name it, select its compatibility profile, and enter the base URL. The task's use is preselected. Configure authentication and HTTP permission as required, then choose **Save and use connection**. Keys use Windows Credential Manager.
+1. **Add a server** — open the task's connection picker and choose **Add connection…**. Name it, select its compatibility profile, and enter the base URL. The task's use is preselected. Configure authentication and HTTP permission as required, then choose **Save and use connection**. Keys use Windows Credential Manager or macOS Keychain.
 2. **Choose a model** — for Voice or Audio file, use **Test** to read model metadata or enter the model ID directly. Home quick controls apply immediately; whisper.cpp uses its server-loaded model. For Text to speech, open **Model and voice settings** to configure its model, voice, and enable switch. Settings-page edits apply with **Save settings**.
 
 </Steps>
@@ -57,7 +56,8 @@ The connection check never submits audio and never invokes a discovered model.
 A successful check does not test transcription quality.
 :::
 
-Voice and Audio file share the same speech-to-text connection and model. Optional
+Voice and Audio file have independent speech-to-text connection and model
+selections; they can choose the same saved connection. Optional
 cleanup is a separate stage after transcription; Text to speech has its own
 connection and settings and can be used without either STT or cleanup.
 
@@ -140,7 +140,12 @@ Now dictate into another application:
 
 </Steps>
 
-If the same safe target still owns focus, Freehand inserts the text with Unicode input. If focus or process identity changed, it fails closed and leaves the transcript available for explicit copying.
+Freehand inserts with Unicode input only while the captured target remains valid.
+Windows checks the original application and focused control. macOS checks the
+frontmost app PID/process start and AX focused window, not editor-field identity;
+a field change within the same window is allowed. Secure Input blocks macOS
+delivery but does not identify every custom secure field. If validation fails,
+use explicit Copy and check for partial text before pasting.
 
 ## Transcribe a stored audio file
 

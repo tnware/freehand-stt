@@ -1,9 +1,9 @@
 ---
 title: Privacy and safety
-description: What Freehand sends, retains, stores, and inserts on your Windows PC.
+description: What Freehand sends, retains, stores, and inserts on Windows and macOS.
 ---
 
-Freehand is a lightweight Windows client for speech-to-text and text-to-speech
+Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
 services you choose. Audio and text are sent only as required by a capability
 you configured: transcription, optional transcript cleanup, or on-demand speech
 generation from your text or retained transcripts.
@@ -16,7 +16,7 @@ that server's own privacy and retention policy still applies.
 | --- | --- | --- |
 | Microphone or selected-file audio | Your configured speech-to-text endpoint | Audio for the active request; released afterward. Existing source files are unchanged. |
 | Transcript sent for cleanup | Your separate cleanup endpoint, when enabled | Keeping both versions after successful cleanup requires enabled session history. Raw failure fallback does not require history. |
-| API keys | The configured capability endpoint when authentication is enabled | Saved keys in Windows Credential Manager. |
+| API keys | The configured capability endpoint when authentication is enabled | Saved keys in Windows Credential Manager or macOS Keychain. |
 | Transcript history | Memory on your PC | Off by default; at most 20 entries and 2 MiB, cleared on exit. |
 | Speech playback text and audio | Your playback endpoint receives text and returns audio | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit. |
 | Update checks | GitHub release service | Update metadata and any downloaded update; no recordings or transcripts are sent. |
@@ -65,11 +65,14 @@ focus-safe direct insertion or manual copy, according to your settings.
 
 ## Safe text insertion
 
-Freehand records the destination when voice capture begins. Before delivering
-the final text, it verifies that the same application, process, and focused
-control still own the destination. If that check fails, Freehand does not
-switch applications or type into a different window; it leaves the transcript
-available for you to copy.
+Freehand records the destination when voice capture begins. Windows validates
+application/process identity and the focused control. macOS validates the
+NSWorkspace frontmost app PID and process start time plus its AX focused window;
+it does not inspect editor metadata or require the same field. Switching fields
+within that window is allowed. Active Secure Input blocks delivery, but custom
+secure fields that do not enable it may not be detected. If validation fails,
+Freehand does not activate another app; the transcript remains available to copy.
+Delivery can be partial, so check for existing text before pasting.
 
 Clipboard-paste insertion is not enabled. Freehand does not silently replace
 the clipboard as part of automatic delivery.
@@ -80,15 +83,20 @@ when no saved connection uses that reference. See [saved connections](../saved-c
 
 ## Saved settings and backups
 
-Non-secret settings are stored on this PC in
+On Windows, non-secret settings are stored in
 `%LOCALAPPDATA%\Freehand\settings.db`. They include server addresses, model
 choices, custom instructions, and request headers. Database access is restricted
 to your Windows user and SYSTEM; the database is not encrypted. Treat it and its
-backups as private configuration. API keys remain in Windows Credential Manager,
+backups as private configuration. API keys remain in Windows Credential Manager or macOS Keychain,
 and transcript history remains memory-only. Window size and position are kept
 separately in `%APPDATA%\Freehand\window-state.json`.
 
-When upgrading from an older alpha, Freehand imports a valid
+On macOS, settings and backups are under `~/Library/Application Support/Freehand`,
+with `settings.db` and the separate `window-state.json`. Files use per-user
+permissions, not Windows ACLs; the database is not encrypted. Keychain denial
+does not trigger plaintext credential storage.
+
+On Windows, when upgrading from an older alpha, Freehand imports a valid
 `%APPDATA%\Freehand\settings.json` once and leaves the original untouched.
 Later settings saves use SQLite. Schema upgrades retain up to three database
 backups; explicit recovery resets retain an archive of the replaced database.
@@ -97,7 +105,7 @@ restoring or removing these files.
 
 ## Credentials and transport
 
-API keys are stored in Windows Credential Manager. They are not written to the
+API keys are stored in Windows Credential Manager or macOS Keychain. They are not written to the
 SQLite settings database or returned to the interface after saving.
 
 HTTPS is required by default. You can explicitly allow HTTP for a trusted local
@@ -131,7 +139,9 @@ does not invoke the model.
 
 Automatic update checks are on by default. Freehand checks GitHub release
 metadata shortly after startup and once per day. If an update is available,
-the updater can download and verify it, then waits for you to restart. You can
+the updater can download and checksum-verify the platform asset, then waits for
+you to restart. macOS uses an app-bundle ZIP; checksum verification does not
+establish Developer ID trust or notarization. See [macOS updates and manual fallback](../macos-setup/#update). You can
 disable automatic checks under **Settings → General**. These checks do not
 send recordings or transcripts to GitHub.
 
