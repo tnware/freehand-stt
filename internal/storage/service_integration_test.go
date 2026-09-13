@@ -1,3 +1,7 @@
+//go:build windows || darwin
+
+// Desktop service integration imports the Wails application layer. Keep the
+// Linux storage-contract job headless while running these tests on both supported desktops.
 package storage
 
 import (
