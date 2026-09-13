@@ -20,6 +20,8 @@
     voicesBusy = false,
     compact = false,
     immediate = false,
+    onEnter,
+    metadataStatus = "idle",
     onChooseModel,
     onForgetModel,
     onDiscoverModels,
@@ -33,6 +35,8 @@
     settings: Settings;
     models?: string[];
     draftModels?: string[];
+    onEnter?: () => void;
+    metadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     voices?: VoicesResult | null;
     busy?: boolean;
     modelsBusy?: boolean;
@@ -67,6 +71,8 @@
   savedModels={rememberedModels(settings, Purpose.Speech).map((e) => e.model)}
   disabled={busy}
   busy={modelsBusy}
+  {onEnter}
+  {metadataStatus}
   onChoose={onChooseModel}
   onForget={onForgetModel}
   onDiscover={onDiscoverModels}
@@ -131,13 +137,18 @@
           value={speech.options.instructions}
           oninput={(event) => {
             if (!immediate)
-              void onOptions({ ...speech.options, instructions: event.currentTarget.value });
+              void onOptions({
+                ...speech.options,
+                instructions: event.currentTarget.value,
+              });
           }}
           onchange={(event) => {
             if (immediate)
-              void onOptions({ ...speech.options, instructions: event.currentTarget.value });
-          }}
-        ></textarea>
+              void onOptions({
+                ...speech.options,
+                instructions: event.currentTarget.value,
+              });
+          }}></textarea>
         <p class="text-xs leading-relaxed text-muted-foreground">
           Describe tone, emotion, or delivery. Leave empty for the selected voice’s usual style.
         </p>

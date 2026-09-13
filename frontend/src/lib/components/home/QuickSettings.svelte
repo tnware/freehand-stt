@@ -45,6 +45,10 @@
     processingTesting = false,
     onUpdate,
     onChangeConnection,
+    onEnterTranscription,
+    onEnterCleanup,
+    sttMetadataStatus = "idle",
+    processingMetadataStatus = "idle",
     onTestConnection,
     onTestProcessingConnection,
     onOpenServerSettings,
@@ -73,6 +77,10 @@
     processingTesting?: boolean;
     onChangeConnection: (change: Change) => Promise<boolean>;
     onUpdate: (patch: QuickSettingsPatch, field: QuickSettingsField) => Promise<boolean>;
+    onEnterTranscription?: () => void;
+    onEnterCleanup?: () => void;
+    sttMetadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
+    processingMetadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     onTestConnection: () => Promise<void>;
     onTestProcessingConnection: () => Promise<void>;
     onOpenServerSettings: () => void;
@@ -230,6 +238,8 @@
           busy={sttTesting}
           disabled={disabled || pending.length > 0 || !settings.savedConnections.selected?.stt}
           onChoose={(model) => onUpdate({ model }, "stt-model")}
+          onEnter={onEnterTranscription}
+          metadataStatus={sttMetadataStatus}
           onDiscover={onTestConnection}
         />
         <QuickSaveStatus fields={["stt-model"]} {pending} saved={savedField} failed={failedField} />
@@ -311,6 +321,8 @@
           busy={processingTesting}
           disabled={disabled || pending.length > 0 || !settings.savedConnections.selected?.cleanup}
           onChoose={(model) => onUpdate({ postProcessing: { model } }, "processing-model")}
+          onEnter={onEnterCleanup}
+          metadataStatus={processingMetadataStatus}
           onDiscover={onTestProcessingConnection}
         />
 

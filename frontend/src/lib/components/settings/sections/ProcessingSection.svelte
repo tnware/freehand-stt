@@ -26,6 +26,8 @@
     connection,
     busy = false,
     draftModels = [],
+    onEnter,
+    metadataStatus = "idle",
     onChooseModel,
     onForgetModel,
     connectionStale = false,
@@ -36,6 +38,8 @@
     connection: ConnectionResult | null;
     busy?: boolean;
     draftModels?: string[];
+    onEnter?: () => void;
+    metadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     onChooseModel: (model: string) => boolean;
     onForgetModel: () => void;
     connectionStale?: boolean;
@@ -74,6 +78,8 @@
       id="cleanup-model"
       value={settings.postProcessing.model}
       {draftModels}
+      {onEnter}
+      {metadataStatus}
       onChoose={onChooseModel}
       onForget={onForgetModel}
       savedModels={rememberedModels(settings, Purpose.Cleanup).map((e) => e.model)}

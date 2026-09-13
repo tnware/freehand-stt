@@ -10,27 +10,27 @@ import (
 )
 
 // ConnectionManagerRequest carries navigation only. No endpoint or credential
-// draft crosses windows; the manager fetches a fresh settings snapshot.
+// draft is retained natively; the renderer exclusively owns its editor state.
 type ConnectionManagerRequest struct {
 	ID      string                  `json:"id"`
 	Purpose savedconnection.Purpose `json:"purpose"`
 	Create  bool                    `json:"create"`
 }
 
-type ConnectionManagerState struct {
-	Visible bool                     `json:"visible"`
-	Request ConnectionManagerRequest `json:"request"`
-}
-
-type ConnectionManagerWindow struct {
-	Open   func()
-	Hide   func()
+type ConnectionNavigation struct {
 	Exists func(string) bool
 }
 
-func ConfigureConnections(s *Service, window ConnectionManagerWindow) { s.connections = window }
+func ConfigureConnections(s *Service, navigation ConnectionNavigation) { s.connections = navigation }
 
 func (s *Service) OpenConnectionManager(request ConnectionManagerRequest) error {
+	return s.OpenTaskConnection(request, "")
+}
+
+func (s *Service) OpenTaskConnection(request ConnectionManagerRequest, origin string) error {
+	if !validOrigin(origin) {
+		return errors.New("unknown settings origin")
+	}
 	if request.Purpose != "" && !savedconnection.ValidPurpose(request.Purpose) {
 		return errors.New("unknown connection purpose")
 	}
@@ -40,34 +40,69 @@ func (s *Service) OpenConnectionManager(request ConnectionManagerRequest) error 
 	if request.ID != "" && (s.connections.Exists == nil || !s.connections.Exists(request.ID)) {
 		return errors.New("connection no longer exists")
 	}
-	if s.connections.Open == nil {
+	if s.openSettings == nil {
 		return errors.New("connection manager is unavailable")
 	}
-	s.connectionMu.Lock()
-	// Reopening an already visible manager must not overwrite an unsaved draft.
-	if !s.connectionOpen {
-		s.connectionRequest = request
-	}
-	s.connectionOpen = true
-	s.connectionMu.Unlock()
-	s.connections.Open()
+	s.navigationMu.Lock()
+	defer s.navigationMu.Unlock()
+	s.setSettingsRequest(SettingsRequest{Section: "connections", Origin: origin, Connection: &request})
+	s.openSettings("connections")
 	return nil
 }
 
-func (s *Service) CurrentConnectionManager() ConnectionManagerState {
-	s.connectionMu.Lock()
-	defer s.connectionMu.Unlock()
-	// Logical ownership includes startup and minimization. Do not synchronously
-	// query a native window from a hidden renderer's initial binding call.
-	return ConnectionManagerState{Request: s.connectionRequest, Visible: s.connectionOpen}
+// SettingsRequest carries only navigation. Draft ownership stays in the renderer.
+type SettingsRequest struct {
+	Section    string                    `json:"section"`
+	Origin     string                    `json:"origin"`
+	Connection *ConnectionManagerRequest `json:"connection,omitempty"`
+}
+type SettingsRequestState struct {
+	Pending bool            `json:"pending"`
+	Request SettingsRequest `json:"request"`
+}
+type SettingsNavigation struct {
+	Ready   func()
+	Visible func() bool
+	Finish  func(string)
 }
 
-func (s *Service) HideConnectionManager() {
-	if s.connections.Hide != nil {
-		s.connections.Hide()
+func ConfigureSettings(s *Service, navigation SettingsNavigation) { s.settingsNavigation = navigation }
+func validOrigin(origin string) bool {
+	switch origin {
+	case "", "voice", "file", "tts":
+		return true
 	}
-	s.connectionMu.Lock()
-	s.connectionRequest = ConnectionManagerRequest{}
-	s.connectionOpen = false
-	s.connectionMu.Unlock()
+	return false
+}
+func (s *Service) setSettingsRequest(request SettingsRequest) {
+	s.requestMu.Lock()
+	defer s.requestMu.Unlock()
+	s.settingsRequest, s.settingsPending = request, true
+}
+func (s *Service) TakeSettingsRequest() SettingsRequestState {
+	s.requestMu.Lock()
+	defer s.requestMu.Unlock()
+	state := SettingsRequestState{Request: s.settingsRequest, Pending: s.settingsPending}
+	s.settingsRequest, s.settingsPending = SettingsRequest{}, false
+	return state
+}
+func (s *Service) SettingsReady() {
+	if s.settingsNavigation.Ready != nil {
+		s.settingsNavigation.Ready()
+	}
+}
+func (s *Service) SettingsVisible() bool {
+	return s.settingsNavigation.Visible != nil && s.settingsNavigation.Visible()
+}
+func (s *Service) FinishSettings(origin string) error {
+	if !validOrigin(origin) {
+		return errors.New("unknown settings origin")
+	}
+	if s.settingsNavigation.Finish == nil {
+		return errors.New("settings window is unavailable")
+	}
+	s.navigationMu.Lock()
+	defer s.navigationMu.Unlock()
+	s.settingsNavigation.Finish(origin)
+	return nil
 }

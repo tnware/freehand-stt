@@ -1,93 +1,109 @@
 import type {
   ConnectionManagerRequest,
-  ConnectionManagerState,
+  SettingsRequest,
+  SettingsRequestState,
 } from "$bindings/windowing";
 import type { SettingsDTO, SaveSettingsRequest } from "$bindings/settings";
-import { Purpose } from "$bindings/savedconnection";
 
-export type ConnectionWindowEvent =
-  "connections:open" | "connections:close-requested" | "common:WindowHide";
-
+// All DTOs cross the same JSON boundary as the native bridge. Sessions do not.
+export const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+type Dispatch = (name: string, data?: unknown) => void;
 declare global {
   interface Window {
     testConnectionWindows: {
-      requestState: ConnectionManagerState;
-      open: (request: ConnectionManagerRequest) => Promise<void>;
+      requestState: SettingsRequestState;
+      visible: boolean;
+      open: (
+        request: ConnectionManagerRequest,
+        origin?: string,
+      ) => Promise<void>;
       hide: () => Promise<void>;
       requestClose: () => void;
-      ready: (dispatch: (name: ConnectionWindowEvent) => void) => void;
+      ready: (dispatch: Dispatch) => Promise<void>;
+      take: () => SettingsRequestState | Promise<SettingsRequestState>;
+      finish: (origin: string) => Promise<void>;
       settings: () => SettingsDTO;
       save: (request: SaveSettingsRequest) => Promise<SettingsDTO>;
-      openSettings: (section: string) => Promise<void>;
+      openSettings: (section: string, origin?: string) => Promise<void>;
     };
   }
 }
-
-// One retained iframe models one native WebView/Session for the entire test.
-// Only service/window boundaries are substituted; editor and lifecycle handlers
-// are real. This browser proxy cannot establish native window/focus acceptance.
-export function installConnectionWindows(backend: {
-  settings: () => SettingsDTO;
-  save: (request: SaveSettingsRequest) => Promise<SettingsDTO>;
-  apply: (settings: SettingsDTO) => void;
-  select: (section: string) => void;
-}) {
+export function installConnectionWindows(
+  backend: {
+    settings: () => SettingsDTO;
+    save: (request: SaveSettingsRequest) => Promise<SettingsDTO>;
+    apply: (settings: SettingsDTO) => void;
+  },
+  integrated = false,
+  general = false,
+) {
+  let dispatch: Dispatch | undefined;
   let frame: HTMLIFrameElement | undefined;
-  let dispatch: ((name: ConnectionWindowEvent) => void) | undefined;
-  let origin: HTMLElement | null = null;
-  const emptyRequest = (): ConnectionManagerRequest => ({
-    id: "",
-    purpose: Purpose.$zero,
-    create: false,
-  });
+  const empty = (): SettingsRequest => ({ section: "", origin: "" });
+  const emitMain: Dispatch = (name, data = null) => {
+    (window as any)._wails.dispatchWailsEvent({ name, data: wire(data) });
+  };
+  const reveal = async (request: SettingsRequest) => {
+    const bridge = window.testConnectionWindows;
+    // Native publishes the latest request; the renderer owns draft guards.
+    bridge.requestState = { pending: true, request: wire(request) };
+    bridge.visible = true;
+    if (integrated && !frame) {
+      frame = document.createElement("iframe");
+      frame.dataset.window = "settings";
+      frame.title = "Settings";
+      frame.style.cssText =
+        "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:1000;background:white";
+      const url = new URL(location.href);
+      url.searchParams.set("settings-frame", "1");
+      frame.src = url.href;
+      document.body.append(frame);
+    }
+    if (frame) frame.hidden = false;
+    dispatch?.("settings:visibility", true);
+    dispatch?.("settings:open");
+  };
   window.testConnectionWindows = {
-    requestState: { visible: false, request: emptyRequest() },
-    settings: backend.settings,
+    requestState: integrated
+      ? { pending: false, request: empty() }
+      : {
+          pending: true,
+          request: { section: "server", origin: general ? "" : "file" },
+        },
+    visible: !integrated,
+    settings: () => wire(backend.settings()),
     save: async (request) => {
-      const saved = await backend.save(request);
-      backend.apply(saved);
+      const saved = wire(await backend.save(wire(request)));
+      backend.apply(wire(saved));
       return saved;
     },
-    ready: (emit) => {
-      dispatch = emit;
-      // Mirrors WindowRuntimeReady; an early reveal event may precede listeners.
-      dispatch("connections:open");
-    },
-    open: async (request) => {
-      const state = window.testConnectionWindows.requestState;
-      // Like the Go service, revealing an already-owned window preserves drafts.
-      if (!state.visible) {
-        state.request = JSON.parse(JSON.stringify(request));
-        origin = document.activeElement as HTMLElement;
-      }
-      state.visible = true;
-      if (!frame) {
-        frame = document.createElement("iframe");
-        frame.title = "Connections window";
-        frame.src = "/connection-manager-fixture";
-        frame.style.cssText =
-          "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:100;background:var(--background)";
-        document.body.append(frame);
-      }
-      frame.hidden = false;
-      dispatch?.("connections:open");
-    },
-    requestClose: () => {
-      // Native WindowClosing is cancelled. The real manager decides whether to
-      // prompt, ignore a busy close request, or call HideConnectionManager.
-      if (window.testConnectionWindows.requestState.visible)
-        dispatch?.("connections:close-requested");
-    },
-    hide: async () => {
-      if (frame) frame.hidden = true;
+    take: () => {
+      const state = wire(window.testConnectionWindows.requestState);
       window.testConnectionWindows.requestState = {
-        visible: false,
-        request: emptyRequest(),
+        pending: false,
+        request: empty(),
       };
-      dispatch?.("common:WindowHide");
-      // Explicit browser focus proxy only, not evidence of native focus restore.
-      origin?.focus();
+      return state;
     },
-    openSettings: async (section) => backend.select(section),
+    ready: async (callback) => {
+      dispatch = callback;
+    },
+    open: async (connection, origin = "") =>
+      reveal({ section: "connections", origin, connection: wire(connection) }),
+    hide: async () => {
+      window.testConnectionWindows.visible = false;
+      window.testConnectionWindows.requestState = {
+        pending: false,
+        request: empty(),
+      };
+      dispatch?.("settings:visibility", false);
+      if (frame) frame.hidden = true;
+    },
+    finish: async (origin) => {
+      await window.testConnectionWindows.hide();
+      if (integrated && origin) emitMain("workspace:select-task", origin);
+    },
+    requestClose: () => dispatch?.("settings:close-requested"),
+    openSettings: async (section, origin = "") => reveal({ section, origin }),
   };
 }

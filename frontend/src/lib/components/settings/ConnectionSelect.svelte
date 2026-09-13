@@ -1,10 +1,20 @@
 <script lang="ts">
   import * as WindowingService from "$bindings/windowing/service";
   import Settings2Icon from "@lucide/svelte/icons/settings-2";
-  import { tick } from "svelte";
+  import { tick, getContext } from "svelte";
+  import { TASK_CONNECTION_NAVIGATION } from "$lib/shell-navigation.svelte";
+  import type { ConnectionManagerRequest } from "$bindings/windowing";
+  const openTaskConnection = getContext<
+    ((request: ConnectionManagerRequest) => void) | undefined
+  >(TASK_CONNECTION_NAVIGATION);
   import { session } from "$lib/stores/session.svelte";
   import { Combobox } from "bits-ui";
-  import { Action, type Catalog, type Change, type Purpose } from "$bindings/savedconnection";
+  import {
+    Action,
+    type Catalog,
+    type Change,
+    type Purpose,
+  } from "$bindings/savedconnection";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Button } from "$lib/components/ui/button";
   import { connectionMatches } from "$lib/utils/connectionChoices";
@@ -33,8 +43,12 @@
   let open = $state(false),
     query = $state(""),
     choosing = $state(false);
-  const entries = $derived((catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)));
-  const selected = $derived(entries.find((c) => c.id === catalog.selected?.[purpose]));
+  const entries = $derived(
+    (catalog.entries ?? []).filter((c) => c.uses?.includes(purpose)),
+  );
+  const selected = $derived(
+    entries.find((c) => c.id === catalog.selected?.[purpose]),
+  );
   const matches = $derived(
     entries
       .filter((c) => connectionMatches(c, query))
@@ -57,7 +71,10 @@
     }
     choosing = true;
     try {
-      if (await onChange({ action: Action.Select, purpose, id: next, name: "" })) open = false;
+      if (
+        await onChange({ action: Action.Select, purpose, id: next, name: "" })
+      )
+        open = false;
     } finally {
       choosing = false;
     }
@@ -67,9 +84,15 @@
     await tick();
     document.getElementById(id)?.focus();
     if (onManage) onManage();
+    else if (openTaskConnection)
+      openTaskConnection({ id: "", purpose, create: false });
     else {
       try {
-        await WindowingService.OpenConnectionManager({ id: "", purpose, create: false });
+        await WindowingService.OpenConnectionManager({
+          id: "",
+          purpose,
+          create: false,
+        });
       } catch (cause) {
         session.messages.fail(cause);
       }
@@ -100,7 +123,10 @@
     {#if selected && !open}<span
         class="pointer-events-none absolute inset-y-0 left-3 flex items-center"
       >
-        <ProviderIcon profile={selected.details.compatibilityProfile} size={16} />
+        <ProviderIcon
+          profile={selected.details.compatibilityProfile}
+          size={16}
+        />
       </span>{/if}
     <Combobox.Input
       {id}
@@ -139,14 +165,19 @@
           >
             <ProviderIcon profile={c.details.compatibilityProfile} size={20} />
             <span class="min-w-0 flex-1"
-              ><span class="block truncate text-sm font-medium">{c.name}</span><span
-                class="block truncate text-xs text-muted-foreground">{c.details.baseURL}</span
+              ><span class="block truncate text-sm font-medium">{c.name}</span
+              ><span class="block truncate text-xs text-muted-foreground"
+                >{c.details.baseURL}</span
               ></span
             >
-            {#if c.id === selected?.id}<CheckIcon class="size-4 shrink-0" />{/if}
+            {#if c.id === selected?.id}<CheckIcon
+                class="size-4 shrink-0"
+              />{/if}
           </Combobox.Item>
         {:else}<p class="px-3 py-4 text-sm text-muted-foreground">
-            {query.trim() ? "No matching connections." : "No connections for this workflow yet."}
+            {query.trim()
+              ? "No matching connections."
+              : "No connections for this workflow yet."}
           </p>{/each}
         {#if !query.trim()}<Combobox.Item
             value="none"

@@ -221,17 +221,35 @@ Builds and fixture tests do not establish this interactive or live-server accept
 
 ## Task-local setup acceptance
 
+These are checks to perform, not a record of native acceptance. Run the affected
+flows separately on Windows and packaged macOS. Assert one dedicated Settings
+window with its own Session and inline Connections editor; Main retains task
+content and a separate synchronized Session. No third configuration window opens.
+Verify `SettingsReady` delivery of pending requests and `ShellReady` delivery of
+task returns, including startup, repeated opens, and native Settings close while
+a draft is dirty. General **Save** stays open; task **Save and return** hides
+Settings and reveals the correct task. About and history details retain their
+existing native lifecycle.
+
+Check first-entry metadata discovery for Voice, Audio file, Cleanup, and Text to
+speech before model selection or optional-feature enablement. Controls within each renderer must reuse pending and completed results; committed
+settings events invalidate metadata coherently across Main and Settings. Delay a response, change the
+connection, and verify the old result is rejected. Exercise empty lists, failures,
+explicit retry and deliberate picker re-entry without reactive retry loops.
+Automatic requests must use applied connections and empty renderer credential
+drafts; metadata discovery must never invoke inference or select/enable models.
+
 Use an isolated configuration for fresh-install review, preserving existing live
 settings and credential store. Start independently with Voice, Audio file, and Text to
 speech. Add a connection from each picker, verify the purpose is preselected and cannot
-be removed, and verify Save and use returns to the same task with the new selection.
+be removed, and verify Save and return resumes the task's configuration with the new selection.
 File and speech setup must work without completing dictation setup. Choose or discover
 a model; test metadata access without invoking model inventories.
 
 Repeat from Transcription, Cleanup, and Text to speech Settings. Cancel an unchanged
 form; discard a changed form; inject a failed save and retry. Verify selections and
-unsaved task/model edits survive Keep editing, Save and continue failures do not advance,
-and Discard and continue applies no discarded edits. Test keyboard entry, Escape,
+unsaved task/model edits survive Keep editing, Save failures do not advance,
+and Discard applies no discarded edits. Test keyboard entry, Escape,
 focus return, window-hide credential cleanup, and a narrow viewport. Library creation
 must still remain inactive. Windows service fixtures use temporary SQLite files and a
 fake vault to check atomic activation, unsupported-purpose rejection, durable selection,
@@ -373,7 +391,7 @@ fake vault/startup adapter and do not establish interactive Windows acceptance.
 - WAV header, channel conversion, sample conversion, and duration bounds.
 - Per-recording device interruption delivery, intentional-stop suppression, stale-generation fencing, partial-audio cleanup, and retry after capture loss.
 - Startup configuration semantics.
-- Main/Settings window identity, startup visibility, singleton Settings reuse, section validation, close-to-hide behavior, light/dark solid native colors, explicit Mica opt-in, launch-time versus saved-material state, main-window placement restoration, missing-display fallback, and owner-relative auxiliary-window geometry.
+- Main/Settings window identity, startup visibility, singleton Settings reuse, retained draft preservation, section/origin validation, guarded Settings close-to-hide behavior, light/dark solid native colors, explicit Mica opt-in, launch-time versus saved-material state, main-window placement restoration, missing-display fallback, and owner-relative Settings/About/history-details geometry.
 - Tray presentation mapping for live dictation, post-processing, VAD/silence, checkpoint, stored-file upload/streaming, completion, failure, cancellation, copy recovery, last activity, and main-window visibility. Tests must prove arbitrary renderer messages, transcript text, and file identity cannot enter labels or tooltips.
 - Overlay preference and appearance defaults, sparse-config compatibility, bounds validation, post-persistence runtime application, DPI/opacity/glow composition, idempotent live enable/disable/configure, current-state restoration, and shutdown fencing.
 - Frontend feature-owner tests beside `editor`, `files`, `history`, `speech`, and `messages` cover committed-settings synchronization, active-draft preservation, serialized quick saves, transient credential cleanup, file delta/snapshot ordering, history mutation ordering, and playback commands. `session.svelte.test.ts` covers composition, namespaced status bindings, aggregate busy state, and presentation-only teardown. `session-events.test.ts` executes the shared main/Settings subscription wiring with a typed event source: subscribe-before-snapshot, accepted-transition history refresh, stale-event rejection, delta-gap recovery, independent window drafts, unsubscribe/remount, and partial-registration cleanup. These are deterministic renderer tests, not native Windows acceptance.
@@ -590,15 +608,15 @@ and Cancel remain visible at compact heights. Check both action menus for readab
 single-line labels, workflow icons/checkmarks, and compact disabled Delete state.
 
 Change a field, then switch rows, use All connections, or close: Keep editing and
-Escape retain the draft, Discard clears it without saving, and Save and continue
+Escape retain the draft, Discard clears it without saving, and Save
 completes the pending navigation only after a successful save. A failed save keeps
 the draft and shows the error. Repeat with a transient replacement key. Add from a
-workflow, save and set up, and confirm the matching model settings open. Creating
+workflow, Save and return, and confirm the originating model settings resume. Creating
 with Save for later must leave active selections unchanged. Use for selects only
 its chosen workflow, while existing model settings and unsaved Settings drafts
 retain their protections. Check keyboard navigation, searchable pickers, and list
 empty/no-match states. Metadata discovery must target only the opened workflow,
-reuse results, require explicit retries after failure, and reject old completions
+reuse results, permit explicit refresh or deliberate picker re-entry after failure, and reject old completions
 when the selected connection changes.
 
 For dark-palette review, check the main window, Settings, About, connection/model

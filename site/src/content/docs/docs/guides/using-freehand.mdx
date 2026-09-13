@@ -244,6 +244,17 @@ details. Each copy action is explicit.
 
 ## Finding and adjusting settings
 
+Settings opens in one dedicated window; Connections is a page inside it, not
+another window. The main workspace remains focused on Voice, files, and speech.
+Task-specific **Save and return** applies changes, closes Settings, and reveals
+the originating task. General preferences use **Save** to apply without closing.
+**Done** closes Settings immediately when there are no edits. Leaving a dirty form offers
+**Save**, **Discard**, or **Keep editing**. A failed save keeps the draft available
+for correction and retry rather than navigating away. Model pickers automatically
+request metadata for the selected connection and share results with full Settings.
+Empty lists allow manual model IDs; failed checks can be retried explicitly or by
+deliberately reopening the picker. Discovery never runs inference or enables a feature.
+
 In a full-width Settings window, **Find settings** filters the sidebar by page
 name or terms such as “padding,” “glow,” and “hotkey.” Enter opens the first match;
 Escape clears the filter. Searching and changing pages keep your unsaved edits.

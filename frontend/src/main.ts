@@ -1,19 +1,14 @@
 import { mount } from "svelte";
 import AboutWindow from "./AboutWindow.svelte";
-import ConnectionManagerWindow from "./ConnectionManagerWindow.svelte";
 import App from "./App.svelte";
+import SettingsHost from "./SettingsHost.svelte";
 import HistoryDetailsWindow from "./HistoryDetailsWindow.svelte";
-import SettingsWindow from "./SettingsWindow.svelte";
 import "./app.css";
-
-const Root = window.location.hash.startsWith("#connections")
-  ? ConnectionManagerWindow
-  : window.location.hash.startsWith("#settings")
-    ? SettingsWindow
-    : window.location.hash.startsWith("#about")
-      ? AboutWindow
-      : window.location.hash.startsWith("#transcription-details")
-        ? HistoryDetailsWindow
-        : App;
-
-mount(Root, { target: document.getElementById("app")! });
+const target = document.getElementById("app")!;
+if (new URLSearchParams(window.location.search).get("window") === "settings")
+  mount(SettingsHost, { target });
+else if (window.location.hash.startsWith("#about"))
+  mount(AboutWindow, { target });
+else if (window.location.hash.startsWith("#transcription-details"))
+  mount(HistoryDetailsWindow, { target });
+else mount(App, { target });

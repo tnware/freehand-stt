@@ -41,7 +41,7 @@ for (const width of [1100, 520]) {
     }) => {
       await section(page, "connections").click();
       const window = manager(page);
-      await expect(section(page, "server")).toHaveAttribute(
+      await expect(section(page, "connections")).toHaveAttribute(
         "aria-current",
         "page",
       );
@@ -75,13 +75,13 @@ for (const width of [1100, 520]) {
       await expect.poll(() => fields.evaluate((el) => el.scrollTop)).toBe(0);
       await expect(window.locator("#connection-name")).toBeInViewport();
       await expect(
-        window.getByRole("button", { name: "Save and set up", exact: true }),
+        window.getByRole("button", { name: "Save connection", exact: true }),
       ).toBeInViewport();
       await expect(
-        window.getByRole("button", { name: "Save and set up", exact: true }),
+        window.getByRole("button", { name: "Save connection", exact: true }),
       ).toBeDisabled();
-      await window.getByRole("button", { name: "Close", exact: true }).click();
-      await expect(section(page, "connections")).toBeFocused();
+      await window.getByRole("button", { name: "Done", exact: true }).click();
+      await expect(page.locator("[data-window=settings]")).toBeHidden();
     });
 
     test("a rejected save on History points back to Audio and keeps other edits", async ({
@@ -94,7 +94,7 @@ for (const width of [1100, 520]) {
       await page.locator("#max-duration").fill("0");
       await section(page, "history").click();
       await page
-        .getByRole("button", { name: "Save settings", exact: true })
+        .getByRole("button", { name: "Save and return", exact: true })
         .click();
       await saves.complete(await saves.waitForStart(), "invalid-duration");
       await expect(section(page, "audio")).toHaveAttribute(
@@ -139,12 +139,12 @@ for (const width of [1100, 520]) {
         page.getByText("Unsaved changes", { exact: true }),
       ).toBeVisible();
       await page
-        .getByRole("button", { name: "Save settings", exact: true })
+        .getByRole("button", { name: "Save and return", exact: true })
         .click();
       await saves.complete(await saves.waitForStart(), "success");
-      await expect(
-        page.getByRole("button", { name: "Save settings", exact: true }),
-      ).toBeDisabled();
+      await expect(page.locator("[data-window=settings]")).toBeHidden();
+      await page.evaluate(() => window.testConnectionWindows.openSettings("server", "file"));
+      await expect(page.getByRole("button", { name: "Save and return", exact: true })).toBeDisabled();
       await expect(page.locator("#file-transcription-timeout")).toHaveValue(
         "75",
       );
@@ -157,7 +157,8 @@ for (const width of [1100, 520]) {
       await section(page, "audio").click();
       await page.locator("#max-duration").fill("0");
       await section(page, "server").click();
-      await section(page, "connections").click();
+      await page.getByRole("button", { name: "Show connections", exact: true }).click();
+      await page.getByRole("button", { name: "Add connection…", exact: true }).click();
       await page
         .getByRole("button", { name: "Save and continue", exact: true })
         .click();

@@ -18,6 +18,8 @@
     connection,
     busy = false,
     draftModels = [],
+    onEnter,
+    metadataStatus = "idle",
     onChooseModel,
     onForgetModel,
     connectionStale = false,
@@ -27,6 +29,8 @@
     connection: ConnectionResult | null;
     busy?: boolean;
     draftModels?: string[];
+    onEnter?: () => void;
+    metadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     onChooseModel: (model: string) => boolean;
     onForgetModel: () => void;
     connectionStale?: boolean;
@@ -50,6 +54,8 @@
     id="model"
     value={settings.model}
     {draftModels}
+    {onEnter}
+    {metadataStatus}
     onChoose={onChooseModel}
     onForget={onForgetModel}
     savedModels={rememberedModels(settings, Purpose.Transcription).map((e) => e.model)}

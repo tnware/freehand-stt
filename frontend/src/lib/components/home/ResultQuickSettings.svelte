@@ -117,6 +117,11 @@
           />
         {:else}
           <QuickSettings
+            onEnterTranscription={() =>
+              void editor.ensureConnectionMetadata(Purpose.Transcription, true)}
+            onEnterCleanup={() => void editor.ensureConnectionMetadata(Purpose.Cleanup, true)}
+            sttMetadataStatus={editor.connectionMetadataStatus(Purpose.Transcription)}
+            processingMetadataStatus={editor.connectionMetadataStatus(Purpose.Cleanup)}
             embedded
             showCapture={false}
             showTranscription={panel === "stt"}

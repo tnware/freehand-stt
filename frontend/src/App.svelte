@@ -1,7 +1,8 @@
 <script lang="ts">
   import { windowMaterial } from "$lib/platform";
   import { onMount } from "svelte";
-  import { Events } from "@wailsio/runtime";
+  import { Events, Window } from "@wailsio/runtime";
+  import type { ConnectionManagerRequest } from "$bindings/windowing";
   import { ModeWatcher, setMode } from "mode-watcher";
   import * as BuildInfoService from "$bindings/buildinfo/service";
   import * as WindowingService from "$bindings/windowing/service";
@@ -12,7 +13,10 @@
   import type { SettingsSectionID } from "$lib/navigation";
   import { FileTranscriptionPhase, State } from "$lib/state";
   import { levels } from "$lib/stores/levels.svelte";
-  import { session } from "$lib/stores/session.svelte";
+  import {
+    session as defaultSession,
+    type Session,
+  } from "$lib/stores/session.svelte";
   import { subscribeSessionEvents } from "$lib/stores/session-events";
   import { activeAppearanceMode } from "$lib/appearance";
   import {
@@ -21,6 +25,7 @@
     taskConnectionDetails,
   } from "$lib/utils/connection";
 
+  let { session = defaultSession }: { session?: Session } = $props();
   let settingsOpen = $state(false);
   let aboutOpen = $state(false);
   let inputMode = $state("voice");
@@ -112,9 +117,7 @@
     const offLevel = Events.On("dictation:level", (event: { data: number }) => {
       levels.push(event.data);
     });
-    const offHide = Events.On("common:WindowHide", () => {
-      session.editor.clearCredentialDraft();
-    });
+
     const offSecondInstance = Events.On("app:second-instance-revealed", () => {
       session.messages.reportInfo(
         "Freehand is already running — that launch revealed this window instead of starting a second recorder.",
@@ -126,6 +129,19 @@
         settingsOpen = event.data;
       },
     );
+    const offTask = Events.On(
+      "workspace:select-task",
+      (event: { data: string }) => {
+        if (["voice", "file", "tts"].includes(event.data))
+          inputMode = event.data;
+      },
+    );
+    const offClose = Events.On("shell:close-requested", () => {
+      void Window.Hide().catch((cause) => session.messages.fail(cause));
+    });
+    void WindowingService.SettingsVisible()
+      .then((visible) => (settingsOpen = visible))
+      .catch((cause) => session.messages.fail(cause));
     const offAboutVisibility = Events.On(
       "about:visibility",
       (event: { data: boolean }) => {
@@ -135,32 +151,38 @@
     void BuildInfoService.Current()
       .then((info) => (version = info.version))
       .catch(() => (version = ""));
-    void WindowingService.SettingsVisible()
-      .then((visible) => (settingsOpen = visible))
-      .catch((cause) => session.messages.reportFailure(String(cause)));
+
     void WindowingService.AboutVisible()
       .then((visible) => (aboutOpen = visible))
       .catch((cause) => session.messages.reportFailure(String(cause)));
-    void session
-      .load()
-      .finally(() => setMode(activeAppearanceMode(session.editor.applied)));
+    void session.load().finally(() => {
+      setMode(activeAppearanceMode(session.editor.applied));
+      void WindowingService.ShellReady().catch((cause) =>
+        session.messages.fail(cause),
+      );
+    });
     return () => {
       offSession();
       session.dispose();
       offLevel();
-      offHide();
       offSecondInstance();
       offSettingsVisibility();
+      offTask();
+      offClose();
       offAboutVisibility();
       session.editor.clearCredentialDraft();
     };
   });
 
   function openSettings(sectionID: SettingsSectionID = "general") {
-    session.messages.clear();
-    void WindowingService.OpenSettings(sectionID).catch((cause) => {
-      session.messages.reportFailure(String(cause));
-    });
+    void WindowingService.OpenTaskSettings(sectionID, inputMode).catch(
+      (cause) => session.messages.fail(cause),
+    );
+  }
+  function openConnection(request: ConnectionManagerRequest) {
+    void WindowingService.OpenTaskConnection(request, inputMode).catch(
+      (cause) => session.messages.fail(cause),
+    );
   }
 
   function openAbout() {
@@ -176,14 +198,18 @@
 <ConfigurationRecoveryDialog {session} />
 
 <div
-  class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground"
+  class="fixed inset-0 flex flex-col overflow-hidden bg-transparent text-foreground"
 >
   <AppHeader
     bind:inputMode
     settings={session.editor.applied ?? session.editor.draft}
     {voiceActive}
     {fileWorking}
-    onSettings={() => openSettings()}
+    onSettings={() => {
+      void WindowingService.OpenSettings("general").catch((cause) =>
+        session.messages.fail(cause),
+      );
+    }}
     {settingsOpen}
   />
 
@@ -209,11 +235,11 @@
     onCheck={() =>
       session.editor.testAppliedConnection(footerConnection.purpose)}
     onEdit={() => {
-      void WindowingService.OpenConnectionManager({
+      openConnection({
         id: footerConnection.selected?.id ?? "",
         purpose: footerConnection.purpose,
         create: false,
-      }).catch((cause) => session.messages.fail(cause));
+      });
     }}
     onSettings={() =>
       openSettings(

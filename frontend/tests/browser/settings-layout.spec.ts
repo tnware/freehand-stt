@@ -8,7 +8,7 @@ for (const scale of [1, 1.25, 1.5]) {
       document.documentElement.style.zoom = String(zoom);
     }, scale);
     const pane = page.locator('section[aria-labelledby="settings-section-title"]').locator("..");
-    const save = page.getByRole("button", { name: "Save settings", exact: true });
+    const save = page.getByRole("button", { name: "Save and return", exact: true });
     for (const workflow of ["voice-transcription", "server", "processing", "speech"]) {
       await page.locator(`[data-settings-section="${workflow}"]`).click();
       const before = await save.boundingBox();

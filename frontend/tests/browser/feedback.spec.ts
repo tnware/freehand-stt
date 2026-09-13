@@ -86,16 +86,16 @@ test("a settings save failure has one owner while the decision dialog is open", 
   await page.locator("#max-duration").fill("90");
   await page.locator('[data-settings-section="connections"]').click();
   const decision = page.getByRole("dialog", {
-    name: "Save settings before changing connections?",
+    name: "Save changes?",
     exact: true,
   });
-  await decision.getByRole("button", { name: "Save and continue", exact: true }).click();
+  await decision.getByRole("button", { name: "Save", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "failure");
   await expect(decision.getByRole("alert")).toContainText("Fixture save failed");
   await expect(page.getByRole("complementary", { name: "Notifications" })).toHaveCount(0);
   await decision.getByRole("button", { name: "Keep editing", exact: true }).click();
   await expect(page.getByRole("complementary", { name: "Notifications" })).toBeVisible();
-  const save = page.getByRole("button", { name: "Save settings", exact: true });
+  const save = page.getByRole("button", { name: "Save and return", exact: true });
   const before = await save.boundingBox();
   await page.getByRole("button", { name: "Dismiss this message" }).click();
   expect(await save.boundingBox()).toEqual(before);

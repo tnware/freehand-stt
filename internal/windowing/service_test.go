@@ -4,7 +4,7 @@ import "testing"
 
 func TestOpenSettingsValidatesSection(t *testing.T) {
 	var opened string
-	service := NewService(func(section string) { opened = section }, nil, nil, nil, nil, nil)
+	service := NewService(func(section string) { opened = section }, nil, nil, nil, nil)
 	if err := service.OpenSettings("processing"); err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func TestOpenSettingsValidatesSection(t *testing.T) {
 
 func TestOpenSettingsDefaultsToGeneral(t *testing.T) {
 	var opened string
-	service := NewService(func(section string) { opened = section }, nil, nil, nil, nil, nil)
+	service := NewService(func(section string) { opened = section }, nil, nil, nil, nil)
 	if err := service.OpenSettings("  "); err != nil {
 		t.Fatal(err)
 	}
@@ -30,22 +30,12 @@ func TestOpenSettingsDefaultsToGeneral(t *testing.T) {
 	}
 }
 
-func TestHideSettingsIsOptional(t *testing.T) {
-	NewService(nil, nil, nil, nil, nil, nil).HideSettings()
-	hidden := false
-	NewService(nil, func() { hidden = true }, nil, nil, nil, nil).HideSettings()
-	if !hidden {
-		t.Fatal("hide callback was not invoked")
-	}
-}
-
-func TestSettingsVisibleUsesNativeState(t *testing.T) {
-	service := NewService(nil, nil, func() bool { return true }, nil, nil, nil)
-	if !service.SettingsVisible() {
-		t.Fatal("visible native settings window was reported hidden")
-	}
-	if NewService(nil, nil, nil, nil, nil, nil).SettingsVisible() {
-		t.Fatal("missing settings window was reported visible")
+func TestShellReadyIsExplicit(t *testing.T) {
+	NewService(nil, nil, nil, nil, nil).ShellReady()
+	ready := false
+	NewService(nil, func() { ready = true }, nil, nil, nil).ShellReady()
+	if !ready {
+		t.Fatal("readiness callback was not invoked")
 	}
 }
 
@@ -53,7 +43,7 @@ func TestAboutWindowActions(t *testing.T) {
 	opened := false
 	hidden := false
 	service := NewService(
-		nil, nil, nil,
+		nil, nil,
 		func() { opened = true },
 		func() { hidden = true },
 		func() bool { return opened && !hidden },
@@ -68,7 +58,7 @@ func TestAboutWindowActions(t *testing.T) {
 	if !hidden || service.AboutVisible() {
 		t.Fatal("About hide did not reach its native callbacks")
 	}
-	if err := NewService(nil, nil, nil, nil, nil, nil).OpenAbout(); err == nil {
+	if err := NewService(nil, nil, nil, nil, nil).OpenAbout(); err == nil {
 		t.Fatal("missing About window was treated as available")
 	}
 }
@@ -77,7 +67,7 @@ func TestOpenSettingsAcceptsEveryTask(t *testing.T) {
 	for _, section := range []string{"server", "processing", "speech"} {
 		t.Run(section, func(t *testing.T) {
 			opened := ""
-			service := NewService(func(s string) { opened = s }, nil, nil, nil, nil, nil)
+			service := NewService(func(s string) { opened = s }, nil, nil, nil, nil)
 			if err := service.OpenSettings(section); err != nil || opened != section {
 				t.Fatalf("task setup inaccessible: section=%s err=%v", opened, err)
 			}

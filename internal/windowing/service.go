@@ -25,47 +25,52 @@ var settingsSections = map[string]struct{}{
 }
 
 type Service struct {
-	connectionMu      sync.Mutex
-	connections       ConnectionManagerWindow
-	connectionRequest ConnectionManagerRequest
-	connectionOpen    bool
-	openSettings      func(string)
-	hideSettings      func()
-	settingsVisible   func() bool
-	openAbout         func()
-	hideAbout         func()
-	aboutVisible      func() bool
+	navigationMu       sync.Mutex
+	requestMu          sync.Mutex
+	connections        ConnectionNavigation
+	settingsRequest    SettingsRequest
+	settingsPending    bool
+	settingsNavigation SettingsNavigation
+	openSettings       func(string)
+	shellReady         func()
+	openAbout          func()
+	hideAbout          func()
+	aboutVisible       func() bool
 }
 
 func NewService(
 	openSettings func(string),
-	hideSettings func(),
-	settingsVisible func() bool,
+	shellReady func(),
 	openAbout func(),
 	hideAbout func(),
 	aboutVisible func() bool,
 ) *Service {
 	return &Service{
-		openSettings:    openSettings,
-		hideSettings:    hideSettings,
-		settingsVisible: settingsVisible,
-		openAbout:       openAbout,
-		hideAbout:       hideAbout,
-		aboutVisible:    aboutVisible,
+		openSettings: openSettings,
+		shellReady:   shellReady,
+		openAbout:    openAbout,
+		hideAbout:    hideAbout,
+		aboutVisible: aboutVisible,
 	}
 }
 
-// SettingsVisible reports whether the native Settings window is open, including
-// while minimised, so a renderer reload can recover the cross-window mutation
-// guard without waiting for another event.
-func (s *Service) SettingsVisible() bool {
-	return s.settingsVisible != nil && s.settingsVisible()
+// ShellReady acknowledges that the main renderer has installed its navigation
+// listeners. Pending native menu requests may now be delivered exactly once.
+func (s *Service) ShellReady() {
+	if s.shellReady != nil {
+		s.shellReady()
+	}
 }
 
-// OpenSettings reveals the singleton native settings window at a known
+// OpenSettings reveals the dedicated singleton Settings window at a known
 // section. Renderer-controlled values are validated before they reach the
 // application window manager.
-func (s *Service) OpenSettings(section string) error {
+func (s *Service) OpenSettings(section string) error { return s.OpenTaskSettings(section, "") }
+
+func (s *Service) OpenTaskSettings(section, origin string) error {
+	if !validOrigin(origin) {
+		return errors.New("unknown settings origin")
+	}
 	section = strings.TrimSpace(section)
 	if section == "" {
 		section = "general"
@@ -74,18 +79,13 @@ func (s *Service) OpenSettings(section string) error {
 		return errors.New("unknown settings section")
 	}
 	if s.openSettings == nil {
-		return errors.New("settings window is unavailable")
+		return errors.New("settings navigation is unavailable")
 	}
+	s.navigationMu.Lock()
+	defer s.navigationMu.Unlock()
+	s.setSettingsRequest(SettingsRequest{Section: section, Origin: origin})
 	s.openSettings(section)
 	return nil
-}
-
-// HideSettings hides the singleton settings window after the renderer has
-// resolved any unsaved draft.
-func (s *Service) HideSettings() {
-	if s.hideSettings != nil {
-		s.hideSettings()
-	}
 }
 
 // AboutVisible reports whether the reusable native About window is open,

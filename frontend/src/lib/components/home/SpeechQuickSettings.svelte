@@ -65,6 +65,8 @@
         />
       </div>
       <SpeechModelControls
+        onEnter={() => void editor.ensureConnectionMetadata(Purpose.Speech, true)}
+        metadataStatus={editor.connectionMetadataStatus(Purpose.Speech)}
         {settings}
         compact
         immediate

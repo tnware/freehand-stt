@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { CancellablePromise } from "@wailsio/runtime";
 import { Action, Purpose } from "$bindings/savedconnection";
 import { ID } from "$bindings/compatibility";
-import { AuthenticationMode, PostProcessingPreset, type Settings } from "$lib/state";
+import {
+  AuthenticationMode,
+  PostProcessingPreset,
+  type Settings,
+} from "$lib/state";
 import {
   createEditor,
   settings,
@@ -44,7 +48,9 @@ const select = {
 
 describe("saved connection editor", () => {
   it("only marks changed connection fields or credential intent as dirty", () => {
-    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
     editor.applySettingsSnapshot(configured());
     editor.beginConnection(editor.applied!.savedConnections.entries![0]);
     expect(editor.dirty).toBe(false);
@@ -77,7 +83,9 @@ describe("saved connection editor", () => {
     expect(editor.dirty).toBe(false);
   });
   it("preserves an open unchanged connection against another window's snapshot", () => {
-    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
     editor.applySettingsSnapshot(configured());
     editor.beginConnection(editor.applied!.savedConnections.entries![0]);
     const changed = configured();
@@ -129,7 +137,9 @@ describe("saved connection editor", () => {
     expect(editor.applied?.savedConnections.selected?.stt).toBe("first");
   });
   it("clears a connection credential draft when Settings is hidden", () => {
-    const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
     editor.applySettingsSnapshot(configured());
     editor.beginConnection();
     editor.connectionDraft!.credentialDraft = "draft-canary";
@@ -142,7 +152,8 @@ describe("saved connection editor", () => {
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: {
-          SaveSettings: () => CancellablePromise.reject(new Error("fixture failure")),
+          SaveSettings: () =>
+            CancellablePromise.reject(new Error("fixture failure")),
         },
       }),
     );
@@ -153,9 +164,11 @@ describe("saved connection editor", () => {
   });
   it("ignores an old cleanup probe after another window selects a connection", async () => {
     let complete!: (v: typeof connectionResult) => void;
-    const pending = new CancellablePromise<typeof connectionResult>((resolve) => {
-      complete = resolve;
-    });
+    const pending = new CancellablePromise<typeof connectionResult>(
+      (resolve) => {
+        complete = resolve;
+      },
+    );
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         connection: { TestPostProcessingConnection: () => pending },
@@ -173,38 +186,43 @@ describe("saved connection editor", () => {
 });
 
 describe("task connection creation", () => {
-  it.each([Purpose.Voice, Purpose.Transcription, Purpose.Cleanup, Purpose.Speech])(
-    "preselects %s and requests one atomic save",
-    async (purpose) => {
-      const next = configured();
-      const SaveSettings = vi.fn(() => CancellablePromise.resolve(next));
-      const { editor } = createEditor(
-        serviceWithStatus(() => CancellablePromise.resolve(idle), { settings: { SaveSettings } }),
-      );
-      editor.applySettingsSnapshot(configured());
-      editor.beginConnection(undefined, purpose);
-      expect(editor.connectionDraft!.uses).toEqual([purpose]);
-      editor.connectionDraft!.name = "New task server";
-      editor.connectionDraft!.details.baseURL = "https://new.example.test/v1";
-      expect(await editor.saveConnection(purpose)).toBe(true);
-      expect(SaveSettings).toHaveBeenCalledTimes(1);
-      expect(SaveSettings).toHaveBeenCalledWith(
-        expect.objectContaining({
-          connectionChange: expect.objectContaining({
-            action: Action.Create,
-            activateFor: purpose,
-            uses: [purpose],
-          }),
+  it.each([
+    Purpose.Voice,
+    Purpose.Transcription,
+    Purpose.Cleanup,
+    Purpose.Speech,
+  ])("preselects %s and requests one atomic save", async (purpose) => {
+    const next = configured();
+    const SaveSettings = vi.fn(() => CancellablePromise.resolve(next));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle), {
+        settings: { SaveSettings },
+      }),
+    );
+    editor.applySettingsSnapshot(configured());
+    editor.beginConnection(undefined, purpose);
+    expect(editor.connectionDraft!.uses).toEqual([purpose]);
+    editor.connectionDraft!.name = "New task server";
+    editor.connectionDraft!.details.baseURL = "https://new.example.test/v1";
+    expect(await editor.saveConnection(purpose)).toBe(true);
+    expect(SaveSettings).toHaveBeenCalledTimes(1);
+    expect(SaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionChange: expect.objectContaining({
+          action: Action.Create,
+          activateFor: purpose,
+          uses: [purpose],
         }),
-      );
-      expect(editor.connectionDraft).toBeNull();
-    },
-  );
+      }),
+    );
+    expect(editor.connectionDraft).toBeNull();
+  });
   it("retains a failed new-connection draft and the active selection for retry", async () => {
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle), {
         settings: {
-          SaveSettings: () => CancellablePromise.reject(new Error("fixture save failure")),
+          SaveSettings: () =>
+            CancellablePromise.reject(new Error("fixture save failure")),
         },
       }),
     );
@@ -220,7 +238,9 @@ describe("task connection creation", () => {
 });
 
 it("adopts the latest external selection only after discarding a connection draft", () => {
-  const { editor } = createEditor(serviceWithStatus(() => CancellablePromise.resolve(idle)));
+  const { editor } = createEditor(
+    serviceWithStatus(() => CancellablePromise.resolve(idle)),
+  );
   editor.applySettingsSnapshot(configured());
   editor.beginConnection(undefined, Purpose.Transcription);
   editor.connectionDraft!.name = "Unfinished server";
@@ -259,7 +279,10 @@ describe("connection card checks", () => {
     const { editor, services } = setup();
     await editor.testSavedConnection("first");
     await editor.testSavedConnection("second");
-    expect(Object.keys(editor.savedConnectionChecks)).toEqual(["first", "second"]);
+    expect(Object.keys(editor.savedConnectionChecks)).toEqual([
+      "first",
+      "second",
+    ]);
     expect(editor.applied!.savedConnections.selected?.stt).toBe("first");
     expect(services.settings.SaveSettings).not.toHaveBeenCalled();
   });
@@ -274,7 +297,8 @@ describe("connection card checks", () => {
   it("invalidates checks and late completions on a confirmed settings snapshot", async () => {
     const { editor, services, config } = setup();
     await editor.testSavedConnection("first");
-    const response = CancellablePromise.withResolvers<typeof connectionResult>();
+    const response =
+      CancellablePromise.withResolvers<typeof connectionResult>();
     services.connection.TestSavedConnection = vi.fn(() => response.promise);
     const pending = editor.testSavedConnection("second");
     expect(editor.savedConnectionCheckingID).toBe("second");
@@ -305,7 +329,10 @@ describe("workflow metadata discovery", () => {
     const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
     const speech = vi.spyOn(services.connection, "TestTextToSpeechConnection");
     const files = vi.spyOn(services.connection, "TestConnection");
-    const cleanup = vi.spyOn(services.connection, "TestPostProcessingConnection");
+    const cleanup = vi.spyOn(
+      services.connection,
+      "TestPostProcessingConnection",
+    );
     const voice = vi.spyOn(services.connection, "TestSavedConnection");
     const { editor } = createEditor(services);
     editor.applySettingsSnapshot(configured());
@@ -326,7 +353,7 @@ describe("workflow metadata discovery", () => {
     editor.applySettingsSnapshot(configured());
     editor.draft!.model = "unsaved";
     await editor.ensureConnectionMetadata(Purpose.Speech);
-    expect(probe).not.toHaveBeenCalled();
+    expect(probe).toHaveBeenCalledTimes(1);
     editor.draft!.model = editor.applied!.model;
     await editor.ensureConnectionMetadata(Purpose.Speech);
     await editor.ensureConnectionMetadata(Purpose.Speech);
@@ -334,8 +361,9 @@ describe("workflow metadata discovery", () => {
     await editor.testTextToSpeechConnection();
     expect(probe).toHaveBeenCalledTimes(2);
   });
-  it("loads a newly selected connection once the previous check finishes", async () => {
-    const response = CancellablePromise.withResolvers<typeof connectionResult>();
+  it("loads a newly selected generation without waiting for the old check", async () => {
+    const response =
+      CancellablePromise.withResolvers<typeof connectionResult>();
     const probe = vi
       .fn()
       .mockImplementationOnce(() => response.promise)
@@ -352,10 +380,10 @@ describe("workflow metadata discovery", () => {
     next.textToSpeech.baseURL = "https://second.example.test/v1";
     editor.applySettingsSnapshot(next);
     await editor.ensureConnectionMetadata(Purpose.Speech);
-    expect(probe).toHaveBeenCalledTimes(1);
+    expect(probe).toHaveBeenCalledTimes(2);
     response.resolve(connectionResult);
     await first;
-    expect(editor.ttsConnection).toBeNull();
+    expect(editor.ttsConnection).toEqual(connectionResult);
     await editor.ensureConnectionMetadata(Purpose.Speech);
     expect(probe).toHaveBeenCalledTimes(2);
     expect(probe.mock.calls[1][0].baseURL).toBe(next.textToSpeech.baseURL);

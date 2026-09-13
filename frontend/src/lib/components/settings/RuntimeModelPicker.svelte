@@ -18,6 +18,8 @@
     serverLoaded = false,
     busy = false,
     onDiscover,
+    onEnter,
+    metadataStatus = "idle",
     onChoose,
     onForget,
     compact = false,
@@ -34,6 +36,8 @@
     serverLoaded?: boolean;
     busy?: boolean;
     onDiscover: () => void;
+    onEnter?: () => void;
+    metadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     onChoose: (model: string) => boolean | Promise<boolean>;
     disabled?: boolean;
     profileName?: string;
@@ -52,17 +56,29 @@
   let open = $state(false),
     query = $state("");
   const allModels = $derived([
-    ...new Set([...draftModels, ...savedModels, ...models, ...(value ? [value] : [])]),
+    ...new Set([
+      ...draftModels,
+      ...savedModels,
+      ...models,
+      ...(value ? [value] : []),
+    ]),
   ]);
   const matches = $derived(
-    allModels.filter((model) => model.toLowerCase().includes(query.trim().toLowerCase())),
+    allModels.filter((model) =>
+      model.toLowerCase().includes(query.trim().toLowerCase()),
+    ),
   );
-  const custom = $derived(query.trim() && !allModels.includes(query.trim()) ? query.trim() : "");
+  const custom = $derived(
+    query.trim() && !allModels.includes(query.trim()) ? query.trim() : "",
+  );
   const choices = $derived(
-    [...matches, ...(custom ? [custom] : [])].map((model) => ({ value: model, label: model })),
+    [...matches, ...(custom ? [custom] : [])].map((model) => ({
+      value: model,
+      label: model,
+    })),
   );
   let choosing = $state(false);
-  const locked = $derived(disabled || busy || choosing);
+  const locked = $derived(disabled || choosing);
   async function choose(model: string) {
     if (!model || locked) return;
     choosing = true;
@@ -86,10 +102,14 @@
       />
     </div>
     <div class="flex items-center gap-1">
-      <Button variant="ghost" size="sm" disabled={locked} onclick={onDiscover}
-        ><RefreshCwIcon class={busy ? "size-3.5 animate-spin" : "size-3.5"} />{serverLoaded
-          ? "Check server"
-          : "Refresh models"}</Button
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={locked || busy}
+        onclick={onDiscover}
+        ><RefreshCwIcon
+          class={busy ? "size-3.5 animate-spin" : "size-3.5"}
+        />{serverLoaded ? "Check server" : "Refresh models"}</Button
       >
       {#if onForget && savedModels.includes(value) && !serverLoaded}<Menu.Root
           ><Menu.Trigger
@@ -105,7 +125,23 @@
         >{/if}
     </div>
   </div>
-  {#if serverLoaded}<p {id} class="text-sm text-muted-foreground">Server-loaded model</p>
+  {#if busy || metadataStatus === "loading"}
+    <p role="status" class="text-xs text-muted-foreground">
+      Loading model list…
+    </p>
+  {:else if metadataStatus === "failed"}
+    <p role="status" class="text-xs text-muted-foreground">
+      Could not load the model list. Refresh or reopen to retry; you can still
+      enter a model ID.
+    </p>
+  {:else if metadataStatus === "empty"}
+    <p role="status" class="text-xs text-muted-foreground">
+      No model IDs were reported. You can enter a model ID manually.
+    </p>
+  {/if}
+  {#if serverLoaded}<p {id} class="text-sm text-muted-foreground">
+      Server-loaded model
+    </p>
   {:else}<Combobox.Root
       type="single"
       {value}
@@ -114,7 +150,8 @@
       items={choices}
       onValueChange={choose}
       onOpenChange={(next) => {
-        if (!next) query = "";
+        if (next) onEnter?.();
+        else query = "";
       }}
       allowDeselect={false}
       disabled={locked}
@@ -127,6 +164,12 @@
           placeholder="Search or enter a model ID…"
           class="h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           spellcheck={false}
+          onclick={() => {
+            if (!open) {
+              open = true;
+              onEnter?.();
+            }
+          }}
           oninput={(e) => {
             query = e.currentTarget.value;
             open = true;
@@ -142,7 +185,10 @@
             }
           }}
         >
-          {#snippet child({ props })}<input {...props} value={open ? query : value} />{/snippet}
+          {#snippet child({ props })}<input
+              {...props}
+              value={open ? query : value}
+            />{/snippet}
         </Combobox.Input>
         <Combobox.Trigger
           aria-label="Show models"
@@ -164,12 +210,21 @@
                 class="flex cursor-default items-center gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
               >
                 <span class="min-w-0 flex-1 break-all font-mono"
-                  >{custom === choice.value ? `Use “${choice.value}”` : choice.value}</span
+                  >{custom === choice.value
+                    ? `Use “${choice.value}”`
+                    : choice.value}</span
                 >
                 <span class="shrink-0 text-[11px] text-muted-foreground">
-                  {modelSources(choice.value, models, savedModels, draftModels)}</span
+                  {modelSources(
+                    choice.value,
+                    models,
+                    savedModels,
+                    draftModels,
+                  )}</span
                 >
-                {#if value === choice.value}<CheckIcon class="size-3.5 shrink-0" />{/if}
+                {#if value === choice.value}<CheckIcon
+                    class="size-3.5 shrink-0"
+                  />{/if}
               </Combobox.Item>
             {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
                 Enter a model ID, or refresh the server’s model list.
@@ -178,9 +233,12 @@
       >
     </Combobox.Root>{/if}
   {#if (showProfileName && profileName) || (value && !serverLoaded)}
-    <p class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+    <p
+      class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+    >
       {#if showProfileName && profileName}<span
-          >Profile <span class="font-medium text-foreground">{profileName}</span></span
+          >Profile <span class="font-medium text-foreground">{profileName}</span
+          ></span
         >{/if}
       {#if value && !serverLoaded}<span
           >{modelSources(value, models, savedModels, draftModels)}</span

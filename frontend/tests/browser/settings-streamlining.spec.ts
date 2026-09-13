@@ -43,7 +43,7 @@ for (const width of [860, 520]) {
     await expect(padding).toHaveAttribute("aria-valuenow", "350");
     await tuning.locator("summary").click();
     await section(page, "history").click();
-    await page.getByRole("button", { name: "Save settings", exact: true }).click();
+    await page.getByRole("button", { name: "Save and return", exact: true }).click();
     await saves.complete(await saves.waitForStart(), "invalid-speech-padding");
     await expect(section(page, "audio")).toHaveAttribute("aria-current", "page");
     await expect(tuning).toHaveAttribute("open", "");

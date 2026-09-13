@@ -67,41 +67,42 @@ type Options struct {
 // App holds the assembled application. Construction is ordered so that nothing
 // observable exists before the thing that publishes to it.
 type App struct {
-	nativeInput       io.Closer
-	shutdownOnce      sync.Once
-	sourcesOnce       sync.Once
-	storage           *storage.Store
-	opts              Options
-	settings          config.Settings
-	settingsService   *settingsservice.Service
-	buildInfo         *buildinfo.Service
-	connection        *connection.Service
-	inputService      *inputservice.Service
-	dictation         *dictation.Service
-	history           *history.Service
-	files             *filetranscription.Service
-	tts               *tts.Service
-	updates           *updates.Service
-	windowing         *windowing.Service
-	services          []application.Service
-	audio             *platform.Capture
-	playback          *platform.Playback
-	hold              *platform.HoldHook
-	shortcuts         *shortcut.Controller
-	capture           *platform.ShortcutCapturer
-	wails             *application.App
-	mainWindow        *windowController
-	settingsWindow    *settingsWindowController
-	aboutWindow       *windowController
-	detailsWindow     *windowController
-	connectionsWindow *windowController
-	windowState       *windowstate.Store
-	mainPlacement     *windowstate.Placement
-	levels            *levelPump
-	overlay           *overlayservice.Service
-	tray              *traycontroller.Controller
-	logger            *slog.Logger
-	wailsLog          *slog.Logger
+	nativeInput     io.Closer
+	shutdownOnce    sync.Once
+	sourcesOnce     sync.Once
+	storage         *storage.Store
+	opts            Options
+	settings        config.Settings
+	settingsService *settingsservice.Service
+	buildInfo       *buildinfo.Service
+	connection      *connection.Service
+	inputService    *inputservice.Service
+	dictation       *dictation.Service
+	history         *history.Service
+	files           *filetranscription.Service
+	tts             *tts.Service
+	updates         *updates.Service
+	windowing       *windowing.Service
+	services        []application.Service
+	audio           *platform.Capture
+	playback        *platform.Playback
+	hold            *platform.HoldHook
+	shortcuts       *shortcut.Controller
+	capture         *platform.ShortcutCapturer
+	wails           *application.App
+	mainWindow      *windowController
+	shell           *shellNavigation
+	settingsWindow  *windowController
+	settingsShell   *shellNavigation
+	aboutWindow     *windowController
+	detailsWindow   *windowController
+	windowState     *windowstate.Store
+	mainPlacement   *windowstate.Placement
+	levels          *levelPump
+	overlay         *overlayservice.Service
+	tray            *traycontroller.Controller
+	logger          *slog.Logger
+	wailsLog        *slog.Logger
 }
 
 // New assembles the application without starting it.
@@ -137,18 +138,19 @@ func New(opts Options) (*App, error) {
 	}
 
 	a := &App{
-		opts:              opts,
-		storage:           store,
-		settings:          settings,
-		mainWindow:        &windowController{},
-		settingsWindow:    &settingsWindowController{},
-		aboutWindow:       &windowController{},
-		detailsWindow:     &windowController{},
-		connectionsWindow: &windowController{},
-		windowState:       windowState,
-		mainPlacement:     mainPlacement,
-		logger:            logger,
-		wailsLog:          rootLogger.With("component", "wails"),
+		opts:           opts,
+		storage:        store,
+		settings:       settings,
+		mainWindow:     &windowController{},
+		shell:          &shellNavigation{},
+		settingsWindow: &windowController{},
+		settingsShell:  &shellNavigation{},
+		aboutWindow:    &windowController{},
+		detailsWindow:  &windowController{},
+		windowState:    windowState,
+		mainPlacement:  mainPlacement,
+		logger:         logger,
+		wailsLog:       rootLogger.With("component", "wails"),
 	}
 
 	// The hold hook is referenced by the service before it exists, so
@@ -244,15 +246,14 @@ func New(opts Options) (*App, error) {
 		opts.Development,
 	)
 	a.windowing = windowing.NewService(
-		a.showSettings,
-		a.hideSettings,
-		a.settingsWindow.visible,
+		a.revealSettings,
+		a.shellReady,
 		a.showAbout,
 		a.hideAbout,
 		a.aboutWindow.open,
 	)
-	windowing.ConfigureConnections(a.windowing, windowing.ConnectionManagerWindow{
-		Open: a.showConnectionManager, Hide: a.connectionsWindow.Hide,
+	windowing.ConfigureSettings(a.windowing, windowing.SettingsNavigation{Ready: a.settingsReady, Visible: a.settingsWindow.open, Finish: a.finishSettings})
+	windowing.ConfigureConnections(a.windowing, windowing.ConnectionNavigation{
 		Exists: func(id string) bool {
 			for _, c := range store.ConnectionCatalog().Entries {
 				if c.ID == id {
@@ -445,7 +446,6 @@ func (a *App) onStarted(*application.ApplicationEvent) {
 	a.newSettingsWindow()
 	a.newAboutWindow()
 	a.newHistoryDetailsWindow()
-	a.newConnectionManagerWindow()
 	a.tray.ApplyDictation(dictation.Snapshot(a.dictation))
 	a.tray.ApplyFile(a.files.CurrentFileTranscription())
 	overlayservice.Start(a.overlay)

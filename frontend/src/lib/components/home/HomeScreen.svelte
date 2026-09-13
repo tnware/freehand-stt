@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { setContext } from "svelte";
+  import { SETTINGS_NAVIGATION, type SettingsSectionID } from "$lib/navigation";
+  import { TASK_CONNECTION_NAVIGATION } from "$lib/shell-navigation.svelte";
+  import type { ConnectionManagerRequest } from "$bindings/windowing";
   import { Purpose } from "$bindings/savedconnection";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
   import CurrentResult from "$lib/components/home/CurrentResult.svelte";
@@ -20,7 +24,12 @@
   import type { Message } from "$lib/utils/messages";
   import { isFailure, statusMessage } from "$lib/utils/status";
   import { appReadiness, readinessVisible } from "$lib/utils/readiness";
-  import { FileTranscriptionPhase, State, TTSPhase, TTSSource } from "$lib/state";
+  import {
+    FileTranscriptionPhase,
+    State,
+    TTSPhase,
+    TTSSource,
+  } from "$lib/state";
 
   let {
     session,
@@ -46,12 +55,31 @@
     quickSettingsDisabled?: boolean;
   } = $props();
 
+  setContext(SETTINGS_NAVIGATION, (section: SettingsSectionID) => {
+    void WindowingService.OpenTaskSettings(section, inputMode).catch((cause) =>
+      session.messages.fail(cause),
+    );
+  });
+  setContext(
+    TASK_CONNECTION_NAVIGATION,
+    (request: ConnectionManagerRequest) => {
+      if (!quickSettingsDisabled)
+        void WindowingService.OpenTaskConnection(request, inputMode).catch(
+          (cause) => session.messages.fail(cause),
+        );
+    },
+  );
+
   const fileWorking = $derived(
     session.files.starting ||
-      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionUploading ||
-      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionProcessing ||
-      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
-      session.files.status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionUploading ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionProcessing ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionStreaming ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionCancelling,
   );
   const voiceActive = $derived(
     session.dictation.status.state !== State.Idle &&
@@ -62,12 +90,16 @@
       session.speech.status.phase === TTSPhase.Playing ||
       session.speech.status.phase === TTSPhase.Paused,
   );
-  const runtimeSettings = $derived(session.editor.applied ?? session.editor.draft);
+  const runtimeSettings = $derived(
+    session.editor.applied ?? session.editor.draft,
+  );
   const readiness = $derived(
     runtimeSettings
       ? appReadiness(
           runtimeSettings,
-          inputMode === "file" ? session.editor.connection : session.editor.currentVoiceConnection,
+          inputMode === "file"
+            ? session.editor.connection
+            : session.editor.currentVoiceConnection,
           session.editor.devices,
           session.editor.devicesBusy,
           inputMode === "file" ? "file" : "voice",
@@ -77,26 +109,32 @@
   let dismissedRecoveryKey = $state("");
   function addConnection(purpose: Purpose) {
     if (quickSettingsDisabled) return;
-    void WindowingService.OpenConnectionManager({ id: "", purpose, create: true }).catch((cause) =>
-      session.messages.reportFailure(String(cause)),
-    );
+    void WindowingService.OpenTaskConnection(
+      { id: "", purpose, create: true },
+      inputMode,
+    ).catch((cause) => session.messages.reportFailure(String(cause)));
   }
   const showReadiness = $derived(
     Boolean(
       inputMode !== "tts" &&
-        readiness &&
-        readinessVisible(readiness, dismissedRecoveryKey) &&
-        !voiceActive &&
-        !fileWorking,
+      readiness &&
+      readinessVisible(readiness, dismissedRecoveryKey) &&
+      !voiceActive &&
+      !fileWorking,
     ),
   );
   const hasHistory = $derived(
-    Boolean(runtimeSettings?.historyEnabled && inputMode !== "tts" && !showReadiness),
+    Boolean(
+      runtimeSettings?.historyEnabled && inputMode !== "tts" && !showReadiness,
+    ),
   );
   const microphoneLabel = $derived.by(() => {
     const selectedID = runtimeSettings?.microphoneID ?? "";
     if (!selectedID) return "system default";
-    return session.editor.devices.find((device) => device.id === selectedID)?.name ?? "selected";
+    return (
+      session.editor.devices.find((device) => device.id === selectedID)?.name ??
+      "selected"
+    );
   });
 
   // Keep the active job visible. A hotkey can start voice capture while the
@@ -104,7 +142,10 @@
   $effect(() => {
     if (voiceActive) inputMode = "voice";
     else if (fileWorking) inputMode = "file";
-    else if (ttsWorking && session.speech.status.source === TTSSource.SourceCompose)
+    else if (
+      ttsWorking &&
+      session.speech.status.source === TTSSource.SourceCompose
+    )
       inputMode = "tts";
   });
 
@@ -115,7 +156,8 @@
     if (preservedFields.length > 0) {
       const remaining = Math.max(
         0,
-        (configuration?.preservedFieldCount ?? preservedFields.length) - preservedFields.length,
+        (configuration?.preservedFieldCount ?? preservedFields.length) -
+          preservedFields.length,
       );
       out.push({
         id: "configuration-compatibility",
@@ -135,7 +177,8 @@
     }
     const speechFailureVisible =
       session.speech.status.phase === TTSPhase.Failed &&
-      (session.speech.status.source !== TTSSource.SourceCompose || inputMode === "tts") &&
+      (session.speech.status.source !== TTSSource.SourceCompose ||
+        inputMode === "tts") &&
       session.messages.isSpeechFailure(session.speech.status.generation);
     if (session.messages.error && !speechFailureVisible) {
       out.push({
@@ -181,7 +224,11 @@
               onToggle={() => session.dictation.toggleRecording()}
               onCancel={() => session.dictation.cancel()}
               onCopy={() => session.dictation.copyPending()}
-              onOpenSettings={() => void WindowingService.OpenSettings("voice-transcription")}
+              onOpenSettings={() =>
+                void WindowingService.OpenTaskSettings(
+                  "voice-transcription",
+                  inputMode,
+                ).catch((cause) => session.messages.fail(cause))}
             />
           {:else if inputMode === "file"}
             <AudioFileTranscription
@@ -192,7 +239,8 @@
               clearing={session.files.clearing}
               streamingEnabled={session.files.streamingEnabled}
               resettingStreaming={session.files.resettingStreaming}
-              onStreamingChange={(enabled) => (session.files.streamingPreferred = enabled)}
+              onStreamingChange={(enabled) =>
+                (session.files.streamingPreferred = enabled)}
               voiceActive={voiceActive || ttsWorking}
               onOpenSettings={onOpenServerSettings}
               onChoose={() => session.files.chooseAudioFile()}
@@ -209,7 +257,10 @@
     </div>
   {/if}
   <div class="body">
-    {#if messages.length}<Notifications {messages} abovePlayback={inputMode === "tts"} />{/if}
+    {#if messages.length}<Notifications
+        {messages}
+        abovePlayback={inputMode === "tts"}
+      />{/if}
     {#if session.speech.status.source !== TTSSource.SourceCompose && session.speech.status.phase !== TTSPhase.Idle && session.speech.status.phase !== TTSPhase.Cancelled}
       <PlaybackBar
         status={session.speech.status}
@@ -228,10 +279,12 @@
     {#if inputMode === "tts" && session.editor.draft}
       <TextToSpeech
         bind:text={session.speech.draft}
-        settings={runtimeSettings?.textToSpeech ?? session.editor.draft.textToSpeech}
+        settings={runtimeSettings?.textToSpeech ??
+          session.editor.draft.textToSpeech}
         status={session.speech.status}
         unavailable={voiceActive || fileWorking}
-        submitting={session.speech.submitting || session.speech.listening !== null}
+        submitting={session.speech.submitting ||
+          session.speech.listening !== null}
         onSpeak={(text) => session.speech.speakText(text)}
         onPause={() => session.speech.pauseTTS()}
         onResume={() => session.speech.resumeTTS()}
@@ -274,7 +327,8 @@
                   ? isFailure(session.dictation.status)
                     ? ""
                     : (statusMessage(session.dictation.status) ?? "")
-                  : session.files.status.phase === FileTranscriptionPhase.FileTranscriptionFailed
+                  : session.files.status.phase ===
+                      FileTranscriptionPhase.FileTranscriptionFailed
                     ? session.files.status.transcript
                       ? "Transcription did not finish. Any text received is kept below."
                       : ""
@@ -285,7 +339,8 @@
                       : ""}
                 failed={inputMode === "voice"
                   ? isFailure(session.dictation.status)
-                  : session.files.status.phase === FileTranscriptionPhase.FileTranscriptionFailed}
+                  : session.files.status.phase ===
+                    FileTranscriptionPhase.FileTranscriptionFailed}
                 resultKey={`${inputMode}:${inputMode === "file" ? session.files.status.generation : session.dictation.status.generation}`}
                 mode={inputMode === "file" ? "file" : "voice"}
                 text={inputMode === "file"
@@ -295,7 +350,8 @@
                 canCopy={inputMode === "file"
                   ? session.files.status.canCopy
                   : Boolean(session.dictation.status.transcript)}
-                recovery={inputMode === "voice" && session.dictation.status.canCopy}
+                recovery={inputMode === "voice" &&
+                  session.dictation.status.canCopy}
                 onCopy={() =>
                   inputMode === "file"
                     ? session.files.copyFileTranscript()
@@ -306,15 +362,23 @@
                 }}
                 listenDisabled={!session.speech.canListen}
                 listenBusy={session.speech.listening?.source ===
-                  (inputMode === "file" ? TTSSource.SourceFile : TTSSource.SourceVoice) ||
+                  (inputMode === "file"
+                    ? TTSSource.SourceFile
+                    : TTSSource.SourceVoice) ||
                   (session.speech.status.phase === TTSPhase.Generating &&
                     session.speech.status.source ===
-                      (inputMode === "file" ? TTSSource.SourceFile : TTSSource.SourceVoice))}
-                onListen={runtimeSettings?.textToSpeech.enabled && !voiceActive && !fileWorking
+                      (inputMode === "file"
+                        ? TTSSource.SourceFile
+                        : TTSSource.SourceVoice))}
+                onListen={runtimeSettings?.textToSpeech.enabled &&
+                !voiceActive &&
+                !fileWorking
                   ? () =>
                       inputMode === "file"
                         ? session.speech.listenFileTranscript()
-                        : session.speech.listenVoiceTranscript(session.dictation.status.generation)
+                        : session.speech.listenVoiceTranscript(
+                            session.dictation.status.generation,
+                          )
                   : undefined}
               >
                 {#snippet quickSettings()}
@@ -338,14 +402,18 @@
                 <ReadinessPanel
                   {readiness}
                   task={inputMode === "file" ? "file" : "voice"}
-                  saving={session.editor.saving || session.editor.quickSettingsPending.length > 0}
+                  saving={session.editor.saving ||
+                    session.editor.quickSettingsPending.length > 0}
                   testing={inputMode === "file"
                     ? session.editor.sttConnectionTesting
                     : session.editor.voiceConnectionTesting}
                   completing={session.editor.setupCompleting}
                   onTestConnection={() =>
                     inputMode === "file"
-                      ? session.editor.testConnection(session.editor.applied, "")
+                      ? session.editor.testConnection(
+                          session.editor.applied,
+                          "",
+                        )
                       : session.editor.testVoiceConnection()}
                   onComplete={() => session.editor.completeSetup()}
                   onDismiss={() => {
@@ -355,7 +423,10 @@
                     if (section === "audio") onOpenAudioSettings();
                     else if (section === "shortcuts") onOpenShortcutSettings();
                     else if (section === "voice-transcription")
-                      void WindowingService.OpenSettings("voice-transcription");
+                      void WindowingService.OpenTaskSettings(
+                        "voice-transcription",
+                        inputMode,
+                      ).catch((cause) => session.messages.fail(cause));
                     else onOpenServerSettings();
                   }}
                 >
@@ -365,39 +436,62 @@
                         setup
                         editor={session.editor}
                         settings={runtimeSettings!}
-                        disabled={quickSettingsDisabled || session.editor.saving}
+                        disabled={quickSettingsDisabled ||
+                          session.editor.saving}
                         onAddConnection={addConnection}
                       />
                     {:else}
                       <QuickSettings
+                        onEnterTranscription={() =>
+                          void session.editor.ensureConnectionMetadata(
+                            Purpose.Transcription,
+                            true,
+                          )}
+                        sttMetadataStatus={session.editor.connectionMetadataStatus(
+                          Purpose.Transcription,
+                        )}
                         showCapture={false}
                         showCleanup={false}
                         settings={runtimeSettings!}
                         devices={session.editor.devices}
                         processingProfiles={session.editor.processingProfiles}
                         connection={session.editor.connection}
-                        processingConnection={session.editor.processingConnection}
+                        processingConnection={session.editor
+                          .processingConnection}
                         sttStale={session.editor.sttConnectionStale ||
                           session.editor.connectionResultStale(
                             Purpose.Transcription,
                             runtimeSettings,
                           )}
-                        processingStale={session.editor.processingConnectionStale ||
-                          session.editor.connectionResultStale(Purpose.Cleanup, runtimeSettings)}
+                        processingStale={session.editor
+                          .processingConnectionStale ||
+                          session.editor.connectionResultStale(
+                            Purpose.Cleanup,
+                            runtimeSettings,
+                          )}
                         pending={session.editor.quickSettingsPending}
                         savedField={session.editor.quickSettingsSaved}
                         failedField={session.editor.quickSettingsFailed}
                         sttTesting={session.editor.sttConnectionTesting}
-                        processingTesting={session.editor.processingConnectionTesting}
+                        processingTesting={session.editor
+                          .processingConnectionTesting}
                         onAddConnection={addConnection}
-                        onChangeConnection={(change) => session.editor.changeConnection(change)}
+                        onChangeConnection={(change) =>
+                          session.editor.changeConnection(change)}
                         onUpdate={(patch, field) =>
                           session.editor.updateQuickSettings(patch, field)}
                         onTestConnection={() =>
-                          session.editor.testConnection(session.editor.applied, "")}
+                          session.editor.testConnection(
+                            session.editor.applied,
+                            "",
+                          )}
                         onTestProcessingConnection={() =>
-                          session.editor.testPostProcessingConnection(session.editor.applied, "")}
-                        disabled={quickSettingsDisabled || session.editor.saving}
+                          session.editor.testPostProcessingConnection(
+                            session.editor.applied,
+                            "",
+                          )}
+                        disabled={quickSettingsDisabled ||
+                          session.editor.saving}
                         {onOpenServerSettings}
                         {onOpenProcessingSettings}
                         {onOpenAudioSettings}
@@ -411,11 +505,13 @@
                   class="flex shrink-0 items-center justify-between gap-3 border-t border-hairline px-4 py-2 text-xs text-muted-foreground"
                 >
                   <span
-                    >History is off. Current results remain available until you clear them or start
-                    again.</span
+                    >History is off. Current results remain available until you
+                    clear them or start again.</span
                   >
-                  <Button variant="ghost" size="sm" onclick={onOpenHistorySettings}
-                    >History settings</Button
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onclick={onOpenHistorySettings}>History settings</Button
                   >
                 </div>
               {/if}
@@ -437,7 +533,9 @@
                   >{session.history.entries.length}</span
                 >
               </h2>
-              <span class="text-xs text-muted-foreground">In memory until you quit</span>
+              <span class="text-xs text-muted-foreground"
+                >In memory until you quit</span
+              >
             </div>
             <div class="history-area">
               <HistoryPanel
@@ -452,10 +550,13 @@
                 onDelete={(id) => session.history.deleteHistoryEntry(id)}
                 onCopyFile={() => session.files.copyFileTranscript()}
                 ttsEnabled={runtimeSettings?.textToSpeech.enabled ?? false}
-                ttsAvailable={!voiceActive && !fileWorking && session.speech.canListen}
+                ttsAvailable={!voiceActive &&
+                  !fileWorking &&
+                  session.speech.canListen}
                 ttsPending={session.speech.listening ?? undefined}
                 ttsStatus={session.speech.status}
-                onListen={(id, version) => session.speech.listenHistoryEntry(id, version)}
+                onListen={(id, version) =>
+                  session.speech.listenHistoryEntry(id, version)}
                 onListenFile={() => session.speech.listenFileTranscript()}
                 onPauseTTS={() => session.speech.pauseTTS()}
                 onResumeTTS={() => session.speech.resumeTTS()}

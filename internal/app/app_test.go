@@ -190,28 +190,6 @@ func TestMainWindowUsesMicaOnlyAfterOptIn(t *testing.T) {
 	}
 }
 
-func TestSettingsWindowIsAHiddenReusableRenderer(t *testing.T) {
-	options := settingsWindowOptions(false, config.AppearanceModeSystem, false)
-	if options.Name != "settings" || options.URL != settingsWindowURL {
-		t.Fatalf("settings identity = name %q URL %q", options.Name, options.URL)
-	}
-	if options.Title != "Freehand — Settings" {
-		t.Fatalf("settings caption = %q", options.Title)
-	}
-	if !options.Hidden {
-		t.Fatal("secondary settings renderer is visible at startup")
-	}
-	if options.Width != 880 || options.Height != 680 {
-		t.Fatalf("settings size = %dx%d", options.Width, options.Height)
-	}
-	if options.MinWidth != 560 || options.MinHeight != 520 {
-		t.Fatalf("settings minimum size = %dx%d", options.MinWidth, options.MinHeight)
-	}
-	if options.Frameless || options.Windows.DisableFramelessWindowDecorations {
-		t.Fatal("settings window replaces native Windows chrome")
-	}
-}
-
 func TestAboutWindowIsACompactHiddenReusableRenderer(t *testing.T) {
 	options := aboutWindowOptions(false, config.AppearanceModeSystem, false)
 	if options.Name != "about" || options.URL != aboutWindowURL {
@@ -241,19 +219,5 @@ func TestWindowControllerRemembersARevealBeforeAttach(t *testing.T) {
 	controller.mu.RUnlock()
 	if !pending {
 		t.Fatal("a reveal that arrived before the window existed was dropped")
-	}
-}
-
-func TestSettingsWindowControllerRemembersSectionUntilRuntimeReady(t *testing.T) {
-	controller := &settingsWindowController{}
-	window, ready := controller.request("processing")
-	if window != nil || ready {
-		t.Fatal("settings request reported an unattached renderer as ready")
-	}
-	controller.mu.RLock()
-	pending, section := controller.pendingReveal, controller.pendingSection
-	controller.mu.RUnlock()
-	if !pending || section != "processing" {
-		t.Fatalf("pending settings request = %v %q", pending, section)
 	}
 }

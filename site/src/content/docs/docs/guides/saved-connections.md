@@ -3,7 +3,7 @@ title: Saved connections
 description: Create server connections in one place, then choose which connection each feature uses.
 ---
 
-**Settings → Connections** opens the Connection Manager as a searchable list.
+**Settings → Connections** opens the Connection Manager inside the Settings window as a searchable list.
 The same list is available through **Manage connections…** in each workflow's
 connection picker. Search by name, backend, or address; select a row to edit it.
 The list stays beside the editor in wider windows. **All connections** returns to
@@ -11,8 +11,10 @@ the full list at any size, and Save and Cancel stay visible below the form.
 
 New installations start with an empty list; upgrading retains existing connections.
 Reopening the manager preserves unfinished edits. Switching rows, returning to the
-list, or closing with changes offers **Keep editing**, **Discard**, or **Save and
-continue**. Closing clears the transient credential draft.
+list, or closing with changes offers **Keep editing**, **Discard**, or **Save**.
+Leaving the editor clears the transient credential draft; Keep editing retains it.
+Connection editing returns to the relevant section inside Settings, without opening another window. **Done** closes Settings and, for task-specific setup, reveals the originating task. A failed save
+keeps the form and error available for correction and retry, without advancing.
 
 A connection represents one reusable server: its URL, backend profile, authentication,
 and HTTP permission. Voice transcription, Audio-file transcription, Cleanup, and Text to speech select connections
@@ -30,14 +32,15 @@ quick popover keeps its compact connection selector.
 3. Configure authentication and explicitly allow HTTP if your trusted server uses it.
    Expand **Available in … workflows** to declare additional operations the deployment
    exposes; this does not select it for those tasks.
-4. Choose **Save and set up**. Saving and selecting happen together. On
+4. Choose **Save and return**. Saving and selecting happen together. On
    failure, the previous selection stays active and the form remains available to retry.
-5. The workflow Settings page opens and loads metadata for its selected connection.
+5. The originating configuration section resumes (or the task's model settings opens
+   when entered from Home) and automatically loads metadata for its selected connection.
    Choose a discovered model or enter an exact model ID; whisper.cpp uses its server-loaded model. Home's quick controls apply immediately.
-   In Settings, model and task edits apply with **Save settings**.
+   For task-specific setup, **Save and return** applies model and task edits, closes Settings, and reveals the originating task. General preferences use **Save** without closing the window.
 
 **Cancel** returns without changing the active connection. If you edited the form,
-you can keep editing, discard those changes, or save before returning to the list. Closing the window clears its transient key draft.
+you can keep editing, discard those changes, or save before returning to the list. Leaving configuration clears its transient key draft.
 
 Dictation's first-run screen includes connection and model controls. Run **Test connection**
 and **Finish setup** after reviewing the microphone and shortcut. Audio-file transcription
@@ -49,7 +52,7 @@ See [Get started](../../getting-started/).
 Open **Settings → Connections → Add connection**, enter the server details and supported
 uses, set **After saving** to **Save for later**, then choose **Save connection**. This creates an inactive entry. Select it later
 from any task it supports. To configure it immediately instead, choose a workflow
-under **After saving** and use **Save and set up**. The library remains the place to edit, duplicate, or delete servers.
+under **After saving** and use **Save and return**. The library remains the place to edit, duplicate, or delete servers.
 
 While editing an entry in the Connection Manager, use **Save connection** or **Cancel**. A disabled save explains what
 the form still needs. Only available backend profiles appear as new choices;
@@ -98,7 +101,8 @@ profiles differ. Custom transcription health paths and headers apply to Voice an
   transcription needs its setup completed again. Running jobs keep their captured settings and keys.
 - **Manage connections…** opens the list; **Edit connection** opens the selected
   entry. Save or discard feature edits first when prompted. **All connections**
-  and **Cancel** return to the list. Saving an existing entry keeps its editor open.
+  and **Cancel** return to the list. Saving an existing entry from the library keeps
+  its editor open; when opened for a task, saving returns to its configuration section.
 - The editor's **Use for…** menu selects this server for a supported workflow and
   opens that workflow's model settings. A checkmark identifies workflows already
   using it; choosing one opens those settings without changing the selection.

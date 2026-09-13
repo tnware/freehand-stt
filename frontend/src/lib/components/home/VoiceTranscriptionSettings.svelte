@@ -5,12 +5,10 @@
   import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import VocabularyLink from "$lib/components/settings/VocabularyLink.svelte";
   import ModelProfilePicker from "../settings/ModelProfilePicker.svelte";
-  import { onDestroy } from "svelte";
   import { ID } from "$bindings/modelprofile";
   import LanguagePicker from "$lib/components/settings/LanguagePicker.svelte";
   import { rememberedModels } from "$lib/utils/modelSettings";
   import { Purpose } from "$bindings/savedconnection";
-  import { Service as ConnectionService } from "$bindings/connection";
   import type { Settings } from "$lib/state";
   import type { SettingsEditor } from "$lib/stores/editor.svelte";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
@@ -34,19 +32,26 @@
   const cfg = $derived(settings.voiceTranscription);
   let profileNotice = $state("");
   const backend = $derived(
-    settings.compatibilityProfiles.transcription?.find((p) => p.id === cfg.compatibilityProfile),
+    settings.compatibilityProfiles.transcription?.find(
+      (p) => p.id === cfg.compatibilityProfile,
+    ),
   );
   const serverLoaded = $derived(
     backend?.capabilities.serverLoadedModel && !backend?.capabilities.realtime,
   );
   const profile = $derived(
-    settings.modelProfiles.voiceTranscription?.find((p) => p.id === cfg.modelProfile),
+    settings.modelProfiles.voiceTranscription?.find(
+      (p) => p.id === cfg.modelProfile,
+    ),
   );
   function chooseProfile(value: string) {
-    const selected = settings.modelProfiles.voiceTranscription?.find((p) => p.id === value);
+    const selected = settings.modelProfiles.voiceTranscription?.find(
+      (p) => p.id === value,
+    );
     if (!selected || selected.id === cfg.modelProfile) return;
     const language =
-      selected.languages?.length && !selected.languages.some((l) => l.code === cfg.language)
+      selected.languages?.length &&
+      !selected.languages.some((l) => l.code === cfg.language)
         ? (selected.languages[0]?.code ?? "auto")
         : cfg.language;
     profileNotice =
@@ -58,7 +63,9 @@
       modelProfile: selected.id,
       realtime: cfg.realtime && selected.capabilities.realtime,
       options:
-        selected.id === ID.Nemotron35 ? { vocabulary: "", boost: 3 } : { vocabulary: "", boost: 0 },
+        selected.id === ID.Nemotron35
+          ? { vocabulary: "", boost: 3 }
+          : { vocabulary: "", boost: 0 },
       transcriptionOptions: {
         prompt: "",
         hotwords: "",
@@ -67,61 +74,39 @@
       },
     });
   }
-  const connectionID = $derived(settings.savedConnections.selected?.[Purpose.Voice] ?? "");
+  const connectionID = $derived(
+    settings.savedConnections.selected?.[Purpose.Voice] ?? "",
+  );
   const busy = $derived(
     disabled ||
       editor.saving ||
-      editor.voiceConnectionTesting ||
       editor.isQuickSettingsPending("voice-transcription"),
   );
-  let testing = $state(false);
-  let testedID = $state("");
-  let models = $state<string[]>([]);
-  let message = $state("");
-  let revision = 0;
-  onDestroy(() => {
-    revision++;
-  });
+  const testing = $derived(editor.voiceConnectionTesting);
   const availableModels = $derived(
-    testedID === connectionID ? models : (editor.currentVoiceConnection?.modelIDs ?? []),
+    editor.currentVoiceConnection?.modelIDs ?? [],
   );
   function chooseModel(model: string) {
     return draft
       ? editor.chooseModel(Purpose.Voice, model)
-      : editor.updateQuickSettings({ voiceTranscription: { model } }, "voice-transcription");
+      : editor.updateQuickSettings(
+          { voiceTranscription: { model } },
+          "voice-transcription",
+        );
   }
   function update(patch: Partial<Settings["voiceTranscription"]>) {
     if (draft) {
-      if (patch.model !== undefined) editor.chooseModel(Purpose.Voice, patch.model);
+      if (patch.model !== undefined)
+        editor.chooseModel(Purpose.Voice, patch.model);
       Object.assign(settings.voiceTranscription, patch);
-    } else void editor.updateQuickSettings({ voiceTranscription: patch }, "voice-transcription");
+    } else
+      void editor.updateQuickSettings(
+        { voiceTranscription: patch },
+        "voice-transcription",
+      );
   }
-  async function test() {
-    const id = connectionID;
-    const current = ++revision;
-    testing = true;
-    message = "";
-    try {
-      const result = draft
-        ? await ConnectionService.TestSavedConnection(id)
-        : await editor.testVoiceConnection();
-      if (!result) return;
-      if (current !== revision || id !== connectionID) return;
-      testedID = id;
-      models = result.modelIDs ?? [];
-      message = result.reachable
-        ? models.length
-          ? "Connected. Choose the model loaded by this server."
-          : "Connected, but no loaded model was reported."
-        : "Could not reach the server. Check its address and credential in Connections.";
-    } catch {
-      if (current === revision && id === connectionID) {
-        testedID = id;
-        message = "Connection check failed.";
-      }
-    } finally {
-      if (current === revision) testing = false;
-    }
+  function test() {
+    void editor.testAppliedConnection(Purpose.Voice);
   }
 </script>
 
@@ -129,7 +114,9 @@
   {#if !draft}
     {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
     <div class="space-y-1.5">
-      <label for="voice-connection" class="text-xs font-medium">Connection</label>
+      <label for="voice-connection" class="text-xs font-medium"
+        >Connection</label
+      >
       <div class="flex gap-2">
         <ConnectionSelect
           id="voice-connection"
@@ -142,9 +129,6 @@
       </div>
     </div>
   {/if}
-  {#if message && testedID === connectionID}<p class="text-xs text-muted-foreground" role="status">
-      {message}
-    </p>{/if}
   {#if draft}
     <SettingsCard>
       {@render modelControls()}
@@ -184,6 +168,10 @@
     busy={testing}
     onChoose={chooseModel}
     onDiscover={test}
+    onEnter={() => {
+      void editor.ensureConnectionMetadata(Purpose.Voice, true);
+    }}
+    metadataStatus={editor.connectionMetadataStatus(Purpose.Voice)}
     onForget={draft
       ? () => {
           void editor.forgetModel(Purpose.Voice);
@@ -207,7 +195,9 @@
 
 {#snippet recognitionControls()}
   {#if profileNotice}<p
-      class={draft ? "px-5 py-3 text-xs text-muted-foreground" : "text-xs text-muted-foreground"}
+      class={draft
+        ? "px-5 py-3 text-xs text-muted-foreground"
+        : "text-xs text-muted-foreground"}
       role="status"
     >
       {profileNotice}
@@ -219,7 +209,9 @@
         : "flex items-center justify-between gap-3 border-t border-hairline pt-3"}
     >
       <div>
-        <label for="voice-realtime" class="text-sm font-medium">Realtime transcription</label>
+        <label for="voice-realtime" class="text-sm font-medium"
+          >Realtime transcription</label
+        >
         <p class="mt-1 text-xs text-muted-foreground">
           Show words as you speak, using this connection and model.
         </p>
@@ -238,13 +230,15 @@
         ? "px-5 py-4 text-xs leading-relaxed text-muted-foreground"
         : "text-xs leading-relaxed text-muted-foreground"}
     >
-      Qwen realtime uses automatic language detection. Language, context, vocabulary, and
-      temperature hints apply only with realtime off.
+      Qwen realtime uses automatic language detection. Language, context,
+      vocabulary, and temperature hints apply only with realtime off.
     </p>
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
     <div class={draft ? "space-y-2 px-5 py-4" : "space-y-1.5"}>
-      <label for="voice-language" class="text-sm font-medium">Spoken language</label>
+      <label for="voice-language" class="text-sm font-medium"
+        >Spoken language</label
+      >
       <LanguagePicker
         id="voice-language"
         restricted={!!profile.languages?.length}
@@ -258,7 +252,8 @@
   {/if}
   {#if !cfg.realtime && profile?.capabilities.transcriptionPrompt}
     <div class={draft ? "space-y-2 px-5 py-4" : "space-y-1.5"}>
-      <label for="voice-prompt" class="text-sm font-medium">Context hint</label><textarea
+      <label for="voice-prompt" class="text-sm font-medium">Context hint</label
+      ><textarea
         id="voice-prompt"
         rows="2"
         maxlength="8192"
@@ -271,8 +266,7 @@
               ...cfg.transcriptionOptions,
               prompt: event.currentTarget.value,
             },
-          })}
-      ></textarea>
+          })}></textarea>
     </div>
   {/if}
 {/snippet}
@@ -299,10 +293,12 @@
         onCheckedChange={(captions) => update({ captions })}
       />
     </div>
-    <p class="border-t border-hairline pt-3 text-xs leading-relaxed text-muted-foreground">
-      Microphone audio streams while recording. Stop to finalize, clean up, and insert. Live mode
-      uses the recording limit; silence trimming, checkpoints, and automatic stop apply to completed
-      transcription.
+    <p
+      class="border-t border-hairline pt-3 text-xs leading-relaxed text-muted-foreground"
+    >
+      Microphone audio streams while recording. Stop to finalize, clean up, and
+      insert. Live mode uses the recording limit; silence trimming, checkpoints,
+      and automatic stop apply to completed transcription.
     </p>
   {/if}
 {/snippet}
@@ -310,7 +306,9 @@
 {#snippet requestControls()}
   {#if !cfg.realtime && profile?.capabilities.transcriptionTemperature}
     <div class="flex items-center justify-between gap-3">
-      <label for="voice-temperature-override" class="text-sm">Override temperature</label><Switch
+      <label for="voice-temperature-override" class="text-sm"
+        >Override temperature</label
+      ><Switch
         id="voice-temperature-override"
         checked={cfg.transcriptionOptions.temperatureOverride}
         disabled={busy}
@@ -354,7 +352,8 @@
         class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
         disabled={busy}
         value={cfg.timeoutSeconds}
-        onchange={(event) => update({ timeoutSeconds: event.currentTarget.valueAsNumber })}
+        onchange={(event) =>
+          update({ timeoutSeconds: event.currentTarget.valueAsNumber })}
       />
       <p class="text-xs text-muted-foreground">
         Each completed recording or checkpoint gets this request budget.

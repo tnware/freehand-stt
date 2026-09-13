@@ -40,7 +40,7 @@ test("unavailable native capture still permits Clear and explicit hold retry", a
   await clear.click();
   await expect(hold.getByText("Not configured", { exact: true })).toBeVisible();
   await page
-    .getByRole("button", { name: "Save settings", exact: true })
+    .getByRole("button", { name: "Save and return", exact: true })
     .click();
   const save = await saves.waitForStart();
   await expect(retry).toBeDisabled();

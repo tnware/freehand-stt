@@ -92,12 +92,19 @@ layer removes fragmented structured Qwen headers; it never deduplicates speech.
 Only an explicit final text field after local stop is deliverable. A mixed
 language result is reported as multilingual so English-only cleanup falls back.
 
-The Connection Manager is a reusable native window composed in `internal/app`.
-`internal/windowing` owns validated navigation and whether an edit session is open,
-including startup and minimization. No credential draft crosses windows. The
-manager loads a fresh snapshot, preserves its draft when revealed again, handles
-native close through the discard guard, and clears keys when hidden or unmounted.
-Settings events update other renderers through the existing stale-draft handling.
+One dedicated Settings window contains both settings pages and the inline
+Connection Manager. Main retains the task workspace. Each WebView owns a Session;
+the transactional Go settings service synchronizes committed snapshots, never
+credential drafts. Settings navigation retains accepted task origin and return
+section; an ignored reveal cannot replace an active draft or its completion intent.
+`internal/windowing` validates sections, origins, and connection requests.
+`SettingsReady` gates pending configuration requests after subscriptions and
+loading; Main's `ShellReady` gates task-return events. Close intent is independent
+of queued navigation. General Save applies without closing; task Save and return
+closes Settings and reveals the originating task only after success. Native
+Settings close resolves Save, Discard, or Keep editing. Failure retains the draft
+and error. Hiding Settings clears transient credentials and stops shortcut capture
+and overlay preview, not Go-owned jobs. No separate connection window exists.
 
 ## Durable settings storage
 
@@ -112,14 +119,14 @@ Named connections represent reusable servers, with explicit supported uses and
 independent active selections for Voice transcription, audio-file transcription, cleanup, and playback. One ID
 can be selected by multiple features; their models and runtime options remain
 independent while URL, profile, authentication, and credential reference are shared. The shared connection editor owns endpoint/authentication/profile fields.
-Settings and workflow pickers open the same native Connection Manager: a compact
+Settings and workflow pickers open the same Connection Manager inside Settings: a compact
 searchable list, a persistent list beside the editor at desktop widths, and an
 explicit All connections route at every size. It owns library creation, editing,
 duplication, deletion, and saved metadata tests. Its renderer guards list, row,
 workflow, and close navigation with save/discard/keep-editing handling; credential
-drafts never cross windows. Workflow pickers search the same catalog and retain
+drafts remain in the Settings editor. Workflow pickers search the same catalog and retain
 Add and Manage actions outside the scrolling results. Library creation offers
-Save for later or a workflow setup destination. Its explicit Save and set up action sends
+Save for later or a workflow setup destination. Its explicit Save and return action sends
 `Change.ActivateFor` with Create so catalog, selection, settings, and key references
 commit together. Storage rejects invalid or unsupported activation purposes and
 activation on other actions. New selections still require model configuration;
@@ -460,14 +467,13 @@ wire authority; feature dependencies use narrow types derived from those
 services rather than handwritten transport shapes. Feature owners do not import
 `Session` or acquire subscriptions during construction.
 
-Both main and Settings windows install `subscribeSessionEvents` before loading
-snapshots. This shared composition routes events to the owners and reacts to
-accepted terminal transitions by refreshing history. Window-specific level and
-overlay reactions stay in the window callbacks. The disposer releases all
-session subscriptions; window teardown clears presentation timers and credential
-drafts without stopping Go-owned recording, transcription, or playback. Hiding
-the reusable Settings window continues to discard its draft through the existing
-settings lifecycle.
+Main and Settings each install `subscribeSessionEvents` before loading snapshots.
+Settings and its inline Connection Manager share one Session and draft owner.
+Accepted terminal transitions refresh history. Each renderer disposes its own
+subscriptions, timers, and credential drafts without stopping Go-owned recording,
+transcription, or playback. Settings hide clears configuration state and releases
+preview/capture resources; accepted backend snapshots synchronize both renderers
+while preserving unsaved draft conflicts.
 
 The main workspace uses continuous recording and playback rows above adjoining
 result and history panes. Voice groups its record control, clock, and status
@@ -629,7 +635,7 @@ tint at `#app` plus translucent panels, while native captions remain under DWM
 control. Light-mode tokens remain independent.
 Windows Mica is an explicit persisted opt-in applied when all four native windows are created, so changing it requires a process restart. The service reports the launch-time material separately from the editable preference; Svelte continues rendering the launch-time material until restart rather than making its surfaces translucent over solid native windows. Shell chrome uses the same material-aware layer roles, including the main header/status strip, Settings navigation/action bar, and About action bar.
 
-`internal/app` owns four named Wails windows: the normal `main` shell plus hidden, reused `settings`, `about`, and `transcription-details` renderers. It creates them from Wails' `ApplicationStarted` lifecycle event, after the framework has populated its screen manager, so the saved main-window placement is supplied directly through `WebviewWindowOptions`. Settings and About use the narrow generated `internal/windowing` binding. Transcription details uses `internal/history.Service`, which validates completed entry IDs and owns only the selected ID; `internal/app` owns its native window handle. `internal/windowstate` persists only the main window's normal bounds relative to its display work area and independently from product settings. On launch, the saved display is matched by Wails screen ID and stable device name, then its bounds are clamped to the current work area; a missing display falls back to a centered primary window. Immediately before Settings, About, or Transcription details is revealed from a hidden state, its Wails logical bounds are centered over the main window and clamped to the main window's current display work area. No auxiliary placement is persisted. Each WebView has independent Svelte state, while the transactional Go settings service remains authoritative and broadcasts its renderer-safe committed snapshot to every window that needs it. Settings reloads from Go whenever it is revealed, preserves an active draft against external events, and routes native close requests through its existing discard confirmation before asking Go to hide it. About and Transcription details have no editable state and hide immediately from either their native close action or footer. Opening another history entry updates and focuses the same details window. Details subscribes before fetching its selection, ignores superseded responses, and refreshes after history actions, settings changes, and workflow status events. Deleting, clearing, disabling, or evicting history makes details unavailable; closing the window clears its selection. No details snapshot is retained separately by Go or persisted. Because Wails parent-blocking modal attachment is not supported on Windows, the main window's rack is inert while the modeless Settings window is visible.
+`internal/app` owns four named Wails windows: `main`, `settings`, `about`, and `transcription-details`. Settings is one reusable native configuration window; its Connections page never opens another window. Main and Settings have independent renderer Sessions synchronized by the transactional settings service. Windows are created from Wails' `ApplicationStarted` event after screen initialization. `internal/windowstate` persists only main-window normal bounds relative to its display work area, independently of product settings. Saved display matching, work-area clamping, and missing-display fallback remain native responsibilities. Settings, About, and transcription details retain owner-relative centering and no persisted auxiliary placement. Settings installs listeners before its readiness handshake, retains guarded drafts on repeated reveals, and clears transient editor state on hide. General saves stay in preferences; task completion closes Settings and explicitly restores the originating Main task. About uses `internal/windowing`; `internal/history.Service` validates completed entry IDs and owns the selected ID while `internal/app` owns the details handle. About and Transcription details have no editable state and hide immediately from either their native close action or footer. Opening another history entry updates and focuses the same details window. Details subscribes before fetching its selection, ignores superseded responses, and refreshes after history actions, settings changes, and workflow status events. Deleting, clearing, disabling, or evicting history makes details unavailable; closing the window clears its selection. No details snapshot is retained separately by Go or persisted.
 
 The native status overlay is enabled by default but has an independent persisted opt-out plus curated layout, work-area anchor, phase visibility, motion, surface, visualizer, proportional-size, opacity, edge-distance, and glow settings. `internal/overlay` owns that feature lifecycle: the settings transaction supplies applied configuration, dictation supplies authoritative status, and the package translates both into a narrow `platform.OverlayOptions`/`platform.OverlayStatus` contract. Enabling creates one native surface and bounded level tap; disabling releases its native surface, timers and graphics resources instead of retaining a hidden renderer. Windows additionally owns its HWND/message-loop thread; macOS dispatches AppKit work to the main thread. Capsule/glass/bars/top-center remains the compatibility default.
 
@@ -649,12 +655,23 @@ Result-toolbar popovers retain immediate-save STT and cleanup controls; micropho
 appear only for dictation. TTS shows its own connection and model/voice settings link.
 Each quick update starts from backend-confirmed settings, restores only engine options
 when a model changes, and calls the same transactional owner without credential mutation.
-Quick controls remain disabled while the Settings window owns an editable draft.
+Main quick controls remain disabled while Settings owns the editable configuration.
 The header groups input modes in a segmented selector with a raised selected
 surface and accent text. Selection and keyboard focus remain separate states.
 Open quick-setting triggers use the shared accent wash and text roles; a hairline
 separates them from result actions. History dates, counts, and status badges use
 the interface typeface, with tabular figures for changing numeric metadata.
+`SettingsEditor` owns shared, generation-fenced metadata for Voice, Audio file,
+Cleanup, and Text to speech. First entry to model settings or a picker ensures
+bounded metadata for the applied connection with empty renderer credential drafts;
+Go resolves saved credentials. Concurrent entries within each renderer reuse
+pending work and cached results. Committed settings changes synchronize renderers
+and invalidate old completions. Ordinary effects do not
+loop on failure; deliberate picker re-entry or explicit refresh can retry.
+Discovery works before model selection or optional-feature enablement and never
+selects a model/profile, enables a feature, or invokes inference. Voice has no
+separate component-owned model cache.
+
 `RuntimeModelPicker` supplies model search, manual IDs, discovery actions, and
 saved/server/draft provenance across Voice, files, cleanup, and speech. Its profile
 summary is descriptive; model IDs never select behavior. `QuickSaveStatus` reads

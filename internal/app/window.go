@@ -16,24 +16,20 @@ import (
 )
 
 const (
-	mainWindowName          = "main"
-	mainWindowURL           = "/index.html#main"
-	mainWindowWidth         = 1080
-	mainWindowHeight        = 720
-	mainWindowMinWidth      = 560
-	mainWindowMinHeight     = 560
-	settingsWindowName      = "settings"
-	settingsWindowURL       = "/index.html#settings"
-	settingsWindowWidth     = 880
-	settingsWindowHeight    = 680
-	settingsWindowMinWidth  = 560
-	settingsWindowMinHeight = 520
-	aboutWindowName         = "about"
-	aboutWindowURL          = "/index.html#about"
-	aboutWindowWidth        = 620
-	aboutWindowHeight       = 440
-	aboutWindowMinWidth     = 480
-	aboutWindowMinHeight    = 360
+	settingsWindowName   = "settings"
+	settingsWindowURL    = "/?window=settings"
+	mainWindowName       = "main"
+	mainWindowURL        = "/index.html#main"
+	mainWindowWidth      = 1080
+	mainWindowHeight     = 720
+	mainWindowMinWidth   = 560
+	mainWindowMinHeight  = 560
+	aboutWindowName      = "about"
+	aboutWindowURL       = "/index.html#about"
+	aboutWindowWidth     = 620
+	aboutWindowHeight    = 440
+	aboutWindowMinWidth  = 480
+	aboutWindowMinHeight = 360
 )
 
 func opaqueWindowTheme() application.ThemeSettings {
@@ -145,14 +141,6 @@ func mainWindowOptions(startupLaunch, showWindowOnLaunch, useMica bool, appearan
 	)
 }
 
-func settingsWindowOptions(useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
-	return baseWindowOptions(
-		settingsWindowName, "Freehand — Settings", settingsWindowURL,
-		settingsWindowWidth, settingsWindowHeight, settingsWindowMinWidth, settingsWindowMinHeight,
-		true, useMica, appearanceMode, systemDark,
-	)
-}
-
 func aboutWindowOptions(useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
 	return baseWindowOptions(
 		aboutWindowName, "Freehand — About", aboutWindowURL,
@@ -238,66 +226,65 @@ type windowController struct {
 	pending bool
 }
 
-// settingsWindowController tracks the singleton settings window separately
-// from the main shell. A section request may arrive before the hidden
-// renderer's runtime is ready, so the most recent section is delivered once
-// its event listener can receive it.
-type settingsWindowController struct {
-	mu             sync.RWMutex
-	window         *application.WebviewWindow
-	runtimeReady   bool
-	pendingReveal  bool
-	pendingSection string
+// shellNavigation remembers native entry points until the main renderer has
+// installed its listeners. It contains navigation only, never editor state.
+type shellNavigation struct {
+	mu           sync.Mutex
+	runtimeReady bool
+	event        string
+	value        string
+	pendingClose bool
+	closeEvent   string
 }
 
-func (w *settingsWindowController) request(section string) (*application.WebviewWindow, bool) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if w.window == nil {
-		w.pendingReveal = true
-		w.pendingSection = section
-		return nil, false
+// Dispatch stays under the same lock as the readiness transition so fresh
+// requests cannot overtake startup replay. Emit must not re-enter navigation.
+func (s *shellNavigation) request(event, value string, emit func(string, string)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.runtimeReady {
+		emit(event, value)
+		return
 	}
-	if !w.runtimeReady {
-		w.pendingSection = section
+	if event == "shell:close-requested" || event == settingsCloseRequestedEvent {
+		s.closeEvent = event
+		s.pendingClose = true
+		return
 	}
-	return w.window, w.runtimeReady
+	s.event, s.value = event, value
+}
+func (s *shellNavigation) ready(emit func(string, string)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.runtimeReady = true
+	if s.event != "" {
+		emit(s.event, s.value)
+		s.event, s.value = "", ""
+	}
+	if s.pendingClose {
+		emit(s.closeEvent, "")
+		s.pendingClose = false
+	}
+}
+func (a *App) emitShell(event, value string) {
+	if window := a.mainWindow.current(); window != nil {
+		window.EmitEvent(event, value)
+	}
+}
+func (a *App) navigateShell(event, value string) {
+	a.mainWindow.Reveal()
+	a.shell.request(event, value, a.emitShell)
+}
+func (a *App) requestShellClose() {
+	a.shell.request("shell:close-requested", "", a.emitShell)
 }
 
-func (w *settingsWindowController) attach(window *application.WebviewWindow) (bool, string) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.window = window
-	pending, section := w.pendingReveal, w.pendingSection
-	w.pendingReveal = false
-	return pending, section
-}
-
-func (w *settingsWindowController) markRuntimeReady() (*application.WebviewWindow, string) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.runtimeReady = true
-	section := w.pendingSection
-	w.pendingSection = ""
-	return w.window, section
-}
-
-func (w *settingsWindowController) hide() *application.WebviewWindow {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.pendingReveal = false
-	w.pendingSection = ""
-	return w.window
-}
-
-func (w *settingsWindowController) visible() bool {
-	w.mu.RLock()
-	window := w.window
-	w.mu.RUnlock()
-	// A minimised Settings window still owns an editable draft. Treat it as
-	// open so the main renderer cannot enable its competing mutation surface.
-	return window != nil && window.IsVisible()
-}
+// shellReady delivers queued native navigation after listener installation.
+// Do not reset this from WindowRuntimeReady: in pinned Wails beta.16 the
+// runtime sends that notification during module evaluation and native emit
+// queues its callback asynchronously. It can run after this explicit handshake.
+// A reload reset requires a renderer-generation protocol, not that event.
+func (a *App) shellReady() { a.shell.ready(a.emitShell) }
 
 func (w *windowController) current() application.Window {
 	w.mu.RLock()
@@ -344,9 +331,10 @@ func (w *windowController) open() bool {
 }
 
 func (w *windowController) Hide() {
-	w.mu.RLock()
+	w.mu.Lock()
 	window := w.window
-	w.mu.RUnlock()
+	w.pending = false
+	w.mu.Unlock()
 	if window != nil {
 		window.Hide()
 	}
@@ -379,8 +367,8 @@ func (a *App) newMainWindow() {
 	window := a.wails.Window.NewWithOptions(options)
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		a.persistMainWindowPlacement(window)
-		window.Hide()
 		event.Cancel()
+		window.Hide()
 	})
 	window.OnWindowEvent(events.Common.WindowLostFocus, func(*application.WindowEvent) {
 		a.persistMainWindowPlacement(window)
@@ -410,58 +398,49 @@ func (a *App) newMainWindow() {
 	a.tray.SetMainWindowVisible(a.mainWindow.visible())
 }
 
-// newSettingsWindow creates one hidden renderer and reuses it for every
-// settings request. Native close requests are handed to the renderer so its
-// existing unsaved-draft confirmation remains authoritative.
-func (a *App) newSettingsWindow() {
-	window := a.wails.Window.NewWithOptions(settingsWindowOptions(
-		a.settings.UseMica,
-		a.settings.AppearanceMode,
-		a.wails.Env.IsDarkMode(),
-	))
-	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
-		event.Cancel()
-		window.EmitEvent(settingsCloseRequestedEvent)
-	})
-	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
-		readyWindow, section := a.settingsWindow.markRuntimeReady()
-		if readyWindow != nil && section != "" {
-			readyWindow.EmitEvent(settingsOpenEvent, section)
-		}
-	})
-	pending, section := a.settingsWindow.attach(window)
-	if pending {
-		go a.showSettings(section)
-	}
+func settingsWindowOptions(useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
+	return baseWindowOptions(settingsWindowName, "Freehand — Settings", settingsWindowURL, 880, 680, 560, 520, true, useMica, appearanceMode, systemDark)
 }
-
-func (a *App) showSettings(section string) {
-	window, ready := a.settingsWindow.request(section)
-	if window == nil {
+func (a *App) newSettingsWindow() {
+	if a.settingsWindow.current() != nil {
 		return
 	}
-	if !window.IsVisible() {
+	window := a.wails.Window.NewWithOptions(settingsWindowOptions(a.settings.UseMica, a.settings.AppearanceMode, a.wails.Env.IsDarkMode()))
+	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) { event.Cancel(); a.requestSettingsClose() })
+	window.OnWindowEvent(events.Common.WindowShow, func(*application.WindowEvent) { a.publishSettingsVisibility(true) })
+	window.OnWindowEvent(events.Common.WindowHide, func(*application.WindowEvent) { a.publishSettingsVisibility(false) })
+	a.settingsWindow.attach(window)
+}
+func (a *App) showSettings(section string) { _ = a.windowing.OpenSettings(section) }
+func (a *App) revealSettings(_ string) {
+	if window := a.settingsWindow.current(); window != nil && !window.IsVisible() {
 		a.centerAuxiliaryWindow(window)
 	}
-	window.Show()
-	window.Restore()
-	window.Focus()
-	if a.wails != nil {
-		a.wails.Event.Emit(settingsVisibilityEvent, true)
-	}
-	if ready {
-		window.EmitEvent(settingsOpenEvent, section)
+	a.settingsWindow.Reveal()
+	a.settingsShell.request(settingsOpenEvent, "", a.emitSettings)
+}
+func (a *App) emitSettings(event, value string) {
+	if window := a.settingsWindow.current(); window != nil {
+		window.EmitEvent(event)
 	}
 }
-
-func (a *App) hideSettings() {
-	a.capture.Cancel()
-	window := a.settingsWindow.hide()
-	if window != nil {
-		window.Hide()
-	}
+func (a *App) settingsReady() { a.settingsShell.ready(a.emitSettings) }
+func (a *App) requestSettingsClose() {
+	a.settingsShell.request(settingsCloseRequestedEvent, "", a.emitSettings)
+}
+func (a *App) publishSettingsVisibility(visible bool) {
 	if a.wails != nil {
-		a.wails.Event.Emit(settingsVisibilityEvent, false)
+		a.wails.Event.Emit(settingsVisibilityEvent, visible)
+	}
+}
+func (a *App) finishSettings(origin string) {
+	if a.capture != nil {
+		a.capture.Cancel()
+	}
+	a.settingsWindow.Hide()
+	a.publishSettingsVisibility(false)
+	if origin != "" {
+		a.navigateShell("workspace:select-task", origin)
 	}
 }
 
@@ -570,28 +549,5 @@ func (a *App) hideAbout() {
 	a.aboutWindow.Hide()
 	if a.wails != nil {
 		a.wails.Event.Emit(aboutVisibilityEvent, false)
-	}
-}
-
-func (a *App) newConnectionManagerWindow() {
-	window := a.wails.Window.NewWithOptions(baseWindowOptions("connections", "Freehand — Connection Manager", "/index.html#connections", 960, 740, 560, 520, true, a.settings.UseMica, a.settings.AppearanceMode, a.wails.Env.IsDarkMode()))
-	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
-		event.Cancel()
-		window.EmitEvent("connections:close-requested")
-	})
-	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) {
-		window.EmitEvent("connections:open")
-	})
-	a.connectionsWindow.attach(window)
-}
-
-func (a *App) showConnectionManager() {
-	window := a.connectionsWindow.current()
-	if window != nil && !window.IsVisible() {
-		a.centerAuxiliaryWindow(window)
-	}
-	a.connectionsWindow.Reveal()
-	if window != nil {
-		window.EmitEvent("connections:open")
 	}
 }

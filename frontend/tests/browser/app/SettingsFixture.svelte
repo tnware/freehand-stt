@@ -33,10 +33,14 @@
     processingProfiles,
     connectionResult,
   } from "$lib/stores/session-fixtures-data";
-  import SettingsScreen from "$lib/components/settings/SettingsScreen.svelte";
-  import type { SettingsSectionID } from "$lib/navigation";
+  import App from "../../../src/App.svelte";
+  import SettingsHost from "../../../src/SettingsHost.svelte";
   import { controlledSaves } from "./save-control";
-  import { installConnectionWindows } from "./connection-window-bridge";
+  import { installConnectionWindows, wire } from "./connection-window-bridge";
+  const params = new URLSearchParams(location.search);
+  const child = params.has("settings-frame");
+  const integrated = !child && (params.has("blank") || params.has("main"));
+  if (child) window.testConnectionWindows = window.parent.testConnectionWindows;
 
   import { shortcutCapture } from "$lib/stores/shortcutCapture.svelte";
   import { ShortcutAction } from "$bindings/hotkey";
@@ -125,6 +129,15 @@
     current.textToSpeech.voice = "alloy";
   }
   if (new URLSearchParams(location.search).has("pickers")) configurePickerFixture(current);
+  const blank = new URLSearchParams(location.search).has("blank");
+  if (blank) {
+    current.savedConnections = { entries: [], selected: {} };
+    current.setupCompleted = false;
+    current.voiceTranscription.model = "";
+    current.voiceTranscription.modelProfile = ModelID.Generic;
+    current.rememberedModels.defaults![Purpose.Voice]!.profile = ModelID.Generic;
+    current.model = "";
+  }
   const saves = controlledSaves((request) => {
     const next = { ...current, ...request.settings };
     const change = request.connectionChange;
@@ -132,6 +145,9 @@
       if (change.action !== Action.Create || !change.details)
         throw new Error("Unexpected connection action");
       const id = "created";
+      if (change.activateFor === Purpose.Voice) {
+        next.voiceTranscription = { ...next.voiceTranscription, ...change.details };
+      }
       next.savedConnections = {
         entries: [
           ...(current.savedConnections.entries ?? []),
@@ -152,8 +168,10 @@
     current = structuredClone(next);
     return structuredClone(current);
   });
+  if (child) current = wire(window.testConnectionWindows.settings());
   const session = new Session(
     serviceWithStatus(() => CancellablePromise.resolve(idle), {
+      input: { ListMicrophones: () => CancellablePromise.resolve([{ id: "default", name: "Fixture microphone", default: true }]) },
       connection: {
         TestConnection: () =>
           CancellablePromise.resolve(
@@ -173,7 +191,10 @@
           ),
       },
       settings: {
-        SaveSettings: (request) => saves.save(structuredClone($state.snapshot(request))),
+        GetSettings: () => CancellablePromise.resolve(child ? wire(window.testConnectionWindows.settings()) : structuredClone(current)),
+        SaveSettings: (request) => child
+          ? CancellablePromise.resolve(window.testConnectionWindows.save(wire(request)))
+          : saves.save(wire(request)),
       },
     }),
   );
@@ -182,28 +203,18 @@
     session.editor.processingProfiles = structuredClone(processingProfiles);
   }
 
-  window.testSaves = saves.control;
-  let active = $state<SettingsSectionID>("server");
-  installConnectionWindows({
-    settings: () => structuredClone(current),
-    save: (request) => saves.save(structuredClone(request)),
-    apply: (saved) => session.editor.applySettingsSnapshot(saved),
-    select: (section) => {
-      active = section as SettingsSectionID;
-    },
-  });
+  if (!child) {
+    window.testSaves = saves.control;
+    installConnectionWindows({
+      settings: () => structuredClone(current),
+      save: (request) => saves.save(wire(request)),
+      apply: (saved) => session.editor.applySettingsSnapshot(wire(saved)),
+    }, integrated, params.has("general"));
+  }
 </script>
 
-<div
-  data-window="settings"
-  class="fixed inset-0 flex min-h-0 flex-col overflow-hidden text-foreground"
->
-  <SettingsScreen
-    {session}
-    bind:active
-    onClose={() => {}}
-    overlayPreviewing={false}
-    onStartOverlayPreview={() => {}}
-    onStopOverlayPreview={() => {}}
-  />
-</div>
+{#if integrated}
+  <App {session} />
+{:else}
+  <SettingsHost {session} />
+{/if}

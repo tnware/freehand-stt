@@ -1,33 +1,43 @@
 <script lang="ts">
-  import { windowMaterial } from "$lib/platform";
   import { onMount } from "svelte";
   import { Events } from "@wailsio/runtime";
-  import { ModeWatcher, setMode } from "mode-watcher";
-  import * as WindowingService from "$bindings/windowing/service";
   import * as OverlayService from "$bindings/overlay/service";
-  import type { PreviewRequest } from "$bindings/overlay";
   import type { ShortcutCaptureProgress } from "$bindings/input";
+  import type { Session } from "$lib/stores/session.svelte";
+  import {
+    acceptConnectionClose,
+    type ShellNavigation,
+  } from "$lib/shell-navigation.svelte";
+  import { Purpose } from "$bindings/savedconnection";
+  import type {
+    ConnectionManagerRequest,
+    SettingsRequest,
+  } from "$bindings/windowing";
   import SettingsScreen from "$lib/components/settings/SettingsScreen.svelte";
-  import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
+  import SettingsNav from "$lib/components/settings/SettingsNav.svelte";
+  import ConnectionManagerWindow from "./ConnectionManagerWindow.svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
-  import { SETTINGS_SECTIONS, type SettingsSectionID } from "$lib/navigation";
-  import { Purpose } from "$bindings/savedconnection";
-  import { State, type Settings } from "$lib/state";
-  import { session } from "$lib/stores/session.svelte";
-  import { subscribeSessionEvents } from "$lib/stores/session-events";
   import { shortcutCapture } from "$lib/stores/shortcutCapture.svelte";
-  import { activeAppearanceMode } from "$lib/appearance";
+  import type { SettingsSectionID } from "$lib/navigation";
 
-  let active = $state<SettingsSectionID>("general");
-  let discardSettingsOpen = $state(false);
-  let navigationRef = $state<HTMLElement | null>(null);
-  let windowVisible = $state(false);
+  let {
+    session,
+    navigation,
+    onReturn,
+  }: { session: Session; navigation: ShellNavigation; onReturn: () => void } =
+    $props();
+  let manager = $state<ConnectionManagerWindow>();
+  let pending = $state<(() => void) | null>(null);
   let overlayPreviewing = $state(false);
-  let overlayPreviewRequestVersion = 0;
-
-  function overlayPreviewRequest(settings: Settings): PreviewRequest {
-    return {
+  let revision = 0;
+  let alive = true;
+  let afterConnection = $state<(() => void) | null>(null);
+  $effect(() => {
+    const settings = session.editor.draft;
+    if (!overlayPreviewing || !settings) return;
+    const current = ++revision;
+    void OverlayService.StartPreview({
       preferences: {
         layout: settings.overlayLayout,
         anchor: settings.overlayAnchor,
@@ -42,204 +52,184 @@
       },
       toggleShortcut: settings.toggleShortcut,
       holdShortcut: settings.holdShortcut,
-    };
-  }
-
-  $effect(() => {
-    if (!overlayPreviewing || !session.editor.draft) return;
-    const version = ++overlayPreviewRequestVersion;
-    void OverlayService.StartPreview(
-      overlayPreviewRequest(session.editor.draft),
-    ).catch((cause) => {
-      if (version !== overlayPreviewRequestVersion) return;
+    }).catch((cause) => {
+      if (current !== revision) return;
       overlayPreviewing = false;
-      session.messages.reportFailure(String(cause));
+      session.messages.fail(cause);
     });
   });
-
-  $effect(() => {
-    document.documentElement.dataset.material = windowMaterial(
-      session.editor.applied,
-    );
-  });
-
-  function settingsSection(value: string): SettingsSectionID {
-    return SETTINGS_SECTIONS.some((section) => section.id === value)
-      ? (value as SettingsSectionID)
-      : "general";
-  }
-
-  function focusActiveSection() {
-    queueMicrotask(() => {
-      navigationRef
-        ?.querySelector<HTMLElement>(`[data-settings-section="${active}"]`)
-        ?.focus();
-    });
-  }
-
-  async function prepareSettings(section: string) {
-    if (section === "connections") {
-      await WindowingService.OpenConnectionManager({
-        id: "",
-        purpose: Purpose.$zero,
-        create: false,
-      });
-      return;
-    }
-    if (windowVisible && session.editor.dirty) {
-      active = settingsSection(section);
-      session.messages.reportInfo(
-        "Your unsaved settings are still here. Save or discard them before switching connections.",
-      );
-      focusActiveSection();
-      return;
-    }
-    windowVisible = true;
-    active = settingsSection(section);
-    discardSettingsOpen = false;
-    session.editor.discardSettingsDraft();
-    await session.load();
-    focusActiveSection();
-  }
-
-  function startOverlayPreview() {
-    overlayPreviewing = true;
-  }
-
   function stopOverlayPreview() {
-    const wasPreviewing = overlayPreviewing;
+    revision++;
+    if (overlayPreviewing)
+      void OverlayService.StopPreview().catch((cause) =>
+        session.messages.fail(cause),
+      );
     overlayPreviewing = false;
-    overlayPreviewRequestVersion++;
-    if (!wasPreviewing) return;
-    void OverlayService.StopPreview().catch((cause) =>
-      session.messages.reportFailure(String(cause)),
-    );
   }
-
-  function cleanUpSettings() {
-    windowVisible = false;
+  function teardown() {
     stopOverlayPreview();
-    session.editor.discardSettingsDraft();
     session.editor.clearCredentialDraft();
-    session.messages.clear();
-    void shortcutCapture.cancel().finally(() => shortcutCapture.reset());
+    void shortcutCapture
+      .cancel()
+      .catch((cause) => session.messages.fail(cause))
+      .finally(() => shortcutCapture.reset());
   }
-
-  async function closeSettings() {
-    discardSettingsOpen = false;
-    cleanUpSettings();
-    try {
-      await WindowingService.HideSettings();
-    } catch (cause) {
-      session.messages.reportFailure(String(cause));
+  export function acceptRequest(request: SettingsRequest) {
+    const blocked =
+      (manager?.blocksReentry() ?? false) ||
+      pending !== null ||
+      afterConnection !== null ||
+      session.editor.dirty ||
+      session.editor.saving ||
+      session.editor.managedConnectionTesting ||
+      shortcutCapture.capturing;
+    if (blocked) return false;
+    stopOverlayPreview();
+    return navigation.acceptRequest(request, false);
+  }
+  function guard(action: () => void) {
+    if (!alive || pending || afterConnection || session.editor.saving) return;
+    if (manager)
+      acceptConnectionClose(session.editor, () => {
+        afterConnection = action;
+        manager?.requestClose();
+      });
+    else if (session.editor.runtimeDirty) pending = action;
+    else action();
+  }
+  export function requestClose(action = onReturn) {
+    guard(action);
+  }
+  export function openConnection(request: ConnectionManagerRequest) {
+    if (manager) return;
+    guard(() => {
+      teardown();
+      navigation.openConnection(request);
+    });
+  }
+  export function selectSection(section: SettingsSectionID) {
+    if (manager)
+      guard(() => {
+        navigation.connection = null;
+        navigation.openSettings(section);
+      });
+    else if (section === "connections")
+      guard(() => {
+        teardown();
+        navigation.openSettings(section);
+      });
+    else {
+      stopOverlayPreview();
+      navigation.active = section;
     }
   }
-
-  function requestSettingsClose() {
-    if (session.editor.saving) return;
-    if (session.editor.dirty) {
-      discardSettingsOpen = true;
-      return;
-    }
-    void closeSettings();
+  async function resolve(save: boolean) {
+    if (save && !(await session.editor.save())) return;
+    if (!alive) return;
+    if (save) shortcutCapture.markSaved();
+    else session.editor.discardSettingsDraft();
+    const action = pending;
+    pending = null;
+    action?.();
   }
-
-  function discardAndCloseSettings() {
-    session.editor.discardSettingsDraft();
-    void closeSettings();
+  function returned(purpose?: Purpose) {
+    if (!alive) return;
+    const next = afterConnection;
+    afterConnection = null;
+    navigation.returnFromConnection(purpose);
+    next?.();
   }
-
   onMount(() => {
-    setMode("system");
-
-    const offOpen = Events.On("settings:open", (event: { data: string }) => {
-      void prepareSettings(event.data);
-    });
-    const offClose = Events.On(
-      "settings:close-requested",
-      requestSettingsClose,
-    );
-    const offVisibility = Events.On(
-      "settings:visibility",
-      (event: { data: boolean }) => {
-        windowVisible = event.data;
-      },
-    );
-    const offSession = subscribeSessionEvents(session, Events.On, (status) => {
-      if (status.state !== State.Idle && status.state !== State.Failed) {
-        overlayPreviewing = false;
-        overlayPreviewRequestVersion++;
-      }
-    });
-    const offShortcutCapture = Events.On(
+    const off = Events.On(
       "shortcut:capture-progress",
       (event: { data: ShortcutCaptureProgress }) =>
         shortcutCapture.applyProgress(event.data),
     );
-    const offHide = Events.On("common:WindowHide", cleanUpSettings);
-    void WindowingService.SettingsVisible()
-      .then(async (visible) => {
-        windowVisible = visible;
-        if (visible) await prepareSettings("general");
-        else await session.editor.load();
-        setMode(activeAppearanceMode(session.editor.applied));
-      })
-      .catch((cause) => session.messages.reportFailure(String(cause)));
     return () => {
-      offSession();
-      session.dispose();
-      offOpen();
-      offClose();
-      offVisibility();
-      offShortcutCapture();
-      offHide();
-      cleanUpSettings();
+      alive = false;
+      pending = null;
+      afterConnection = null;
+      off();
+      teardown();
     };
   });
 </script>
 
-<ModeWatcher defaultMode="system" disableTransitions />
-
-<ConfigurationRecoveryDialog {session} />
-
-<div
-  data-window="settings"
-  class="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-transparent text-foreground"
->
-  <SettingsScreen
-    {session}
-    visible={windowVisible}
-    bind:active
-    bind:navigationRef
-    onClose={requestSettingsClose}
-    {overlayPreviewing}
-    onStartOverlayPreview={startOverlayPreview}
-    onStopOverlayPreview={stopOverlayPreview}
-  />
+<div data-window="settings" class="flex min-h-0 flex-1 overflow-hidden">
+  {#if navigation.active === "connections"}
+    <SettingsNav active="connections" onSelect={selectSection} />
+    {#key navigation.connection}
+      <ConnectionManagerWindow
+        bind:this={manager}
+        {session}
+        onCancelClose={() => (afterConnection = null)}
+        initialRequest={navigation.connection ?? {
+          id: "",
+          purpose: Purpose.$zero,
+          create: false,
+        }}
+        onReturn={(purpose) => {
+          if (!alive) return;
+          if (!navigation.connection && !afterConnection && !purpose)
+            onReturn();
+          else returned(purpose);
+        }}
+      />
+    {/key}
+  {:else}
+    <SettingsScreen
+      {session}
+      bind:active={navigation.active}
+      onClose={() => requestClose()}
+      decisionOpen={pending !== null}
+      onNavigate={selectSection}
+      onOpenConnection={openConnection}
+      onSaved={() => {
+        if (alive && navigation.saveReturnsToTask) onReturn();
+      }}
+      saveReturnsToTask={navigation.saveReturnsToTask}
+      {overlayPreviewing}
+      onStartOverlayPreview={() => (overlayPreviewing = true)}
+      onStopOverlayPreview={stopOverlayPreview}
+    />
+  {/if}
 </div>
-
 <Dialog.Root
-  open={discardSettingsOpen}
-  onOpenChange={(open) => (discardSettingsOpen = open)}
+  open={pending !== null}
+  onOpenChange={(open) => {
+    if (!open && !session.editor.saving) pending = null;
+  }}
 >
   <Dialog.Content
-    class="gap-0 bg-dialog-surface p-0 shadow-xl ring-dialog-stroke sm:max-w-[420px]"
+    showCloseButton={!session.editor.saving}
+    onEscapeKeydown={(event) => {
+      if (session.editor.saving) event.preventDefault();
+    }}
+    onInteractOutside={(event) => {
+      if (session.editor.saving) event.preventDefault();
+    }}
   >
-    <Dialog.Header class="border-b border-hairline px-5 py-4 pr-14">
-      <Dialog.Title class="text-base font-semibold"
-        >Discard unsaved changes?</Dialog.Title
+    <Dialog.Header
+      ><Dialog.Title>Save changes?</Dialog.Title><Dialog.Description
+        >Your edits remain here until you save or discard them.</Dialog.Description
+      ></Dialog.Header
+    >
+    {#if session.messages.error}<p role="alert" class="text-destructive">
+        {session.messages.error}
+      </p>{/if}
+    <Dialog.Footer>
+      <Button
+        variant="outline"
+        disabled={session.editor.saving}
+        onclick={() => (pending = null)}>Keep editing</Button
       >
-      <Dialog.Description class="mt-1 text-[13px] leading-relaxed">
-        Settings you changed in this window have not been applied. Closing now
-        will restore the last saved configuration.
-      </Dialog.Description>
-    </Dialog.Header>
-    <Dialog.Footer class="border-t-0 px-5 py-4">
-      <Button variant="outline" onclick={() => (discardSettingsOpen = false)}
-        >Keep editing</Button
+      <Button
+        variant="ghost"
+        disabled={session.editor.saving}
+        onclick={() => resolve(false)}>Discard</Button
       >
-      <Button variant="destructive" onclick={discardAndCloseSettings}
-        >Discard changes</Button
+      <Button disabled={session.editor.saving} onclick={() => resolve(true)}
+        >Save</Button
       >
     </Dialog.Footer>
   </Dialog.Content>

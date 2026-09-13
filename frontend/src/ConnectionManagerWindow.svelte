@@ -1,10 +1,7 @@
 <script lang="ts">
-  import { windowMaterial } from "$lib/platform";
   import { onMount } from "svelte";
-  import { Events } from "@wailsio/runtime";
-  import { ModeWatcher, setMode } from "mode-watcher";
-  import * as WindowingService from "$bindings/windowing/service";
-  import * as SettingsService from "$bindings/settings/service";
+  import type { Session } from "$lib/stores/session.svelte";
+  import { saveConnectionAndContinue } from "$lib/shell-navigation.svelte";
   import { Action, Purpose, type Connection } from "$bindings/savedconnection";
   import {
     connectionSection,
@@ -22,13 +19,22 @@
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import * as Menu from "$lib/components/ui/dropdown-menu";
   import type { ConnectionManagerRequest } from "$bindings/windowing";
-  import type { Settings } from "$lib/state";
-  import { session } from "$lib/stores/session.svelte";
-  import { activeAppearanceMode } from "$lib/appearance";
+
   import ConnectionsSection from "$lib/components/settings/sections/ConnectionsSection.svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
 
+  let {
+    session,
+    initialRequest,
+    onReturn,
+    onCancelClose = () => {},
+  }: {
+    session: Session;
+    initialRequest: ConnectionManagerRequest;
+    onReturn: (purpose?: Purpose) => void;
+    onCancelClose?: () => void;
+  } = $props();
   let request = $state<ConnectionManagerRequest | null>(null);
   let visible = $state(false);
   let loading = $state(false);
@@ -37,7 +43,7 @@
   let selectedID = $state("");
   let activateFor = $state<Purpose | undefined>();
   let deleteOpen = $state(false);
-  const editor = session.editor;
+  const editor = $derived(session.editor);
   const busy = $derived(editor.saving || editor.managedConnectionTesting);
   const selected = $derived(
     editor.applied?.savedConnections.entries?.find(
@@ -52,57 +58,23 @@
   );
   let revision = 0;
 
-  function applyAppearance(settings: Settings) {
-    setMode(activeAppearanceMode(settings));
-    document.documentElement.dataset.material = windowMaterial(settings);
-  }
-
   async function prepare() {
-    if (visible || loading) return;
-    const current = ++revision;
-    loading = true;
-    const timeout = setTimeout(() => {
-      if (current !== revision) return;
-      revision++;
-      loading = false;
-      session.messages.reportFailure(
-        "Connections did not load. Try again after Freehand finishes starting.",
+    request = initialRequest;
+    visible = true;
+    activateFor = request.create ? request.purpose || undefined : undefined;
+    if (request.create) editor.beginConnection(undefined, activateFor);
+    else if (request.id) {
+      selectedID = request.id;
+      const connection = editor.applied?.savedConnections.entries?.find(
+        (c) => c.id === request?.id,
       );
-    }, 10000);
-    try {
-      const state = await WindowingService.CurrentConnectionManager();
-      if (current !== revision || !state.visible) return;
-      const settings = await SettingsService.GetSettings();
-      if (current !== revision) return;
-      session.editor.applySettingsSnapshot(settings);
-      applyAppearance(settings);
-      request = state.request;
-      visible = true;
-      activateFor = request.create
-        ? request.purpose || Purpose.Voice
-        : undefined;
-      if (request.create)
-        session.editor.beginConnection(undefined, activateFor);
-      else if (request.id) {
-        selectedID = request.id;
-        const connection =
-          session.editor.applied?.savedConnections.entries?.find(
-            (c) => c.id === request?.id,
-          );
-        if (connection) session.editor.beginConnection(connection);
-        else
-          session.messages.reportFailure(
-            "This connection is no longer available.",
-          );
-      }
-    } catch (cause) {
-      session.messages.reportFailure(String(cause));
-    } finally {
-      clearTimeout(timeout);
-      if (current === revision) loading = false;
+      if (connection) editor.beginConnection(connection);
+      else
+        session.messages.reportFailure(
+          "This connection is no longer available.",
+        );
     }
   }
-
   function clear() {
     revision++;
     loading = false;
@@ -118,7 +90,7 @@
   }
   async function close() {
     clear();
-    await WindowingService.HideConnectionManager();
+    onReturn();
   }
   function navigate(action: () => void) {
     if (busy) return;
@@ -129,6 +101,19 @@
       editor.cancelConnectionEdit();
       action();
     }
+  }
+  export function blocksReentry() {
+    return (
+      !!editor.connectionDraft ||
+      busy ||
+      loading ||
+      discardOpen ||
+      deleteOpen ||
+      pendingAction !== null
+    );
+  }
+  export function requestClose() {
+    leave(true);
   }
   function leave(closeWindow: boolean) {
     navigate(() => {
@@ -151,8 +136,8 @@
     navigate(() => {
       request = null;
       selectedID = "";
-      activateFor = Purpose.Voice;
-      editor.beginConnection(undefined, Purpose.Voice);
+      activateFor = undefined;
+      editor.beginConnection();
     });
   }
   function discard() {
@@ -163,16 +148,15 @@
     action?.();
   }
   async function saveAndContinue() {
-    if (!(await editor.saveConnection())) return;
-    discard();
+    await saveConnectionAndContinue(
+      (purpose) => editor.saveConnection(purpose),
+      activateFor,
+      discard,
+    );
   }
   async function openWorkflow(purpose: Purpose) {
-    try {
-      await WindowingService.OpenSettings(connectionSection(purpose));
-      await close();
-    } catch (cause) {
-      session.messages.reportFailure(String(cause));
-    }
+    clear();
+    onReturn(purpose);
   }
   function use(purpose: Purpose) {
     const id = selectedID;
@@ -195,7 +179,10 @@
   function saved(purpose?: Purpose, id?: string) {
     if (id) selectedID = id;
     if (purpose) void openWorkflow(purpose);
-    else if (selected) editor.beginConnection(selected);
+    else if (initialRequest.purpose) {
+      clear();
+      onReturn();
+    } else if (selected) editor.beginConnection(selected);
   }
   function duplicate() {
     if (!selected) return;
@@ -246,22 +233,8 @@
     } else if (selected) editor.beginConnection(selected);
   }
   onMount(() => {
-    setMode("system");
-    const offs = [
-      Events.On("connections:open", () => void prepare()),
-      Events.On("connections:close-requested", () => leave(true)),
-      Events.On("common:WindowHide", clear),
-      Events.On("settings:changed", (event: { data: Settings }) => {
-        session.editor.applySettingsSnapshot(event.data);
-        applyAppearance(event.data);
-      }),
-    ];
     void prepare();
-    return () => {
-      for (const off of offs) off();
-      clear();
-      session.dispose();
-    };
+    return clear;
   });
 </script>
 
@@ -278,9 +251,9 @@
     }
   }}
 />
-<ModeWatcher defaultMode="system" disableTransitions />
+
 <div
-  class="flex h-screen flex-col overflow-hidden bg-transparent text-foreground"
+  class="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent text-foreground"
 >
   <header
     class="flex shrink-0 items-center justify-between gap-4 border-b border-hairline px-4 py-3"
@@ -295,7 +268,7 @@
       <h1 class="truncate text-base font-semibold">Connections</h1>
     </div>
     <Button variant="ghost" disabled={busy} onclick={() => leave(true)}
-      >Close</Button
+      >Done</Button
     >
   </header>
   {#if loading}<p class="p-5 text-sm text-muted-foreground">
@@ -475,7 +448,17 @@
       >
     </div>{/if}
 </div>
-<Dialog.Root bind:open={discardOpen}>
+<Dialog.Root
+  open={discardOpen}
+  onOpenChange={(open) => {
+    if (!open && busy) return;
+    discardOpen = open;
+    if (!open) {
+      pendingAction = null;
+      onCancelClose();
+    }
+  }}
+>
   <Dialog.Content
     ><Dialog.Header
       ><Dialog.Title>Save connection changes?</Dialog.Title><Dialog.Description
@@ -495,10 +478,10 @@
         onclick={() => {
           discardOpen = false;
           pendingAction = null;
+          onCancelClose();
         }}>Keep editing</Button
       ><Button variant="ghost" disabled={busy} onclick={discard}>Discard</Button
-      ><Button disabled={busy} onclick={saveAndContinue}
-        >Save and continue</Button
+      ><Button disabled={busy} onclick={saveAndContinue}>Save</Button
       ></Dialog.Footer
     >
   </Dialog.Content>

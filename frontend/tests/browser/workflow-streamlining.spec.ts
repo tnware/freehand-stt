@@ -40,7 +40,7 @@ test("save validation reveals a collapsed request limit", async ({ page, saves }
   await page.locator("#file-transcription-timeout").fill("45");
   await requestSettings(page).locator("summary").click();
   await section(page, "general").click();
-  await page.getByRole("button", { name: "Save settings", exact: true }).click();
+  await page.getByRole("button", { name: "Save and return", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "invalid-file-timeout");
   await expect(page.locator("#file-transcription-timeout")).toBeFocused();
   await expect(page.locator("#file-transcription-timeout")).toHaveValue("45");
@@ -58,7 +58,7 @@ test("voice controls survive collapsing and workflow validation reveals them", a
   await page.getByRole("spinbutton", { name: "Temperature", exact: true }).fill("0.4");
   await requestSettings(page).locator("summary").click();
   await section(page, "general").click();
-  await page.getByRole("button", { name: "Save settings", exact: true }).click();
+  await page.getByRole("button", { name: "Save and return", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "invalid-voice");
   await expect(page.getByRole("spinbutton", { name: "Temperature", exact: true })).toHaveValue(
     "0.4",

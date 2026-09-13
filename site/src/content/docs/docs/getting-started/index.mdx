@@ -46,8 +46,8 @@ To connect a service from your chosen task:
 
 <Steps>
 
-1. **Add a server** — open the task's connection picker and choose **Add connection…**. Name it, select its compatibility profile, and enter the base URL. The task's use is preselected. Configure authentication and HTTP permission as required, then choose **Save and use connection**. Keys use Windows Credential Manager or macOS Keychain.
-2. **Choose a model** — for Voice or Audio file, use **Test** to read model metadata or enter the model ID directly. Home quick controls apply immediately; whisper.cpp uses its server-loaded model. For Text to speech, open **Model and voice settings** to configure its model, voice, and enable switch. Settings-page edits apply with **Save settings**.
+1. **Add a server** — open the task's connection picker and choose **Add connection…**. Name it, select its compatibility profile, and enter the base URL. The task's use is preselected. Configure authentication and HTTP permission as required, then choose **Save and return**. Keys use Windows Credential Manager or macOS Keychain. Configuration stays inside one Settings window; saving the connection resumes the task's model settings there.
+2. **Choose a model** — opening the task's model picker or model settings automatically reads metadata for the selected connection. Choose a listed model or enter its exact ID. Retry failed discovery explicitly or by reopening the picker; discovery never runs a model. Home quick controls apply immediately; whisper.cpp uses its server-loaded model. For Text to speech, open **Model and voice settings** to configure its model, voice, and enable switch. Settings-page edits apply with **Save and return**.
 
 </Steps>
 
@@ -115,7 +115,9 @@ recognition hints supported by your selected model profile.
 The **Next step** card leads you through anything still needed. Ready checks are
 collapsed together; expand them to review your microphone or shortcut and open
 its settings. **Ctrl+Shift+Space** is the default toggle shortcut. Save any edits
-made in the Settings window before returning to Voice.
+with **Save and return** to close Settings and resume Voice in the main window. **Done** also
+returns; a dirty form offers **Save**, **Discard**, or **Keep editing**. A failed
+save retains the draft and error for correction and retry.
 
 Choose **Check connection** to test access without running a model. If the check
 fails, correct the problem and choose **Check again**. **Finish setup** appears

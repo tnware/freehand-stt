@@ -25,6 +25,8 @@
     connectionBusy = false,
     canPreview = true,
     draftModels = [],
+    onEnter,
+    metadataStatus = "idle",
     onChooseModel,
     onForgetModel,
     connectionStale = false,
@@ -44,6 +46,8 @@
     connectionBusy?: boolean;
     canPreview?: boolean;
     draftModels?: string[];
+    onEnter?: () => void;
+    metadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     onChooseModel: (model: string) => boolean;
     onForgetModel: () => void;
     connectionStale?: boolean;
@@ -89,6 +93,8 @@
       {busy}
       models={connectionStale ? [] : (connection?.modelIDs ?? [])}
       modelsBusy={connectionBusy}
+      {onEnter}
+      {metadataStatus}
       {onChooseModel}
       {onForgetModel}
       onDiscoverModels={onTestConnection}

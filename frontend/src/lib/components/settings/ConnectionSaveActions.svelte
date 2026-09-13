@@ -46,6 +46,6 @@
     aria-describedby={reason ? explanationID : undefined}
   >
     {#if editor.saving}<LoaderCircleIcon class="animate-spin" />{/if}
-    {editor.saving ? "Saving…" : activateFor ? "Save and set up" : "Save connection"}
+    {editor.saving ? "Saving…" : activateFor ? "Save and return" : "Save connection"}
   </Button>
 </div>

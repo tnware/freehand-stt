@@ -93,7 +93,7 @@ The accepted SQLite direction is defined in [ADR 0006](site/src/content/docs/doc
 - Preserve Unicode text.
 - Clipboard insertion must not destroy unrelated clipboard state or paste into the wrong HWND.
 - Use Wails single-instance ownership with encrypted second-instance messages. A second launch should reveal the main window rather than starting another recorder.
-- Tray Quit is the authoritative shutdown path; closing settings hides the window.
+- Tray Quit is the authoritative shutdown path; main-window close hides the task workspace. One reusable Settings window owns configuration and its inline Connections editor; its close action resolves drafts before hiding. Never open a separate native Connection Manager.
 
 ## macOS interaction requirements
 

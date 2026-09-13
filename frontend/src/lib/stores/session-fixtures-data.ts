@@ -167,6 +167,7 @@ const settings: Settings = {
   appearanceModeActive: AppearanceMode.AppearanceModeSystem,
 };
 settings.rememberedModels.defaults = {
+  [Purpose.Voice]: modelOptions(settings, Purpose.Voice),
   [Purpose.Transcription]: modelOptions(settings, Purpose.Transcription),
   [Purpose.Cleanup]: modelOptions(settings, Purpose.Cleanup),
   [Purpose.Speech]: modelOptions(settings, Purpose.Speech),
