@@ -6,8 +6,23 @@ description: Versioning, Windows and macOS artifacts, integrity, and update boun
 Freehand uses Conventional Commits and Release Please. Changes merged to `main`
 accumulate in one release pull request. That pull request updates
 `CHANGELOG.md`, `.release-please-manifest.json`, and the human version in
-`build/config.yml`. Merging it creates a draft prerelease and a `v`-prefixed
+`build/config.yml`. Merging it creates a draft release and a `v`-prefixed
 SemVer tag. Use the version in the release manifest and tag; do not infer the current version from an example.
+
+## Version policy
+
+`0.1.0` is the first non-alpha baseline. It remains a pre-1.0 SemVer version,
+not a promise of a frozen 1.0 compatibility contract. Subsequent release bumps
+follow Conventional Commits: `fix` bumps the patch, `feat` bumps the minor, and
+an explicit breaking change bumps the major. From `0.1.0`, those produce
+`0.1.1`, `0.2.0`, and `1.0.0`, respectively.
+
+Release Please uses `prerelease: false` with its `prerelease` versioning strategy.
+Despite that strategy's name, this combination graduates an existing alpha to
+its non-prerelease base version and then applies ordinary SemVer bumps to stable
+versions. There is no `release-as` override pinning future releases. Keep the
+release manifest and application version in the bot-owned release PR; changing
+`initial-version` alone does not override an existing release's version.
 
 The repository uses squash merges with the pull request title as the commit
 subject and an empty commit body. Write the **PR title** as a Conventional
@@ -27,7 +42,9 @@ The release workflow validates the tag through the same CI workflow used by PRs,
 with every workload enabled and the expected version checked before packaging.
 Only after validation succeeds does publication download the complete Windows and macOS artifacts
 from that same release run, create checksums and attestations, and make the draft
-public. It does not reuse PR artifacts or rebuild different bytes after tests.
+public as a non-prerelease and GitHub's latest release. It rejects prerelease
+tags before uploading and reads back both the published flags and latest tag.
+It does not reuse PR artifacts or rebuild different bytes after tests.
 A failed validation leaves publication blocked; rerun the failed jobs after
 diagnosing the failure rather than making the draft public manually.
 

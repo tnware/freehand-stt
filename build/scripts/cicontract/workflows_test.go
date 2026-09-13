@@ -186,7 +186,7 @@ func TestReleaseAssemblesAndAttestsCompleteAssetsBeforePublication(t *testing.T)
 	if strings.Contains(commands, "gh release delete-asset") {
 		t.Fatal("unexpected remote assets must block publication, not be deleted")
 	}
-	for _, command := range []string{"sha256sum --check --strict SHA256SUMS", "gh release download", "cmp dist/SHA256SUMS uploaded/SHA256SUMS", "--draft=false --prerelease=true --latest=false"} {
+	for _, command := range []string{"sha256sum --check --strict SHA256SUMS", "gh release download", "cmp dist/SHA256SUMS uploaded/SHA256SUMS", "--draft=false --prerelease=false --latest=true"} {
 		if !strings.Contains(commands, command) {
 			t.Errorf("missing publication guard: %s", command)
 		}

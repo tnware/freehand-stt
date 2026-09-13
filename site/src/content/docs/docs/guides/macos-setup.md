@@ -27,7 +27,7 @@ whether your Mac has an Apple chip (Apple Silicon) or an Intel processor.
 3. Double-click the verified ZIP in Finder. Move the extracted **Freehand.app**
    to **Applications** (or your account's Applications folder) before enabling
    permissions or login startup. Run the app bundle, not its internal executable.
-4. Open **Freehand** from Applications. The alpha is **ad-hoc-signed, not
+4. Open **Freehand** from Applications. The app is **ad-hoc-signed, not
    Developer ID-signed or notarized**, so Gatekeeper may block its first launch.
    If you trust the verified official download, use **System Settings → Privacy
    & Security → Open Anyway** after the blocked attempt, then confirm macOS's

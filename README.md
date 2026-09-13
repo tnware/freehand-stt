@@ -20,7 +20,7 @@ Freehand stays compact by leaving model inference and model storage on the
 speech infrastructure you choose. Download sizes vary by platform and release;
 transcription time depends on the model, hardware, network, and optional cleanup stage.
 
-[Download the latest alpha](https://github.com/tnware/freehand-stt/releases) ·
+[Download Freehand](https://github.com/tnware/freehand-stt/releases) ·
 [Get started](https://tnware.github.io/freehand-stt/docs/getting-started/) ·
 [Read the documentation](https://tnware.github.io/freehand-stt/docs/)
 
@@ -76,7 +76,7 @@ installer/portable executable or matching-architecture macOS ZIP from
 [GitHub Releases](https://github.com/tnware/freehand-stt/releases). Older releases
 may not include macOS assets; check the assets attached to the selected release.
 
-The current alpha is not Authenticode-signed, so Windows may identify its
+Windows builds are not Authenticode-signed, so Windows may identify their
 publisher as unknown. Verify manual downloads against the published
 `SHA256SUMS` file.
 

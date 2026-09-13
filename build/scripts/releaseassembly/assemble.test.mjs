@@ -5,6 +5,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 const assets = [
   ["freehand.exe", "freehand-windows-amd64.exe"],
@@ -18,7 +19,7 @@ function fixture(t) {
   const input = join(root, "bin"), output = join(root, "dist");
   mkdirSync(input);
   for (const [source] of assets) writeFileSync(join(input, source), `fixture:${source}`);
-  const run = () => spawnSync(process.execPath, [new URL("./assemble.mjs", import.meta.url).pathname, input, output], { encoding: "utf8" });
+  const run = () => spawnSync(process.execPath, [fileURLToPath(new URL("./assemble.mjs", import.meta.url)), input, output], { encoding: "utf8" });
   return { input, output, run };
 }
 test("assembles exactly four byte-preserved assets and one complete checksum manifest", (t) => {
