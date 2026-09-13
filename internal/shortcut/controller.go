@@ -14,17 +14,24 @@ type Global interface {
 	Unregister(string) error
 }
 
-type Hold interface{ Configure(string) error }
+type Hold interface {
+	Start(string) error
+	Configure(string) error
+}
 
 type Controller struct {
-	mu        sync.Mutex
-	global    Global
-	hold      Hold
-	active    config.Settings
-	toggle    func()
-	show      func()
-	hasState  bool
-	suspended bool
+	mu     sync.Mutex
+	global Global
+	hold   Hold
+	active config.Settings
+	// Bound globals are separate from saved preferences: startup may be degraded.
+	boundToggle string
+	boundShow   string
+	boundHold   string
+	toggle      func()
+	show        func()
+	hasState    bool
+	suspended   bool
 }
 
 func New(global Global, hold Hold, toggle, show func()) *Controller {
@@ -48,24 +55,70 @@ func normalize(settings config.Settings) (config.Settings, error) {
 	return settings, nil
 }
 
-// Start tolerates an unavailable optional hold hook without dropping independent
-// global bindings or forgetting the saved preference. Explicit changes stay atomic.
+// Start tolerates unavailable bindings without dropping independent shortcuts
+// or forgetting saved preferences. Explicit changes stay atomic.
 func (c *Controller) Start(next config.Settings) error     { return c.configure(next, true) }
 func (c *Controller) Configure(next config.Settings) error { return c.configure(next, false) }
 func (c *Controller) configure(next config.Settings, startup bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.configureLocked(next, startup)
+}
+
+type bindings struct {
+	toggle, show, hold string
+}
+
+func (c *Controller) bound() bindings {
+	return bindings{c.boundToggle, c.boundShow, c.boundHold}
+}
+
+// ConfigureWithRollback captures preferences and effective bindings atomically
+// with applying a change. The settings transaction owns the returned rollback;
+// restoring it never retries an unavailable saved startup chord.
+func (c *Controller) ConfigureWithRollback(next config.Settings) (func() error, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.hasState {
+		return nil, errors.New("shortcuts are not configured yet")
+	}
+	previous, effective := c.active, c.bound()
+	if err := c.configureLocked(next, false); err != nil {
+		return nil, err
+	}
+	return func() error {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return c.applyLocked(previous, effective, false)
+	}, nil
+}
+
+func (c *Controller) configureLocked(next config.Settings, startup bool) error {
 	var err error
 	next, err = normalize(next)
 	if err != nil {
 		return fmt.Errorf("shortcut configuration is invalid: %w", err)
 	}
+	// An unchanged preference must not retry an unavailable startup binding.
+	target := c.bound()
+	if !c.hasState || next.ToggleShortcut != c.active.ToggleShortcut {
+		target.toggle = next.ToggleShortcut
+	}
+	if !c.hasState || next.ShowShortcut != c.active.ShowShortcut {
+		target.show = next.ShowShortcut
+	}
+	if !c.hasState || next.HoldShortcut != c.active.HoldShortcut {
+		target.hold = next.HoldShortcut
+	}
+	return c.applyLocked(next, target, startup)
+}
+
+func (c *Controller) applyLocked(next config.Settings, target bindings, startup bool) error {
 	if c.suspended {
 		return errors.New("shortcuts cannot be changed while shortcut capture is active")
 	}
-	old := c.active
-	if c.hasState && ((next.ToggleShortcut == old.ShowShortcut && next.ToggleShortcut != old.ToggleShortcut) ||
-		(next.ShowShortcut == old.ToggleShortcut && next.ShowShortcut != old.ShowShortcut)) {
+	if c.hasState && ((target.toggle != "" && target.toggle == c.boundShow && target.toggle != c.boundToggle) ||
+		(target.show != "" && target.show == c.boundToggle && target.show != c.boundShow)) {
 		return errors.New("toggle/show shortcut swap cannot be applied atomically; save an unused intermediate shortcut first")
 	}
 	type binding struct {
@@ -75,35 +128,48 @@ func (c *Controller) configure(next config.Settings, startup bool) error {
 	}
 	newBindings := []binding{}
 	oldBindings := []binding{}
-	if !c.hasState || next.ToggleShortcut != old.ToggleShortcut {
-		newBindings = append(newBindings, binding{hotkey.ToggleRecording, next.ToggleShortcut, c.toggle})
-		if c.hasState {
-			oldBindings = append(oldBindings, binding{hotkey.ToggleRecording, old.ToggleShortcut, c.toggle})
+	if target.toggle != c.boundToggle {
+		if target.toggle != "" {
+			newBindings = append(newBindings, binding{hotkey.ToggleRecording, target.toggle, c.toggle})
+		}
+		if c.boundToggle != "" {
+			oldBindings = append(oldBindings, binding{hotkey.ToggleRecording, c.boundToggle, c.toggle})
 		}
 	}
-	if !c.hasState || next.ShowShortcut != old.ShowShortcut {
-		if next.ShowShortcut != "" {
-			newBindings = append(newBindings, binding{hotkey.ShowFreehand, next.ShowShortcut, c.show})
+	if target.show != c.boundShow {
+		if target.show != "" {
+			newBindings = append(newBindings, binding{hotkey.ShowFreehand, target.show, c.show})
 		}
 		if c.hasState {
-			if old.ShowShortcut != "" {
-				oldBindings = append(oldBindings, binding{hotkey.ShowFreehand, old.ShowShortcut, c.show})
+			if c.boundShow != "" {
+				oldBindings = append(oldBindings, binding{hotkey.ShowFreehand, c.boundShow, c.show})
 			}
 		}
 	}
 	registered := []binding{}
+	var startupErr error
 	for _, item := range newBindings {
 		if err := c.global.Register(item.value, item.cb); err != nil {
+			err = fmt.Errorf("%s shortcut %q was rejected by the operating system; it may be reserved or already used by another application. Record a different shortcut or clear it in Settings > Shortcuts: %w", hotkey.ActionLabel(item.action), item.value, err)
+			if startup && !c.hasState {
+				startupErr = errors.Join(startupErr, err)
+				continue
+			}
 			for i := len(registered) - 1; i >= 0; i-- {
 				_ = c.global.Unregister(registered[i].value)
 			}
-			return fmt.Errorf("%s shortcut %q was rejected by the operating system; it may be reserved or already used by another application: %w", hotkey.ActionLabel(item.action), item.value, err)
+			return err
 		}
 		registered = append(registered, item)
 	}
 	var holdErr error
-	if c.hold != nil && (!c.hasState || next.HoldShortcut != old.HoldShortcut) {
-		if err := c.hold.Configure(next.HoldShortcut); err != nil {
+	boundHold := c.boundHold
+	if c.hold != nil && (!c.hasState || target.hold != c.boundHold || next.HoldShortcut != c.active.HoldShortcut) {
+		apply := c.hold.Configure
+		if !c.hasState {
+			apply = c.hold.Start
+		}
+		if err := apply(target.hold); err != nil {
 			holdErr = fmt.Errorf("hold-to-talk is unavailable: %w", err)
 			if !startup || c.hasState {
 				for i := len(registered) - 1; i >= 0; i-- {
@@ -111,6 +177,8 @@ func (c *Controller) configure(next config.Settings, startup bool) error {
 				}
 				return holdErr
 			}
+		} else {
+			boundHold = target.hold
 		}
 	}
 	for _, item := range oldBindings {
@@ -122,14 +190,29 @@ func (c *Controller) configure(next config.Settings, startup bool) error {
 				_ = c.global.Unregister(registered[i].value)
 			}
 			if c.hold != nil {
-				_ = c.hold.Configure(old.HoldShortcut)
+				_ = c.hold.Configure(c.boundHold)
 			}
 			return fmt.Errorf("old shortcut could not be released; previous bindings were restored: %w", err)
 		}
 	}
+	for _, item := range oldBindings {
+		if item.action == hotkey.ToggleRecording {
+			c.boundToggle = ""
+		} else {
+			c.boundShow = ""
+		}
+	}
+	for _, item := range registered {
+		if item.action == hotkey.ToggleRecording {
+			c.boundToggle = item.value
+		} else {
+			c.boundShow = item.value
+		}
+	}
 	c.active = next
+	c.boundHold = boundHold
 	c.hasState = true
-	return holdErr
+	return errors.Join(startupErr, holdErr)
 }
 
 // RetryHold is explicit, serialized with capture/settings, and never changes
@@ -145,7 +228,11 @@ func (c *Controller) RetryHold() error {
 	if c.hold == nil {
 		return errors.New("hold-to-talk is unavailable")
 	}
-	return c.hold.Configure(c.active.HoldShortcut)
+	if err := c.hold.Configure(c.active.HoldShortcut); err != nil {
+		return err
+	}
+	c.boundHold = c.active.HoldShortcut
+	return nil
 }
 
 func (c *Controller) Suspend() error {
@@ -161,15 +248,19 @@ func (c *Controller) Suspend() error {
 		action hotkey.ShortcutAction
 		value  string
 		cb     func()
-	}{{hotkey.ToggleRecording, c.active.ToggleShortcut, c.toggle}, {hotkey.ShowFreehand, c.active.ShowShortcut, c.show}}
-	if bindings[1].value == "" {
-		bindings = bindings[:1]
-	}
+	}{{hotkey.ToggleRecording, c.boundToggle, c.toggle}, {hotkey.ShowFreehand, c.boundShow, c.show}}
 	unregistered := 0
 	for index, binding := range bindings {
+		if binding.value == "" {
+			unregistered++
+			continue
+		}
 		if err := c.global.Unregister(binding.value); err != nil {
 			var rollback error
 			for prior := index - 1; prior >= 0; prior-- {
+				if bindings[prior].value == "" {
+					continue
+				}
 				rollback = errors.Join(rollback, c.global.Register(bindings[prior].value, bindings[prior].cb))
 			}
 			return errors.Join(fmt.Errorf("shortcut capture could not suspend %q: %w", binding.value, err), rollback)
@@ -180,6 +271,9 @@ func (c *Controller) Suspend() error {
 		if err := c.hold.Configure(""); err != nil {
 			var rollback error
 			for _, binding := range bindings {
+				if binding.value == "" {
+					continue
+				}
 				rollback = errors.Join(rollback, c.global.Register(binding.value, binding.cb))
 			}
 			return errors.Join(fmt.Errorf("hold-to-talk could not be suspended for shortcut capture: %w", err), rollback)
@@ -201,23 +295,28 @@ func (c *Controller) Resume() error {
 		action hotkey.ShortcutAction
 		value  string
 		cb     func()
-	}{{hotkey.ToggleRecording, c.active.ToggleShortcut, c.toggle}, {hotkey.ShowFreehand, c.active.ShowShortcut, c.show}}
-	if bindings[1].value == "" {
-		bindings = bindings[:1]
-	}
+	}{{hotkey.ToggleRecording, c.boundToggle, c.toggle}, {hotkey.ShowFreehand, c.boundShow, c.show}}
+
 	// Capture has ended even if held keys or lost permission prevent the optional
 	// hook from rearming. Restore the independent globals before reporting that.
 	var holdErr error
 	if c.hold != nil {
-		if err := c.hold.Configure(c.active.HoldShortcut); err != nil {
+		if err := c.hold.Configure(c.boundHold); err != nil {
 			holdErr = fmt.Errorf("hold-to-talk could not be restored after shortcut capture: %w", err)
 		}
 	}
 	registered := 0
 	for index, binding := range bindings {
+		if binding.value == "" {
+			registered++
+			continue
+		}
 		if err := c.global.Register(binding.value, binding.cb); err != nil {
 			var rollback error
 			for prior := index - 1; prior >= 0; prior-- {
+				if bindings[prior].value == "" {
+					continue
+				}
 				rollback = errors.Join(rollback, c.global.Unregister(bindings[prior].value))
 			}
 			if c.hold != nil {
@@ -229,6 +328,9 @@ func (c *Controller) Resume() error {
 	}
 	if registered == len(bindings) {
 		c.suspended = false
+		if holdErr != nil {
+			c.boundHold = ""
+		}
 	}
 	return holdErr
 }

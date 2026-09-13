@@ -269,6 +269,25 @@ Focused operations use generated request DTOs. A connection probe receives only 
 
 Shortcut settings follow the same boundary. `internal/hotkey` owns one bounded action matrix for toggle recording, Show Freehand, and hold to talk. `internal/input` exposes that matrix as generated policy metadata, accepts one action-specific capture request, and emits bounded normalized chord progress while the native hook is active. The renderer never selects native validation flags or maintains a second key grammar. Expected capture rejections return structured categories; a cross-process global conflict remains knowable only when the transactional settings save asks Windows to register the replacement.
 
+All shortcut assignments are optional, including toggle recording. Empty values
+survive settings transactions and SQLite reload without default substitution.
+`internal/shortcut` separates saved preferences from successfully bound chords:
+startup reports conflicts but preserves independent registrations and a usable
+capture guard. Capture suspends/restores only those bound chords, not rejected
+startup preferences. Explicit saves retain register-before-unregister rollback.
+`ConfigureWithRollback` captures the controller's saved preferences and effective
+toggle/show/hold bindings together before applying a change. Its returned rollback
+belongs to the single settings transaction, including configuration recovery: a
+later startup, credential, or persistence failure attempts to restore that exact
+snapshot, not register previously rejected saved chords. Native rollback failures
+remain part of the reported save error. The controller keeps no implicit
+previous-settings history and substitutes no fallback.
+The controller calls the hold adapter's `Start` for initialization and `Configure`
+for subsequent changes, including when the initial assignment is empty; the
+Windows reducer emits no edges for an empty chord.
+Voice readiness does not require a global shortcut. Recording admission and
+focus-safe insertion remain unchanged.
+
 Custom health targets retain the base-relative path-joining contract, including
 the leading slash in saved values. Settings help and validation describe that
 contract; no configuration migration or fallback model probe is performed.

@@ -9,6 +9,7 @@ import (
 
 type reviewHold struct{ err error }
 
+func (h *reviewHold) Start(value string) error { return h.Configure(value) }
 func (h *reviewHold) Configure(value string) error {
 	if value != "" {
 		return h.err

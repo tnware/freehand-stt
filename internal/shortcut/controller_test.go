@@ -29,6 +29,7 @@ func (f *globalFake) Unregister(v string) error {
 
 type holdFake struct{ value string }
 
+func (h *holdFake) Start(v string) error     { return h.Configure(v) }
 func (h *holdFake) Configure(v string) error { h.value = v; return nil }
 
 func TestReplacementRegistersBeforeUnregisterAndPreservesOnConflict(t *testing.T) {
@@ -194,6 +195,7 @@ type failingHold struct {
 	calls int
 }
 
+func (h *failingHold) Start(v string) error { return h.Configure(v) }
 func (h *failingHold) Configure(v string) error {
 	h.calls++
 	if h.fail && v != "" {

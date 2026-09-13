@@ -1,4 +1,85 @@
+import { readFileSync } from "node:fs";
 import { test, expect } from "./fixtures";
+
+test("toggle can be cleared, saved unassigned, and explicitly replaced", async ({
+  page,
+  saves,
+}) => {
+  const bindings = readFileSync(
+    new URL(
+      "../../bindings/github.com/tnware/freehand-stt/internal/input/service.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const captureID = Number(
+    bindings.match(/function CaptureShortcut\([^]*?ByID\((\d+)/)![1],
+  );
+  let captures = 0;
+  await page.route("**/wails/runtime", async (route) => {
+    const request = route.request().postDataJSON();
+    expect(request.args.methodID).toBe(captureID);
+    expect(request.args.args[0]).toMatchObject({
+      action: "toggle",
+      assignments: { toggleRecording: "" },
+    });
+    captures++;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        outcome: "captured",
+        shortcut: "F14",
+        changed: true,
+      }),
+    });
+  });
+  await page.goto("/tests/browser/app/?hold-degraded&general");
+  await page.locator('[data-settings-section="shortcuts"]').click();
+  const toggle = page.getByRole("group", {
+    name: "Toggle recording",
+    exact: true,
+  });
+  await expect(toggle.getByText("Optional", { exact: true })).toBeVisible();
+  await toggle
+    .getByRole("button", { name: "Clear Toggle recording shortcut" })
+    .click();
+  await expect(
+    toggle.getByText("Not configured", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await saves.complete(await saves.waitForStart(), "success");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.testConnectionWindows.settings().toggleShortcut,
+      ),
+    )
+    .toBe("");
+  await expect(
+    toggle.getByText("Not configured", { exact: true }),
+  ).toBeVisible();
+  expect(captures).toBe(0);
+
+  const record = toggle.getByRole("button", { name: "Record", exact: true });
+  await expect(record).toBeEnabled();
+  await record.click();
+  await expect(toggle.getByText("F14", { exact: true })).toBeVisible();
+  expect(captures).toBe(1);
+  expect(
+    await page.evaluate(
+      () => window.testConnectionWindows.settings().toggleShortcut,
+    ),
+  ).toBe("");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await saves.complete(await saves.waitForStart(), "success");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.testConnectionWindows.settings().toggleShortcut,
+      ),
+    )
+    .toBe("F14");
+});
 
 test("unavailable native capture still permits Clear and explicit hold retry", async ({
   page,

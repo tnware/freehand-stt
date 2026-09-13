@@ -135,7 +135,7 @@ type Service struct {
 	startup                Startup
 	hold                   HoldInfo
 	holdRetry              func() error
-	shortcutChanged        func(config.Settings) error
+	shortcutChanged        func(config.Settings) (func() error, error)
 	overlaySettingsChanged func(config.Settings)
 	historyEnabledChanged  func(bool)
 	fileSettingsChanged    func(config.Settings)
@@ -147,7 +147,10 @@ type Service struct {
 	closed                 atomic.Bool
 }
 
-func NewService(st ConfigStore, cfg config.Settings, k credential.Store, processKeys credential.Store, start Startup, hold HoldInfo, shortcutChanged func(config.Settings) error, overlaySettingsChanged func(config.Settings), historyEnabledChanged func(bool), fileSettingsChanged func(config.Settings), settingsChanged func(SettingsDTO), logger *slog.Logger, options ...Option) *Service {
+// shortcutChanged returns the rollback for its pre-change native snapshot, even
+// on failure if its own partial changes require recovery. Only this settings
+// transaction invokes it; saved preferences are not a native binding snapshot.
+func NewService(st ConfigStore, cfg config.Settings, k credential.Store, processKeys credential.Store, start Startup, hold HoldInfo, shortcutChanged func(config.Settings) (func() error, error), overlaySettingsChanged func(config.Settings), historyEnabledChanged func(bool), fileSettingsChanged func(config.Settings), settingsChanged func(SettingsDTO), logger *slog.Logger, options ...Option) *Service {
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
@@ -624,14 +627,11 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 
 		old = s.current()
 		shortcutsChanged := old.ToggleShortcut != v.ToggleShortcut || old.ShowShortcut != v.ShowShortcut || old.HoldShortcut != v.HoldShortcut
-		rollbackShortcuts := rollbackStep{name: "shortcuts", run: func() error {
-			if shortcutsChanged && s.shortcutChanged != nil {
-				return s.shortcutChanged(old)
-			}
-			return nil
-		}}
+		rollbackShortcuts := rollbackStep{name: "shortcuts"}
 		if shortcutsChanged && s.shortcutChanged != nil {
-			if shortcutErr := s.shortcutChanged(v); shortcutErr != nil {
+			var shortcutErr error
+			rollbackShortcuts.run, shortcutErr = s.shortcutChanged(v)
+			if shortcutErr != nil {
 				return SettingsDTO{}, rollback(fmt.Errorf("shortcuts were not changed: %w", shortcutErr), rollbackShortcuts)
 			}
 		}
@@ -874,14 +874,11 @@ func (s *Service) applyRecoveredSettingsLocked(next config.Settings, persist boo
 	}
 	old := s.current()
 	// Reconcile native state even when a failed rollback left the same runtime snapshot.
-	rollbackShortcuts := rollbackStep{name: "shortcuts", run: func() error {
-		if s.shortcutChanged != nil {
-			return s.shortcutChanged(old)
-		}
-		return nil
-	}}
+	rollbackShortcuts := rollbackStep{name: "shortcuts"}
 	if s.shortcutChanged != nil {
-		if err := s.shortcutChanged(next); err != nil {
+		var err error
+		rollbackShortcuts.run, err = s.shortcutChanged(next)
+		if err != nil {
 			return SettingsDTO{}, config.Settings{}, rollback(fmt.Errorf("shortcuts were not changed: %w", err), rollbackShortcuts)
 		}
 	}

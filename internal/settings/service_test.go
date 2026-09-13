@@ -122,7 +122,10 @@ func transactionalService(failSave bool) (*Service, *[]string, *startupFake, *ke
 	service := NewService(
 		&storeFake{log: log, fail: failSave}, config.Default(), keys, processingKeys,
 		startup, func() (bool, string) { return true, "" },
-		func(config.Settings) error { *log = append(*log, "shortcuts:configure"); return nil },
+		func(config.Settings) (func() error, error) {
+			*log = append(*log, "shortcuts:configure")
+			return func() error { *log = append(*log, "shortcuts:configure"); return nil }, nil
+		},
 		nil, nil, nil, nil, nil,
 	)
 	return service, log, startup, keys
@@ -156,10 +159,14 @@ func newTransactionHarness(store ConfigStore) *transactionHarness {
 	h.service = NewService(
 		store, config.Default(), h.keys, h.processingKeys,
 		h.startup, func() (bool, string) { return true, "" },
-		func(config.Settings) error {
+		func(config.Settings) (func() error, error) {
 			h.shortcutCalls++
 			*log = append(*log, "shortcuts:configure")
-			return h.shortcutFailAt[h.shortcutCalls]
+			return func() error {
+				h.shortcutCalls++
+				*log = append(*log, "shortcuts:configure")
+				return h.shortcutFailAt[h.shortcutCalls]
+			}, h.shortcutFailAt[h.shortcutCalls]
 		},
 		nil, nil, nil, nil, nil,
 		WithTextToSpeechCredential(h.ttsKeys),

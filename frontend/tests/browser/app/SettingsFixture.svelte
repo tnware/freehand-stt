@@ -49,9 +49,16 @@
     current.holdShortcut = "F13";
     current.holdAvailable = false;
     current.holdAvailabilityReason = "Keyboard event tap stopped.";
-    shortcutCapture.policies = [ShortcutAction.ToggleRecording, ShortcutAction.ShowFreehand, ShortcutAction.HoldToTalk].map(action => ({
-      action, required: action === ShortcutAction.ToggleRecording,
-      modifiedPrimaryGroups: [], dedicatedPrimaryGroups: [], modifierOnlyMinimum: 0,
+    shortcutCapture.policies = [
+      ShortcutAction.ToggleRecording,
+      ShortcutAction.ShowFreehand,
+      ShortcutAction.HoldToTalk,
+    ].map((action) => ({
+      action,
+      required: false,
+      modifiedPrimaryGroups: [],
+      dedicatedPrimaryGroups: [],
+      modifierOnlyMinimum: 0,
       externalAvailabilityKnown: false,
     }));
   }

@@ -5,6 +5,29 @@ description: Deterministic, integration, and native acceptance responsibilities.
 
 ## Shortcut recovery regression checks
 
+The controller and input-service tests cover unavailable startup toggle/show
+bindings, preservation of independent registrations, replacement capture before
+and after clearing, and explicit hold-hook initialization despite a global
+conflict. An unavailable startup hold preference must not block capture of a
+replacement toggle. Empty chords never reach global registration or emit hold
+edges. Settings and real SQLite reopen tests cover saving an empty toggle without
+restoring its default; frontend readiness treats unassignment as nonblocking.
+Real controller/settings-service integration tests inject persistence failure
+after replacement or Clear has already changed native bindings. They assert the
+complete prior settings snapshot, persisted settings, startup preference, effective
+globals and hold assignment survive, no rejected startup chord is retried, and no
+failed draft is published. Degraded toggle, degraded hold, and fully bound Clear
+cases also exercise capture after rollback and a subsequent successful save.
+Hold lifecycle coverage starts with an empty assignment, then assigns a chord and
+captures again, asserting exactly one `Start` and subsequent `Configure` use.
+
+On Windows, additionally exercise a real startup conflict, **Clear → Save**,
+restart with the toggle unassigned, and **Record → Save** with an unused chord.
+Check hold press/release separately, including that clearing hold stops modifier
+keys from starting recording. On macOS repeat optional-toggle persistence and
+capture recovery in a packaged app with the required permissions. Deterministic
+fixtures do not establish OS registration ownership or cross-platform acceptance.
+
 Run `go test -race ./internal/shortcut ./internal/settings ./internal/input ./internal/platform ./internal/app`
 and `npx playwright test --config shortcut-recovery.config.ts` from `frontend`
 (for the browser command only). The browser fixture uses the real generated retry

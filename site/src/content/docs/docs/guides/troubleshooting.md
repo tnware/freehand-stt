@@ -27,7 +27,7 @@ or **Text to speech** without finishing dictation setup.
 
 | Task | What must be ready |
 | --- | --- |
-| Voice | STT connection and model, authentication if required, microphone, recording shortcut, and the initial metadata connection check |
+| Voice | STT connection and model, authentication if required, microphone, and the initial metadata connection check; a recording shortcut is optional |
 | Audio file | STT connection and model, authentication if required, and a supported file; no microphone or recording shortcut |
 | Text to speech | Its own connection, model and voice ID, authentication if required, and **Enable text to speech**; no STT connection required |
 
@@ -163,6 +163,11 @@ condition, then retry deliberately.
 - Check the shortcut shown under **Settings → Shortcuts**. A conflicting global
   shortcut is rejected when settings are saved, leaving the previous working
   shortcut in place.
+- If the saved shortcut was already unavailable at startup, record a replacement
+  or choose **Clear** and save it unassigned. There is no automatic fallback key,
+  and an unavailable startup binding does not block replacement capture. Use the
+  on-screen recording controls while unassigned; copy the result if the intended
+  destination was not focused when recording began.
 - Finish or cancel active audio-file transcription before starting a recording.
 - Recording normally stops speech playback automatically before opening the
   microphone. If playback cannot be stopped, capture does not start. Stop

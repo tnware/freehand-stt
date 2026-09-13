@@ -131,9 +131,9 @@ export function appReadiness(
       label: "Recording shortcut",
       detail: shortcutConfigured
         ? settings.toggleShortcut
-        : "Choose a global recording shortcut.",
-      status: shortcutConfigured ? "complete" : "attention",
-      blocking: !shortcutConfigured,
+        : "Not assigned. Use Start recording in Freehand, or record a shortcut in Settings.",
+      status: "complete",
+      blocking: false,
       settingsSection: "shortcuts",
     },
     {

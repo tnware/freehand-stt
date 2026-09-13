@@ -514,12 +514,12 @@ func (a *App) publishSettings(settings settingsservice.SettingsDTO) {
 	}
 }
 
-// applyShortcuts re-registers global shortcuts after a settings save.
-func (a *App) applyShortcuts(settings config.Settings) error {
+// applyShortcuts gives the settings transaction an exact native rollback.
+func (a *App) applyShortcuts(settings config.Settings) (func() error, error) {
 	if a.shortcuts == nil {
-		return nil
+		return nil, nil
 	}
-	return a.shortcuts.Configure(settings)
+	return a.shortcuts.ConfigureWithRollback(settings)
 }
 
 // Suspend and Resume implement input.ShortcutCaptureGuard. Recording a new
