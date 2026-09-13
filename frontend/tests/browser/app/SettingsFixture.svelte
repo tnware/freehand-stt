@@ -1,4 +1,24 @@
 <script lang="ts">
+  import { setContext } from "svelte";
+  import {
+    NATIVE_PERMISSION_SERVICES,
+    type NativePermissionServices,
+  } from "$lib/stores/nativePermissions.svelte";
+  import type { PermissionStatus } from "$bindings/input";
+  let permissionStatus: PermissionStatus = {
+    required: true,
+    microphone: "not-determined",
+    accessibility: false,
+    keyboard: false,
+  };
+  setContext<NativePermissionServices>(NATIVE_PERMISSION_SERVICES, {
+    NativePermissions: async () => ({ ...permissionStatus }),
+    RequestPermission: async () => {
+      permissionStatus = { ...permissionStatus, microphone: "denied" };
+      return { ...permissionStatus };
+    },
+    OpenPermissionSettings: async () => {},
+  });
   import { configurePickerFixture } from "./picker-data";
   import { CancellablePromise } from "@wailsio/runtime";
   import { Action, Purpose } from "$bindings/savedconnection";
@@ -16,8 +36,34 @@
   import SettingsScreen from "$lib/components/settings/SettingsScreen.svelte";
   import type { SettingsSectionID } from "$lib/navigation";
   import { controlledSaves } from "./save-control";
+  import { installConnectionWindows } from "./connection-window-bridge";
 
+  import { shortcutCapture } from "$lib/stores/shortcutCapture.svelte";
+  import { ShortcutAction } from "$bindings/hotkey";
   let current = structuredClone(settings);
+  if (new URLSearchParams(location.search).has("hold-degraded")) {
+    current.holdShortcut = "F13";
+    current.holdAvailable = false;
+    current.holdAvailabilityReason = "Keyboard event tap stopped.";
+    shortcutCapture.policies = [ShortcutAction.ToggleRecording, ShortcutAction.ShowFreehand, ShortcutAction.HoldToTalk].map(action => ({
+      action, required: action === ShortcutAction.ToggleRecording,
+      modifiedPrimaryGroups: [], dedicatedPrimaryGroups: [], modifierOnlyMinimum: 0,
+      externalAvailabilityKnown: false,
+    }));
+  }
+  let retries = 0;
+  if (!new URLSearchParams(location.search).has("hold-binding")) setContext("hold-shortcut-retry", async () => {
+    retries++;
+    if (retries === 1) throw new Error("Secure Input is still active.");
+    current.holdAvailable = true;
+    current.holdAvailabilityReason = "Hold-to-talk is ready.";
+    return structuredClone(current);
+  });
+  if (new URLSearchParams(location.search).get("platform") === "darwin") {
+    current.platform = "darwin";
+    current.useMica = true;
+    current.micaActive = true;
+  }
   current.savedConnections = {
     entries: [
       {
@@ -97,7 +143,10 @@
             hasCredential: false,
           },
         ],
-        selected: { ...current.savedConnections.selected, [Purpose.Transcription]: id },
+        selected: {
+          ...current.savedConnections.selected,
+          ...(change.activateFor ? { [change.activateFor]: id } : {}),
+        },
       };
     }
     current = structuredClone(next);
@@ -135,6 +184,14 @@
 
   window.testSaves = saves.control;
   let active = $state<SettingsSectionID>("server");
+  installConnectionWindows({
+    settings: () => structuredClone(current),
+    save: (request) => saves.save(structuredClone(request)),
+    apply: (saved) => session.editor.applySettingsSnapshot(saved),
+    select: (section) => {
+      active = section as SettingsSectionID;
+    },
+  });
 </script>
 
 <div

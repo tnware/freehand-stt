@@ -266,10 +266,25 @@ test("the full-width track follows irregular playback updates before and after s
   await expect(slider).toHaveAttribute("aria-valuenow", String(selected + 100));
   await advance.click();
   await expect(slider).toHaveAttribute("aria-valuenow", String(selected + 300));
-  const fillBox = (await fill.boundingBox())!;
-  const thumbBox = (await slider.boundingBox())!;
-  expect(fillBox.width / trackBox.width).toBeGreaterThan(0.74);
-  expect(fillBox.width / trackBox.width).toBeLessThan(0.78);
+  const { fillBox, thumbBox, currentTrackBox } = await bar.evaluate(async (element) => {
+    const range = element.querySelector('[data-slot="slider-range"]')!;
+    const thumb = element.querySelector('[data-slot="slider-thumb"]')!;
+    const track = element.querySelector('[data-slot="slider-track"]')!;
+    // aria-valuenow updates before the range's CSS transition finishes. Even
+    // reduced motion leaves a 0.01ms transition pending until a rendering tick.
+    // Wait for presentation to settle, then read all geometry in one DOM turn;
+    // separate boundingBox calls can observe different animation frames.
+    await Promise.all(
+      [...range.getAnimations(), ...thumb.getAnimations()].map((animation) => animation.finished),
+    );
+    return {
+      fillBox: range.getBoundingClientRect().toJSON(),
+      thumbBox: thumb.getBoundingClientRect().toJSON(),
+      currentTrackBox: track.getBoundingClientRect().toJSON(),
+    };
+  });
+  expect(fillBox.width / currentTrackBox.width).toBeGreaterThan(0.74);
+  expect(fillBox.width / currentTrackBox.width).toBeLessThan(0.78);
   expect(Math.abs(fillBox.x + fillBox.width - thumbBox.x - thumbBox.width / 2)).toBeLessThan(2);
   await expect(
     page.getByText("Speech requests: 1; seek requests: 1", { exact: true }),

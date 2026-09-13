@@ -22,7 +22,10 @@ for (const width of [560, 1156]) {
   }) => {
     await page.setViewportSize({ width, height: 560 });
     await page.goto("/tests/browser/app/?view=transcript");
-    const text = page.getByRole("textbox", { name: "Live transcript", exact: true });
+    const text = page.getByRole("textbox", {
+      name: "Live transcript",
+      exact: true,
+    });
     const scroll = page.getByRole("region", { name: "Current result" }).locator(".overflow-y-auto");
     await text.focus();
     await text.press("Home");
@@ -53,12 +56,15 @@ for (const width of [560, 1156]) {
         { once: true },
       ),
     );
-    await text.press("Control+c");
+    await text.press("ControlOrMeta+c");
     await expect(page.locator("html")).toHaveAttribute("data-copied-excerpt", excerpt);
     await page
       .getByRole("button", { name: "Finalize", exact: true })
       .evaluate((node: HTMLButtonElement) => node.click());
-    const final = page.getByRole("textbox", { name: "Current transcript", exact: true });
+    const final = page.getByRole("textbox", {
+      name: "Current transcript",
+      exact: true,
+    });
     await expect(final).toHaveText(before!);
     expect(await selected(page)).toBe(excerpt);
     await page.evaluate(() => getSelection()?.removeAllRanges());
@@ -107,10 +113,19 @@ for (const width of [560, 1156]) {
     await page.evaluate(() => getSelection()?.removeAllRanges());
     await expect(text).toContainText("Cleaned.");
     await row
-      .getByRole("button", { name: "Compare raw and cleaned transcripts", exact: true })
+      .getByRole("button", {
+        name: "Compare raw and cleaned transcripts",
+        exact: true,
+      })
       .click();
-    const raw = row.getByRole("textbox", { name: "Raw transcript text", exact: true });
-    const cleaned = row.getByRole("textbox", { name: "Cleaned transcript text", exact: true });
+    const raw = row.getByRole("textbox", {
+      name: "Raw transcript text",
+      exact: true,
+    });
+    const cleaned = row.getByRole("textbox", {
+      name: "Cleaned transcript text",
+      exact: true,
+    });
     await raw.focus();
     await raw.press("Control+a");
     expect(await selected(page)).toBe(original);
