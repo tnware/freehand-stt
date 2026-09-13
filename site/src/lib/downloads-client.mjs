@@ -16,12 +16,8 @@ export async function enhanceDownloads() {
   if (!region) return;
   document.querySelector('[data-platform-message]').textContent = recommendation.message;
   for (const key of recommendation.choices) {
-    const link = document.createElement('a');
-    link.className = 'release-row';
-    link.dataset.asset = key;
-    link.href = RELEASES_URL;
-    link.textContent = `${ASSETS[key].label} — Check GitHub availability`;
-    region.append(link);
+    const link = region.querySelector(`[data-asset="${key}"]`);
+    if (link) link.hidden = false;
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
@@ -37,7 +33,8 @@ export async function enhanceDownloads() {
   for (const link of document.querySelectorAll('[data-asset]')) {
     const key = link.dataset.asset;
     link.href = release?.assets[key] ?? release?.url ?? RELEASES_URL;
-    link.textContent = `${ASSETS[key].label} — ${release?.assets[key] ? 'Download' : release ? 'Not in this release · View release' : 'Check GitHub availability'}`;
+    const label = link.querySelector('[data-asset-label]') ?? link;
+    label.textContent = `${ASSETS[key].label} — ${release?.assets[key] ? 'Download' : release ? 'Not in this release · View release' : 'Check GitHub availability'}`;
   }
   const primary = document.querySelector('[data-primary-download]');
   const key = recommendation.primary;

@@ -1,0 +1,18 @@
+---
+import type { Support } from "../data/backends";
+interface Props { status: Support }
+const { status } = Astro.props;
+const label = status === "available" ? "Supported" : status === "planned" ? "Planned" : "Not supported";
+---
+<span class:list={["support-indicator", status]} title={label}>
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {status === "available" ? <><circle cx="12" cy="12" r="10" class="support-ring" /><path d="m7.5 12 3 3 6-6" /></> : status === "planned" ? <><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></> : <path d="M8 12h8" />}
+  </svg>
+  <span class="sr-only">{label}</span>
+</span>
+<style>
+  .support-indicator { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; color: var(--muted); }
+  .available { color: var(--ink); }
+  .support-ring { fill: rgb(255 255 255 / 4%); stroke: rgb(255 255 255 / 18%); }
+  .none { color: #777777; }
+</style>

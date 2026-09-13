@@ -106,6 +106,10 @@ The second build/run pair exercises the production GitHub Pages base path.
 Keep the preview environment consistent with the build. Browser fixtures cover
 Windows, both known Mac architectures, ambiguous Mac architecture, unsupported
 platforms, partial/missing/malformed releases, API failure/timeout and no JavaScript.
+Checks also cover platform grouping, decorative icons surviving release-label
+updates, narrow download layouts, and accessible capability indicators in the
+backend tables. Visually review both Mac and Windows recommendation rows and
+confirm the neutral glass surfaces remain faint with readable text.
 All supported alternatives remain visible. Synthetic release assets establish
 selection behavior, not public availability or native application acceptance.
 The test preview uses its own port and bypasses Astro's development preview lock.

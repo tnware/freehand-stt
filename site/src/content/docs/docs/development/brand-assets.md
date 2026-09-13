@@ -51,6 +51,27 @@ mark. The current release path is NSIS. Wails v3.0.0-beta.16's experimental
 project-asset input, so it is not treated as a shippable branded package until
 that packaging path is replaced or upstream gains an explicit asset contract.
 
+## Site palette
+
+Product-site controls, cards, borders, supporting text, and links use neutral
+charcoal, gray, and white tokens in `site/src/styles/product.css`. Large panels
+use faint translucent charcoal with backdrop blur and low-opacity white borders,
+not blue-tinted fills. Starlight's light and dark palettes live in
+`site/src/styles/docs.css` and follow the same neutral treatment.
+
+The page background is neutral near-black. Blue is reserved for the Freehand
+mark, decorative particle effects, and faithful app demonstrations; provider
+artwork retains its original colors.
+Do not reuse those colors as site UI accents. Preserve visible focus rings,
+underlined prose links, and readable contrast in both documentation themes.
+
+The download page groups builds under monochrome Windows and Apple platform
+marks from Bootstrap Icons v1.13.1. `PlatformIcon.astro` records the source;
+`site/public/licenses/bootstrap-icons.txt` ships the MIT notice. These decorative
+marks accompany visible platform names and never imply release availability.
+Backend comparison tables use `SupportIndicator.astro` for check, dash, and
+planned-clock symbols with accessible text, driven by the existing catalog.
+
 ## Updating artwork
 
 From the repository root:
