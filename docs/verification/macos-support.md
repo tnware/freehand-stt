@@ -84,7 +84,14 @@ Outputs: `bin/freehand-darwin-amd64.zip`, `bin/freehand-darwin-arm64.zip`, and
 were built as full applications. Extracted packages passed signature validation,
 architecture checks, executable mode checks, and `otool` minimum-version checks
 for macOS 13.0. Signing is **ad hoc**, not Developer ID signing/notarization.
-The handoff rebuild must include the final reviewed shortcut recovery code.
+The handoff packages were rebuilt from committed source `e6d6412`, including
+the final reviewed shortcut recovery code. Extracted packages were verified
+again after this rebuild. SHA-256:
+
+```text
+474cf5826d65ad061f77a3a3191dcc6729feaddf933129293444a9d202d76bb2  freehand-darwin-amd64.zip
+5094443d3fa4c346c571b9ba9e7657836a903203c7ad74cd50a5e5fda4a1f64e  freehand-darwin-arm64.zip
+```
 
 Windows GUI cross-compilation also passed. Explicit Windows CGO flags avoid
 inheriting the host's macOS deployment flags:
@@ -96,7 +103,7 @@ go build -tags production -trimpath -ldflags='-s -w -H windowsgui' \
   -o bin/freehand-windows-amd64.exe .
 ```
 
-An earlier packaged Apple Silicon smoke build launched using a temporary HOME.
+The final packaged Apple Silicon smoke build launched using a temporary HOME.
 Native process metadata reported completed application launch and an on-screen
 main window. A native graceful-quit request exited with code 0. This proves
 launch/window creation/quit, **not** successful rendering or dictation. The
