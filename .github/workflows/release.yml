@@ -42,51 +42,64 @@ jobs:
       ref: ${{ needs.release-please.outputs.tag-name }}
       expected-version: ${{ needs.release-please.outputs.version }}
 
-  windows:
-    name: Publish Windows release
+  publish:
+    name: Publish complete release
     needs: [release-please, validation]
     if: needs.release-please.outputs.release-created == 'true'
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag-name }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
       # Same-run artifacts from trusted release-tag validation, never a PR run.
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: freehand-windows-amd64
           path: bin
-      - name: Assemble release assets
-        shell: pwsh
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: freehand-darwin
+          path: bin
+      - name: Assemble all release assets and verify their checksums
         run: |
-          New-Item -ItemType Directory -Path dist | Out-Null
-          Copy-Item bin/freehand.exe dist/freehand-windows-amd64.exe
-          Copy-Item bin/freehand-amd64-installer.exe dist/freehand-windows-amd64-installer.exe
-          $lines = Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
-            $hash = (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant()
-            "$hash  $($_.Name)"
-          }
-          Set-Content -Path dist/SHA256SUMS -Value $lines -Encoding ascii
+          node build/scripts/releaseassembly/assemble.mjs bin dist
+          (cd dist && sha256sum --check --strict SHA256SUMS)
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: freehand-${{ needs.release-please.outputs.version }}-windows-amd64
+          name: freehand-${{ needs.release-please.outputs.version }}-complete
           if-no-files-found: error
           retention-days: 30
           path: dist/*
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         # Private-repository attestations require GitHub Enterprise Cloud.
-        # Public releases receive attestations automatically after publication.
+        # Attest every assembled asset before making the draft public.
         if: github.event.repository.visibility == 'public'
         with:
           subject-path: |
             dist/freehand-windows-amd64.exe
             dist/freehand-windows-amd64-installer.exe
+            dist/freehand-darwin-arm64.zip
+            dist/freehand-darwin-amd64.zip
             dist/SHA256SUMS
       - name: Publish complete release
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.release-please.outputs.tag-name }}
         run: |
-          gh release upload $env:RELEASE_TAG dist/* --clobber
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          gh release edit $env:RELEASE_TAG --draft=false --prerelease=true --latest=false
+          set -euo pipefail
+          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true
+          gh release upload "$RELEASE_TAG" dist/* --clobber
+          # Reject unknown pre-existing assets; never delete them automatically.
+          gh release view "$RELEASE_TAG" --json assets | node build/scripts/releaseassembly/check.mjs
+          # Read back uploaded bytes while still draft. Any missing/corrupt asset blocks publication.
+          gh release download "$RELEASE_TAG" --dir uploaded
+          cmp dist/SHA256SUMS uploaded/SHA256SUMS
+          (cd uploaded && sha256sum --check --strict SHA256SUMS)
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease=true --latest=false
+          test "$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease --jq '[.isDraft,.isPrerelease] | @json')" = '[false,true]'

@@ -35,6 +35,7 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
       - run: npm ci --prefix site
+      - run: npm --prefix site test
       - name: Verify shared branding
         run: |
           cmp branding/freehand-mark.svg site/src/assets/freehand-mark.svg

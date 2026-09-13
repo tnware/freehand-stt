@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: 22
       - name: Test selection and fail-closed gate
-        run: node --test .github/workflows/scripts/validation.test.mjs
+        run: node --test .github/workflows/scripts/validation.test.mjs build/scripts/releaseassembly/*.test.mjs
       - id: select
         name: Select workloads and pin source commit
         env:
@@ -184,6 +184,11 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force frontend/dist | Out-Null
           Set-Content frontend/dist/index.html "<!doctype html><title>CI compile placeholder</title>"
+      - name: Derive release metadata from source version
+        shell: pwsh
+        run: |
+          go run ./build/scripts/releaseinfo -root . sync
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test Windows safety and application packages
         run: go test ./...
       - name: Verify release version
@@ -225,6 +230,75 @@ jobs:
             bin/freehand-amd64-installer.exe
             bin/freehand-amd64-installer.exe.sha256
 
+  macos:
+    name: macOS native tests and packages
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    # Standard Apple Silicon runner; amd64 packaging is cross-compilation.
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CGO_ENABLED: "1"
+      CGO_CFLAGS: -mmacosx-version-min=13.0
+      CGO_LDFLAGS: -mmacosx-version-min=13.0
+      MACOSX_DEPLOYMENT_TARGET: "13.0"
+      GOFLAGS: -ldflags=-extldflags=-mmacosx-version-min=13.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.changes.outputs.ref }}
+      - uses: ./.github/actions/setup-go
+        with:
+          scope: macos
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install pinned Wails CLI
+        run: |
+          version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
+          if ! command -v wails3 >/dev/null 2>&1; then
+            go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
+          fi
+      - name: Prepare frontend placeholder for native tests
+        run: mkdir -p frontend/dist && printf '<!doctype html><title>CI compile placeholder</title>' > frontend/dist/index.html
+      - name: Derive release metadata from source version
+        run: go run ./build/scripts/releaseinfo -root . sync
+      - name: Test deterministic native safety and application packages
+        # Fixtures inject capture, insertion and clipboard operations; no live inference.
+        run: |
+          go test -race ./...
+          go vet ./...
+      - name: Verify release version
+        if: inputs.expected-version != ''
+        env:
+          RELEASE_VERSION: ${{ inputs.expected-version }}
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const version = readFileSync("build/config.yml", "utf8").match(/^\s*version:\s*"([^"\n]+)"/m)?.[1];
+            if (version !== process.env.RELEASE_VERSION) throw new Error("Release version mismatch");
+          '
+          go run ./build/scripts/releaseinfo -root . check
+      - name: Package Apple Silicon and Intel archives
+        run: |
+          wails3 task package ARCH=arm64 CI=true
+          wails3 task package ARCH=amd64 CI=true
+          test -s bin/freehand-darwin-arm64.zip
+          test -s bin/freehand-darwin-amd64.zip
+          unzip -t bin/freehand-darwin-arm64.zip
+          unzip -t bin/freehand-darwin-amd64.zip
+          git diff --exit-code -- go.mod go.sum
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: freehand-darwin
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            bin/freehand-darwin-arm64.zip
+            bin/freehand-darwin-amd64.zip
+
   site:
     name: Site
     needs: changes
@@ -236,7 +310,7 @@ jobs:
   validation:
     name: Validation
     if: always()
-    needs: [changes, storage, go, frontend, windows, site]
+    needs: [changes, storage, go, frontend, windows, macos, site]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

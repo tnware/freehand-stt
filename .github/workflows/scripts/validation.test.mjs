@@ -117,7 +117,7 @@ test("an unavailable baseline fails rather than silently skipping work", (t) => 
 function needs(app, site) {
   return {
     changes: { result: "success", outputs: { app: String(app), site: String(site) } },
-    ...Object.fromEntries(["go", "storage", "frontend", "windows"].map((job) => [job, { result: app ? "success" : "skipped" }])),
+    ...Object.fromEntries(["go", "storage", "frontend", "windows", "macos"].map((job) => [job, { result: app ? "success" : "skipped" }])),
     site: { result: site ? "success" : "skipped" },
   };
 }
@@ -135,7 +135,7 @@ for (const [app, site] of [[true, true], [true, false], [false, true], [false, f
   });
 }
 
-for (const job of ["changes", "go", "storage", "frontend", "windows", "site"]) {
+for (const job of ["changes", "go", "storage", "frontend", "windows", "macos", "site"]) {
   for (const result of ["failure", "cancelled", "skipped"]) {
     test(`gate rejects ${result} for required ${job}`, () => {
       const input = needs(true, true);

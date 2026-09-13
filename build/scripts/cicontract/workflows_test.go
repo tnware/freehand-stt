@@ -11,12 +11,14 @@ import (
 )
 
 type job struct {
-	Name  string         `yaml:"name"`
-	If    string         `yaml:"if"`
-	Needs yaml.Node      `yaml:"needs"`
-	Uses  string         `yaml:"uses"`
-	With  map[string]any `yaml:"with"`
-	Steps []struct {
+	RunsOn string            `yaml:"runs-on"`
+	Env    map[string]string `yaml:"env"`
+	Name   string            `yaml:"name"`
+	If     string            `yaml:"if"`
+	Needs  yaml.Node         `yaml:"needs"`
+	Uses   string            `yaml:"uses"`
+	With   map[string]any    `yaml:"with"`
+	Steps  []struct {
 		Run  string         `yaml:"run"`
 		Uses string         `yaml:"uses"`
 		With map[string]any `yaml:"with"`
@@ -60,7 +62,7 @@ func TestValidationAlwaysReportsAndIncludesSelectedWorkloads(t *testing.T) {
 	if err := gate.Needs.Decode(&needs); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"changes", "storage", "go", "frontend", "windows", "site"} {
+	for _, name := range []string{"changes", "storage", "go", "frontend", "windows", "macos", "site"} {
 		if !slices.Contains(needs, name) {
 			t.Errorf("gate does not depend on %s", name)
 		}
@@ -77,7 +79,7 @@ func TestReleasePublishesOnlyArtifactsFromItsOwnValidatedTag(t *testing.T) {
 		t.Fatal("validation does not check release tag")
 	}
 	var needs []string
-	publication := release.Jobs["windows"]
+	publication := release.Jobs["publish"]
 	if err := publication.Needs.Decode(&needs); err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +87,7 @@ func TestReleasePublishesOnlyArtifactsFromItsOwnValidatedTag(t *testing.T) {
 		t.Fatal("publication can bypass validation")
 	}
 	found := false
-	for _, step := range release.Jobs["windows"].Steps {
+	for _, step := range release.Jobs["publish"].Steps {
 		if strings.HasPrefix(step.Uses, "actions/download-artifact@") {
 			found = true
 			if step.With["run-id"] != nil || step.With["repository"] != nil {
@@ -98,6 +100,96 @@ func TestReleasePublishesOnlyArtifactsFromItsOwnValidatedTag(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("release does not consume validated artifacts")
+	}
+}
+
+func TestMacOSNativeValidationAndBothPackages(t *testing.T) {
+	mac := load(t, "ci").Jobs["macos"]
+	if mac.RunsOn != "macos-15" || mac.If != "needs.changes.outputs.app == 'true'" {
+		t.Fatal("macOS must run as a selected native workload")
+	}
+	for key, value := range map[string]string{"CGO_ENABLED": "1", "MACOSX_DEPLOYMENT_TARGET": "13.0", "CGO_CFLAGS": "-mmacosx-version-min=13.0", "CGO_LDFLAGS": "-mmacosx-version-min=13.0", "GOFLAGS": "-ldflags=-extldflags=-mmacosx-version-min=13.0"} {
+		if mac.Env[key] != value {
+			t.Errorf("missing macOS toolchain setting %s", key)
+		}
+	}
+	var commands string
+	var cache, upload bool
+	for _, step := range mac.Steps {
+		commands += step.Run + "\n"
+		if step.Uses == "./.github/actions/setup-go" {
+			cache = step.With["scope"] == "macos"
+		}
+		if strings.HasPrefix(step.Uses, "actions/checkout@") && step.With["ref"] != "${{ needs.changes.outputs.ref }}" {
+			t.Fatal("macOS source is not pinned")
+		}
+		if strings.HasPrefix(step.Uses, "actions/upload-artifact@") {
+			upload = step.With["name"] == "freehand-darwin" && step.With["if-no-files-found"] == "error"
+			for _, arch := range []string{"arm64", "amd64"} {
+				if !strings.Contains(step.With["path"].(string), "bin/freehand-darwin-"+arch+".zip") {
+					t.Errorf("missing %s archive", arch)
+				}
+			}
+		}
+	}
+	if !cache || !upload {
+		t.Fatal("missing scoped cache or required artifact upload")
+	}
+	for _, command := range []string{"go test -race ./...", "go vet ./...", "go list -m", "wails3 task package ARCH=arm64 CI=true", "wails3 task package ARCH=amd64 CI=true", "go run ./build/scripts/releaseinfo -root . check"} {
+		if !strings.Contains(commands, command) {
+			t.Errorf("missing %s", command)
+		}
+	}
+}
+
+func TestReleaseAssemblesAndAttestsCompleteAssetsBeforePublication(t *testing.T) {
+	publication := load(t, "release").Jobs["publish"]
+	downloads := map[string]bool{}
+	var commands, subjects string
+	assembly, attestation, publish := -1, -1, -1
+	for i, step := range publication.Steps {
+		commands += step.Run + "\n"
+		if strings.HasPrefix(step.Uses, "actions/download-artifact@") {
+			downloads[step.With["name"].(string)] = true
+		}
+		if strings.Contains(step.Run, "node build/scripts/releaseassembly/assemble.mjs bin dist") {
+			assembly = i
+		}
+		if strings.HasPrefix(step.Uses, "actions/attest@") {
+			attestation = i
+			subjects = step.With["subject-path"].(string)
+		}
+		if strings.Contains(step.Run, "gh release edit") {
+			publish = i
+		}
+	}
+	if len(downloads) != 2 || !downloads["freehand-windows-amd64"] || !downloads["freehand-darwin"] {
+		t.Fatal("release must consume both validated platforms")
+	}
+	if assembly < 0 || attestation <= assembly || publish <= attestation {
+		t.Fatal("publication must follow complete assembly and attestations")
+	}
+	for _, asset := range []string{"freehand-windows-amd64.exe", "freehand-windows-amd64-installer.exe", "freehand-darwin-arm64.zip", "freehand-darwin-amd64.zip", "SHA256SUMS"} {
+		if !slices.Contains(strings.Fields(subjects), "dist/"+asset) {
+			t.Errorf("missing attestation: %s", asset)
+		}
+	}
+	guard := `gh release view "$RELEASE_TAG" --json assets | node build/scripts/releaseassembly/check.mjs`
+	upload := strings.Index(commands, "gh release upload")
+	check := strings.Index(commands, guard)
+	readback := strings.Index(commands, "gh release download")
+	edit := strings.Index(commands, "gh release edit")
+	draft := strings.Index(commands, `test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true`)
+	if draft < 0 || upload <= draft || check <= upload || readback <= check || edit <= readback {
+		t.Fatal("exact remote asset validation and checksum readback must occur while draft, before publication")
+	}
+	if strings.Contains(commands, "gh release delete-asset") {
+		t.Fatal("unexpected remote assets must block publication, not be deleted")
+	}
+	for _, command := range []string{"sha256sum --check --strict SHA256SUMS", "gh release download", "cmp dist/SHA256SUMS uploaded/SHA256SUMS", "--draft=false --prerelease=true --latest=false"} {
+		if !strings.Contains(commands, command) {
+			t.Errorf("missing publication guard: %s", command)
+		}
 	}
 }
 

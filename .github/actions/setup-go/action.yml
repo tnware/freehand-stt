@@ -3,7 +3,7 @@ description: Install the repository toolchain and isolate dependency/tool and co
 
 inputs:
   scope:
-    description: 'Workload cache namespace: go, storage, frontend, windows, or site.'
+    description: 'Workload cache namespace: go, storage, frontend, windows, macos, or site.'
     required: true
 
 outputs:
@@ -27,8 +27,8 @@ runs:
         EVENT_NAME: ${{ github.event_name }}
       run: |
         case "$CACHE_SCOPE" in
-          go|storage|frontend|windows|site) ;;
-          *) printf '%s\n' '::error::scope must be go, storage, frontend, windows, or site'; exit 1 ;;
+          go|storage|frontend|windows|macos|site) ;;
+          *) printf '%s\n' '::error::scope must be go, storage, frontend, windows, macos, or site'; exit 1 ;;
         esac
         # Never execute fork-controlled Go/tools in a base-branch cache context.
         if [[ "$EVENT_NAME" == pull_request_target ]]; then
@@ -101,7 +101,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.go-env.outputs.build-dir }}
-        key: ${{ steps.go-env.outputs.prefix }}-build-${{ hashFiles('go.mod', 'go.sum', 'build/scripts/storage/main.go', '.github/workflows/ci.yml') }}-${{ hashFiles('*.go', 'internal/**/*.go', 'internal/**/*.sql', 'build/scripts/**/*.go', 'sqlc.yaml', 'sqlc.yml', 'Taskfile.yml', 'build/**/*.yml', 'frontend/src/**', 'frontend/package.json', 'frontend/package-lock.json', '.github/workflows/*.yml', '.github/actions/setup-go/action.yml') }}
+        key: ${{ steps.go-env.outputs.prefix }}-build-${{ hashFiles('go.mod', 'go.sum', 'build/scripts/storage/main.go', '.github/workflows/ci.yml') }}-${{ hashFiles('*.go', 'internal/**/*.go', 'internal/**/*.m', 'internal/**/*.h', 'internal/**/*.sql', 'build/scripts/**/*.go', 'sqlc.yaml', 'sqlc.yml', 'Taskfile.yml', 'build/**/*.yml', 'frontend/src/**', 'frontend/package.json', 'frontend/package-lock.json', '.github/workflows/*.yml', '.github/actions/setup-go/action.yml') }}
         restore-keys: |
           ${{ steps.go-env.outputs.prefix }}-build-${{ hashFiles('go.mod', 'go.sum', 'build/scripts/storage/main.go', '.github/workflows/ci.yml') }}-
           ${{ steps.go-env.outputs.prefix }}-build-

@@ -27,7 +27,7 @@ function gate() {
   if (![app, site].every((value) => value === "true" || value === "false")) {
     throw new Error("Missing or invalid workload selection");
   }
-  for (const job of ["go", "storage", "frontend", "windows", "site"]) {
+  for (const job of ["go", "storage", "frontend", "windows", "macos", "site"]) {
     const selected = (job === "site" ? site : app) === "true";
     const expected = selected ? "success" : "skipped";
     if (needs[job]?.result !== expected) throw new Error(`${job}: expected ${expected}, got ${needs[job]?.result}`);
