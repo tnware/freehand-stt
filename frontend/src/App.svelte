@@ -12,6 +12,7 @@
   import StatusBar from "$lib/components/shell/StatusBar.svelte";
   import SettingsPane from "$lib/components/settings/SettingsPane.svelte";
   import HistoryPane from "$lib/components/history/HistoryPane.svelte";
+  import RuntimesPane from "$lib/components/runtimes/RuntimesPane.svelte";
   import { ShellNavigation } from "$lib/shell-navigation.svelte";
   import { paneByID, type PaneID } from "$lib/panes";
   import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
@@ -57,15 +58,9 @@
   // Runtimes is its own place on the rail but resolves to the settings pane's
   // runtime section, so there is one implementation of that screen, not two.
   const activePane = $derived<PaneID>(
-    auxPane === null
-      ? (inputMode as PaneID)
-      : auxPane === "history"
-        ? "history"
-        : navigation.active === "local-runtime"
-          ? "runtimes"
-          : "settings",
+    auxPane === null ? (inputMode as PaneID) : auxPane,
   );
-  const settingsOpen = $derived(auxPane === "settings" || auxPane === "runtimes");
+  const settingsOpen = $derived(auxPane === "settings");
 
   const fileWorking = $derived(
     session.files.status.phase ===
@@ -212,8 +207,12 @@
   });
 
   function openSettings(sectionID: SettingsSectionID = "general") {
+    if (sectionID === "local-runtime") {
+      auxPane = "runtimes";
+      return;
+    }
     navigation.openSettings(sectionID, inputMode);
-    auxPane = sectionID === "local-runtime" ? "runtimes" : "settings";
+    auxPane = "settings";
   }
   function openConnection(request: ConnectionManagerRequest) {
     navigation.openConnection(request, inputMode);
@@ -251,7 +250,10 @@
       {fileWorking}
       onSelect={(id) => {
         if (id === "settings") return openSettings("general");
-        if (id === "runtimes") return openSettings("local-runtime");
+        if (id === "runtimes") {
+          auxPane = "runtimes";
+          return;
+        }
         if (id === "history") {
           auxPane = "history";
           return;
@@ -282,7 +284,13 @@
       />
     </div>
 
-    {#if auxPane === "history"}
+    {#if auxPane === "runtimes"}
+      <RuntimesPane
+        {session}
+        workBusy={voiceActive || fileWorking}
+        onOpenConnections={() => openSettings("connections")}
+      />
+    {:else if auxPane === "history"}
       <HistoryPane
         {session}
         onOpenHistorySettings={() => openSettings("history")}

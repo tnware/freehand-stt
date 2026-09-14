@@ -77,21 +77,11 @@
       )}
       {@const runtimeView = runtimePresentation(instance?.status)}
       {@const metadata = connection.details.managedInstanceID
-        ? [
-            connection.builtIn ? "Built-in" : "Local runtime",
-            runtimeView.backend,
-            active.map((role) => role.label).join(", "),
-          ]
+        ? [connection.builtIn ? "Built-in" : "Local runtime", runtimeView.backend]
             .filter(Boolean)
             .join(" · ")
-        : [
-            connectionTargetLabel(connection, instances),
-            active.length
-              ? `In use: ${active.map((role) => role.label).join(", ")}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
+        : connectionTargetLabel(connection, instances)}
+      {@const usedBy = active.map((role) => role.label).join(", ")}
       <button
         type="button"
         disabled={busy}
@@ -115,6 +105,12 @@
             class="mt-1 block truncate text-xs text-secondary-foreground"
             title={metadata}>{metadata}</span
           >
+          <span class="mt-0.5 block truncate text-[11px]" title={usedBy}>
+            <span class="text-ink-quiet">Used by</span>
+            <span class={usedBy ? "text-secondary-foreground" : "text-ink-quiet"}
+              >{usedBy || "nothing yet"}</span
+            >
+          </span>
         </span>
         <span class="connection-status min-w-0">
           {#if connection.details.managedInstanceID}

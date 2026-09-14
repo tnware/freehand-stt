@@ -29,12 +29,21 @@
     workBusy = false,
     onAction,
     onConnections,
+    focus = "",
+    chrome = true,
   }: {
     runtime: ManagedRuntimeState;
     disabled?: boolean;
     workBusy?: boolean;
     onAction: (action: () => void) => void;
     onConnections: () => void;
+    /**
+     * Render only this provider, expanded. The Runtimes pane puts the
+     * inventory in its own sidebar, so the body shows one runtime at a time.
+     */
+    focus?: string;
+    /** False when the surrounding pane already supplies a heading. */
+    chrome?: boolean;
   } = $props();
   const uid = $props.id();
   let now = $state(Date.now());
@@ -59,6 +68,16 @@
       ),
   );
   let selectedID = $state("");
+  // A focused provider owns the selection: the pane's sidebar is the list, so
+  // the body must follow it rather than keep a second, private one.
+  $effect(() => {
+    if (focus) selectedID = focus;
+  });
+  const shown = $derived(
+    focus
+      ? runtime.providers.filter((entry) => entry.id === focus)
+      : runtime.providers,
+  );
   let recoveryID = $state("");
   const provider = $derived(runtime.providers.find((p) => p.id === selectedID));
   const providerRows = $derived(
@@ -163,22 +182,24 @@
 </script>
 
 <div class="@container/runtime flex min-w-0 flex-col gap-4">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h2 class="text-base font-semibold">Managed runtimes</h2>
-      <p class="mt-1 text-[13px] text-secondary-foreground">
-        Each installed runtime appears automatically as a built-in Connection.
-      </p>
+  {#if chrome}
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-base font-semibold">Managed runtimes</h2>
+        <p class="mt-1 text-[13px] text-secondary-foreground">
+          Each installed runtime appears automatically as a built-in Connection.
+        </p>
+      </div>
+      <div class="flex items-center gap-1">
+        <Button variant="soft" size="sm" onclick={onConnections}
+          >Manage connections</Button
+        >
+      </div>
     </div>
-    <div class="flex items-center gap-1">
-      <Button variant="soft" size="sm" onclick={onConnections}
-        >Manage connections</Button
-      >
-    </div>
-  </div>
+  {/if}
   {#if runtime.providers.length}
     <div class="space-y-3" aria-label="Runtime inventory">
-      {#each runtime.providers as entry (entry.id)}
+      {#each shown as entry (entry.id)}
         {@const item =
           selectedID === entry.id
             ? row
