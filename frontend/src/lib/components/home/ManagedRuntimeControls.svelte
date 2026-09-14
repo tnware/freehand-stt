@@ -45,23 +45,6 @@
 </script>
 
 <div class="space-y-3">
-  <div class="flex items-center justify-between gap-3">
-    <div class="min-w-0">
-      <p class="truncate text-sm font-medium">
-        {row?.instance.name ?? "Runtime unavailable"}
-      </p>
-      <p class="text-xs text-muted-foreground">
-        {provider?.name ?? row?.instance.provider ?? "Status unavailable"}
-      </p>
-    </div>
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      aria-label="Manage runtime"
-      title="Manage runtime"
-      onclick={onManage}><SettingsIcon class="size-4" /></Button
-    >
-  </div>
   {#if row}
     <div class="space-y-1.5">
       <label for={`${uid}-model`} class="text-xs font-medium"
@@ -101,6 +84,13 @@
       {runtime.pendingFor(instanceID) || view.label}
     </p>
     <div class="flex shrink-0 items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Manage runtime"
+        title="Manage runtime"
+        onclick={onManage}><SettingsIcon class="size-4" /></Button
+      >
       {#if operating}
         <Button
           variant="ghost"
@@ -127,14 +117,7 @@
       {/if}
     </div>
   </div>
-  {#if row?.activeModel}<p class="break-all text-xs text-muted-foreground">
-      Active model: {row.activeModel}
-    </p>{/if}
-  {#if row?.activeModel && row.activeModel !== row.instance.model}<p
-      class="text-xs text-muted-foreground"
-    >
-      The active API model identity differs from the selected catalog key.
-    </p>{/if}
+
   {#if !view.installed || !selected?.installed}<Button
       variant="outline"
       size="sm"

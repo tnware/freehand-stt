@@ -91,11 +91,17 @@ streaming model; a completed-only selection cannot enable live mode.
 
 Downloads show transferred bytes and a percentage while the total is known,
 including NeMo downloads. Preparation and verification use an activity indicator.
-A full transfer is not finished until verification succeeds; the setup area then
-confirms completion. Cancellation and failure show separate outcomes.
+A full transfer is not finished until verification succeeds. The setup area and
+the model's catalog row show progress and offer cancellation. The row stays in
+place with a completion, cancellation, or failure message. Successful downloads
+also receive a **Downloaded** badge.
 
 Downloads can be cancelled and retried. Stop active transcription before
-switching or removing the loaded model. Removing a downloaded model frees its
+switching or removing the loaded model. In task quick settings, choose the
+**Connection** first, then choose one of that runtime's downloaded models under
+**Selected model**. The runtime shares its selected model with every task using
+it. **Manage runtime** opens installation, downloads, and runtime details.
+Removing a downloaded model frees its
 managed cache data; using it again requires another download.
 
 ## Stop, disable, or remove

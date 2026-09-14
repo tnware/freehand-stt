@@ -69,6 +69,10 @@ refresh across windows, removal confirmation, and dirty-draft protection.
 At compact desktop sizes, assert that provider-row install, selected-model download,
 progress/cancel, and start/stop remain in view without scrolling or Playwright's
 automatic click scrolling. Download completion must not implicitly start inference.
+Repeat from an alternative model's catalog row after scrolling to it: progress,
+Cancel, and terminal feedback must stay in the viewport without an additional
+scroll, including after the model becomes installed. Check quick-settings geometry
+puts Connection above the runtime model selector for Voice and audio files.
 Exercise keyboard navigation, narrow layouts, light/dark appearance, and reduced
 motion. Generated Wails DTOs remain the fixture contract.
 

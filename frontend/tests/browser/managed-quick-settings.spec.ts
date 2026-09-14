@@ -16,6 +16,15 @@ for (const task of ["Voice", "Audio file"]) {
     await expect(
       panel.getByLabel("Selected model", { exact: true }),
     ).toHaveText("Nemotron 3.5 Streaming");
+    const connection = await panel
+      .getByRole("combobox", { name: "Choose connection", exact: true })
+      .boundingBox();
+    const model = await panel
+      .getByLabel("Selected model", { exact: true })
+      .boundingBox();
+    expect(connection).not.toBeNull();
+    expect(model).not.toBeNull();
+    expect(connection!.y + connection!.height).toBeLessThan(model!.y);
     await panel.getByRole("button", { name: "Start", exact: true }).click();
     await expect(
       panel.getByRole("button", { name: "Stop", exact: true }),

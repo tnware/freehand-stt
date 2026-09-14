@@ -62,6 +62,9 @@ selected model's exact owned partial/final paths while its own manager runs.
 Neither raw child diagnostics nor paths enter renderer progress. Full transfer
 does not imply successful verification, and request admission does not imply
 operation success.
+The runtime manager renders this same status at the setup action and the matching
+model's catalog row, including cancellation and terminal outcomes. Catalog rows
+retain their position instead of regrouping on installation state changes.
 
 Following [ADR 0016](../../decisions/0016-managed-runtime-connections/), the
 settings owner persists runtime instance definitions and ordinary Connections
@@ -84,7 +87,9 @@ connection. Runtime installation/catalog management remains separate from, and
 linked by, Connections and task quick settings.
 
 Task settings and quick settings replace manual model/profile pickers with
-instance-targeted controls when their selected Connection is managed. The shared
+instance-targeted controls below the Connection picker when that Connection is
+managed. Runtime identity and API-model diagnostics stay in runtime management,
+not repeated above the quick-settings model selector. The shared
 speech controls preserve voice, speed, and qualified language/style options;
 cleanup preserves its instruction and generation controls. These surfaces do not
 register providers or imply additional roles: NeMo qualifies transcription and

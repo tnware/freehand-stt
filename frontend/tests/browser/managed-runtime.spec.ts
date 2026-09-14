@@ -15,6 +15,45 @@ async function installRuntime(page: Page) {
   });
 }
 
+test("catalog downloads keep progress, cancellation and completion at the model", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 640 });
+  await page.goto("/tests/browser/app/?runtime");
+  await page.locator('[data-settings-section="local-runtime"]').click();
+  const id = await installRuntime(page);
+  const model = page.getByRole("article", {
+    name: "Parakeet TDT v3",
+    exact: true,
+  });
+  await model.scrollIntoViewIfNeeded();
+  await model.getByRole("button", { name: "Download", exact: true }).click();
+  const progress = model.getByRole("progressbar");
+  await expect(progress).toBeInViewport();
+  await page.evaluate(
+    (id) =>
+      window.testRuntime.change(id, {
+        acquisition: {
+          phase: "downloading",
+          bytes: 500_000_000,
+          totalBytes: 1_000_000_000,
+        },
+      }),
+    id,
+  );
+  await expect(progress).toHaveAttribute("value", "50");
+  const cancel = model.getByRole("button", { name: "Cancel", exact: true });
+  await expect(cancel).toBeInViewport();
+  await cancel.click();
+  await expect(model.getByRole("status")).toContainText("cancelled");
+  await model.getByRole("button", { name: "Download", exact: true }).click();
+  await page.evaluate((id) => window.testRuntime.finishDownload(id), id);
+  await expect(model.getByRole("status")).toContainText(
+    "downloaded and verified",
+  );
+  await expect(model.getByRole("status")).toBeInViewport();
+});
+
 for (const viewport of [
   { width: 1280, height: 720 },
   { width: 900, height: 640 },
@@ -67,7 +106,11 @@ for (const viewport of [
       );
     }
     await cancel.click();
-    await expect(page.getByText(/Operation cancelled\./)).toBeVisible();
+    const setup = page.getByRole("region", {
+      name: "Runtime setup",
+      exact: true,
+    });
+    await expect(setup.getByText(/Operation cancelled\./)).toBeInViewport();
     await expect(download).toBeInViewport();
     await download.click();
     await page.evaluate(
@@ -93,8 +136,8 @@ for (const viewport of [
       instanceID,
     );
     await expect(
-      page.getByText(/Model downloaded and verified\./),
-    ).toBeVisible();
+      setup.getByText(/Model downloaded and verified\./),
+    ).toBeInViewport();
     expect(await page.evaluate(() => window.testRuntime.calls)).not.toContain(
       `Start:${instanceID}`,
     );

@@ -130,16 +130,6 @@
 <div class={draft ? "flex flex-col gap-5" : "space-y-4"}>
   {#if !draft}
     {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
-    {#if managed && runtime}
-      <ManagedRuntimeControls
-        {instanceID}
-        {runtime}
-        disabled={disabled ||
-          editor.saving ||
-          editor.quickSettingsPending.length > 0}
-        onManage={onManageRuntime}
-      />
-    {/if}
     <div class="space-y-1.5">
       <label for="voice-connection" class="text-xs font-medium"
         >Connection</label
@@ -155,6 +145,16 @@
         />
       </div>
     </div>
+    {#if managed && runtime}
+      <ManagedRuntimeControls
+        {instanceID}
+        {runtime}
+        disabled={disabled ||
+          editor.saving ||
+          editor.quickSettingsPending.length > 0}
+        onManage={onManageRuntime}
+      />
+    {/if}
   {/if}
   {#if draft}
     <SettingsCard>
@@ -299,7 +299,8 @@
               ...cfg.transcriptionOptions,
               prompt: event.currentTarget.value,
             },
-          })}></textarea>
+          })}
+      ></textarea>
     </div>
   {/if}
 {/snippet}
