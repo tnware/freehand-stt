@@ -9,7 +9,7 @@
   dividers, while individual inputs retain their interactive boundaries.
 -->
 <div
-  class="settings-group rounded-xl border border-border bg-card shadow-xs [&>*+*]:border-t [&>*+*]:border-hairline"
+  class="settings-group rounded-lg border border-hairline [&>*+*]:border-t [&>*+*]:border-hairline"
 >
   {@render children()}
 </div>

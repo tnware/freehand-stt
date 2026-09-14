@@ -40,7 +40,7 @@
 </script>
 
 <section
-  class="rounded-xl border border-border bg-card px-5 py-4 shadow-xs"
+  class="rounded-lg border border-hairline px-5 py-3.5"
   aria-label={inactive ? "Saved manual connection" : "Active connection"}
 >
   <div class="flex flex-wrap items-center gap-x-3 gap-y-2">

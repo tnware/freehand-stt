@@ -87,7 +87,7 @@
         disabled={busy}
         aria-current={connection.id === selected ? "true" : undefined}
         onclick={() => onSelect(connection)}
-        class={`connection-row w-full items-center gap-x-3 gap-y-1.5 rounded-xl border px-3 py-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${connection.id === selected ? "border-accent-edge bg-accent-wash" : "border-hairline bg-card hover:border-accent-edge hover:bg-subtle-fill-hover"}`}
+        class={`connection-row w-full items-center gap-x-3 gap-y-1.5 rounded-lg border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${connection.id === selected ? "border-accent-edge bg-accent-wash" : "border-hairline bg-card hover:border-accent-edge hover:bg-subtle-fill-hover"}`}
       >
         <span
           class="connection-icon flex size-10 shrink-0 items-center justify-center rounded-lg border border-hairline bg-background"

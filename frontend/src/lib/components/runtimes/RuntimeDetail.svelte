@@ -11,6 +11,7 @@
   import { Button } from "$lib/components/ui/button";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
+  import LocalRuntimeSection from "$lib/components/settings/sections/LocalRuntimeSection.svelte";
   import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
 
@@ -19,12 +20,14 @@
     row,
     entry,
     locked = false,
+    workBusy = false,
     onOpenConnections,
   }: {
     runtime: ManagedRuntimeState;
     row: InstanceStatus | undefined;
     entry: ProviderDescriptor;
     locked?: boolean;
+    workBusy?: boolean;
     onOpenConnections: () => void;
   } = $props();
 
@@ -40,6 +43,7 @@
 
   let preferencesOpen = $state(false);
   let sourceOpen = $state(false);
+  let manageOpen = $state(false);
 
   function size(bytes: number): string {
     if (!bytes) return "—";
@@ -140,6 +144,21 @@
   </div>
 
   <div class="min-h-0 flex-1 overflow-y-auto px-5">
+    {#if !installed}
+      <!-- Not installed yet: the install flow owns binary probing, backend
+           choice and the first model download, so this defers to it whole. -->
+      <div class="py-4">
+        <LocalRuntimeSection
+          {runtime}
+          focus={entry.id}
+          chrome={false}
+          {workBusy}
+          disabled={locked}
+          onAction={(action) => action()}
+          onConnections={onOpenConnections}
+        />
+      </div>
+    {:else}
     <div class="flex h-10 items-center justify-between gap-3">
       <span
         class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
@@ -296,6 +315,42 @@
         </dl>
       {/if}
     {/each}
+
+    <button
+      type="button"
+      class="flex h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+      aria-expanded={manageOpen}
+      onclick={() => (manageOpen = !manageOpen)}
+    >
+      <span class="flex items-center gap-2">
+        <ChevronRightIcon
+          class="size-3.5 text-muted-foreground transition-transform {manageOpen
+            ? 'rotate-90'
+            : ''}"
+          aria-hidden="true"
+        />
+        <span class="text-[12.5px] text-secondary-foreground"
+          >Manage runtime</span
+        >
+      </span>
+      <span class="font-mono text-[10px] text-ink-quiet"
+        >repair · remove · retry</span
+      >
+    </button>
+    {#if manageOpen}
+      <div class="border-b border-hairline py-3">
+        <LocalRuntimeSection
+          {runtime}
+          focus={entry.id}
+          chrome={false}
+          {workBusy}
+          disabled={locked}
+          onAction={(action) => action()}
+          onConnections={onOpenConnections}
+        />
+      </div>
+    {/if}
+    {/if}
   </div>
 
   <div class="flex h-44 shrink-0 flex-col border-t border-hairline">

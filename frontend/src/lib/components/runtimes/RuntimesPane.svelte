@@ -185,6 +185,7 @@
         row={current.instance}
         entry={current.entry}
         locked={workBusy || session.editor.saving || runtime.loading}
+        {workBusy}
         {onOpenConnections}
       />
     {:else}
