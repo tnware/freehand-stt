@@ -99,6 +99,7 @@
   });
 
   onMount(() => {
+    let alive = true;
     setMode("system");
 
     const offSession = subscribeSessionEvents(
@@ -137,11 +138,17 @@
       },
     );
     const offClose = Events.On("shell:close-requested", () => {
-      void Window.Hide().catch((cause) => session.messages.fail(cause));
+      void Window.Hide().catch((cause) => {
+        if (alive) session.messages.fail(cause);
+      });
     });
     void WindowingService.SettingsVisible()
-      .then((visible) => (settingsOpen = visible))
-      .catch((cause) => session.messages.fail(cause));
+      .then((visible) => {
+        if (alive) settingsOpen = visible;
+      })
+      .catch((cause) => {
+        if (alive) session.messages.fail(cause);
+      });
     const offAboutVisibility = Events.On(
       "about:visibility",
       (event: { data: boolean }) => {
@@ -149,19 +156,29 @@
       },
     );
     void BuildInfoService.Current()
-      .then((info) => (version = info.version))
-      .catch(() => (version = ""));
+      .then((info) => {
+        if (alive) version = info.version;
+      })
+      .catch(() => {
+        if (alive) version = "";
+      });
 
     void WindowingService.AboutVisible()
-      .then((visible) => (aboutOpen = visible))
-      .catch((cause) => session.messages.reportFailure(String(cause)));
+      .then((visible) => {
+        if (alive) aboutOpen = visible;
+      })
+      .catch((cause) => {
+        if (alive) session.messages.reportFailure(String(cause));
+      });
     void session.load().finally(() => {
+      if (!alive) return;
       setMode(activeAppearanceMode(session.editor.applied));
-      void WindowingService.ShellReady().catch((cause) =>
-        session.messages.fail(cause),
-      );
+      void WindowingService.ShellReady().catch((cause) => {
+        if (alive) session.messages.fail(cause);
+      });
     });
     return () => {
+      alive = false;
       offSession();
       session.dispose();
       offLevel();

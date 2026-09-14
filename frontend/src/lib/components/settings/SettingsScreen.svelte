@@ -7,7 +7,7 @@
     SETTINGS_VALIDATION,
     type SettingsValidationContext,
   } from "$lib/utils/settingsValidation";
-  import * as Dialog from "$lib/components/ui/dialog";
+  import PendingChangesDialog from "./PendingChangesDialog.svelte";
   import * as WindowingService from "$bindings/windowing/service";
   import SavedConnectionPicker from "$lib/components/settings/SavedConnectionPicker.svelte";
   import { Purpose } from "$bindings/savedconnection";
@@ -159,10 +159,6 @@
   });
 
   let pendingConnectionAction = $state<(() => void) | null>(null);
-  function preventDismissWhileSaving(event: Event) {
-    // onOpenChange observes a close; these hooks can prevent it.
-    if (session.editor.saving) event.preventDefault();
-  }
   function withSavedSettings(action: () => void) {
     if (session.editor.saving) return;
     if (session.editor.runtimeDirty) pendingConnectionAction = action;
@@ -613,42 +609,16 @@
   </div>
 </div>
 
-<Dialog.Root
+<PendingChangesDialog
   open={pendingConnectionAction !== null}
-  onOpenChange={(open) => {
-    if (!open && !session.editor.saving) pendingConnectionAction = null;
-  }}
->
-  <Dialog.Content
-    showCloseButton={!session.editor.saving}
-    onEscapeKeydown={preventDismissWhileSaving}
-    onInteractOutside={preventDismissWhileSaving}
-  >
-    <Dialog.Header>
-      <Dialog.Title>Save settings before continuing?</Dialog.Title>
-      <Dialog.Description
-        >Your model and task edits have not been applied. Save them for the
-        current connection, or discard them before continuing.</Dialog.Description
-      >
-    </Dialog.Header>
-    {#if session.messages.error}<p role="alert" class="text-destructive">
-        {session.messages.error}
-      </p>{/if}
-    <Dialog.Footer>
-      <Button
-        variant="outline"
-        disabled={session.editor.saving}
-        onclick={() => (pendingConnectionAction = null)}>Keep editing</Button
-      >
-      <Button
-        variant="secondary"
-        disabled={session.editor.saving}
-        onclick={() => continueConnection(false)}>Discard and continue</Button
-      >
-      <Button
-        disabled={session.editor.saving}
-        onclick={() => continueConnection(true)}>Save and continue</Button
-      >
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+  busy={session.editor.saving}
+  title="Save settings before continuing?"
+  description="Your model and task edits have not been applied. Save them for the current connection, or discard them before continuing."
+  error={session.messages.error}
+  discardLabel="Discard and continue"
+  discardVariant="secondary"
+  saveLabel="Save and continue"
+  onKeepEditing={() => (pendingConnectionAction = null)}
+  onDiscard={() => continueConnection(false)}
+  onSave={() => continueConnection(true)}
+/>

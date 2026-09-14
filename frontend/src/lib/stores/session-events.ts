@@ -58,7 +58,7 @@ export function subscribeSessionEvents(
   try {
     subscribe("dictation:status", ({ data }) => {
       const previous = session.dictation.status;
-      session.dictation.applyStatus(data);
+      if (!session.dictation.applyStatus(data)) return;
       if (data.state === State.Idle || data.state === State.Failed)
         void session.history.refresh();
       dictationChanged(data, previous);

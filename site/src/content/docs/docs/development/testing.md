@@ -3,6 +3,27 @@ title: Testing contract
 description: Deterministic, integration, and native acceptance responsibilities.
 ---
 
+## Renderer state and navigation
+
+Exercise dictation events and overlapping status reads in both completion orders.
+Older generations must not replace newer state, refresh history, or emit result
+notifications. Same-generation completion, rejection, and clear events remain
+valid, and a newer generation must not be lost behind a slower snapshot read.
+Settings metadata tests cover the single confirmed-snapshot invalidation path,
+including changes to credentials that do not alter renderer-visible settings.
+
+Suspend session initialization at each stage, dispose the session, then resolve
+or reject the outstanding request. No subsequent initialization or session-level
+failure reporting may start. Real App mount/unmount browser fixtures also reject
+late metadata and readiness replies, verifying that teardown prevents a new
+`ShellReady` call and late error notices.
+
+The shared pending-changes dialog must preserve each parent's labels, errors,
+and navigation actions. Browser checks keep the dialog open during a pending
+save despite Escape or outside interaction, then allow recovery after failure.
+Compare completed transcription metadata fixtures through both microphone and
+file clients while retaining their separate response limits and text admission.
+
 ## Managed desktop runtimes
 
 Keep managed-runtime tests isolated from the user's application-data directory.

@@ -317,48 +317,7 @@ export class SettingsEditor {
       );
       return false;
     }
-    const previous = this.applied;
     this.#adopt(settings);
-    if (
-      previous &&
-      (previous.savedConnections.selected?.stt !==
-        settings.savedConnections.selected?.stt ||
-        previous.baseURL !== settings.baseURL ||
-        previous.compatibilityProfile !== settings.compatibilityProfile ||
-        previous.model !== settings.model ||
-        previous.allowInsecureHTTP !== settings.allowInsecureHTTP ||
-        previous.authenticationMode !== settings.authenticationMode ||
-        previous.healthPath !== settings.healthPath ||
-        JSON.stringify(previous.headers) !== JSON.stringify(settings.headers))
-    ) {
-      this.#invalidateSTTConnection();
-    }
-    if (
-      previous &&
-      (previous.savedConnections.selected?.cleanup !==
-        settings.savedConnections.selected?.cleanup ||
-        previous.postProcessing.baseURL !== settings.postProcessing.baseURL ||
-        previous.postProcessing.compatibilityProfile !==
-          settings.postProcessing.compatibilityProfile ||
-        previous.postProcessing.model !== settings.postProcessing.model)
-    ) {
-      this.#invalidateProcessingConnection();
-    }
-    if (
-      previous &&
-      (previous.savedConnections.selected?.speech !==
-        settings.savedConnections.selected?.speech ||
-        previous.textToSpeech.baseURL !== settings.textToSpeech.baseURL ||
-        previous.textToSpeech.compatibilityProfile !==
-          settings.textToSpeech.compatibilityProfile ||
-        previous.textToSpeech.model !== settings.textToSpeech.model ||
-        previous.textToSpeech.allowInsecureHTTP !==
-          settings.textToSpeech.allowInsecureHTTP ||
-        previous.textToSpeech.authenticationMode !==
-          settings.textToSpeech.authenticationMode)
-    ) {
-      this.#invalidateTTSConnection();
-    }
     return true;
   }
 
@@ -984,14 +943,6 @@ export class SettingsEditor {
         clearTextToSpeechCredential: false,
       });
       this.#adopt(saved);
-      if (patch.model !== undefined) {
-        this.#invalidateSTTConnection();
-      }
-      if (patch.postProcessing?.model !== undefined) {
-        this.#invalidateProcessingConnection();
-      }
-      if (patch.textToSpeech?.model !== undefined)
-        this.#invalidateTTSConnection();
       this.#markQuickSettingsSaved(field);
       operationResult = true;
     });

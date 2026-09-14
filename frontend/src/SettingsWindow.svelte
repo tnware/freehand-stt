@@ -16,8 +16,7 @@
   import SettingsScreen from "$lib/components/settings/SettingsScreen.svelte";
   import SettingsNav from "$lib/components/settings/SettingsNav.svelte";
   import ConnectionManagerWindow from "./ConnectionManagerWindow.svelte";
-  import { Button } from "$lib/components/ui/button";
-  import * as Dialog from "$lib/components/ui/dialog";
+  import PendingChangesDialog from "$lib/components/settings/PendingChangesDialog.svelte";
   import { shortcutCapture } from "$lib/stores/shortcutCapture.svelte";
   import type { SettingsSectionID } from "$lib/navigation";
 
@@ -195,43 +194,13 @@
     />
   {/if}
 </div>
-<Dialog.Root
+<PendingChangesDialog
   open={pending !== null}
-  onOpenChange={(open) => {
-    if (!open && !session.editor.saving) pending = null;
-  }}
->
-  <Dialog.Content
-    showCloseButton={!session.editor.saving}
-    onEscapeKeydown={(event) => {
-      if (session.editor.saving) event.preventDefault();
-    }}
-    onInteractOutside={(event) => {
-      if (session.editor.saving) event.preventDefault();
-    }}
-  >
-    <Dialog.Header
-      ><Dialog.Title>Save changes?</Dialog.Title><Dialog.Description
-        >Your edits remain here until you save or discard them.</Dialog.Description
-      ></Dialog.Header
-    >
-    {#if session.messages.error}<p role="alert" class="text-destructive">
-        {session.messages.error}
-      </p>{/if}
-    <Dialog.Footer>
-      <Button
-        variant="outline"
-        disabled={session.editor.saving}
-        onclick={() => (pending = null)}>Keep editing</Button
-      >
-      <Button
-        variant="ghost"
-        disabled={session.editor.saving}
-        onclick={() => resolve(false)}>Discard</Button
-      >
-      <Button disabled={session.editor.saving} onclick={() => resolve(true)}
-        >Save</Button
-      >
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+  busy={session.editor.saving}
+  title="Save changes?"
+  description="Your edits remain here until you save or discard them."
+  error={session.messages.error}
+  onKeepEditing={() => (pending = null)}
+  onDiscard={() => resolve(false)}
+  onSave={() => resolve(true)}
+/>

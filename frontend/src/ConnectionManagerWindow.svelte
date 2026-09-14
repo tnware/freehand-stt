@@ -11,6 +11,7 @@
   import BuiltInConnectionDetails from "$lib/components/settings/BuiltInConnectionDetails.svelte";
   import * as WindowingService from "$bindings/windowing/service";
   import ConnectionSaveActions from "$lib/components/settings/ConnectionSaveActions.svelte";
+  import PendingChangesDialog from "$lib/components/settings/PendingChangesDialog.svelte";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   import { connectionStatusLabel } from "$lib/utils/connection";
   import { sectionByID } from "$lib/navigation";
@@ -346,7 +347,7 @@
                     align="end"
                     class="w-80 max-w-[calc(100vw-24px)] p-1.5"
                   >
-                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id), ) as role (role.id)}
+                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id) ) as role (role.id)}
                       {@const Icon = sectionByID(role.section).icon}
                       {@const current =
                         editor.applied.savedConnections.selected?.[role.id] ===
@@ -490,44 +491,21 @@
       >
     </div>{/if}
 </div>
-<Dialog.Root
+<PendingChangesDialog
   open={discardOpen}
-  onOpenChange={(open) => {
-    if (!open && busy) return;
-    discardOpen = open;
-    if (!open) {
-      pendingAction = null;
-      onCancelClose();
-    }
+  {busy}
+  title="Save connection changes?"
+  description="Your edits will be kept until you save or discard them."
+  error={session.messages.error}
+  errorClass="text-sm text-destructive"
+  onKeepEditing={() => {
+    discardOpen = false;
+    pendingAction = null;
+    onCancelClose();
   }}
->
-  <Dialog.Content
-    ><Dialog.Header
-      ><Dialog.Title>Save connection changes?</Dialog.Title><Dialog.Description
-        >Your edits will be kept until you save or discard them.</Dialog.Description
-      ></Dialog.Header
-    >
-    {#if session.messages.error}<p
-        role="alert"
-        class="text-sm text-destructive"
-      >
-        {session.messages.error}
-      </p>{/if}
-    <Dialog.Footer
-      ><Button
-        variant="outline"
-        disabled={busy}
-        onclick={() => {
-          discardOpen = false;
-          pendingAction = null;
-          onCancelClose();
-        }}>Keep editing</Button
-      ><Button variant="ghost" disabled={busy} onclick={discard}>Discard</Button
-      ><Button disabled={busy} onclick={saveAndContinue}>Save</Button
-      ></Dialog.Footer
-    >
-  </Dialog.Content>
-</Dialog.Root>
+  onDiscard={discard}
+  onSave={saveAndContinue}
+/>
 <Dialog.Root bind:open={deleteOpen}>
   <Dialog.Content
     ><Dialog.Header

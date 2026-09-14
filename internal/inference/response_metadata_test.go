@@ -10,10 +10,12 @@ import (
 )
 
 func TestTranscribeCapturesOptionalResponseMetadata(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.Copy(io.Discard, r.Body)
-		w.Header().Set("X-Request-Id", "req_transcription")
-		_, _ = io.WriteString(w, `{
+	for _, workflow := range []string{"microphone", "file"} {
+		t.Run(workflow, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = io.Copy(io.Discard, r.Body)
+				w.Header().Set("X-Request-Id", "req_transcription")
+				_, _ = io.WriteString(w, `{
 			"text":"captured words",
 			"id":"transcription_123",
 			"request_id":"body_transcription_request",
@@ -34,31 +36,39 @@ func TestTranscribeCapturesOptionalResponseMetadata(t *testing.T) {
 			},
 			"timings":{"prompt_n":20,"prompt_ms":100,"prompt_per_second":200}
 		}`)
-	}))
-	defer server.Close()
+			}))
+			defer server.Close()
 
-	result, err := New().Transcribe(context.Background(), server.URL, "configured-model", "", "", nil, []byte("RIFF"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	metadata := result.Metadata
-	if result.Text != "captured words" || metadata.RequestID != "body_transcription_request" || metadata.ResponseID != "transcription_123" || metadata.EffectiveModel != "whisper-1-2026-08-01" || metadata.Provider != "Compatible provider" {
-		t.Fatalf("result = %#v", result)
-	}
-	if metadata.RequestCount != 1 || metadata.UsageReportCount != 1 || metadata.CostReportCount != 0 || metadata.PerformanceReportCount != 1 {
-		t.Fatalf("report coverage = %#v", metadata)
-	}
-	if metadata.CreatedAtUnix == nil || *metadata.CreatedAtUnix != 1788200000 || metadata.ServerAudioSeconds == nil || *metadata.ServerAudioSeconds != 12.5 {
-		t.Fatalf("timestamps and duration = %#v", metadata)
-	}
-	if strings.Join(metadata.DetectedLanguages, ",") != "en,es" {
-		t.Fatalf("languages = %#v", metadata.DetectedLanguages)
-	}
-	if metadata.Usage.Type != "tokens" || value(metadata.Usage.InputTokens) != 20 || value(metadata.Usage.OutputTokens) != 4 || value(metadata.Usage.TotalTokens) != 24 || value(metadata.Usage.AudioInputTokens) != 18 || value(metadata.Usage.TextInputTokens) != 2 {
-		t.Fatalf("usage = %#v", metadata.Usage)
-	}
-	if value(metadata.Performance.PromptTokens) != 20 || floatValue(metadata.Performance.PromptMilliseconds) != 100 || floatValue(metadata.Performance.PromptTokensPerSecond) != 200 {
-		t.Fatalf("performance = %#v", metadata.Performance)
+			var result TranscriptionResult
+			var err error
+			if workflow == "file" {
+				result, err = New().TranscribeFile(t.Context(), server.URL, "configured-model", "", "", nil, "recording.wav", 4, strings.NewReader("RIFF"), false, FileTranscriptionCallbacks{})
+			} else {
+				result, err = New().Transcribe(t.Context(), server.URL, "configured-model", "", "", nil, []byte("RIFF"))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			metadata := result.Metadata
+			if result.Text != "captured words" || metadata.RequestID != "body_transcription_request" || metadata.ResponseID != "transcription_123" || metadata.EffectiveModel != "whisper-1-2026-08-01" || metadata.Provider != "Compatible provider" {
+				t.Fatalf("result = %#v", result)
+			}
+			if metadata.RequestCount != 1 || metadata.UsageReportCount != 1 || metadata.CostReportCount != 0 || metadata.PerformanceReportCount != 1 {
+				t.Fatalf("report coverage = %#v", metadata)
+			}
+			if metadata.CreatedAtUnix == nil || *metadata.CreatedAtUnix != 1788200000 || metadata.ServerAudioSeconds == nil || *metadata.ServerAudioSeconds != 12.5 {
+				t.Fatalf("timestamps and duration = %#v", metadata)
+			}
+			if strings.Join(metadata.DetectedLanguages, ",") != "en,es" {
+				t.Fatalf("languages = %#v", metadata.DetectedLanguages)
+			}
+			if metadata.Usage.Type != "tokens" || value(metadata.Usage.InputTokens) != 20 || value(metadata.Usage.OutputTokens) != 4 || value(metadata.Usage.TotalTokens) != 24 || value(metadata.Usage.AudioInputTokens) != 18 || value(metadata.Usage.TextInputTokens) != 2 {
+				t.Fatalf("usage = %#v", metadata.Usage)
+			}
+			if value(metadata.Performance.PromptTokens) != 20 || floatValue(metadata.Performance.PromptMilliseconds) != 100 || floatValue(metadata.Performance.PromptTokensPerSecond) != 200 {
+				t.Fatalf("performance = %#v", metadata.Performance)
+			}
+		})
 	}
 }
 

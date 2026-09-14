@@ -150,7 +150,8 @@ whether a stream is complete; see [file streaming compatibility](../../reference
 **Current result** holds your latest transcript, including dictation that was
 inserted into another application. **Copy** and **Clear** work with history off;
 **Listen** is available when text to speech is enabled. A new recording replaces
-the dictation result. Clear or replace an audio file to remove its result.
+the dictation result; delayed updates from an earlier attempt cannot replace the
+newer dictation. Clear or replace an audio file to remove its result.
 You do not need history to copy a transcript after failed insertion.
 
 In the **Current result** toolbar, the microphone icon opens audio controls;
@@ -218,7 +219,8 @@ Open Settings from the tray or from a task's quick settings. Choose **Save** to
 apply edits, or **Save and return** when setting up a task to apply them and return
 to it. **Done** closes Settings; if you have unsaved edits, choose **Save**,
 **Discard**, or **Keep editing**. If saving fails, correct the indicated field and
-try again.
+try again. While saving, the confirmation stays open until the save finishes;
+Escape and clicks outside it do not dismiss it.
 
 In a full-width Settings window, **Find settings** filters the sidebar by page
 name or terms such as “padding,” “glow,” and “hotkey.” Enter opens the first match;

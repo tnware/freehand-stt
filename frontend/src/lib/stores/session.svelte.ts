@@ -48,6 +48,7 @@ export class Session {
   readonly files: FileTranscriptionState;
   readonly speech: SpeechState;
   readonly history: HistoryState;
+  #disposed = false;
 
   constructor(bindings: SessionServices = services) {
     this.dictation = new DictationState(bindings.dictation, this.messages);
@@ -74,20 +75,27 @@ export class Session {
   }
 
   async load() {
+    if (this.#disposed) return;
     this.messages.clear();
     try {
       await Promise.all([this.dictation.load(), this.runtime.load()]);
+      if (this.#disposed) return;
       await this.speech.load();
+      if (this.#disposed) return;
       await this.files.refresh();
-      if (!(await this.editor.load())) return;
+      if (this.#disposed) return;
+      if (!(await this.editor.load()) || this.#disposed) return;
       await this.editor.refreshDevices();
+      if (this.#disposed) return;
       await this.history.refresh();
     } catch (cause) {
-      this.messages.fail(cause);
+      if (!this.#disposed) this.messages.fail(cause);
     }
   }
 
   dispose() {
+    if (this.#disposed) return;
+    this.#disposed = true;
     this.runtime.dispose();
     this.speech.draft = "";
     this.editor.dispose();

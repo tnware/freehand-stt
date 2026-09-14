@@ -3,7 +3,6 @@ package inference
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -97,45 +96,21 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 		// transcript data. Preserve only the status code across this boundary.
 		return TranscriptionResult{}, &Error{Kind: "http", Status: resp.StatusCode, Message: "transcription request failed"}
 	}
-	var out struct {
-		Text              *string         `json:"text"`
-		ID                string          `json:"id"`
-		RequestID         string          `json:"request_id"`
-		Model             string          `json:"model"`
-		Provider          string          `json:"provider"`
-		Created           json.RawMessage `json:"created"`
-		Usage             json.RawMessage `json:"usage"`
-		Timings           json.RawMessage `json:"timings"`
-		Languages         json.RawMessage `json:"languages"`
-		Language          string          `json:"language"`
-		Duration          json.RawMessage `json:"duration"`
-		ServiceTier       string          `json:"service_tier"`
-		SystemFingerprint string          `json:"system_fingerprint"`
+	result, err := decodeTranscriptionJSON(bodyBytes, key)
+	if err != nil {
+		return TranscriptionResult{}, err
 	}
-	if err = json.Unmarshal(bodyBytes, &out); err != nil || out.Text == nil {
-		return TranscriptionResult{}, &Error{Kind: "malformed_response", Message: "expected JSON object with text"}
-	}
-	text := strings.TrimSpace(*out.Text)
+	text := strings.TrimSpace(result.Text)
 	if c.modelProfile == modelprofile.Nemotron35 {
 		text, _ = modelprofile.StripNemotronLanguageTag(text)
 	}
 	if key != "" && strings.Contains(text, key) {
 		return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
 	}
-	metadata := metadataFromHeaders(resp.Header, key)
-	if requestID := safePeerString(out.RequestID, key); requestID != "" {
-		metadata.RequestID = requestID
+	if result.Metadata.RequestID == "" {
+		result.Metadata.RequestID = metadataFromHeaders(resp.Header, key).RequestID
 	}
-	metadata.RequestCount = 1
-	metadata.ResponseID = safePeerString(out.ID, key)
-	metadata.EffectiveModel = safePeerString(out.Model, key)
-	metadata.Provider = safePeerString(out.Provider, key)
-	metadata.CreatedAtUnix = optionalInt(out.Created)
-	metadata.DetectedLanguages = parseLanguages(out.Languages, out.Language, key)
-	metadata.ServerAudioSeconds = optionalFloat(out.Duration)
-	metadata.ServiceTier = safePeerString(out.ServiceTier, key)
-	metadata.SystemFingerprint = safePeerString(out.SystemFingerprint, key)
-	applyUsageMetadata(&metadata, out.Usage, key)
-	applyPerformanceMetadata(&metadata, out.Timings)
-	return TranscriptionResult{Text: text, Metadata: sanitizeResponseMetadata(metadata, key)}, nil
+	result.Text = text
+	result.Metadata = sanitizeResponseMetadata(result.Metadata, key)
+	return result, nil
 }

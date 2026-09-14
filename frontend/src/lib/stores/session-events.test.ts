@@ -78,6 +78,70 @@ describe("shared session event composition", () => {
     }
   });
 
+  it.each([State.Idle, State.Failed, State.Recording])(
+    "ignores an older %s dictation event and its cross-feature reactions",
+    (state) => {
+      const TranscriptHistory = vi.fn(() => CancellablePromise.resolve([]));
+      const session = new Session(
+        serviceWithStatus(() => CancellablePromise.resolve(idle), {
+          history: { TranscriptHistory },
+        }),
+      );
+      const events = eventSource();
+      const edge = vi.fn();
+      const off = subscribeSessionEvents(session, events.on, edge);
+      try {
+        const current = { ...recording, generation: 3 };
+        events.emit("dictation:status", current);
+        edge.mockClear();
+        events.emit("dictation:status", {
+          ...idle,
+          state,
+          generation: 2,
+          transcript: "previous recording",
+        });
+        expect(session.dictation.status).toEqual(current);
+        expect(TranscriptHistory).not.toHaveBeenCalled();
+        expect(edge).not.toHaveBeenCalled();
+      } finally {
+        off();
+        session.dispose();
+      }
+    },
+  );
+
+  it("accepts same-generation completion, rejected-start feedback, and result clearing", () => {
+    const session = new Session(
+      serviceWithStatus(() => CancellablePromise.resolve(idle)),
+    );
+    const events = eventSource();
+    const edge = vi.fn();
+    const off = subscribeSessionEvents(session, events.on, edge);
+    try {
+      const current = { ...recording, generation: 3 };
+      const completed = {
+        ...idle,
+        generation: 3,
+        transcript: "completed recording",
+      };
+      const rejected = {
+        ...completed,
+        state: State.Failed,
+        startRejected: true,
+        message: "Cannot start recording.",
+      };
+      const cleared = { ...idle, generation: 3 };
+      for (const status of [current, completed, rejected, cleared]) {
+        events.emit("dictation:status", status);
+        expect(session.dictation.status).toEqual(status);
+      }
+      expect(edge).toHaveBeenCalledTimes(4);
+    } finally {
+      off();
+      session.dispose();
+    }
+  });
+
   it("refreshes history only for an accepted active-to-terminal file event", async () => {
     const entries = CancellablePromise.withResolvers<(typeof historyEntry)[]>();
     const TranscriptHistory = vi.fn(() => entries.promise);

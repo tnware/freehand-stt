@@ -54,14 +54,33 @@ for (const gesture of ["Escape", "Done", "titlebar"] as const) {
     await selected(page, "Pending server");
   });
 }
-test("save in dirty close prompt keeps activation through failure and retry", async ({ page, saves }) => {
+test("save in dirty close prompt keeps activation through failure and retry", async ({
+  page,
+  saves,
+}) => {
   await add(page);
   await page.locator("#connection-name").fill("Saved by prompt");
   await page.locator("#connection-url").fill("https://fixture.example.test/v1");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await prompt(page).getByRole("button", { name: "Save", exact: true }).click();
-  await saves.complete(await saves.waitForStart(), "failure");
-  await expect(prompt(page).getByRole("alert")).toContainText("Fixture save failed");
+  const first = await saves.waitForStart();
+  await expect(
+    prompt(page).getByRole("button", { name: "Keep editing" }),
+  ).toBeDisabled();
+  await expect(
+    prompt(page).getByRole("button", { name: "Discard", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    prompt(page).getByRole("button", { name: "Close", exact: true }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(prompt(page)).toBeVisible();
+  await page.mouse.click(5, 5);
+  await expect(prompt(page)).toBeVisible();
+  await saves.complete(first, "failure");
+  await expect(prompt(page).getByRole("alert")).toContainText(
+    "Fixture save failed",
+  );
   await prompt(page).getByRole("button", { name: "Save", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "success");
   await selected(page, "Saved by prompt");
@@ -93,7 +112,7 @@ test("dirty settings save before adding retains failure and retries without losi
   await page.locator("#file-transcription-timeout").fill("75");
   await page.getByRole("button", { name: "Show connections", exact: true }).click();
   await page.getByRole("button", { name: "Add connection…", exact: true }).click();
-  const decision = page.getByRole("dialog", { name: "Save settings before changing connections?", exact: true });
+  const decision = page.getByRole("dialog", { name: "Save settings before continuing?", exact: true });
   await decision.getByRole("button", { name: "Save and continue" }).click();
   const first = await saves.waitForStart();
   await page.keyboard.press("Escape");

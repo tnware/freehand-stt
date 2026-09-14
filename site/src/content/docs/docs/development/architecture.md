@@ -689,6 +689,12 @@ publishes its own status and diagnostics.
 
 ## Renderer state ownership
 
+Settings and Connection navigation use the controlled `PendingChangesDialog`.
+Parents own drafts, pending destinations, and save/discard actions; the shared
+dialog owns presentation and blocks Escape/outside dismissal while saving.
+Confirmed settings adoption invalidates metadata once through `SettingsEditor`,
+including credential changes that are invisible to the renderer.
+
 `LocalRuntimeSection` owns provider selection, installation choices, action
 guards, and removal confirmations. `LocalRuntimeDetails` renders setup and
 preferences, and `LocalRuntimeModelCatalog` renders the qualified model list.
@@ -699,6 +705,10 @@ Each WebView composes its own `Session` from feature owners under
 `frontend/src/lib/stores`. `Session` owns construction, initial loading order,
 aggregate busy presentation, and presentation teardown; it is not a second
 command facade or a container for feature state.
+Disposal is terminal: `Session` stops scheduling subsequent initialization steps
+and suppresses late initialization failures. Already-started operations retain
+their feature owners. The app mount separately guards metadata replies,
+appearance updates, and the `ShellReady` handshake against component teardown.
 
 - `SettingsEditor` owns the applied settings snapshot, independent editable
   settings/credential draft, connection probes, microphone choices, recovery,
@@ -706,7 +716,11 @@ command facade or a container for feature state.
   editing transaction. Pure snapshot copying and quick-control patch projection
   live in `utils/settingsDraft.ts`; that helper owns no bindings, credentials,
   save queue, or reactive state.
-- `DictationState` owns live-dictation projection and commands.
+- `DictationState` owns live-dictation projection and commands. It rejects older
+  generations before changing state or triggering history and notification
+  reactions. Snapshot responses use the same admission rule; a newer generation
+  wins even when overlapping reads finish in the opposite order. Same-generation
+  outcomes remain valid, while intervening events supersede same-generation reads.
 - `FileTranscriptionState` owns stored-file projection, generation/revision
   reconciliation, delta-gap recovery, and explicit file commands. It also owns the
   renderer-session streaming preference independently of backend capability status.
@@ -889,6 +903,11 @@ new sink, persistence, export binding, or renderer logging facility.
 
 ## Configuration boundaries
 
+`internal/settings/request_profiles.go` contains ordinary Go request-profile
+capture and preview validation. These methods remain on the settings owner and
+hold its save lock while resolving settings, managed endpoints, and credentials.
+They do not add a Wails service or a second settings transaction.
+
 Durable settings contain ordinary STT, VAD, shortcut, window, appearance, history, post-processing, and optional speech-playback configuration. STT, stored-file STT, post-processing, and TTS have independent validated request budgets; STT, post-processing, and TTS retain independent runtime models and selections. Selecting the same reusable connection explicitly shares its endpoint, HTTP policy, backend profile, and credential reference; selecting separate connections keeps those identities independent. Stored credentials remain in Windows Credential Manager or macOS Keychain; SQLite contains only their opaque references. Payload and retained-memory ceilings are implementation safety invariants rather than user-tunable settings.
 
 `internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. Current Voice playback passes only the displayed dictation generation. The dictation owner rejects stale, active, cleared, and closed results, then supplies an immutable text snapshot through the injected `tts.TranscriptSources` collaboration boundary; history retention is not required. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata. Generic has no portable voice-list operation; qualified speech profiles add metadata-only voice discovery, and model profiles may restrict selectable voices. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation immediately and serializes native output teardown within the service wait budget described below.
@@ -1001,6 +1020,12 @@ An active operation observes one coherent request profile. The transactional set
 `postprocess.Processor` accepts the captured configuration and credential explicitly through `ProcessWithCredential`; it has no credential-store dependency or alternate store-reading entry point. Credential acquisition remains with the transactional settings/profile owner.
 
 ## Audio contract
+
+`internal/filetranscription/audio_file.go` owns the private selected-file
+capability, size/type checks, and identity revalidation before opening. The file
+service retains selection and job lifetime. Completed Voice and file responses
+share JSON and safe metadata decoding in `internal/inference/transcription_response.go`;
+each caller retains its response limit, transport errors, and final-text checks.
 
 The capture adapter may receive the Windows mix format, commonly 48 kHz float/stereo. Before upload, the client produces a bounded WAV payload with explicit format metadata. The initial target is mono signed 16-bit PCM at 16 kHz.
 

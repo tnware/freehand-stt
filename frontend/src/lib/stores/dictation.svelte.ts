@@ -32,9 +32,11 @@ export class DictationState {
   status = $state<Status>(IDLE);
   #statusRevision = 0;
 
-  applyStatus(status: Status) {
+  applyStatus(status: Status): boolean {
+    if (status.generation < this.status.generation) return false;
     this.#statusRevision++;
     this.status = status;
+    return true;
   }
 
   async toggleRecording() {
@@ -89,6 +91,12 @@ export class DictationState {
   async load() {
     const revision = this.#statusRevision;
     const status = await this.#service.CurrentStatus();
-    if (revision === this.#statusRevision) this.status = status;
+    // A newer recording supersedes prior updates, but a same-generation
+    // snapshot must not overwrite an event received while it was loading.
+    if (
+      status.generation > this.status.generation ||
+      revision === this.#statusRevision
+    )
+      this.applyStatus(status);
   }
 }
