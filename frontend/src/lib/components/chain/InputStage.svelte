@@ -111,7 +111,7 @@
   </div>
 
   <div
-    class="rounded-md bg-well px-2.5 py-2"
+    class="rounded-md bg-sunk px-2.5 py-2"
     style="--meter-height: 2.75rem"
   >
     <Waveform

@@ -34,7 +34,7 @@
   aria-label={`Stage ${ordinal}: ${label}${unused ? " (not used in this workflow)" : ""}`}
 >
   <header
-    class="flex h-[30px] shrink-0 items-center justify-between gap-2 border-b border-hairline bg-subtle-fill-hover px-2.5"
+    class="stage-head flex h-[30px] shrink-0 items-center justify-between gap-2 border-b border-hairline px-2.5"
   >
     <span class="flex min-w-0 items-center gap-2">
       <span class="figure shrink-0 font-mono text-[10px] text-ink-quiet"
@@ -54,7 +54,7 @@
     {/if}
   </header>
 
-  <div class="flex min-h-0 flex-1 flex-col gap-2 p-3">
+  <div class="stage-body flex min-h-0 flex-1 flex-col p-3">
     {@render children()}
     {#if footer}
       <div class="flex-1"></div>
@@ -66,6 +66,14 @@
 </section>
 
 <style>
+  /* One step above the card, not two: at 6% the strip reads as a filled bar
+     rather than a seam. */
+  .stage-head {
+    background: color-mix(in srgb, var(--foreground) 3.5%, transparent);
+  }
+  .stage-body {
+    gap: 9px;
+  }
   .stage {
     border-color: var(--hairline);
   }

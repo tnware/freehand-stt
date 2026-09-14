@@ -58,7 +58,7 @@
     <!-- Live text belongs to the stage that produces it, so the chain shows
          the recogniser working rather than only its finished output. -->
     <p
-      class="h-[62px] overflow-hidden rounded-md bg-well px-2.5 py-2 text-xs leading-relaxed"
+      class="h-[62px] overflow-hidden rounded-md bg-sunk px-2.5 py-2 text-xs leading-relaxed"
       aria-live="polite"
     >
       <span class="text-secondary-foreground">{live}</span

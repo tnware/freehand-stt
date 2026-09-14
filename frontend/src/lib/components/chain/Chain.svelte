@@ -48,6 +48,9 @@
     display: flex;
     min-width: 0;
     flex: 1;
+    /* Equal, fixed height across the row: a stage whose state has nothing to
+       show must not make the chain ragged. */
+    min-height: 18.5rem;
   }
   .chain-link {
     display: flex;

@@ -10,7 +10,10 @@
  * solid and Mica appearances; status colours remain separate from the brand.
  */
 :root {
-  /* Surfaces, recessed to raised. */
+  /* Surfaces, recessed to raised. --sunk is the only one below the page
+   * ground: it is the inside of a meter, a log or a live-text well, and it
+   * has to be darker than what surrounds it or the recess inverts. */
+  --sunk: #e7e7e7;
   --well: #f0f0f0;
   --background: #f4f4f4;
   --layer-fill: #ededed;
@@ -111,6 +114,7 @@
 .dark {
   /* Charcoal surfaces separate the canvas, content and floating controls.
 	 * Brand blue is reserved for actions and selected state. */
+  --sunk: #0e0e0e;
   --well: #151515;
   --background: #121212;
   --layer-fill: #1b1b1b;
@@ -299,6 +303,7 @@
   --color-control-fill-active: var(--control-fill-active);
   --color-layer-fill: var(--layer-fill);
   --color-well: var(--well);
+  --color-sunk: var(--sunk);
   --color-subtle-fill-hover: var(--subtle-fill-hover);
   --color-subtle-fill-pressed: var(--subtle-fill-pressed);
   --color-popover-foreground: var(--popover-foreground);
