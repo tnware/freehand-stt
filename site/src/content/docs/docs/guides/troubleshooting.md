@@ -120,13 +120,14 @@ To restore a backup made by this new settings lineage:
    `~/Library/Application Support/Freehand` using Finder → Go to Folder (macOS). Copy `freehand.db` and any
    matching `freehand.db-journal`, `freehand.db-wal`, or `freehand.db-shm` files
    together into a separate recovery folder before removing them from this folder.
-3. Copy a known-good `.db` file from `freehand-backups` into the Freehand folder and name
+3. Copy a known-good `freehand-*.db` file from `freehand-backups` into the Freehand folder and name
    the copy `freehand.db`. Keep the original backup. Do not mix old sidecars with
    the restored database.
 4. Reopen Freehand and review settings and authentication. Backups contain
    configuration, not keys; replaced keys may need entering again.
 
-The app retains the newest three backups made before schema upgrades. Explicit
+Files ending in `.tmp` are unfinished backups and must not be restored.
+The app retains the newest three completed backups made before schema upgrades. Explicit
 reset archives are retained until you remove them. Keep any recovery files private:
 they can contain endpoint addresses, headers, and custom instructions.
 

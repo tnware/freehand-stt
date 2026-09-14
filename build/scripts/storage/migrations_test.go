@@ -81,6 +81,8 @@ func TestMigrationValidation(t *testing.T) {
 		{"commented Up", map[string]string{"00001_initial.sql": "-- example: -- +goose Up\nSELECT 1;\n"}, "migration must use goose transactions"},
 		{"nontransactional", map[string]string{"00001_initial.sql": "-- +goose NO TRANSACTION\n" + initialMigration}, "migration must use goose transactions"},
 		{"nontransactional whitespace", map[string]string{"00001_initial.sql": "-- +goose NO\tTRANSACTION\n" + initialMigration}, "migration must use goose transactions"},
+		{"nontransactional lowercase", map[string]string{"00001_initial.sql": "-- +goose no transaction\n" + initialMigration}, "migration must use goose transactions"},
+		{"nontransactional mixed case", map[string]string{"00001_initial.sql": "-- +goose No Transaction\n" + initialMigration}, "migration must use goose transactions"},
 		{"transactional", map[string]string{"00001_initial.sql": initialMigration}, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -94,6 +96,35 @@ func TestMigrationValidation(t *testing.T) {
 			err := checkMigrations("")
 			if tc.want == "" && err != nil || tc.want != "" && (err == nil || !strings.Contains(err.Error(), tc.want)) {
 				t.Fatalf("checkMigrations() = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestMigrationLineagePreservesPublishedGaps(t *testing.T) {
+	for _, action := range []string{"unchanged gap", "append after gap", "backfill", "backfill and append"} {
+		t.Run(action, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			fixtureGit(t, "init", "-q")
+			writeMigrationFixture(t, initialPath, initialMigration)
+			writeMigrationFixture(t, "internal/storage/schema/00003_published.sql", "-- +goose Up\nALTER TABLE settings ADD COLUMN published TEXT;\n")
+			fixtureGit(t, "add", ".")
+			fixtureGit(t, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "publish versions 1 and 3")
+			base := fixtureGit(t, "rev-parse", "HEAD")
+			backfill := action == "backfill" || action == "backfill and append"
+			if backfill {
+				writeMigrationFixture(t, "internal/storage/schema/00002_backfill.sql", "-- +goose Up\nALTER TABLE settings ADD COLUMN backfill TEXT;\n")
+			}
+			if action == "append after gap" || action == "backfill and append" {
+				writeMigrationFixture(t, "internal/storage/schema/00004_next.sql", "-- +goose Up\nALTER TABLE settings ADD COLUMN next TEXT;\n")
+			}
+			err := checkMigrations(base)
+			if backfill {
+				if err == nil || !strings.Contains(err.Error(), "new migration must follow published version 00003") {
+					t.Fatalf("backfilled migration passed append-only policy: %v", err)
+				}
+			} else if err != nil {
+				t.Fatalf("unchanged published gap rejected: %v", err)
 			}
 		})
 	}

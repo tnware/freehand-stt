@@ -428,9 +428,6 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 			}
 		}
 	}
-	if err := q.ClearSelectedConnections(ctx); err != nil {
-		return state, err
-	}
 	for _, purpose := range purposes {
 		p := savedconnection.Purpose(purpose)
 		if state.selected[p] == "" {

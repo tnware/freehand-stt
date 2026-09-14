@@ -695,7 +695,14 @@ Check file isolation on both platforms: `settings.db` and `settings.json`
 remain untouched, legacy credentials are never read or deleted, and `freehand.db`
 starts with defaults and no connections. Renamed foreign databases must fail identity
 validation. Temporary Git fixtures reject edits, removal, or renaming of published
-`schema/` migrations, as well as invalid or nontransactional migrations. Check backups,
+`schema/` migrations, new versions below the published maximum, and nontransactional
+annotations in every accepted letter case. Backup tests block source access to
+verify that incomplete copies are never published, cancel that work, and restore
+the completed snapshot after retention ignores temporary and unrelated files.
+Catalog tests fill all four manual allowances alongside the maximum managed
+inventory and reopen it through the real storage owner. Inject native-vault write
+and deletion failures to exercise rollback, deferred cleanup, and cleanup-cap recovery.
+Check backups,
 constraints, lock waits, read-only/full-disk failures, incompatible history, and
 staged credential consistency. Run the storage/settings race tests on Windows;
 CI also checks portable storage fixtures on Linux. Native service fixtures use a

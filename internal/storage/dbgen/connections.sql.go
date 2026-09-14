@@ -152,9 +152,10 @@ func (q *Queries) ListConnectionUses(ctx context.Context) ([]SavedConnectionUse,
 }
 
 const listSavedConnections = `-- name: ListSavedConnections :many
-SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account,managed_instance_id FROM saved_connections ORDER BY name,id LIMIT 129
+SELECT id,name,compatibility_profile,base_url,allow_insecure_http,authentication_mode,health_path,credential_account,managed_instance_id FROM saved_connections ORDER BY name,id LIMIT 137
 `
 
+// Allow 32 manual connections per task plus 8 managed instances and one overflow sentinel.
 func (q *Queries) ListSavedConnections(ctx context.Context) ([]SavedConnection, error) {
 	rows, err := q.db.QueryContext(ctx, listSavedConnections)
 	if err != nil {

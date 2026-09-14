@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/pressly/goose/v3"
@@ -23,16 +24,21 @@ func (s *Store) backup(ctx context.Context, db *sql.DB) (string, error) {
 	if err := secureDirectory(dir); err != nil {
 		return "", err
 	}
-	temp, err := os.CreateTemp(dir, "freehand-*.db")
+	temp, err := os.CreateTemp(dir, "freehand-*.tmp")
 	if err != nil {
 		return "", err
 	}
-	path := temp.Name()
+	tempPath := temp.Name()
+	defer os.Remove(tempPath)
 	if err = temp.Close(); err != nil {
 		return "", err
 	}
-	if err = backupDatabase(ctx, db, path); err != nil {
-		os.Remove(path)
+	if err = backupDatabase(ctx, db, tempPath); err != nil {
+		return "", err
+	}
+	// Interrupted work must never be offered or counted as a completed backup.
+	path := strings.TrimSuffix(tempPath, ".tmp") + ".db"
+	if err = os.Rename(tempPath, path); err != nil {
 		return "", err
 	}
 	// Complete and synced before retention removes any previous successful backup.
@@ -46,7 +52,7 @@ func (s *Store) backup(ctx context.Context, db *sql.DB) (string, error) {
 	}
 	var files []item
 	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".db" {
+		if !entry.Type().IsRegular() || !strings.HasPrefix(entry.Name(), "freehand-") || filepath.Ext(entry.Name()) != ".db" {
 			continue
 		}
 		info, e := entry.Info()

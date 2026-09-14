@@ -33,9 +33,10 @@ Generated rows and database handles never cross into Wails or domain services.
 
 ## Change the schema or a query
 
-1. Add the next five-digit goose SQL migration, such as `00002_example.sql`.
-   Never edit or delete a migration already on the target branch. Runtime startup
-   runs forward only; migrations must remain transactional.
+1. Add the next five-digit goose SQL migration with a version greater than every
+   migration on the target branch. Never edit, delete, or fill gaps below published
+   versions. Runtime startup runs forward only; migrations must remain transactional.
+   The contract check rejects Goose's `NO TRANSACTION` annotation regardless of case.
 2. Add explicit, parameterized application queries under `queries/`. `sqlc.yaml`
    reads the same migration directory used by the executable.
 3. Generate from the repository root:
@@ -98,7 +99,10 @@ keys. A distinct SQLite `application_id` rejects even an alpha database renamed
 to `freehand.db`. Only backups with the current database identity are eligible for restoration.
 
 Before upgrading an existing schema, SQLite's backup API creates a consistent,
-synced copy under `freehand-backups/` as `freehand-*.db`; the newest three successful backups are retained.
+synced copy under `freehand-backups/`. It writes a private `freehand-*.tmp` candidate
+and publishes it as `freehand-*.db` only after copying and synchronization finish.
+Retention considers only completed backup names and keeps the newest three;
+interrupted temporary files and unrelated files do not consume those slots.
 A backup failure blocks the upgrade. Each migration and its goose version update
 commit together. On an uncertain settings commit, saves and new inference
 profiles pause until Retry validates and reloads the committed state.
@@ -166,6 +170,8 @@ the committed connection fields before validation and save only feature options.
 Selection clears the role's model; optional features disable until configured.
 Settings, selected IDs, entry mutations, and active credential references commit
 in one transaction, then publish. Expected selected IDs reject stale editors.
+The bounded catalog query admits all 128 manual connections and eight managed
+entries, plus one overflow row so an oversized database is rejected rather than truncated.
 An entry must be deselected from every active feature before deletion or removal
 of an active use; empty catalogs are valid. Shared edits project endpoint details
 into every selected feature while preserving model/options. Credential replacement

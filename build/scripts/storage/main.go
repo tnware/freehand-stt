@@ -153,7 +153,8 @@ func checkMigrations(base string) error {
 	}
 	valid := regexp.MustCompile(`^[0-9]{5}_[a-z0-9_]+\.sql$`)
 	up := regexp.MustCompile(`(?m)^[	 ]*--[	 ]+\+goose[	 ]+Up[	 \r]*$`)
-	nontransactional := regexp.MustCompile(`\bNO\s+TRANSACTION\b`)
+	// Goose annotation commands are case-insensitive.
+	nontransactional := regexp.MustCompile(`(?i)\bNO\s+TRANSACTION\b`)
 	versions := map[string]bool{}
 	for _, entry := range entries {
 		if entry.IsDir() || !valid.MatchString(entry.Name()) {
@@ -182,7 +183,9 @@ func checkMigrations(base string) error {
 	if err != nil {
 		return err
 	}
-	for _, path := range strings.Fields(string(paths)) {
+	published := map[string]bool{}
+	maxPublishedVersion := ""
+	for path := range strings.FieldsSeq(string(paths)) {
 		old, err := exec.Command("git", "show", base+":"+path).Output()
 		if err != nil {
 			return err
@@ -193,6 +196,16 @@ func checkMigrations(base string) error {
 		}
 		if !bytes.Equal(old, current) {
 			return fmt.Errorf("published migration changed: %s", path)
+		}
+		name := filepath.Base(path)
+		published[name] = true
+		maxPublishedVersion = max(maxPublishedVersion, name[:5])
+	}
+	// Preserve existing gaps. Filling one after a later version shipped would
+	// work on a fresh database but Goose rejects it as out of order on upgrade.
+	for _, entry := range entries {
+		if !published[entry.Name()] && entry.Name()[:5] <= maxPublishedVersion {
+			return fmt.Errorf("new migration must follow published version %s: %s", maxPublishedVersion, entry.Name())
 		}
 	}
 	return nil

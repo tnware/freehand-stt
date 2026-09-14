@@ -62,29 +62,42 @@ func TestBuiltInConnectionRemovalFollowsExplicitInventoryRemoval(t *testing.T) {
 func TestBuiltInsDoNotConsumeManualConnectionCapacity(t *testing.T) {
 	s := testStore(t)
 	v := loadStore(t, s)
-	d := savedconnection.Extract(v, savedconnection.Voice)
-	d.BaseURL = "https://example.test/v1"
-	for n := 0; n < savedconnection.Limit(savedconnection.Voice); n++ {
-		var err error
-		v, err = s.BeginConnectionChange(savedconnection.Change{Action: savedconnection.Create, Name: fmt.Sprintf("Manual %d", n), Details: &d, Uses: []savedconnection.Purpose{savedconnection.Voice}}, v)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err = s.Save(v); err != nil {
-			t.Fatal(err)
+	for _, purpose := range []savedconnection.Purpose{savedconnection.Voice, savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech} {
+		d := savedconnection.Extract(v, purpose)
+		d.BaseURL = "https://example.test/v1"
+		for n := range savedconnection.Limit(purpose) {
+			var err error
+			v, err = s.BeginConnectionChange(savedconnection.Change{Action: savedconnection.Create, Name: fmt.Sprintf("Manual %s %d", purpose, n), Details: &d, Uses: []savedconnection.Purpose{purpose}}, v)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = s.Save(v); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
-	v.ManagedRuntimes = []managedruntime.Instance{{ID: "local", Name: "Local", Provider: managedruntime.NeMoSpeechCPP, Model: "nemotron-3.5"}}
+	// Duplicate providers remain valid durable inventory so older installations
+	// can be recovered explicitly, even though new duplicates are not admitted.
+	for n := range managedruntime.MaxInstances {
+		v.ManagedRuntimes = append(v.ManagedRuntimes, managedruntime.Instance{ID: fmt.Sprintf("local-%d", n), Name: fmt.Sprintf("Local %d", n), Provider: managedruntime.NeMoSpeechCPP, Model: "nemotron-3.5"})
+	}
 	if err := s.Save(v); err != nil {
 		t.Fatal(err)
+	}
+	before := s.ConnectionCatalog()
+	if want := savedconnection.MaxPerPurpose*4 + managedruntime.MaxInstances; len(before.Entries) != want {
+		t.Fatalf("catalog has %d entries, want %d", len(before.Entries), want)
 	}
 	s = reopen(t, s)
 	v, err := s.Load()
 	if err != nil {
 		t.Fatalf("automatic row exceeded manual use limit on reload: %v", err)
 	}
-	v = selectConnection(t, s, v, savedconnection.Voice, savedconnection.BuiltInID("local"))
-	if v.VoiceTranscription.ManagedInstanceID != "local" {
+	if !reflect.DeepEqual(s.ConnectionCatalog(), before) {
+		t.Fatal("full catalog changed across reopen")
+	}
+	v = selectConnection(t, s, v, savedconnection.Voice, savedconnection.BuiltInID("local-0"))
+	if v.VoiceTranscription.ManagedInstanceID != "local-0" {
 		t.Fatal("full manual catalog prevented built-in selection")
 	}
 }
