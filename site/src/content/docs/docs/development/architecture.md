@@ -1098,6 +1098,17 @@ History never contains a URL path supplied by the user, target-window identity, 
 
 ## Lifecycle
 
+The update service checks release metadata after 30 seconds, with a two-minute
+request timeout, then daily after success or after 15 minutes on failure. Wails
+owns the update window, download, verification, staging, and explicit restart.
+About derives interactive outcomes from Wails' state: successful staging does
+not mean the running version is current. Shutdown rejects new checks, cancels
+the service context, and waits at most two seconds across repeated shutdown calls.
+This bound lets the native shutdown thread proceed if updater presentation is
+waiting for it. A late worker cannot publish or replace service status. The
+service cannot guarantee completion of Wails' native window teardown; that
+requires packaged Windows and macOS acceptance.
+
 - Wails single-instance ownership uses encrypted second-instance messages and the stable product identifier parsed from `build/config.yml`, shared deliberately with packaging and updates.
 - First process owns hotkeys, tray, capture, the main window, and reusable Settings, About, and Transcription details windows.
 - Second process asks the first to reveal the main window and exits.

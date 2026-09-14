@@ -22,12 +22,21 @@ artifacts, and release configuration; reading a file is not itself a test smell.
 Use controlled promises or channels for asynchronous results and Go's
 [`testing/synctest`](https://pkg.go.dev/testing/synctest) for timer-driven owners.
 Updater tests advance the production schedule in virtual time and exercise
-disabling updates during a pending result. These checker fixtures do not qualify
+disabling updates during a pending result, metadata timeouts, retry after failure,
+and returning to daily checks after recovery. Manual-check fixtures distinguish
+a staged update from an up-to-date result. A blocked presentation fixture verifies
+the shared two-second shutdown deadline, rejection of new work, and suppression
+of late status changes. These checker fixtures do not qualify
 the native Wails updater window or its shutdown behavior. Window option tests
 cover renderer permissions across surfaces; retained-instance tests check reuse
 without claiming native close, focus, or startup acceptance.
 
 ## Renderer state and navigation
+
+Frontend CI runs unit tests, Svelte checks, and the production build. Keep the
+frontend Playwright workflow suite out of CI because of its runtime cost; run
+relevant browser tests locally for concrete behavior changes. Browser fixtures
+use synthetic services and do not qualify native desktop behavior.
 
 Exercise dictation events and overlapping status reads in both completion orders.
 Older generations must not replace newer state, refresh history, or emit result

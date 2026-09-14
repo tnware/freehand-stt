@@ -169,7 +169,10 @@ does not invoke the model.
 ## Update checks
 
 Automatic update checks are on by default. Freehand checks GitHub release
-metadata shortly after startup and once per day. If an update is available,
+metadata about 30 seconds after startup and once per day after a successful
+check. Failed attempts retry after 15 minutes while Freehand is running.
+Development builds do not check automatically. You can also use **About → Check now**.
+If an update is available,
 the updater can download and checksum-verify the platform asset, then waits for
 you to restart. macOS uses an app-bundle ZIP; checksum verification does not
 establish Developer ID trust or notarization. See [macOS updates and manual fallback](../macos-setup/#update). You can
@@ -181,6 +184,14 @@ send recordings or transcripts to GitHub.
 Operational logs include status, timing, and failure categories. They
 exclude audio, transcript text, credentials, private headers, full paths,
 model IDs, URL paths and queries, and destination-window identity.
+
+When you restart into an app update, the Wails update helper separately writes
+`wails-update-<pid>.log` in the operating system's temporary directory. It records
+installation and temporary file paths, process IDs, and replacement errors, so
+paths may reveal your account name. It does not receive your recordings,
+transcripts, or inference API keys. The helper does not delete this file when
+finished; it remains until you or the operating system remove it. Review it
+before sharing it for support.
 
 Managed runtime **View output** is separate from those logs. Freehand privately
 captures recent process output in memory even with the viewer closed. The tail

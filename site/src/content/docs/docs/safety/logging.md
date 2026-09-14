@@ -11,7 +11,17 @@ This document defines application logging contract version 1. Logs are operation
 
 The single exception is root `main.go`: construction can fail before the Wails logger exists. That isolated bootstrap path prints only a bounded `error_kind` before exiting. After initialization, `App.Run` owns the structured terminal record and root exits silently on its returned error. The bootstrap path must never format the underlying error.
 
-Development runs show the default logger in the terminal. The application does not create or retain a log file. In the pinned Wails version, `application.DefaultLogger` uses `io.Discard` with the `production` build tag, including normal Windows release builds. These records are therefore available for local development diagnostics, not as a retrievable release-build support log. Changing destinations or adding retention is a separate privacy and support decision.
+Development runs show the default logger in the terminal. Freehand's application logger does not create or retain a log file. In the pinned Wails version, `application.DefaultLogger` uses `io.Discard` with the `production` build tag, including normal Windows release builds. These records are therefore available for local development diagnostics, not as a retrievable release-build support log. Changing destinations or adding retention is a separate privacy and support decision.
+
+The pinned Wails updater's detached restart helper is outside this logger
+hierarchy. When a user restarts into an update, it writes
+`wails-update-<pid>.log` in the OS temporary directory and to stderr. Its swap
+diagnostics include installation/staging paths, process IDs, and raw filesystem
+errors. The helper closes but does not remove this file. It does not receive
+transcripts, audio, or inference credentials. Do not describe this upstream log
+as satisfying Freehand's path/error filtering rules or include it unreviewed in
+a support bundle. Native update acceptance must account for this exception;
+altering helper logging requires a separate upstream integration change.
 
 ## Levels and bridge debugging
 

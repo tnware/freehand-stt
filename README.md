@@ -98,7 +98,7 @@ Source-build instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - [Install and update on Windows](https://tnware.github.io/freehand-stt/docs/guides/windows-installer/)
 - [Connect a speech server](https://tnware.github.io/freehand-stt/docs/guides/connect-a-server/)
-- [Set up local speech on Windows](https://tnware.github.io/freehand-stt/docs/guides/local-runtime/)
+- [Set up local speech on Windows or macOS](https://tnware.github.io/freehand-stt/docs/guides/local-runtime/)
 - [Use Freehand](https://tnware.github.io/freehand-stt/docs/guides/using-freehand/)
 - [Privacy and safety](https://tnware.github.io/freehand-stt/docs/guides/privacy-and-safety/)
 - [Troubleshooting](https://tnware.github.io/freehand-stt/docs/guides/troubleshooting/)

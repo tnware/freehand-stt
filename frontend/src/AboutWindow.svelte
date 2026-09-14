@@ -53,7 +53,7 @@
       case UpdateState.StateCurrent:
         return "Freehand is up to date.";
       case UpdateState.StateError:
-        return "The last update check could not reach GitHub Releases.";
+        return "The last update attempt failed. Check again to see details in the updater window.";
       default:
         return status.enabled
           ? "Automatic checks are on."
@@ -207,9 +207,9 @@
       >
         <p>
           Speech is captured locally, sent to the endpoint you configure, and
-          inserted into the window that had focus when you started. If focus
-          moved before the transcript came back, nothing is typed and the text
-          waits for an explicit copy.
+          inserted only while the original destination remains safe. If delivery
+          cannot finish, the text stays available to copy. Check for partially
+          inserted text before pasting again.
         </p>
         <p>
           Your API key is stored in {credentialStore} and is never returned to this

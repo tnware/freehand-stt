@@ -21,6 +21,9 @@ const (
 	StatusEvent       = "updates:status"
 	initialCheckDelay = 30 * time.Second
 	checkInterval     = 24 * time.Hour
+	failedCheckRetry  = 15 * time.Minute
+	metadataTimeout   = 2 * time.Minute
+	shutdownTimeout   = 2 * time.Second
 )
 
 type State string
@@ -49,6 +52,7 @@ type Status struct {
 type Checker interface {
 	Check(context.Context) (*updater.Release, error)
 	CheckAndInstall(context.Context) error
+	State() updater.State
 }
 
 type Service struct {
@@ -65,6 +69,8 @@ type Service struct {
 	wait            sync.WaitGroup
 	checkInProgress atomic.Bool
 	closed          atomic.Bool
+	shutdownDone    chan struct{}
+	shutdownBy      time.Time
 }
 
 func NewService(currentVersion string, enabled, development bool, publish func(Status), logger *slog.Logger) *Service {
@@ -116,24 +122,44 @@ func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptio
 	s.lifetime, s.cancel = context.WithCancel(ctx)
 	lifetime := s.lifetime
 	s.mu.Unlock()
-	s.wait.Add(1)
-	go s.run(lifetime)
+	s.wait.Go(func() { s.run(lifetime) })
 	return nil
 }
 
 func (s *Service) ServiceShutdown() error {
 	s.workerMu.Lock()
-	s.closed.Store(true)
-	s.mu.Lock()
-	cancel := s.cancel
-	s.cancel = nil
-	s.mu.Unlock()
-	if cancel != nil {
-		cancel()
+	if !s.closed.Swap(true) {
+		s.shutdownBy = time.Now().Add(shutdownTimeout)
+		s.shutdownDone = make(chan struct{})
+		s.mu.Lock()
+		cancel := s.cancel
+		s.cancel = nil
+		s.mu.Unlock()
+		if cancel != nil {
+			cancel()
+		}
+		// Wails presentation can wait for the native UI thread which invokes
+		// shutdown. Never let that worker hold Quit indefinitely.
+		go func() {
+			s.wait.Wait()
+			close(s.shutdownDone)
+		}()
 	}
+	done, deadline := s.shutdownDone, s.shutdownBy
 	s.workerMu.Unlock()
-	s.wait.Wait()
-	return nil
+	select {
+	case <-done:
+		return nil
+	default:
+	}
+	timer := time.NewTimer(max(0, time.Until(deadline)))
+	defer timer.Stop()
+	select {
+	case <-done:
+		return nil
+	case <-timer.C:
+		return context.DeadlineExceeded
+	}
 }
 
 // Current returns the last bounded update-check status.
@@ -147,6 +173,10 @@ func (s *Service) Current() Status {
 // an ordinary Go composition helper rather than a renderer binding.
 func ApplyEnabled(s *Service, enabled bool) {
 	s.mu.Lock()
+	if s.closed.Load() {
+		s.mu.Unlock()
+		return
+	}
 	s.status.Enabled = enabled
 	if s.development {
 		s.status.State = StateDevelopment
@@ -188,25 +218,22 @@ func (s *Service) CheckForUpdates() error {
 		return errors.New("an update check is already running")
 	}
 	s.setChecking()
-	s.wait.Add(1)
-	go func() {
-		defer s.wait.Done()
+	s.wait.Go(func() {
 		defer s.checkInProgress.Store(false)
 		started := time.Now()
 		s.logger.Info("interactive update check started")
 		err := checker.CheckAndInstall(lifetime)
-		s.finishInteractive(err)
+		s.finishInteractive(err, checker.State())
 		if err != nil {
 			s.logger.Warn("interactive update check failed", "duration_ms", time.Since(started).Milliseconds(), "error_kind", diagnostics.ErrorKind(err))
 			return
 		}
 		s.logger.Info("interactive update check completed", "duration_ms", time.Since(started).Milliseconds(), "outcome", "presented")
-	}()
+	})
 	return nil
 }
 
 func (s *Service) run(ctx context.Context) {
-	defer s.wait.Done()
 	timer := time.NewTimer(initialCheckDelay)
 	defer timer.Stop()
 	for {
@@ -225,7 +252,11 @@ func (s *Service) run(ctx context.Context) {
 			if s.enabled() {
 				s.backgroundCheck(ctx)
 			}
-			timer.Reset(checkInterval)
+			interval := checkInterval
+			if s.Current().State == StateError {
+				interval = failedCheckRetry
+			}
+			timer.Reset(interval)
 		}
 	}
 }
@@ -250,7 +281,9 @@ func (s *Service) backgroundCheck(ctx context.Context) {
 	s.setChecking()
 	started := time.Now()
 	s.logger.Info("automatic update check started")
-	release, err := checker.Check(ctx)
+	checkCtx, cancel := context.WithTimeout(ctx, metadataTimeout)
+	release, err := checker.Check(checkCtx)
+	cancel()
 	s.finishBackground(release, err)
 	if err != nil {
 		s.logger.Warn("automatic update check failed", "duration_ms", time.Since(started).Milliseconds(), "error_kind", diagnostics.ErrorKind(err))
@@ -261,7 +294,7 @@ func (s *Service) backgroundCheck(ctx context.Context) {
 		outcome = "available"
 	}
 	s.logger.Info("automatic update check completed", "duration_ms", time.Since(started).Milliseconds(), "outcome", outcome)
-	if release == nil || !s.enabled() {
+	if release == nil || !s.enabled() || ctx.Err() != nil || s.closed.Load() {
 		return
 	}
 
@@ -272,7 +305,7 @@ func (s *Service) backgroundCheck(ctx context.Context) {
 	presented := time.Now()
 	s.logger.Info("automatic update presentation started")
 	err = checker.CheckAndInstall(ctx)
-	s.finishInteractive(err)
+	s.finishInteractive(err, checker.State())
 	if err != nil {
 		s.logger.Warn("automatic update presentation failed", "duration_ms", time.Since(presented).Milliseconds(), "error_kind", diagnostics.ErrorKind(err))
 		return
@@ -282,7 +315,12 @@ func (s *Service) backgroundCheck(ctx context.Context) {
 
 func (s *Service) setChecking() {
 	s.mu.Lock()
+	if s.closed.Load() {
+		s.mu.Unlock()
+		return
+	}
 	s.status.State = StateChecking
+	s.status.LatestVersion = ""
 	s.status.ErrorKind = ""
 	status := s.status
 	s.mu.Unlock()
@@ -291,6 +329,10 @@ func (s *Service) setChecking() {
 
 func (s *Service) finishBackground(release *updater.Release, err error) {
 	s.mu.Lock()
+	if s.closed.Load() {
+		s.mu.Unlock()
+		return
+	}
 	if !s.status.Enabled {
 		s.status.State = StateDisabled
 		s.status.LatestVersion = ""
@@ -316,17 +358,30 @@ func (s *Service) finishBackground(release *updater.Release, err error) {
 	s.publishStatus(status)
 }
 
-func (s *Service) finishInteractive(err error) {
+func (s *Service) finishInteractive(err error, state updater.State) {
 	s.mu.Lock()
+	if s.closed.Load() {
+		s.mu.Unlock()
+		return
+	}
 	s.status.LastCheckedAt = time.Now().UTC().Format(time.RFC3339)
 	s.status.ErrorKind = ""
 	if err != nil {
 		s.status.State = StateError
 		s.status.ErrorKind = diagnostics.ErrorKind(err)
-	} else if s.status.State == StateChecking {
-		// Detailed outcome remains visible in Wails' updater window. Keep the
-		// compact About summary truthful without duplicating that state machine.
-		s.status.State = StateCurrent
+	} else {
+		// A nil error also means a newer version was staged. Only Wails'
+		// explicit no-update state proves the running version is current.
+		switch state {
+		case updater.StateUpToDate:
+			s.status.State = StateCurrent
+			s.status.LatestVersion = ""
+		case updater.StateAvailable, updater.StateDownloading, updater.StateVerifying, updater.StateInstalling, updater.StateReady:
+			s.status.State = StateAvailable
+		default:
+			s.status.State = StateIdle
+			s.status.LatestVersion = ""
+		}
 	}
 	status := s.status
 	s.mu.Unlock()
@@ -334,7 +389,7 @@ func (s *Service) finishInteractive(err error) {
 }
 
 func (s *Service) publishStatus(status Status) {
-	if s.publish != nil {
+	if s.publish != nil && !s.closed.Load() {
 		s.publish(status)
 	}
 }
