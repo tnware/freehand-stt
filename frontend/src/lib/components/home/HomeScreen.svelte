@@ -17,7 +17,7 @@
   import AudioFileTranscription from "$lib/components/home/AudioFileTranscription.svelte";
   import HistoryPanel from "$lib/components/home/HistoryPanel.svelte";
   import Notifications from "$lib/components/shell/Notifications.svelte";
-  import TransportBar from "$lib/components/home/TransportBar.svelte";
+  import VoiceChain from "$lib/components/chain/VoiceChain.svelte";
   import TextToSpeech from "$lib/components/home/TextToSpeech.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import type { Session } from "$lib/stores/session.svelte";
@@ -25,6 +25,7 @@
   import { isFailure, statusMessage } from "$lib/utils/status";
   import { appReadiness, readinessVisible } from "$lib/utils/readiness";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
+  import { endpointHost } from "$lib/utils/endpoint";
   import {
     FileTranscriptionPhase,
     State,
@@ -34,6 +35,7 @@
 
   let {
     session,
+    now,
     inputMode = $bindable("voice"),
     onOpenHistorySettings,
     onOpenServerSettings,
@@ -45,6 +47,8 @@
     quickSettingsDisabled = false,
   }: {
     session: Session;
+    /** Shared shell clock; the input stage renders a per-second capture time. */
+    now: number;
     inputMode: string;
     onOpenHistorySettings: () => void;
     onOpenServerSettings: () => void;
@@ -231,24 +235,30 @@
       {#if session.editor.draft}
         {#if !readiness?.initialSetup}
           {#if inputMode === "voice"}
-            <TransportBar
-              status={session.dictation.status}
-              availability={recordingAvailability}
+            <VoiceChain
+              {session}
+              {now}
               busy={fileWorking}
-              toggleShortcut={session.editor.draft.toggleShortcut}
-              model={managed
+              microphone={microphoneLabel}
+              availability={recordingAvailability}
+              transcribeModel={managed
                 ? localModel
                 : (runtimeSettings?.voiceTranscription.model ?? "")}
-              processingModel={runtimeSettings?.postProcessing.model ?? ""}
-              microphone={microphoneLabel}
-              onToggle={() => session.dictation.toggleRecording()}
-              onCancel={() => session.dictation.cancel()}
-              onCopy={() => session.dictation.copyPending()}
-              onOpenSettings={() =>
-                void WindowingService.OpenTaskSettings(
-                  managed ? "local-runtime" : "voice-transcription",
-                  inputMode,
-                ).catch((cause) => session.messages.fail(cause))}
+              transcribeSource={managed
+                ? local.label
+                : endpointHost(
+                    runtimeSettings?.voiceTranscription.baseURL ?? "",
+                  )}
+              onOpenAudio={onOpenAudioSettings}
+              onOpenTranscribe={() =>
+                managed
+                  ? openLocalRuntime()
+                  : void WindowingService.OpenTaskSettings(
+                      "voice-transcription",
+                      inputMode,
+                    ).catch((cause) => session.messages.fail(cause))}
+              onOpenCleanup={onOpenProcessingSettings}
+              onOpenDelivery={onOpenGeneralSettings}
             />
           {:else if inputMode === "file"}
             <AudioFileTranscription

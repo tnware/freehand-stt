@@ -247,6 +247,7 @@
     <div class="flex min-w-0 flex-1 flex-col">
       <HomeScreen
         {session}
+        {now}
         bind:inputMode
         onOpenHistorySettings={() => openSettings("history")}
         onOpenServerSettings={() => openSettings("server")}

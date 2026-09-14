@@ -1,5 +1,5 @@
 <script lang="ts">
-  import StatusStrip from "$lib/components/shell/StatusStrip.svelte";
+  import StatusBar from "$lib/components/shell/StatusBar.svelte";
   import {
     taskConnectionDetails,
     taskConnectionStatus,
@@ -28,7 +28,9 @@
     serviceWithStatus,
   } from "$lib/stores/session-fixtures-data";
   import HomeScreen from "$lib/components/home/HomeScreen.svelte";
-  import AppHeader from "$lib/components/shell/AppHeader.svelte";
+  import TitleBar from "$lib/components/shell/TitleBar.svelte";
+  import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
+  import { paneByID, type PaneID } from "$lib/panes";
   import { controlledSaves } from "./save-control";
 
   const listenScenario = new URLSearchParams(location.search).has(
@@ -614,18 +616,28 @@
   const footerConnection = $derived(
     taskConnectionDetails(inputMode, session.editor),
   );
+  let now = $state(Date.now());
+  $effect(() => {
+    const timer = setInterval(() => (now = Date.now()), 1_000);
+    return () => clearInterval(timer);
+  });
 </script>
 
 <div
   class="flex h-screen flex-col overflow-hidden bg-background text-foreground"
 >
-  <AppHeader
-    bind:inputMode
-    settings={session.editor.applied}
-    onSettings={noop}
-  />
+  <TitleBar paneLabel={paneByID(inputMode as PaneID).label} />
+  <div class="flex min-h-0 flex-1">
+    <ActivityRail
+      pane={inputMode as PaneID}
+      onSelect={(id) => {
+        if (id !== "settings") inputMode = id;
+      }}
+    />
+    <div class="flex min-w-0 flex-1 flex-col">
   <HomeScreen
     {session}
+    {now}
     bind:inputMode
     onOpenHistorySettings={noop}
     onOpenServerSettings={() =>
@@ -636,8 +648,12 @@
     onOpenSpeechSettings={() => (openedSettings = "Speech settings")}
     onOpenGeneralSettings={noop}
   />
+    </div>
+  </div>
   {#if diagnosticsScenario}
-    <StatusStrip
+    <StatusBar
+      dictation={session.dictation.status}
+      {now}
       connectionState={footerStatus}
       connectionDetails={footerConnection}
       onCheck={() =>
