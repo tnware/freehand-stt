@@ -69,7 +69,10 @@ func newCompletionService(serverURL string, clients ...*inference.Client) (*Serv
 	cfg.Model = "speech/stt"
 	cfg.AuthenticationMode = config.AuthenticationModeNone
 	cfg.AutoInsert = true
-	cfg.VoiceTranscription = config.VoiceFromCompleted(cfg)
+	cfg.VoiceTranscription.BaseURL = cfg.BaseURL
+	cfg.VoiceTranscription.Model = cfg.Model
+	cfg.VoiceTranscription.AllowInsecureHTTP = cfg.AllowInsecureHTTP
+	cfg.VoiceTranscription.AuthenticationMode = config.AuthenticationModeNone
 	settingsSource := settings.Source(func() config.Settings { return cfg })
 	profiles := settings.ProfileSource(func() (settings.RequestProfile, error) {
 		return settings.RequestProfile{Settings: cfg}, nil

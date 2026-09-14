@@ -141,7 +141,7 @@ func TestCaptureShortcutReportsAlreadyAssignedWithoutCreatingADirtyDraft(t *test
 
 func TestShortcutPoliciesExposeTheNativeActionMatrix(t *testing.T) {
 	policies := (&Service{}).ShortcutPolicies()
-	if len(policies) != 3 || !policies[0].Required || policies[2].ModifierOnlyMinimum != 2 {
+	if len(policies) != 3 || policies[0].Required || policies[2].ModifierOnlyMinimum != 2 {
 		t.Fatalf("policies = %#v", policies)
 	}
 }

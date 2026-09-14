@@ -3,6 +3,11 @@ title: "ADR 0009: Unified Voice transcription"
 description: One microphone provider/model selection with an optional qualified realtime mode, independent of audio files.
 ---
 
+> Storage policy superseded by [ADR 0014](../0014-clean-settings-baseline/):
+> the alpha migration chain, JSON import, and historical-field compatibility
+> described below are historical, not supported upgrade paths. Current settings
+> start in a distinct `freehand.db` lineage; other product decisions remain intact.
+
 - Status: Accepted
 - Date: 2026-09-07
 - Supersedes: ADR 0008's separate realtime feature selection and ADR 0002's separate completed-microphone/realtime settings slots. Their transport and final-text safety contracts remain applicable.

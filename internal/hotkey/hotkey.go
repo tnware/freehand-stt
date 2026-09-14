@@ -60,7 +60,7 @@ func Policies() []ShortcutPolicy {
 
 func policiesForPlatform(platform string) []ShortcutPolicy {
 	policies := []ShortcutPolicy{
-		policy(ToggleRecording, true, 0, "Ctrl+Shift+Space", "CmdOrCtrl+Shift+Space"),
+		policy(ToggleRecording, false, 0, "Ctrl+Shift+Space", "CmdOrCtrl+Shift+Space"),
 		policy(ShowFreehand, false, 0, ""),
 		policy(HoldToTalk, false, minModifierOnly, ""),
 	}
@@ -566,6 +566,9 @@ type Reducer struct {
 }
 
 func (r *Reducer) Event(vk uint32, down bool) Edge {
+	if r.Chord == (Chord{}) {
+		return NoEdge
+	}
 	if mod := modifierForVK(vk); mod != 0 {
 		if down {
 			r.mods |= mod

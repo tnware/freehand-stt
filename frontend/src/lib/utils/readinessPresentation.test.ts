@@ -28,10 +28,23 @@ describe("readiness next action", () => {
       kind: "settings",
       section: "audio",
     });
+  });
+  it("offers connection check and completion without assigning a toggle shortcut", () => {
+    const current = configured();
     current.toggleShortcut = "";
-    expect(nextReadinessAction(appReadiness(current, null, devices, false))).toMatchObject({
-      kind: "settings",
-      section: "shortcuts",
+    expect(
+      nextReadinessAction(appReadiness(current, null, devices, false)),
+    ).toEqual({
+      kind: "check",
+      label: "Check connection",
+    });
+    expect(
+      nextReadinessAction(
+        appReadiness(current, connectionResult, devices, false),
+      ),
+    ).toEqual({
+      kind: "complete",
+      label: "Finish setup",
     });
   });
   it("waits for device discovery and offers finish only after metadata success", () => {

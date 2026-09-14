@@ -45,15 +45,12 @@ type SettingsDTO struct {
 	AppearanceModeActive               config.AppearanceMode `json:"appearanceModeActive"`
 }
 
-// ConfigurationStatus describes whether the durable settings document is
-// usable. Renderer code may show preserved newer fields, but must block all
-// ordinary mutations while RecoveryRequired is true.
+// ConfigurationStatus describes whether the durable settings database is
+// usable. Ordinary mutations are blocked while RecoveryRequired is true.
 type ConfigurationStatus struct {
-	RecoveryRequired    bool     `json:"recoveryRequired"`
-	ErrorKind           string   `json:"errorKind,omitempty"`
-	Message             string   `json:"message,omitempty"`
-	PreservedFieldCount int      `json:"preservedFieldCount,omitempty"`
-	PreservedFields     []string `json:"preservedFields,omitempty"`
+	RecoveryRequired bool   `json:"recoveryRequired"`
+	ErrorKind        string `json:"errorKind,omitempty"`
+	Message          string `json:"message,omitempty"`
 }
 
 // SaveSettingsRequest groups the persisted settings and transient credential
@@ -82,7 +79,6 @@ type ConfigStore interface{ Save(config.Settings) error }
 type ConfigLoader interface {
 	ConfigStore
 	Load() (config.Settings, error)
-	LoadReport() config.LoadReport
 }
 
 type Option func(*Service)
@@ -90,17 +86,13 @@ type Option func(*Service)
 // WithConfigurationLoad connects the startup load result to the bound
 // settings service. It is optional so isolated service tests and consumers
 // that only need persistence do not acquire a recovery dependency.
-func WithConfigurationLoad(loader ConfigLoader, failure *config.LoadFailure, report config.LoadReport) Option {
+func WithConfigurationLoad(loader ConfigLoader, failure *config.LoadFailure) Option {
 	return func(service *Service) {
 		service.loader = loader
-		service.configuration.PreservedFieldCount = report.PreservedFieldCount
-		service.configuration.PreservedFields = append([]string(nil), report.PreservedFields...)
 		if failure != nil {
 			service.configuration.RecoveryRequired = true
 			service.configuration.ErrorKind = failure.Kind
 			service.configuration.Message = failure.Message
-			service.configuration.PreservedFieldCount = 0
-			service.configuration.PreservedFields = nil
 		}
 	}
 }
@@ -135,7 +127,7 @@ type Service struct {
 	startup                Startup
 	hold                   HoldInfo
 	holdRetry              func() error
-	shortcutChanged        func(config.Settings) error
+	shortcutChanged        func(config.Settings) (func() error, error)
 	overlaySettingsChanged func(config.Settings)
 	historyEnabledChanged  func(bool)
 	fileSettingsChanged    func(config.Settings)
@@ -147,7 +139,10 @@ type Service struct {
 	closed                 atomic.Bool
 }
 
-func NewService(st ConfigStore, cfg config.Settings, k credential.Store, processKeys credential.Store, start Startup, hold HoldInfo, shortcutChanged func(config.Settings) error, overlaySettingsChanged func(config.Settings), historyEnabledChanged func(bool), fileSettingsChanged func(config.Settings), settingsChanged func(SettingsDTO), logger *slog.Logger, options ...Option) *Service {
+// shortcutChanged returns the rollback for its pre-change native snapshot, even
+// on failure if its own partial changes require recovery. Only this settings
+// transaction invokes it; saved preferences are not a native binding snapshot.
+func NewService(st ConfigStore, cfg config.Settings, k credential.Store, processKeys credential.Store, start Startup, hold HoldInfo, shortcutChanged func(config.Settings) (func() error, error), overlaySettingsChanged func(config.Settings), historyEnabledChanged func(bool), fileSettingsChanged func(config.Settings), settingsChanged func(SettingsDTO), logger *slog.Logger, options ...Option) *Service {
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
@@ -443,7 +438,7 @@ func (s *Service) settingsSnapshotLocked() SettingsDTO {
 		ModelProfiles:                      modelCatalog(v),
 		TranscriptionLanguages:             speechlanguage.Options(),
 		Settings:                           v,
-		Configuration:                      cloneConfigurationStatus(s.configuration),
+		Configuration:                      s.configuration,
 		CredentialConfigured:               s.keys.Configured(),
 		PostProcessingCredentialConfigured: processingCredentialConfigured,
 		TextToSpeechCredentialConfigured:   ttsCredentialConfigured,
@@ -624,14 +619,11 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 
 		old = s.current()
 		shortcutsChanged := old.ToggleShortcut != v.ToggleShortcut || old.ShowShortcut != v.ShowShortcut || old.HoldShortcut != v.HoldShortcut
-		rollbackShortcuts := rollbackStep{name: "shortcuts", run: func() error {
-			if shortcutsChanged && s.shortcutChanged != nil {
-				return s.shortcutChanged(old)
-			}
-			return nil
-		}}
+		rollbackShortcuts := rollbackStep{name: "shortcuts"}
 		if shortcutsChanged && s.shortcutChanged != nil {
-			if shortcutErr := s.shortcutChanged(v); shortcutErr != nil {
+			var shortcutErr error
+			rollbackShortcuts.run, shortcutErr = s.shortcutChanged(v)
+			if shortcutErr != nil {
 				return SettingsDTO{}, rollback(fmt.Errorf("shortcuts were not changed: %w", shortcutErr), rollbackShortcuts)
 			}
 		}
@@ -832,7 +824,6 @@ func (s *Service) RetryConfiguration() (result SettingsDTO, err error) {
 	s.publishSettingsChange(old, next, result)
 	s.log().Info("settings recovery completed",
 		"duration_ms", time.Since(started).Milliseconds(),
-		"preserved_field_count", result.Configuration.PreservedFieldCount,
 		"outcome", "reloaded",
 	)
 	return result, nil
@@ -874,14 +865,11 @@ func (s *Service) applyRecoveredSettingsLocked(next config.Settings, persist boo
 	}
 	old := s.current()
 	// Reconcile native state even when a failed rollback left the same runtime snapshot.
-	rollbackShortcuts := rollbackStep{name: "shortcuts", run: func() error {
-		if s.shortcutChanged != nil {
-			return s.shortcutChanged(old)
-		}
-		return nil
-	}}
+	rollbackShortcuts := rollbackStep{name: "shortcuts"}
 	if s.shortcutChanged != nil {
-		if err := s.shortcutChanged(next); err != nil {
+		var err error
+		rollbackShortcuts.run, err = s.shortcutChanged(next)
+		if err != nil {
 			return SettingsDTO{}, config.Settings{}, rollback(fmt.Errorf("shortcuts were not changed: %w", err), rollbackShortcuts)
 		}
 	}
@@ -904,11 +892,6 @@ func (s *Service) applyRecoveredSettingsLocked(next config.Settings, persist boo
 	s.cfg = next
 	s.mu.Unlock()
 	s.configuration = ConfigurationStatus{}
-	if !persist && s.loader != nil {
-		report := s.loader.LoadReport()
-		s.configuration.PreservedFieldCount = report.PreservedFieldCount
-		s.configuration.PreservedFields = append([]string(nil), report.PreservedFields...)
-	}
 	return s.settingsSnapshotLocked(), old, nil
 }
 
@@ -928,11 +911,6 @@ func (s *Service) publishSettingsChange(old, next config.Settings, result Settin
 	if s.settingsChanged != nil {
 		s.settingsChanged(result)
 	}
-}
-
-func cloneConfigurationStatus(status ConfigurationStatus) ConfigurationStatus {
-	status.PreservedFields = append([]string(nil), status.PreservedFields...)
-	return status
 }
 
 func overlaySettingsDiffer(old, next config.Settings) bool {

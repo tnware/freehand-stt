@@ -19,11 +19,11 @@ import (
 const retainedBackups = 3
 
 func (s *Store) backup(ctx context.Context, db *sql.DB) (string, error) {
-	dir := filepath.Join(filepath.Dir(s.path), "backups")
+	dir := filepath.Join(filepath.Dir(s.path), "freehand-backups")
 	if err := secureDirectory(dir); err != nil {
 		return "", err
 	}
-	temp, err := os.CreateTemp(dir, "settings-*.db")
+	temp, err := os.CreateTemp(dir, "freehand-*.db")
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +123,7 @@ func (s *Store) Reset(v config.Settings) error {
 	}
 	ctx, cancel := context.WithTimeout(s.ctx, operationTimeout)
 	defer cancel()
-	temp, err := os.CreateTemp(filepath.Dir(s.path), "settings-reset-*.db")
+	temp, err := os.CreateTemp(filepath.Dir(s.path), "freehand-reset-*.db")
 	if err != nil {
 		return failure("write_failed", err)
 	}
@@ -134,7 +134,7 @@ func (s *Store) Reset(v config.Settings) error {
 	if err != nil {
 		return failure("write_failed", err)
 	}
-	err = s.initialize(ctx, replacement, v, "reset")
+	err = s.initialize(ctx, replacement, v)
 	err = errors.Join(err, replacement.Close())
 	if err != nil {
 		return failure("write_failed", err)
@@ -181,7 +181,7 @@ func (s *Store) archiveDatabase() error {
 	} else if err != nil {
 		return failure("unreadable", err)
 	}
-	dir, err := os.MkdirTemp(filepath.Dir(s.path), "settings-recovery-")
+	dir, err := os.MkdirTemp(filepath.Dir(s.path), "freehand-recovery-")
 	if err != nil {
 		return failure("write_failed", err)
 	}
@@ -239,7 +239,7 @@ func (s *Store) RestoreBackup(path string) error {
 	if err = checkIntegrity(ctx, source); err != nil {
 		return failure("corrupt", err)
 	}
-	temp, err := os.CreateTemp(filepath.Dir(s.path), "settings-restore-*.db")
+	temp, err := os.CreateTemp(filepath.Dir(s.path), "freehand-restore-*.db")
 	if err != nil {
 		return failure("write_failed", err)
 	}

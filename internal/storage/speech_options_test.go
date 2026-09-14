@@ -1,28 +1,21 @@
 package storage
 
 import (
-	"reflect"
-	"testing"
-
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
+	"github.com/tnware/freehand-stt/internal/savedconnection"
+	"reflect"
+	"testing"
 )
 
-func TestSpeechOptionsUpgradeRoundTripAndRollback(t *testing.T) {
+func TestSpeechOptionsRoundTripAndRollback(t *testing.T) {
 	s := testStore(t)
-	before := loadStore(t, s)
-	// Reconstruct alpha.4's v10 schema, then exercise the real startup upgrade.
-	if _, err := s.db.Exec(`ALTER TABLE speech_settings DROP COLUMN speech_language; ALTER TABLE speech_settings DROP COLUMN speech_instructions; ALTER TABLE remembered_models DROP COLUMN speech_language; ALTER TABLE remembered_models DROP COLUMN speech_instructions; DELETE FROM goose_db_version WHERE version_id=11;`); err != nil {
-		t.Fatal(err)
-	}
-	s = reopen(t, s)
 	got := loadStore(t, s)
-	if !reflect.DeepEqual(got, before) {
-		t.Fatal("upgrade changed existing settings")
-	}
-	got.TextToSpeech.CompatibilityProfile = compatibility.VLLMOmni
+	d := savedconnection.Extract(got, savedconnection.Speech)
+	d.CompatibilityProfile = compatibility.VLLMOmni
+	d.BaseURL = "https://speech.example.test/v1"
+	got = createSelectedConnection(t, s, got, "Speech", savedconnection.Speech, d)
 	got.TextToSpeech.ModelProfile = modelprofile.Qwen3TTS
-	got.TextToSpeech.BaseURL = "https://speech.example.test/v1"
 	got.TextToSpeech.Model = "customvoice-alias"
 	got.TextToSpeech.Voice = "ryan"
 	got.TextToSpeech.Options = modelprofile.SpeechOptions{Language: "ja", Instructions: "穏やかに話す"}

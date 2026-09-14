@@ -23,10 +23,10 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-//go:embed migrations/*.sql
+//go:embed schema/*.sql
 var embeddedMigrations embed.FS
 
-const applicationID = 1179796804 // FRHD: database identity, not a schema version.
+const applicationID = 0x46484442 // FHDB: database identity, not a schema version.
 const operationTimeout = 10 * time.Second
 
 type Store struct {
@@ -34,7 +34,7 @@ type Store struct {
 	pendingConnections      *connectionState
 	pendingConnectionTarget string
 	mu                      sync.Mutex
-	path, legacy            string
+	path                    string
 	db                      *sql.DB
 	lock                    *os.File
 	closed                  bool
@@ -53,18 +53,13 @@ func NewStore() (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	legacy, err := os.UserConfigDir()
-	if err != nil {
-		return nil, err
-	}
-	return newStore(filepath.Join(local, "Freehand", "settings.db"), filepath.Join(legacy, "Freehand", "settings.json"), nativeVault{}), nil
+	return newStore(filepath.Join(local, "Freehand", "freehand.db"), nativeVault{}), nil
 }
-func newStore(path, legacy string, vault Vault) *Store {
-	migrations, _ := fs.Sub(embeddedMigrations, "migrations")
+func newStore(path string, vault Vault) *Store {
+	migrations, _ := fs.Sub(embeddedMigrations, "schema")
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Store{ctx: ctx, cancel: cancel, path: path, legacy: legacy, migrations: migrations, vault: vault, refs: map[string]string{}}
+	return &Store{ctx: ctx, cancel: cancel, path: path, migrations: migrations, vault: vault, refs: map[string]string{}}
 }
-func (s *Store) LoadReport() config.LoadReport { return config.LoadReport{} }
 func (s *Store) Load() (config.Settings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -129,9 +124,6 @@ func (s *Store) Save(v config.Settings) error {
 	if s.pending != nil {
 		for _, purpose := range purposes {
 			next, old := s.pending[purpose], s.refs[purpose]
-			if err = q.PutCredentialRef(ctx, dbgen.PutCredentialRefParams{Purpose: purpose, Account: next}); err != nil {
-				return failure("write_failed", err)
-			}
 			if old != "" && old != next {
 				if err = q.QueueCredentialGC(ctx, old); err != nil {
 					return failure("write_failed", err)
@@ -234,27 +226,9 @@ func (s *Store) open(ctx context.Context) (retErr error) {
 	if exists && (!info.Mode().IsRegular() || info.Size() == 0) {
 		return failure("corrupt", nil)
 	}
-	initial := config.Default()
-	source := "defaults"
-
-	if !exists && s.legacy != "" {
-		legacy := &config.LegacyReader{Path: s.legacy}
-		initial, err = legacy.Load()
-		if err != nil {
-			return failure("legacy_invalid", err)
-		}
-		if legacy.LoadReport().PreservedFieldCount > 0 {
-			return failure("legacy_newer", nil)
-		}
-		if _, err = os.Stat(s.legacy); err == nil {
-			source = "legacy"
-		} else if !os.IsNotExist(err) {
-			return failure("legacy_invalid", err)
-		}
-	}
 	if !exists {
-		// Build privately. Publishing the fully initialized file is the import commit point.
-		temp, err := os.CreateTemp(filepath.Dir(s.path), "settings-init-*.db")
+		// Build privately. Publish only after the fresh database is fully initialized.
+		temp, err := os.CreateTemp(filepath.Dir(s.path), "freehand-init-*.db")
 		if err != nil {
 			return failure("write_failed", err)
 		}
@@ -267,7 +241,7 @@ func (s *Store) open(ctx context.Context) (retErr error) {
 		if err != nil {
 			return failure("write_failed", err)
 		}
-		if err = s.initialize(ctx, db, initial, source); err != nil {
+		if err = s.initialize(ctx, db, config.Default()); err != nil {
 			_ = db.Close()
 			return failure("write_failed", err)
 		}
@@ -322,15 +296,7 @@ func (s *Store) open(ctx context.Context) (retErr error) {
 	}
 	return nil
 }
-func (s *Store) initialize(ctx context.Context, db *sql.DB, v config.Settings, source string) error {
-	if source == "legacy" {
-		v.VoiceTranscription = config.VoiceFromCompleted(v)
-		v.Vocabulary.Terms = config.VocabularyTerms(v.TranscriptionOptions.Hotwords)
-		v.Vocabulary.Voice = v.Vocabulary.Terms != ""
-		v.Vocabulary.Files = v.Vocabulary.Terms != ""
-		v.TranscriptionOptions.Hotwords = ""
-		v.VoiceTranscription.TranscriptionOptions.Hotwords = ""
-	}
+func (s *Store) initialize(ctx context.Context, db *sql.DB, v config.Settings) error {
 	p, err := goose.NewProvider(goose.DialectSQLite3, db, s.migrations, goose.WithLogger(goose.NopLogger()))
 	if err != nil {
 		return err
@@ -345,27 +311,6 @@ func (s *Store) initialize(ctx context.Context, db *sql.DB, v config.Settings, s
 	defer tx.Rollback()
 	q := dbgen.New(tx)
 	if err = writeSettings(ctx, q, v); err != nil {
-		return err
-	}
-	for _, purpose := range purposes {
-		account := ""
-		if source == "legacy" {
-			account = legacyAccount(purpose)
-			if purpose == "voice" {
-				account = legacyAccount("stt")
-			}
-		}
-		if source == "reset" {
-			account = s.refs[purpose]
-		}
-		if err = q.PutCredentialRef(ctx, dbgen.PutCredentialRefParams{Purpose: purpose, Account: account}); err != nil {
-			return err
-		}
-	}
-	if err = seedConnections(ctx, q); err != nil {
-		return err
-	}
-	if err = q.Initialize(ctx, source); err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, fmt.Sprintf("PRAGMA application_id=%d", applicationID)); err != nil {
@@ -475,8 +420,6 @@ func (e *storageError) ConfigurationFailure() config.LoadFailure {
 		"newer_schema":     "This settings database needs a newer Freehand version. Update Freehand or restore a compatible backup.",
 		"foreign_database": "The selected file is not a Freehand settings database.",
 		"corrupt":          "The settings database could not pass validation. Restore a backup or explicitly reset it.",
-		"legacy_invalid":   "The previous settings file could not be imported. Repair it and retry, or explicitly reset settings.",
-		"legacy_newer":     "The previous settings file contains unsupported fields. Use a compatible version or explicitly reset settings.",
 		"write_failed":     "Settings could not be committed. Check available disk space and file access.",
 		"backup_failed":    "A settings backup could not be created. The database was not upgraded.",
 		"migration_failed": "The settings database could not be upgraded. Its backup remains available.",

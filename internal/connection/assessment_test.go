@@ -71,7 +71,9 @@ func TestDiagnosticsUseOnlyMetadataEvenWhenModelOptionsAreInvalid(t *testing.T) 
 	}))
 	defer server.Close()
 	opts := modelsettings.Defaults()[savedconnection.Transcription]
-	opts.Transcription.Hotwords = "unsupported-canary"
+	opts.Transcription.Prompt = "unsupported-canary"
+	opts.Transcription.TemperatureOverride = true
+	opts.Transcription.Temperature = 2
 	s := NewService(&keyFake{}, &keyFake{}, &keyFake{}, &inference.Client{HTTP: server.Client()}, nil)
 	result := s.TestConnection(ConnectionTestRequest{BaseURL: server.URL + "/v1", CompatibilityProfile: compatibility.Generic, AuthenticationMode: config.AuthenticationModeNone, Model: "asr", Options: &opts})
 	if calls != 1 || result.ErrorKind != "" || checkFor(t, result.Checks, CheckConfiguration).Status != CheckAttention {

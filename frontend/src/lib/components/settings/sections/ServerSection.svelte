@@ -76,7 +76,6 @@
       settings.modelProfile = id;
       settings.transcriptionOptions = {
         prompt: "",
-        hotwords: "",
         temperatureOverride: false,
         temperature: 0,
       };

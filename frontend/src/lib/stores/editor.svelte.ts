@@ -110,7 +110,6 @@ const copySettings = (settings: Settings): Settings => ({
     transcriptionOptions: {
       ...settings.voiceTranscription.transcriptionOptions,
     },
-    options: { ...settings.voiceTranscription.options },
   },
   savedConnections: {
     selected: { ...settings.savedConnections.selected },

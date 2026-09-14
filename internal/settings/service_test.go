@@ -24,7 +24,6 @@ type recoveryStoreFake struct {
 	storeFake
 	settings config.Settings
 	loadErr  error
-	report   config.LoadReport
 	saved    *config.Settings
 }
 
@@ -34,8 +33,6 @@ func (f *recoveryStoreFake) Load() (config.Settings, error) {
 	}
 	return f.settings, nil
 }
-
-func (f *recoveryStoreFake) LoadReport() config.LoadReport { return f.report }
 
 func (f *recoveryStoreFake) Save(settings config.Settings) error {
 	if err := f.storeFake.Save(settings); err != nil {
@@ -122,7 +119,10 @@ func transactionalService(failSave bool) (*Service, *[]string, *startupFake, *ke
 	service := NewService(
 		&storeFake{log: log, fail: failSave}, config.Default(), keys, processingKeys,
 		startup, func() (bool, string) { return true, "" },
-		func(config.Settings) error { *log = append(*log, "shortcuts:configure"); return nil },
+		func(config.Settings) (func() error, error) {
+			*log = append(*log, "shortcuts:configure")
+			return func() error { *log = append(*log, "shortcuts:configure"); return nil }, nil
+		},
 		nil, nil, nil, nil, nil,
 	)
 	return service, log, startup, keys
@@ -156,10 +156,14 @@ func newTransactionHarness(store ConfigStore) *transactionHarness {
 	h.service = NewService(
 		store, config.Default(), h.keys, h.processingKeys,
 		h.startup, func() (bool, string) { return true, "" },
-		func(config.Settings) error {
+		func(config.Settings) (func() error, error) {
 			h.shortcutCalls++
 			*log = append(*log, "shortcuts:configure")
-			return h.shortcutFailAt[h.shortcutCalls]
+			return func() error {
+				h.shortcutCalls++
+				*log = append(*log, "shortcuts:configure")
+				return h.shortcutFailAt[h.shortcutCalls]
+			}, h.shortcutFailAt[h.shortcutCalls]
 		},
 		nil, nil, nil, nil, nil,
 		WithTextToSpeechCredential(h.ttsKeys),
@@ -290,16 +294,16 @@ func TestSaveSettingsRejectsOversizedCredentialBeforeDependencies(t *testing.T) 
 func TestRecoveryBlocksOrdinarySettingsAndRequestProfiles(t *testing.T) {
 	log := &[]string{}
 	store := &recoveryStoreFake{storeFake: storeFake{log: log}, settings: config.Default()}
-	failure := config.LoadFailure{Kind: "invalid_json", Message: "The settings file is invalid."}
+	failure := config.LoadFailure{Kind: "database_corrupt", Message: "The settings database is damaged."}
 	keys := &keyFake{log: log}
 	service := NewService(
 		store, config.Default(), keys, &keyFake{log: log}, &startupFake{log: log},
 		func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil,
-		WithConfigurationLoad(store, &failure, config.LoadReport{}),
+		WithConfigurationLoad(store, &failure),
 	)
 
 	snapshot := service.GetSettings()
-	if !snapshot.Configuration.RecoveryRequired || snapshot.Configuration.ErrorKind != "invalid_json" {
+	if !snapshot.Configuration.RecoveryRequired || snapshot.Configuration.ErrorKind != "database_corrupt" {
 		t.Fatalf("configuration status = %#v", snapshot.Configuration)
 	}
 	if _, err := service.SaveSettings(request(config.Default(), "")); err == nil {
@@ -313,18 +317,18 @@ func TestRecoveryBlocksOrdinarySettingsAndRequestProfiles(t *testing.T) {
 	}
 }
 
-func TestRetryConfigurationKeepsRecoveryUntilTheOriginalFileLoads(t *testing.T) {
+func TestRetryConfigurationKeepsRecoveryUntilTheDatabaseLoads(t *testing.T) {
 	log := &[]string{}
 	store := &recoveryStoreFake{
 		storeFake: storeFake{log: log},
 		settings:  config.Default(),
 		loadErr:   errors.New("still invalid"),
 	}
-	failure := config.LoadFailure{Kind: "invalid_json", Message: "Initial failure."}
+	failure := config.LoadFailure{Kind: "database_corrupt", Message: "Initial failure."}
 	service := NewService(
 		store, config.Default(), &keyFake{log: log}, &keyFake{log: log}, &startupFake{log: log},
 		func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil,
-		WithConfigurationLoad(store, &failure, config.LoadReport{}),
+		WithConfigurationLoad(store, &failure),
 	)
 
 	snapshot, err := service.RetryConfiguration()
@@ -335,20 +339,19 @@ func TestRetryConfigurationKeepsRecoveryUntilTheOriginalFileLoads(t *testing.T) 
 		t.Fatalf("retry status = %#v", snapshot.Configuration)
 	}
 	if store.saved != nil {
-		t.Fatal("retry replaced the settings file")
+		t.Fatal("retry replaced the settings database")
 	}
 
 	store.loadErr = nil
-	store.report = config.LoadReport{PreservedFieldCount: 1, PreservedFields: []string{"realtime"}}
 	snapshot, err = service.RetryConfiguration()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snapshot.Configuration.RecoveryRequired || !reflect.DeepEqual(snapshot.Configuration.PreservedFields, []string{"realtime"}) {
+	if snapshot.Configuration != (ConfigurationStatus{}) {
 		t.Fatalf("recovered status = %#v", snapshot.Configuration)
 	}
 	if store.saved != nil {
-		t.Fatal("successful retry rewrote the valid settings file")
+		t.Fatal("successful retry rewrote the valid settings database")
 	}
 }
 
@@ -360,7 +363,7 @@ func TestResetConfigurationExplicitlyReplacesSettingsButKeepsCredentials(t *test
 	service := NewService(
 		store, config.Default(), keys, &keyFake{log: log}, &startupFake{log: log},
 		func() (bool, string) { return true, "" }, nil, nil, nil, nil, nil, nil,
-		WithConfigurationLoad(store, &failure, config.LoadReport{}),
+		WithConfigurationLoad(store, &failure),
 	)
 
 	snapshot, err := service.ResetConfiguration()
@@ -691,7 +694,8 @@ func TestCompletedVoiceProfileIsIndependentAndImmutable(t *testing.T) {
 	service.cfg.BaseURL = "https://files.example.test/v1"
 	service.cfg.Model = "file-model"
 	service.cfg.AuthenticationMode = config.AuthenticationModeAPIKey
-	v := config.VoiceFromCompleted(service.cfg)
+	v := config.DefaultVoiceTranscription()
+	v.AuthenticationMode = config.AuthenticationModeAPIKey
 	v.BaseURL = "https://voice.example.test/v1"
 	v.Model = "voice-model"
 	v.Language = "ja"

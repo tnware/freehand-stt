@@ -37,6 +37,8 @@ func TestErrorKindReturnsBoundedCategories(t *testing.T) {
 		{name: "settings admission", err: classifiedTestError{kind: "invalid_settings", message: "private model"}, want: "invalid_settings"},
 		{name: "unexpected speech response", err: classifiedTestError{kind: "unexpected_response", message: "private response"}, want: "unexpected_response"},
 		{name: "empty speech response", err: classifiedTestError{kind: "empty_response", message: "private response"}, want: "empty_response"},
+		{name: "removed legacy invalid classification", err: classifiedTestError{kind: "legacy_invalid", message: "private legacy path"}, want: "operation"},
+		{name: "removed legacy newer classification", err: classifiedTestError{kind: "legacy_newer", message: "private legacy path"}, want: "operation"},
 		{name: "unknown classification", err: classifiedTestError{kind: "secret provider body", message: "secret provider body"}, want: "operation"},
 		{name: "dns", err: &net.DNSError{Err: "secret resolver detail", Name: "private.example"}, want: "dns"},
 		{name: "permission", err: os.ErrPermission, want: "permission"},

@@ -15,21 +15,32 @@ import (
 
 const MaxPerUse = 32
 
-// Options intentionally excludes endpoints, credentials, enablement, and capture policy.
+// TranscriptionOptions contains model behavior, never task-owned vocabulary.
+// Runtime inference options remain in compatibility.TranscriptionOptions.
+type TranscriptionOptions struct {
+	Prompt              string  `json:"prompt"`
+	TemperatureOverride bool    `json:"temperatureOverride"`
+	Temperature         float64 `json:"temperature"`
+}
+
+func transcriptionOptions(o config.TranscriptionOptions) TranscriptionOptions {
+	return TranscriptionOptions{Prompt: o.Prompt, TemperatureOverride: o.TemperatureOverride, Temperature: o.Temperature}
+}
+
+func (o TranscriptionOptions) apply(v *config.TranscriptionOptions) {
+	v.Prompt = o.Prompt
+	v.TemperatureOverride = o.TemperatureOverride
+	v.Temperature = o.Temperature
+}
+
+// Options excludes task intent, endpoints, credentials, enablement, and capture policy.
 // Only fields belonging to Purpose are populated; Apply ignores all other fields.
 type Options struct {
-	Speech        modelprofile.SpeechOptions         `json:"speech"`
-	Realtime      modelprofile.NemotronOptions       `json:"realtime"`
-	Profile       modelprofile.ID                    `json:"profile"`
-	Language      string                             `json:"language"`
-	Transcription compatibility.TranscriptionOptions `json:"transcription"`
-	Cleanup       compatibility.CleanupOptions       `json:"cleanup"`
-	SystemPrompt  string                             `json:"systemPrompt"`
-	Styling       string                             `json:"styling"`
-	Structure     string                             `json:"structure"`
-	Context       string                             `json:"context"`
-	Voice         string                             `json:"voice"`
-	Speed         float64                            `json:"speed"`
+	Speech        modelprofile.SpeechOptions   `json:"speech"`
+	Profile       modelprofile.ID              `json:"profile"`
+	Transcription TranscriptionOptions         `json:"transcription"`
+	Cleanup       compatibility.CleanupOptions `json:"cleanup"`
+	Voice         string                       `json:"voice"`
 }
 type Key struct {
 	ConnectionID string                  `json:"connectionID"`
@@ -74,15 +85,15 @@ func Model(v config.Settings, p savedconnection.Purpose) string {
 func Extract(v config.Settings, p savedconnection.Purpose) Options {
 	switch p {
 	case savedconnection.Voice:
-		return Options{Profile: v.VoiceTranscription.ModelProfile, Language: v.VoiceTranscription.Language, Realtime: v.VoiceTranscription.Options, Transcription: v.VoiceTranscription.TranscriptionOptions}
+		return Options{Profile: v.VoiceTranscription.ModelProfile, Transcription: transcriptionOptions(v.VoiceTranscription.TranscriptionOptions)}
 	case savedconnection.Transcription:
-		return Options{Profile: modelprofile.Effective(v.ModelProfile), Language: v.Language, Transcription: v.TranscriptionOptions}
+		return Options{Profile: modelprofile.Effective(v.ModelProfile), Transcription: transcriptionOptions(v.TranscriptionOptions)}
 	case savedconnection.Cleanup:
 		c := v.PostProcessing
-		return Options{Profile: modelprofile.Effective(modelprofile.ID(c.Preset)), Cleanup: c.GenerationOptions, SystemPrompt: c.SystemPrompt, Styling: c.Styling, Structure: c.Structure, Context: c.Context}
+		return Options{Profile: modelprofile.Effective(modelprofile.ID(c.Preset)), Cleanup: c.GenerationOptions}
 	case savedconnection.Speech:
 		c := v.TextToSpeech
-		return Options{Profile: modelprofile.Effective(c.ModelProfile), Voice: c.Voice, Speed: c.Speed, Speech: c.Options}
+		return Options{Profile: modelprofile.Effective(c.ModelProfile), Voice: c.Voice, Speech: c.Options}
 	}
 	return Options{}
 }
@@ -91,30 +102,22 @@ func Apply(v config.Settings, p savedconnection.Purpose, model string, o Options
 	case savedconnection.Voice:
 		v.VoiceTranscription.Model = model
 		v.VoiceTranscription.ModelProfile = o.Profile
-		v.VoiceTranscription.Language = o.Language
-		v.VoiceTranscription.Options = o.Realtime
-		v.VoiceTranscription.TranscriptionOptions = o.Transcription
+		o.Transcription.apply(&v.VoiceTranscription.TranscriptionOptions)
 	case savedconnection.Transcription:
 		v.Model = model
 		v.ModelProfile = o.Profile
-		v.Language = o.Language
-		v.TranscriptionOptions = o.Transcription
+		o.Transcription.apply(&v.TranscriptionOptions)
 	case savedconnection.Cleanup:
 		c := &v.PostProcessing
 		c.Model = model
 		c.Preset = config.PostProcessingPreset(o.Profile)
 		c.GenerationOptions = o.Cleanup
-		c.SystemPrompt = o.SystemPrompt
-		c.Styling = o.Styling
-		c.Structure = o.Structure
-		c.Context = o.Context
 	case savedconnection.Speech:
 		c := &v.TextToSpeech
 		c.Model = model
 		c.ModelProfile = o.Profile
 		c.Options = o.Speech
 		c.Voice = o.Voice
-		c.Speed = o.Speed
 	}
 	return v
 }
@@ -147,26 +150,10 @@ func Validate(e Entry, d savedconnection.Details) error {
 	return errors.New("invalid remembered model purpose")
 }
 
-// Select restores engine behavior without replacing the user's current task.
-// Apply remains the full snapshot decoder for validating the existing SQLite
-// format; historical task fields in remembered rows are not selection authority.
+// Select restores model behavior and gates realtime against the selected backend/profile.
+// Task intent is preserved by construction: Options cannot represent it.
 func Select(v config.Settings, p savedconnection.Purpose, model string, o Options) config.Settings {
 	next := Apply(v, p, model, o)
-	// Historical per-model terms are not authority over the shared vocabulary.
-	if p == savedconnection.Transcription {
-		next.TranscriptionOptions.Hotwords = ""
-	}
-	if p == savedconnection.Voice {
-		next.VoiceTranscription.TranscriptionOptions.Hotwords = ""
-		next.VoiceTranscription.Options.Vocabulary = ""
-	}
-	next.Language = v.Language
-	next.VoiceTranscription.Language = v.VoiceTranscription.Language
 	next.VoiceTranscription.Realtime = v.VoiceTranscription.Realtime && config.VoiceRealtimeEligible(next.VoiceTranscription)
-	next.PostProcessing.SystemPrompt = v.PostProcessing.SystemPrompt
-	next.PostProcessing.Styling = v.PostProcessing.Styling
-	next.PostProcessing.Structure = v.PostProcessing.Structure
-	next.PostProcessing.Context = v.PostProcessing.Context
-	next.TextToSpeech.Speed = v.TextToSpeech.Speed
 	return next
 }

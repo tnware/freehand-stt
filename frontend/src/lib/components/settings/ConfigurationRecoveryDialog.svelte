@@ -62,10 +62,11 @@
       {/if}
 
       <p class="text-xs leading-relaxed text-muted-foreground">
-        Close Freehand before restoring a database backup, then reopen it. Retry
-        loading after fixing file access or a legacy import. Resetting archives
+        Close Freehand before restoring a current-version database backup, then
+        reopen it. Retry loading after fixing file access. Resetting archives
         the existing database and starts with safe defaults; credentials stored
-        in {native.credentialStore} are not deleted.
+        in {native.credentialStore} are not deleted. Reconfigure connections and enter
+        API keys again after resetting.
       </p>
     </div>
 

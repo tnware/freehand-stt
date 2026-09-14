@@ -132,14 +132,14 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 		return nil, errors.New("the realtime server loaded a different model; refresh its model selection")
 	}
 	phrases := []string{}
-	for _, line := range strings.Split(cfg.Options.Vocabulary, "\n") {
+	for _, line := range strings.Split(cfg.RealtimeOptions().Vocabulary, "\n") {
 		if line = strings.TrimSpace(line); line != "" {
 			phrases = append(phrases, line)
 		}
 	}
 	options := map[string]any{"sample_rate": audio.SampleRate, "language": cfg.Language, "automatic_punctuation": true, "verbatim": true, "speaker_diarization": false}
 	if len(phrases) > 0 {
-		options["speech_contexts"] = []any{map[string]any{"phrases": phrases, "boost": cfg.Options.Boost}}
+		options["speech_contexts"] = []any{map[string]any{"phrases": phrases, "boost": cfg.RealtimeOptions().Boost}}
 	}
 	message, _ := json.Marshal(map[string]any{"type": "session.update", "session": options})
 	if conn.Write(setup, websocket.MessageText, message) != nil {

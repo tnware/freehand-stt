@@ -142,12 +142,19 @@ func checkBoundaries(root string) error {
 	})
 }
 func checkMigrations(base string) error {
-	dir := "internal/storage/migrations"
+	// ADR 0014 starts a distinct lineage. Only published migrations in this
+	// authoritative directory participate; this is not an immutability bypass.
+	dir := "internal/storage/schema"
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
+	if len(entries) == 0 {
+		return errors.New("no schema migrations")
+	}
 	valid := regexp.MustCompile(`^[0-9]{5}_[a-z0-9_]+\.sql$`)
+	up := regexp.MustCompile(`(?m)^[	 ]*--[	 ]+\+goose[	 ]+Up[	 \r]*$`)
+	nontransactional := regexp.MustCompile(`\bNO\s+TRANSACTION\b`)
 	versions := map[string]bool{}
 	for _, entry := range entries {
 		if entry.IsDir() || !valid.MatchString(entry.Name()) {
@@ -162,7 +169,7 @@ func checkMigrations(base string) error {
 		if err != nil {
 			return err
 		}
-		if bytes.Contains(data, []byte("NO TRANSACTION")) || !bytes.Contains(data, []byte("-- +goose Up")) {
+		if nontransactional.Match(data) || !up.Match(data) {
 			return fmt.Errorf("migration must use goose transactions: %s", entry.Name())
 		}
 	}

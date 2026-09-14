@@ -136,7 +136,7 @@ export default defineConfig({
       head: [
         {
           tag: "meta",
-          attrs: { name: "theme-color", content: "#071120" },
+          attrs: { name: "theme-color", content: "#0d0d0d" },
         },
       ],
     }),

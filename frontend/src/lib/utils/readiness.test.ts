@@ -48,7 +48,6 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   },
   transcriptionOptions: {
     prompt: "",
-    hotwords: "",
     temperatureOverride: false,
     temperature: 0,
   },
@@ -77,8 +76,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     timeoutSeconds: 120,
     transcriptionOptions: {
       prompt: "",
-      hotwords: "",
-      temperatureOverride: false,
+        temperatureOverride: false,
       temperature: 0,
     },
     compatibilityProfile: overrides.compatibilityProfile ?? ID.Generic,
@@ -91,7 +89,6 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     model: overrides.model ?? "speech/stt",
     language: "auto",
     captions: true,
-    options: { vocabulary: "", boost: 0 },
   },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
@@ -167,7 +164,6 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   },
   configuration: {
     recoveryRequired: false,
-    preservedFields: [],
   },
   credentialConfigured: true,
   postProcessingCredentialConfigured: false,
@@ -227,6 +223,40 @@ describe("app readiness", () => {
     const after = appReadiness(settings(), connection(), devices, false);
     expect(after.canComplete).toBe(true);
     expect(after.completedCount).toBe(after.steps.length);
+  });
+
+  it.each(["", "   "])(
+    "allows initial setup with an unassigned toggle shortcut (%j)",
+    (toggleShortcut) => {
+      const current = settings({ toggleShortcut });
+      const readiness = appReadiness(current, connection(), devices, false);
+
+      expect(readiness.canComplete).toBe(true);
+      expect(readiness.recoveryNeeded).toBe(false);
+      expect(readiness.completedCount).toBe(readiness.steps.length);
+      expect(
+        readiness.steps.find((step) => step.id === "shortcut"),
+      ).toMatchObject({
+        status: "complete",
+        blocking: false,
+        detail:
+          "Not assigned. Use Start recording in Freehand, or record a shortcut in Settings.",
+        settingsSection: "shortcuts",
+      });
+      expect(current.toggleShortcut).toBe(toggleShortcut);
+    },
+  );
+
+  it("does not require recovery after clearing the toggle shortcut", () => {
+    const readiness = appReadiness(
+      settings({ setupCompleted: true, toggleShortcut: "" }),
+      null,
+      devices,
+      false,
+    );
+    expect(readiness.show).toBe(false);
+    expect(readiness.recoveryNeeded).toBe(false);
+    expect(readinessVisible(readiness, "")).toBe(false);
   });
 
   it("does not nag a completed setup merely because this session has not probed the server", () => {

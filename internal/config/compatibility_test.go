@@ -1,49 +1,10 @@
 package config
 
 import (
-	"encoding/json"
-	"github.com/tnware/freehand-stt/internal/compatibility"
-	"os"
-	"path/filepath"
 	"testing"
-)
 
-func TestCompatibilityProfilesMigrateAndRoundTrip(t *testing.T) {
-	settings := Default()
-	raw, _ := json.Marshal(settings)
-	var document map[string]any
-	if err := json.Unmarshal(raw, &document); err != nil {
-		t.Fatal(err)
-	}
-	delete(document, "compatibilityProfile")
-	delete(document["postProcessing"].(map[string]any), "compatibilityProfile")
-	delete(document["textToSpeech"].(map[string]any), "compatibilityProfile")
-	raw, _ = json.Marshal(document)
-	store := &LegacyReader{Path: filepath.Join(t.TempDir(), "settings.json")}
-	if err := os.WriteFile(store.Path, raw, 0600); err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := store.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if loaded.CompatibilityProfile != compatibility.Generic || loaded.PostProcessing.CompatibilityProfile != compatibility.Generic || loaded.TextToSpeech.CompatibilityProfile != compatibility.Generic {
-		t.Fatal("old document did not retain generic defaults")
-	}
-	loaded.CompatibilityProfile = compatibility.Speaches
-	loaded.PostProcessing.CompatibilityProfile = compatibility.LlamaCPP
-	loaded.TextToSpeech.CompatibilityProfile = compatibility.Speaches
-	if err := writeLegacyFixture(store.Path, loaded); err != nil {
-		t.Fatal(err)
-	}
-	again, err := store.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if again.CompatibilityProfile != compatibility.Speaches || again.PostProcessing.CompatibilityProfile != compatibility.LlamaCPP || again.TextToSpeech.CompatibilityProfile != compatibility.Speaches {
-		t.Fatal("separate selections were lost")
-	}
-}
+	"github.com/tnware/freehand-stt/internal/compatibility"
+)
 
 func TestUnavailableCompatibilityProfilesFailEvenWhenFeatureDisabled(t *testing.T) {
 	for _, id := range []compatibility.ID{compatibility.LocalAI, compatibility.ID("future-profile")} {
@@ -67,34 +28,20 @@ func TestUnavailableCompatibilityProfilesFailEvenWhenFeatureDisabled(t *testing.
 	if Validate(settings) == nil {
 		t.Fatal("chat profile accepted for STT")
 	}
-	// Existing recovery behavior must preserve a future profile on disk.
-	raw, _ := json.Marshal(settings)
-	store := &LegacyReader{Path: filepath.Join(t.TempDir(), "settings.json")}
-	if err := os.WriteFile(store.Path, raw, 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := store.Load(); err == nil {
-		t.Fatal("invalid profile did not require recovery")
-	}
-	after, err := os.ReadFile(store.Path)
-	if err != nil || string(after) != string(raw) {
-		t.Fatal("invalid document was overwritten")
-	}
 }
 
 func TestWhisperCPPDoesNotRequireAClientModel(t *testing.T) {
-	s := Default()
+	s := DefaultVoiceTranscription()
 	s.BaseURL = "http://127.0.0.1:8081"
 	s.AllowInsecureHTTP = true
 	s.AuthenticationMode = AuthenticationModeNone
-	s.SetupCompleted = true
 	s.CompatibilityProfile = compatibility.WhisperCPP
 	s.Model = ""
-	if err := ValidateVoiceRecording(VoiceFromCompleted(s)); err != nil {
+	if err := ValidateVoiceRecording(s); err != nil {
 		t.Fatal(err)
 	}
 	s.CompatibilityProfile = compatibility.VLLM
-	if err := ValidateVoiceRecording(VoiceFromCompleted(s)); err == nil {
+	if err := ValidateVoiceRecording(s); err == nil {
 		t.Fatal("vLLM accepted missing model")
 	}
 }

@@ -2,9 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
-	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -49,7 +46,7 @@ func TestUpdateChecksAreEnabledByDefault(t *testing.T) {
 	}
 }
 
-func TestSetupReviewIsOneTimePersistedState(t *testing.T) {
+func TestSetupReviewDefaultsToIncompleteAndAcceptsCompletion(t *testing.T) {
 	settings := Default()
 	if settings.SetupCompleted {
 		t.Fatal("first launch must require the setup review")
@@ -57,16 +54,8 @@ func TestSetupReviewIsOneTimePersistedState(t *testing.T) {
 	settings.BaseURL = "https://example.test/v1"
 	settings.Model = "speech/stt"
 	settings.SetupCompleted = true
-	store := &LegacyReader{Path: filepath.Join(t.TempDir(), "settings.json")}
-	if err := writeLegacyFixture(store.Path, settings); err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := store.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !loaded.SetupCompleted {
-		t.Fatal("completed setup review was not preserved")
+	if err := Validate(settings); err != nil {
+		t.Fatalf("completed setup review rejected: %v", err)
 	}
 }
 
@@ -104,72 +93,6 @@ func TestVoiceSetupDoesNotRequireAudioFileConnection(t *testing.T) {
 	}
 	if err := ValidateVoiceRecording(s.VoiceTranscription); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestLegacyUnknownSettingsAreReportedWithoutChangingSource(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := os.WriteFile(path, []byte(`{"unknownFutureSetting":{"enabled":true},"postProcessing":{"futureControl":"kept"},"showWindowOnLaunch":false}`), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	store := &LegacyReader{Path: path}
-	settings, err := store.Load()
-	if err != nil {
-		t.Fatalf("forward-compatible settings were rejected: %v", err)
-	}
-	if settings.ShowWindowOnLaunch {
-		t.Fatal("recognized setting was not loaded")
-	}
-	report := store.LoadReport()
-	if report.PreservedFieldCount != 2 {
-		t.Fatalf("preserved field count = %d", report.PreservedFieldCount)
-	}
-	if strings.Join(report.PreservedFields, ",") != "postProcessing.futureControl,unknownFutureSetting" {
-		t.Fatalf("preserved fields = %v", report.PreservedFields)
-	}
-	var saved map[string]json.RawMessage
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(data, &saved); err != nil {
-		t.Fatal(err)
-	}
-	var futureSetting struct {
-		Enabled bool `json:"enabled"`
-	}
-	if err := json.Unmarshal(saved["unknownFutureSetting"], &futureSetting); err != nil || !futureSetting.Enabled {
-		t.Fatalf("unknown top-level setting was changed: %s (%v)", saved["unknownFutureSetting"], err)
-	}
-	var processing map[string]json.RawMessage
-	if err := json.Unmarshal(saved["postProcessing"], &processing); err != nil {
-		t.Fatal(err)
-	}
-	if string(processing["futureControl"]) != `"kept"` {
-		t.Fatalf("unknown nested setting was changed: %s", processing["futureControl"])
-	}
-}
-
-func TestInvalidSettingsReturnSafeRecoveryDefaultsAndReason(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "settings.json")
-	original := []byte(`{"appearanceMode":"ultraviolet"}`)
-	if err := os.WriteFile(path, original, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	settings, err := (&LegacyReader{Path: path}).Load()
-	if err == nil {
-		t.Fatal("invalid known setting was accepted")
-	}
-	failure := LoadFailureFor(err)
-	if failure.Kind != "invalid_values" || !strings.Contains(failure.Message, "appearance mode") {
-		t.Fatalf("load failure = %#v", failure)
-	}
-	if !reflect.DeepEqual(settings, Default()) {
-		t.Fatalf("unsafe recovery settings = %#v", settings)
-	}
-	after, readErr := os.ReadFile(path)
-	if readErr != nil || !reflect.DeepEqual(after, original) {
-		t.Fatalf("failed load changed the original file: %q (%v)", after, readErr)
 	}
 }
 
@@ -506,39 +429,32 @@ func TestDedicatedFunctionKeysAndWindowsAliasesAreValidShortcuts(t *testing.T) {
 	}
 }
 
-func TestLoadPreservesDefaultWindowVisibilityForSparseFiles(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := os.WriteFile(path, []byte("{}"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	settings, err := (&LegacyReader{Path: path}).Load()
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestDefaultsPreserveWindowVisibilityAndRequestBudgets(t *testing.T) {
+	settings := Default()
 	if !settings.ShowWindowOnLaunch {
-		t.Fatal("a sparse settings file silently changed normal launches to tray-only")
+		t.Fatal("defaults silently changed normal launches to tray-only")
 	}
 	if settings.AuthenticationMode != AuthenticationModeNone {
-		t.Fatalf("sparse settings authentication mode = %q", settings.AuthenticationMode)
+		t.Fatalf("default settings authentication mode = %q", settings.AuthenticationMode)
 	}
 	if settings.TranscriptionTimeoutSeconds != DefaultTranscriptionTimeoutSeconds ||
 		settings.FileTranscriptionTimeoutSeconds != DefaultFileTranscriptionTimeoutSeconds ||
 		settings.PostProcessing.TimeoutSeconds != DefaultPostProcessingTimeoutSeconds ||
 		settings.TextToSpeech.TimeoutSeconds != DefaultTextToSpeechTimeoutSeconds {
-		t.Fatalf("sparse settings request budgets = recording %d file %d processing %d speech %d", settings.TranscriptionTimeoutSeconds, settings.FileTranscriptionTimeoutSeconds, settings.PostProcessing.TimeoutSeconds, settings.TextToSpeech.TimeoutSeconds)
+		t.Fatalf("default settings request budgets = recording %d file %d processing %d speech %d", settings.TranscriptionTimeoutSeconds, settings.FileTranscriptionTimeoutSeconds, settings.PostProcessing.TimeoutSeconds, settings.TextToSpeech.TimeoutSeconds)
 	}
 	if settings.UseMica {
-		t.Fatal("a sparse settings file silently enabled Mica")
+		t.Fatal("defaults silently enabled Mica")
 	}
 	if !settings.OverlayEnabled {
-		t.Fatal("a sparse settings file silently disabled the status overlay")
+		t.Fatal("defaults silently disabled the status overlay")
 	}
 	if settings.OverlaySizePercent != 100 || settings.OverlayOpacityPercent != 85 || settings.OverlayTopOffset != 18 || settings.OverlayGlowPercent != 70 {
-		t.Fatalf("sparse settings overlay appearance = size %d opacity %d offset %d glow %d", settings.OverlaySizePercent, settings.OverlayOpacityPercent, settings.OverlayTopOffset, settings.OverlayGlowPercent)
+		t.Fatalf("default settings overlay appearance = size %d opacity %d offset %d glow %d", settings.OverlaySizePercent, settings.OverlayOpacityPercent, settings.OverlayTopOffset, settings.OverlayGlowPercent)
 	}
 	if settings.OverlayLayout != OverlayLayoutCapsule || settings.OverlayAnchor != OverlayAnchorBottomCenter || settings.OverlayVisibility != OverlayVisibilityAll ||
 		settings.OverlayMotion != OverlayMotionSystem || settings.OverlaySurface != OverlaySurfaceMinimal || settings.OverlayVisualizer != OverlayVisualizerEnvelope {
-		t.Fatalf("sparse settings overlay presentation = %+v", settings.OverlayPreferences())
+		t.Fatalf("default settings overlay presentation = %+v", settings.OverlayPreferences())
 	}
 }
 
@@ -596,12 +512,8 @@ func TestAppearanceModeValidationAndMicaPolicy(t *testing.T) {
 	}
 }
 
-func TestLegacyJSONUsesWindowLaunchKey(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "settings.json")
-	if err := writeLegacyFixture(path, Default()); err != nil {
-		t.Fatal(err)
-	}
-	data, err := os.ReadFile(path)
+func TestSettingsDTOUsesWindowLaunchKey(t *testing.T) {
+	data, err := json.Marshal(Default())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -651,16 +563,4 @@ func TestS1MiniProfileRejectsUnknownControlValues(t *testing.T) {
 	if err := Validate(settings); err == nil || !strings.Contains(err.Error(), "S1-mini styling") {
 		t.Fatalf("invalid S1-mini control error = %v", err)
 	}
-}
-
-// Only tests write legacy fixtures; production JSON support is read-only.
-func writeLegacyFixture(path string, v Settings) error {
-	if err := Validate(v); err != nil {
-		return err
-	}
-	data, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0600)
 }

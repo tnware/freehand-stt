@@ -7,11 +7,17 @@ Freehand exposes three global shortcut actions. Configure them under
 **Settings → Shortcuts** by choosing a field and pressing the combination you
 want to use.
 
+All three actions may be left unassigned. Use **Clear** and save to disable a
+shortcut; saving an empty toggle does not restore the default. You can finish
+Voice setup and use the on-screen recording controls without a global shortcut.
+For insertion into another application, a working shortcut lets you start while
+that destination is focused; otherwise review the result and copy it explicitly.
+
 ## Windows
 
 | Action | Required | Accepted forms | Default |
 | --- | --- | --- | --- |
-| Toggle recording | Yes | One or more modifiers plus a supported primary key; or F13-F24 alone | `Ctrl+Shift+Space` |
+| Toggle recording | No | One or more modifiers plus a supported primary key; or F13-F24 alone | `Ctrl+Shift+Space` |
 | Show Freehand | No | One or more modifiers plus a supported primary key; or F13-F24 alone | Unassigned |
 | Hold to talk | No | The global forms above; or two or more modifiers alone | Unassigned |
 
@@ -71,3 +77,10 @@ previous shortcut set rather than persisting a partially applied replacement.
 Shortcut capture temporarily pauses Freehand's working shortcuts. Press Escape
 to cancel. A captured, rejected, cancelled, or timed-out attempt restores the
 previous bindings.
+
+If a saved shortcut is unavailable at startup, Freehand keeps your saved choice
+but leaves that binding inactive. Other available shortcuts still work. No
+fallback key is selected automatically. Open **Settings → Shortcuts** to record
+a replacement directly, or **Clear**, save, and record one later. Capture only
+pauses and restores bindings Freehand successfully registered; an existing
+startup conflict does not prevent recording a replacement.

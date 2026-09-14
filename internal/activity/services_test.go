@@ -108,7 +108,10 @@ func newHarness(t *testing.T, beforeSpeechProfile func(), fileProfile func()) *h
 	cfg.VADEnabled = false
 	cfg.SilenceSplitting = false
 	cfg.AutoStopEnabled = false
-	cfg.VoiceTranscription = config.VoiceFromCompleted(cfg)
+	cfg.VoiceTranscription.BaseURL = cfg.BaseURL
+	cfg.VoiceTranscription.Model = cfg.Model
+	cfg.VoiceTranscription.AllowInsecureHTTP = cfg.AllowInsecureHTTP
+	cfg.VoiceTranscription.AuthenticationMode = config.AuthenticationModeNone
 	source := settings.Source(func() config.Settings { return cfg })
 	profiles := settings.ProfileSource(func() (settings.RequestProfile, error) { return settings.RequestProfile{Settings: cfg}, nil })
 	client := inference.New()

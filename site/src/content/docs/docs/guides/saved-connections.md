@@ -84,9 +84,10 @@ Voice and Audio file, not cleanup or speech generation.
   entry, select another connection or **None selected** in every task using it first.
   The same rule applies before removing an enabled use from a connection.
 
-Use a unique name for each connection. You can save up to 64 connections for
-Voice and 32 each for Audio file, Cleanup, and Text to speech, including separate
-entries for the same address with different credentials.
+Use a unique name for each connection. You can save up to 32 connections for
+each use: Voice, Audio file, Cleanup, and Text to speech, including separate
+entries for the same address with different credentials. A reusable connection
+counts toward the limit for each of its enabled uses.
 See [Model profiles](../../models/#remember-settings-for-each-model) for the
 settings remembered when you switch models or connections.
 

@@ -73,7 +73,7 @@ const transcript = [
   .overlay-live-caption { position: absolute; left: 8.5cqw; right: 2.6cqw; top: 0; height: 100%; display: flex; align-items: center; overflow: hidden; white-space: nowrap; color: #f1f4fa; font-size: 2.05cqw; }
   [data-live-caption] { flex: none; }
   .realtime-note { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
-  .realtime-note a { color: var(--blue-bright); text-decoration: underline; text-underline-offset: 3px; }
+  .realtime-note a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
   .overlay-surface { fill: #151d2bf5; stroke: #7ca9e354; }
   .overlay-spinner, .overlay-check, .overlay-progress, .overlay-finish { display: none; }
   [data-phase="processing"] .overlay-spinner { display: block; transform-origin: 32px 27px; animation: demo-spin 1.2s linear infinite; }
@@ -85,7 +85,7 @@ const transcript = [
   [data-phase="processing"] .progress-segment, [data-phase="inserting"] .progress-segment { animation: demo-progress 1.4s ease-in-out infinite alternate; }
   [data-paused="true"] .overlay-spinner, [data-paused="true"] .progress-segment { animation-play-state: paused; }
   .demo-caption { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; }
-  [data-demo-status] { color: #cad6e8; }
+  [data-demo-status] { color: var(--muted-strong); }
   .demo-actions { display: flex; gap: 14px; }
   .demo-actions[hidden] { display: none; }
   .demo-actions button { padding: 0; min-height: 44px; background: none; border: none; color: var(--muted); font: inherit; cursor: pointer; }

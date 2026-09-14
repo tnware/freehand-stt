@@ -81,7 +81,7 @@ the clipboard as part of automatic delivery.
 ## Saved settings and backups
 
 On Windows, non-secret settings are stored in
-`%LOCALAPPDATA%\Freehand\settings.db`. They include server addresses, model
+`%LOCALAPPDATA%\Freehand\freehand.db`. They include server addresses, model
 choices, vocabulary, custom instructions, and request headers. Database access is restricted
 to your Windows user and SYSTEM; the database is not encrypted. Treat it and its
 backups as private configuration. API keys remain in Windows Credential Manager or macOS Keychain,
@@ -89,14 +89,14 @@ and transcript history remains memory-only. Window size and position are kept
 separately in `%APPDATA%\Freehand\window-state.json`.
 
 On macOS, settings and backups are under `~/Library/Application Support/Freehand`,
-with `settings.db` and the separate `window-state.json`. Files use per-user
+with `freehand.db` and the separate `window-state.json`. Files use per-user
 permissions, not Windows ACLs; the database is not encrypted. Keychain denial
 does not trigger plaintext credential storage.
 
-On Windows, when upgrading from an older alpha, Freehand imports a valid
-`%APPDATA%\Freehand\settings.json` once and leaves the original untouched.
-Later settings saves use SQLite. Schema upgrades retain up to three database
-backups; explicit recovery resets retain an archive of the replaced database.
+Earlier alpha settings and native credentials are left untouched and are not
+imported or reused on either platform. See the [first-launch reset notice](../../getting-started/#first-launch).
+Future schema upgrades retain up to three database backups; explicit recovery
+resets retain an archive of the replaced current database.
 See [settings recovery](../troubleshooting/#saved-settings-need-attention) before
 restoring or removing these files.
 

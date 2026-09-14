@@ -1,33 +1,33 @@
 :root {
-  --sl-color-accent-low: #152540;
-  --sl-color-accent: #6b9fff;
-  --sl-color-accent-high: #d9e7ff;
-  --sl-color-white: #f7f9fc;
-  --sl-color-gray-1: #e4e9f0;
-  --sl-color-gray-2: #b2bdca;
-  --sl-color-gray-3: #7f8b9a;
-  --sl-color-gray-4: #515d6c;
-  --sl-color-gray-5: #2b3440;
-  --sl-color-gray-6: #181e27;
-  --sl-color-gray-7: #10151d;
-  --sl-color-black: #090d13;
+  --sl-color-accent-low: #262626;
+  --sl-color-accent: #bdbdbd;
+  --sl-color-accent-high: #ededed;
+  --sl-color-white: #f7f7f7;
+  --sl-color-gray-1: #e7e7e7;
+  --sl-color-gray-2: #bdbdbd;
+  --sl-color-gray-3: #898989;
+  --sl-color-gray-4: #5c5c5c;
+  --sl-color-gray-5: #333333;
+  --sl-color-gray-6: #1d1d1d;
+  --sl-color-gray-7: #151515;
+  --sl-color-black: #0d0d0d;
   --sl-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --sl-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 :root[data-theme="light"] {
-  --sl-color-accent-low: #edf4ff;
-  --sl-color-accent: #2563eb;
-  --sl-color-accent-high: #15356a;
-  --sl-color-white: #111827;
-  --sl-color-gray-1: #263348;
-  --sl-color-gray-2: #526079;
+  --sl-color-accent-low: #eeeeee;
+  --sl-color-accent: #525252;
+  --sl-color-accent-high: #262626;
+  --sl-color-white: #171717;
+  --sl-color-gray-1: #333333;
+  --sl-color-gray-2: #606060;
   /* Inactive tabs and supporting text must remain readable on light surfaces. */
-  --sl-color-gray-3: #5b687d;
-  --sl-color-gray-4: #aab4c4;
-  --sl-color-gray-5: #d9dfe9;
-  --sl-color-gray-6: #f2f5f9;
-  --sl-color-gray-7: #f8fafc;
+  --sl-color-gray-3: #666666;
+  --sl-color-gray-4: #b3b3b3;
+  --sl-color-gray-5: #dedede;
+  --sl-color-gray-6: #f5f5f5;
+  --sl-color-gray-7: #fafafa;
   --sl-color-black: #ffffff;
 }
 
@@ -52,7 +52,7 @@ header.header {
   height: 2rem;
   padding: 0.18rem;
   border-radius: 0.58rem;
-  background: #f8fafc;
+  background: #fafafa;
 }
 
 .content-panel + .content-panel {

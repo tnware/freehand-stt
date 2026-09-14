@@ -47,7 +47,6 @@ const settings: Settings = {
   },
   transcriptionOptions: {
     prompt: "",
-    hotwords: "",
     temperatureOverride: false,
     temperature: 0,
   },
@@ -67,8 +66,7 @@ const settings: Settings = {
     timeoutSeconds: 120,
     transcriptionOptions: {
       prompt: "",
-      hotwords: "",
-      temperatureOverride: false,
+        temperatureOverride: false,
       temperature: 0,
     },
     compatibilityProfile: ID.NeMoSpeechV1,
@@ -79,7 +77,6 @@ const settings: Settings = {
     model: "",
     language: "auto",
     captions: true,
-    options: { vocabulary: "", boost: 3 },
   },
   baseURL: "https://example.test/v1",
   allowInsecureHTTP: false,
@@ -156,7 +153,6 @@ const settings: Settings = {
   savedConnections: { entries: [], selected: {} },
   configuration: {
     recoveryRequired: false,
-    preservedFields: [],
   },
   credentialConfigured: false,
   postProcessingCredentialConfigured: false,
