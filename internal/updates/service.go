@@ -51,16 +51,6 @@ type Checker interface {
 	CheckAndInstall(context.Context) error
 }
 
-type Option func(*Service)
-
-// WithSchedule is intended for deterministic tests.
-func WithSchedule(first, interval time.Duration) Option {
-	return func(service *Service) {
-		service.initialDelay = first
-		service.interval = interval
-	}
-}
-
 type Service struct {
 	mu              sync.RWMutex
 	workerMu        sync.Mutex
@@ -69,8 +59,6 @@ type Service struct {
 	development     bool
 	publish         func(Status)
 	logger          *slog.Logger
-	initialDelay    time.Duration
-	interval        time.Duration
 	lifetime        context.Context
 	cancel          context.CancelFunc
 	wake            chan struct{}
@@ -79,7 +67,7 @@ type Service struct {
 	closed          atomic.Bool
 }
 
-func NewService(currentVersion string, enabled, development bool, publish func(Status), logger *slog.Logger, options ...Option) *Service {
+func NewService(currentVersion string, enabled, development bool, publish func(Status), logger *slog.Logger) *Service {
 	if logger == nil {
 		logger = diagnostics.DiscardLogger()
 	}
@@ -89,23 +77,17 @@ func NewService(currentVersion string, enabled, development bool, publish func(S
 	} else if !enabled {
 		state = StateDisabled
 	}
-	service := &Service{
+	return &Service{
 		status: Status{
 			State:          state,
 			Enabled:        enabled,
 			CurrentVersion: currentVersion,
 		},
-		development:  development,
-		publish:      publish,
-		logger:       logger.With("component", "updates"),
-		initialDelay: initialCheckDelay,
-		interval:     checkInterval,
-		wake:         make(chan struct{}, 1),
+		development: development,
+		publish:     publish,
+		logger:      logger.With("component", "updates"),
+		wake:        make(chan struct{}, 1),
 	}
-	for _, option := range options {
-		option(service)
-	}
-	return service
 }
 
 // Configure attaches the Wails updater after application.New has created it.
@@ -225,8 +207,7 @@ func (s *Service) CheckForUpdates() error {
 
 func (s *Service) run(ctx context.Context) {
 	defer s.wait.Done()
-	delay := s.initialDelay
-	timer := time.NewTimer(delay)
+	timer := time.NewTimer(initialCheckDelay)
 	defer timer.Stop()
 	for {
 		select {
@@ -239,14 +220,12 @@ func (s *Service) run(ctx context.Context) {
 				default:
 				}
 			}
-			delay = s.initialDelay
-			timer.Reset(delay)
+			timer.Reset(initialCheckDelay)
 		case <-timer.C:
 			if s.enabled() {
 				s.backgroundCheck(ctx)
 			}
-			delay = s.interval
-			timer.Reset(delay)
+			timer.Reset(checkInterval)
 		}
 	}
 }

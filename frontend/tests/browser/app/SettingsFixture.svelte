@@ -20,6 +20,7 @@
     OpenPermissionSettings: async () => {},
   });
   import { configurePickerFixture } from "./picker-data";
+  import { controlledMetadata } from "./metadata-control";
   import { createRuntimeFixture } from "./runtime-fixture";
   import { ProviderID } from "$bindings/managedruntime";
   import { State } from "$lib/state";
@@ -265,6 +266,14 @@
       [Purpose.Transcription]: "local-speech",
     };
   }
+  const metadata = params.has("metadata-control") ? controlledMetadata() : null;
+  if (metadata) {
+    window.testMetadata = metadata.control;
+    current.setupCompleted = true;
+    if (params.has("metadata-readiness")) current.model = "";
+    current.authenticationMode = AuthenticationMode.AuthenticationModeNone;
+    current.postProcessing.enabled = true;
+  }
   const session = new Session({
     ...serviceWithStatus(
       () =>
@@ -280,6 +289,7 @@
         },
         connection: {
           TestConnection: () =>
+            metadata?.request(Purpose.Transcription) ??
             CancellablePromise.resolve(
               new URLSearchParams(location.search).has("attention")
                 ? {
@@ -295,6 +305,12 @@
                   }
                 : connectionResult,
             ),
+          TestPostProcessingConnection: () =>
+            metadata?.request(Purpose.Cleanup) ??
+            CancellablePromise.resolve(connectionResult),
+          TestTextToSpeechConnection: () =>
+            metadata?.request(Purpose.Speech) ??
+            CancellablePromise.resolve(connectionResult),
         },
         settings: {
           GetSettings: () =>

@@ -128,24 +128,34 @@ func assertWindowThemeColour(t *testing.T, theme *application.WindowTheme, name 
 	}
 }
 
-func TestMainWindowDeniesUnusedWebViewCapabilities(t *testing.T) {
-	options := mainWindowOptions(false, true, false, config.AppearanceModeSystem, false)
-	for _, capability := range []application.PermissionType{
-		application.PermissionMicrophone,
-		application.PermissionCamera,
-		application.PermissionGeolocation,
-		application.PermissionNotifications,
-		application.PermissionClipboardRead,
+func TestAppWindowsDenyUnusedWebViewCapabilities(t *testing.T) {
+	for name, options := range map[string]application.WebviewWindowOptions{
+		"main":            mainWindowOptions(false, true, false, config.AppearanceModeSystem, false),
+		"settings":        settingsWindowOptions(false, config.AppearanceModeSystem, false),
+		"about":           aboutWindowOptions(false, config.AppearanceModeSystem, false),
+		"history details": historyDetailsWindowOptions(false, config.AppearanceModeSystem, false),
+		"Windows popover": trayPopoverWindowOptionsForPlatform("windows", config.AppearanceModeSystem, false),
+		"macOS popover":   trayPopoverWindowOptionsForPlatform("darwin", config.AppearanceModeSystem, false),
 	} {
-		if got := options.Permissions[capability]; got != application.PermissionDeny {
-			t.Fatalf("permission %d = %d, want deny", capability, got)
-		}
-	}
-	if options.AllowSimpleEventEmit {
-		t.Fatal("simple renderer event emission is enabled")
-	}
-	if options.EnableFileDrop {
-		t.Fatal("renderer file drop is enabled")
+		t.Run(name, func(t *testing.T) {
+			for _, capability := range []application.PermissionType{
+				application.PermissionMicrophone,
+				application.PermissionCamera,
+				application.PermissionGeolocation,
+				application.PermissionNotifications,
+				application.PermissionClipboardRead,
+			} {
+				if got := options.Permissions[capability]; got != application.PermissionDeny {
+					t.Fatalf("permission %d = %d, want deny", capability, got)
+				}
+			}
+			if options.AllowSimpleEventEmit {
+				t.Fatal("simple renderer event emission is enabled")
+			}
+			if options.EnableFileDrop {
+				t.Fatal("renderer file drop is enabled")
+			}
+		})
 	}
 }
 

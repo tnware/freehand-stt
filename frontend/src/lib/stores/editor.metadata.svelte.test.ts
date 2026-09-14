@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { CancellablePromise } from "@wailsio/runtime";
 import { Purpose } from "$bindings/savedconnection";
+import { modelFor } from "$lib/utils/modelSettings";
 import {
   createEditor,
   settings,
@@ -81,21 +82,38 @@ describe("shared metadata lifecycle", () => {
     editor.quickSettingsPending = ["voice-transcription"];
     expect(editor.chooseModel(role, "blocked/model")).toBe(false);
   });
-  it.each(roles)("accepts manual %s model choice during discovery", async (role) => {
-    const { editor, probe } = fixture();
-    let finish!: (value: typeof connectionResult) => void;
-    probe.mockImplementationOnce(() => new CancellablePromise(resolve => { finish = resolve; }));
-    const pending = editor.ensureConnectionMetadata(role);
-    expect(editor.connectionMetadataStatus(role)).toBe("loading");
-    expect(editor.chooseModel(role, "manual/pending-model")).toBe(true);
-    const selected = role === Purpose.Voice ? editor.draft!.voiceTranscription.model
-      : role === Purpose.Transcription ? editor.draft!.model
-      : role === Purpose.Cleanup ? editor.draft!.postProcessing.model : editor.draft!.textToSpeech.model;
-    expect(selected).toBe("manual/pending-model");
-    finish(connectionResult);
-    await pending;
-    expect(editor.connectionMetadataStatus(role)).toBe("ready");
-  });
+  it.each(
+    roles.flatMap(
+      (role) =>
+        [
+          { role, outcome: "ready" },
+          { role, outcome: "failed" },
+        ] as const,
+    ),
+  )(
+    "preserves manual $role model choice when delayed discovery becomes $outcome",
+    async ({ role, outcome }) => {
+      const { editor, probe } = fixture();
+      const deferred =
+        CancellablePromise.withResolvers<typeof connectionResult>();
+      probe.mockImplementationOnce(() => deferred.promise);
+      const appliedModel = modelFor(editor.applied!, role);
+      const pending = editor.ensureConnectionMetadata(role);
+      expect(editor.connectionMetadataStatus(role)).toBe("loading");
+      expect(editor.chooseModel(role, "manual/pending-model")).toBe(true);
+      expect(modelFor(editor.draft!, role)).toBe("manual/pending-model");
+      if (outcome === "ready") deferred.resolve(connectionResult);
+      else deferred.reject(new Error("offline"));
+      await pending;
+      expect(editor.connectionMetadataStatus(role)).toBe(outcome);
+      expect(modelFor(editor.draft!, role)).toBe("manual/pending-model");
+      expect(modelFor(editor.applied!, role)).toBe(appliedModel);
+      expect(editor.dirty).toBe(true);
+      expect(editor.connectionMetadataResult(role)?.modelIDs ?? []).toEqual(
+        outcome === "ready" ? connectionResult.modelIDs : [],
+      );
+    },
+  );
   it.each([Purpose.Transcription, Purpose.Cleanup, Purpose.Speech])(
     "does not attribute successful draft %s metadata to the applied inventory",
     async (role) => {

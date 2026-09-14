@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -40,64 +41,65 @@ func (f *checkerFake) counts() (int, int) {
 }
 
 func TestAutomaticCheckPublishesAvailableRelease(t *testing.T) {
-	checker := &checkerFake{release: &updater.Release{Version: "0.1.0-alpha.2"}}
-	statuses := make(chan Status, 8)
-	service := NewService("0.1.0-alpha.1", true, false, func(status Status) { statuses <- status }, nil,
-		WithSchedule(time.Millisecond, time.Hour))
-	Configure(service, checker)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if err := service.ServiceStartup(ctx, application.ServiceOptions{}); err != nil {
-		t.Fatal(err)
-	}
-	defer service.ServiceShutdown()
-
-	deadline := time.After(time.Second)
-	for {
-		select {
-		case status := <-statuses:
-			if status.State == StateAvailable {
-				if status.LatestVersion != "0.1.0-alpha.2" || status.LastCheckedAt == "" {
-					t.Fatalf("available status = %#v", status)
-				}
-				deadline := time.Now().Add(time.Second)
-				for {
-					_, interactive := checker.counts()
-					if interactive == 1 {
-						return
-					}
-					if time.Now().After(deadline) {
-						t.Fatal("available update did not open the Wails updater")
-					}
-					time.Sleep(time.Millisecond)
-				}
-			}
-		case <-deadline:
-			t.Fatal("automatic update result was not published")
+	synctest.Test(t, func(t *testing.T) {
+		checker := &checkerFake{release: &updater.Release{Version: "0.1.0-alpha.2"}}
+		var statuses []Status
+		service := NewService("0.1.0-alpha.1", true, false, func(status Status) { statuses = append(statuses, status) }, nil)
+		Configure(service, checker)
+		if err := service.ServiceStartup(t.Context(), application.ServiceOptions{}); err != nil {
+			t.Fatal(err)
 		}
-	}
+		defer service.ServiceShutdown()
+
+		synctest.Wait()
+		synctest.Sleep(initialCheckDelay - time.Nanosecond)
+		if checks, _ := checker.counts(); checks != 0 {
+			t.Fatalf("automatic check ran before its initial delay: %d", checks)
+		}
+		synctest.Sleep(time.Nanosecond)
+		if checks, interactive := checker.counts(); checks != 1 || interactive != 1 {
+			t.Fatalf("checks/interactive = %d/%d, want 1/1", checks, interactive)
+		}
+		for _, status := range statuses {
+			if status.State == StateAvailable && status.LatestVersion == "0.1.0-alpha.2" && status.LastCheckedAt != "" {
+				return
+			}
+		}
+		t.Fatalf("available release was not published: %#v", statuses)
+	})
 }
 
 func TestDisabledServiceDoesNotPollUntilEnabled(t *testing.T) {
-	checker := &checkerFake{}
-	service := NewService("0.1.0-alpha.1", false, false, nil, nil,
-		WithSchedule(5*time.Millisecond, time.Hour))
-	Configure(service, checker)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if err := service.ServiceStartup(ctx, application.ServiceOptions{}); err != nil {
-		t.Fatal(err)
-	}
-	defer service.ServiceShutdown()
-	time.Sleep(20 * time.Millisecond)
-	if checks, _ := checker.counts(); checks != 0 {
-		t.Fatalf("disabled service made %d checks", checks)
-	}
-	ApplyEnabled(service, true)
-	time.Sleep(20 * time.Millisecond)
-	if checks, _ := checker.counts(); checks != 1 {
-		t.Fatalf("enabled service made %d checks, want 1", checks)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		checker := &checkerFake{}
+		service := NewService("0.1.0-alpha.1", false, false, nil, nil)
+		Configure(service, checker)
+		if err := service.ServiceStartup(t.Context(), application.ServiceOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		defer service.ServiceShutdown()
+		synctest.Wait()
+		synctest.Sleep(initialCheckDelay + 2*checkInterval)
+		if checks, _ := checker.counts(); checks != 0 {
+			t.Fatalf("disabled service made %d checks", checks)
+		}
+		ApplyEnabled(service, true)
+		synctest.Wait()
+		synctest.Sleep(initialCheckDelay)
+		if checks, _ := checker.counts(); checks != 1 {
+			t.Fatalf("enabled service made %d checks, want 1", checks)
+		}
+		synctest.Sleep(checkInterval)
+		if checks, _ := checker.counts(); checks != 2 {
+			t.Fatalf("enabled service did not repeat the check: %d", checks)
+		}
+		ApplyEnabled(service, false)
+		synctest.Wait()
+		synctest.Sleep(initialCheckDelay + 2*checkInterval)
+		if checks, _ := checker.counts(); checks != 2 {
+			t.Fatalf("disabled service kept polling: %d", checks)
+		}
+	})
 }
 
 func TestAutomaticCheckStaysQuietWhenCurrent(t *testing.T) {
@@ -144,21 +146,57 @@ func TestShutdownRejectsNewInteractiveWork(t *testing.T) {
 
 func TestBackgroundFailureIsBounded(t *testing.T) {
 	checker := &checkerFake{err: errors.New("GET https://secret.example/path?token=value failed")}
-	service := NewService("0.1.0-alpha.1", true, false, nil, nil)
+	var published Status
+	service := NewService("0.1.0-alpha.1", true, false, func(status Status) { published = status }, nil)
 	Configure(service, checker)
-	service.backgroundCheck(context.Background())
+	service.backgroundCheck(t.Context())
 	status := service.Current()
-	if status.State != StateError || status.ErrorKind == "" {
+	if status.State != StateError || status.ErrorKind != "operation" || status.LatestVersion != "" {
 		t.Fatalf("failure status = %#v", status)
+	}
+	if published != status {
+		t.Fatalf("renderer event = %#v, want bounded current status %#v", published, status)
 	}
 }
 
 func TestDisabledPreferenceWinsOverAnInFlightBackgroundResult(t *testing.T) {
-	service := NewService("0.1.0-alpha.1", true, false, nil, nil)
-	ApplyEnabled(service, false)
-	service.finishBackground(&updater.Release{Version: "0.1.0-alpha.2"}, nil)
-	status := service.Current()
-	if status.State != StateDisabled || status.LatestVersion != "" {
-		t.Fatalf("disabled status was replaced by late result: %#v", status)
+	synctest.Test(t, func(t *testing.T) {
+		checker := &waitingChecker{result: make(chan *updater.Release, 1)}
+		service := NewService("0.1.0-alpha.1", true, false, nil, nil)
+		Configure(service, checker)
+		if err := service.ServiceStartup(t.Context(), application.ServiceOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		defer service.ServiceShutdown()
+		synctest.Wait()
+		synctest.Sleep(initialCheckDelay)
+		if state := service.Current().State; state != StateChecking {
+			t.Fatalf("state before result = %q, want checking", state)
+		}
+
+		ApplyEnabled(service, false)
+		checker.result <- &updater.Release{Version: "0.1.0-alpha.2"}
+		synctest.Wait()
+		status := service.Current()
+		if status.State != StateDisabled || status.LatestVersion != "" {
+			t.Fatalf("disabled status was replaced by late result: %#v", status)
+		}
+		if _, interactive := checker.counts(); interactive != 0 {
+			t.Fatal("late result opened an updater after updates were disabled")
+		}
+	})
+}
+
+type waitingChecker struct {
+	checkerFake
+	result chan *updater.Release
+}
+
+func (f *waitingChecker) Check(ctx context.Context) (*updater.Release, error) {
+	select {
+	case release := <-f.result:
+		return release, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 }

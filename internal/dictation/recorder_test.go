@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -249,49 +250,53 @@ func waitForState(t *testing.T, recorder *testRecorder, want State) Status {
 }
 
 func TestDeviceInterruptionFailsPromptlyDiscardsAndAllowsRetry(t *testing.T) {
-	capture := &interruptCapture{partial: []byte{1, 2, 3, 4}}
-	recorder := New(capture, &platFake{}, nil, nil, settingsFake{}, nil)
-	if err := recorder.Start(); err != nil {
-		t.Fatal(err)
-	}
-	firstGeneration := recorder.Status().Generation
-	capture.session(0) <- audio.ErrDeviceInterrupted
+	synctest.Test(t, func(t *testing.T) {
+		capture := &interruptCapture{partial: []byte{1, 2, 3, 4}}
+		recorder := New(capture, &platFake{}, nil, nil, settingsFake{}, nil)
+		defer recorder.Cancel()
+		if err := recorder.Start(); err != nil {
+			t.Fatal(err)
+		}
+		firstGeneration := recorder.Status().Generation
+		capture.session(0) <- audio.ErrDeviceInterrupted
 
-	status := waitForState(t, recorder, Failed)
-	if status.Generation != firstGeneration || status.Message != "Microphone: "+audio.ErrDeviceInterrupted.Error() {
-		t.Fatalf("interruption status = %+v", status)
-	}
-	recorder.mu.Lock()
-	_, targetRetained := recorder.targets[firstGeneration]
-	pending := recorder.pending
-	recordingCancel := recorder.recordingCancel
-	recorder.mu.Unlock()
-	capture.mu.Lock()
-	cancelCount := capture.cancelCount
-	partial := append([]byte(nil), capture.partial...)
-	capture.mu.Unlock()
-	if targetRetained || pending != "" || recordingCancel != nil || cancelCount != 1 || !allZero(partial) {
-		t.Fatalf("interruption cleanup: target=%v pending=%q watcher=%v cancels=%d partial=%v", targetRetained, pending, recordingCancel != nil, cancelCount, partial)
-	}
+		synctest.Wait()
+		status := recorder.Status()
+		if status.State != Failed || status.Generation != firstGeneration || status.Message != "Microphone: "+audio.ErrDeviceInterrupted.Error() {
+			t.Fatalf("interruption status = %+v", status)
+		}
+		recorder.mu.Lock()
+		_, targetRetained := recorder.targets[firstGeneration]
+		pending := recorder.pending
+		recordingCancel := recorder.recordingCancel
+		recorder.mu.Unlock()
+		capture.mu.Lock()
+		cancelCount := capture.cancelCount
+		partial := append([]byte(nil), capture.partial...)
+		capture.mu.Unlock()
+		if targetRetained || pending != "" || recordingCancel != nil || cancelCount != 1 || !allZero(partial) {
+			t.Fatalf("interruption cleanup: target=%v pending=%q watcher=%v cancels=%d partial=%v", targetRetained, pending, recordingCancel != nil, cancelCount, partial)
+		}
 
-	if err := recorder.Start(); err != nil {
-		t.Fatalf("retry start: %v", err)
-	}
-	second := recorder.Status()
-	if second.State != Recording || second.Generation <= firstGeneration {
-		t.Fatalf("retry status = %+v", second)
-	}
+		if err := recorder.Start(); err != nil {
+			t.Fatalf("retry start: %v", err)
+		}
+		second := recorder.Status()
+		if second.State != Recording || second.Generation <= firstGeneration {
+			t.Fatalf("retry status = %+v", second)
+		}
 
-	// A delayed notification from the first recording is tied to its old
-	// channel and cannot fail the new generation.
-	capture.session(0) <- audio.ErrDeviceInterrupted
-	time.Sleep(25 * time.Millisecond)
-	if got := recorder.Status(); got.State != Recording || got.Generation != second.Generation {
-		t.Fatalf("stale interruption changed retry: %+v", got)
-	}
-	if err := recorder.Cancel(); err != nil {
-		t.Fatal(err)
-	}
+		// A delayed notification from the first recording is tied to its old
+		// channel and cannot fail the new generation.
+		capture.session(0) <- audio.ErrDeviceInterrupted
+		synctest.Wait()
+		if got := recorder.Status(); got.State != Recording || got.Generation != second.Generation {
+			t.Fatalf("stale interruption changed retry: %+v", got)
+		}
+		if err := recorder.Cancel(); err != nil {
+			t.Fatal(err)
+		}
+	})
 }
 
 func allZero(value []byte) bool {

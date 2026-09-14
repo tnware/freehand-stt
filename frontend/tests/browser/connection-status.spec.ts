@@ -92,3 +92,19 @@ test("disabled speech and missing connections offer setup without probing", asyn
     page.getByRole("status").filter({ hasText: "Edit connections for voice" }),
   ).toHaveCount(1);
 });
+
+
+test("real App footer follows the active task", async ({ page }) => {
+  await page.goto("/tests/browser/app/?main&workflows&pickers");
+  for (const [tab, label] of [
+    ["Voice", "Voice transcription"],
+    ["Audio file", "Audio-file transcription"],
+    ["Text to speech", "Text to speech"],
+  ]) {
+    await page.getByRole("tab", { name: tab, exact: true }).click();
+    await status(page).click();
+    await expect(panel(page)).toContainText(label);
+    await page.keyboard.press("Escape");
+    await expect(status(page)).toBeFocused();
+  }
+});

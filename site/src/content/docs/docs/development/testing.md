@@ -3,6 +3,30 @@ title: Testing contract
 description: Deterministic, integration, and native acceptance responsibilities.
 ---
 
+## Choosing useful coverage
+
+Test observable outcomes at the owning boundary: admitted requests, immutable
+settings, persisted data, emitted status, rendered controls, and actions a user
+can perform. Cover failure, cancellation, and out-of-order completion where they
+can change those outcomes. Small mechanical refactors do not need new tests that
+repeat their implementation.
+
+Avoid assertions about source spelling, prop forwarding, private helper names,
+or incidental markup counts. Exercise state owners directly, render static
+presentation, and use browser tests for component wiring, interaction, and the
+accessibility tree. When removing a brittle test, identify the behavior coverage
+that replaces it or explain why the asserted detail is not a contract. Preserve
+string assertions for actual protocol values, safety-relevant copy, generated
+artifacts, and release configuration; reading a file is not itself a test smell.
+
+Use controlled promises or channels for asynchronous results and Go's
+[`testing/synctest`](https://pkg.go.dev/testing/synctest) for timer-driven owners.
+Updater tests advance the production schedule in virtual time and exercise
+disabling updates during a pending result. These checker fixtures do not qualify
+the native Wails updater window or its shutdown behavior. Window option tests
+cover renderer permissions across surfaces; retained-instance tests check reuse
+without claiming native close, focus, or startup acceptance.
+
 ## Renderer state and navigation
 
 Exercise dictation events and overlapping status reads in both completion orders.

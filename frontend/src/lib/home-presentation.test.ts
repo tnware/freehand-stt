@@ -2,12 +2,27 @@ import { readFileSync } from "node:fs";
 import { render } from "svelte/server";
 import { describe, expect, it } from "vitest";
 import CurrentResult from "$lib/components/home/CurrentResult.svelte";
+import QuickControls from "$lib/components/home/QuickControls.svelte";
 import TextToSpeech from "$lib/components/home/TextToSpeech.svelte";
 import { TTSPhase, TTSSource, type TTSStatus } from "$lib/state";
 import { settings } from "$lib/stores/session-fixtures";
 
 const read = (path: string) =>
   readFileSync(new URL(path, import.meta.url), "utf8");
+
+const idleSpeech: TTSStatus = {
+  generation: 0,
+  phase: TTSPhase.Idle,
+  positionMilliseconds: 0,
+  durationMilliseconds: 0,
+  canPause: false,
+  canResume: false,
+  canRestart: false,
+  canSeek: false,
+  canStop: false,
+  canSave: false,
+  canClear: false,
+};
 
 describe("home task presentation", () => {
   it("uses Freehand as the accessible document and updater title", () => {
@@ -17,19 +32,18 @@ describe("home task presentation", () => {
     );
   });
 
-  it("uses stable shared transcription and delivery labels", () => {
-    expect(read("components/home/QuickSettings.svelte")).toContain(
-      'label="Transcription"',
-    );
-    expect(read("components/home/ResultQuickSettings.svelte")).toContain(
-      "Transcription settings",
-    );
-    expect(read("components/home/QuickControls.svelte")).toContain(
-      "Direct input off uses manual copy.",
-    );
-    expect(read("components/home/TextToSpeech.svelte")).toContain(
-      "Text to speech settings",
-    );
+  it("renders manual-copy guidance with the delivery controls", () => {
+    const { body } = render(QuickControls, {
+      props: {
+        settings: { ...settings, autoInsert: false },
+        section: "delivery",
+        devices: [],
+        onUpdate: async () => true,
+        onOpenAudioSettings: () => {},
+        onOpenDeliverySettings: () => {},
+      },
+    });
+    expect(body).toContain("Direct input off uses manual copy.");
   });
 
   it.each(["file", "voice"] as const)(
@@ -55,20 +69,7 @@ describe("home task presentation", () => {
   it.each([undefined, TTSSource.SourceCompose])(
     "labels idle TTS as locally ready to generate (%s)",
     (source) => {
-      const status: TTSStatus = {
-        generation: 0,
-        phase: TTSPhase.Idle,
-        source,
-        positionMilliseconds: 0,
-        durationMilliseconds: 0,
-        canPause: false,
-        canResume: false,
-        canRestart: false,
-        canSeek: false,
-        canStop: false,
-        canSave: false,
-        canClear: false,
-      };
+      const status: TTSStatus = { ...idleSpeech, source };
       const noop = () => {};
       const { body } = render(TextToSpeech, {
         props: {
@@ -95,11 +96,22 @@ describe("home task presentation", () => {
       expect(body).not.toContain("Reachable");
     },
   );
-  it("wires the selected task and editor metadata into the footer", () => {
-    const app = read("../App.svelte");
-    expect(app).toMatch(
-      /taskConnectionStatus\(inputMode,\s*session.editor,\s*now\)/,
-    );
-    expect(app).toContain("connectionState={footerStatus}");
+  it("offers an accessible settings action when speech is unconfigured", () => {
+    const noop = () => {};
+    const { body } = render(TextToSpeech, {
+      props: {
+        settings: { ...settings.textToSpeech, enabled: false },
+        status: idleSpeech,
+        onSpeak: noop,
+        onPause: noop,
+        onResume: noop,
+        onRestart: noop,
+        onStop: noop,
+        onSave: noop,
+        onClear: noop,
+        onOpenSettings: noop,
+      },
+    });
+    expect(body).toContain('aria-label="Text to speech settings"');
   });
 });

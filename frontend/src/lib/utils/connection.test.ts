@@ -1,15 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { settings } from "$lib/stores/session-fixtures";
-import { readFileSync } from "node:fs";
-import { parse } from "svelte/compiler";
 import { render } from "svelte/server";
 import { ID, type Profile } from "$bindings/compatibility";
 import CompatibilityProfilePicker from "$lib/components/settings/CompatibilityProfilePicker.svelte";
-
-const pickerSource = readFileSync(
-  new URL("../components/settings/CompatibilityProfilePicker.svelte", import.meta.url),
-  "utf8",
-);
 
 describe("compatibility profile picker options", () => {
   it("keeps an unavailable selection visible with an explanation, without changing it", () => {
@@ -31,30 +24,6 @@ describe("compatibility profile picker options", () => {
     expect(body).toContain("Dedicated support is not implemented.");
     expect(body).toContain("This saved profile is unavailable");
     expect(props.value).toBe(ID.LocalAI);
-  });
-
-  it("renders options only from the available profiles, not the planned catalog", () => {
-    const ast = parse(pickerSource, { modern: true });
-    const optionLists: string[] = [];
-    function visit(node: unknown) {
-      if (!node || typeof node !== "object") return;
-      const value = node as Record<string, unknown>;
-      if (value.type === "EachBlock") {
-        const block = node as {
-          body: { start: number; end: number };
-          expression: { start: number; end: number };
-        };
-        if (pickerSource.slice(block.body.start, block.body.end).includes("Select.Item")) {
-          optionLists.push(pickerSource.slice(block.expression.start, block.expression.end));
-        }
-      }
-      for (const child of Object.values(value)) {
-        if (Array.isArray(child)) child.forEach(visit);
-        else if (child && typeof child === "object") visit(child);
-      }
-    }
-    visit(ast.fragment);
-    expect(optionLists).toEqual(["available"]);
   });
 });
 import {

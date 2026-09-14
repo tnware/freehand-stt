@@ -1,12 +1,11 @@
 package app
 
 import (
+	"runtime"
+	"testing"
+
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"os"
-	"runtime"
-	"strings"
-	"testing"
 )
 
 func TestOpeningMainOrSettingsDismissesOnlyPopover(t *testing.T) {
@@ -23,31 +22,23 @@ func TestOpeningMainOrSettingsDismissesOnlyPopover(t *testing.T) {
 	}
 }
 
-func TestTrayPopoverRetainedNativeLifecycle(t *testing.T) {
-	source, err := os.ReadFile("tray_popover.go")
-	if err != nil {
-		t.Fatal(err)
+func TestTrayPopoverConstructorRetainsExistingWindow(t *testing.T) {
+	if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
+		t.Skip("popover construction is unavailable on this platform")
 	}
-	for _, contract := range []string{`runtime.GOOS != "darwin"`, `a.trayPopover.current() != nil`, `a.trayPopover.attach(window)`, `a.tray.AttachPopover(window)`, `events.Common.WindowClosing`, `event.Cancel()`, `window.Hide()`} {
-		if !strings.Contains(string(source), contract) {
-			t.Errorf("missing lifecycle boundary %s", contract)
-		}
-	}
-	startup, err := os.ReadFile("app.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	started := strings.Split(string(startup), "func (a *App) onStarted(")[1]
-	if !strings.Contains(started, "a.newTrayPopoverWindow()") {
-		t.Fatal("popover not created after native startup")
+	window := &application.WebviewWindow{}
+	a := &App{trayPopover: &windowController{window: window}}
+	// Repeated construction must return before touching the native factory.
+	// This checks reuse only; close hooks and startup timing need native acceptance.
+	a.newTrayPopoverWindow()
+	a.newTrayPopoverWindow()
+	if a.trayPopover.current() != window {
+		t.Fatal("popover constructor replaced the retained window")
 	}
 }
 
 func TestTrayPopoverWindowsOptions(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("Windows window options")
-	}
-	o := trayPopoverWindowOptions(config.AppearanceModeDark, true)
+	o := trayPopoverWindowOptionsForPlatform("windows", config.AppearanceModeDark, true)
 	if !o.Windows.HiddenOnTaskbar {
 		t.Fatal("tray panel must not create a taskbar entry")
 	}

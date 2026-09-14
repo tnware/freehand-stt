@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/tnware/freehand-stt/internal/audio"
@@ -481,66 +483,68 @@ func TestAutomaticStopTrimsSilenceAndCompletesDictation(t *testing.T) {
 }
 
 func TestHoldRecordingWaitsForReleaseWhenAutomaticStopIsConfigured(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"text":"released normally"}`))
-	}))
-	defer server.Close()
+	synctest.Test(t, func(t *testing.T) {
+		capture := newStreamingCapture()
+		platform := &platFake{}
+		cfg := config.Default()
+		cfg.BaseURL = "http://speech.test"
+		cfg.Model = "fixture-model"
+		cfg.HistoryEnabled = true
+		cfg.SilenceTrimming = true
+		cfg.SpeechPaddingMS = 100
+		cfg.AutoStopEnabled = true
+		cfg.AutoStopSilenceMS = 500
+		cfg.AutoStopMinimumSpeechMS = 100
+		cfg.VADActivitySilenceMS = 200
+		var statusMu sync.Mutex
+		var statuses []Status
+		recorder := New(capture, platform, nil, staticCredential{value: "secret"}, staticSettings{value: cfg}, func(status Status) {
+			statusMu.Lock()
+			statuses = append(statuses, status)
+			statusMu.Unlock()
+		})
+		defer recorder.Cancel()
+		recorder.client = newTestClient(&http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusOK, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"text":"released normally"}`))}, nil
+		})})
+		recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) {
+			return &sampleDetector{observed: capture.observed}, nil
+		}
 
-	capture := newStreamingCapture()
-	platform := &platFake{}
-	cfg := config.Default()
-	cfg.BaseURL = server.URL
-	cfg.Model = "fixture-model"
-	cfg.HistoryEnabled = true
-	cfg.SilenceTrimming = true
-	cfg.SpeechPaddingMS = 100
-	cfg.AutoStopEnabled = true
-	cfg.AutoStopSilenceMS = 500
-	cfg.AutoStopMinimumSpeechMS = 100
-	cfg.VADActivitySilenceMS = 200
-	var statusMu sync.Mutex
-	var statuses []Status
-	recorder := New(capture, platform, nil, staticCredential{value: "secret"}, staticSettings{value: cfg}, func(status Status) {
-		statusMu.Lock()
-		statuses = append(statuses, status)
-		statusMu.Unlock()
+		if err := recorder.StartWithMode(RecordingHold); err != nil {
+			t.Fatal(err)
+		}
+		if status := recorder.Status(); status.RecordingMode != RecordingHold {
+			t.Fatalf("recording mode = %q, want %q", status.RecordingMode, RecordingHold)
+		}
+		feedFrames(t, capture, pcmFrame(1200), 10)
+		feedFrames(t, capture, pcmFrame(0), 35)
+		// Detector acknowledgement precedes the rest of each frame's processing.
+		// Settle the segmenter and watcher before asserting that silence cannot stop hold.
+		synctest.Wait()
+		assertVADState(t, statuses, VADSilence)
+		if status := recorder.Status(); status.State != Recording || status.AutoStopState != "" || !status.AutoStopDeadline.IsZero() {
+			t.Fatalf("hold recording ended or exposed a countdown before release: %+v", status)
+		}
+		if platform.inserts != 0 {
+			t.Fatalf("hold recording inserted %d times before release", platform.inserts)
+		}
+
+		if err := recorder.Stop(); err != nil {
+			t.Fatal(err)
+		}
+		if platform.lastInsert != "released normally" {
+			t.Fatalf("inserted = %q", platform.lastInsert)
+		}
+		entries := recorder.History()
+		if len(entries) != 1 {
+			t.Fatalf("history = %#v", entries)
+		}
+		details := entries[0].Details
+		if details.RecordingMode != string(RecordingHold) || !details.AutoStopEnabled || details.AutoStopActive || details.AutoStopped || !details.SilenceTrimming {
+			t.Fatalf("hold recording history details = %#v", details)
+		}
 	})
-	recorder.client = newTestClient(server.Client())
-	recorder.newDetector = func(config.VADMode) (audio.VoiceDetector, error) {
-		return &sampleDetector{observed: capture.observed}, nil
-	}
-
-	if err := recorder.StartWithMode(RecordingHold); err != nil {
-		t.Fatal(err)
-	}
-	if status := recorder.Status(); status.RecordingMode != RecordingHold {
-		t.Fatalf("recording mode = %q, want %q", status.RecordingMode, RecordingHold)
-	}
-	feedFrames(t, capture, pcmFrame(1200), 10)
-	feedFrames(t, capture, pcmFrame(0), 35)
-	waitForVADState(t, &statusMu, &statuses, VADSilence)
-	time.Sleep(30 * time.Millisecond)
-	if status := recorder.Status(); status.State != Recording || status.AutoStopState != "" || !status.AutoStopDeadline.IsZero() {
-		t.Fatalf("hold recording ended or exposed a countdown before release: %+v", status)
-	}
-	if platform.inserts != 0 {
-		t.Fatalf("hold recording inserted %d times before release", platform.inserts)
-	}
-
-	if err := recorder.Stop(); err != nil {
-		t.Fatal(err)
-	}
-	if platform.lastInsert != "released normally" {
-		t.Fatalf("inserted = %q", platform.lastInsert)
-	}
-	entries := recorder.History()
-	if len(entries) != 1 {
-		t.Fatalf("history = %#v", entries)
-	}
-	details := entries[0].Details
-	if details.RecordingMode != string(RecordingHold) || !details.AutoStopEnabled || details.AutoStopActive || details.AutoStopped || !details.SilenceTrimming {
-		t.Fatalf("hold recording history details = %#v", details)
-	}
 }
 
 func newTestClient(httpClient *http.Client) *inference.Client {

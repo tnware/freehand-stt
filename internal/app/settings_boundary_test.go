@@ -1,11 +1,11 @@
 package app
 
 import (
-	"github.com/tnware/freehand-stt/internal/config"
-	"os"
 	"reflect"
-	"strings"
 	"testing"
+
+	"github.com/tnware/freehand-stt/internal/config"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 func TestSettingsTaskReturnWaitsForMainListeners(t *testing.T) {
@@ -23,21 +23,14 @@ func TestSettingsTaskReturnWaitsForMainListeners(t *testing.T) {
 	}
 }
 
-func TestSettingsIsOnlyConfigurationNativeWindow(t *testing.T) {
-	source, err := os.ReadFile("window.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(source)
-	for _, obsolete := range []string{"newConnectionManagerWindow", "connectionsWindow", `"Freehand — Connection Manager"`} {
-		if strings.Contains(text, obsolete) {
-			t.Fatalf("separate Connections native boundary: %s", obsolete)
-		}
-	}
-	start := strings.Index(text, "func (a *App) revealSettings(")
-	end := strings.Index(text[start:], "func (a *App) emitSettings(") + start
-	if strings.Contains(text[start:end], "NewWithOptions") || strings.Contains(text[start:end], "mainWindow.Reveal") {
-		t.Fatal("repeat open creates a window or reveals main")
+func TestSettingsConstructorRetainsExistingWindow(t *testing.T) {
+	window := &application.WebviewWindow{}
+	a := &App{settingsWindow: &windowController{window: window}}
+	// No native factory is configured: an existing Settings window must suffice.
+	a.newSettingsWindow()
+	a.newSettingsWindow()
+	if a.settingsWindow.current() != window {
+		t.Fatal("settings constructor replaced the retained window")
 	}
 }
 
