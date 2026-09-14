@@ -11,24 +11,24 @@ import (
 
 // Create suspended: no child code (including curl creation) executes until the
 // process has been assigned to our non-inheritable kill-on-close Job Object.
-func startInJob(cmd *exec.Cmd) (func(), error) {
+func startOwnedProcess(cmd *exec.Cmd) (func(), int, error) {
 	job, e := windows.CreateJobObject(nil, nil)
 	if e != nil {
-		return nil, e
+		return nil, 0, e
 	}
 	closeJob := func() { windows.CloseHandle(job) }
 	info := windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION{}
 	info.BasicLimitInformation.LimitFlags = windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
 	if _, e = windows.SetInformationJobObject(job, windows.JobObjectExtendedLimitInformation, uintptr(unsafe.Pointer(&info)), uint32(unsafe.Sizeof(info))); e != nil {
 		closeJob()
-		return nil, e
+		return nil, 0, e
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_SUSPENDED | windows.CREATE_NO_WINDOW}
 	if e = cmd.Start(); e != nil {
 		closeJob()
-		return nil, e
+		return nil, 0, e
 	}
-	fail := func(err error) (func(), error) { cmd.Process.Kill(); cmd.Wait(); closeJob(); return nil, err }
+	fail := func(err error) (func(), int, error) { cmd.Process.Kill(); cmd.Wait(); closeJob(); return nil, 0, err }
 	proc, e := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE, false, uint32(cmd.Process.Pid))
 	if e != nil {
 		return fail(e)
@@ -57,7 +57,7 @@ func startInJob(cmd *exec.Cmd) (func(), error) {
 		if err != nil {
 			return fail(err)
 		}
-		return closeJob, nil
+		return closeJob, cmd.Process.Pid, nil
 	}
 	return fail(windows.ERROR_NOT_FOUND)
 }

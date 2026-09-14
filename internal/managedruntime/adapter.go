@@ -28,6 +28,11 @@ func newAdapter(root string) *nemoAdapter {
 // NeMo's parser accepts arbitrary NEMO_SPEECH_* configuration, including
 // model paths, API keys and download origins. Never inherit that configuration.
 func childEnvironment(root string, inherited []string) []string {
+	if runtime.GOOS == "darwin" {
+		// NeMo invokes system curl for explicit model acquisition. Do not inherit
+		// shell PATH, DYLD injection, proxy/auth, or model-manager configuration.
+		return append(ggmlEnvironment(inherited), "PATH=/usr/bin:/bin", "NEMO_SPEECH_MODEL_DIR="+filepath.Join(root, "models"))
+	}
 	env := make([]string, 0, len(inherited)+1)
 	for _, v := range inherited {
 		key, _, _ := strings.Cut(v, "=")
@@ -40,7 +45,8 @@ func childEnvironment(root string, inherited []string) []string {
 	return append(env, "NEMO_SPEECH_MODEL_DIR="+filepath.Join(root, "models"))
 }
 func (a *nemoAdapter) executable() string {
-	return filepath.Join(a.root, "runtime", "bin", "nemo-speech.exe")
+	r, _ := recipeFor(NeMoSpeechCPP, runtime.GOOS, runtime.GOARCH, "cpu")
+	return filepath.Join(a.root, "runtime", filepath.FromSlash(r.executable))
 }
 func (a *nemoAdapter) command(ctx context.Context, args ...string) ([]byte, error) {
 	return a.commandProgress(ctx, nil, args...)
@@ -90,14 +96,14 @@ func (a *nemoAdapter) installedBackend(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	selected, ok := assets[string(marker)]
+	selected, ok := recipeFor(NeMoSpeechCPP, runtime.GOOS, runtime.GOARCH, string(marker))
 	if !ok {
 		return "", errIntegrity
 	}
-	if err = verifyRuntime(ctx, a.root, selected); err != nil {
+	if err = verifyRuntimeBundle(ctx, filepath.Join(a.root, "runtime"), selected.runtimeBundle); err != nil {
 		return "", err
 	}
-	return selected.backend, nil
+	return string(marker), nil
 }
 func (a *nemoAdapter) Inspect(ctx context.Context) (string, []Model, error) {
 	if err := a.clearDownloadDiagnostics(); err != nil {
@@ -141,7 +147,15 @@ func releaseClient() *http.Client {
 // requires a recent driver; uncertain/older systems conservatively use CPU.
 func (a *nemoAdapter) chooseAsset(ctx context.Context) asset {
 	if runtime.GOOS != "windows" {
-		return assets["cpu"]
+		backend := "cpu"
+		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+			backend = "metal"
+		}
+		r, ok := recipeFor(NeMoSpeechCPP, runtime.GOOS, runtime.GOARCH, backend)
+		if !ok {
+			return asset{}
+		}
+		return r.archives[0]
 	}
 	exe := filepath.Join(os.Getenv("SystemRoot"), "System32", "nvidia-smi.exe")
 	if !filepath.IsAbs(exe) {
@@ -167,8 +181,8 @@ func (a *nemoAdapter) chooseAsset(ctx context.Context) asset {
 	return assets["cpu"]
 }
 func (a *nemoAdapter) Install(ctx context.Context, progress func(float64)) (string, error) {
-	if runtime.GOOS != "windows" || runtime.GOARCH != "amd64" {
-		return "", errors.New("Managed speech requires Windows x64.")
+	if !(nemoProvider{}).descriptor().Supported {
+		return "", errUnsupported
 	}
 	if err := safeRoot(a.root); err != nil {
 		return "", err
@@ -184,10 +198,14 @@ func (a *nemoAdapter) Install(ctx context.Context, progress func(float64)) (stri
 	selected := a.chooseAsset(ctx)
 	client := releaseClient()
 	defer client.CloseIdleConnections()
-	if err := installAsset(ctx, a.root, selected, client, progress); err != nil {
+	recipe, ok := recipeFor(NeMoSpeechCPP, runtime.GOOS, runtime.GOARCH, selected.backend)
+	if !ok {
+		return "", errUnsupported
+	}
+	if err := installRuntimeBundle(ctx, a.root, recipe.runtimeBundle, client, progress); err != nil {
 		return "", err
 	}
-	if err := verifyRuntime(ctx, a.root, selected); err != nil {
+	if err := verifyRuntimeBundle(ctx, filepath.Join(a.root, "runtime"), recipe.runtimeBundle); err != nil {
 		return "", err
 	}
 	return selected.backend, nil

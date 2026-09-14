@@ -3,7 +3,7 @@ title: Testing contract
 description: Deterministic, integration, and native acceptance responsibilities.
 ---
 
-## Managed Windows runtime
+## Managed desktop runtimes
 
 Keep managed-runtime tests isolated from the user's application-data directory.
 Use small synthetic archives, fake HTTP listeners, and disposable child
@@ -15,7 +15,18 @@ interrupted install/retry, bounded child output, metadata-only catalog filtering
 model download failure/removal, unsupported platforms, premature child exit,
 readiness timeout, port conflicts, and shutdown during install/pull/start/run.
 Windows process tests must prove descendants cannot outlive the owner's Job
-Object, not just that the immediate child receives a kill request.
+Object, not just that the immediate child receives a kill request. macOS native
+tests exercise cancellation, natural exit, parent SIGKILL, descendant cleanup,
+and libproc rejection of foreign and dead listeners. Temporary fixture roots use
+the physical macOS temporary directory so production path guards remain strict.
+
+`TestDarwinOfficialRuntimeArchives` is opt-in via
+`FREEHAND_MACOS_RUNTIME_ARCHIVES`, an isolated directory containing the official
+filenames pinned in `platform_recipe.go`. It verifies and installs the Mac
+archives, checks Mach-O metadata, and runs only `--help` on the native
+architecture. It neither downloads, enumerates, nor loads models. Archive
+verification on another architecture is not native execution acceptance.
+Keep this opt-in qualification out of automatic CI inference checks.
 
 Real SQLite tests exercise fresh empty inventory, forward schema upgrades,
 enabled/disabled runtime preferences, save/reopen, and failed persistence.
@@ -65,7 +76,8 @@ an absolute executable path. Keep this explicit environment allowance rather
 than inheriting user PATH or CUDA configuration.
 
 The Windows runtime pins are llama.cpp `b10809` and whisper.cpp `v1.8.3`; release and
-model URL/size/SHA-256 metadata live in `internal/managedruntime/provider_ggml.go`.
+runtime URL/size/SHA-256 metadata live in `internal/managedruntime/platform_recipe.go`;
+model pins live in `provider_ggml.go`.
 Qualify pin changes using the exact official binary, not only fixtures matching
 the intended arguments. Native acceptance separately covers explicitly selected
 S1-mini cleanup alongside NeMo, whisper completed requests, cancellation, and

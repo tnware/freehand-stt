@@ -88,10 +88,6 @@
     disabled || workBusy || runtime.loading || operating || !status?.supported,
   );
   const running = $derived(status?.state === "running");
-  const backendOptions = [
-    { id: "cpu", label: "CPU" },
-    { id: "cuda", label: "NVIDIA GPU (CUDA)" },
-  ] as const;
   function switchableProvider(providerID: ProviderID) {
     return (
       providerID === ProviderID.LlamaCPP || providerID === ProviderID.WhisperCPP
@@ -241,7 +237,7 @@
                         : ""}
                 >
                   {!entry.supported
-                    ? "Unavailable on this platform"
+                    ? entry.unavailableReason || "Unavailable on this platform"
                     : item
                       ? presentation.startup || presentation.label
                       : "Not installed"}
@@ -515,21 +511,21 @@
                   <fieldset disabled={locked || running}>
                     <legend class="sr-only">Runtime binary</legend>
                     <div class="flex flex-wrap items-center gap-2">
-                      {#each backendOptions as option (option.id)}
+                      {#each entry.backends ?? [] as backend (backend)}
                         <Button
                           variant="outline"
-                          class={status.backend === option.id
+                          class={status.backend === backend
                             ? "border-primary/50 bg-accent-wash text-primary disabled:opacity-100"
                             : ""}
                           size="sm"
-                          aria-pressed={status.backend === option.id}
+                          aria-pressed={status.backend === backend}
                           disabled={locked ||
                             running ||
-                            status.backend === option.id}
+                            status.backend === backend}
                           onclick={() => {
                             if (!running)
-                              act(() => runtime.installBackend(id, option.id));
-                          }}>{option.label}</Button
+                              act(() => runtime.installBackend(id, backend));
+                          }}>{backendLabel(backend)}</Button
                         >
                       {/each}
                       {#if running}<span
@@ -546,9 +542,14 @@
                     <p class="mt-2 max-w-prose leading-relaxed">
                       Switching keeps downloaded models and saved Connections.
                       Existing installations are never changed automatically.
-                      CUDA 12.4 requires an NVIDIA GPU with compute capability
-                      5.0+ and driver 551.78 or newer. It may share GPU memory
-                      with NeMo or other apps.
+                      {#if entry.backends?.includes("metal")}
+                        Metal uses the Apple Silicon GPU and shares memory with
+                        NeMo and other apps. Choose CPU to disable GPU offload.
+                      {:else if entry.backends?.includes("cuda")}
+                        CUDA 12.4 requires an NVIDIA GPU with compute capability
+                        5.0+ and driver 551.78 or newer. It may share GPU memory
+                        with NeMo or other apps.
+                      {/if}
                     </p>
                   </details>
                 {/if}

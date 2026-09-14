@@ -1,7 +1,6 @@
 package managedruntime
 
 import (
-	"archive/zip"
 	"context"
 	"fmt"
 	"io"
@@ -48,16 +47,13 @@ func verifyRuntimeBundle(ctx context.Context, base string, b runtimeBundle) erro
 		if err := verifyRuntimeArchive(ctx, base, filepath.Join(base, name), a); err != nil {
 			return err
 		}
-		z, err := zip.OpenReader(filepath.Join(base, name))
+		names, err := archiveFileNames(ctx, filepath.Join(base, name))
 		if err != nil {
 			return err
 		}
-		for _, entry := range z.File {
-			if !archiveDirectory(entry) {
-				allowed[strings.ToLower(archiveName(entry.Name))] = true
-			}
+		for _, entry := range names {
+			allowed[strings.ToLower(entry)] = true
 		}
-		z.Close()
 	}
 	for _, name := range append([]string{b.executable}, b.required...) {
 		st, err := os.Stat(filepath.Join(base, filepath.FromSlash(name)))

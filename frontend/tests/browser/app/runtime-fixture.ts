@@ -61,6 +61,8 @@ export function createRuntimeFixture(
   ready = true,
   providerID = ProviderID.NeMoSpeechCPP,
 ) {
+  const macOS = new URLSearchParams(location.search).has("runtime-macos");
+  const backends = macOS ? ["cpu", "metal"] : ["cpu", "cuda"];
   let models: Model[] = [
     {
       id: "nemotron-3.5",
@@ -165,13 +167,14 @@ export function createRuntimeFixture(
             : "NeMo-Speech.cpp",
       version: "0.1.0",
       supported,
+      backends: supported ? backends : [],
       models,
       source: {
         repositoryURL: `https://github.com/${upstream}`,
         releaseURL: `https://github.com/${upstream}/releases/tag/fixture-release`,
-        artifacts: ["cpu", "cuda"].map((backend) => ({
-          os: "windows",
-          architecture: "amd64",
+        artifacts: backends.map((backend) => ({
+          os: macOS ? "darwin" : "windows",
+          architecture: macOS ? "arm64" : "amd64",
           backend,
           filename: `fixture-${backend}.zip`,
           url: `https://github.com/${upstream}/releases/download/fixture-release/fixture-${backend}.zip`,
@@ -248,12 +251,14 @@ export function createRuntimeFixture(
       calls.push(`GetBinaryOptions:${provider}`);
       return {
         provider,
-        os: "windows",
-        architecture: "amd64",
+        os: macOS ? "darwin" : "windows",
+        architecture: macOS ? "arm64" : "amd64",
         supported: true,
-        recommendedBackend: "cuda",
-        reason: "Compatible NVIDIA GPU detected.",
-        options: ["cpu", "cuda"].map((backend) => ({
+        recommendedBackend: macOS ? "metal" : "cuda",
+        reason: macOS
+          ? "Apple Silicon GPU available."
+          : "Compatible NVIDIA GPU detected.",
+        options: backends.map((backend) => ({
           backend,
           supported: true,
           available: true,

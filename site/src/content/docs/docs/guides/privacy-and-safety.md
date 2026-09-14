@@ -20,12 +20,12 @@ that server's own privacy and retention policy still applies.
 | Transcript history | Memory on your computer | Off by default; at most 20 entries and 2 MiB, cleared on exit. |
 | Speech playback text and audio | Your playback endpoint receives text and returns audio | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit. |
 | Update checks | GitHub release service | Update metadata and any downloaded update; no recordings or transcripts are sent. |
-| Managed runtime installation (Windows, optional) | Official pinned NeMo, llama.cpp, or whisper.cpp releases and the selected model’s download host | Runtime binaries and selected model weights in Freehand's application-data directory, until removed. |
+| Managed runtime installation (Windows/macOS, optional) | Official pinned NeMo, llama.cpp, or whisper.cpp releases and the selected model’s download host | Runtime binaries and selected model weights in Freehand's application-data directory, until removed. |
 | Managed process output | Private memory on this computer; shown only after sensitive-output consent | A bounded rolling tail, cleared explicitly or on the next start attempt, runtime removal, or exit. Closing the viewer revokes access but does not erase the private tail. |
 
 ## Managed local recognition
 
-The optional Windows runtime recognizes speech on this PC. Its listener is
+The optional managed runtime recognizes speech on this computer. Its listener is
 restricted to this computer, not your LAN. Installing binaries and downloading
 models requires internet access; browsing the catalog does not run inference.
 Other software running on the same computer can potentially access a loopback

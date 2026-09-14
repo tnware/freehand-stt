@@ -32,8 +32,9 @@ type gpuMetadata struct {
 	known   bool
 }
 type binaryHost struct {
-	os, arch string
-	gpu      gpuMetadata
+	os, arch  string
+	gpu       gpuMetadata
+	osVersion uint32
 }
 
 func cudaAvailable(r platformRecipe, g gpuMetadata) bool {
@@ -44,13 +45,22 @@ func selectBinaryOptions(provider ProviderID, host binaryHost) (BinaryOptions, e
 		return BinaryOptions{}, errors.New("Choose llama.cpp or whisper.cpp for binary selection.")
 	}
 	result := BinaryOptions{Provider: provider, OS: host.os, Architecture: host.arch, Options: []BinaryOption{}}
-	for _, backend := range []string{"cpu", "cuda"} {
+	backends := []string{"cpu", "cuda"}
+	if host.os == "darwin" {
+		backends = []string{"cpu", "metal"}
+	}
+	for _, backend := range backends {
 		recipe, supported := recipeFor(provider, host.os, host.arch, backend)
 		option := BinaryOption{Backend: backend, Supported: supported, Reason: "No qualified binary is available for this operating system and architecture."}
 		if supported {
-			if backend == "cpu" {
+			if !supportsOSVersion(provider, host.os, host.osVersion) {
+				option.Reason = "The pinned llama.cpp binary requires macOS 13.3 or later."
+			} else if backend == "cpu" {
 				option.Available = true
-				option.Reason = "The pinned CPU binary is available without an NVIDIA GPU."
+				option.Reason = "The pinned CPU binary is available on this computer."
+			} else if backend == "metal" {
+				option.Available = host.os == "darwin" && host.arch == "arm64"
+				option.Reason = "The pinned Metal binary uses the Apple Silicon GPU."
 			} else if cudaAvailable(recipe, host.gpu) {
 				option.Available = true
 				option.Reason = "NVIDIA GPU 0 and its driver meet the pinned CUDA 12.4 requirements."
@@ -60,13 +70,15 @@ func selectBinaryOptions(provider ProviderID, host binaryHost) (BinaryOptions, e
 		}
 		result.Options = append(result.Options, option)
 	}
-	result.Supported = result.Options[0].Supported
+	result.Supported = result.Options[0].Supported && result.Options[0].Available
 	result.Reason = result.Options[0].Reason
 	if result.Supported {
 		result.RecommendedBackend = "cpu"
-		result.Reason = result.Options[1].Reason
+		if result.Options[1].Supported {
+			result.Reason = result.Options[1].Reason
+		}
 		if result.Options[1].Available {
-			result.RecommendedBackend = "cuda"
+			result.RecommendedBackend = result.Options[1].Backend
 		}
 	}
 	return result, nil
@@ -76,7 +88,7 @@ func selectBinaryOptions(provider ProviderID, host binaryHost) (BinaryOptions, e
 // installation, downloads an archive, or launches a model. Install keeps its
 // CPU default; explicit acceptance uses InstallBackend with the chosen backend.
 func (m *Manager) GetBinaryOptions(request ProviderRequest) (BinaryOptions, error) {
-	host := binaryHost{os: runtime.GOOS, arch: runtime.GOARCH}
+	host := binaryHost{os: runtime.GOOS, arch: runtime.GOARCH, osVersion: hostOSVersion()}
 	if _, err := selectBinaryOptions(request.Provider, host); err != nil {
 		return BinaryOptions{}, err
 	}

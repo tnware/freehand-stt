@@ -3,6 +3,7 @@ import type { Model, Status } from "$bindings/managedruntime";
 export function backendLabel(backend: string): string {
   if (backend === "cpu") return "CPU";
   if (backend === "cuda") return "NVIDIA GPU (CUDA)";
+  if (backend === "metal") return "Apple GPU (Metal)";
   return backend.toUpperCase();
 }
 
@@ -113,7 +114,7 @@ export function runtimePresentation(
     label: !status
       ? "Status unavailable"
       : !supported
-        ? "Windows only"
+        ? "Unavailable on this platform"
         : active
           ? activity
           : (labels[status.state] ?? "Checking status"),

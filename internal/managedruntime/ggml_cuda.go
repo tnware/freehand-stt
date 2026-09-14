@@ -17,16 +17,15 @@ func (g ggmlProvider) bundle(backend string) (runtimeBundle, error) {
 	if r, ok := recipeFor(g.id, runtime.GOOS, runtime.GOARCH, backend); ok {
 		// Existing consumers project these fields from the registry; retain
 		// fixture overrides without maintaining a second set of release pins.
-		if runtime.GOOS == "windows" && runtime.GOARCH == "amd64" {
-			if backend == "cpu" {
-				r.archives = []asset{g.release}
-			} else {
-				r.runtimeBundle = g.cuda
-			}
+		if backend == "cpu" {
+			r.archives = []asset{g.release}
+			r.executable = g.executable
+		} else if backend == "cuda" {
+			r.runtimeBundle = g.cuda
 		}
 		return r.runtimeBundle, nil
 	}
-	return runtimeBundle{}, errors.New("Choose a supported CPU or NVIDIA CUDA backend.")
+	return runtimeBundle{}, errors.New("Choose a binary supported on this operating system and architecture.")
 }
 func (g ggmlProvider) backendArguments(model string, s modelSpec, root string, port int, backend string) ([]string, error) {
 	if _, err := g.bundle(backend); err != nil {
@@ -39,7 +38,11 @@ func (g ggmlProvider) backendArguments(model string, s modelSpec, root string, p
 	if g.id == LlamaCPP {
 		args[slices.Index(args, "--gpu-layers")+1] = "auto"
 		args = slices.DeleteFunc(args, func(s string) bool { return s == "--no-op-offload" || s == "--no-warmup" })
-		args = append(args, "--device", "CUDA0", "--split-mode", "none", "--main-gpu", "0")
+		if backend == "metal" {
+			args = append(args, "--device", "Metal", "--split-mode", "none")
+		} else {
+			args = append(args, "--device", "CUDA0", "--split-mode", "none", "--main-gpu", "0")
+		}
 	} else {
 		args = slices.DeleteFunc(args, func(s string) bool { return s == "--no-gpu" })
 	}

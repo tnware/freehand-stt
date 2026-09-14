@@ -45,7 +45,7 @@
       >Binary download details</summary
     >
     <div class="mt-2 space-y-3 border-l border-border pl-3">
-      {#each artifacts as artifact (artifact.url)}
+      {#each artifacts as artifact (`${artifact.os}/${artifact.architecture}/${artifact.backend}/${artifact.filename}`)}
         <div class="min-w-0 space-y-1">
           <p class="font-medium text-foreground">
             {backendLabel(artifact.backend)} · {artifact.os} / {artifact.architecture}

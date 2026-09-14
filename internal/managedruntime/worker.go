@@ -45,7 +45,7 @@ type worker struct {
 }
 
 var errBusy = errors.New("Wait for the current managed speech operation to finish.")
-var errUnsupported = errors.New("Managed speech is supported only on Windows x64.")
+var errUnsupported = errors.New("This managed runtime has no qualified binary for this operating system and architecture.")
 var errNotReady = errors.New("Managed speech is not ready. Start the selected installed model or disable managed speech.")
 
 // Lease identities remain distinct even when a deleted instance is recreated.
@@ -310,8 +310,8 @@ type backendInstaller interface {
 }
 
 func (s *worker) InstallBackend(backend string) error {
-	if backend != "cpu" && backend != "cuda" {
-		return errors.New("Choose CPU or NVIDIA CUDA.")
+	if backend != "cpu" && backend != "cuda" && backend != "metal" {
+		return errors.New("Choose a supported runtime binary.")
 	}
 	a, ok := s.adapter.(backendInstaller)
 	if !ok {

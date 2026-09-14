@@ -42,13 +42,17 @@ processing, copy recovery, and error states retain usable controls.
 
 ## Managed local runtime
 
-Use an isolated Windows user or explicit test data root for destructive cases.
+Use an isolated test user or explicit test data root for destructive cases.
 Do not delete personal runtime installations or pull every catalog model.
 
 Check host-aware recommendations, warm-up, startup progress, and the
-process-output viewer on Windows using the cases below. Deterministic tests and
-browser fixtures do not establish native acceptance. Managed installation is
-Windows x64 only.
+process-output viewer on Windows and macOS using the cases below. Deterministic
+tests and browser fixtures do not establish native inference or permission acceptance.
+On macOS, test NeMo and llama.cpp on each claimed architecture; use a packaged
+app for permissions. Verify Metal on Apple Silicon, CPU on Intel, the llama.cpp
+13.3 minimum, and unavailable managed whisper.cpp with manual connections intact.
+Exercise the existing viewer consent, selection-copy, and teardown cases on both
+platforms.
 
 - Start with no manual connections. Open Local runtime, install the official
   binary, and verify that browsing its speech catalog does not download weights
@@ -69,7 +73,8 @@ Windows x64 only.
   must show the backend's current operation, not start a duplicate job.
 - Stop/start repeatedly. Quit during model pull, startup, and active streaming;
   confirm the server and model-manager descendants exit. Force-close the test
-  app and verify Job Object cleanup. A separate manually started NeMo server
+  app and verify Job Object cleanup on Windows or lifetime-pipe/process-group
+  cleanup on macOS. A separate manually started NeMo server
   must remain untouched.
 - Preserve a manual connection with a disposable key before selecting a managed
   Connection. Confirm local requests carry neither that key nor its custom headers.

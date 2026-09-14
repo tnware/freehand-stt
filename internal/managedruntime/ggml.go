@@ -232,7 +232,7 @@ func ggmlEnvironment(inherited []string) []string {
 		switch strings.ToUpper(key) {
 		// NVIDIA NVML requires ProgramFiles even with an absolute nvidia-smi
 		// path. Keep this OS location, never the user's PATH or CUDA overrides.
-		case "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "PROGRAMFILES":
+		case "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "PROGRAMFILES", "TMPDIR":
 			env = append(env, v)
 		}
 	}
@@ -314,7 +314,7 @@ func (a *ggmlAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 		return nil, Endpoint{}, errors.New("Choose a qualified runtime model.")
 	}
 	if !a.recipe.descriptor().Supported {
-		return nil, Endpoint{}, errors.New("Managed runtimes require Windows x64.")
+		return nil, Endpoint{}, errUnsupported
 	}
 	reportStartupProgress(ctx, "verifying_runtime")
 	backend, err := a.installedBackend(ctx)
@@ -352,7 +352,7 @@ func (a *ggmlAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	base := "http://127.0.0.1:" + strconv.Itoa(port)
 	bounded, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-	if backend == "cuda" && a.recipe.id == LlamaCPP {
+	if backend != "cpu" && a.recipe.id == LlamaCPP {
 		reportStartupProgress(ctx, "loading_warming")
 	} else {
 		reportStartupProgress(ctx, "waiting_ready")

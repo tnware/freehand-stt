@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,12 +20,12 @@ import (
 // only archive/model bytes and the external child with a loopback HTTP fixture.
 func WithGGMLEndpointFixture(t *testing.T, id ProviderID, handler http.Handler, exercise func(Endpoint)) {
 	t.Helper()
-	if runtime.GOOS != "windows" || runtime.GOARCH != "amd64" {
-		t.Skip("Windows provider")
-	}
 	g := llamaProvider
 	if id == WhisperCPP {
 		g = whisperProvider
+	}
+	if !g.descriptor().Supported {
+		t.Skip("No binary for this host")
 	}
 	key := g.models[0].ID
 	g.specs = map[string]modelSpec{key: g.specs[key]}

@@ -10,7 +10,7 @@ func TestLlamaLoggingArguments(t *testing.T) {
 	if !llamaProvider.descriptor().Supported {
 		t.Skip("Windows x64 recipe")
 	}
-	for _, backend := range []string{"cpu", "cuda"} {
+	for _, backend := range hostBackends(LlamaCPP) {
 		t.Run(backend, func(t *testing.T) {
 			args, err := llamaProvider.backendArguments("s1-mini", llamaProvider.specs["s1-mini"], t.TempDir(), 1234, backend)
 			if err != nil {

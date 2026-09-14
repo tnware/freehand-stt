@@ -9,7 +9,7 @@ func TestBinarySelectionCUDAWarmup(t *testing.T) {
 	if !llamaProvider.descriptor().Supported {
 		t.Skip("Windows x64 recipe")
 	}
-	for _, backend := range []string{"cpu", "cuda"} {
+	for _, backend := range hostBackends(LlamaCPP) {
 		args, err := llamaProvider.backendArguments("s1-mini", llamaProvider.specs["s1-mini"], t.TempDir(), 1234, backend)
 		if err != nil {
 			t.Fatal(err)
@@ -35,7 +35,6 @@ func TestBinarySelectionHostAndMetadata(t *testing.T) {
 			{"old GPU", "windows", "amd64", "nvidia", "551.78, 3.5", "cpu", 0, true, true},
 			{"wrong vendor", "windows", "amd64", "amd", "610.62, 12.0", "cpu", 0, true, true},
 			{"wrong ordinal", "windows", "amd64", "nvidia", "610.62, 12.0", "cpu", 1, true, true},
-			{"mac extension", "darwin", "arm64", "apple", "", "", 0, true, false},
 			{"windows arm", "windows", "arm64", "nvidia", "610.62, 12.0", "", 0, true, false},
 		} {
 			t.Run(string(provider)+tc.name, func(t *testing.T) {
@@ -47,6 +46,27 @@ func TestBinarySelectionHostAndMetadata(t *testing.T) {
 					t.Fatalf("CUDA admission disagrees: %+v", got)
 				}
 			})
+		}
+	}
+	for _, tc := range []struct {
+		provider   ProviderID
+		arch, want string
+		supported  bool
+	}{
+		{LlamaCPP, "arm64", "metal", true},
+		{LlamaCPP, "amd64", "cpu", true},
+		{WhisperCPP, "arm64", "", false},
+		{WhisperCPP, "amd64", "", false},
+	} {
+		got, err := selectBinaryOptions(tc.provider, binaryHost{os: "darwin", arch: tc.arch, osVersion: macOSVersion("13.3")})
+		if err != nil || got.Supported != tc.supported || got.RecommendedBackend != tc.want || got.Options[1].Backend != "metal" {
+			t.Fatalf("macOS recipe admission: %+v %v", got, err)
+		}
+	}
+	for _, version := range []string{"", "unknown", "13.0", "13.2.1"} {
+		got, err := selectBinaryOptions(LlamaCPP, binaryHost{os: "darwin", arch: "arm64", osVersion: macOSVersion(version)})
+		if err != nil || got.Supported || got.RecommendedBackend != "" || got.Options[1].Available {
+			t.Fatalf("unsupported macOS version admitted: %+v %v", got, err)
 		}
 	}
 	if _, err := selectBinaryOptions(ProviderID("../llama"), binaryHost{}); err == nil {

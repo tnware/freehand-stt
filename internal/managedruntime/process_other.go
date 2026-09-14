@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build !windows && !darwin
 
 package managedruntime
 
@@ -7,6 +7,6 @@ import (
 	"os/exec"
 )
 
-func startInJob(*exec.Cmd) (func(), error) {
-	return nil, errors.New("Managed speech requires Windows x86-64.")
+func startOwnedProcess(*exec.Cmd) (func(), int, error) {
+	return nil, 0, errors.New("Managed runtimes are unavailable on this platform.")
 }

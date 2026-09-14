@@ -8,7 +8,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
-// These recipes target Windows x64 and one task per provider. CPU remains
+// These recipes target qualified Windows/macOS hosts and one task per provider. CPU remains
 // the default; CUDA is an explicit, durable selection.
 // Release asset sizes and SHA256 are from the official GitHub release API,
 // independently checked against downloaded ZIPs. Model pins are HF LFS metadata.
@@ -25,13 +25,13 @@ type ggmlProvider struct {
 }
 
 var llamaProvider = ggmlProvider{
-	id: LlamaCPP, name: "llama.cpp", platformRecipe: windowsCPURecipe(LlamaCPP),
+	id: LlamaCPP, name: "llama.cpp", platformRecipe: hostCPURecipe(LlamaCPP),
 	backend: compatibility.LlamaCPP, profile: modelprofile.S1Mini, role: compatibility.PostProcessing,
 	models: []Model{{ID: "s1-mini", Name: "S1-mini by Superwhisper", Description: "v1 Q4_K_M. English transcript cleanup; not speech recognition.", Recommended: true}},
 	specs:  map[string]modelSpec{"s1-mini": {"superwhisper/s1-mini-GGUF", "34add00a48a2e5d24e5a4ee5405a99620a3a240c", "s1-mini-q4_k_m.gguf", "3b41ebe2502cbd03e811d5d16b022f5ab551eda58d62597d152f89535003c634", 484219808}},
 }
 var whisperProvider = ggmlProvider{
-	id: WhisperCPP, name: "whisper.cpp", platformRecipe: windowsCPURecipe(WhisperCPP),
+	id: WhisperCPP, name: "whisper.cpp", platformRecipe: hostCPURecipe(WhisperCPP),
 	backend: compatibility.WhisperCPP, profile: modelprofile.Generic, role: compatibility.Transcription,
 	models: []Model{
 		{ID: "base", Name: "Whisper Base", Description: "Multilingual completed transcription.", Recommended: true},
@@ -66,7 +66,17 @@ func (g ggmlProvider) descriptor() ProviderDescriptor {
 		models[i].Source = g.specs[models[i].ID].source(FreehandHuggingFace)
 	}
 	_, supported := recipeFor(g.id, runtime.GOOS, runtime.GOARCH, "cpu")
-	return ProviderDescriptor{ID: g.id, Name: g.name, Version: g.version, Supported: supported, Models: models, Source: runtimeSource(g.id)}
+	supported = supported && supportsOSVersion(g.id, runtime.GOOS, hostOSVersion())
+	reason := ""
+	if !supported && runtime.GOOS == "darwin" {
+		if g.id == WhisperCPP {
+			reason = "Upstream does not publish a macOS server binary. Use a manual Connection."
+		}
+		if g.id == LlamaCPP && (runtime.GOARCH == "arm64" || runtime.GOARCH == "amd64") {
+			reason = "The pinned llama.cpp binary requires macOS 13.3 or later."
+		}
+	}
+	return ProviderDescriptor{ID: g.id, Name: g.name, Version: g.version, Supported: supported, UnavailableReason: reason, Backends: hostBackends(g.id), Models: models, Source: runtimeSource(g.id)}
 }
 func (g ggmlProvider) newAdapter(root string) runtimeAdapter {
 	return &ggmlAdapter{root: root, recipe: g, launch: launchOwned, listenerOwner: ownsListener}

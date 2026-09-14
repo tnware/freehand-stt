@@ -1,29 +1,31 @@
 ---
 title: Local runtimes
-description: Set up local transcription and cleanup with NeMo, whisper.cpp, and llama.cpp on Windows.
+description: Set up local transcription and cleanup with NeMo, whisper.cpp, and llama.cpp on Windows and macOS.
 ---
 
-On Windows, Freehand can install and manage NeMo-Speech.cpp for local Voice and
+On Windows and macOS, Freehand can install and manage NeMo-Speech.cpp for local Voice and
 audio-file transcription. The recommended model is **Nemotron 3.5 ASR streaming**
 with realtime enabled: words appear while you speak, and the final transcript
 uses the same cleanup and safe insertion rules as other dictation.
 
 You can still connect to your own local, network, or hosted service. Each task
 selects a Connection; a managed Connection uses a runtime installed by Freehand.
-Your manual connections remain intact. macOS uses
-[manual connections](../connect-a-server/); managed installation is Windows x64
-only.
+Your manual connections remain intact. Managed NeMo and llama.cpp support Apple
+Silicon and Intel Macs. Managed whisper.cpp is available on Windows only; its
+upstream release does not include a macOS server executable. On a Mac, use NeMo
+for managed transcription or a [manual whisper.cpp connection](../../backends/whisper-cpp/).
 
 ## Before installing
 
-- Use Windows 11 x64. NeMo selects its backend automatically. For llama.cpp and
-  whisper.cpp, Freehand recommends CPU or NVIDIA CUDA from your PC’s hardware
-  information; you confirm the binary before installation. Performance depends
-  on the selected model and PC.
+- Use Windows 11 x64 or macOS 13 or later on Apple Silicon or Intel. Managed
+  llama.cpp requires macOS 13.3 or later. NeMo selects Metal on Apple Silicon,
+  CPU on Intel Macs, and a compatible backend on Windows. For llama.cpp and
+  Windows whisper.cpp, review the recommended binary before installation.
+  Performance depends on your computer and selected model.
 - Allow internet access for the runtime and explicit model downloads. Model
   weights use additional disk space; the catalog shows download sizes when the
   runtime provides them.
-- NeMo's model manager needs the `curl` executable supplied with current Windows.
+- NeMo's model manager uses the `curl` executable supplied with Windows or macOS.
   Freehand does not install Python, Docker, WSL, or a development toolchain.
 
 Runtime binaries and downloaded weights stay under Freehand's per-user local
@@ -90,7 +92,7 @@ selected model at a time. Different runtimes can run together.
 
 ### whisper.cpp transcription
 
-Choose **Install** on the whisper.cpp row, review and confirm the binary choice,
+On Windows, choose **Install** on the whisper.cpp row, review and confirm the binary choice,
 download a model from its catalog, and choose **Start**. Select its
 built-in Connection for Voice or audio files. Voice uses completed transcription, not
 realtime; file response streaming is also unavailable. CPU and NVIDIA CUDA
@@ -102,7 +104,7 @@ Choose **Install** for **llama.cpp**, review and confirm the binary choice,
 download **S1-mini by Superwhisper**, and start the runtime.
 Select its built-in Connection in **Cleanup**, and enable cleanup.
 NeMo can continue handling Voice while llama.cpp cleans up its completed text.
-Choose CPU if you want to leave GPU memory for NeMo. A CUDA recommendation
+Choose CPU if you want to leave GPU memory for NeMo. A GPU recommendation
 checks compatibility, not whether your GPU has room for both models.
 
 S1-mini is English-only and runs with reasoning disabled. If the input language
@@ -111,9 +113,21 @@ skips S1-mini. Failed cleanup keeps the raw transcript. The model is not a
 general chat assistant or a speech-synthesis model. See
 [transcript cleanup](../post-processing/) for its style and structure controls.
 
+### Use Apple GPU acceleration
+
+On Apple Silicon, NeMo installs its Metal package automatically. For a new
+llama.cpp installation, **Auto (recommended)** selects **Apple GPU (Metal)**.
+Choose **CPU** to disable GPU offload, then **Download and install**.
+Intel Macs use CPU; CUDA is not offered on macOS.
+
+To change llama.cpp later, stop it and choose **CPU** or **Apple GPU (Metal)**
+under **Runtime binary**, then start it again. Switching preserves downloaded
+models, saved Connections, and startup preferences. Metal shares your Mac's
+memory with NeMo and other apps; a recommendation does not reserve memory.
+
 ### Use NVIDIA GPU acceleration
 
-For a new llama.cpp or whisper.cpp installation, **Install** first shows a
+On Windows, for a new llama.cpp or whisper.cpp installation, **Install** first shows a
 binary recommendation and its reason without downloading files. Keep
 **Auto (recommended)** or explicitly choose **CPU** or **NVIDIA GPU (CUDA)**,
 then choose **Download and install**. Unknown or unsupported NVIDIA hardware or
@@ -247,7 +261,7 @@ abrupt exit. It does not show or copy their contents into application logs.
 
 If installation or download fails, read the reported stage, check disk space
 and network access, then retry. An integrity failure must not be bypassed. If
-startup fails, retry after freeing PC resources or return explicitly to a manual
+startup fails, retry after freeing computer resources or return explicitly to a manual
 endpoint. Freehand does not replay a failed realtime recording; start a new one.
 
 Advanced backend flags, custom model files, alternative runtime versions, and

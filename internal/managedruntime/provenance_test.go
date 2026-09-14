@@ -183,36 +183,33 @@ func TestProviderRuntimeSourceProjectsPinnedArchives(t *testing.T) {
 			if decoded.Source == nil {
 				t.Fatal("provider has no runtime source disclosure")
 			}
-			expected := map[string]asset{}
-			if d.ID == NeMoSpeechCPP {
-				for _, a := range assets {
-					expected[a.url] = a
+			expected := map[string]RuntimeArtifact{}
+			for key, recipe := range platformRecipes {
+				if key.provider != d.ID {
+					continue
 				}
-			} else {
-				for key, recipe := range platformRecipes {
-					if key.provider == d.ID {
-						for _, a := range recipe.archives {
-							expected[a.url] = a
-						}
-					}
+				for _, a := range recipe.archives {
+					u, _ := url.Parse(a.url)
+					id := key.os + "/" + key.arch + "/" + a.backend + "/" + a.url
+					expected[id] = RuntimeArtifact{OS: key.os, Architecture: key.arch, Backend: a.backend, Filename: path.Base(u.Path), URL: a.url, SHA256: a.sha256, SizeBytes: a.size}
 				}
 			}
 			if len(decoded.Source.Artifacts) != len(expected) {
 				t.Fatalf("artifacts: got %d, want %d", len(decoded.Source.Artifacts), len(expected))
 			}
 			for _, got := range decoded.Source.Artifacts {
-				a, ok := expected[got.URL]
+				id := got.OS + "/" + got.Architecture + "/" + got.Backend + "/" + got.URL
+				a, ok := expected[id]
 				if !ok {
 					t.Fatalf("unexpected or duplicate artifact %q", got.URL)
 				}
-				delete(expected, got.URL)
-				u, _ := url.Parse(a.url)
-				repo, release, _ := strings.Cut(a.url, "/releases/download/")
+				delete(expected, id)
+				repo, release, _ := strings.Cut(a.URL, "/releases/download/")
 				tag, _, _ := strings.Cut(release, "/")
 				if decoded.Source.RepositoryURL != repo || decoded.Source.ReleaseURL != repo+"/releases/tag/"+tag {
 					t.Fatal("release identity does not match downloaded artifact")
 				}
-				if got.OS != "windows" || got.Architecture != "amd64" || got.Backend != a.backend || got.Filename != path.Base(u.Path) || got.SHA256 != a.sha256 || got.SizeBytes != a.size {
+				if got.OS != a.OS || got.Architecture != a.Architecture || got.Backend != a.Backend || got.Filename != a.Filename || got.SHA256 != a.SHA256 || got.SizeBytes != a.SizeBytes {
 					t.Fatalf("artifact does not match acquisition recipe: %+v", got)
 				}
 			}

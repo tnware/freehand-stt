@@ -28,7 +28,7 @@ dictation owns recording setup, file transcription needs STT but no microphone
 or completed dictation setup, and the TTS composer needs its own enabled speech
 configuration but neither STT nor a microphone. Conversation mode remains out of
 scope. Inference runs on the user's chosen server or an explicitly installed
-optional Windows managed runtime; models and runtime binaries are not bundled.
+optional Windows or macOS managed runtime; models and runtime binaries are not bundled.
 
 ## Managed local speech
 
@@ -131,13 +131,26 @@ Recommendation and installation admission share compatibility rules. The UI
 requires explicit acceptance before `InstallBackend`; the legacy `Install`
 operation retains its CPU default. No latest-release lookup, installation
 mutation, model execution, or free-VRAM-driven switching occurs during selection.
-NeMo retains its own binary-selection policy. macOS has only the shared extension
-contract, not qualified packages or native managed-runtime acceptance.
+NeMo retains its own binary-selection policy: Metal on Apple Silicon, CPU on
+Intel Macs, and its existing Windows driver checks. llama.cpp recommends Metal
+on Apple Silicon and CPU on Intel. Its pinned macOS binaries require 13.3;
+OS-version admission is separate from Freehand's 13.0 minimum. No macOS
+whisper.cpp recipe exists because upstream does not publish a server executable.
+Provider `backends` metadata drives the switching controls; unsupported providers
+remain visible with installation disabled.
+
+Pinned macOS tar.gz archives retain their upstream directory layout. The installer
+validates every entry, bounds expanded size, and resolves same-directory dylib
+aliases solely against regular files in the verified archive. It materializes
+aliases as copies and verifies their bytes and executable permissions before
+publication and launch. Traversal, escaping or cyclic links, hard links, special
+files, duplicate names, and unexpected installed files fail closed. Windows ZIP
+recipes retain their existing extraction and integrity rules.
 
 ### Download source metadata
 
 Download provenance is additive metadata on `GetProviders`: runtime sources
-project the platform recipes and NeMo assets; model sources project the same
+project the platform recipes; model sources project the same
 specifications used for acquisition and verification. It is not a second pin
 registry or evidence of the currently installed files. The renderer uses the
 generated `RuntimeSource`/`ModelSource` DTOs, with provider-catalog metadata as
@@ -151,6 +164,15 @@ external browser API, never as remote content inside the settings WebView.
 ### Startup ownership and progress
 
 Windows owns children through a Job Object, including model-manager subprocesses.
+macOS re-execs a private supervisor before application startup. A lifetime pipe
+from Freehand and kqueue child-exit observation own a dedicated runtime process
+group. Pipe EOF on cancellation, Quit, or parent crash kills the group. Natural
+server exit also kills remaining descendants. The supervisor observes exit before
+reaping the leader, preventing process-group identity reuse during cleanup.
+Only the exact child PID is published internally; libproc verifies its IPv4
+loopback listening socket before endpoint admission. The inherited environment
+excludes DYLD, user PATH, proxy/auth, and runtime configuration overrides; NeMo
+gets only a fixed system PATH for its explicit curl downloads.
 The server listens only on `127.0.0.1`; verification, selected-model readiness,
 and required GPU warm-up precede endpoint admission. Runtime/model hashing before
 launch is cancellable. After process creation, readiness and warm-up share a 120-second timeout;

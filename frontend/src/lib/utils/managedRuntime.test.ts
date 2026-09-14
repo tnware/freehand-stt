@@ -138,7 +138,7 @@ describe("local runtime presentation", () => {
         enabled: true,
         supported: false,
       }),
-    ).toMatchObject({ label: "Windows only", ready: false });
+    ).toMatchObject({ label: "Unavailable on this platform", ready: false });
   });
   it("shows indeterminate progress and unknown sizes honestly", () => {
     expect(

@@ -414,8 +414,8 @@ func (m *Manager) Install(r InstanceRequest) error {
 	return m.install(r.InstanceID, (*worker).Install)
 }
 func (m *Manager) InstallBackend(r BackendRequest) error {
-	if r.Backend != "cpu" && r.Backend != "cuda" {
-		return errors.New("Choose CPU or NVIDIA CUDA.")
+	if r.Backend != "cpu" && r.Backend != "cuda" && r.Backend != "metal" {
+		return errors.New("Choose a supported runtime binary.")
 	}
 	return m.install(r.InstanceID, func(w *worker) error { return w.InstallBackend(r.Backend) })
 }

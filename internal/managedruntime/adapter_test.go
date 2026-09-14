@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -77,14 +78,26 @@ func managedAdapterFixture(t *testing.T, root string) (*nemoAdapter, *[]string) 
 	t.Helper()
 	ctx := context.Background()
 	a := newAdapter(root)
-	data := zipFixture(t, map[string]string{"bin/nemo-speech.exe": "fixture, never executed"})
+	key := platformRecipeKey{NeMoSpeechCPP, runtime.GOOS, runtime.GOARCH, "cpu"}
+	originalRecipe, existed := platformRecipes[key]
+	recipe := originalRecipe
+	if recipe.executable == "" {
+		recipe = platformRecipes[platformRecipeKey{NeMoSpeechCPP, "windows", "amd64", "cpu"}]
+	}
+	data := zipFixture(t, map[string]string{recipe.executable: "fixture, never executed"})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(data) }))
 	t.Cleanup(srv.Close)
 	pin := asset{backend: "cpu", url: srv.URL, size: int64(len(data)), sha256: fmt.Sprintf("%x", sha256.Sum256(data))}
-	saved := assets["cpu"]
-	assets["cpu"] = pin
-	t.Cleanup(func() { assets["cpu"] = saved })
-	if err := installAsset(ctx, root, pin, srv.Client(), nil); err != nil {
+	recipe.archives = []asset{pin}
+	platformRecipes[key] = recipe
+	t.Cleanup(func() {
+		if existed {
+			platformRecipes[key] = originalRecipe
+		} else {
+			delete(platformRecipes, key)
+		}
+	})
+	if err := installRuntimeBundle(ctx, root, recipe.runtimeBundle, srv.Client(), nil); err != nil {
 		t.Fatal(err)
 	}
 	catalog, err := os.ReadFile("testdata/catalog-v0.1.0.json")

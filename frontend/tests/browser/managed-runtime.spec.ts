@@ -478,3 +478,35 @@ test("unsupported hosts never offer an enabled Windows runtime", async ({
   ).toBeDisabled();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });
+
+test("macOS llama installation and switching use Metal without CUDA", async ({
+  page,
+}) => {
+  await page.goto(
+    "/tests/browser/app/?runtime&runtime-provider=llama-cpp&runtime-macos",
+  );
+  await page.locator('[data-settings-section="local-runtime"]').click();
+  await page.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(
+    page.getByText("Recommended: Apple GPU (Metal)", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "NVIDIA GPU (CUDA)", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Download and install", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Apple GPU (Metal)", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "CPU", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "CPU", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "GetBinaryOptions:llama-cpp",
+    "SetInstance:llama-cpp",
+    "InstallBackend:llama-cpp:metal",
+    "InstallBackend:llama-cpp:cpu",
+  ]);
+});

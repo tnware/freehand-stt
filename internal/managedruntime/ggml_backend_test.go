@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 )
@@ -18,7 +19,7 @@ func TestGGMLBackendAdmissionAndArguments(t *testing.T) {
 		if _, err := g.bundle("auto"); err == nil {
 			t.Fatal("accepted automatic GPU selection")
 		}
-		for _, backend := range []string{"cpu", "cuda"} {
+		for _, backend := range hostBackends(g.id) {
 			b, err := g.bundle(backend)
 			if err != nil {
 				t.Fatal(err)
@@ -36,7 +37,7 @@ func TestGGMLBackendAdmissionAndArguments(t *testing.T) {
 			if g.id == LlamaCPP {
 				i := slices.Index(args, "--gpu-layers")
 				want := "0"
-				if backend == "cuda" {
+				if backend != "cpu" {
 					want = "auto"
 				}
 				if i < 0 || args[i+1] != want || slices.Contains(args, "--no-warmup") != (backend == "cpu") || !slices.Contains(args, "--offline") {
@@ -44,6 +45,9 @@ func TestGGMLBackendAdmissionAndArguments(t *testing.T) {
 				}
 				if backend == "cuda" && (!slices.Contains(args, "CUDA0") || !slices.Contains(args, "--split-mode")) {
 					t.Fatal("unbounded devices", args)
+				}
+				if backend == "metal" && (!slices.Contains(args, "Metal") || slices.Contains(args, "CUDA0")) {
+					t.Fatal("wrong Metal device", args)
 				}
 			} else if slices.Contains(args, "--no-gpu") != (backend == "cpu") || !slices.Contains(args, "--no-flash-attn") {
 				t.Fatal("wrong whisper device flags", args)
@@ -86,6 +90,9 @@ func TestManagerBackendSwitchAdmission(t *testing.T) {
 }
 
 func TestCUDADriverFailureOffersCPURecovery(t *testing.T) {
+	if runtime.GOOS != "windows" || runtime.GOARCH != "amd64" {
+		t.Skip("Windows CUDA recipe")
+	}
 	w := newWorker(t.TempDir(), llamaProvider, workerConfig{Model: "s1-mini"}, nil, nil)
 	if !w.status.Supported {
 		t.Skip("Windows x64 provider")

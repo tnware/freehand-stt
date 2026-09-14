@@ -63,12 +63,12 @@ func launchOwned(ctx context.Context, exe string, args []string, dir string, env
 		cmd.Stderr = observedOutput{&p.stderr, observer, "stderr"}
 	}
 	cmd.WaitDelay = 2 * time.Second
-	closeJob, err := startInJob(cmd)
+	closeJob, pid, err := startOwnedProcess(cmd)
 	if err != nil {
 		return nil, err
 	}
 	p.closeJob = closeJob
-	p.pid = cmd.Process.Pid
+	p.pid = pid
 	if observer != nil {
 		observer.child(p)
 	}

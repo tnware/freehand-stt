@@ -135,6 +135,9 @@ func installBinaryAsset(ctx context.Context, root string, a asset, expectedExecu
 	return os.Rename(stage, filepath.Join(root, "runtime"))
 }
 func extractArchive(ctx context.Context, archive, dest string) error {
+	if gzipArchive(archive) {
+		return extractTarArchive(ctx, archive, dest)
+	}
 	z, e := zip.OpenReader(archive)
 	if e != nil {
 		return e
@@ -190,6 +193,13 @@ func verifyRuntime(ctx context.Context, root string, a asset) error {
 func verifyRuntimeArchive(ctx context.Context, base, archive string, a asset) error {
 	if e := verifyFile(ctx, archive, a.size, a.sha256); e != nil {
 		return e
+	}
+	if gzipArchive(archive) {
+		entries, err := tarManifest(ctx, archive)
+		if err != nil {
+			return err
+		}
+		return verifyTarEntries(ctx, base, entries)
 	}
 	z, e := zip.OpenReader(archive)
 	if e != nil {

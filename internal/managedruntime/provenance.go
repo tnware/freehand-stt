@@ -92,21 +92,13 @@ func runtimeSource(provider ProviderID) *RuntimeSource {
 		source.Artifacts = append(source.Artifacts, RuntimeArtifact{OS: os, Architecture: arch, Backend: a.backend, Filename: path.Base(u.Path), URL: a.url, SHA256: a.sha256, SizeBytes: a.size})
 		return true
 	}
-	if provider == NeMoSpeechCPP {
-		for _, a := range assets {
-			if !appendAsset("windows", "amd64", a) {
-				return nil
-			}
+	for key, recipe := range platformRecipes {
+		if key.provider != provider {
+			continue
 		}
-	} else {
-		for key, recipe := range platformRecipes {
-			if key.provider != provider {
-				continue
-			}
-			for _, a := range recipe.archives {
-				if !appendAsset(key.os, key.arch, a) {
-					return nil
-				}
+		for _, a := range recipe.archives {
+			if !appendAsset(key.os, key.arch, a) {
+				return nil
 			}
 		}
 	}

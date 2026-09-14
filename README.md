@@ -16,7 +16,7 @@ provider or hosting may have its own costs. You do not need a dedicated local
 GPU: send inference to another machine to keep this PC's memory and GPU
 available for your other work, or run your models locally if you prefer.
 
-On Windows, you can let Freehand install and manage a local NeMo speech runtime,
+On Windows and macOS, you can let Freehand install and manage a local NeMo speech runtime,
 or connect to infrastructure you already run. The recommended local setup uses
 Nemotron 3.5 streaming for live transcription. Runtime and model downloads are
 optional and separate from the app; performance depends on your hardware, model,
@@ -48,8 +48,8 @@ can each use a separate service and model.
 
 Leave transcripts unchanged, use custom instructions with a separate chat
 model, or select the **S1-mini by Superwhisper** profile for its English
-style, structure, and context controls. You provide the inference services;
-Freehand does not download or host these models. If cleanup fails or returns
+style, structure, and context controls. Use your own inference service or
+explicitly install the managed llama.cpp runtime and S1-mini model. If cleanup fails or returns
 empty text, Freehand falls back to the raw transcript.
 
 [Configure transcript cleanup](https://tnware.github.io/freehand-stt/docs/guides/post-processing/)
@@ -59,7 +59,7 @@ empty text, Freehand falls back to the raw transcript.
 - Toggle recording or hold to talk across Windows and macOS applications.
 - Use independent OpenAI-compatible endpoints for speech recognition,
   optional transcript cleanup, and optional speech playback.
-- Install an optional local speech runtime on Windows, browse its supported
+- Install an optional local speech runtime on Windows or macOS, browse its supported
   model catalog, and use Nemotron streaming without configuring a server URL.
 - Keep the current transcript available to copy with history disabled.
 - Use local voice detection for silence trimming, automatic stop, and
@@ -69,12 +69,13 @@ empty text, Freehand falls back to the raw transcript.
 - Opt into bounded, memory-only history; configure or disable the native status overlay.
 
 Freehand does not bundle models in its executable. Managed runtime installation
-is optional; macOS continues to use a separately configured speech service.
+is optional; managed NeMo and llama.cpp support Windows and macOS, while
+managed whisper.cpp remains Windows-only.
 
 ## Install
 
 Freehand supports Windows 11 x64 with WebView2 and macOS 13 or newer on Apple
-Silicon or Intel. Use the managed local speech runtime on Windows or a reachable
+Silicon or Intel (managed llama.cpp requires macOS 13.3). Use a managed local speech runtime or a reachable
 compatible service for your task. Only dictation needs a microphone; recording
 shortcuts are optional. Download the Windows
 installer/portable executable or matching-architecture macOS ZIP from
