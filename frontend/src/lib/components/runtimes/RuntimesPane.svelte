@@ -3,7 +3,7 @@
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
-  import LocalRuntimeSection from "$lib/components/settings/sections/LocalRuntimeSection.svelte";
+  import RuntimeDetail from "./RuntimeDetail.svelte";
   import { Button } from "$lib/components/ui/button";
   import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
   import type { Session } from "$lib/stores/session.svelte";
@@ -119,12 +119,15 @@
               <span
                 class="block truncate text-[13px] {on
                   ? 'text-foreground'
-                  : 'text-secondary-foreground'}">{row.entry.id}</span
+                  : 'text-secondary-foreground'}">{row.entry.name}</span
               >
               <span class="block truncate font-mono text-[10px] text-ink-quiet">
-                {row.view.label}{row.instance?.status.backend
-                  ? ` · ${backendLabel(row.instance.status.backend)}`
-                  : ""}
+                {[
+                  row.instance?.status.realtime === false ? "batch" : "speech",
+                  row.instance?.status.version || row.entry.version,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || row.view.label}
               </span>
             </span>
             <span
@@ -176,16 +179,20 @@
       {/if}
     </div>
 
-    <div class="min-w-0 flex-1 overflow-y-auto px-5 py-4">
-      <LocalRuntimeSection
+    {#if current}
+      <RuntimeDetail
         {runtime}
-        focus={active}
-        chrome={false}
-        {workBusy}
-        disabled={session.editor.saving}
-        onAction={(action) => action()}
-        onConnections={onOpenConnections}
+        row={current.instance}
+        entry={current.entry}
+        locked={workBusy || session.editor.saving || runtime.loading}
+        {onOpenConnections}
       />
-    </div>
+    {:else}
+      <div class="flex min-w-0 flex-1 items-center justify-center px-5">
+        <p class="text-[13px] text-muted-foreground">
+          No managed runtime is available for this platform.
+        </p>
+      </div>
+    {/if}
   </div>
 </div>
