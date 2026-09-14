@@ -51,7 +51,7 @@ func (a *serviceAdapter) Install(ctx context.Context, p func(float64)) (string, 
 	p(.5)
 	return "cpu", nil
 }
-func (a *serviceAdapter) Pull(ctx context.Context, id string) error {
+func (a *serviceAdapter) Pull(ctx context.Context, id string, progress func(AcquisitionProgress)) error {
 	if a.pullEntered != nil {
 		close(a.pullEntered)
 		<-ctx.Done()

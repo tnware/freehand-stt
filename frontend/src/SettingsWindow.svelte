@@ -163,6 +163,7 @@
         bind:this={manager}
         {session}
         onCancelClose={() => (afterConnection = null)}
+        onManageRuntime={() => selectSection("local-runtime")}
         initialRequest={navigation.connection ?? {
           id: "",
           purpose: Purpose.$zero,

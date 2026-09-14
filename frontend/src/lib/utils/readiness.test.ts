@@ -38,6 +38,8 @@ it("requires the selected Voice instance to be ready, independently of manual fi
     },
     activeModel: "nemotron-3.5",
     status: {
+      acquisition: { phase: "", bytes: 0, totalBytes: 0 },
+      operation: { id: 0, kind: "", model: "", outcome: "", error: "" },
       supported: true,
       state: "running",
       enabled: true,
@@ -98,6 +100,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     entries: [
       {
         id: "voice",
+        builtIn: false,
         name: "Voice",
         uses: [],
         hasCredential: overrides.credentialConfigured ?? true,

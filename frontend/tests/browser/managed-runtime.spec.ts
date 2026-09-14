@@ -1,14 +1,11 @@
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
 
-async function addRuntime(page: Page) {
-  await page.getByRole("button", { name: "Add runtime", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Add runtime" });
-  await dialog.getByLabel("Runtime name").fill("Local speech");
-  await dialog
-    .getByRole("button", { name: "Add runtime", exact: true })
-    .click();
-  await expect(dialog).toBeHidden();
+async function installRuntime(page: Page) {
+  await page.getByRole("button", { name: "Install", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Download selected model", exact: true }),
+  ).toBeVisible();
   return page.evaluate(() => {
     const call = window.testRuntime.calls.find((c) =>
       c.startsWith("SetInstance:"),
@@ -29,15 +26,9 @@ for (const viewport of [
     await page.goto("/tests/browser/app/?runtime");
     await page.locator('[data-settings-section="local-runtime"]').click();
     await expect(
-      page.getByRole("button", { name: "Add runtime", exact: true }),
+      page.getByRole("button", { name: "Install", exact: true }),
     ).toBeInViewport();
-    const instanceID = await addRuntime(page);
-    const install = page.getByRole("button", {
-      name: "Install runtime",
-      exact: true,
-    });
-    await expect(install).toBeInViewport();
-    await install.click();
+    const instanceID = await installRuntime(page);
     const download = page.getByRole("button", {
       name: "Download selected model",
       exact: true,
@@ -55,13 +46,55 @@ for (const viewport of [
       exact: true,
     });
     await expect(cancel).toBeInViewport();
+    const progress = page.getByRole("progressbar", {
+      name: "Runtime operation progress",
+    });
+    for (const bytes of [250_000_000, 750_000_000]) {
+      await page.evaluate(
+        ({ id, bytes }) =>
+          window.testRuntime.change(id, {
+            acquisition: {
+              phase: "downloading",
+              bytes,
+              totalBytes: 1_000_000_000,
+            },
+          }),
+        { id: instanceID, bytes },
+      );
+      await expect(progress).toHaveAttribute(
+        "value",
+        String(bytes / 10_000_000),
+      );
+    }
     await cancel.click();
+    await expect(page.getByText(/Operation cancelled\./)).toBeVisible();
     await expect(download).toBeInViewport();
     await download.click();
+    await page.evaluate(
+      (id) =>
+        window.testRuntime.change(id, {
+          acquisition: {
+            phase: "verifying",
+            bytes: 1_000_000_000,
+            totalBytes: 1_000_000_000,
+          },
+        }),
+      instanceID,
+    );
+    await expect(progress).toHaveCount(0);
+    await expect(page.getByText(/Model downloaded and verified\./)).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("button", { name: "Start runtime", exact: true }),
+    ).toHaveCount(0);
     await page.evaluate(
       (id) => window.testRuntime.finishDownload(id),
       instanceID,
     );
+    await expect(
+      page.getByText(/Model downloaded and verified\./),
+    ).toBeVisible();
     expect(await page.evaluate(() => window.testRuntime.calls)).not.toContain(
       `Start:${instanceID}`,
     );
@@ -86,17 +119,21 @@ test("local runtime is discoverable and browsing never downloads", async ({
     page.getByRole("heading", { name: "Managed runtimes", exact: true }),
   ).toBeVisible();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
-  const instanceID = await addRuntime(page);
+  await installRuntime(page);
   await expect(
     page.getByRole("region", { name: "Model catalog" }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Refresh catalog", exact: true })
     .click();
-  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
-    `SetInstance:${instanceID}`,
-    `RefreshCatalog:${instanceID}`,
-  ]);
+  expect(
+    await page.evaluate(() =>
+      window.testRuntime.calls.some(
+        (call) =>
+          call.startsWith("DownloadModel:") || call.startsWith("Start:"),
+      ),
+    ),
+  ).toBe(false);
 });
 
 test("unsaved drafts guard immediate runtime operations", async ({ page }) => {
@@ -104,6 +141,7 @@ test("unsaved drafts guard immediate runtime operations", async ({ page }) => {
   await page.locator('[data-settings-section="audio"]').click();
   await page.locator("#max-duration").fill("90");
   await page.locator('[data-settings-section="local-runtime"]').click();
+  await page.getByRole("button", { name: "Manage", exact: true }).click();
   await page.getByRole("button", { name: "Stop runtime", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText(
     "Save settings before continuing?",
@@ -120,13 +158,13 @@ test("unsupported hosts never offer an enabled Windows runtime", async ({
   await page.goto("/tests/browser/app/?runtime&platform=darwin");
   await page.locator('[data-settings-section="local-runtime"]').click();
   await expect(
-    page.getByText("No managed provider is available on this platform.", {
+    page.getByText("Unavailable on this platform", {
       exact: false,
     }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: "Add runtime",
+      name: "Install",
       exact: true,
     }),
   ).toBeDisabled();

@@ -2,7 +2,7 @@ package settings
 
 import (
 	"errors"
-	"github.com/tnware/freehand-stt/internal/config"
+
 	"github.com/tnware/freehand-stt/internal/managedruntime"
 	"github.com/tnware/freehand-stt/internal/savedconnection"
 	"github.com/tnware/freehand-stt/internal/storage"
@@ -33,8 +33,7 @@ func TestManagedConnectionsCommitReloadAndMetadata(t *testing.T) {
 	if err := SaveManagedInstances(s, []managedruntime.Instance{i}); err != nil {
 		t.Fatal(err)
 	}
-	d := savedconnection.Details{ManagedInstanceID: i.ID, AuthenticationMode: config.AuthenticationModeNone, Headers: map[string]string{}}
-	got, err := s.SaveSettings(SaveSettingsRequest{Settings: s.current(), ConnectionChange: &savedconnection.Change{Action: savedconnection.Create, Name: "Local", Uses: []savedconnection.Purpose{savedconnection.Transcription}, ActivateFor: savedconnection.Transcription, Details: &d}})
+	got, err := s.SaveSettings(SaveSettingsRequest{Settings: s.current(), ConnectionChange: &savedconnection.Change{Action: savedconnection.Select, ID: savedconnection.BuiltInID(i.ID), Purpose: savedconnection.Transcription}})
 	if err != nil {
 		t.Fatal(err)
 	}

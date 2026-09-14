@@ -1,6 +1,9 @@
 <script lang="ts">
   import StatusStrip from "$lib/components/shell/StatusStrip.svelte";
-  import { taskConnectionDetails, taskConnectionStatus } from "$lib/utils/connection";
+  import {
+    taskConnectionDetails,
+    taskConnectionStatus,
+  } from "$lib/utils/connection";
   import { configurePickerFixture } from "./picker-data";
   import { onDestroy } from "svelte";
   import { CancellablePromise } from "@wailsio/runtime";
@@ -28,21 +31,34 @@
   import AppHeader from "$lib/components/shell/AppHeader.svelte";
   import { controlledSaves } from "./save-control";
 
-  const listenScenario = new URLSearchParams(location.search).has("listen-pending");
+  const listenScenario = new URLSearchParams(location.search).has(
+    "listen-pending",
+  );
   let listenRequests = $state(0);
   let finishListen: ((success: boolean) => void) | undefined;
   const saveScenario = new URLSearchParams(location.search).has("save-pending");
-  let finishAudioSave: ((outcome: "saved" | "cancelled" | "failed") => void) | undefined;
+  let finishAudioSave:
+    | ((outcome: "saved" | "cancelled" | "failed") => void)
+    | undefined;
   const playbackScenario = new URLSearchParams(location.search).has("playback");
-  const fileStreamingScenario = new URLSearchParams(location.search).has("file-streaming");
-  const fileActionsScenario = new URLSearchParams(location.search).has("file-actions");
-  const captureClockScenario = new URLSearchParams(location.search).has("capture-clock");
+  const fileStreamingScenario = new URLSearchParams(location.search).has(
+    "file-streaming",
+  );
+  const fileActionsScenario = new URLSearchParams(location.search).has(
+    "file-actions",
+  );
+  const captureClockScenario = new URLSearchParams(location.search).has(
+    "capture-clock",
+  );
   let finishFileStart: ((success: boolean) => void) | undefined;
   let fileRequests = $state(0);
   let lastFileStream = $state(false);
   let seekCalls = $state(0);
-  const historyExpansion = new URLSearchParams(location.search).get("history") === "expansion";
-  const diagnosticsScenario = new URLSearchParams(location.search).get("diagnostics");
+  const historyExpansion =
+    new URLSearchParams(location.search).get("history") === "expansion";
+  const diagnosticsScenario = new URLSearchParams(location.search).get(
+    "diagnostics",
+  );
   const setupScenario = new URLSearchParams(location.search).get("setup");
   let openedSettings = $state("");
   let connectionChecks = 0;
@@ -52,7 +68,8 @@
   let audioSaves = $state(0);
   let current = structuredClone(settings);
   current.setupCompleted = true;
-  current.historyEnabled = new URLSearchParams(location.search).get("history") !== "off";
+  current.historyEnabled =
+    new URLSearchParams(location.search).get("history") !== "off";
   current.authenticationMode = AuthenticationMode.AuthenticationModeNone;
   current.postProcessing.model = "cleanup/standard";
   current.voiceTranscription = {
@@ -80,6 +97,7 @@
     ...(current.savedConnections.entries ?? []),
     {
       id: "voice-fixture",
+      builtIn: false,
       name: "Example transcription server",
       uses: [Purpose.Voice],
       hasCredential: false,
@@ -94,6 +112,7 @@
     },
     {
       id: "speech-fixture",
+      builtIn: false,
       name: "Example speech server",
       uses: [Purpose.Speech],
       hasCredential: false,
@@ -151,19 +170,25 @@
       },
     },
   ];
-  if (new URLSearchParams(location.search).has("pickers")) configurePickerFixture(current);
+  if (new URLSearchParams(location.search).has("pickers"))
+    configurePickerFixture(current);
   if (setupScenario) {
-    current.setupCompleted = !["first", "retry", "missing-model", "loading"].includes(
-      setupScenario,
-    );
+    current.setupCompleted = ![
+      "first",
+      "retry",
+      "missing-model",
+      "loading",
+    ].includes(setupScenario);
     current.historyEnabled = false;
-    if (setupScenario === "missing-model") current.voiceTranscription.model = "";
+    if (setupScenario === "missing-model")
+      current.voiceTranscription.model = "";
   }
   if (diagnosticsScenario) {
     current.baseURL = "https://files.test/v1";
     current.savedConnections.selected[Purpose.Transcription] = "file-fixture";
     current.savedConnections.entries!.push({
       id: "file-fixture",
+      builtIn: false,
       name: "Example file server",
       uses: [Purpose.Transcription],
       hasCredential: false,
@@ -178,7 +203,8 @@
     });
   }
   if (diagnosticsScenario === "off") current.textToSpeech.enabled = false;
-  if (diagnosticsScenario === "missing") current.savedConnections.selected.voice = "";
+  if (diagnosticsScenario === "missing")
+    current.savedConnections.selected.voice = "";
   const saves = controlledSaves((request) => {
     current = structuredClone({ ...current, ...request.settings });
     return structuredClone(current);
@@ -218,7 +244,9 @@
               finishFileStart = (success) => {
                 finishFileStart = undefined;
                 if (!success) {
-                  reject(new Error("The file could not be started. Try again."));
+                  reject(
+                    new Error("The file could not be started. Try again."),
+                  );
                   return;
                 }
                 session.files.applyStatus({
@@ -246,12 +274,17 @@
           const status = session.speech.status;
           if (request.generation !== status.generation)
             return CancellablePromise.reject(new Error("stale seek"));
-          const atEnd = request.positionMilliseconds === status.durationMilliseconds;
+          const atEnd =
+            request.positionMilliseconds === status.durationMilliseconds;
           const playing = status.phase === TTSPhase.Playing && !atEnd;
           const next = {
             ...status,
             positionMilliseconds: request.positionMilliseconds,
-            phase: atEnd ? TTSPhase.Completed : playing ? TTSPhase.Playing : TTSPhase.Paused,
+            phase: atEnd
+              ? TTSPhase.Completed
+              : playing
+                ? TTSPhase.Playing
+                : TTSPhase.Paused,
             canPause: playing,
             canResume: !playing && !atEnd,
             canStop: !atEnd,
@@ -302,7 +335,10 @@
             ...session.speech.status,
             generation: speechRequests,
             source: TTSSource.SourceCompose,
-            phase: speechRequests === 1 && feedbackScenario ? TTSPhase.Failed : TTSPhase.Completed,
+            phase:
+              speechRequests === 1 && feedbackScenario
+                ? TTSPhase.Failed
+                : TTSPhase.Completed,
             message:
               speechRequests === 1 && feedbackScenario
                 ? "The speech service could not complete this request. Check the connection and selected voice, then try again. ".repeat(
@@ -321,7 +357,8 @@
             const pending = CancellablePromise.withResolvers<boolean>();
             finishAudioSave = (outcome) => {
               finishAudioSave = undefined;
-              if (outcome === "failed") pending.reject(new Error("Audio could not be saved"));
+              if (outcome === "failed")
+                pending.reject(new Error("Audio could not be saved"));
               else pending.resolve(outcome === "saved");
             };
             return pending.promise;
@@ -347,13 +384,19 @@
           return CancellablePromise.resolve();
         },
         PlayHistoryEntry: (id) =>
-          listenScenario ? startListen(TTSSource.SourceHistory, id) : CancellablePromise.resolve(),
+          listenScenario
+            ? startListen(TTSSource.SourceHistory, id)
+            : CancellablePromise.resolve(),
         PlayFileTranscript: () =>
-          listenScenario ? startListen(TTSSource.SourceFile) : CancellablePromise.resolve(),
+          listenScenario
+            ? startListen(TTSSource.SourceFile)
+            : CancellablePromise.resolve(),
         PlayVoiceTranscript: (generation) => {
           if (listenScenario) return startListen(TTSSource.SourceVoice);
           if (generation !== 7)
-            return CancellablePromise.reject(new Error("Wrong result generation"));
+            return CancellablePromise.reject(
+              new Error("Wrong result generation"),
+            );
           session.speech.applyStatus({
             ...session.speech.status,
             generation: 1,
@@ -366,24 +409,29 @@
         },
       },
       settings: {
-        SaveSettings: (request) => saves.save(structuredClone($state.snapshot(request))),
+        SaveSettings: (request) =>
+          saves.save(structuredClone($state.snapshot(request))),
       },
     }),
   );
   session.editor.applySettingsSnapshot(structuredClone(current));
-  session.editor.devices = [{ id: "desk-mic", name: "Desk microphone", default: true }];
+  session.editor.devices = [
+    { id: "desk-mic", name: "Desk microphone", default: true },
+  ];
   session.editor.connection = structuredClone(connectionResult);
   session.dictation.status = {
     ...idle,
     generation: 7,
     transcript: "Testing, testing.",
   };
-  session.history.entries = (current.historyEnabled ? [1, 2] : []).map((id) => ({
-    ...structuredClone(historyEntry),
-    id,
-    text: "Testing, testing.",
-    rawText: "Testing, testing.",
-  }));
+  session.history.entries = (current.historyEnabled ? [1, 2] : []).map(
+    (id) => ({
+      ...structuredClone(historyEntry),
+      id,
+      text: "Testing, testing.",
+      rawText: "Testing, testing.",
+    }),
+  );
   if (new URLSearchParams(location.search).get("history") === "review") {
     session.history.entries[0] = {
       ...session.history.entries[0],
@@ -429,7 +477,8 @@
         ? entry
         : {
             ...entry,
-            processingStatus: HistoryProcessingStatus.HistoryProcessingCompleted,
+            processingStatus:
+              HistoryProcessingStatus.HistoryProcessingCompleted,
             processedText: "Cleaned. " + sampleTranscript,
             text: "Cleaned. " + sampleTranscript,
           },
@@ -461,9 +510,11 @@
   if (setupScenario) {
     session.dictation.status = { ...idle, transcript: "" };
     session.editor.connection = null;
-    if (setupScenario === "microphone" || setupScenario === "loading") session.editor.devices = [];
+    if (setupScenario === "microphone" || setupScenario === "loading")
+      session.editor.devices = [];
     if (setupScenario === "loading") session.editor.devicesBusy = true;
-    if (setupScenario === "connection") void session.editor.testVoiceConnection();
+    if (setupScenario === "connection")
+      void session.editor.testVoiceConnection();
   }
   if (new URLSearchParams(location.search).get("feedback") === "voice") {
     session.dictation.status = {
@@ -499,7 +550,8 @@
   if (diagnosticsScenario) {
     session.editor.connection = null;
     if (diagnosticsScenario === "stale") {
-      session.editor.draft!.textToSpeech.baseURL = "https://unsaved-draft.test/v1";
+      session.editor.draft!.textToSpeech.baseURL =
+        "https://unsaved-draft.test/v1";
       void session.editor.testTextToSpeechConnection();
     }
   }
@@ -556,17 +608,28 @@
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
   const noop = () => {};
-  const footerStatus = $derived(taskConnectionStatus(inputMode, session.editor, Date.now()));
-  const footerConnection = $derived(taskConnectionDetails(inputMode, session.editor));
+  const footerStatus = $derived(
+    taskConnectionStatus(inputMode, session.editor, Date.now()),
+  );
+  const footerConnection = $derived(
+    taskConnectionDetails(inputMode, session.editor),
+  );
 </script>
 
-<div class="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-  <AppHeader bind:inputMode settings={session.editor.applied} onSettings={noop} />
+<div
+  class="flex h-screen flex-col overflow-hidden bg-background text-foreground"
+>
+  <AppHeader
+    bind:inputMode
+    settings={session.editor.applied}
+    onSettings={noop}
+  />
   <HomeScreen
     {session}
     bind:inputMode
     onOpenHistorySettings={noop}
-    onOpenServerSettings={() => (openedSettings = "File transcription settings")}
+    onOpenServerSettings={() =>
+      (openedSettings = "File transcription settings")}
     onOpenProcessingSettings={noop}
     onOpenAudioSettings={() => (openedSettings = "Audio settings")}
     onOpenShortcutSettings={() => (openedSettings = "Shortcut settings")}
@@ -577,7 +640,8 @@
     <StatusStrip
       connectionState={footerStatus}
       connectionDetails={footerConnection}
-      onCheck={() => session.editor.testAppliedConnection(footerConnection.purpose)}
+      onCheck={() =>
+        session.editor.testAppliedConnection(footerConnection.purpose)}
       onEdit={() =>
         (openedSettings = `Edit ${footerConnection.selected?.id || "connections"} for ${footerConnection.purpose}`)}
       onSettings={() => (openedSettings = "Speech settings")}
@@ -622,15 +686,27 @@
         </div>
       {:else if fileStreamingScenario}
         <div class="flex flex-wrap gap-3">
-          <button onclick={() => fileCapability(false)}>Streaming supported</button>
-          <button onclick={() => fileCapability(true)}>Streaming rejected</button>
-          <button onclick={() => fileCapability(true, true)}>Completed-only profile</button>
+          <button onclick={() => fileCapability(false)}
+            >Streaming supported</button
+          >
+          <button onclick={() => fileCapability(true)}
+            >Streaming rejected</button
+          >
+          <button onclick={() => fileCapability(true, true)}
+            >Completed-only profile</button
+          >
           {#if fileActionsScenario}
-            <button onclick={() => finishFileStart?.(true)}>Admit file start</button>
-            <button onclick={() => finishFileStart?.(false)}>Reject file start</button>
+            <button onclick={() => finishFileStart?.(true)}
+              >Admit file start</button
+            >
+            <button onclick={() => finishFileStart?.(false)}
+              >Reject file start</button
+            >
           {/if}
           <span role="status"
-            >File requests: {fileRequests}; streaming: {String(lastFileStream)}</span
+            >File requests: {fileRequests}; streaming: {String(
+              lastFileStream,
+            )}</span
           >
         </div>
       {:else if playbackScenario}
@@ -647,7 +723,8 @@
             onclick={() =>
               session.speech.applyStatus({
                 ...session.speech.status,
-                positionMilliseconds: session.speech.status.positionMilliseconds + 137,
+                positionMilliseconds:
+                  session.speech.status.positionMilliseconds + 137,
               })}>Advance playback</button
           >
           <button
@@ -658,12 +735,22 @@
                 positionMilliseconds: 5000,
               })}>Replace audio</button
           >
-          <span role="status">Speech requests: {speechRequests}; seek requests: {seekCalls}</span>
-          <span class="sr-only" aria-label="Submitted speech text">{submittedSpeechText}</span>
+          <span role="status"
+            >Speech requests: {speechRequests}; seek requests: {seekCalls}</span
+          >
+          <span class="sr-only" aria-label="Submitted speech text"
+            >{submittedSpeechText}</span
+          >
           {#if saveScenario}
-            <button onclick={() => finishAudioSave?.("saved")}>Complete save</button>
-            <button onclick={() => finishAudioSave?.("cancelled")}>Cancel save</button>
-            <button onclick={() => finishAudioSave?.("failed")}>Fail save</button>
+            <button onclick={() => finishAudioSave?.("saved")}
+              >Complete save</button
+            >
+            <button onclick={() => finishAudioSave?.("cancelled")}
+              >Cancel save</button
+            >
+            <button onclick={() => finishAudioSave?.("failed")}
+              >Fail save</button
+            >
             <span>Save requests: {audioSaves}</span>
           {/if}
         </div>
@@ -672,7 +759,9 @@
           <button onclick={addHistoryTranscript}>Add transcript</button>
           <button onclick={updateHistoryTranscript}>Update latest</button>
           <button onclick={showFileTranscript}>Show file result</button>
-          <button onclick={() => void session.history.clearHistory()}>Clear history</button>
+          <button onclick={() => void session.history.clearHistory()}
+            >Clear history</button
+          >
         </div>
       {:else}
         {openedSettings || "Transcription: Reachable · Example connection"}

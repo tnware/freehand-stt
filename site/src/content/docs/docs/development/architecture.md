@@ -34,11 +34,34 @@ optional Windows managed-runtime exception to ADR 0005's remote-first boundary.
 
 `internal/managedruntime.Manager` owns the runtime inventory and independent
 per-instance workers. Provider adapters own installation, metadata catalogs,
-model acquisition, and process launch; NeMo is the implemented provider. It
+model acquisition, and process launch for NeMo, llama.cpp cleanup, and whisper.cpp
+completed transcription. The manager
 exposes a small instance-targeted Wails boundary and
 bounded status events, not upstream flags. Official versioned archives are
 checksum-verified before extraction is published. Model downloads use NeMo's
-own manager with a Freehand-owned cache. Listing the catalog never loads models.
+own manager with a Freehand-owned cache; the GGML adapters download only their
+pinned catalog revisions with size and SHA-256 verification. Listing the catalog
+never loads models. [ADR 0017](../../decisions/0017-managed-provider-installations/)
+bounds each provider to one installation and one process tree, including retired
+workers. Existing duplicate entries remain explicitly repairable without ID,
+Connection, or model rewrites. Different providers can run concurrently.
+
+[ADR 0018](../../decisions/0018-built-in-runtime-connections/) makes each configured
+runtime a built-in row in the existing connection state. Storage derives its
+stable identity and qualified uses and materializes it through ordinary settings
+transactions, preserving selection and remembered-option foreign keys. There is
+no additional runtime-event routing registry. Go rejects edits, rename, duplicate,
+and delete for built-in rows; legacy managed aliases and their selections remain
+intact. Runtime-owned transport/model fields are read-only in Connections, while
+task options retain their existing owners. Stopped rows remain available for
+explicit selection and repair, but requests fail closed until ready.
+
+Acquisition events contain only bounded operation IDs, phases, counters, and
+terminal outcomes. GGML reports bytes written; NeMo observes metadata for the
+selected model's exact owned partial/final paths while its own manager runs.
+Neither raw child diagnostics nor paths enter renderer progress. Full transfer
+does not imply successful verification, and request admission does not imply
+operation success.
 
 Following [ADR 0016](../../decisions/0016-managed-runtime-connections/), the
 settings owner persists runtime instance definitions and ordinary Connections
@@ -64,13 +87,20 @@ Task settings and quick settings replace manual model/profile pickers with
 instance-targeted controls when their selected Connection is managed. The shared
 speech controls preserve voice, speed, and qualified language/style options;
 cleanup preserves its instruction and generation controls. These surfaces do not
-register providers or imply managed cleanup/speech qualification: NeMo currently
-qualifies transcription only.
+register providers or imply additional roles: NeMo qualifies transcription and
+Nemotron realtime, whisper.cpp qualifies completed transcription, and llama.cpp
+qualifies S1-mini cleanup. None of these managed adapters qualifies TTS.
 
 The adapter probes `/ready` and `/v1/models` at the server origin, but publishes
 `http://127.0.0.1:<port>/v1` as the speech API base. Completed microphone/file
 clients append `audio/transcriptions`; the realtime client appends `realtime`.
 Keep this distinction at the adapter boundary, not in shared client URL handling.
+
+llama.cpp likewise publishes `/v1` for the cleanup client, with S1-mini reasoning
+disabled. whisper.cpp instead publishes the server origin for native `/inference`
+requests and `/health` metadata. Both new managed adapters initially use CPU
+execution and share the existing process ownership boundary; they do not acquire
+CUDA runtimes or change NeMo's device policy.
 
 Windows owns children through a Job Object, including model-manager subprocesses.
 The server listens only on `127.0.0.1`; readiness and loaded model metadata are

@@ -424,7 +424,14 @@ func validate(s Settings, stored bool) error {
 	if err := modelprofile.ValidateCleanup(modelprofile.ID(s.PostProcessing.Preset), s.PostProcessing.CompatibilityProfile, s.PostProcessing.GenerationOptions); err != nil {
 		return fieldError("postProcessing.preset", "Choose a compatible cleanup model profile and generation options.", err)
 	}
-	if s.PostProcessing.Enabled {
+	if s.PostProcessing.ManagedInstanceID != "" {
+		if err := validateManagedTransport(s.PostProcessing.BaseURL, s.PostProcessing.AllowInsecureHTTP, AuthenticationModeNone, "", nil); err != nil {
+			return err
+		}
+		if err := validatePostProcessingOptions(s.PostProcessing); err != nil {
+			return err
+		}
+	} else if s.PostProcessing.Enabled {
 		if err := ValidatePostProcessing(s.PostProcessing); err != nil {
 			return err
 		}
@@ -657,7 +664,20 @@ func validateHeaders(headers map[string]string) error {
 	return nil
 }
 
+// ValidatePostProcessing admits a resolved request, not a durable managed reference.
 func ValidatePostProcessing(s PostProcessingSettings) error {
+	if s.ManagedInstanceID != "" {
+		if err := validateResolvedManagedTransport(s.BaseURL, AuthenticationModeNone, "", nil); err != nil {
+			return err
+		}
+	}
+	if err := validatePostProcessingConnection(s.BaseURL, s.AllowInsecureHTTP, s.Model, true); err != nil {
+		return err
+	}
+	return validatePostProcessingOptions(s)
+}
+
+func validatePostProcessingOptions(s PostProcessingSettings) error {
 	if err := modelprofile.ValidateCleanup(modelprofile.ID(s.Preset), s.CompatibilityProfile, s.GenerationOptions); err != nil {
 		return fieldError("postProcessing.preset", "Choose a compatible cleanup model profile and generation options.", err)
 	}
@@ -667,8 +687,8 @@ func ValidatePostProcessing(s PostProcessingSettings) error {
 	if err := validateTimeout("post-processing request", s.TimeoutSeconds, MinRequestTimeoutSeconds, MaxRequestTimeoutSeconds); err != nil {
 		return fieldError("postProcessing.timeoutSeconds", fmt.Sprintf("Enter a cleanup timeout from %d to %d seconds.", MinRequestTimeoutSeconds, MaxRequestTimeoutSeconds), err)
 	}
-	if err := validatePostProcessingConnection(s.BaseURL, s.AllowInsecureHTTP, s.Model, true); err != nil {
-		return err
+	if strings.TrimSpace(s.Model) == "" || len(s.Model) > 200 {
+		return fieldError("postProcessing.model", "Choose a cleanup model of at most 200 characters.", errors.New("post-processing model is required and must be at most 200 characters"))
 	}
 	if len(s.SystemPrompt) > MaxPromptBytes {
 		return fieldError("postProcessing.systemPrompt", fmt.Sprintf("Enter a cleanup system instruction of at most %d bytes.", MaxPromptBytes), fmt.Errorf("post-processing system prompt must be at most %d bytes", MaxPromptBytes))

@@ -40,13 +40,6 @@ export type SettingsSection = {
  */
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
-    id: "local-runtime",
-    label: "Local runtime",
-    blurb: "Manage on-device speech and downloaded models.",
-    icon: ServerIcon,
-    group: "workflows",
-  },
-  {
     id: "voice-transcription",
     label: "Voice transcription",
     blurb:
@@ -79,7 +72,14 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: "connections",
     label: "Connections",
-    blurb: "Create and manage saved server connections.",
+    blurb: "Manage server connections and built-in local runtime connections.",
+    icon: ServerIcon,
+    group: "shared",
+  },
+  {
+    id: "local-runtime",
+    label: "Local runtime",
+    blurb: "Manage on-device speech and downloaded models.",
     icon: ServerIcon,
     group: "shared",
   },

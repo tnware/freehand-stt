@@ -83,6 +83,7 @@
     entries: [
       {
         id: "original",
+        builtIn: false,
         name: "Original server",
         uses: [Purpose.Transcription],
         hasCredential: false,
@@ -177,6 +178,7 @@
           {
             id,
             name: change.name,
+            builtIn: false,
             uses: change.uses ?? [],
             details: change.details,
             hasCredential: false,
@@ -202,25 +204,58 @@
       )
     : null;
   if (runtimeFixture) window.testRuntime = runtimeFixture.control;
-  if (runtimeFixture && current.managedRuntimes?.length && params.has("runtime-ready")) {
+  if (
+    runtimeFixture &&
+    current.managedRuntimes?.length &&
+    params.has("runtime-ready")
+  ) {
     const instance = current.managedRuntimes[0];
-    const profiles = runtimeFixture.providers[0].models?.flatMap((m) => m.behavior ? [m.behavior] : []) ?? [];
+    const profiles =
+      runtimeFixture.providers[0].models?.flatMap((m) =>
+        m.behavior ? [m.behavior] : [],
+      ) ?? [];
     current.modelProfiles.voiceTranscription = profiles;
     current.modelProfiles.transcription = profiles;
     current.savedConnections.entries!.push({
-      id: "local-speech", name: instance.name,
-      uses: [Purpose.Voice, Purpose.Transcription], hasCredential: false,
-      details: { managedInstanceID: instance.id, compatibilityProfile: BackendID.$zero,
-        baseURL: "", allowInsecureHTTP: false, authenticationMode: AuthenticationMode.AuthenticationModeNone,
-        healthPath: "", headers: {} },
+      id: "local-speech",
+      name: instance.name,
+      builtIn: !params.has("legacy-runtime"),
+      uses: [Purpose.Voice, Purpose.Transcription],
+      hasCredential: false,
+      details: {
+        managedInstanceID: instance.id,
+        compatibilityProfile: BackendID.$zero,
+        baseURL: "",
+        allowInsecureHTTP: false,
+        authenticationMode: AuthenticationMode.AuthenticationModeNone,
+        healthPath: "",
+        headers: {},
+      },
     });
-    const managed = { managedInstanceID: instance.id, model: instance.model,
-      compatibilityProfile: BackendID.NeMoSpeechV1, modelProfile: ModelID.Nemotron35,
-      baseURL: "", allowInsecureHTTP: false, authenticationMode: AuthenticationMode.AuthenticationModeNone,
-      healthPath: "", headers: {} };
-    current = { ...current, ...managed,
-      voiceTranscription: { ...current.voiceTranscription, ...managed, realtime: true } };
-    current.savedConnections.selected = { [Purpose.Voice]: "local-speech", [Purpose.Transcription]: "local-speech" };
+    const managed = {
+      managedInstanceID: instance.id,
+      model: instance.model,
+      compatibilityProfile: BackendID.NeMoSpeechV1,
+      modelProfile: ModelID.Nemotron35,
+      baseURL: "",
+      allowInsecureHTTP: false,
+      authenticationMode: AuthenticationMode.AuthenticationModeNone,
+      healthPath: "",
+      headers: {},
+    };
+    current = {
+      ...current,
+      ...managed,
+      voiceTranscription: {
+        ...current.voiceTranscription,
+        ...managed,
+        realtime: true,
+      },
+    };
+    current.savedConnections.selected = {
+      [Purpose.Voice]: "local-speech",
+      [Purpose.Transcription]: "local-speech",
+    };
   }
   const session = new Session({
     ...serviceWithStatus(() => CancellablePromise.resolve(idle), {

@@ -6,6 +6,8 @@ import {
 } from "./managedRuntime";
 import type { Status } from "$bindings/managedruntime";
 const status: Status = {
+  acquisition: { phase: "", bytes: 0, totalBytes: 0 },
+  operation: { id: 0, kind: "", model: "", outcome: "", error: "" },
   supported: true,
   state: "not_installed",
   enabled: false,
@@ -19,6 +21,68 @@ const status: Status = {
   models: [],
 };
 describe("local runtime presentation", () => {
+  it("tracks transferred bytes without treating a full transfer as verified success", () => {
+    const downloading = {
+      ...status,
+      state: "installing",
+      phase: "download",
+      operation: {
+        id: 1,
+        kind: "download",
+        model: "nemotron-3.5",
+        outcome: "running",
+        error: "",
+      },
+      acquisition: {
+        phase: "downloading",
+        bytes: 250_000_000,
+        totalBytes: 1_000_000_000,
+      },
+    };
+    expect(runtimePresentation(downloading)).toMatchObject({
+      percent: 25,
+      completion: "",
+    });
+    expect(
+      runtimePresentation({
+        ...downloading,
+        acquisition: { ...downloading.acquisition, bytes: 750_000_000 },
+      }).percent,
+    ).toBe(75);
+    const verifying = {
+      ...downloading,
+      acquisition: {
+        ...downloading.acquisition,
+        phase: "verifying",
+        bytes: 1_000_000_000,
+      },
+    };
+    expect(runtimePresentation(verifying)).toMatchObject({
+      percent: null,
+      completion: "",
+    });
+    expect(
+      runtimePresentation({
+        ...verifying,
+        phase: "",
+        state: "installed",
+        operation: { ...verifying.operation, outcome: "succeeded" },
+      }).completion,
+    ).not.toBe("");
+    for (const outcome of ["cancelled", "failed"]) {
+      expect(
+        runtimePresentation({
+          ...verifying,
+          operation: { ...verifying.operation, outcome },
+        }).completion,
+      ).not.toBe(
+        runtimePresentation({
+          ...verifying,
+          operation: { ...verifying.operation, outcome: "succeeded" },
+        }).completion,
+      );
+    }
+  });
   it("does not count a failed download as installed just because the release version is known", () => {
     expect(
       runtimePresentation({ ...status, state: "error", version: "v0.1.0" }),

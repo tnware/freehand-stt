@@ -234,6 +234,8 @@ describe("shared session event composition", () => {
       },
       activeModel: "nemotron-3.5",
       status: {
+        acquisition: { phase: "", bytes: 0, totalBytes: 0 },
+        operation: { id: 0, kind: "", model: "", outcome: "", error: "" },
         supported: true,
         state: "running",
         enabled: true,

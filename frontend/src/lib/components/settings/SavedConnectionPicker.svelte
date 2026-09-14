@@ -63,7 +63,11 @@
       size="sm"
       disabled={busy}
       onclick={selected ? onManage : onAdd}
-      >{selected ? "Edit connection" : "Add connection"}</Button
+      >{selected?.builtIn
+        ? "Connection details"
+        : selected
+          ? "Edit connection"
+          : "Add connection"}</Button
     >
   </div>
   {#if selected}<p
@@ -75,7 +79,7 @@
   {:else}<p class="mt-2 text-[13px] text-muted-foreground">
       {entries.length
         ? "Choose a saved connection to configure this feature."
-        : "Add a server or managed local runtime connection."}
+        : "Add a server connection or set up a local runtime. Built-in connections appear automatically."}
     </p>{/if}
   {#if dirty}<p class="mt-2 text-xs text-muted-foreground">
       Save or discard your edits before switching connections.

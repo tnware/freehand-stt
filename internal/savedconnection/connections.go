@@ -56,6 +56,8 @@ type Details struct {
 	Headers              map[string]string         `json:"headers"`
 }
 type Connection struct {
+	// BuiltIn marks a runtime-owned row, not a separately editable endpoint.
+	BuiltIn       bool      `json:"builtIn"`
 	ID            string    `json:"id"`
 	Name          string    `json:"name"`
 	Uses          []Purpose `json:"uses"`

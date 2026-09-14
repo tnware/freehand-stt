@@ -17,6 +17,8 @@ function row(id: string): InstanceStatus {
     },
     activeModel: "",
     status: {
+      acquisition: { phase: "", bytes: 0, totalBytes: 0 },
+      operation: { id: 0, kind: "", model: "", outcome: "", error: "" },
       supported: true,
       state: "installed",
       enabled: false,

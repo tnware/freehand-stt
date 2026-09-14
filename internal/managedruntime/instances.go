@@ -14,6 +14,8 @@ import (
 type ProviderID string
 
 const NeMoSpeechCPP ProviderID = "nemo-speech-cpp"
+const LlamaCPP ProviderID = "llama-cpp"
+const WhisperCPP ProviderID = "whisper-cpp"
 const MaxInstances = 8
 const LegacyInstanceID = "nemo-default"
 
@@ -48,7 +50,7 @@ type provider interface {
 	newAdapter(string) runtimeAdapter
 }
 
-var providers = map[ProviderID]provider{NeMoSpeechCPP: nemoProvider{}}
+var providers = map[ProviderID]provider{NeMoSpeechCPP: nemoProvider{}, LlamaCPP: llamaProvider, WhisperCPP: whisperProvider}
 
 func Qualify(id ProviderID, model string, role compatibility.Role) (Contract, error) {
 	p, ok := providers[id]

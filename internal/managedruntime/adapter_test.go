@@ -37,7 +37,7 @@ func WithManagedEndpointFixture(t *testing.T, exercise func(Endpoint)) {
 	if len(*calls) != 1 || (*calls)[0] != "--json model list" {
 		t.Fatal(calls)
 	}
-	if err := a.Pull(ctx, "nemotron-3.5"); err != nil {
+	if err := a.Pull(ctx, "nemotron-3.5", nil); err != nil {
 		t.Fatal(err)
 	}
 	_, models, err = a.Inspect(ctx)

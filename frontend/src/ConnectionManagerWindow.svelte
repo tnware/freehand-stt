@@ -8,6 +8,8 @@
     connectionWorkflows,
   } from "$lib/utils/connectionChoices";
   import ConnectionList from "$lib/components/settings/ConnectionList.svelte";
+  import BuiltInConnectionDetails from "$lib/components/settings/BuiltInConnectionDetails.svelte";
+  import * as WindowingService from "$bindings/windowing/service";
   import ConnectionSaveActions from "$lib/components/settings/ConnectionSaveActions.svelte";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   import { connectionStatusLabel } from "$lib/utils/connection";
@@ -28,11 +30,17 @@
     session,
     initialRequest,
     onReturn,
+    onManageRuntime = () => {
+      void WindowingService.OpenSettings("local-runtime").catch((cause) =>
+        session.messages.fail(cause),
+      );
+    },
     onCancelClose = () => {},
   }: {
     session: Session;
     initialRequest: ConnectionManagerRequest;
     onReturn: (purpose?: Purpose) => void;
+    onManageRuntime?: () => void;
     onCancelClose?: () => void;
   } = $props();
   let request = $state<ConnectionManagerRequest | null>(null);
@@ -57,6 +65,18 @@
     ),
   );
   let revision = 0;
+  const showingDetails = $derived(
+    !!editor.connectionDraft || !!selected?.builtIn,
+  );
+  const runtimeStatus = $derived(
+    session.runtime.statusFor(selected?.details.managedInstanceID ?? ""),
+  );
+  const runtimeInstance = $derived(
+    runtimeStatus?.instance ??
+      editor.applied?.managedRuntimes?.find(
+        (instance) => instance.id === selected?.details.managedInstanceID,
+      ),
+  );
 
   async function prepare() {
     request = initialRequest;
@@ -185,7 +205,7 @@
     } else if (selected) editor.beginConnection(selected);
   }
   function duplicate() {
-    if (!selected) return;
+    if (!selected || selected.builtIn) return;
     const connection = selected;
     navigate(() => {
       let prefix = connection.name;
@@ -222,7 +242,13 @@
     });
   }
   async function remove() {
-    if (!selected || activeUses.length || editor.connectionDirty) return;
+    if (
+      !selected ||
+      selected.builtIn ||
+      activeUses.length ||
+      editor.connectionDirty
+    )
+      return;
     const id = selected.id;
     editor.cancelConnectionEdit();
     if (
@@ -234,6 +260,7 @@
   }
   onMount(() => {
     void prepare();
+    void session.runtime.load();
     return clear;
   });
 </script>
@@ -259,7 +286,7 @@
     class="flex shrink-0 items-center justify-between gap-4 border-b border-hairline px-4 py-3"
   >
     <div class="flex min-w-0 items-center gap-3">
-      {#if editor.connectionDraft}<Button
+      {#if showingDetails}<Button
           variant="ghost"
           size="sm"
           disabled={busy}
@@ -281,10 +308,11 @@
       >
         {session.messages.error}
       </p>{/if}
-    <div class="manager-body" class:editing={!!editor.connectionDraft}>
+    <div class="manager-body" class:editing={showingDetails}>
       <aside class="connection-list bg-layer-fill">
         <ConnectionList
           catalog={editor.applied.savedConnections}
+          instances={session.runtime.instances}
           selected={selectedID}
           creating={editor.connectionDraft?.creating}
           {busy}
@@ -292,15 +320,17 @@
           onAdd={add}
         />
       </aside>
-      {#if editor.connectionDraft}<section
-          aria-label="Connection editor"
+      {#if showingDetails}<section
+          aria-label={selected?.builtIn
+            ? "Connection details"
+            : "Connection editor"}
           class="flex min-h-0 min-w-0 flex-1 flex-col"
         >
           <div
             class="flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-3"
           >
             <h2 class="truncate text-sm font-semibold">
-              {editor.connectionDraft.creating
+              {editor.connectionDraft?.creating
                 ? "New connection"
                 : (selected?.name ?? "Edit connection")}
             </h2>
@@ -316,7 +346,7 @@
                     align="end"
                     class="w-80 max-w-[calc(100vw-24px)] p-1.5"
                   >
-                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id) ) as role (role.id)}
+                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id), ) as role (role.id)}
                       {@const Icon = sectionByID(role.section).icon}
                       {@const current =
                         editor.applied.savedConnections.selected?.[role.id] ===
@@ -340,63 +370,75 @@
                     {/each}
                   </Menu.Content></Menu.Root
                 >
-                <Menu.Root
-                  ><Menu.Trigger disabled={busy}>
-                    {#snippet child({ props })}<Button
-                        {...props}
-                        size="icon-sm"
-                        variant="ghost"
-                        aria-label="Connection actions"><EllipsisIcon /></Button
-                      >{/snippet}
-                  </Menu.Trigger><Menu.Content
-                    align="end"
-                    class="w-56 max-w-[calc(100vw-24px)] p-1.5"
-                  >
-                    <Menu.Item
-                      class="gap-3 rounded-md px-3 py-2.5"
-                      disabled={(editor.applied.savedConnections.entries
-                        ?.length ?? 0) >= 96}
-                      onSelect={duplicate}><CopyIcon />Duplicate</Menu.Item
+                {#if !selected.builtIn}<Menu.Root
+                    ><Menu.Trigger disabled={busy}>
+                      {#snippet child({ props })}<Button
+                          {...props}
+                          size="icon-sm"
+                          variant="ghost"
+                          aria-label="Connection actions"
+                          ><EllipsisIcon /></Button
+                        >{/snippet}
+                    </Menu.Trigger><Menu.Content
+                      align="end"
+                      class="w-56 max-w-[calc(100vw-24px)] p-1.5"
                     >
-                    <Menu.Separator />
-                    <Menu.Item
-                      class="gap-3 rounded-md px-3 py-2.5"
-                      variant="destructive"
-                      disabled={!!activeUses.length || editor.connectionDirty}
-                      onSelect={() => {
-                        deleteOpen = true;
-                      }}
-                    >
-                      <Trash2Icon /><span class="flex-1">Delete</span>
-                      {#if activeUses.length}<span
-                          class="text-xs text-muted-foreground">In use</span
-                        >
-                        <span class="sr-only"
-                          >Choose another connection in its active workflows
-                          before deleting.</span
-                        >
-                      {:else if editor.connectionDirty}<span
-                          class="text-xs text-muted-foreground"
-                          >Unsaved edits</span
-                        >{/if}
-                    </Menu.Item>
-                  </Menu.Content></Menu.Root
-                >
+                      <Menu.Item
+                        class="gap-3 rounded-md px-3 py-2.5"
+                        disabled={(editor.applied.savedConnections.entries
+                          ?.length ?? 0) >= 96}
+                        onSelect={duplicate}><CopyIcon />Duplicate</Menu.Item
+                      >
+                      <Menu.Separator />
+                      <Menu.Item
+                        class="gap-3 rounded-md px-3 py-2.5"
+                        variant="destructive"
+                        disabled={!!activeUses.length || editor.connectionDirty}
+                        onSelect={() => {
+                          deleteOpen = true;
+                        }}
+                      >
+                        <Trash2Icon /><span class="flex-1">Delete</span>
+                        {#if activeUses.length}<span
+                            class="text-xs text-muted-foreground">In use</span
+                          >
+                          <span class="sr-only"
+                            >Choose another connection in its active workflows
+                            before deleting.</span
+                          >
+                        {:else if editor.connectionDirty}<span
+                            class="text-xs text-muted-foreground"
+                            >Unsaved edits</span
+                          >{/if}
+                      </Menu.Item>
+                    </Menu.Content></Menu.Root
+                  >{/if}
               </div>{/if}
           </div>
           <main
             class="connection-fields min-h-0 flex-1 overflow-y-auto overscroll-contain p-4"
           >
-            <ConnectionsSection
-              {editor}
-              bind:activateFor
-              chooseWorkflow={!request?.purpose || !request.create}
-              formID="connection-editor"
-              externalActions
-              error={session.messages.error}
-              onBack={() => leave(false)}
-              onSaved={saved}
-            />
+            {#if selected?.builtIn}
+              <BuiltInConnectionDetails
+                connection={selected}
+                instance={runtimeInstance}
+                status={runtimeStatus}
+                providers={session.runtime.providers}
+                {busy}
+                {onManageRuntime}
+                onWorkflow={(purpose) => void openWorkflow(purpose)}
+              />
+            {:else}<ConnectionsSection
+                {editor}
+                runtime={session.runtime}
+                bind:activateFor
+                chooseWorkflow={!request?.purpose || !request.create}
+                formID="connection-editor"
+                externalActions
+                error={session.messages.error}
+                onBack={() => leave(false)}
+                onSaved={saved}
+              />{/if}
             {#if selected}<details class="mt-4 border-t border-hairline py-3">
                 <summary class="cursor-pointer text-xs font-medium"
                   >Connection check · {connectionStatusLabel(
@@ -428,16 +470,16 @@
                 </div>
               </details>{/if}
           </main>
-          <footer
-            class="shrink-0 border-t border-hairline bg-layer-fill px-4 py-3"
-          >
-            <ConnectionSaveActions
-              {editor}
-              {activateFor}
-              formID="connection-editor"
-              onBack={() => leave(false)}
-            />
-          </footer>
+          {#if !selected?.builtIn}<footer
+              class="shrink-0 border-t border-hairline bg-layer-fill px-4 py-3"
+            >
+              <ConnectionSaveActions
+                {editor}
+                {activateFor}
+                formID="connection-editor"
+                onBack={() => leave(false)}
+              />
+            </footer>{/if}
         </section>{/if}
     </div>
   {:else if session.messages.error}<div class="p-5">

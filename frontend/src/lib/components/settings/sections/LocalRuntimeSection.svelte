@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import type { ProviderDescriptor } from "$bindings/managedruntime";
+  import { Role } from "$bindings/compatibility";
   import {
     catalogGroups,
     modelSize,
@@ -16,6 +17,7 @@
   import PlayIcon from "@lucide/svelte/icons/play";
   import SquareIcon from "@lucide/svelte/icons/square";
   import RefreshIcon from "@lucide/svelte/icons/refresh-cw";
+  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
 
   import TrashIcon from "@lucide/svelte/icons/trash-2";
 
@@ -34,16 +36,21 @@
   } = $props();
   const uid = $props.id();
   let selectedID = $state("");
+  let recoveryID = $state("");
   const provider = $derived(runtime.providers.find((p) => p.id === selectedID));
-  const row = $derived(
-    runtime.instances.find((item) => item.instance.provider === provider?.id),
+  const providerRows = $derived(
+    runtime.instances.filter((item) => item.instance.provider === provider?.id),
   );
-  const id = $derived(row?.instance.id ?? "");
+  const row = $derived(
+    providerRows.find((item) => item.instance.id === recoveryID) ??
+      providerRows[0],
+  );
+  const id = $derived(row?.instance.id ?? provider?.id ?? "");
   const status = $derived(row?.status);
   const view = $derived(runtimePresentation(status));
   const models = $derived(
-    (status?.models ?? []).filter((m) =>
-      provider?.models?.some((q) => q.id === m.id),
+    (status?.models?.length ? status.models : (provider?.models ?? [])).filter(
+      (m) => provider?.models?.some((q) => q.id === m.id),
     ),
   );
   const groups = $derived(catalogGroups(models));
@@ -80,6 +87,7 @@
     )
       return;
     selectedID = provider.id;
+    recoveryID = "";
     onAction(() => {
       void (async () => {
         let instance = runtime.instances.find(
@@ -121,7 +129,7 @@
     <div>
       <h2 class="text-base font-semibold">Managed runtimes</h2>
       <p class="mt-1 text-[13px] text-muted-foreground">
-        Install and run models here. Choose their tasks in Connections.
+        Each installed runtime appears automatically as a built-in Connection.
       </p>
     </div>
     <div class="flex items-center gap-1">
@@ -170,11 +178,302 @@
                 aria-expanded={selectedID === entry.id}
                 onclick={() => {
                   selectedID = selectedID === entry.id ? "" : entry.id;
+                  recoveryID = "";
                 }}>Manage</Button
               >
             {/if}
           </div>
         </div>
+        {#if row && status && selectedID === entry.id}
+          {#if providerRows.length > 1}
+            <div class="space-y-2 py-3" role="status">
+              <p class="text-sm text-muted-foreground">
+                Multiple saved installations need review. Keep one; remove
+                unwanted files and reassign their Connections before deleting
+                duplicate entries. Nothing is removed automatically.
+              </p>
+              <div class="flex flex-wrap gap-2">
+                {#each providerRows as legacy (legacy.instance.id)}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={id === legacy.instance.id}
+                    onclick={() => {
+                      recoveryID = legacy.instance.id;
+                    }}>{legacy.instance.name} · {legacy.instance.model}</Button
+                  >
+                {/each}
+              </div>
+            </div>
+          {/if}
+          <section
+            class="overflow-hidden rounded-xl border border-hairline bg-card p-5"
+            aria-label="Runtime setup"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  {status.backend
+                    ? `${status.backend.toUpperCase()} · `
+                    : ""}{status.version ||
+                    provider?.version ||
+                    "Not installed"}
+                </p>
+              </div>
+              <Badge variant="secondary">{view.label}</Badge>
+            </div>
+            <p class="mt-4 text-[13px] text-muted-foreground">
+              {operating
+                ? runtime.pendingFor(id) || view.activity
+                : !view.installed
+                  ? "First, install the runtime on this PC."
+                  : !selected?.installed
+                    ? `Next, download ${selected?.name ?? row.instance.model}.`
+                    : running
+                      ? "Ready. Select the built-in Connection in a compatible workflow’s connection picker."
+                      : "Your selected model is downloaded. Start the runtime when you need it."}
+            </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              {#if operating}<Button
+                  variant="outline"
+                  disabled={disabled || runtime.pendingFor(id) === "Cancelling"}
+                  onclick={() => void runtime.cancel(id)}
+                  >Cancel operation</Button
+                >
+              {:else if running}<Button
+                  variant="outline"
+                  disabled={locked}
+                  onclick={() => act(() => runtime.run(id, "Stop"))}
+                  ><SquareIcon class="size-4" />Stop runtime</Button
+                >
+              {:else if !view.installed}<Button
+                  disabled={locked}
+                  onclick={() => act(() => runtime.run(id, "Install"))}
+                  ><DownloadIcon class="size-4" />Install runtime</Button
+                >
+              {:else if !selected?.installed}<Button
+                  disabled={locked || !selected}
+                  onclick={() =>
+                    act(() => runtime.downloadModel(id, row.instance.model))}
+                  ><DownloadIcon class="size-4" />Download selected model</Button
+                >
+              {:else}<Button
+                  disabled={locked}
+                  onclick={() => act(() => runtime.run(id, "Start"))}
+                  ><PlayIcon class="size-4" />Start runtime</Button
+                >{/if}
+              {#if runtime.canRetry(id) && !operating}<Button
+                  variant="outline"
+                  disabled={locked}
+                  onclick={() => act(() => runtime.retry(id))}>Retry</Button
+                >{/if}
+            </div>
+            {#if operating}<div class="mt-3" role="status">
+                <p class="text-xs text-muted-foreground">
+                  {view.operationModel || view.activity}{view.percent !== null
+                    ? ` · ${view.percent}%`
+                    : ""}
+                </p>
+                {#if view.transferred}<p
+                    class="mt-1 text-xs tabular-nums text-muted-foreground"
+                  >
+                    {view.transferred}
+                  </p>{/if}
+                {#if view.percent !== null}
+                  <progress
+                    class="mt-2 h-1.5 w-full accent-primary"
+                    max="100"
+                    value={view.percent}
+                    aria-label="Runtime operation progress"
+                  ></progress>
+                {:else}
+                  <LoaderCircleIcon
+                    class="mt-2 size-4 animate-spin motion-reduce:animate-none text-muted-foreground"
+                    aria-label={view.activity}
+                  />
+                {/if}
+              </div>{/if}
+            {#if !operating && view.completion}<p
+                class="mt-3 text-sm"
+                role="status"
+              >
+                {view.operationModel
+                  ? `${view.operationModel}: `
+                  : ""}{view.completion}
+              </p>{/if}
+            <div class="mt-4 space-y-1 text-xs text-muted-foreground">
+              <p>Selected: {selected?.name ?? row.instance.model}</p>
+              <p class="break-all">
+                Active API model: {row.activeModel || "None"}
+              </p>
+              {#if row.activeModel && row.activeModel !== row.instance.model}<p>
+                  The API model identity differs from the selected catalog key.
+                </p>{/if}
+              <p>
+                Stopping or removing files keeps saved Connections selected;
+                there is no automatic fallback.
+              </p>
+            </div>
+          </section>
+          <details class="rounded-xl border border-hairline bg-card p-4">
+            <summary class="cursor-pointer text-sm font-medium"
+              >Runtime preferences</summary
+            >
+            <div class="mt-4 space-y-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <label for={`${uid}-autostart`} class="text-sm font-medium"
+                    >Start when Freehand launches</label
+                  >
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    Uses this runtime’s selected model. Does not download
+                    missing files.
+                  </p>
+                </div>
+                <Switch
+                  id={`${uid}-autostart`}
+                  checked={row.instance.autoStart}
+                  disabled={locked}
+                  onCheckedChange={(autoStart) =>
+                    act(() =>
+                      runtime.saveInstance({ ...row.instance, autoStart }),
+                    )}
+                />
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={locked || !view.installed}
+                  onclick={() => {
+                    confirmation = {
+                      instanceID: id,
+                      kind: "files",
+                      name: row.instance.name,
+                    };
+                  }}>Remove runtime files</Button
+                >{#if providerRows.length > 1}<Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={locked}
+                    onclick={() => {
+                      confirmation = {
+                        instanceID: id,
+                        kind: "instance",
+                        name: row.instance.name,
+                      };
+                    }}
+                    ><TrashIcon class="size-3.5" />Delete duplicate entry</Button
+                  >{/if}
+              </div>
+            </div>
+          </details>
+          <section class="space-y-3" aria-label="Model catalog">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold">Model catalog</h3>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  Browsing is metadata-only. Only Download fetches model files.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={locked || !view.installed}
+                onclick={() => act(() => runtime.run(id, "RefreshCatalog"))}
+                ><RefreshIcon class="size-3.5" />Refresh catalog</Button
+              >
+            </div>
+            {#if running}<p class="text-xs text-muted-foreground">
+                Stop the runtime before downloading or changing models.
+              </p>{/if}
+            {#each groups as group (group.label)}{#if group.models.length}<div
+                  class="space-y-2"
+                >
+                  <h4 class="text-xs font-medium text-muted-foreground">
+                    {group.label}
+                  </h4>
+                  {#each group.models as model (model.id)}
+                    <article
+                      class="rounded-xl border border-hairline bg-card p-4"
+                      aria-label={model.name}
+                    >
+                      <div
+                        class="flex flex-wrap items-start justify-between gap-3"
+                      >
+                        <div class="min-w-0 flex-[1_1_12rem]">
+                          <div class="flex flex-wrap items-center gap-2">
+                            <h5 class="text-sm font-semibold">{model.name}</h5>
+                            {#if model.recommended}<Badge variant="secondary"
+                                >Recommended</Badge
+                              >{/if}{#if model.id === row.instance.model}<Badge
+                                variant="outline">Selected</Badge
+                              >{/if}
+                          </div>
+                          <p class="mt-1.5 text-[13px] text-muted-foreground">
+                            {model.description}
+                          </p>
+                          <p class="mt-2 text-xs text-muted-foreground">
+                            {modelSize(model.sizeBytes)} · {model.contracts?.some(
+                              (contract) =>
+                                contract.role === Role.PostProcessing,
+                            )
+                              ? "Transcript cleanup"
+                              : model.realtime
+                                ? "Realtime + completed transcription"
+                                : "Completed transcription"}
+                          </p>
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={locked ||
+                              running ||
+                              model.id === row.instance.model}
+                            onclick={() =>
+                              act(() =>
+                                runtime.saveInstance({
+                                  ...row.instance,
+                                  model: model.id,
+                                }),
+                              )}
+                            >{model.id === row.instance.model
+                              ? "Selected"
+                              : "Select model"}</Button
+                          >
+                          {#if model.installed}<Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Delete ${model.name}`}
+                              title="Delete model"
+                              disabled={locked || running}
+                              onclick={() => {
+                                confirmation = {
+                                  instanceID: id,
+                                  kind: "model",
+                                  model: model.id,
+                                  name: model.name,
+                                };
+                              }}><TrashIcon class="size-3.5" /></Button
+                            >{:else}<Button
+                              variant="outline"
+                              size="sm"
+                              disabled={locked || running || !view.installed}
+                              onclick={() =>
+                                act(() => runtime.downloadModel(id, model.id))}
+                              ><DownloadIcon class="size-3.5" />Download</Button
+                            >{/if}
+                        </div>
+                      </div>
+                    </article>
+                  {/each}
+                </div>{/if}{/each}
+            {#if !models.length}<p class="text-sm text-muted-foreground">
+                Install the runtime, then refresh its qualified model catalog.
+              </p>{/if}
+          </section>
+        {/if}
       {/each}
     </div>
   {:else}
@@ -183,244 +482,6 @@
         ? "Reading runtime inventory…"
         : "No runtime adapters available. Use your own server in Connections."}
     </p>
-  {/if}
-  {#if row && status}
-    <section
-      class="overflow-hidden rounded-xl border border-hairline bg-card p-5"
-      aria-label="Runtime setup"
-    >
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 class="font-semibold">{provider?.name}</h3>
-          <p class="mt-1 text-xs text-muted-foreground">
-            {provider?.name ?? row.instance.provider} · {status.version ||
-              provider?.version ||
-              "Not installed"}
-          </p>
-        </div>
-        <Badge variant="secondary">{view.label}</Badge>
-      </div>
-      <p class="mt-4 text-[13px] text-muted-foreground">
-        {operating
-          ? runtime.pendingFor(id) || "Runtime operation in progress…"
-          : !view.installed
-            ? "First, install the runtime on this PC."
-            : !selected?.installed
-              ? `Next, download ${selected?.name ?? row.instance.model}.`
-              : running
-                ? "Process ready. Assign this runtime through Connections to use it for a task."
-                : "Your selected model is downloaded. Start the runtime when you need it."}
-      </p>
-      <div class="mt-3 flex flex-wrap items-center gap-2">
-        {#if operating}<Button
-            variant="outline"
-            disabled={disabled || runtime.pendingFor(id) === "Cancelling"}
-            onclick={() => void runtime.cancel(id)}>Cancel operation</Button
-          >
-        {:else if running}<Button
-            variant="outline"
-            disabled={locked}
-            onclick={() => act(() => runtime.run(id, "Stop"))}
-            ><SquareIcon class="size-4" />Stop runtime</Button
-          >
-        {:else if !view.installed}<Button
-            disabled={locked}
-            onclick={() => act(() => runtime.run(id, "Install"))}
-            ><DownloadIcon class="size-4" />Install runtime</Button
-          >
-        {:else if !selected?.installed}<Button
-            disabled={locked || !selected}
-            onclick={() =>
-              act(() => runtime.downloadModel(id, row.instance.model))}
-            ><DownloadIcon class="size-4" />Download selected model</Button
-          >
-        {:else}<Button
-            disabled={locked}
-            onclick={() => act(() => runtime.run(id, "Start"))}
-            ><PlayIcon class="size-4" />Start runtime</Button
-          >{/if}
-        {#if runtime.canRetry(id) && !operating}<Button
-            variant="outline"
-            disabled={locked}
-            onclick={() => act(() => runtime.retry(id))}>Retry</Button
-          >{/if}
-        <Button variant="ghost" size="sm" onclick={onConnections}
-          >Connect to a task</Button
-        >
-      </div>
-      {#if operating}<div class="mt-3" role="status">
-          <p class="text-xs text-muted-foreground">
-            {status.phase || runtime.pendingFor(id)}{view.percent !== null
-              ? ` · ${view.percent}%`
-              : ""}
-          </p>
-          <progress
-            class="mt-2 h-1.5 w-full accent-primary"
-            max="100"
-            value={view.percent ?? undefined}
-            aria-label="Runtime operation progress"
-          ></progress>
-        </div>{/if}
-      <div class="mt-4 space-y-1 text-xs text-muted-foreground">
-        <p>Selected: {selected?.name ?? row.instance.model}</p>
-        <p class="break-all">Active API model: {row.activeModel || "None"}</p>
-        {#if row.activeModel && row.activeModel !== row.instance.model}<p>
-            The API model identity differs from the selected catalog key.
-          </p>{/if}
-        <p>
-          Stopping or removing files keeps saved Connections selected; there is
-          no automatic fallback.
-        </p>
-      </div>
-    </section>
-    <details class="rounded-xl border border-hairline bg-card p-4">
-      <summary class="cursor-pointer text-sm font-medium"
-        >Runtime preferences</summary
-      >
-      <div class="mt-4 space-y-4">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <label for={`${uid}-autostart`} class="text-sm font-medium"
-              >Start when Freehand launches</label
-            >
-            <p class="mt-1 text-xs text-muted-foreground">
-              Uses this runtime’s selected model. Does not download missing
-              files.
-            </p>
-          </div>
-          <Switch
-            id={`${uid}-autostart`}
-            checked={row.instance.autoStart}
-            disabled={locked}
-            onCheckedChange={(autoStart) =>
-              act(() => runtime.saveInstance({ ...row.instance, autoStart }))}
-          />
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={locked || !view.installed}
-            onclick={() => {
-              confirmation = {
-                instanceID: id,
-                kind: "files",
-                name: row.instance.name,
-              };
-            }}>Remove runtime files</Button
-          ><Button
-            variant="ghost"
-            size="sm"
-            disabled={locked}
-            onclick={() => {
-              confirmation = {
-                instanceID: id,
-                kind: "instance",
-                name: row.instance.name,
-              };
-            }}><TrashIcon class="size-3.5" />Delete instance</Button
-          >
-        </div>
-      </div>
-    </details>
-    <section class="space-y-3" aria-label="Model catalog">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 class="text-sm font-semibold">Model catalog</h3>
-          <p class="mt-1 text-xs text-muted-foreground">
-            Browsing is metadata-only. Only Download fetches model files.
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={locked || !view.installed}
-          onclick={() => act(() => runtime.run(id, "RefreshCatalog"))}
-          ><RefreshIcon class="size-3.5" />Refresh catalog</Button
-        >
-      </div>
-      {#if running}<p class="text-xs text-muted-foreground">
-          Stop the runtime before downloading or changing models.
-        </p>{/if}
-      {#each groups as group (group.label)}{#if group.models.length}<div
-            class="space-y-2"
-          >
-            <h4 class="text-xs font-medium text-muted-foreground">
-              {group.label}
-            </h4>
-            {#each group.models as model (model.id)}
-              <article
-                class="rounded-xl border border-hairline bg-card p-4"
-                aria-label={model.name}
-              >
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div class="min-w-0 flex-[1_1_12rem]">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <h5 class="text-sm font-semibold">{model.name}</h5>
-                      {#if model.recommended}<Badge variant="secondary"
-                          >Recommended</Badge
-                        >{/if}{#if model.id === row.instance.model}<Badge
-                          variant="outline">Selected</Badge
-                        >{/if}
-                    </div>
-                    <p class="mt-1.5 text-[13px] text-muted-foreground">
-                      {model.description}
-                    </p>
-                    <p class="mt-2 text-xs text-muted-foreground">
-                      {modelSize(model.sizeBytes)} · {model.realtime
-                        ? "Realtime + completed speech"
-                        : "Completed speech"}
-                    </p>
-                  </div>
-                  <div class="flex flex-wrap gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={locked ||
-                        running ||
-                        model.id === row.instance.model}
-                      onclick={() =>
-                        act(() =>
-                          runtime.saveInstance({
-                            ...row.instance,
-                            model: model.id,
-                          }),
-                        )}
-                      >{model.id === row.instance.model
-                        ? "Selected"
-                        : "Select model"}</Button
-                    >
-                    {#if model.installed}<Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Delete ${model.name}`}
-                        title="Delete model"
-                        disabled={locked || running}
-                        onclick={() => {
-                          confirmation = {
-                            instanceID: id,
-                            kind: "model",
-                            model: model.id,
-                            name: model.name,
-                          };
-                        }}><TrashIcon class="size-3.5" /></Button
-                      >{:else}<Button
-                        variant="outline"
-                        size="sm"
-                        disabled={locked || running || !view.installed}
-                        onclick={() =>
-                          act(() => runtime.downloadModel(id, model.id))}
-                        ><DownloadIcon class="size-3.5" />Download</Button
-                      >{/if}
-                  </div>
-                </div>
-              </article>
-            {/each}
-          </div>{/if}{/each}
-      {#if !models.length}<p class="text-sm text-muted-foreground">
-          Install the runtime, then refresh its qualified model catalog.
-        </p>{/if}
-    </section>
   {/if}
   {#if problem}<p role="alert" class="text-sm text-destructive">
       {problem}

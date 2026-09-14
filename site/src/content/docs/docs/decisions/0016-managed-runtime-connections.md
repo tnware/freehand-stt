@@ -4,6 +4,8 @@ description: Separate built-in runtime lifecycle from per-task connection select
 ---
 
 - Status: Accepted
+- Partly superseded by [ADR 0018](../0018-built-in-runtime-connections/): configured runtimes supply built-in Connections automatically rather than requiring managed connection creation.
+- Partly superseded by [ADR 0017](../0017-managed-provider-installations/): one installation and running model per provider replaces user-created duplicate instances. Connections routing and safety contracts remain in force.
 - Supersedes: ADR 0015's singleton managed-mode routing and persistence decisions. Its acquisition, process ownership, privacy, and native qualification requirements remain in force.
 
 ## Decision

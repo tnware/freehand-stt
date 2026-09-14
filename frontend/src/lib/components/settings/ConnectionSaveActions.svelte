@@ -21,7 +21,7 @@
   const reason = $derived(
     !draft?.name.trim()
       ? "Enter a connection name."
-      : !draft.details.baseURL.trim()
+      : !draft.details.managedInstanceID && !draft.details.baseURL.trim()
         ? "Enter the server’s base URL."
         : draft.uses.length === 0
           ? "Choose at least one use for this connection."
@@ -34,11 +34,16 @@
 
 <div class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
   {#if reason}
-    <p id={explanationID} class="mr-auto max-w-full text-xs text-muted-foreground">
+    <p
+      id={explanationID}
+      class="mr-auto max-w-full text-xs text-muted-foreground"
+    >
       {reason}
     </p>
   {/if}
-  <Button type="button" variant="outline" disabled={busy} onclick={onBack}>Cancel</Button>
+  <Button type="button" variant="outline" disabled={busy} onclick={onBack}
+    >Cancel</Button
+  >
   <Button
     type="submit"
     form={formID}
@@ -46,6 +51,10 @@
     aria-describedby={reason ? explanationID : undefined}
   >
     {#if editor.saving}<LoaderCircleIcon class="animate-spin" />{/if}
-    {editor.saving ? "Saving…" : activateFor ? "Save and return" : "Save connection"}
+    {editor.saving
+      ? "Saving…"
+      : activateFor
+        ? "Save and return"
+        : "Save connection"}
   </Button>
 </div>

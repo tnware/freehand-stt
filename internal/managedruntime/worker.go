@@ -14,7 +14,7 @@ import (
 type runtimeAdapter interface {
 	Inspect(context.Context) (string, []Model, error)
 	Install(context.Context, func(float64)) (string, error)
-	Pull(context.Context, string) error
+	Pull(context.Context, string, func(AcquisitionProgress)) error
 	RemoveModel(context.Context, string) error
 	Remove(context.Context) error
 	Start(context.Context, string) (*ownedProcess, Endpoint, error)
@@ -46,6 +46,7 @@ var errNotReady = errors.New("Managed speech is not ready. Start the selected in
 
 // Lease identities remain distinct even when a deleted instance is recreated.
 var leaseGeneration atomic.Uint64
+var operationSequence atomic.Uint64
 
 type workerConfig struct {
 	Model                        string
@@ -140,6 +141,9 @@ func (s *worker) configureLocked(p workerConfig) *ownedProcess {
 
 // run reserves admission before calling guards, so UI tasks cannot overlap.
 func (s *worker) run(phase, state string, guard bool, work func(context.Context) error) error {
+	return s.runOperation(phase, state, guard, "", work)
+}
+func (s *worker) runOperation(phase, state string, guard bool, model string, work func(context.Context) error) error {
 	s.mu.Lock()
 	if err := s.admitLocked(); err != nil {
 		s.mu.Unlock()
@@ -172,6 +176,8 @@ func (s *worker) run(phase, state string, guard bool, work func(context.Context)
 	ctx, cancel := context.WithCancel(s.ctx)
 	s.operationCancel = cancel
 	s.status.Phase = phase
+	s.status.Acquisition = AcquisitionProgress{}
+	s.status.Operation = Operation{ID: operationSequence.Add(1), Kind: phase, Model: model, Outcome: "running"}
 	s.status.Error = ""
 	s.status.Progress = -1
 	if state != "" {
@@ -193,13 +199,14 @@ func (s *worker) run(phase, state string, guard bool, work func(context.Context)
 			cancel()
 		}
 		s.operationCancel = nil
-		s.busy = false
 		s.status.Phase = ""
 		s.status.Progress = -1
 		kind := "none"
+		s.status.Operation.Outcome = "succeeded"
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				kind = "cancelled"
+				s.status.Operation.Outcome = "cancelled"
 				if s.process == nil {
 					if s.status.Backend == "" {
 						s.status.State = "not_installed"
@@ -209,6 +216,7 @@ func (s *worker) run(phase, state string, guard bool, work func(context.Context)
 				}
 			} else {
 				kind = "runtime"
+				s.status.Operation.Outcome = "failed"
 				s.status.Error = "Managed speech could not complete the operation. Check setup and try again."
 				if errors.Is(err, errProviderRunning) {
 					s.status.Error = errProviderRunning.Error()
@@ -221,6 +229,7 @@ func (s *worker) run(phase, state string, guard bool, work func(context.Context)
 				}
 			}
 		}
+		s.status.Operation.Error = s.status.Error
 		if s.closed {
 			s.status.State = "stopped"
 			s.endpoint = Endpoint{}
@@ -229,7 +238,11 @@ func (s *worker) run(phase, state string, guard bool, work func(context.Context)
 		if s.logger != nil {
 			s.logger.Info("managed operation finished", "operation", phase, "error_kind", kind, "duration_ms", time.Since(started).Milliseconds())
 		}
+		// Publish the terminal result before another admission can replace it.
 		s.notify()
+		s.mu.Lock()
+		s.busy = false
+		s.mu.Unlock()
 	}()
 	return nil
 }
@@ -291,11 +304,21 @@ func (s *worker) DownloadModel(id string) error {
 	if !s.supportsModel(id) {
 		return errors.New("Choose a supported managed speech model.")
 	}
-	return s.run("download", "installing", false, func(ctx context.Context) error {
-		if err := s.adapter.Pull(ctx, id); err != nil {
+	return s.runOperation("download", "installing", false, id, func(ctx context.Context) error {
+		if err := s.adapter.Pull(ctx, id, func(p AcquisitionProgress) { s.acquisitionProgress(ctx, p) }); err != nil {
 			return err
 		}
-		return s.inspect(ctx)
+		if err := s.inspect(ctx); err != nil {
+			return err
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		for _, model := range s.status.Models {
+			if model.ID == id && model.Installed {
+				return nil
+			}
+		}
+		return errIntegrity
 	})
 }
 func (s *worker) RemoveModel(id string) error {

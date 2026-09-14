@@ -22,7 +22,6 @@ describe("settings navigation", () => {
     expect(
       sectionsInGroup("workflows").map((section) => section.label),
     ).toEqual([
-      "Local runtime",
       "Voice transcription",
       "Audio-file transcription",
       "Cleanup",
@@ -30,6 +29,7 @@ describe("settings navigation", () => {
     ]);
     expect(sectionsInGroup("shared").map((section) => section.id)).toEqual([
       "connections",
+      "local-runtime",
       "vocabulary",
     ]);
     expect(SETTINGS_SECTIONS.map((section) => section.id)).toEqual(

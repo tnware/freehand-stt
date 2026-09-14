@@ -71,14 +71,18 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	if err != nil {
 		return state, err
 	}
-	if len(rows) > savedconnection.MaxPerPurpose*4 {
+	if len(rows) > savedconnection.MaxPerPurpose*4+managedruntime.MaxInstances {
 		return state, errors.New("too many saved connections")
 	}
 	for _, row := range rows {
 		if savedconnection.ValidateName(row.Name) != nil || (row.CredentialAccount != "" && !connectionAccount(row.CredentialAccount)) {
 			return state, errors.New("invalid saved connection")
 		}
-		state.entries[row.ID] = storedConnection{Connection: savedconnection.Connection{ID: row.ID, Name: row.Name, Uses: []savedconnection.Purpose{}, Details: savedconnection.Details{ManagedInstanceID: row.ManagedInstanceID.String, CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), HealthPath: row.HealthPath, Headers: map[string]string{}}}, account: row.CredentialAccount}
+		builtIn := row.ManagedInstanceID.String != "" && row.ID == savedconnection.BuiltInID(row.ManagedInstanceID.String)
+		state.entries[row.ID] = storedConnection{Connection: savedconnection.Connection{BuiltIn: builtIn, ID: row.ID, Name: row.Name, Uses: []savedconnection.Purpose{}, Details: savedconnection.Details{ManagedInstanceID: row.ManagedInstanceID.String, CompatibilityProfile: compatibility.ID(row.CompatibilityProfile), BaseURL: row.BaseUrl, AllowInsecureHTTP: row.AllowInsecureHttp != 0, AuthenticationMode: config.AuthenticationMode(row.AuthenticationMode), HealthPath: row.HealthPath, Headers: map[string]string{}}}, account: row.CredentialAccount}
+	}
+	if state.manualCount() > savedconnection.MaxPerPurpose*4 {
+		return state, errors.New("too many saved connections")
 	}
 	uses, err := q.ListConnectionUses(ctx)
 	if err != nil {
@@ -88,7 +92,9 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 	for _, use := range uses {
 		p := savedconnection.Purpose(use.Purpose)
 		c, ok := state.entries[use.ConnectionID]
-		counts[p]++
+		if !c.BuiltIn {
+			counts[p]++
+		}
 		if !ok || !savedconnection.ValidPurpose(p) || counts[p] > savedconnection.Limit(p) {
 			return state, errors.New("invalid connection uses")
 		}
@@ -112,6 +118,9 @@ func readConnections(ctx context.Context, q *dbgen.Queries, v config.Settings, r
 			return state, errors.New("too many saved headers")
 		}
 		state.entries[h.ConnectionID] = c
+	}
+	if err := state.projectBuiltIns(v); err != nil {
+		return state, err
 	}
 	for _, c := range state.entries {
 		if savedconnection.ValidateUsesForSettings(v, c.Uses, c.Details) != nil {
@@ -158,6 +167,9 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	state.instances = append([]managedruntime.Instance{}, v.ManagedRuntimes...)
 	p := change.Purpose
 	current, ok := state.entries[change.ID]
+	if current.BuiltIn && change.Action != savedconnection.Select {
+		return v, errors.New("built-in connections are owned by their runtime; change the runtime instead")
+	}
 	if change.Action != savedconnection.Create && !(change.Action == savedconnection.Select && change.ID == "") && (!ok || (change.Action == savedconnection.Select && !current.Supports(p))) {
 		return v, errors.New("saved connection is unavailable; reload settings")
 	}
@@ -167,7 +179,7 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 			return v, err
 		}
 		for id, c := range state.entries {
-			if strings.EqualFold(c.Name, name) && ((change.Action != savedconnection.Rename && change.Action != savedconnection.Update) || id != change.ID) {
+			if !c.BuiltIn && strings.EqualFold(c.Name, name) && ((change.Action != savedconnection.Rename && change.Action != savedconnection.Update) || id != change.ID) {
 				return v, errors.New("a connection with that name already exists")
 			}
 		}
@@ -176,7 +188,7 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	target := ""
 	switch change.Action {
 	case savedconnection.Create, savedconnection.Duplicate:
-		if len(state.entries) >= savedconnection.MaxPerPurpose*4 {
+		if state.manualCount() >= savedconnection.MaxPerPurpose*4 {
 			return v, errors.New("connection limit reached")
 		}
 		var id [16]byte
@@ -277,6 +289,9 @@ func (s *Store) BeginConnectionChange(change savedconnection.Change, v config.Se
 	}
 	counts := map[savedconnection.Purpose]int{}
 	for _, c := range state.entries {
+		if c.BuiltIn {
+			continue
+		}
 		for _, role := range c.Uses {
 			counts[role]++
 			if counts[role] > savedconnection.Limit(role) {
@@ -355,6 +370,9 @@ func (s *Store) writeConnections(ctx context.Context, q *dbgen.Queries, v config
 	state := s.connections.clone()
 	if s.pendingConnections != nil {
 		state = s.pendingConnections.clone()
+	}
+	if err := state.projectBuiltIns(v); err != nil {
+		return state, err
 	}
 	if err := state.reconcileTransport(v); err != nil {
 		return state, err

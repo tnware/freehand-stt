@@ -23,6 +23,10 @@ Settings tests prove independent task selection, credential-free managed request
 snapshots, rejected unsupported roles, and unavailable-instance admission without
 remote fallback. Runtime tests exercise independent worker lifetime, retired
 directory ownership, stale endpoint generations, and the shared shutdown bound.
+Provider-admission checks reject new duplicate installations and keep a provider's
+process slot occupied through actual child exit. Distinct-provider concurrency
+must remain independent. Verify existing duplicate inventories can still be
+loaded and explicitly repaired without rewriting Connections.
 Assert external behavior at these boundaries rather than source strings, markup
 snapshots, or private call ordering. Existing realtime fixtures continue
 to check loaded-model identity, final-only delivery, and no automatic replay.
@@ -33,11 +37,36 @@ versioned NeMo fixture. It covers both qualified completed profiles and the
 Nemotron handshake, catching a missing `/v1` prefix even when readiness succeeds.
 The fixture does not load a model or establish native inference acceptance.
 
+Built-in Connections tests exercise automatic catalog membership, selecting and
+reopening task settings, immutable runtime-owned fields, legacy alias preservation,
+manual quotas, and stopped runtime rejection through the real storage/settings
+owners. UI acceptance selects a running local Cleanup Connection without creating
+an alias or entering a URL. Acquisition tests must observe changing counters and
+distinct verification and terminal outcomes for GGML and NeMo. NeMo fixtures use
+the pinned model manager's documented partial-file layout, not fabricated output
+lines. A 100% transfer must not render as success before verification completes.
+
+`TestManagedGGMLProductionClientRoutes` exercises the actual managed adapter
+boundary with production cleanup and completed-transcription clients. It checks
+llama.cpp `/v1/chat/completions` with S1-mini reasoning disabled and whisper.cpp
+`/inference` without introducing model discovery or inference inventory scans.
+`TestGGMLPinnedRuntimeZIPs` is opt-in: set `FREEHAND_TEST_GGML_ZIPS` to an isolated
+directory containing the pinned `llama.zip` and `whisper.zip`. It verifies the
+official archives through the installer, then launches owned processes with the
+managed arguments and `--help`; it neither downloads nor loads models.
+
+The Windows CPU pins are llama.cpp `b10809` and whisper.cpp `v1.8.3`; release and
+model URL/size/SHA-256 metadata live in `internal/managedruntime/provider_ggml.go`.
+Qualify pin changes using the exact official binary, not only fixtures matching
+the intended arguments. Native acceptance separately covers explicitly selected
+S1-mini cleanup alongside NeMo, whisper completed requests, cancellation, and
+Quit with both providers running.
+
 Browser fixtures should cover a fresh installation with no manual connections,
 recommended Nemotron realtime setup, supported catalog browsing without pulls,
 explicit download/cancel/retry, switching models, unsupported realtime, status
 refresh across windows, removal confirmation, and dirty-draft protection.
-At compact desktop sizes, assert that instance creation, install, selected-model download,
+At compact desktop sizes, assert that provider-row install, selected-model download,
 progress/cancel, and start/stop remain in view without scrolling or Playwright's
 automatic click scrolling. Download completion must not implicitly start inference.
 Exercise keyboard navigation, narrow layouts, light/dark appearance, and reduced

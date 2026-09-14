@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { session } from "$lib/stores/session.svelte";
+  import type { InstanceStatus } from "$bindings/managedruntime";
   import { type Catalog, type Connection } from "$bindings/savedconnection";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -13,6 +13,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   let {
     catalog,
+    instances = [],
     selected = "",
     creating = false,
     busy = false,
@@ -20,6 +21,7 @@
     onAdd,
   }: {
     catalog: Catalog;
+    instances?: InstanceStatus[];
     selected?: string;
     creating?: boolean;
     busy?: boolean;
@@ -29,7 +31,7 @@
   let query = $state("");
   const entries = $derived(
     (catalog.entries ?? [])
-      .filter((c) => connectionMatches(c, query, session.runtime.instances))
+      .filter((c) => connectionMatches(c, query, instances))
       .sort((a, b) => a.name.localeCompare(b.name)),
   );
 </script>
@@ -82,12 +84,13 @@
           >
           <span
             class="mt-0.5 block truncate text-xs text-muted-foreground"
-            title={connectionTargetLabel(connection, session.runtime.instances)}
-            >{connectionTargetLabel(
-              connection,
-              session.runtime.instances,
-            )}</span
+            title={connectionTargetLabel(connection, instances)}
+            >{connectionTargetLabel(connection, instances)}</span
           >
+          {#if connection.builtIn}<span
+              class="mt-1 block text-[11px] text-muted-foreground"
+              >Built-in · Runtime-owned</span
+            >{/if}
           {#if active.length}<span
               class="mt-1 block truncate text-[11px] text-muted-foreground"
               >In use · {active.map((role) => role.label).join(" · ")}</span
@@ -99,12 +102,12 @@
     {:else}<p class="px-3 py-6 text-center text-sm text-muted-foreground">
         {query
           ? "No matching connections."
-          : "Add a server or local runtime connection to get started."}
+          : "Add a server connection or set up a local runtime. Its built-in connection appears automatically."}
       </p>{/each}
   </nav>
   <p
     class="shrink-0 border-t border-hairline px-4 py-2 text-xs text-muted-foreground"
   >
-    {catalog.entries?.length ?? 0} saved connections
+    {catalog.entries?.length ?? 0} connections
   </p>
 </div>

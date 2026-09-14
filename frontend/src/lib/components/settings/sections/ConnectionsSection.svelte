@@ -11,7 +11,7 @@
   const navigate = getContext<
     ((section: SettingsSectionID) => void) | undefined
   >(SETTINGS_NAVIGATION);
-  const runtime = session.runtime;
+  import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   onMount(() => {
     void runtime.load();
   });
@@ -40,6 +40,7 @@
 
   let {
     editor,
+    runtime = session.runtime,
     activateFor = $bindable(),
     chooseWorkflow = false,
     formID,
@@ -49,6 +50,7 @@
     onSaved,
   }: {
     editor: SettingsEditor;
+    runtime?: ManagedRuntimeState;
     activateFor?: Purpose;
     chooseWorkflow?: boolean;
     formID?: string;
@@ -290,27 +292,31 @@
               placeholder="For example, Office speech server"
             />{/snippet}
         </ValueRow>
-        <ValueRow id="connection-target" label="Connection target">
-          {#snippet control()}
-            <Select.Root
-              type="single"
-              value={managed ? "managed" : "manual"}
-              onValueChange={setTarget}
-              disabled={busy}
-            >
-              <Select.Trigger id="connection-target" class="w-full"
-                >{managed
-                  ? "Managed local runtime"
-                  : "Manual server"}</Select.Trigger
+        {#if !form.creating && managed}<ValueRow
+            id="connection-target"
+            label="Connection target"
+          >
+            {#snippet control()}
+              <Select.Root
+                type="single"
+                value={managed ? "managed" : "manual"}
+                onValueChange={setTarget}
+                disabled={busy}
               >
-              <Select.Content
-                ><Select.Item value="manual">Manual server</Select.Item
-                ><Select.Item value="managed">Managed local runtime</Select.Item
-                ></Select.Content
-              >
-            </Select.Root>
-          {/snippet}
-        </ValueRow>
+                <Select.Trigger id="connection-target" class="w-full"
+                  >{managed
+                    ? "Managed local runtime"
+                    : "Manual server"}</Select.Trigger
+                >
+                <Select.Content
+                  ><Select.Item value="manual">Manual server</Select.Item
+                  ><Select.Item value="managed"
+                    >Managed local runtime</Select.Item
+                  ></Select.Content
+                >
+              </Select.Root>
+            {/snippet}
+          </ValueRow>{/if}
         {#if managed}
           <ValueRow
             id="connection-instance"
@@ -349,7 +355,7 @@
             <p class="text-xs text-muted-foreground">
               {instance
                 ? `Selected model: ${instance.model}. Stopping this runtime keeps the connection selected; it never falls back to a server.`
-                : "Add an instance in runtime settings, then select it here."}
+                : "This saved alias refers to an unavailable runtime. Select an existing runtime to recover it, or switch to a manual server."}
             </p>
             {#if runtime.error}<p role="alert" class="text-xs text-destructive">
                 {runtime.error}

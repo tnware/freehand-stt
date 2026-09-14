@@ -71,7 +71,7 @@ func SaveManagedInstances(s *Service, instances []managedruntime.Instance) error
 			ConnectionCatalog() savedconnection.Catalog
 		}); ok {
 			for _, c := range store.ConnectionCatalog().Entries {
-				if c.Details.ManagedInstanceID != "" {
+				if c.Details.ManagedInstanceID != "" && !c.BuiltIn {
 					for _, p := range c.Uses {
 						if _, _, err := config.ManagedContract(next, c.Details.ManagedInstanceID, roleForPurpose(p)); err != nil {
 							return err

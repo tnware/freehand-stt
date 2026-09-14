@@ -73,6 +73,11 @@ func (p *progressWriter) Write(b []byte) (int, error) {
 	return n, e
 }
 func installAsset(ctx context.Context, root string, a asset, client *http.Client, progress func(float64)) error {
+	return installBinaryAsset(ctx, root, a, "bin/nemo-speech.exe", client, progress)
+}
+
+// expectedExecutable is a private, built-in recipe path, never renderer input.
+func installBinaryAsset(ctx context.Context, root string, a asset, expectedExecutable string, client *http.Client, progress func(float64)) error {
 	if e := safeRoot(root); e != nil {
 		return e
 	}
@@ -118,7 +123,7 @@ func installAsset(ctx context.Context, root string, a asset, client *http.Client
 	if e = extractArchive(ctx, archive, stage); e != nil {
 		return e
 	}
-	if _, e = os.Stat(filepath.Join(stage, "bin", "nemo-speech.exe")); e != nil {
+	if st, statErr := os.Stat(filepath.Join(stage, filepath.FromSlash(expectedExecutable))); statErr != nil || !st.Mode().IsRegular() {
 		return errIntegrity
 	}
 	if e = os.WriteFile(filepath.Join(stage, ".backend"), []byte(a.backend), 0600); e != nil {

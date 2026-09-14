@@ -1,6 +1,6 @@
 ---
-title: Local speech runtime
-description: Install a managed Windows speech runtime and use Nemotron live transcription on this PC.
+title: Local runtimes
+description: Set up local transcription and cleanup with NeMo, whisper.cpp, and llama.cpp on Windows.
 ---
 
 On Windows, Freehand can install and manage NeMo-Speech.cpp for local Voice and
@@ -30,17 +30,18 @@ application-data directory. They are not installed globally or added to PATH.
 
 ## Set up local transcription
 
-1. Open **Settings → Local runtime**.
-2. Choose **Add runtime**, give it a name, and keep the recommended Nemotron 3.5
-   Streaming model. Adding it does not download or start anything.
-3. Choose **Install runtime** at the top of the page. Progress and cancellation
-   stay in that same area.
+1. Open **Settings → Local runtime**, under **Connections & vocabulary**.
+2. Find **NeMo-Speech.cpp** in the runtime list and choose **Install**. Keep the
+   recommended Nemotron 3.5 Streaming model. Installation does not download it.
+3. The row opens its setup controls. Progress and cancellation stay in that area;
+   use **Manage** to reopen it later.
 4. When installation finishes, the action changes to **Download selected model**.
    Choose it to download Nemotron, or use the catalog below to choose an alternative.
    Browsing the catalog does not download or load any model.
 5. After downloading, choose **Start runtime** in the same area. Wait for **Running**.
-6. Open **Manage connections**, add a managed Connection referencing this runtime,
-   and select it for Voice. Complete the microphone and recording setup.
+6. In Voice's connection picker, select the built-in **NeMo-Speech.cpp** Connection.
+   It appears automatically; no URL, API key, or additional connection setup is needed.
+   Complete the microphone and recording setup.
 7. In Voice's transcription settings, enable **Realtime transcription** for the
    recommended live-preview workflow. Captions and language remain Voice options.
 
@@ -56,10 +57,42 @@ in Voice keeps its connection and model selected and uses completed recording.
 
 ## Choose another model
 
+The runtime list also offers **whisper.cpp** for completed transcription and
+**llama.cpp** for local cleanup. Each runtime is installed once and runs one
+selected model at a time. Different runtimes can run together.
+
+### whisper.cpp transcription
+
+Choose **Install** on the whisper.cpp row, download a model from its catalog,
+and choose **Start runtime**. Select its built-in Connection for Voice or audio
+files. Voice uses completed transcription, not
+realtime; file response streaming is also unavailable. This managed adapter uses
+CPU execution. Larger models need more memory and take longer to process.
+
+### Local cleanup with S1-mini
+
+Install **llama.cpp**, download **S1-mini by Superwhisper**, and start the runtime.
+Select its built-in Connection in **Cleanup**, and enable cleanup.
+NeMo can continue handling Voice while llama.cpp cleans up its completed text.
+This managed llama.cpp adapter runs on CPU, leaving NeMo's GPU allocation alone.
+
+S1-mini is English-only and runs with reasoning disabled. If the input language
+is unknown, Freehand assumes English for cleanup; explicitly non-English input
+skips S1-mini. Failed cleanup keeps the raw transcript. The model is not a
+general chat assistant or a speech-synthesis model. See
+[transcript cleanup](../post-processing/) for its style and structure controls.
+
+### NeMo models
+
 The catalog contains models from NeMo's installed index that match Freehand's
 supported speech profiles. It is not a general Hugging Face browser. A model
 must be downloaded before it can run. Realtime is available only for a qualified
 streaming model; a completed-only selection cannot enable live mode.
+
+Downloads show transferred bytes and a percentage while the total is known,
+including NeMo downloads. Preparation and verification use an activity indicator.
+A full transfer is not finished until verification succeeds; the setup area then
+confirms completion. Cancellation and failure show separate outcomes.
 
 Downloads can be cancelled and retried. Stop active transcription before
 switching or removing the loaded model. Removing a downloaded model frees its
@@ -68,8 +101,8 @@ managed cache data; using it again requires another download.
 ## Stop, disable, or remove
 
 Stopping releases the running server; starting it again reloads the selected
-model. **Start when Freehand launches**, under **Instance preferences**, enables
-startup for an installed instance without downloading missing files.
+model. **Start when Freehand launches**, under **Runtime preferences**, enables
+startup for an installed runtime without downloading missing files.
 Quitting Freehand stops the processes it owns, including active downloads.
 
 To switch back to a manual service, select its saved Connection in the task's
@@ -77,15 +110,20 @@ connection picker. Manual connections retain their URLs, models, and API keys.
 Stopping a runtime does not change any task's selection. A local runtime failure
 does not automatically send audio to another server.
 
-**Remove runtime files**, under **Instance preferences**, deletes that instance's
+**Remove runtime files**, under **Runtime preferences**, deletes that runtime's
 managed binaries and model data after
 confirmation. It does not remove manual connections, their credentials, source
 audio files, or models installed by another application.
 
 File removal leaves its Connections selected but unavailable until repaired;
-it cannot silently switch transcription to a saved server. **Delete instance**
-removes the inventory entry only, not downloaded files. Reassign or remove its
-Connections first. Other runtime instances remain untouched.
+it cannot silently switch transcription to a saved server. Other runtimes remain
+untouched.
+
+If an earlier setup left duplicate installations, **Manage** exposes each one
+for review. Keep one, remove unwanted runtime files, and reassign or remove its
+Connections before choosing **Delete duplicate entry**. Deleting the entry alone
+does not remove downloaded files. Freehand does not choose which copy to keep
+or run two copies of the same runtime.
 
 ## Privacy and recovery
 

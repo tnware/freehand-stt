@@ -10,6 +10,22 @@ choose their own connection and can share the same server.
 Open **Settings → Connections** or **Manage connections…** in a task's connection
 picker. Search by name, backend, or address, then select an entry to edit it.
 
+## Built-in local connections
+
+On Windows, each configured [local runtime](../local-runtime/) appears automatically
+as a **Built-in** Connection. Install its runtime and model, start it, then select
+it directly from a compatible task's connection picker. No separate connection
+creation, URL, or API key is needed. llama.cpp with S1-mini appears for Cleanup;
+NeMo and whisper.cpp appear for their qualified transcription tasks.
+
+The runtime owns its name, endpoint, model, and supported uses. These are not
+editable connection fields. Manage the runtime to change its downloaded/loaded
+model; use the task's settings for language, realtime mode, and cleanup options.
+Built-in Connections cannot be duplicated or deleted from the connection editor.
+They remain visible but unavailable when stopped, without changing any task's
+selection or falling back to a server. Previously saved local connection aliases
+remain intact. Built-in rows do not count against the manual connection limit.
+
 ## Add a connection while setting up a task
 
 1. Open the task's connection picker and choose **Add connection…**.

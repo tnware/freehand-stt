@@ -23,6 +23,7 @@ function configured(): Settings {
       entries: [
         {
           id: "first",
+          builtIn: false,
           name: "First",
           uses: [Purpose.Transcription],
           hasCredential: true,
@@ -46,7 +47,95 @@ const select = {
   name: "",
 };
 
+describe("built-in connection ownership", () => {
+  function setup() {
+    const config = configured();
+    const builtin = { ...config.savedConnections.entries![0], builtIn: true };
+    config.savedConnections.entries = [builtin];
+    const SaveSettings = vi.fn(() => CancellablePromise.resolve(config));
+    const { editor } = createEditor(
+      serviceWithStatus(() => CancellablePromise.resolve(idle), {
+        settings: { SaveSettings },
+      }),
+    );
+    editor.applySettingsSnapshot(config);
+    return { editor, builtin, SaveSettings };
+  }
+  it("does not open an editable or credential-bearing draft for a runtime-owned row", () => {
+    const { editor, builtin } = setup();
+    editor.beginConnection(builtin);
+    expect(editor.connectionDraft).toBeNull();
+    expect(editor.dirty).toBe(false);
+  });
+  it.each([Action.Update, Action.Rename, Action.Duplicate, Action.Delete])(
+    "rejects %s of a built-in before saving",
+    async (action) => {
+      const { editor, builtin, SaveSettings } = setup();
+      expect(
+        await editor.changeConnection({
+          action,
+          id: builtin.id,
+          name: "Changed",
+        }),
+      ).toBe(false);
+      expect(SaveSettings).not.toHaveBeenCalled();
+    },
+  );
+  it("allows selecting a built-in without creating another connection", async () => {
+    const { editor, builtin, SaveSettings } = setup();
+    expect(
+      await editor.changeConnection({
+        action: Action.Select,
+        id: builtin.id,
+        purpose: Purpose.Transcription,
+        name: "",
+      }),
+    ).toBe(true);
+    expect(SaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionChange: expect.objectContaining({
+          action: Action.Select,
+          id: builtin.id,
+        }),
+      }),
+    );
+  });
+});
+
 describe("saved connection editor", () => {
+  it("checks managed file and cleanup selections without sending empty manual transports or credential drafts", async () => {
+    const config = configured();
+    config.managedInstanceID = "whisper-local";
+    config.baseURL = "";
+    config.postProcessing.managedInstanceID = "llama-local";
+    config.postProcessing.baseURL = "";
+    const services = serviceWithStatus(() => CancellablePromise.resolve(idle));
+    services.connection.TestSavedConnection = vi.fn(() =>
+      CancellablePromise.resolve(connectionResult),
+    );
+    services.connection.TestConnection = vi.fn(() => {
+      throw new Error("manual file transport used");
+    });
+    services.connection.TestPostProcessingConnection = vi.fn(() => {
+      throw new Error("manual cleanup transport used");
+    });
+    const { editor } = createEditor(services);
+    editor.applySettingsSnapshot(config);
+    await editor.testAppliedConnection(Purpose.Transcription);
+    await editor.testAppliedConnection(Purpose.Cleanup);
+    expect(editor.connection).toEqual(connectionResult);
+    expect(editor.processingConnection).toEqual(connectionResult);
+    expect(services.connection.TestSavedConnection).toHaveBeenCalledWith(
+      "first",
+    );
+    expect(services.connection.TestSavedConnection).toHaveBeenCalledWith(
+      "cleanup",
+    );
+    expect(services.connection.TestConnection).not.toHaveBeenCalled();
+    expect(
+      services.connection.TestPostProcessingConnection,
+    ).not.toHaveBeenCalled();
+  });
   it("clears manual transport and bounded credential drafts when targeting a managed instance", () => {
     const { editor } = createEditor(
       serviceWithStatus(() => CancellablePromise.resolve(idle)),

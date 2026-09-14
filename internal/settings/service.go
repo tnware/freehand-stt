@@ -572,6 +572,27 @@ func (s *Service) SaveSettings(request SaveSettingsRequest) (result SettingsDTO,
 			return SettingsDTO{}, errors.New("model and connection changes must be separate")
 		}
 		if change := request.ConnectionChange; change != nil {
+			managedAlias := change.Action == savedconnection.Create && change.Details != nil && change.Details.ManagedInstanceID != ""
+			if change.Action == savedconnection.Update || change.Action == savedconnection.Duplicate {
+				if catalog, ok := s.store.(interface {
+					ConnectionCatalog() savedconnection.Catalog
+				}); ok {
+					for _, c := range catalog.ConnectionCatalog().Entries {
+						if c.ID != change.ID {
+							continue
+						}
+						if change.Action == savedconnection.Duplicate {
+							managedAlias = c.Details.ManagedInstanceID != ""
+						} else if change.Details != nil {
+							managedAlias = change.Details.ManagedInstanceID != "" && change.Details.ManagedInstanceID != c.Details.ManagedInstanceID
+						}
+						break
+					}
+				}
+			}
+			if managedAlias {
+				return SettingsDTO{}, errors.New("managed runtimes provide built-in connections automatically; select the runtime connection instead")
+			}
 			store, ok := s.store.(interface {
 				BeginConnectionChange(savedconnection.Change, config.Settings) (config.Settings, error)
 				StageConnectionCredential(string, bool) error

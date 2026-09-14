@@ -42,7 +42,7 @@ func TestManagerRealAdaptersIsolatePathsAndRestartGenerations(t *testing.T) {
 			dir = filepath.Join(root, "managed-runtime")
 		}
 		a, _ := managedAdapterFixture(t, dir)
-		if err := a.Pull(t.Context(), i.Model); err != nil {
+		if err := a.Pull(t.Context(), i.Model, nil); err != nil {
 			t.Fatal(err)
 		}
 		m.workers[i.ID].adapter = a

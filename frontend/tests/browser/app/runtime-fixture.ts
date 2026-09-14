@@ -110,6 +110,8 @@ export function createRuntimeFixture(
     instance,
     activeModel: "",
     status: {
+      acquisition: { phase: "", bytes: 0, totalBytes: 0 },
+      operation: { id: 0, kind: "", model: "", outcome: "", error: "" },
       supported,
       state: "not_installed",
       enabled: false,
@@ -151,6 +153,7 @@ export function createRuntimeFixture(
   preferences();
   const calls: string[] = [];
   const downloading = new Map<string, string>();
+  let operationID = 0;
   let publish: (row: InstanceStatus) => void = () => {};
   const get = (id: string) => {
     const row = rows.find((r) => r.instance.id === id);
@@ -204,7 +207,15 @@ export function createRuntimeFixture(
     Cancel: async ({ instanceID }) => {
       calls.push(`Cancel:${instanceID}`);
       downloading.delete(instanceID);
-      change(instanceID, { state: "installed", phase: "", progress: -1 });
+      change(instanceID, {
+        state: "installed",
+        phase: "",
+        progress: -1,
+        operation: {
+          ...get(instanceID).status.operation,
+          outcome: "cancelled",
+        },
+      });
     },
     RefreshCatalog: async ({ instanceID }) => {
       calls.push(`RefreshCatalog:${instanceID}`);
@@ -225,7 +236,23 @@ export function createRuntimeFixture(
     DownloadModel: async ({ instanceID, model }) => {
       calls.push(`DownloadModel:${instanceID}:${model}`);
       downloading.set(instanceID, model);
-      change(instanceID, { phase: "download", progress: -1 });
+      change(instanceID, {
+        state: "installing",
+        phase: "download",
+        progress: 0,
+        operation: {
+          id: ++operationID,
+          kind: "download",
+          model,
+          outcome: "running",
+          error: "",
+        },
+        acquisition: {
+          phase: "downloading",
+          bytes: 0,
+          totalBytes: 1_000_000_000,
+        },
+      });
     },
     RemoveModel: async ({ instanceID, model }) => {
       calls.push(`RemoveModel:${instanceID}:${model}`);
@@ -245,6 +272,11 @@ export function createRuntimeFixture(
       const model = downloading.get(instanceID);
       if (!model) throw new Error("No pending fixture download");
       change(instanceID, {
+        state: "installed",
+        operation: {
+          ...get(instanceID).status.operation,
+          outcome: "succeeded",
+        },
         phase: "",
         progress: -1,
         models:

@@ -43,11 +43,35 @@ func (a *nemoAdapter) executable() string {
 	return filepath.Join(a.root, "runtime", "bin", "nemo-speech.exe")
 }
 func (a *nemoAdapter) command(ctx context.Context, args ...string) ([]byte, error) {
+	return a.commandProgress(ctx, nil, args...)
+}
+func (a *nemoAdapter) commandProgress(ctx context.Context, sample func(), args ...string) ([]byte, error) {
 	p, err := a.launch(ctx, a.executable(), args, filepath.Join(a.root, "runtime"), childEnvironment(a.root, os.Environ()))
 	if err != nil {
 		return nil, err
 	}
+	if sample != nil {
+		tick := time.NewTicker(acquisitionInterval)
+		defer tick.Stop()
+		sample()
+	waitProgress:
+		for {
+			select {
+			case <-ctx.Done():
+				break waitProgress
+			case <-p.done:
+				break waitProgress
+			case <-tick.C:
+				sample()
+			}
+		}
+	}
 	if err = p.wait(ctx); err != nil {
+		// Job cancellation can race the child's exit notification. Its OS exit
+		// error is not an acquisition failure when our cancellation caused it.
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, err
 	}
 	p.stdout.mu.Lock()
@@ -168,7 +192,9 @@ func (a *nemoAdapter) Install(ctx context.Context, progress func(float64)) (stri
 	}
 	return selected.backend, nil
 }
-func (a *nemoAdapter) Pull(ctx context.Context, id string) error {
+func (a *nemoAdapter) Pull(ctx context.Context, id string, progress func(AcquisitionProgress)) error {
+	report := acquisitionReporter{emit: progress}
+	report.update(AcquisitionProgress{Phase: "preparing"})
 	spec, ok := modelSpecs[id]
 	if !ok {
 		return errors.New("Choose a supported managed speech model.")
@@ -191,7 +217,9 @@ func (a *nemoAdapter) Pull(ctx context.Context, id string) error {
 	}
 	bounded, cancel := context.WithTimeout(ctx, 45*time.Minute)
 	defer cancel()
-	_, pullErr := a.command(bounded, "--json", "model", "pull", spec.repo)
+	_, pullErr := a.commandProgress(bounded, func() {
+		report.update(nemoAcquiredBytes(a.root, spec))
+	}, "--json", "model", "pull", spec.repo)
 	if err := a.clearDownloadDiagnostics(); err != nil {
 		return err
 	}
@@ -201,6 +229,9 @@ func (a *nemoAdapter) Pull(ctx context.Context, id string) error {
 	if err = safeRoot(a.root); err != nil {
 		return err
 	}
+	measured := nemoAcquiredBytes(a.root, spec)
+	measured.Phase = "verifying"
+	report.update(measured)
 	return verifyFile(ctx, spec.path(a.root), spec.size, spec.sha256)
 }
 func (a *nemoAdapter) RemoveModel(ctx context.Context, id string) error {
@@ -343,7 +374,7 @@ func (a *nemoAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 		stop, done := context.WithTimeout(context.WithoutCancel(ctx), 4*time.Second)
 		defer done()
 		_ = p.wait(stop)
-		return nil, Endpoint{}, err
+		return p, Endpoint{}, err
 	}
 	// Readiness uses the server origin; speech clients append their routes to
 	// the OpenAI-compatible API base, which includes NeMo's /v1 prefix.

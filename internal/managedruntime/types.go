@@ -50,16 +50,39 @@ type Model struct {
 	// Behavior is the resolved model/backend contract, independent of manual settings.
 	Behavior *modelprofile.Profile `json:"behavior,omitempty"`
 }
+
+// Operation is an admitted asynchronous operation, not a request receipt.
+// Outcome is running, succeeded, cancelled, or failed. The latest result stays
+// in status until another operation is admitted; ID is unique for this process.
+type Operation struct {
+	ID      uint64 `json:"id"`
+	Kind    string `json:"kind"`
+	Model   string `json:"model"`
+	Outcome string `json:"outcome"`
+	Error   string `json:"error"`
+}
+
+// AcquisitionProgress contains only bounded counters and an allowlisted phase.
+// TotalBytes is zero when unknown. Bytes measure acquired bytes, not verified
+// bytes; a full transfer is never evidence of successful installation.
+type AcquisitionProgress struct {
+	Phase      string `json:"phase"`
+	Bytes      int64  `json:"bytes"`
+	TotalBytes int64  `json:"totalBytes"`
+}
+
 type Status struct {
-	Supported     bool    `json:"supported"`
-	State         string  `json:"state"`
-	Enabled       bool    `json:"enabled"`
-	SelectedModel string  `json:"selectedModel"`
-	Realtime      bool    `json:"realtime"`
-	Backend       string  `json:"backend"`
-	Version       string  `json:"version"`
-	Progress      float64 `json:"progress"`
-	Phase         string  `json:"phase"`
-	Error         string  `json:"error"`
-	Models        []Model `json:"models"`
+	Acquisition   AcquisitionProgress `json:"acquisition"`
+	Operation     Operation           `json:"operation"`
+	Supported     bool                `json:"supported"`
+	State         string              `json:"state"`
+	Enabled       bool                `json:"enabled"`
+	SelectedModel string              `json:"selectedModel"`
+	Realtime      bool                `json:"realtime"`
+	Backend       string              `json:"backend"`
+	Version       string              `json:"version"`
+	Progress      float64             `json:"progress"`
+	Phase         string              `json:"phase"`
+	Error         string              `json:"error"`
+	Models        []Model             `json:"models"`
 }
