@@ -14,11 +14,14 @@
   let {
     active,
     onSelect,
+    onOpenChain,
     invalidSection,
     navigationRef = $bindable(null),
   }: {
     active: SettingsSectionID;
     onSelect: (id: SettingsSectionID) => void;
+    /** Returns to the workflow chain, where the same controls save at once. */
+    onOpenChain?: () => void;
     invalidSection?: SettingsSectionID;
     navigationRef?: HTMLElement | null;
   } = $props();
@@ -179,4 +182,25 @@
       </div>
     {/if}
   {/each}
+
+  {#if onOpenChain}
+    <div class="mt-auto hidden pt-4 min-[760px]:block">
+      <!-- These pages are the full form. The chain carries the same few
+           controls inline and saves them immediately, which is where most
+           visits actually want to go. -->
+      <div
+        class="rounded-lg border border-accent-edge bg-accent-wash p-2.5 text-[11.5px] leading-relaxed"
+      >
+        <p class="text-secondary-foreground">
+          Connection, model and cleanup are also on each workflow&#39;s chain,
+          where changes save as you make them.
+        </p>
+        <button
+          type="button"
+          class="mt-1.5 text-accent-text underline-offset-2 hover:underline"
+          onclick={onOpenChain}>Open the Voice chain →</button
+        >
+      </div>
+    </div>
+  {/if}
 </nav>

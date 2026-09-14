@@ -626,7 +626,10 @@
 <div
   class="flex h-screen flex-col overflow-hidden bg-background text-foreground"
 >
-  <TitleBar paneLabel={paneByID(inputMode as PaneID).label} />
+  <TitleBar
+    paneLabel={paneByID(inputMode as PaneID).label}
+    onOpenCommands={noop}
+  />
   <div class="flex min-h-0 flex-1">
     <ActivityRail
       pane={inputMode as PaneID}

@@ -13,8 +13,13 @@
   import SettingsPane from "$lib/components/settings/SettingsPane.svelte";
   import HistoryPane from "$lib/components/history/HistoryPane.svelte";
   import RuntimesPane from "$lib/components/runtimes/RuntimesPane.svelte";
+  import CommandPalette, {
+    type Command,
+  } from "$lib/components/shell/CommandPalette.svelte";
+  import { PANES, paneByID, type PaneID } from "$lib/panes";
+  import { SETTINGS_SECTIONS } from "$lib/navigation";
+  import { canToggleRecording, isRecording } from "$lib/utils/status";
   import { ShellNavigation } from "$lib/shell-navigation.svelte";
-  import { paneByID, type PaneID } from "$lib/panes";
   import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
   import type { SettingsSectionID } from "$lib/navigation";
   import { FileTranscriptionPhase, State } from "$lib/state";
@@ -62,6 +67,16 @@
   );
   const settingsOpen = $derived(auxPane === "settings");
 
+  function selectPane(id: PaneID) {
+    if (id === "settings") return openSettings("general");
+    if (id === "runtimes" || id === "history") {
+      auxPane = id;
+      return;
+    }
+    auxPane = null;
+    inputMode = id;
+  }
+
   const fileWorking = $derived(
     session.files.status.phase ===
       FileTranscriptionPhase.FileTranscriptionUploading ||
@@ -76,6 +91,69 @@
     session.dictation.status.state !== State.Idle &&
       session.dictation.status.state !== State.Failed,
   );
+
+  let commandsOpen = $state(false);
+  const macOS = $derived(session.editor.applied?.platform === "darwin");
+
+  // Everything the rail and the chain already expose, addressed by name. No
+  // command here can do something the interface cannot.
+  const commands = $derived<Command[]>([
+    ...PANES.map((pane) => ({
+      id: `go:${pane.id}`,
+      group: "Go to",
+      label: pane.label,
+      icon: pane.icon,
+      keywords: "open show switch pane",
+      run: () => selectPane(pane.id),
+    })),
+    {
+      id: "dictation:toggle",
+      group: "Dictation",
+      label: isRecording(session.dictation.status)
+        ? "Stop recording"
+        : "Start recording",
+      keywords: "record capture microphone talk",
+      detail: session.editor.applied?.toggleShortcut ?? "",
+      disabled: !canToggleRecording(session.dictation.status, fileWorking),
+      run: () => void session.dictation.toggleRecording(),
+    },
+    {
+      id: "dictation:copy",
+      group: "Dictation",
+      label: "Copy the current transcript",
+      keywords: "clipboard paste",
+      disabled: !session.dictation.status.canCopy,
+      run: () => void session.dictation.copyPending(),
+    },
+    {
+      id: "cleanup:toggle",
+      group: "Cleanup",
+      label: session.editor.applied?.postProcessing.enabled
+        ? "Turn cleanup off"
+        : "Turn cleanup on",
+      keywords: "post processing tidy rewrite s1-mini",
+      detail: session.editor.applied?.postProcessing.model ?? "",
+      disabled: !session.editor.applied,
+      run: () =>
+        void session.editor.updateQuickSettings(
+          {
+            postProcessing: {
+              enabled: !session.editor.applied?.postProcessing.enabled,
+            },
+          },
+          "processing-enabled",
+        ),
+    },
+    ...SETTINGS_SECTIONS.map((section) => ({
+      id: `settings:${section.id}`,
+      group: "Settings",
+      label: section.label,
+      icon: section.icon,
+      keywords: section.blurb,
+      run: () => openSettings(section.id),
+    })),
+  ]);
+
 
   $effect(() => {
     document.documentElement.dataset.material = windowMaterial(
@@ -159,6 +237,16 @@
         }
       },
     );
+    // One accelerator, owned by the renderer: the palette is a window surface,
+    // not a global shortcut competing with dictation.
+    function commandKey(event: KeyboardEvent) {
+      if (event.key !== "k" && event.key !== "K") return;
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      event.preventDefault();
+      commandsOpen = !commandsOpen;
+    }
+    window.addEventListener("keydown", commandKey);
+
     const offClose = Events.On("shell:close-requested", () => {
       void Window.Hide().catch((cause) => {
         if (alive) session.messages.fail(cause);
@@ -200,6 +288,7 @@
       offSecondInstance();
       offSettings();
       offTask();
+      window.removeEventListener('keydown', commandKey);
       offClose();
       offAboutVisibility();
       session.editor.clearCredentialDraft();
@@ -241,26 +330,20 @@
 <div
   class="fixed inset-0 flex flex-col overflow-hidden bg-transparent text-foreground"
 >
-  <TitleBar paneLabel={paneByID(activePane).label} />
+  <TitleBar
+    paneLabel={paneByID(activePane).label}
+    commandHint={macOS ? "⌘" : "Ctrl"}
+    onOpenCommands={() => (commandsOpen = true)}
+  />
+
+  <CommandPalette bind:open={commandsOpen} {commands} />
 
   <div class="flex min-h-0 flex-1">
     <ActivityRail
       pane={activePane}
       {voiceActive}
       {fileWorking}
-      onSelect={(id) => {
-        if (id === "settings") return openSettings("general");
-        if (id === "runtimes") {
-          auxPane = "runtimes";
-          return;
-        }
-        if (id === "history") {
-          auxPane = "history";
-          return;
-        }
-        auxPane = null;
-        inputMode = id;
-      }}
+      onSelect={selectPane}
     />
 
     <div
@@ -327,6 +410,17 @@
             ? "server"
             : "voice-transcription",
       )}
+    cleanup={session.editor.applied?.postProcessing.enabled
+      ? (session.editor.applied.postProcessing.model ?? "on")
+      : ""}
+    delivery={inputMode === "tts"
+      ? "Play or save"
+      : inputMode === "file"
+        ? "Copy or save"
+        : session.editor.applied?.autoInsert
+          ? "Insert → focused app"
+          : "Copy only"}
+    commandHint={macOS ? "⌘K" : "Ctrl+K"}
     {version}
     {aboutOpen}
     onAbout={openAbout}

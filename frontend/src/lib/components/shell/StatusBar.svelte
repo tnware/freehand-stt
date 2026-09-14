@@ -22,6 +22,9 @@
     onCheck,
     onEdit,
     onSettings,
+    cleanup = "",
+    delivery = "",
+    commandHint = "Ctrl+K",
     version = "",
     aboutOpen = false,
     onAbout,
@@ -35,6 +38,11 @@
     onCheck: () => void;
     onEdit: () => void;
     onSettings: () => void;
+    /** The cleanup model in force, empty when cleanup is off. */
+    cleanup?: string;
+    /** Where a finished transcript goes. */
+    delivery?: string;
+    commandHint?: string;
     version?: string;
     aboutOpen?: boolean;
     onAbout: () => void;
@@ -160,7 +168,15 @@
     {/if}
   </div>
 
-  <div class="flex shrink-0 items-center gap-3">
+  <div class="flex shrink-0 items-center gap-2.5">
+    <span class="hidden items-center gap-2.5 min-[960px]:flex">
+      <span class="sb">{cleanup ? `Cleanup ${cleanup}` : "No cleanup"}</span>
+      <span class="vr"></span>
+      <span class="sb">{delivery}</span>
+      <span class="vr"></span>
+      <span class="sb mono text-muted-foreground">{commandHint}</span>
+      <span class="vr"></span>
+    </span>
     {#if version}
       <span class="figure text-ink-quiet">{version}</span>
     {/if}

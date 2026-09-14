@@ -57,39 +57,41 @@
   aria-label="Current result"
 >
   <div
-    class="flex h-14 shrink-0 items-center gap-2 border-b border-hairline bg-secondary/50 px-3"
+    class="flex h-8 shrink-0 items-center gap-2 border-b border-hairline px-4"
   >
-    <h2 class={quickSettings ? "sr-only" : "text-sm font-medium"}>
-      Current result
+    <h2
+      class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+    >
+      Transcript
     </h2>
     <span
-      class={quickSettings
-        ? "sr-only"
-        : "mr-auto text-xs text-muted-foreground"}
-      >{working
-        ? "In progress"
+      class="mr-auto inline-flex h-5 items-center rounded-sm border px-1.5 text-[11px] {live ||
+      working
+        ? 'border-accent-edge bg-accent-wash text-accent-text'
         : recovery
-          ? "Ready to copy"
+          ? 'border-warning/30 text-warning'
           : failed
-            ? "Needs attention"
-            : text
-              ? "Ready"
-              : mode === "file"
-                ? "No transcript yet"
-                : "Nothing recorded yet"}</span
+            ? 'border-destructive/30 text-destructive'
+            : 'border-border text-muted-foreground'}"
+      >{live
+        ? "Live"
+        : working
+          ? "In progress"
+          : recovery
+            ? "Ready to copy"
+            : failed
+              ? "Needs attention"
+              : text
+                ? "Ready"
+                : mode === "file"
+                  ? "No transcript yet"
+                  : "Nothing recorded yet"}</span
     >
-    {#if quickSettings}
-      <div class="min-w-0 flex-1">{@render quickSettings()}</div>
-    {/if}
     {#if text}
-      {#if quickSettings}<span
-          class="mx-1 h-4 w-px shrink-0 bg-hairline"
-          aria-hidden="true"
-        ></span>{/if}
       {#if onListen}<Button
           variant="outline"
-          size="sm"
-          class="min-w-16"
+          size="xs"
+          class="min-w-14"
           disabled={working || !canCopy || listenDisabled}
           aria-label={listenBusy
             ? "Preparing speech for this transcript"
@@ -105,13 +107,13 @@
               class="animate-spin motion-reduce:animate-none"
             />{:else}Listen{/if}</Button
         >{/if}
-      <Button variant="ghost" size="sm" disabled={working} onclick={onClear}
+      <Button variant="ghost" size="xs" disabled={working} onclick={onClear}
         >Clear</Button
       >
       <Button
         variant="soft"
-        size="sm"
-        class="min-w-18"
+        size="xs"
+        class="min-w-16"
         disabled={working || !canCopy}
         onclick={copy}>{feedback.key === resultKey ? "Copied" : "Copy"}</Button
       >
