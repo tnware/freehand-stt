@@ -6,10 +6,9 @@
   "include-v-in-release-name": true,
   "draft": true,
   "force-tag-creation": true,
-  "prerelease": true,
-  "prerelease-type": "alpha",
+  "prerelease": false,
   "versioning": "prerelease",
-  "initial-version": "0.1.0-alpha.1",
+  "initial-version": "0.1.0",
   "packages": {
     ".": {
       "extra-files": [

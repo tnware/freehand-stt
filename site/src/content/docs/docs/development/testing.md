@@ -298,6 +298,10 @@ The second build/run pair exercises the production GitHub Pages base path.
 Keep the preview environment consistent with the build. Browser fixtures cover
 Windows, both known Mac architectures, ambiguous Mac architecture, unsupported
 platforms, partial/missing/malformed releases, API failure/timeout and no JavaScript.
+Checks also cover platform grouping, decorative icons surviving release-label
+updates, narrow download layouts, and accessible capability indicators in the
+backend tables. Visually review both Mac and Windows recommendation rows and
+confirm the neutral glass surfaces remain faint with readable text.
 All supported alternatives remain visible. Synthetic release assets establish
 selection behavior, not public availability or native application acceptance.
 The test preview uses its own port and bypasses Astro's development preview lock.
@@ -325,6 +329,11 @@ The Features page adds a static overlay-appearance explorer. Check each layout
 at every position on desktop and narrow screens, selected controls, no-JavaScript
 fallback, and the linked guide anchors. It illustrates layout choices only;
 it does not change application settings or establish native rendering acceptance.
+
+The Features hero uses decorative neutral icons alongside its overlay-setting
+descriptions. Keep page titles consistent and supporting feature sections
+text-first. The app-preview suite checks hero icon visibility on narrow screens
+and without JavaScript, while preserving the explanatory text and guide links.
 
 ## CI workflow acceptance
 
@@ -720,7 +729,7 @@ list is an acceptance procedure, not a claim that the checks have passed:
 39. Configure a dedicated local or remote `/v1/audio/speech` endpoint under **Speech playback**. Press **Test**, confirm the authenticated `GET /v1/models` result populates the model picker, enter the provider's voice ID, and save. Then press **Preview**. Verify the fixed preview phrase plays, pause/resume preserve progress, restart begins at zero, and stop releases the session.
 40. Enable History, create raw-only and successfully cleaned entries, and verify Listen reads the selected final version. Complete a stored-audio transcript with History off and verify its result can still be listened to. Start a toggle or hold recording during playback and confirm playback stops before capture begins without transcript/history mutation.
 41. Under **Voice**, **Audio file**, **Cleanup**, and **Text to speech**, confirm the saved microphone/checkpoint, stored-audio, cleanup, and speech-generation budgets reload exactly and the fixed safety ceilings remain visible but not editable. Against a deliberately slow endpoint, set each budget low and confirm the affected phase reports a timeout, logs bounded `error_kind=timeout`, and records the budget in opt-in History details. A cleanup timeout must still insert or expose the raw transcript and mark the fallback. A stored-file request configured above 90 seconds must remain active beyond 90 seconds; Cancel must still end immediately as cancellation rather than timeout. Exercise the streamed transcript safety ceiling with a deterministic fixture and confirm accepted text remains copyable under an explicit partial-result message rather than stopping silently.
-42. In a packaged build, verify About reports automatic updates enabled, **Check now** opens the Wails update window, and declining leaves the running executable unchanged. Disable automatic checks, restart, and confirm no background request occurs. Using a controlled newer prerelease, verify the exact `freehand-windows-amd64.exe` asset passes `SHA256SUMS`, stages successfully, and restarts into the version shown by About. A checksum mismatch must fail closed. Confirm this direct-binary path does not claim to run or update through NSIS.
+42. In a packaged build, verify About reports automatic updates enabled, **Check now** opens the Wails update window, and declining leaves the running executable unchanged. Disable automatic checks, restart, and confirm no background request occurs. Using a controlled newer release, verify the exact `freehand-windows-amd64.exe` asset passes `SHA256SUMS`, stages successfully, and restarts into the version shown by About. Exercise both an alpha-to-non-prerelease upgrade and a later non-prerelease upgrade. A checksum mismatch must fail closed. Confirm this direct-binary path does not claim to run or update through NSIS.
 
 ## Model safety
 

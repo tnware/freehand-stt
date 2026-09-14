@@ -10,7 +10,7 @@ Freehand owns the desktop boundary: capture, local speech policy, native shortcu
 
 ## Current delivery boundary
 
-The current alpha supports two first-class input workflows:
+Freehand supports two first-class input workflows:
 
 ```text
 hotkey -> microphone capture -> optional VAD checkpoints -> /v1/audio/transcriptions

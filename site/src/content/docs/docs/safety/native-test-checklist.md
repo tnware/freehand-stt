@@ -1,5 +1,5 @@
 ---
-title: Native Windows alpha checklist
+title: Native Windows acceptance checklist
 description: Interactive acceptance checks that must run on a real Windows desktop.
 ---
 

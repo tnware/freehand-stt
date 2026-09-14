@@ -49,6 +49,16 @@ try {
     await page.goto(origin + base + 'download/');
     if (!c.nojs) await page.waitForFunction(() => document.querySelector('[data-release-status]')?.getAttribute('data-settled') === 'true', null, { timeout: 10000 });
     for (const key of Object.keys(ASSETS)) assert.ok(await page.locator(`#all-downloads [data-asset="${key}"]`).isVisible(), `${c.name}: ${key} visible`);
+    for (const platform of ['windows', 'mac']) {
+      const group = page.locator(`[data-download-platform="${platform}"]`);
+      assert.equal(await group.locator('[data-asset]').count(), 2);
+      assert.ok(await group.locator(`[data-platform-icon="${platform}"]`).isVisible());
+    }
+    for (const row of await page.locator('[data-recommendation] .release-row:visible').all()) {
+      const key = await row.getAttribute('data-asset');
+      assert.ok(await row.locator(`[data-platform-icon="${key.startsWith('mac') ? 'mac' : 'windows'}"]`).isVisible(), `${c.name}: icon survives release update`);
+      assert.match(await row.locator('[data-asset-label]').innerText(), /Download|View release|Check GitHub availability/);
+    }
     if (c.primary) assert.ok((await page.locator('[data-primary-download]').getAttribute('href')).endsWith(ASSETS[c.primary].name), c.name);
     else assert.ok(!(await page.locator('[data-primary-download]').getAttribute('href')).includes('/download/v-'), c.name);
     if (c.choices) for (const key of ['macArm', 'macIntel']) assert.ok(await page.locator(`[data-recommendation] [data-asset="${key}"]`).isVisible());
@@ -58,10 +68,31 @@ try {
     console.log(`PASS ${c.name}`); count++;
   }
   const page = await browser.newPage();
+  for (const width of [390, 768, 1365]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(origin + base + 'download/');
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `download layout at ${width}`);
+    for (const key of Object.keys(ASSETS)) assert.ok(await page.locator(`#all-downloads [data-asset="${key}"]`).isVisible());
+  }
+  await page.goto(origin + base + 'backends/');
+  for (const row of await page.locator('[data-backend-name]').all()) {
+    const capabilities = (await row.getAttribute('data-capabilities')).split(' ');
+    const cells = row.locator('.capability-cell');
+    const keys = ['microphone', 'realtime', 'cleanup', 'playback'];
+    for (let i = 0; i < keys.length; i++) {
+      assert.equal(await cells.nth(i).locator('.sr-only').innerText(), capabilities.includes(keys[i]) ? 'Supported' : 'Not supported');
+      assert.ok(await cells.nth(i).locator('svg[aria-hidden="true"]').isVisible());
+    }
+  }
+  await page.locator('#compare summary').click();
+  assert.ok(await page.locator('#compare .support-indicator').count() > 0);
+  await page.locator('select[aria-label="Filter by capability"]').selectOption('realtime');
+  for (const row of await page.locator('[data-backend-name]:visible').all()) assert.match(await row.getAttribute('data-capabilities'), /realtime/);
+  console.log('PASS platform groups, release icons, responsive layouts, and accessible capability indicators');
   await page.goto(origin + base);
   assert.match(await page.title(), /Windows and macOS/);
   assert.equal(await page.locator('[data-home-download]').getAttribute('href'), base + 'download/');
-  console.log(`PASS homepage metadata and base path; ${count + 1} browser scenarios passed`);
+  console.log(`PASS homepage metadata and base path; ${count} release scenarios plus layout and capability checks passed`);
 } finally {
   await browser?.close();
   server.kill();

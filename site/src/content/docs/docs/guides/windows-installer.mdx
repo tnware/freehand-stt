@@ -1,6 +1,6 @@
 ---
 title: Install and update on Windows
-description: Install, verify, update, or remove the Freehand Windows alpha.
+description: Install, verify, update, or remove Freehand on Windows.
 ---
 
 import { Steps, Tabs, TabItem, LinkCard } from '@astrojs/starlight/components';
@@ -11,7 +11,7 @@ the installer for a normal installation, or the portable executable to run
 without installing. Download `SHA256SUMS` from the **same release** to verify
 either file.
 
-:::caution[Unsigned alpha]
+:::caution[Unsigned Windows builds]
 The current downloads are not Authenticode-signed, so Windows may identify the
 publisher as unknown. Confirm that your download came from the official
 release and compare its SHA-256 hash with the matching entry in `SHA256SUMS`
@@ -111,7 +111,7 @@ Automatic update checks are enabled by default and can be disabled under
 downloads and verifies the standalone executable and waits for you to restart.
 The in-app updater replaces the executable; it does not run the installer.
 
-The installer does not block installing an older alpha, but an older app cannot
+The installer does not block installing an older version, but an older app cannot
 downgrade a newer settings database. Read the release notes and
 [settings recovery guidance](../troubleshooting/#saved-settings-need-attention)
 before downgrading.

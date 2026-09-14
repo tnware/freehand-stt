@@ -1,17 +1,51 @@
 ---
 import ProductLayout from "../layouts/ProductLayout.astro";
+import PlatformIcon from "../components/PlatformIcon.astro";
 import mark from "../assets/freehand-mark.svg";
 import { ASSETS, RELEASES_URL } from "../lib/downloads.mjs";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const href = (path: string) => `${base}${path}`;
+const platforms = [
+  { id: "windows", name: "Windows", requirements: "Windows 11 · x64", guide: "/docs/guides/windows-installer/", note: "Unsigned builds. The installer works without administrator access.", builds: [
+    { key: "installer", title: "Installer", tag: "Recommended", description: "Install for your account with a Start Menu shortcut and uninstaller." },
+    { key: "portable", title: "Portable", tag: "Standalone EXE", description: "Run from a stable, user-writable folder. No shortcuts or uninstaller." },
+  ] },
+  { id: "mac", name: "macOS", requirements: "macOS 13 or later", guide: "/docs/guides/macos-setup/", note: "Ad-hoc signed, not notarized. Read the setup guide before opening.", builds: [
+    { key: "macArm", title: "Apple Silicon", tag: "ARM64 · ZIP", description: "For Macs with an Apple M-series chip." },
+    { key: "macIntel", title: "Intel", tag: "x64 · ZIP", description: "For Macs with an Intel processor. Check About This Mac if unsure." },
+  ] },
+] as const;
 ---
-<ProductLayout current="download" title="Download Freehand for Windows and macOS" description="Freehand public alpha for Windows 11 x64 and macOS 13+. Windows installer, portable, Apple Silicon, and Intel release availability." path="download/">
+<ProductLayout current="download" title="Download Freehand for Windows and macOS" description="Freehand for Windows 11 x64 and macOS 13+. Windows installer, portable, Apple Silicon, and Intel release availability." path="download/">
   <section class="download-intro" aria-labelledby="download-title">
-    <div><p class="eyebrow">Windows & macOS · Public alpha</p><h1 id="download-title">Download Freehand</h1><p class="lede">Free and open source. Connect a compatible speech server or provider; models and inference runtimes are not bundled.</p><div class="actions"><a class="button" href="#all-downloads" data-primary-download>Choose your desktop build</a></div><p data-platform-message>Choose Windows, Apple Silicon, or Intel below. Not every release includes every platform.</p><p class="fine-print">Windows 11 x64 · macOS 13+<br />Your chosen provider or hosting may have its own costs.</p></div>
-    <aside class="release-summary" aria-label="Latest release"><header><img src={mark.src} alt="" /><div><p>Latest public release</p><strong data-release-version>Check release availability</strong></div></header><div data-recommendation aria-label="Recommended downloads"></div><p class="release-status" data-release-status role="status">Availability has not been checked. Use GitHub Releases to see the actual files.</p><noscript><p class="fine-print">JavaScript is off. Platform links open GitHub Releases; choose a file actually listed there.</p></noscript><a class="text-link" href={RELEASES_URL}>Release notes & checksums ↗</a></aside>
+    <div><p class="eyebrow">Windows & macOS</p><h1 id="download-title">Download Freehand</h1><p class="lede">Free and open source. Connect a compatible speech server or provider; models and inference runtimes are not bundled.</p><div class="actions"><a class="button" href="#all-downloads" data-primary-download>Choose your desktop build</a></div><p data-platform-message>Choose Windows, Apple Silicon, or Intel below. Not every release includes every platform.</p><p class="fine-print">Windows 11 x64 · macOS 13+<br />Your chosen provider or hosting may have its own costs.</p></div>
+    <aside class="release-summary" aria-label="Latest release">
+      <header><img src={mark.src} alt="" /><div><p>Latest public release</p><strong data-release-version>Check release availability</strong></div></header>
+      <div data-recommendation aria-label="Recommended downloads">
+        {Object.entries(ASSETS).map(([key, asset]) => <a class="release-row" href={RELEASES_URL} data-asset={key} hidden>
+          <PlatformIcon platform={key.startsWith("mac") ? "mac" : "windows"} size={22} />
+          <span data-asset-label>{asset.label} — Check GitHub availability</span>
+          <span class="release-row-arrow" aria-hidden="true">↗</span>
+        </a>)}
+      </div>
+      <p class="release-status" data-release-status role="status">Availability has not been checked. Use GitHub Releases to see the actual files.</p>
+      <noscript><p class="fine-print">JavaScript is off. Platform links open GitHub Releases; choose a file actually listed there.</p></noscript>
+      <a class="text-link" href={RELEASES_URL}>Release notes & checksums ↗</a>
+    </aside>
   </section>
-  <section id="all-downloads" class="download-options" aria-labelledby="platform-title"><h2 id="platform-title">Desktop builds</h2><div class="download-grid">{Object.entries(ASSETS).map(([key, asset]) => <article class="download-option"><h3>{asset.label}</h3><p>{asset.detail}</p><p>{key === "installer" ? "Recommended on Windows. Installs for your account with a Start Menu shortcut; no administrator access required." : key === "portable" ? "Keep the executable in a stable, user-writable folder. No shortcuts or uninstaller." : "Choose the ZIP matching your Mac. Ad-hoc signed, not notarized; read the setup guide before opening."}</p><a class="text-link" href={RELEASES_URL} data-asset={key}>{asset.label} — Check GitHub availability</a></article>)}</div></section>
-  <section class="install-notes" aria-label="Installation notes"><article><h2>Installation & permissions</h2><p>Windows alpha builds are unsigned. Mac builds are ad-hoc signed, not notarized. Follow the platform guide for installation and permissions.</p><a class="text-link" href={href("/docs/guides/windows-installer/")}>Windows installation →</a><br /><a class="text-link" href={href("/docs/guides/macos-setup/")}>macOS setup →</a></article><article><h2>Verify & connect</h2><p>Check SHA-256 against SHA256SUMS from the same release. After opening Freehand, configure the connection and model for the task you want to use.</p><a class="text-link" href={href("/docs/getting-started/")}>Setup guide →</a></article></section>
+  <section id="all-downloads" class="download-options" aria-labelledby="platform-title">
+    <div class="section-heading"><div><h2 id="platform-title">Choose your platform</h2><p>All builds connect to the speech infrastructure you choose.</p></div><span class="download-format-note">Installer, executable, or ZIP</span></div>
+    <div class="download-grid">{platforms.map((platform) => <article class="download-option" data-download-platform={platform.id}>
+      <header class="download-platform-heading"><span class="download-platform-mark"><PlatformIcon platform={platform.id} size={30} /></span><div><h3>{platform.name}</h3><p>{platform.requirements}</p></div></header>
+      <div class="download-build-list">{platform.builds.map((build) => <section class="download-build" aria-labelledby={`build-${build.key}`}>
+        <div class="download-build-heading"><h4 id={`build-${build.key}`}>{build.title}</h4><span>{build.tag}</span></div>
+        <p>{build.description}</p>
+        <div class="download-build-action"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4" /></svg><a class="text-link" href={RELEASES_URL} data-asset={build.key}>{ASSETS[build.key].label} — Check GitHub availability</a></div>
+      </section>)}</div>
+      <footer class="download-platform-footer"><p>{platform.note}</p><a class="text-link" href={href(platform.guide)}>{platform.name} setup guide <span aria-hidden="true">↗</span></a></footer>
+    </article>)}</div>
+  </section>
+  <section class="install-notes" aria-label="Installation notes"><article><h2>Installation & permissions</h2><p>Windows builds are unsigned. Mac builds are ad-hoc signed, not notarized. Follow the platform guide for installation and permissions.</p><a class="text-link" href={href("/docs/guides/windows-installer/")}>Windows installation →</a><br /><a class="text-link" href={href("/docs/guides/macos-setup/")}>macOS setup →</a></article><article><h2>Verify & connect</h2><p>Check SHA-256 against SHA256SUMS from the same release. After opening Freehand, configure the connection and model for the task you want to use.</p><a class="text-link" href={href("/docs/getting-started/")}>Setup guide →</a></article></section>
   <script>
     import { enhanceDownloads } from "../lib/downloads-client.mjs";
     enhanceDownloads();

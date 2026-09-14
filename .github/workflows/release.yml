@@ -93,6 +93,8 @@ jobs:
           RELEASE_TAG: ${{ needs.release-please.outputs.tag-name }}
         run: |
           set -euo pipefail
+          # Never label a prerelease tag as a stable/latest release.
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
           test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true
           gh release upload "$RELEASE_TAG" dist/* --clobber
           # Reject unknown pre-existing assets; never delete them automatically.
@@ -101,5 +103,6 @@ jobs:
           gh release download "$RELEASE_TAG" --dir uploaded
           cmp dist/SHA256SUMS uploaded/SHA256SUMS
           (cd uploaded && sha256sum --check --strict SHA256SUMS)
-          gh release edit "$RELEASE_TAG" --draft=false --prerelease=true --latest=false
-          test "$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease --jq '[.isDraft,.isPrerelease] | @json')" = '[false,true]'
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease=false --latest=true
+          test "$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease --jq '[.isDraft,.isPrerelease] | @json')" = '[false,false]'
+          test "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)" = "$RELEASE_TAG"
