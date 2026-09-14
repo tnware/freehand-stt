@@ -143,7 +143,7 @@
           </p>
         {/if}
         {#if live || text}
-          <div class="w-full max-w-[76ch] px-4 py-3.5">
+          <div class="w-full max-w-[760px] px-4 py-3.5">
             {#if live}
               <p class="mb-3 text-xs text-muted-foreground" role="status">
                 Live preview · text may change

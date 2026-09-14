@@ -16,11 +16,10 @@
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
   import ReadinessPanel from "$lib/components/home/ReadinessPanel.svelte";
-  import FileChain from "$lib/components/chain/FileChain.svelte";
-  import SpeechChain from "$lib/components/chain/SpeechChain.svelte";
+  import FileBar from "./FileBar.svelte";
   import HistoryPanel from "$lib/components/home/HistoryPanel.svelte";
   import Notifications from "$lib/components/shell/Notifications.svelte";
-  import VoiceChain from "$lib/components/chain/VoiceChain.svelte";
+  import WorkflowSidebar from "./WorkflowSidebar.svelte";
   import TextToSpeech from "$lib/components/home/TextToSpeech.svelte";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import type { Session } from "$lib/stores/session.svelte";
@@ -169,10 +168,8 @@
   );
   const paneSummary = $derived(
     inputMode === "file"
-      ? "file → transcribe → clean up → copy"
-      : inputMode === "tts"
-        ? "text → synthesize → play or save"
-        : "mic → transcribe → clean up → deliver",
+      ? "transcribe a recording, then copy or save it"
+      : "write text, generate audio, play or save it",
   );
   const liveDictation = $derived(
     inputMode === "voice" && !!runtimeSettings?.voiceTranscription.realtime,
@@ -244,81 +241,62 @@
   class:onboarding={showReadiness}
   aria-label="Freehand workspace"
 >
-  <PaneHeader title={paneTitle} summary={paneSummary}>
-    {#snippet actions()}
-      {#if liveDictation}
-        <span
-          class="inline-flex h-5 items-center rounded-sm border border-accent-edge bg-accent-wash px-1.5 text-[11px] text-accent-text"
-          >Live dictation</span
-        >
-      {/if}
-    {/snippet}
-  </PaneHeader>
 
-  <div class="transport-frame">
-    {#if session.editor.draft}
-      {#if inputMode === "tts" || !readiness?.initialSetup}
-          {#if inputMode === "voice"}
-            <VoiceChain
-              {session}
-              {now}
-              busy={fileWorking}
-              microphone={microphoneLabel}
-              availability={recordingAvailability}
-              transcribeModel={managed
-                ? localModel
-                : (runtimeSettings?.voiceTranscription.model ?? "")}
-              transcribeSource={managed
-                ? local.label
-                : endpointHost(
-                    runtimeSettings?.voiceTranscription.baseURL ?? "",
-                  )}
-              onOpenAudio={onOpenAudioSettings}
-              onOpenTranscribe={() =>
-                managed
-                  ? openLocalRuntime()
-                  : onOpenSettingsSection("voice-transcription")}
-              onOpenCleanup={onOpenProcessingSettings}
-              onOpenDelivery={onOpenGeneralSettings}
-              onOpenRuntimes={openLocalRuntime}
-              {onAddConnection}
-            />
-          {:else if inputMode === "file"}
-            <FileChain
-              {session}
-              {now}
-              blocked={voiceActive || ttsWorking
-                ? "Finish the current job first"
-                : ""}
-              transcribeModel={managed
-                ? localModel
-                : (runtimeSettings?.model ?? "")}
-              transcribeSource={managed
-                ? local.label
-                : endpointHost(runtimeSettings?.baseURL ?? "")}
-              onOpenTranscribe={managed
-                ? openLocalRuntime
-                : onOpenServerSettings}
-              onOpenCleanup={onOpenProcessingSettings}
-              onOpenDelivery={onOpenHistorySettings}
-              onOpenRuntimes={openLocalRuntime}
-              {onAddConnection}
-            />
-          {:else}
-            <SpeechChain
-              {session}
-              {now}
-              onOpenSpeech={onOpenSpeechSettings}
-              onOpenRuntimes={openLocalRuntime}
-              {onAddConnection}
-            />
-          {/if}
-      {/if}
-    {:else}
-      <Skeleton class="h-[132px] w-full rounded-none" />
+
+  <div class="workspace">
+    {#if session.editor.draft && !readiness?.initialSetup}
+      {@const workflowSection =
+        inputMode === "file"
+          ? "server"
+          : inputMode === "tts"
+            ? "speech"
+            : "voice-transcription"}
+      <WorkflowSidebar
+        {session}
+        workflow={inputMode === "file"
+          ? "file"
+          : inputMode === "tts"
+            ? "tts"
+            : "voice"}
+        title={paneTitle}
+        instanceID={managed ? instanceID : ""}
+        disabled={quickSettingsDisabled || session.editor.saving}
+        onOpenConnection={() => onOpenSettingsSection(workflowSection)}
+        onOpenModel={() =>
+          managed && inputMode !== "tts"
+            ? openLocalRuntime()
+            : onOpenSettingsSection(workflowSection)}
+        onOpenCleanup={onOpenProcessingSettings}
+        onOpenVocabulary={() => onOpenSettingsSection("vocabulary")}
+        onOpenDelivery={inputMode === "voice"
+          ? onOpenGeneralSettings
+          : () => onOpenSettingsSection(workflowSection)}
+        onOpenOverlay={() => onOpenSettingsSection("overlay")}
+        onOpenRuntime={openLocalRuntime}
+      />
     {/if}
-  </div>
   <div class="body">
+      {#if inputMode === "file" && session.editor.draft && !readiness?.initialSetup}
+        <div class="transport-frame">
+          <FileBar
+        status={session.files.status}
+        choosing={session.files.choosing}
+        starting={session.files.starting}
+        cancelling={session.files.cancelling}
+        clearing={session.files.clearing}
+        blocked={voiceActive || ttsWorking ? "Finish the current job first" : ""}
+        streamingEnabled={session.files.streamingEnabled}
+        resettingStreaming={session.files.resettingStreaming}
+        onStreamingChange={(enabled) =>
+          (session.files.streamingPreferred = enabled)}
+        onChoose={() => session.files.chooseAudioFile()}
+        onStart={() => session.files.startFileTranscription()}
+        onCancel={() => session.files.cancelFileTranscription()}
+        onClear={() => session.files.clearAudioFile()}
+        onTryStreamingAgain={() => session.files.tryFileStreamingAgain()}
+      />
+        </div>
+      {/if}
     {#if messages.length}<Notifications
         {messages}
         abovePlayback={inputMode === "tts"}
@@ -647,6 +625,7 @@
       </WorkspaceSplit>
     {/if}
   </div>
+  </div>
 </main>
 
 <style>
@@ -661,7 +640,7 @@
   }
   .transport-frame {
     flex-shrink: 0;
-    padding: 0.875rem 1.25rem 1rem;
+    padding: 12px 20px 12px;
   }
   .transport-frame :global(.transport) {
     overflow: hidden;
@@ -669,8 +648,15 @@
     border-radius: 0.5rem;
     background: linear-gradient(115deg, var(--card), var(--layer-fill));
   }
+  .workspace {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+  }
   .body {
     display: flex;
+    min-width: 0;
     min-height: 0;
     flex: 1;
     flex-direction: column;

@@ -22,7 +22,7 @@
   from 72px to 36px and gives the height back to the transcript.
 -->
 <header
-  class="flex h-9 shrink-0 items-center gap-2.5 border-b border-hairline bg-well px-3"
+  class="flex h-[34px] shrink-0 items-center gap-2.5 border-b border-hairline bg-well px-3"
 >
   <div class="flex min-w-0 flex-1 items-center gap-2.5">
     <BrandMark />

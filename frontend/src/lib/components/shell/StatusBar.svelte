@@ -89,7 +89,7 @@
 <!-- Endpoint reachability is different from capture state; both are ambient,
      so both live here rather than being restated inside each pane. -->
 <footer
-  class="status-bar flex h-7 shrink-0 items-center justify-between gap-2 border-t px-3 text-[11px] leading-none"
+  class="status-bar flex h-6 shrink-0 items-center justify-between gap-2 border-t px-3 text-[11px] leading-none"
   data-tone={capture.tone}
 >
   <div class="flex min-w-0 items-center gap-2.5">
