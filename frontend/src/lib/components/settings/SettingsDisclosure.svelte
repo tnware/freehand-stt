@@ -15,8 +15,8 @@
     class="flex cursor-pointer list-none items-center gap-3 rounded-lg px-5 py-3 transition-colors group-open/disclosure:rounded-b-none group-open/disclosure:bg-subtle-fill hover:bg-subtle-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
   >
     <span class="min-w-0 flex-1">
-      <span class="block text-sm font-semibold">{title}</span>
-      <span class="mt-1 block text-[13px] leading-5 text-muted-foreground"
+      <span class="block text-[13px] font-medium">{title}</span>
+      <span class="mt-0.5 block text-[11.5px] leading-[1.45] text-muted-foreground"
         >{description}</span
       >
     </span>

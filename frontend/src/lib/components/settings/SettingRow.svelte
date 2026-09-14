@@ -25,7 +25,7 @@
 </script>
 
 <div
-  class={compact ? "px-5 py-3" : "px-5 py-3.5"}
+  class={compact ? "px-4 py-2" : "px-4 py-2.5"}
   role="group"
   aria-labelledby={titleID}
   aria-describedby={description ? descriptionID : undefined}
@@ -36,15 +36,15 @@
         <label
           id={titleID}
           for={controlID}
-          class="cursor-pointer text-sm font-semibold">{title}</label
+          class="cursor-pointer text-[13px] font-medium">{title}</label
         >
       {:else}
-        <p id={titleID} class="text-sm font-semibold">{title}</p>
+        <p id={titleID} class="text-[13px] font-medium">{title}</p>
       {/if}
       {#if description}
         <p
           id={descriptionID}
-          class="mt-1 text-[13px] leading-5 text-muted-foreground"
+          class="mt-0.5 text-[11.5px] leading-[1.45] text-muted-foreground"
         >
           {description}
         </p>
@@ -59,6 +59,6 @@
     {/if}
   </div>
   {#if children}
-    <div class="mt-3">{@render children()}</div>
+    <div class="mt-2">{@render children()}</div>
   {/if}
 </div>

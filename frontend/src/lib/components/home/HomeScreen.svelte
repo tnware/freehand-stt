@@ -710,7 +710,7 @@
     overflow-y: auto;
   }
   .speech-workspace .body {
-    padding-top: 0;
+    padding: 0;
   }
   .columns {
     display: flex;

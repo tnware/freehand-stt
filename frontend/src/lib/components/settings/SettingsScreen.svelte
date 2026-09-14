@@ -278,7 +278,7 @@
           <h3
             id="settings-page-heading"
             tabindex="-1"
-            class="font-display text-[26px] font-bold tracking-tight"
+            class="font-display text-[15px] font-semibold tracking-tight"
           >
             {section.label}
           </h3>

@@ -126,31 +126,34 @@
 </script>
 
 <section
-  class="@container flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-hairline bg-card"
+  class="@container flex min-h-0 flex-1 flex-col overflow-hidden"
   aria-label="Speech composer"
 >
   <div
-    class="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-3"
+    class="flex h-8 shrink-0 items-center gap-2 border-b border-hairline px-4"
   >
-    <h2 class="sr-only">Text to speech</h2>
-    <div class="min-w-0 flex-1">
-      {#if quickSettings}{@render quickSettings()}{:else}<span
-          class="text-sm font-medium">Text to speech</span
-        >{/if}
-    </div>
+    <h2
+      class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+    >
+      Compose
+    </h2>
     <span
-      class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground"
+      class={cn(
+        "mr-auto inline-flex h-5 items-center rounded-sm border px-1.5 text-[11px]",
+        failed
+          ? "border-destructive/30 text-destructive"
+          : working
+            ? "border-accent-edge bg-accent-wash text-accent-text"
+            : "border-border text-muted-foreground",
+      )}
       role="status"
       title="Local configuration only; connection checks appear in the footer."
     >
-      <span
-        class={cn(
-          "size-1.5 rounded-full",
-          failed ? "bg-destructive" : working ? "bg-primary" : "bg-border",
-        )}
-      ></span>
       {stateLabel}
     </span>
+    {#if quickSettings}
+      <div class="min-w-0 shrink-0">{@render quickSettings()}</div>
+    {/if}
   </div>
   <div class="flex min-h-24 flex-1 flex-col overflow-y-auto">
     <label for="speech-composer-text" class="sr-only">Text to speak</label>
@@ -161,7 +164,7 @@
       aria-describedby="speech-character-count speech-compose-shortcut"
       aria-keyshortcuts="Control+Enter"
       onkeydown={composerKey}
-      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-6 py-4 text-[15px] leading-8 focus-visible:ring-2 focus-visible:ring-inset"
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-3.5 text-[15px] leading-8 focus-visible:ring-2 focus-visible:ring-inset"
       placeholder="Write or paste text to speak…"
     />
   </div>
@@ -171,7 +174,7 @@
     the current audio.
   </p>
   <div
-    class="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline px-4 py-3"
+    class="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline px-4 py-2"
   >
     <span
       id="speech-character-count"

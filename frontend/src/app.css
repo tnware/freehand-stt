@@ -433,9 +433,10 @@ html.dark[data-material="mica"] #app {
   }
 }
 
-/* Settings use one quiet group surface; row content shares a consistent inset. */
+/* Settings groups are hairline-bounded runs of rows, not raised cards, and
+ * every row shares the same inset as the pane header above them. */
 .settings-group > * {
-  padding-inline: 1.125rem;
+  padding-inline: 1rem;
 }
 
 /* Shared control geometry belongs to the application, across all windows. */
