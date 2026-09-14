@@ -111,7 +111,7 @@
   class="flex min-h-0 w-14 shrink-0 flex-col gap-4 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill px-2 py-5 min-[760px]:w-56 min-[760px]:px-3"
 >
   <p
-    class="hidden px-3 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase min-[760px]:block"
+    class="hidden h-[33px] items-center border-b border-hairline pl-3.5 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase min-[760px]:flex"
   >
     Settings
   </p>

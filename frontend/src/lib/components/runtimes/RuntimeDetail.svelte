@@ -14,6 +14,7 @@
   import { Button } from "$lib/components/ui/button";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
+  import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
   import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
 
@@ -46,6 +47,8 @@
   let preferencesOpen = $state(false);
   let sourceOpen = $state(false);
   let manageOpen = $state(false);
+  let panelTab = $state("output");
+  let panelCollapsed = $state(false);
   let probing = $state(false);
   let recommendation = $state<BinaryOptions | null>(null);
   let binaryChoice = $state("auto");
@@ -565,18 +568,18 @@
     {/if}
   </div>
 
-  <div class="flex h-44 shrink-0 flex-col border-t border-hairline">
-    <div
-      class="flex h-7 shrink-0 items-center justify-between border-b border-hairline px-3"
-    >
-      <span
-        class="text-[10px] font-semibold tracking-[0.08em] text-secondary-foreground uppercase"
-        >Runtime output</span
-      >
-      <span class="font-mono text-[10px] text-ink-quiet"
-        >memory only · not written to disk</span
-      >
-    </div>
-    <RuntimeOutputDrawer instanceID={instance?.id ?? ""} {running} />
+  <div
+    class="flex shrink-0 flex-col border-t border-hairline"
+    class:h-44={!panelCollapsed}
+  >
+    <PanelTabs
+      tabs={[{ id: "output", label: "Runtime output" }]}
+      bind:active={panelTab}
+      bind:collapsed={panelCollapsed}
+      note="memory only · not written to disk"
+    />
+    {#if !panelCollapsed}
+      <RuntimeOutputDrawer instanceID={instance?.id ?? ""} {running} />
+    {/if}
   </div>
 </div>

@@ -1,7 +1,6 @@
 <script lang="ts">
-  import PlusIcon from "@lucide/svelte/icons/plus";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
-  import PaneHeader from "$lib/components/home/PaneHeader.svelte";
+  import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import RuntimeDetail from "./RuntimeDetail.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -59,40 +58,24 @@
   in configuration. The sidebar is the inventory and what this machine can
   actually run; the body is whichever runtime you picked.
 -->
-<div class="flex min-h-0 flex-1 flex-col">
-  <PaneHeader
-    title="Local runtime"
-    summary="installed engines and their models"
-  >
-    {#snippet actions()}
-      <Button
-        variant="outline"
-        size="xs"
-        disabled={runtime.loading}
-        onclick={() => void runtime.load()}
-      >
-        <RefreshCwIcon class="size-3" />
-        Refresh inventory
-      </Button>
-      <Button variant="outline" size="xs" onclick={onOpenConnections}>
-        Connections
-      </Button>
-    {/snippet}
-  </PaneHeader>
-
-  <div class="flex min-h-0 flex-1">
+<div class="flex min-h-0 flex-1">
     <div
       class="flex w-[252px] shrink-0 flex-col overflow-y-auto border-r border-hairline bg-layer-fill"
     >
-      <div
-        class="flex h-8 shrink-0 items-center justify-between border-b border-hairline px-3"
-      >
-        <span
-          class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-          >Runtimes</span
-        >
-        <PlusIcon class="size-3.5 text-muted-foreground" aria-hidden="true" />
-      </div>
+      <SidebarHeader title="Runtimes">
+        {#snippet actions()}
+          <Button
+            variant="ghost"
+            size="xs"
+            class="size-6 rounded-sm p-0"
+            disabled={runtime.loading}
+            aria-label="Refresh inventory"
+            title="Refresh inventory"
+            onclick={() => void runtime.load()}
+            ><RefreshCwIcon class="size-3.5" /></Button
+          >
+        {/snippet}
+      </SidebarHeader>
 
       <div
         class="flex flex-col gap-0.5 p-1.5"
@@ -195,5 +178,4 @@
         </p>
       </div>
     {/if}
-  </div>
 </div>

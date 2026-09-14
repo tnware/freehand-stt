@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { Switch } from "$lib/components/ui/switch";
   import { Button } from "$lib/components/ui/button";
@@ -96,15 +96,7 @@
   class="flex w-[252px] shrink-0 flex-col border-r border-hairline bg-layer-fill"
   aria-label={`${title} settings`}
 >
-  <div
-    class="flex h-[33px] shrink-0 items-center justify-between border-b border-hairline pr-2.5 pl-3.5"
-  >
-    <span
-      class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-      >{title}</span
-    >
-    <ChevronDownIcon class="size-3.5 text-muted-foreground" aria-hidden="true" />
-  </div>
+  <SidebarHeader {title} />
 
   <div class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1.5 py-2">
     <button type="button" class="srow" onclick={onOpenConnection} {disabled}>

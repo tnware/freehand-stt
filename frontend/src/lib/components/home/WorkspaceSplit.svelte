@@ -1,8 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import { MediaQuery } from "svelte/reactivity";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
+  import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
   import * as Resizable from "$lib/components/ui/resizable";
   import { Button } from "$lib/components/ui/button";
 
@@ -60,42 +59,15 @@
       minSize={collapsed ? 0 : 18}
     >
       <div class="flex h-full min-h-0 flex-col">
-        <div
-          class="flex h-7 shrink-0 items-center justify-between border-b border-hairline"
-        >
-          <div class="flex min-w-0" role="tablist" aria-label="Workspace panel">
-            {#each [{ id: "recent", label: hasHistory ? `Recent · ${historyCount}` : "Recent" }, { id: "output", label: "Runtime output" }, { id: "diagnostics", label: "Diagnostics" }] as entry (entry.id)}
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={active === entry.id}
-                  class="panel-tab relative h-7 px-3 text-[10px] font-semibold tracking-[0.08em] uppercase transition-colors {active ===
-                  entry.id
-                    ? 'text-secondary-foreground'
-                    : 'text-ink-quiet hover:text-secondary-foreground'}"
-                  onclick={() => {
-                    tab = entry.id as Tab;
-                    collapsed = false;
-                  }}>{entry.label}</button
-                >
-            {/each}
-          </div>
-          <Button
-            variant="ghost"
-            size="xs"
-            class="mr-1 size-6 rounded-sm p-0"
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? "Show panel" : "Hide panel"}
-            title={collapsed ? "Show panel" : "Hide panel"}
-            onclick={() => (collapsed = !collapsed)}
-          >
-            {#if collapsed}
-              <ChevronUpIcon class="size-3.5" />
-            {:else}
-              <ChevronDownIcon class="size-3.5" />
-            {/if}
-          </Button>
-        </div>
+        <PanelTabs
+          tabs={[
+            { id: "recent", label: hasHistory ? `Recent · ${historyCount}` : "Recent" },
+            { id: "output", label: "Runtime output" },
+            { id: "diagnostics", label: "Diagnostics" },
+          ]}
+          bind:active={tab}
+          bind:collapsed
+        />
         {#if !collapsed}
           <div class="flex min-h-0 flex-1 flex-col">
             {#if active === "output" && output}
@@ -137,16 +109,3 @@
     {#if hasHistory && visibleView === "history"}{@render history()}{:else}{@render result()}{/if}
   </div>
 {/if}
-
-<style>
-  /* The selected tab is underlined rather than filled, so the strip reads as
-     panel chrome instead of a row of buttons. */
-  .panel-tab[aria-selected="true"]::after {
-    content: "";
-    position: absolute;
-    inset-inline: 0.75rem;
-    bottom: 0;
-    height: 1px;
-    background: var(--muted-foreground);
-  }
-</style>
