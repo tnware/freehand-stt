@@ -339,25 +339,37 @@
           : HistoryTextVersion.HistoryTextFinal}
         <article
           class={cn(
-            "history-entry group border-b border-hairline px-4 pt-2.5 pb-2 transition-colors",
-            isExpanded ? "bg-card" : "bg-layer-fill/40",
+            "history-entry group border-b border-hairline transition-colors",
+            isExpanded
+              ? "bg-subtle-fill px-4 pt-2.5 pb-2"
+              : entry.id === newestID
+                ? "bg-latest"
+                : "",
           )}
         >
           <div
             class={cn(
-              "history-row-header -mx-4 -mt-3.5 flex min-h-8 w-[calc(100%+2rem)] min-w-0 items-center rounded-t-xl bg-card",
-              isExpanded && "sticky top-0 z-10",
+              "history-row-header flex min-w-0 items-center",
+              isExpanded
+                ? "-mx-4 -mt-3.5 min-h-8 w-[calc(100%+2rem)] sticky top-0 z-10 bg-subtle-fill"
+                : "h-11 w-full",
             )}
           >
             <button
               type="button"
-              class="history-disclosure flex min-h-8 min-w-0 flex-1 items-center gap-3 px-4 py-1 text-left"
+              class="history-disclosure flex min-w-0 flex-1 items-center gap-2.5 px-4 py-1 text-left"
+              class:min-h-8={isExpanded}
               aria-label={`${isExpanded ? "Collapse" : "Expand"} transcript from ${completedDateTime(entry.completedAt)}`}
               aria-expanded={isExpanded}
               aria-controls={`history-entry-${entry.id}-content`}
               onclick={() => toggleExpanded(entry.id)}
             >
-              <span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <span
+                class={cn(
+                  "flex min-w-0 items-center gap-2",
+                  isExpanded ? "flex-1 flex-wrap" : "shrink-0",
+                )}
+              >
                 <span class={cn("size-2 shrink-0 rounded-full", outcomeDot(entry.outcome))}></span>
                 {#if entry.id === newestID}<span class="text-xs font-medium text-muted-foreground"
                     >Latest</span
@@ -389,6 +401,15 @@
                   </Badge>
                 {/if}
               </span>
+              {#if !isExpanded}
+                <span
+                  class="min-w-0 flex-[2] truncate text-[12.5px] text-secondary-foreground"
+                  >{entry.text}</span
+                >
+                <span class="figure shrink-0 text-[11px] text-ink-quiet"
+                  >{characterLabel(entry.characterCount)}</span
+                >
+              {/if}
               <span
                 class="disclosure-affordance grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground"
               >
@@ -417,6 +438,7 @@
             {/if}
           </div>
 
+          {#if isExpanded}
           <div id={`history-entry-${entry.id}-content`}>
             {#if isExpanded}
               {#if isComparing}
@@ -510,17 +532,6 @@
                   class="mt-2.5 w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
                 />
               {/if}
-            {:else}
-              <button
-                type="button"
-                class="transcript-toggle -mx-2 mt-2 block w-[calc(100%+1rem)] rounded-md px-2 text-left"
-                aria-label={`Expand transcript from ${completedDateTime(entry.completedAt)}`}
-                aria-expanded="false"
-                aria-controls={`history-entry-${entry.id}-content`}
-                onclick={() => toggleExpanded(entry.id)}
-              >
-                <span class="line-clamp-1 text-sm leading-7 break-words">{entry.text}</span>
-              </button>
             {/if}
           </div>
 
@@ -621,6 +632,7 @@
               </div>
             </div>
           </div>
+          {/if}
         </article>
       {/each}
     </div>
@@ -632,6 +644,11 @@
 {/if}
 
 <style>
+  /* The newest row is tinted rather than boxed, exactly one step off the
+     ground so it reads as "latest" without becoming a card. */
+  :global(.history-entry.bg-latest) {
+    background: color-mix(in srgb, var(--foreground) 2.5%, transparent);
+  }
   article {
     container-type: inline-size;
   }
