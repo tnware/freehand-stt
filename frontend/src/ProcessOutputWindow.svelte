@@ -1,22 +1,22 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
-  import { Events } from "@wailsio/runtime";
+  import { onMount } from "svelte";
+  import { Clipboard, Events } from "@wailsio/runtime";
   import { ModeWatcher, setMode } from "mode-watcher";
   import * as Manager from "$bindings/managedruntime/manager";
   import * as Windowing from "$bindings/windowing/service";
   import * as SettingsService from "$bindings/settings/service";
   import { ProcessOutputState } from "$lib/stores/process-output.svelte";
+  import ProcessOutputTerminal from "$lib/components/ProcessOutputTerminal.svelte";
   import { Button } from "$lib/components/ui/button";
   import { activeAppearanceMode } from "$lib/appearance";
   import { windowMaterial } from "$lib/platform";
   import type { Settings } from "$lib/state";
 
   const output = new ProcessOutputState(Manager);
-  let paused = $state(false);
+  let following = $state(true);
   let closing = $state(false);
   let error = $state("");
   let runtimeName = $state("");
-  let viewport: HTMLPreElement | undefined = $state();
 
   function appearance(settings: Settings) {
     setMode(activeAppearanceMode(settings));
@@ -34,14 +34,7 @@
       closing = false;
     }
   }
-  async function followTail() {
-    await tick();
-    if (!paused && viewport) viewport.scrollTop = viewport.scrollHeight;
-  }
-  function toggleScroll() {
-    paused = !paused;
-    if (!paused) void followTail();
-  }
+
   onMount(() => {
     let active = true;
     let revision = 0;
@@ -50,7 +43,7 @@
     async function refresh() {
       const request = ++revision;
       output.select("");
-      paused = false;
+      following = true;
       error = "";
       runtimeName = "";
       try {
@@ -95,9 +88,7 @@
       .catch(() => {});
     void refresh();
     const timer = setInterval(() => {
-      void output.poll().then(() => {
-        if (active) void followTail();
-      });
+      void output.poll();
     }, 500);
     return () => {
       active = false;
@@ -132,19 +123,6 @@
       <Button
         variant="ghost"
         size="sm"
-        disabled={!output.accepted}
-        onclick={toggleScroll}
-        >{paused ? "Resume scrolling" : "Pause scrolling"}</Button
-      >
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={!output.accepted || output.busy}
-        onclick={() => void output.clear()}>Clear</Button
-      >
-      <Button
-        variant="ghost"
-        size="sm"
         disabled={closing}
         onclick={() => void close()}>Close</Button
       >
@@ -154,15 +132,16 @@
     class="flex min-h-0 flex-1 flex-col gap-3 px-5 pb-5"
     aria-label="Process output"
   >
-    <div class="relative min-h-0 flex-1 border border-hairline bg-layer-fill">
-      <pre
-        bind:this={viewport}
-        role="region"
-        aria-label="Plain-text process output"
-        aria-describedby={!output.accepted ? "output-consent" : undefined}
-        class="absolute inset-0 overflow-auto p-3 font-mono text-xs whitespace-pre-wrap break-words">{#if output.accepted}{#each output.chunks as chunk (chunk.sequence)}<span
-              >{chunk.text}</span
-            >{/each}{/if}</pre>
+    <ProcessOutputTerminal
+      chunks={output.chunks}
+      revision={output.revision}
+      enabled={output.accepted}
+      busy={output.busy}
+      bind:following
+      onclear={() => void output.clear()}
+      oncopy={Clipboard.SetText}
+      describedby={!output.accepted ? "output-consent" : undefined}
+    >
       {#if !output.accepted}
         <div
           class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-4 border-b border-hairline bg-background px-4 py-3"
@@ -182,7 +161,7 @@
           >
         </div>
       {/if}
-    </div>
+    </ProcessOutputTerminal>
     <p
       role={error || output.error ? "alert" : undefined}
       class="h-4 shrink-0 truncate text-xs text-muted-foreground"
@@ -192,7 +171,7 @@
         output.error ||
         (!output.instanceID
           ? "Open this viewer from a runtime to select its output."
-          : paused
+          : !following
             ? "Scrolling paused; output collection continues."
             : output.truncated
               ? "Earlier output was cleared or discarded from the bounded buffer."

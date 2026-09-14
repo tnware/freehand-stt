@@ -190,7 +190,10 @@ output. This private capture is not saved as a log file.
 
 The separate viewer requires **Show output** consent each time it opens or
 switches runtime. Avoid displaying it during screen sharing. It is read-only,
-with no Copy, export, or file logging. Closing/switching clears displayed text
+with search, colors, and progress updates but no command input or file logging.
+**Copy selection** puts only the text you select on the clipboard when you ask;
+other applications may read it, and it can remain after closing the viewer.
+Closing/switching clears displayed text
 and revokes access without stopping the runtime or erasing its private tail.
 **Clear**, the next start attempt, runtime removal, and Quit discard the tail.
 Pausing scrolling does not pause collection. Freehand does not forward this

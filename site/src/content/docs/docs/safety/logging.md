@@ -93,10 +93,8 @@ Classify errors with `diagnostics.ErrorKind`; do not attach `err`, `err.Error()`
 
 ## Managed process output
 
-[ADR 0020](../../decisions/0020-managed-runtime-startup-and-diagnostics/) permits
-one narrow exception to raw child output staying outside the renderer: the
-explicitly authorized **Process output** viewer. This is not an application log
-or a relaxation of the prohibited-content rules above. Arbitrary upstream output
+The **Process output** viewer displays bounded child output only after explicit
+sensitive-output consent. It is separate from application logs. Arbitrary upstream output
 may include prompts, transcripts, paths, and other sensitive content; terminal
 control filtering is not comprehensive redaction.
 
@@ -110,17 +108,18 @@ revokes reads but does not erase this private capture.
 Require sensitive-output consent per viewer opening or runtime switch. Use only
 bounded cursor-delta binding reads while authorized, never raw output events.
 Clear visible frontend data and revoke access on close/switch; fence late reads
-and bound renderer accumulation. Render text nodes, not HTML, a terminal, links,
-or executable instructions. Follow/pause affects scrolling only; Clear and window
-lifecycle must not affect process ownership. No Copy/export, file retention,
-clipboard automation, crash-report attachment, or application-log forwarding is
-provided. Lifecycle notification events may identify the viewer state, not carry
-output text.
+and bound renderer accumulation. Read-only xterm.js rendering accepts only
+backend-filtered SGR colors/styles, carriage return, backspace, and CSI K
+line-erasure controls for progress updates. Never interpret HTML or enable output-triggered clipboard, links,
+window titles, or process input. Follow affects scrolling only; Clear and window
+lifecycle must not affect process ownership. Explicit Copy selection is allowed;
+export, file retention, clipboard automation, crash-report attachment, and
+application-log forwarding remain prohibited. Lifecycle notification events
+may identify the viewer state, not carry output text.
 
 Keep Wails at `Info`: bridge debug tracing can serialize these sensitive binding
-results as well as credential drafts and transcripts. Under ADR 0020's explicit
-superseding clarification, llama.cpp `b10809` uses `--log-verbosity 3 --log-colors off`
-instead of `--log-disable` for both CPU and CUDA. Normal info/warnings/errors go
+results as well as credential drafts and transcripts. llama.cpp `b10809` uses
+`--log-verbosity 3 --log-colors on` for both CPU and CUDA. Normal info/warnings/errors go
 only to the existing bounded private capture; trace/debug is not enabled.
 Normal logging is not redaction and can still contain sensitive content.
 

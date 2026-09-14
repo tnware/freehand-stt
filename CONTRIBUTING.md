@@ -54,8 +54,7 @@ Build a distributable bundle separately with `wails3 task package ARCH=arm64`.
 Use `ARCH=amd64` for an Intel build. Packaging produces an app bundle and a
 matching-architecture ZIP; launch the bundle, not a bare binary, for native
 permission tests. A local ad-hoc signature is not Developer ID signing or
-notarization. See the [macOS setup guide](site/src/content/docs/docs/guides/macos-setup.md)
-and [ADR 0013](site/src/content/docs/docs/decisions/0013-native-macos-boundary.md).
+notarization. See the [macOS setup guide](site/src/content/docs/docs/guides/macos-setup.md).
 Record real microphone, keyboard, insertion, Keychain, overlay and login behavior
 separately from unit/browser tests and cross-compilation. Never invoke model
 inventories to qualify a build.

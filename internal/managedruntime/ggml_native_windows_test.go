@@ -83,8 +83,9 @@ func TestGGMLPinnedRuntimeZIPs(t *testing.T) {
 				if !strings.Contains(string(p.stderr.bytes()), "argument '--offline' specified multiple times") {
 					t.Fatal("normal upstream warning missing from owned stderr capture")
 				}
-				if strings.Contains(string(p.stderr.bytes()), "\x1b[") {
-					t.Fatal("upstream logging emitted ANSI color escapes")
+				// Prefixes default off, but the warning still emits its SGR reset.
+				if !strings.Contains(string(p.stderr.bytes()), "\x1b[0m") {
+					t.Fatal("forced upstream ANSI colors missing from private capture")
 				}
 			}
 			if !slices.Equal(before, files()) {

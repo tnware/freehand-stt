@@ -126,11 +126,7 @@ export default defineConfig({
             { slug: "docs/safety/logging" },
             { slug: "docs/safety/windows" },
             { slug: "docs/safety/native-test-checklist" },
-            {
-              label: "Architecture decisions",
-              collapsed: true,
-              items: [{ autogenerate: { directory: "docs/decisions" } }],
-            },
+
           ],
         },
       ],

@@ -127,9 +127,8 @@ For llama.cpp or whisper.cpp, open its details using the chevron. If it is
 running, choose **Stop**. Under **Runtime binary**, choose
 **NVIDIA GPU (CUDA)** and wait for installation to finish, then choose
 **Start**. Runtime management, quick settings, and Connection details
-show the installed backend separately from the Connection name. Built-in
-llama.cpp and whisper.cpp Connections omit the old default **(CPU)** name suffix;
-changing the backend does not rename custom Connections or alter task selections.
+show the installed backend separately from the Connection name. Changing the
+backend does not rename custom Connections or alter task selections.
 
 CUDA 12.4 requires a compatible NVIDIA GPU with compute capability 5.0 or newer
 and driver 551.78 or newer; newer GPUs also need a driver that supports them.
@@ -192,11 +191,13 @@ You can inspect recent process output while startup is still in progress:
 2. The separate **Process output** window opens with a blank viewer and disabled
    output controls. Read its warning banner and choose **Show output** only if
    displaying it on your screen is safe.
-3. Use **Pause scrolling** to inspect earlier text, **Resume scrolling** to follow
-   new output, or **Clear** to discard the captured tail. Collection continues
-   while scrolling is paused.
+3. Use **Search** to find text, **Follow** to follow new output, or **Clear** to
+   discard the captured output. Collection continues when Follow is off.
+4. Select text and choose **Copy selection** if you want it on your clipboard.
+   Copied text can remain there after the viewer closes.
 
-The viewer is read-only and offers no Copy, export, or file logging. Closing it
+The read-only viewer supports colors and in-place progress updates when the
+runtime emits them. It does not accept commands or save log files. Closing it
 does not stop the runtime. Each opening requires consent again; closing or
 switching runtimes clears the displayed text and revokes access, but the private
 bounded tail remains until cleared, the next start attempt, runtime removal, or

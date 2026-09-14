@@ -23,6 +23,8 @@ export class ProcessOutputState {
   busy = $state(false);
   visible = $state(true);
   truncated = $state(false);
+  // Parser/viewport epoch, including resets coalesced into a single UI update.
+  revision = $state(0);
   #generation = 0;
   #reading = false;
   #disposed = false;
@@ -38,6 +40,7 @@ export class ProcessOutputState {
   select(instanceID: string) {
     const previous = this.instanceID;
     this.#generation++;
+    this.revision++;
     this.instanceID = instanceID;
     this.accepted = false;
     this.busy = false;
@@ -76,6 +79,7 @@ export class ProcessOutputState {
   async clear() {
     if (!this.accepted || this.busy || this.#disposed) return;
     const generation = ++this.#generation;
+    this.revision++;
     this.chunks = [];
     this.cursor = 0;
     this.truncated = false;
@@ -124,6 +128,7 @@ export class ProcessOutputState {
         this.select("");
         return;
       }
+      if (snapshot.truncated) this.revision++;
       const chunks = [
         ...(snapshot.truncated ? [] : this.chunks),
         ...(snapshot.chunks ?? []).filter(

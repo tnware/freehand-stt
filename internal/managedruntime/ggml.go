@@ -245,7 +245,7 @@ func (g ggmlProvider) arguments(model string, s modelSpec, root string, port int
 		// bounded stdout/stderr capture. No --log-file/--log-prompts-dir: the
 		// upstream file sink defaults to null, and ggmlEnvironment excludes
 		// logging/config overrides. See testdata/ggml-startup-source.md.
-		return append(args, "--alias", model, "--reasoning", "off", "--no-warmup", "--parallel", "1", "--ctx-size", "4096", "--gpu-layers", "0", "--no-op-offload", "--offline", "--no-ui", "--no-agent", "--no-ui-mcp-proxy", "--log-verbosity", "3", "--log-colors", "off")
+		return append(args, "--alias", model, "--reasoning", "off", "--no-warmup", "--parallel", "1", "--ctx-size", "4096", "--gpu-layers", "0", "--no-op-offload", "--offline", "--no-ui", "--no-agent", "--no-ui-mcp-proxy", "--log-verbosity", "3", "--log-colors", "on")
 	}
 	return append(args, "--no-gpu", "--no-flash-attn")
 }

@@ -98,8 +98,8 @@ and macOS; packaging and cross-compilation do not certify hardware behavior.
 
 The storage job runs the pinned sqlc command, rejects stale or untracked generated
 queries, compares published `internal/storage/schema/` migrations against the PR
-base (or previous main revision), and checks import/query ownership. ADR 0014
-permits an alpha-only base to introduce the new lineage, not to mutate a
-published new-baseline migration. Real SQLite tests cover migrations,
+base (or previous main revision), and checks import/query ownership. An alpha-only
+base can introduce `schema/00001_initial.sql`; published migrations in `schema/`
+remain immutable. Real SQLite tests cover migrations,
 recovery, constraints, and file locking; fixtures never use personal settings or
 credentials. See [SQLite storage](../storage/) for the matching local commands.

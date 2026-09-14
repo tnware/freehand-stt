@@ -27,8 +27,8 @@ Readiness is task-specific, not an application-wide setup prerequisite:
 dictation owns recording setup, file transcription needs STT but no microphone
 or completed dictation setup, and the TTS composer needs its own enabled speech
 configuration but neither STT nor a microphone. Conversation mode remains out of
-scope. [ADR 0015](../../decisions/0015-managed-local-speech-runtime/) adds the
-optional Windows managed-runtime exception to ADR 0005's remote-first boundary.
+scope. Inference runs on the user's chosen server or an explicitly installed
+optional Windows managed runtime; models and runtime binaries are not bundled.
 
 ## Managed local speech
 
@@ -41,13 +41,11 @@ bounded status events, not upstream flags. Official versioned archives are
 checksum-verified before extraction is published. Model downloads use NeMo's
 own manager with a Freehand-owned cache; the GGML adapters download only their
 pinned catalog revisions with size and SHA-256 verification. Listing the catalog
-never loads models. [ADR 0017](../../decisions/0017-managed-provider-installations/)
-bounds each provider to one installation and one process tree, including retired
-workers. Existing duplicate entries remain explicitly repairable without ID,
-Connection, or model rewrites. Different providers can run concurrently.
+never loads models. Each provider is bounded to one installation and one process
+tree, including retired workers. Existing duplicate entries remain explicitly
+repairable without ID, Connection, or model rewrites. Different providers can run concurrently.
 
-[ADR 0018](../../decisions/0018-built-in-runtime-connections/) makes each configured
-runtime a built-in row in the existing connection state. Storage derives its
+Each configured runtime has a built-in row in connection state. Storage derives its
 stable identity and qualified uses and materializes it through ordinary settings
 transactions, preserving selection and remembered-option foreign keys. There is
 no additional runtime-event routing registry. Go rejects edits, rename, duplicate,
@@ -56,7 +54,7 @@ intact. Runtime-owned transport/model fields are read-only in Connections, while
 task options retain their existing owners. Stopped rows remain available for
 explicit selection and repair, but requests fail closed until ready.
 
-Built-in name projection removes only the historical GGML default `(CPU)` suffix
+Built-in name projection removes only the GGML default `(CPU)` suffix
 for its matching provider, leaving durable instance preferences, custom names,
 legacy aliases, IDs, and task selections intact. Installed backend presentation
 comes from the referenced runtime's `Status.backend`, never from a saved name.
@@ -80,8 +78,7 @@ icons resolve the referenced instance's provider, since durable managed details
 intentionally contain no manual API profile. Quick settings pass their runtime
 inventory into connection pickers so artwork and status use the same session.
 
-Following [ADR 0016](../../decisions/0016-managed-runtime-connections/), the
-settings owner persists runtime instance definitions and ordinary Connections
+The settings owner persists runtime instance definitions and ordinary Connections
 through the existing SQLite transaction. A managed Connection references an
 instance, not an ephemeral port. Each task independently selects its Connection;
 there is no global managed-mode routing override. Runtime instances own loaded
@@ -117,9 +114,7 @@ Keep this distinction at the adapter boundary, not in shared client URL handling
 
 llama.cpp likewise publishes `/v1` for the cleanup client, with S1-mini reasoning
 disabled. whisper.cpp instead publishes the server origin for native `/inference`
-requests and `/health` metadata. Their pinned CPU/CUDA installation and
-replacement contract follows [ADR 0019](../../decisions/0019-managed-ggml-gpu/);
-[ADR 0020](../../decisions/0020-managed-runtime-startup-and-diagnostics/) adds
+requests and `/health` metadata. GGML installations use pinned CPU/CUDA recipes,
 host-aware recommendations, selected-model GPU warm-up, and a private output viewer.
 The adapter verifies the server and companion libraries as a pinned installation;
 its recorded backend determines controlled launch arguments. Backend changes
@@ -200,15 +195,28 @@ than owns the runtime. Each opening or runtime switch requires sensitive-output
 consent before enabling reads. Cursor-based, bounded request/response deltas are
 polled without overlap; no output is published in events, application logs,
 bridge tracing, crash reports, or files. Frontend accumulation is also bounded.
-Text nodes display output without HTML or terminal interpretation; scrolling can
-follow or pause, and Clear drops the tail. There is no Copy/export or shell input.
+A read-only xterm.js surface displays bounded UTF-8 text, newline, tab, carriage
+return, backspace, validated bounded SGR colors/styles, and erase-line progress
+controls. Other control families are filtered, including OSC, DCS/APC/PM/SOS,
+terminal queries, input modes, and alternate-screen operations. Decoder state is
+bounded and independent per stream, including fragmented or malformed controls.
+Filtering is not sensitive-content redaction. The viewer has no process-input,
+link, title, or escape-triggered clipboard handlers; terminal-generated responses
+never reach child stdin. Fit/search addons and search terms are viewer-local.
+Terminal scrollback and write queues are bounded; reset, eviction, and consent
+changes discard stale rendered state and pending writes. Follow controls
+scrolling; Clear drops the tail.
+Explicit Copy selection sends only selected rendered text to the native clipboard,
+without reading clipboard contents, automatic copy, Copy-all, export, or shell input.
+Copied text can outlive the viewer and be visible to other applications. Teardown
+disposes terminal, addon, and resize resources.
 
 Closing/switching clears visible renderer data and revokes retrieval. Disabling
 access does not erase private memory. The tail may survive process exit for
 inspection; Clear, the next start attempt, runtime removal, and shutdown release
 it. Viewer actions never start, stop, restart, or orphan a process. llama.cpp
-uses normal non-debug `--log-verbosity 3 --log-colors off` output in the existing
-private capture, superseding the initial `--log-disable` policy in ADR 0020.
+uses normal non-debug `--log-verbosity 3 --log-colors on` output in the existing
+private capture.
 The pinned logger defaults to no disk sink; file/prompt logging flags and
 inherited logging/config overrides remain excluded. Normal logs may contain
 sensitive content; whisper verbosity is not enabled.
@@ -220,8 +228,7 @@ native capture or manual endpoints.
 
 ## macOS platform boundary
 
-[ADR 0013](../../decisions/0013-native-macos-boundary/) extends the Windows-first
-architecture with native macOS adapters while preserving the existing feature owners.
+Windows and macOS use native adapters under shared feature owners.
 Shared audio selects CoreAudio or WASAPI. Quartz/Accessibility own Mac keyboard and
 safe delivery, Security.framework owns Keychain, and a nonactivating Cocoa panel
 owns the passive overlay. Wails retains the interactive shell, tray and single instance.
@@ -259,15 +266,14 @@ and SQLite after feature shutdown through Wails `PostShutdown`.
 
 ## Optional realtime dictation
 
-[ADR 0008](../../decisions/0008-qualified-realtime-dictation/) qualifies Nemotron
-3.5 on NeMo-Speech.cpp v0.1.0. [ADR 0011](../../decisions/0011-qwen-vllm-realtime/)
-adds Qwen3-ASR on vLLM 0.28.0, with model-only configuration, JSON/base64 audio,
-and distinct delta/done events. `internal/realtime` owns the versioned WebSocket
+Qualified realtime combinations include Nemotron 3.5 on NeMo-Speech.cpp v0.1.0
+and Qwen3-ASR on vLLM 0.28.0. The vLLM adapter uses model-only configuration,
+JSON/base64 audio, and distinct delta/done events. `internal/realtime` owns the versioned WebSocket
 adapters and bounded audio/text transport; `internal/dictation` owns capture,
 generation fencing, immutable profiles, finalization, cleanup, and safe delivery.
-[ADR 0009](../../decisions/0009-unified-voice-transcription/) gives Voice one active
-connection/model/profile and an optional qualified realtime mode. `VoiceTranscription`
-owns microphone settings; root STT fields own audio files. Dictation captures only
+Voice has one active connection/model/profile and an optional qualified realtime
+mode. `VoiceTranscription` owns microphone settings; root STT fields own audio
+files. Dictation captures only
 the Voice credential for either transport, while files capture only their own key.
 The completed Voice snapshot adapts onto the existing STT request fields without
 changing persistent file settings. Native captions carry a bounded transient tail
@@ -296,11 +302,11 @@ and overlay preview, not Go-owned jobs. No separate connection window exists.
 
 ## Durable settings storage
 
-[ADR 0014](../../decisions/0014-clean-settings-baseline/) governs the current
-SQLite store: modernc, embedded Goose migrations in `internal/storage/schema/`,
+The SQLite store uses modernc, embedded Goose migrations in `internal/storage/schema/`,
 and sqlc-generated queries. The distinct `freehand.db` identity starts from safe
-defaults and an empty catalog, without reading, importing, or deleting alpha
-settings or native credentials. Goose alone owns schema versions.
+defaults and an empty catalog. It never reads, imports, converts, or deletes
+`settings.db`, `settings.json`, or their legacy native credentials.
+Goose alone owns schema versions.
 `internal/storage` owns the database lifecycle and adapters; `internal/settings`
 retains coherent saves and immutable request profiles. See the
 [storage maintenance guide](../storage/) for schema changes and recovery.
@@ -323,7 +329,7 @@ commit together. Storage rejects invalid or unsupported activation purposes and
 activation on other actions. New selections still require model configuration;
 no inference or optional feature is enabled by creating a connection. Feature pages own active selection, model,
 language, presets, voice, and other runtime options. Fresh catalogs are empty.
-Selection restores remembered engine options while preserving task intent (ADR 0007); an
+Selection restores remembered engine options while preserving task intent; an
 unconfigured connection starts with defaults and disables optional features.
 The domain contract lives in
 `internal/savedconnection`; SQLite adapters remain in storage. The existing
@@ -783,9 +789,9 @@ checkpoint, file, and speech request paths carry model-profile selection in thei
 existing immutable settings snapshot. Model-specific fields never become
 connection credentials or connection-owned settings.
 
-The initial schema persists feature-owned model-profile IDs with Generic
+The schema persists feature-owned model-profile IDs with Generic
 defaults. Cleanup's `preset` field holds its model-profile ID, not a second
-source of truth or an alpha compatibility adapter. The cleanup descriptor service
+source of truth. The cleanup descriptor service
 supplies prompt/control metadata; shared catalog metadata supplies behavior names,
 capabilities, and requirements.
 
@@ -1040,14 +1046,12 @@ window-placement persistence, native dialog dispatch, or all OS cleanup. Preserv
 that distinction in acceptance reports; do not replace serialized cleanup with
 concurrent frees or an unconditional process kill.
 
-## Shelved conversation research
+<span id="shelved-conversation-research"></span>
 
-Conversation mode is not part of the active product direction. If future
-evidence revives it, it must reuse the same coherent-profile and
-feature-ownership principles but requires a separate turn state machine,
-streamed chat, ordered sentence segmentation, sequential TTS playback,
-cancellation, and a single selected LLM. It must not create parallel requests
-to different Ollama models.
+## Conversation scope
+
+Conversation mode is outside the product boundary. On-demand speech generation
+does not automatically send transcripts to chat or start a conversational turn.
 
 ## Optional post-STT normalization
 
@@ -1057,20 +1061,21 @@ The client provides an optional transcript-processing capability:
 STT -> raw transcript -> selected processing profile -> clean transcript -> insertion
 ```
 
-Raw STT remains first-class and selectable. The processor is orchestrated by the client through a separately configured OpenAI-compatible `/chat/completions` endpoint; it is never hidden inside Speaches and is never bundled into the Windows executable. The default custom-instruction profile works with an ordinary compatible chat model. S1-mini by Superwhisper is a separate purpose-built profile whose styling, structure, context, and fixed request contract apply only when explicitly selected. All failures fall back to raw text. See [ADR 0001](../../decisions/0001-s1-mini-post-processing/).
+Raw STT remains first-class and selectable. The processor is orchestrated by the client through a separately configured OpenAI-compatible `/chat/completions` endpoint; it is never hidden inside Speaches and is never bundled into the Windows executable. The default custom-instruction profile works with an ordinary compatible chat model. S1-mini by Superwhisper is a separate purpose-built profile whose styling, structure, context, and fixed request contract apply only when explicitly selected. Processing failures preserve raw text; owning-operation cancellation still prevents delivery. See the [S1-mini model guide](../../models/s1-mini/).
 
 <span id="shelved-realtime-transcription-research"></span>
 
-## Historical Speaches realtime research
+<span id="historical-speaches-realtime-research"></span>
 
-[ADR 0002](../../decisions/0002-realtime-transcription/) preserves the original
-Speaches v0.8.2 investigation, including 24 kHz PCM16 audio and item-correlation
-requirements. It is not the implemented realtime adapter. The
-[qualified realtime boundary](#optional-realtime-dictation) uses distinct NeMo
-and vLLM protocols under the unified Voice selection. Their audio formats,
-configuration, and finalization rules must not be inferred from the historical
-Speaches contract. Only authoritative final text may proceed to cleanup and
-focus-safe insertion.
+## Realtime transport boundaries
+
+The [qualified realtime adapters](#optional-realtime-dictation) use distinct NeMo
+and vLLM protocols under unified Voice selection. Audio formats, session setup,
+and finalization belong to the selected adapter; OpenAI compatibility alone does
+not establish realtime support. Uploaded-file SSE streams response text after
+upload, not live microphone audio. Outgoing audio queues are bounded; transport
+failure discards provisional text rather than reconnecting and replaying audio.
+Only authoritative final text may proceed to cleanup and focus-safe insertion.
 
 ### Transcription option snapshots
 
@@ -1128,8 +1133,7 @@ persisted settings collection. `compatibility.Contract.TranscriptionLanguage`
 owns provider mapping, consumed before both microphone and file multipart bodies
 are built. `config.Settings.VoiceTranscription.Language` and `config.Settings.Language`
 preserve independent Voice/file selections. Model profiles further restrict
-language support and defaults; model selection preserves task language under
-ADR 0007 rather than restoring a historical model-row language.
+language support and defaults; model selection preserves task language.
 
 The existing S1-mini profile descriptor declares English. Each workflow owner
 uses `postprocess.ValidateLanguage` after transcription and before cleanup, with
@@ -1176,7 +1180,7 @@ counts, not URLs, model IDs, voice IDs, or credentials.
 The settings editor rejects late results from an obsolete connection revision
 or model selection. The voice picker preserves custom IDs and never treats
 inventory membership as request admission. Lists are ephemeral; selected voices
-use the existing modelsettings/sqlc save transaction, requiring no migration.
+use the modelsettings/sqlc save transaction.
 Kokoro's `stream: false` is a backend wire adaptation, not a model preference.
 
 ### Ordered runtime publication and speech lifecycle
@@ -1206,16 +1210,16 @@ current result is persisted in SQLite or browser storage.
 
 ### Task preference ownership
 
-[ADR 0007](../../decisions/0007-task-state-and-preference-ownership/) defines the
-selection contract shared by `modelsettings.Select` and the renderer model editor.
-Language, cleanup intent, and speaking speed survive model/connection switches;
-engine options and voice remain scoped to a model. The clean baseline stores
-only the current model-owned subset in remembered-model rows; historical task
-fields are absent, not retained for compatibility.
+`modelsettings.Select` and the renderer model editor share the same selection
+contract. Language, cleanup instructions, trained S1-mini styling/structure/context,
+and speaking speed survive model/connection switches; engine options and voice
+remain scoped to a model. Remembered-model rows store only model-owned options,
+not task settings. Generic cleanup instructions are not translated into trained
+S1-mini controls.
 
 ### Shared vocabulary
 
-Following [ADR 0010](../../decisions/0010-shared-vocabulary/), `config.VocabularySettings` owns task-level terminology and Voice/file opt-ins. `modelprofile.VocabularyMode` resolves qualified hint fields; the renderer preview and request projection share Go validation. `settings.captureProfile` projects only into immutable workflow snapshots. Completed NeMo speech contexts use request-only transcription fields, excluded from JSON/model preferences. The baseline vocabulary table and sqlc queries persist the shared settings in the same transaction. Remembered-model rows do not store the shared phrase list.
+`config.VocabularySettings` owns task-level terminology and Voice/file opt-ins. `modelprofile.VocabularyMode` resolves qualified hint fields; the renderer preview and request projection share Go validation. `settings.captureProfile` projects only into immutable workflow snapshots. Completed NeMo speech contexts use request-only transcription fields, excluded from JSON/model preferences. The vocabulary table and sqlc queries persist the shared settings in the same transaction. Remembered-model rows do not store the shared phrase list.
 
 ## File and speech workspace presentation
 
@@ -1301,9 +1305,8 @@ or active settings; ordinary composition/history/file playback uses saved settin
 
 ## Speech family contracts
 
-[ADR 0012](../../decisions/0012-speech-model-expansion/) adds Parakeet TDT v3 and
-Cohere profiles on existing completed adapters, Voxtral on the existing vLLM
-realtime transport, and vLLM-Omni speech with Qwen3-TTS CustomVoice options.
+Parakeet TDT v3 and Cohere profiles use completed adapters, Voxtral uses the vLLM
+realtime transport, and vLLM-Omni speech supports Qwen3-TTS CustomVoice options.
 `modelprofile` owns languages, preset voices, and option admission; Svelte uses
 that resolved metadata. Only Qwen realtime output passes through the Qwen header
 parser. Voxtral finals remain ordinary text under the same stop/final authority.

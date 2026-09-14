@@ -14,7 +14,7 @@
 - Remove development chronology, rejected-design comparisons (such as "not a
   separate window"), migration internals, and commentary about layout fixes from
   user pages. Keep an upgrade note only when a user must act or understand a
-  change to their data; put implementation history in maintainer records or ADRs.
+  change to their data.
 - Explain safety and compatibility through user consequences and actions. Keep
   important limits, data lifetimes, costs, permission restrictions, and versioned
   backend requirements, but reserve process IDs, state ownership, wire formats,

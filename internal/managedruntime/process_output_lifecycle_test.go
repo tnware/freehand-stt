@@ -36,7 +36,7 @@ func TestProcessOutputChild(t *testing.T) {
 	if os.Getenv("FREEHAND_OUTPUT_HELPER") != "1" {
 		return
 	}
-	fmt.Fprint(os.Stdout, "startup private text\n")
+	fmt.Fprint(os.Stdout, "\x1b[32mstartup private text\x1b[0m\r\x1b[Kready\n\x1b]52;c;hidden clipboard\a")
 	fmt.Fprint(os.Stderr, "startup stderr\n")
 	time.Sleep(20 * time.Second)
 	os.Exit(0)
@@ -71,7 +71,11 @@ func TestProcessOutputDuringStartupAndFailure(t *testing.T) {
 		for _, c := range snap.Chunks {
 			text.WriteString(c.Text)
 		}
-		if strings.Contains(text.String(), "startup private text") && strings.Contains(text.String(), "startup stderr") {
+		if strings.Contains(text.String(), "\x1b[32mstartup private text\x1b[0m\r\x1b[Kready\n") && strings.Contains(text.String(), "startup stderr") {
+			displaySnapshotText(t, snap)
+			if strings.Contains(text.String(), "hidden clipboard") {
+				t.Fatal("hostile child OSC escaped the capture policy")
+			}
 			break
 		}
 		if time.Now().After(deadline) {
@@ -109,13 +113,13 @@ func TestProcessOutputPreservesParserPrefix(t *testing.T) {
 	w := &worker{}
 	prefix := &boundedOutput{}
 	writer := observedOutput{prefix: prefix, observer: &startupObserver{output: func(stream string, p []byte) { w.appendProcessOutput(0, stream, p) }}, stream: "stdout"}
-	input := strings.Repeat("a", outputLimit) + "tail"
+	input := "\x1b[31m" + strings.Repeat("a", outputLimit) + "tail\x1b[0m"
 	n, err := writer.Write([]byte(input))
 	if n != len(input) || err != nil || !prefix.overflow || string(prefix.bytes()) != input[:outputLimit] {
 		t.Fatal("parser prefix/overflow changed")
 	}
 	chunks := w.output.chunks
-	if !strings.HasSuffix(chunks[len(chunks)-1].Text, "tail") {
+	if !strings.HasSuffix(chunks[len(chunks)-1].Text, "tail\x1b[0m") {
 		t.Fatal("viewer not rolling")
 	}
 }

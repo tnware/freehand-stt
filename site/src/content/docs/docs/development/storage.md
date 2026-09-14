@@ -3,9 +3,7 @@ title: SQLite storage
 description: Maintain the schema, generated queries, credential references, and recovery contract.
 ---
 
-Freehand persists non-secret settings in SQLite. Follow
-[ADR 0014](../../decisions/0014-clean-settings-baseline/) and the repository's
-`AGENTS.md` for every storage change. Saved connections use stable server records
+Freehand persists non-secret settings in SQLite. Saved connections use stable server records
 with explicit capability memberships. Remembered model preferences share the
 settings transaction; transcript history remains optional and memory-only. Disposable window
 placement remains in `window-state.json`, independent of settings recovery.
@@ -29,8 +27,7 @@ when upgrading. SQLite adds no SQLite-specific CGO dependency; the native audio
 and Wails build requirements still apply.
 
 `00001_initial.sql` directly creates the current `STRICT` settings, connection,
-vocabulary, remembered-model, and credential-reference schema. There is no alpha
-upgrade chain, JSON import marker, or historical task-field compatibility layer.
+vocabulary, remembered-model, and credential-reference schema.
 Foreign keys and explicit deletion rules protect related rows. Go validates complete domain settings before writing and after reading.
 Generated rows and database handles never cross into Wails or domain services.
 
@@ -64,7 +61,6 @@ Git base permits this explicit new lineage; it does not exempt a published
 `schema/00001_initial.sql` from byte-for-byte immutability. Handwritten infrastructure SQL
 is confined to `store.go` and `recovery.go`: connection settings, identity/version
 inspection, integrity checks, and backup work. Application queries require sqlc.
-A different driver, ORM, migration runner, or boundary requires a superseding ADR.
 
 ## Connection and durability policy
 
@@ -96,11 +92,10 @@ catalog in a private temporary database, validates it, and publishes it only whe
 complete. Interrupted initialization leaves no authoritative partial database.
 Unpublished temporary files are not loaded as settings.
 
-This is a hard reset from all alpha settings, not an import. On both platforms,
-alpha `settings.db`, `settings.json`, their recovery files, and legacy native
+On both platforms, alpha `settings.db`, `settings.json`, their recovery files, and legacy native
 credentials are never read, converted, or deleted. Users repeat setup and re-enter
 keys. A distinct SQLite `application_id` rejects even an alpha database renamed
-to `freehand.db`. Only backups from the new lineage are eligible for restoration.
+to `freehand.db`. Only backups with the current database identity are eligible for restoration.
 
 Before upgrading an existing schema, SQLite's backup API creates a consistent,
 synced copy under `freehand-backups/` as `freehand-*.db`; the newest three successful backups are retained.
@@ -195,7 +190,7 @@ The baseline has a STRICT remembered-model table with an explicit
 connection/purpose/model primary key, bounded typed option columns, a cascading
 connection foreign key, and a partial unique index for each use's last selection.
 Only current model-owned options are stored; task language, cleanup intent,
-speaking speed, and shared vocabulary are not historical model snapshots.
+speaking speed, and shared vocabulary remain task-owned.
 The settings transaction persists remembered and active options together through
 sqlc; no configuration JSON, credentials, audio, or transcript content is stored
 in these rows.

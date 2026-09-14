@@ -48,7 +48,7 @@ func TestProcessOutputOptInBoundedOrdered(t *testing.T) {
 	w.appendProcessOutput(0, "stdout", []byte("first\x1b[31m red\x1b[0m\r\n"))
 	w.appendProcessOutput(0, "stderr", []byte("second"))
 	s, err := m.ReadProcessOutput(OutputRequest{InstanceID: "test"})
-	if err != nil || len(s.Chunks) != 3 || s.Chunks[0].Text != "private before open" || s.Chunks[1].Text != "first red\n" || s.Chunks[2].Stream != "stderr" || s.Chunks[2].Sequence <= s.Chunks[1].Sequence {
+	if err != nil || len(s.Chunks) != 3 || s.Chunks[0].Text != "private before open" || s.Chunks[1].Text != "first\x1b[31m red\x1b[0m\r\n" || s.Chunks[2].Stream != "stderr" || s.Chunks[2].Sequence <= s.Chunks[1].Sequence {
 		t.Fatalf("snapshot: %+v %v", s, err)
 	}
 	cursor := s.Next
@@ -72,6 +72,6 @@ func TestProcessOutputOptInBoundedOrdered(t *testing.T) {
 	w.appendProcessOutput(0, "stdout", []byte("after close"))
 	s, _ = m.ReadProcessOutput(OutputRequest{InstanceID: "test"})
 	if s.Enabled || len(s.Chunks) != 0 {
-		t.Fatal("disable must clear and stop capture")
+		t.Fatal("disable must revoke reads")
 	}
 }

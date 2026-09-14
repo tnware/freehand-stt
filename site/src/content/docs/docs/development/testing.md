@@ -17,8 +17,8 @@ readiness timeout, port conflicts, and shutdown during install/pull/start/run.
 Windows process tests must prove descendants cannot outlive the owner's Job
 Object, not just that the immediate child receives a kill request.
 
-Real SQLite tests exercise the forward instance migration, fresh empty inventory,
-enabled/disabled checkpoint upgrades, save/reopen, and failed persistence.
+Real SQLite tests exercise fresh empty inventory, forward schema upgrades,
+enabled/disabled runtime preferences, save/reopen, and failed persistence.
 Settings tests prove independent task selection, credential-free managed request
 snapshots, rejected unsupported roles, and unavailable-instance admission without
 remote fallback. Runtime tests exercise independent worker lifetime, retired
@@ -97,7 +97,7 @@ built-in Connection details/pickers, and managed task shortcuts. Check both them
 status text and action labels must stay readable independently of the artwork.
 Exercise CPU/CUDA status updates in quick settings and Connection details without
 changing the Connection selection. Reopen real SQLite settings containing the
-historical `llama.cpp (CPU)` and `whisper.cpp (CPU)` default names: built-in names
+`llama.cpp (CPU)` and `whisper.cpp (CPU)` default names: built-in names
 must be backend-neutral while instance preferences, selected IDs, and custom
 names remain intact. These checks establish display consistency, not GPU offload.
 Exercise download/cancel/retry and start/stop directly from a collapsed runtime
@@ -116,14 +116,9 @@ inventory inference belongs in CI. See the
 
 ### Startup, recommendation, and output-viewer validation
 
-[ADR 0020](../../decisions/0020-managed-runtime-startup-and-diagnostics/) is an
-implemented checkpoint, not completed native acceptance. The earlier CPU/CUDA
-checkpoint was user-tested on Windows; that evidence does not qualify the new
-host recommendation, GPU warm-up, startup-phase reporting, or auxiliary viewer.
-Record deterministic test/build results separately from native observations.
-No live inference was performed as part of the implementation-agent checks.
-
-Required deterministic coverage exercises the real ownership boundaries:
+Test host recommendations, GPU warm-up, startup reporting, and the output viewer
+at their ownership boundaries. Separate deterministic results from native
+startup, rendering, clipboard, and selected-model inference observations:
 
 - Source projection tests compare metadata with actual acquisition specifications,
   including companion archives and NeMo release-index pins. Intercept the real
@@ -156,22 +151,31 @@ Required deterministic coverage exercises the real ownership boundaries:
   truncation, interleaved streams, split UTF-8 and terminal controls, generation
   fencing, opt-in reads, revocation without private-tail erasure, explicit Clear,
   next-start/remove/shutdown cleanup, and the separate bounded parser prefix.
+- Use split and malformed controls to verify the display allowlist: bounded SGR
+  colors/styles and erase-line progress may pass; OSC clipboard/link/title,
+  DCS/APC/PM/SOS, queries, input modes, and alternate-screen controls may not.
+  Check per-stream decoder isolation, bounded terminal scrollback/write queues,
+  eviction/reset propagation, and stale writes after close or revoked consent.
+  Explicit Copy selection must copy only selected rendered text through the native
+  boundary, never read the clipboard or react to upstream escape sequences.
 - Windowing and frontend state tests must cover viewer reuse, consent per opening or
   runtime switch, bounded non-overlapping polling, late-read rejection, visible
   state clearing, and no process lifecycle calls from viewer actions. Browser
   fixtures must cover recommendation before installation, explicit acceptance,
   phase/elapsed display without fake percentages, **View output** during startup
-  from management and quick controls, warning/consent, text-only rendering,
-  follow/pause scrolling, Clear, close/reopen, and sparse upstream output.
+  from management and quick controls, warning/consent, read-only terminal rendering,
+  colors and carriage-return progress, local search, resize, selection/copy admission,
+  follow/pause scrolling, Clear, close/reopen, and sparse upstream output. Use bounded
+  synthetic output; viewer interactions must never send input or change process lifetime.
 
-Native Windows acceptance of these additions remains pending. Use only a
-user-selected model to measure startup and first/subsequent request behavior,
-confirm actual GPU preparation and CPU behavior, inspect host recommendations,
+For native Windows acceptance, use only a user-selected model to measure startup
+and first/subsequent request behavior, confirm actual GPU preparation and CPU
+behavior, inspect host recommendations,
 and exercise real window close/reuse, cancellation, and process-tree shutdown.
 Neither browser mocks, `--help`, a docs build, nor successful deterministic tests
-establish those results. Keep these checks in the existing
-[native runtime acceptance section](../../safety/native-test-checklist/#managed-local-runtime),
-not a second delivery checklist. macOS currently has shared recipe-extension
+establish those results. Use the
+[native runtime acceptance section](../../safety/native-test-checklist/#managed-local-runtime).
+macOS currently has shared recipe-extension
 contracts only: no qualified managed packages or native acceptance.
 
 ## Shortcut recovery regression checks
@@ -211,7 +215,7 @@ These checks do not substitute for packaged-app keyboard/permission acceptance.
 
 ## Native macOS acceptance
 
-[ADR 0013](../../decisions/0013-native-macos-boundary/) defines the Mac boundary.
+See the [macOS platform boundary](../architecture/#macos-platform-boundary).
 Run the deterministic Go and frontend suites on macOS, then exercise a packaged
 app with a stable bundle identity. Tests guarded by `FREEHAND_NATIVE_*` are opt-in:
 a skipped acceptance test proves nothing about native behavior. Do not prompt, type
@@ -246,7 +250,7 @@ Native verification must separately cover:
 - Real bundle/signature/entitlement inspection; Intel execution and signed update
   application are distinct from an Apple Silicon build or a local ad-hoc signature.
 
-Record commands, actual results and unverified cases in the work item. Live inference
+Record commands, actual results, and unverified cases. Live inference
 uses only an explicitly selected endpoint/model; do not qualify a model inventory.
 Microphone or keyboard denial must leave file transcription and TTS independently usable.
 
@@ -329,7 +333,7 @@ latter skips application jobs but still reports the gate and relevant site
 result. Compare cold and warm cache timings separately. A task dry run confirms
 `npm ci` selection but is not a package build. Release gating and same-run artifact
 publication also require a real release run; local tests do not establish those
-GitHub effects. See [GitHub Actions](../github-actions/) for the rollout contract.
+GitHub effects. See [GitHub Actions](../github-actions/) for workflow configuration.
 
 ## Product site and onboarding acceptance
 
@@ -584,12 +588,11 @@ Run `go run ./build/scripts/storage -check -base main` and
 `go test ./internal/storage ./internal/settings ./build/scripts/storage`.
 Storage fixtures use temporary files and real modernc/goose/sqlc paths, including
 abrupt subprocess exits during initialization, writes, and forward upgrades.
-Prove the alpha hard reset on both platforms: old `settings.db` and `settings.json`
+Check file isolation on both platforms: `settings.db` and `settings.json`
 remain untouched, legacy credentials are never read or deleted, and `freehand.db`
-starts with defaults and no connections. Renamed alpha databases must fail identity
-validation. Temporary Git fixtures permit the alpha-only base transition but
-reject edits, removal, or renaming of published `schema/` migrations, as well as
-invalid or nontransactional migrations. Check backups,
+starts with defaults and no connections. Renamed foreign databases must fail identity
+validation. Temporary Git fixtures reject edits, removal, or renaming of published
+`schema/` migrations, as well as invalid or nontransactional migrations. Check backups,
 constraints, lock waits, read-only/full-disk failures, incompatible history, and
 staged credential consistency. Run the storage/settings race tests on Windows;
 CI also checks portable storage fixtures on Linux. Native service fixtures use a
@@ -597,7 +600,7 @@ fake vault/startup adapter and do not establish interactive Windows acceptance.
 
 ## Unit and deterministic integration tests
 
-- Configuration validation, URL joining, header filtering, fresh initialization with alpha-file isolation, and explicit database recovery without implicit replacement.
+- Configuration validation, URL joining, header filtering, fresh initialization with legacy-file isolation, and explicit database recovery without implicit replacement.
 - OpenAI multipart transcription request shape against an in-process HTTP server.
 - Inference redirect denial through the production constructor: 301/302/303/307/308 across STT, chat, completed/streamed file upload, speech generation, models, and health routes. Local fake transports assert exactly one request with canary credentials/payload, covering same-origin, cross-origin, and HTTPS-to-HTTP targets; failures expose neither Location nor peer body.
 - Successful-response credential canaries across completed STT/chat/file, SSE and buffered-SSE terminal metadata, all retained request-ID headers, nested languages/usage type, and discovered model IDs. Check before truncation (including straddling and long credentials), preserve benign text/metrics and unauthenticated controls, and serialize the real history service DTO to prove safe publication. Preserve text-reflection rejection, including split-stream guard behavior. These fixtures never contact inference infrastructure or invoke models.
@@ -656,7 +659,7 @@ Cross-compilation proves source/build compatibility only.
 ## Native Windows acceptance
 
 Run these checks on a non-elevated Windows desktop with disposable settings and
-explicitly selected inference endpoints. Record results in the work item; this
+explicitly selected inference endpoints. Record actual results separately; this
 list is an acceptance procedure, not a claim that the checks have passed:
 
 1. The unsigned executable launches after the expected SmartScreen warning.
@@ -696,7 +699,7 @@ list is an acceptance procedure, not a claim that the checks have passed:
 35. Move and resize the main window on a non-primary display, open Settings, About, and Transcription details, and confirm each hidden auxiliary window opens centered over the main window without leaving that display's usable work area. Move an already-open auxiliary window and invoke it again; confirm it is focused without jumping. Hide and reopen it; confirm it returns relative to the main window rather than retaining independent placement. Choose tray Quit, relaunch, and confirm only the main window restores its normal size and screen-relative position. Then disconnect the saved display and relaunch; confirm the main window is fully visible and centered on the primary work area.
 36. In direct-input mode, compare short, long, multiline, and non-ASCII transcripts in Notepad, a Chromium text field, VS Code or another editor, a terminal, and an Office-style rich-text target. Ordinary text should appear in one immediate update; long text should complete without visible fixed-delay stepping, truncation, or broken surrogate pairs. Change focus during a long insertion and confirm delivery stops before the next dispatch rather than redirecting its remainder. Confirm the terminal records only UTF-16 unit count, batch count, duration, strategy, and bounded failure stage—never text or target identity.
 37. Resize the result/history divider by dragging and with the keyboard, quit through the tray, and relaunch. Confirm the split restores and both panes scroll independently. At the 560x560 minimum window size, verify Result/History view switching and that audio, transcription, cleanup, and delivery popovers stay within the window without moving the transcript. Exercise nested selectors, Escape focus return, pending saves, and failed-save recovery. Check both light/dark palettes and opaque/Mica modes. Clearing WebView site data may reset pane widths but must not alter Go-owned settings or transcript history.
-38. In an isolated user-data directory, place alpha settings files and launch the new build. Confirm first-run defaults and an empty connection catalog, with alpha files and credentials untouched. Save and reopen `freehand.db`. Exercise corrupt/newer SQLite, foreign alpha identity, locked files, and uncertain save recovery: both windows must pause new work and ordinary saves; Retry reloads committed state, and only explicit Reset archives and replaces the current database. Restore a new-lineage upgrade backup with Freehand closed. Verify credential references remain coherent without exposing keys.
+38. In an isolated user-data directory, place `settings.db` and `settings.json` fixtures before launch. Confirm first-run defaults and an empty connection catalog, with those files and legacy credentials untouched. Save and reopen `freehand.db`. Exercise corrupt/newer SQLite, foreign database identity, locked files, and uncertain save recovery: both windows must pause new work and ordinary saves; Retry reloads committed state, and only explicit Reset archives and replaces the current database. Restore a `freehand.db` upgrade backup with Freehand closed. Verify credential references remain coherent without exposing keys.
 39. Configure a dedicated local or remote `/v1/audio/speech` endpoint under **Speech playback**. Press **Test**, confirm the authenticated `GET /v1/models` result populates the model picker, enter the provider's voice ID, and save. Then press **Preview**. Verify the fixed preview phrase plays, pause/resume preserve progress, restart begins at zero, and stop releases the session.
 40. Enable History, create raw-only and successfully cleaned entries, and verify Listen reads the selected final version. Complete a stored-audio transcript with History off and verify its result can still be listened to. Start a toggle or hold recording during playback and confirm playback stops before capture begins without transcript/history mutation.
 41. Under **Voice**, **Audio file**, **Cleanup**, and **Text to speech**, confirm the saved microphone/checkpoint, stored-audio, cleanup, and speech-generation budgets reload exactly and the fixed safety ceilings remain visible but not editable. Against a deliberately slow endpoint, set each budget low and confirm the affected phase reports a timeout, logs bounded `error_kind=timeout`, and records the budget in opt-in History details. A cleanup timeout must still insert or expose the raw transcript and mark the fallback. A stored-file request configured above 90 seconds must remain active beyond 90 seconds; Cancel must still end immediately as cancellation rather than timeout. Exercise the streamed transcript safety ceiling with a deterministic fixture and confirm accepted text remains copyable under an explicit partial-result message rather than stopping silently.
@@ -876,7 +879,7 @@ catalog entry alone does not establish support. Do not probe model inventories.
   and voice restore only for the matching use and model. Language, cleanup
   instructions, trained S1-mini controls, speaking speed, and shared vocabulary
   must preserve current task settings, which are absent from remembered-model
-  rows (ADRs 0007, 0010, and 0014).
+  rows.
 - A new model ID starts from Generic defaults. Verify changing a name does not
   infer S1-mini, and model edits leave capture settings and timeouts unchanged.
 - Switch freely between modified model drafts, save all edited options together,
@@ -929,10 +932,9 @@ without metadata, after a failed refresh, and for an unlisted alias. Change the
 connection/model while discovery is pending: old results must not populate the
 new selection. Inspect keyboard selection and light/dark/narrow layouts.
 
-Manual Kokoro acceptance used one fixed `af_heart` sample with `kokoro` at speed
-1.0 against API 0.6.0. The Windows adapter and WAV decoder accepted 24 kHz mono
-PCM16 audio. Audio was not retained and the manual harness is not committed or
-run in CI. Native speaker-device preview is a separate interactive check.
+For native Kokoro playback, use one explicitly selected model/voice and verify
+WAV decoding and speaker-device preview separately from metadata discovery.
+Keep generated test audio memory-only; do not run live synthesis in CI.
 Verify the site matrix exposes accessible support labels with visual checkmarks
 and links the Kokoro guide from the directory and documentation navigation.
 
@@ -988,7 +990,7 @@ or window behavior. Never load inventories or add automatic inference to CI.
 
 ### Unified Voice transcription
 
-Fresh-baseline fixtures exercise completed and realtime Voice configurations, independent file selection, and remembered model options without importing alpha data. Completed Voice profile tests isolate endpoint, model, options, headers, and credential snapshots from Audio file. Backend eligibility tests must reject realtime on Generic or a mismatched server/profile.
+Fresh-store fixtures exercise completed and realtime Voice configurations, independent file selection, and remembered model options without importing legacy data. Completed Voice profile tests isolate endpoint, model, options, headers, and credential snapshots from Audio file. Backend eligibility tests must reject realtime on Generic or a mismatched server/profile.
 
 For native acceptance, open Voice → Transcription: there must be no separate Live button. Choose NeMo-Speech.cpp, its loaded model, and the explicit Nemotron profile; enable Realtime inside that panel. Verify live results and one-row captions. Turn realtime off and record using the same connection/model. Switch to an ineligible model/connection and verify mode is disabled. Configure Audio file separately, switch between tasks, and verify independent connection/model/language settings and truthful footer status. Restart and repeat. Test Voice-only first-run setup with Audio file unconfigured. These native checks are separate from successful builds and deterministic tests.
 

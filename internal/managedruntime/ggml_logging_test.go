@@ -31,7 +31,7 @@ func TestLlamaLoggingArguments(t *testing.T) {
 					logging = append(logging, args[i])
 				}
 			}
-			if !slices.Equal(logging, []string{"--log-verbosity", "3", "--log-colors", "off"}) {
+			if !slices.Equal(logging, []string{"--log-verbosity", "3", "--log-colors", "on"}) {
 				t.Fatalf("expected normal private console logging only, got %v", logging)
 			}
 		})

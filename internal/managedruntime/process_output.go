@@ -4,8 +4,6 @@ import (
 	"errors"
 	"strings"
 	"time"
-	"unicode"
-	"unicode/utf8"
 )
 
 // OutputRequest is exclusively for the explicitly opted-in process viewer.
@@ -32,8 +30,7 @@ type processOutput struct {
 	next    uint64
 	floor   uint64
 	// Decoder state is per stream and survives writes until clear/next launch.
-	escape  [2]byte
-	pending [2][]byte
+	decoder [2]processDisplayDecoder
 }
 
 func (b *processOutput) clear() {
@@ -43,8 +40,7 @@ func (b *processOutput) clear() {
 	// The next read must invalidate its old text before new output arrives.
 	b.next++
 	b.floor = b.next
-	b.escape = [2]byte{}
-	b.pending = [2][]byte{}
+	b.decoder = [2]processDisplayDecoder{}
 }
 
 // outputAccess never uses operation admission: viewers work during startup.
@@ -117,20 +113,15 @@ func (w *worker) appendProcessOutput(launch uint64, stream string, p []byte) {
 		if n > 4096 {
 			n = 4096
 		}
-		text := plainProcessText(p[:n], &b.escape[index], &b.pending[index])
+		text := b.decoder[index].write(p[:n])
 		p = p[n:]
 		if text == "" {
 			continue
 		}
-		// Invalid UTF-8 replacement may expand input; retain bounded chunks.
+		// Invalid UTF-8 replacement and completed pending CSI may expand input.
+		// Evict only whole chunks, each containing complete display tokens.
 		for len(text) > 0 {
-			size := len(text)
-			if size > 4096 {
-				size = 4096
-				for size > 0 && text[size]&0xc0 == 0x80 {
-					size--
-				}
-			}
+			size := processDisplayChunkSize(text, 4096)
 			part := strings.Clone(text[:size])
 			text = text[size:]
 			b.next++
@@ -145,69 +136,4 @@ func (w *worker) appendProcessOutput(launch uint64, stream string, p []byte) {
 			b.bytes += len(part)
 		}
 	}
-}
-
-// Strip terminal escape sequences across writes and non-text controls. The
-// renderer must still use text nodes, never HTML or a terminal interpreter.
-func plainProcessText(p []byte, state *byte, pending *[]byte) string {
-	out := append(make([]byte, 0, len(p)+len(*pending)), (*pending)...)
-	*pending = nil
-	for _, c := range p {
-		switch *state {
-		case 1:
-			switch c {
-			case '[':
-				*state = 2
-			case ']', 'P', '^', '_':
-				*state = 3
-			default:
-				*state = 0
-			}
-			continue
-		case 2:
-			if c >= 0x40 && c <= 0x7e {
-				*state = 0
-			}
-			continue
-		case 3:
-			if c == 7 {
-				*state = 0
-			}
-			if c == 27 {
-				*state = 4
-			}
-			continue
-		case 4:
-			if c == '\\' {
-				*state = 0
-			} else {
-				*state = 3
-			}
-			continue
-		}
-		if c == 27 {
-			*state = 1
-			continue
-		}
-		if c < 32 && c != '\n' && c != '\t' || c == 127 {
-			continue
-		}
-		out = append(out, c)
-	}
-	end := 0
-	for end < len(out) {
-		if !utf8.FullRune(out[end:]) {
-			*pending = append([]byte(nil), out[end:]...)
-			break
-		}
-		_, size := utf8.DecodeRune(out[end:])
-		end += size
-	}
-	out = out[:end]
-	return strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) && r != '\n' && r != '\t' || unicode.Is(unicode.Cf, r) {
-			return -1
-		}
-		return r
-	}, strings.ToValidUTF8(string(out), "�"))
 }

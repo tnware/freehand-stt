@@ -142,8 +142,7 @@ func checkBoundaries(root string) error {
 	})
 }
 func checkMigrations(base string) error {
-	// ADR 0014 starts a distinct lineage. Only published migrations in this
-	// authoritative directory participate; this is not an immutability bypass.
+	// Check published migrations in the freehand.db schema directory.
 	dir := "internal/storage/schema"
 	entries, err := os.ReadDir(dir)
 	if err != nil {

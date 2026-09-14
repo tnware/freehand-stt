@@ -45,12 +45,10 @@ processing, copy recovery, and error states retain usable controls.
 Use an isolated Windows user or explicit test data root for destructive cases.
 Do not delete personal runtime installations or pull every catalog model.
 
-The earlier CPU/CUDA checkpoint has user-reported Windows testing. ADR 0020's
-host-aware recommendation, warm-up, startup progress, and process-output viewer
-are implemented but still need the native checks below. Deterministic tests and
-browser fixtures do not satisfy this acceptance, and implementation-agent checks
-did not run live inference. macOS managed runtimes remain unqualified; shared
-recipe contracts do not supply native packages or acceptance.
+Check host-aware recommendations, warm-up, startup progress, and the
+process-output viewer on Windows using the cases below. Deterministic tests and
+browser fixtures do not establish native acceptance. Managed installation is
+Windows x64 only.
 
 - Start with no manual connections. Open Local runtime, install the official
   binary, and verify that browsing its speech catalog does not download weights
@@ -113,17 +111,21 @@ recipe contracts do not supply native packages or acceptance.
   Close via native chrome, Alt+F4, Escape, and the footer; reopen and switch
   runtime, confirming new consent and no stale visible text or late-read leak.
   Use non-sensitive data only, including synthetic HTML/terminal-control text:
-  it must remain inert plain text, never links, HTML, or terminal commands.
+  only SGR colors/styles, carriage return, backspace, and CSI K line erasure may
+  render as terminal controls. OSC clipboard,
+  links, titles, terminal queries, and mode changes must have no side effects.
+  Test colors and carriage-return progress split across output chunks.
 - With enough synthetic output to exceed the bounded tail, confirm older text
   is discarded and renderer memory does not grow without bound. Follow and
-  **Pause scrolling**/**Resume scrolling** must work; collection continues while
-  paused. **Clear** drops the captured tail without changing the process.
+  search must work; collection continues when Follow is off. **Clear** drops
+  the captured tail and terminal state without changing the process.
   Closing revokes retrieval but preserves private capture until Clear, the next
   start attempt, removal, or Quit. Check retained output after process exit,
-  generation isolation on restart, and no Copy/export, file, event, application
-  log, or crash-report output path. After an ordinary subsequent llama.cpp start,
+  generation isolation on restart, and no export, file, event, application
+  log, or crash-report output path. Explicit Copy selection must copy only the
+  selected displayed text, never automatically or before consent. After an ordinary subsequent llama.cpp start,
   verify normal info/warning/error output reaches the consent-gated viewer on
-  CPU and CUDA, with `--log-verbosity 3 --log-colors off`, not `--log-disable` or
+  CPU and CUDA, with `--log-verbosity 3 --log-colors on`, not `--log-disable` or
   trace/debug logging. Check the runtime working directory for no new log or
   prompt files; inherited logging/config overrides must remain excluded.
   Use only explicitly selected models and non-sensitive requests. Normal logs

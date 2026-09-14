@@ -18,8 +18,8 @@ var errWarmup = errors.New("GPU warm-up failed. Try starting the runtime again o
 
 // warmWhisper is startup work, never a health probe. The pinned v1.8.3
 // /inference handler executes audio but has no startup warm-up operation.
-// One second avoids its short-input early return. See ADR 0020 and the pinned
-// source evidence in testdata/ggml-startup-source.md. Output is discarded.
+// One second avoids its short-input early return. See the pinned source
+// evidence in testdata/ggml-startup-source.md. Output is discarded.
 func warmWhisper(ctx context.Context, base string) error {
 	u, err := url.Parse(base)
 	if err != nil || u.Scheme != "http" || u.Hostname() != "127.0.0.1" || u.Port() == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {

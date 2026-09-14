@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("consent reveals plain text without moving the log viewport", async ({
+test("consent reveals read-only output without moving the log viewport", async ({
   page,
 }, testInfo) => {
   const errors: string[] = [];
@@ -41,24 +41,24 @@ test("consent reveals plain text without moving the log viewport", async ({
   );
   await page.setViewportSize({ width: 920, height: 580 });
   await page.goto("/?window=process-output");
-  const log = page.getByRole("region", { name: "Plain-text process output" });
+  const log = page.getByRole("region", { name: "Read-only process output" });
   const accept = page.getByRole("button", { name: "Show output", exact: true });
   await expect(accept).toBeEnabled({ timeout: 15000 });
   await expect(log).toHaveText("");
   await expect(log).toHaveAttribute("aria-describedby", "output-consent");
   await expect(
-    page.getByRole("button", { name: "Pause scrolling", exact: true }),
+    page.getByRole("button", { name: "Follow", exact: true }),
   ).toBeDisabled();
   const before = await log.boundingBox();
   await page.screenshot({ path: testInfo.outputPath("consent.png") });
   await accept.click();
-  await expect(log).toHaveText("<b>runtime ready</b>");
+  await expect(log).toContainText("<b>runtime ready</b>");
   await expect(log.locator("b")).toHaveCount(0);
   await expect(accept).toHaveCount(0);
 
   expect(await log.boundingBox()).toEqual(before);
   await expect(
-    page.getByRole("button", { name: "Pause scrolling", exact: true }),
+    page.getByRole("button", { name: "Follow", exact: true }),
   ).toBeEnabled();
   expect(errors).toEqual([]);
 });

@@ -54,8 +54,10 @@ describe("private process output", () => {
     await state.show();
     await state.poll();
     expect(state.chunks).toHaveLength(1);
+    const revision = state.revision;
     reset = true;
     await state.poll();
+    expect(state.revision).toBeGreaterThan(revision);
     expect(state.chunks).toEqual([]);
     expect(state.accepted).toBe(true);
   });
