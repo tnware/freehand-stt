@@ -10,6 +10,11 @@ Use small synthetic archives, fake HTTP listeners, and disposable child
 executables for deterministic checks; these fixtures are not official NeMo
 runtime or model qualification.
 
+Exercise the shared archive downloader through both the single-archive and
+bundle installers. Failed HTTP status, mismatched declared length, short or
+oversized unknown-length bodies, checksum mismatch, and cancellation must leave
+no published runtime or staging directory.
+
 Coverage must include archive checksum failure, path traversal, cancellation,
 interrupted install/retry, bounded child output, metadata-only catalog filtering,
 model download failure/removal, unsupported platforms, premature child exit,
@@ -135,6 +140,11 @@ Exercise download/cancel/retry and start/stop directly from a collapsed runtime
 row, checking that details stay collapsed and dirty drafts still guard mutations.
 Exercise keyboard navigation, narrow layouts, light/dark appearance, and reduced
 motion. Generated Wails DTOs remain the fixture contract.
+
+The `managed-runtime` and `runtime-sources` browser suites cover the composed
+runtime section, including its setup/preferences and model-catalog components.
+Keep assertions at the visible controls and runtime commands so component
+extraction preserves confirmation, cancellation, and metadata-only browsing.
 
 Native acceptance uses only the explicitly selected model. Check installation
 from an official verified archive, NeMo's model pull, a real ready listener,

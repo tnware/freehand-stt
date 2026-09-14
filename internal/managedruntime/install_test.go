@@ -94,3 +94,64 @@ func TestVerifiedAtomicInstall(t *testing.T) {
 		t.Fatal("published failed install")
 	}
 }
+
+func TestRuntimeInstallRejectsUnverifiedDownloads(t *testing.T) {
+	b := zipFixture(t, map[string]string{"bin/nemo-speech.exe": "binary"})
+	installers := map[string]func(context.Context, string, asset, *http.Client, func(float64)) error{
+		"single archive": installAsset,
+		"bundle": func(ctx context.Context, root string, a asset, client *http.Client, progress func(float64)) error {
+			return installRuntimeBundle(ctx, root, runtimeBundle{
+				archives: []asset{a}, executable: "bin/nemo-speech.exe",
+			}, client, progress)
+		},
+	}
+	for name, install := range installers {
+		t.Run(name, func(t *testing.T) {
+			for _, failure := range []string{"status", "length", "short body", "oversized body", "checksum", "cancelled"} {
+				t.Run(failure, func(t *testing.T) {
+					srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						switch failure {
+						case "status":
+							w.WriteHeader(http.StatusServiceUnavailable)
+							return
+						case "length":
+							w.Header().Set("Content-Length", fmt.Sprint(len(b)+1))
+						case "short body":
+							w.(http.Flusher).Flush() // Unknown length must still enforce the pin.
+							w.Write(b[:len(b)-1])
+							return
+						case "oversized body":
+							w.(http.Flusher).Flush()
+							w.Write(b)
+							w.Write([]byte("extra"))
+							return
+						}
+						w.Write(b)
+					}))
+					defer srv.Close()
+					a := asset{backend: "cpu", url: srv.URL, size: int64(len(b)), sha256: fmt.Sprintf("%x", sha256.Sum256(b))}
+					if failure == "checksum" {
+						a.sha256 = "bad"
+					}
+					ctx, cancel := context.WithCancel(t.Context())
+					defer cancel()
+					var progress func(float64)
+					if failure == "cancelled" {
+						progress = func(float64) { cancel() }
+					}
+					root := t.TempDir()
+					if err := install(ctx, root, a, srv.Client(), progress); err == nil {
+						t.Fatal("accepted unverified download")
+					}
+					entries, err := os.ReadDir(root)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if len(entries) != 0 {
+						t.Fatalf("failed install retained staging files or published runtime: %v", entries)
+					}
+				})
+			}
+		})
+	}
+}

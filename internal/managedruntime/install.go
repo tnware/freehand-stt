@@ -89,35 +89,8 @@ func installBinaryAsset(ctx context.Context, root string, a asset, expectedExecu
 		return e
 	}
 	defer os.RemoveAll(stage)
-	req, e := http.NewRequestWithContext(ctx, http.MethodGet, a.url, nil)
-	if e != nil {
-		return e
-	}
-	res, e := client.Do(req)
-	if e != nil {
-		return e
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 || res.ContentLength > 0 && res.ContentLength != a.size {
-		return errIntegrity
-	}
 	archive := filepath.Join(stage, ".release.zip")
-	f, e := os.OpenFile(archive, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-	if e != nil {
-		return e
-	}
-	n, e := io.Copy(&progressWriter{w: f, total: a.size, changed: progress}, io.LimitReader(res.Body, a.size+1))
-	ce := f.Close()
-	if e != nil {
-		return e
-	}
-	if ce != nil {
-		return ce
-	}
-	if n != a.size {
-		return errIntegrity
-	}
-	if e = verifyFile(ctx, archive, a.size, a.sha256); e != nil {
+	if e = downloadRuntimeArchive(ctx, archive, a, client, progress); e != nil {
 		return e
 	}
 	if e = extractArchive(ctx, archive, stage); e != nil {
@@ -134,6 +107,40 @@ func installBinaryAsset(ctx context.Context, root string, a asset, expectedExecu
 	}
 	return os.Rename(stage, filepath.Join(root, "runtime"))
 }
+
+// The caller owns a fresh staging directory and removes it on failure. Both
+// single-archive installations and bundles share the same pinned download checks.
+func downloadRuntimeArchive(ctx context.Context, path string, a asset, client *http.Client, progress func(float64)) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.url, nil)
+	if err != nil {
+		return err
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK || res.ContentLength > 0 && res.ContentLength != a.size {
+		return errIntegrity
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	n, err := io.Copy(&progressWriter{w: f, total: a.size, changed: progress}, io.LimitReader(contextReader{ctx, res.Body}, a.size+1))
+	closeErr := f.Close()
+	if err != nil {
+		return err
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	if n != a.size {
+		return errIntegrity
+	}
+	return verifyFile(ctx, path, a.size, a.sha256)
+}
+
 func extractArchive(ctx context.Context, archive, dest string) error {
 	if gzipArchive(archive) {
 		return extractTarArchive(ctx, archive, dest)

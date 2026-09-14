@@ -45,6 +45,10 @@ never loads models. Each provider is bounded to one installation and one process
 tree, including retired workers. Existing duplicate entries remain explicitly
 repairable without ID, Connection, or model rewrites. Different providers can run concurrently.
 
+NeMo and GGML archive installers share the bounded download and checksum
+verification path. Each installer still owns its staging directory, extraction,
+publication, and recovery; sharing transfer code does not merge provider recipes.
+
 Each configured runtime has a built-in row in connection state. Storage derives its
 stable identity and qualified uses and materializes it through ordinary settings
 transactions, preserving selection and remembered-option foreign keys. There is
@@ -685,6 +689,12 @@ publishes its own status and diagnostics.
 
 ## Renderer state ownership
 
+`LocalRuntimeSection` owns provider selection, installation choices, action
+guards, and removal confirmations. `LocalRuntimeDetails` renders setup and
+preferences, and `LocalRuntimeModelCatalog` renders the qualified model list.
+Both use the existing runtime store and parent action guard; component mounting
+does not acquire models or start processes.
+
 Each WebView composes its own `Session` from feature owners under
 `frontend/src/lib/stores`. `Session` owns construction, initial loading order,
 aggregate busy presentation, and presentation teardown; it is not a second
@@ -693,7 +703,9 @@ command facade or a container for feature state.
 - `SettingsEditor` owns the applied settings snapshot, independent editable
   settings/credential draft, connection probes, microphone choices, recovery,
   and serialized quick saves. These remain together to preserve one coherent
-  editing transaction.
+  editing transaction. Pure snapshot copying and quick-control patch projection
+  live in `utils/settingsDraft.ts`; that helper owns no bindings, credentials,
+  save queue, or reactive state.
 - `DictationState` owns live-dictation projection and commands.
 - `FileTranscriptionState` owns stored-file projection, generation/revision
   reconciliation, delta-gap recovery, and explicit file commands. It also owns the

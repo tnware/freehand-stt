@@ -3,7 +3,6 @@ package managedruntime
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -133,7 +132,7 @@ func installRuntimeBundle(ctx context.Context, root string, b runtimeBundle, cli
 			}
 		}
 		archive := filepath.Join(stage, bundleArchive(i))
-		if err := downloadBundleArchive(ctx, archive, a, client, report); err != nil {
+		if err := downloadRuntimeArchive(ctx, archive, a, client, report); err != nil {
 			return err
 		}
 		if err := extractArchive(ctx, archive, stage); err != nil {
@@ -186,34 +185,4 @@ func installRuntimeBundle(ctx context.Context, root string, b runtimeBundle, cli
 	// Backup cleanup failure is recoverable and must not report a failed switch.
 	_ = os.RemoveAll(previous)
 	return nil
-}
-func downloadBundleArchive(ctx context.Context, path string, a asset, client *http.Client, progress func(float64)) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, a.url, nil)
-	if err != nil {
-		return err
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK || res.ContentLength > 0 && res.ContentLength != a.size {
-		return errIntegrity
-	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-	n, err := io.Copy(&progressWriter{w: f, total: a.size, changed: progress}, io.LimitReader(contextReader{ctx, res.Body}, a.size+1))
-	closeErr := f.Close()
-	if err != nil {
-		return err
-	}
-	if closeErr != nil {
-		return closeErr
-	}
-	if n != a.size {
-		return errIntegrity
-	}
-	return verifyFile(ctx, path, a.size, a.sha256)
 }

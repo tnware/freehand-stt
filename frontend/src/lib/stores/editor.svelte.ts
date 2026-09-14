@@ -1,3 +1,8 @@
+import {
+  copySettings,
+  quickSettingsDraft,
+  type QuickSettingsPatch,
+} from "$lib/utils/settingsDraft";
 import { VoiceScope, type VoicesResult } from "$bindings/inference";
 import { connectionInputKey } from "$lib/utils/connectionInputs";
 import type { Edit } from "$bindings/modelsettings";
@@ -58,32 +63,7 @@ export interface SettingsEditorServices {
   >;
 }
 
-export type QuickSettingsPatch = Partial<
-  Pick<
-    Settings,
-    | "microphoneID"
-    | "vadEnabled"
-    | "silenceTrimming"
-    | "autoStopEnabled"
-    | "silenceSplitting"
-    | "maxDurationSeconds"
-    | "autoInsert"
-    | "historyEnabled"
-    | "overlayEnabled"
-  >
-> & {
-  voiceTranscription?: Partial<Settings["voiceTranscription"]>;
-  model?: string;
-  textToSpeech?: Partial<
-    Pick<Settings["textToSpeech"], "model" | "voice" | "speed" | "options">
-  >;
-  postProcessing?: Partial<
-    Pick<
-      Settings["postProcessing"],
-      "enabled" | "model" | "preset" | "styling" | "structure" | "context"
-    >
-  >;
-};
+export type { QuickSettingsPatch } from "$lib/utils/settingsDraft";
 
 export type QuickSettingsField =
   | "speech-controls"
@@ -99,39 +79,6 @@ export type QuickSettingsField =
   | "processing-model"
   | "processing-profile"
   | "processing-controls";
-
-/** Keeps the editable draft independent from the backend-confirmed snapshot. */
-const copySettings = (settings: Settings): Settings => ({
-  ...settings,
-  vocabulary: { ...settings.vocabulary },
-  voiceTranscription: {
-    ...settings.voiceTranscription,
-    headers: { ...settings.voiceTranscription.headers },
-    transcriptionOptions: {
-      ...settings.voiceTranscription.transcriptionOptions,
-    },
-  },
-  savedConnections: {
-    selected: { ...settings.savedConnections.selected },
-    entries: (settings.savedConnections.entries ?? []).map((c) => ({
-      ...c,
-      uses: [...(c.uses ?? [])],
-      details: { ...c.details, headers: { ...c.details.headers } },
-    })),
-  },
-  transcriptionOptions: { ...settings.transcriptionOptions },
-  headers:
-    settings.headers == null ? settings.headers : { ...settings.headers },
-  postProcessing: {
-    ...settings.postProcessing,
-    generationOptions: { ...settings.postProcessing.generationOptions },
-  },
-  textToSpeech: {
-    ...settings.textToSpeech,
-    options: { ...settings.textToSpeech.options },
-  },
-  microphoneID: settings.microphoneID ?? "",
-});
 
 const settingsMatch = (
   left: Settings | null,
@@ -1023,65 +970,7 @@ export class SettingsEditor {
     let operationResult = false;
     const operation = this.#quickSettingsQueue.then(async () => {
       if (!this.applied) return;
-      const next = copySettings(this.applied);
-      if (patch.voiceTranscription) {
-        if (
-          patch.voiceTranscription.model !== undefined &&
-          !applyModel(
-            next,
-            Purpose.Voice,
-            patch.voiceTranscription.model.trim(),
-          )
-        )
-          throw new Error("Reload settings before selecting a Voice model.");
-        next.voiceTranscription = {
-          ...next.voiceTranscription,
-          ...patch.voiceTranscription,
-        };
-      }
-      if (patch.textToSpeech) {
-        const { model, ...options } = patch.textToSpeech;
-        if (
-          model !== undefined &&
-          !applyModel(next, Purpose.Speech, model.trim())
-        )
-          throw new Error("Reload settings before selecting a speech model.");
-        next.textToSpeech = { ...next.textToSpeech, ...options };
-      }
-      if (
-        patch.model !== undefined &&
-        !applyModel(next, Purpose.Transcription, patch.model.trim())
-      )
-        throw new Error("Reload settings before selecting a model.");
-      if (patch.microphoneID !== undefined)
-        next.microphoneID = patch.microphoneID;
-      if (patch.vadEnabled !== undefined) next.vadEnabled = patch.vadEnabled;
-      if (patch.silenceTrimming !== undefined)
-        next.silenceTrimming = patch.silenceTrimming;
-      if (patch.autoStopEnabled !== undefined)
-        next.autoStopEnabled = patch.autoStopEnabled;
-      if (patch.silenceSplitting !== undefined) {
-        next.silenceSplitting = patch.silenceSplitting;
-      }
-      if (patch.maxDurationSeconds !== undefined) {
-        next.maxDurationSeconds = patch.maxDurationSeconds;
-      }
-      if (patch.autoInsert !== undefined) next.autoInsert = patch.autoInsert;
-      if (patch.historyEnabled !== undefined)
-        next.historyEnabled = patch.historyEnabled;
-      if (patch.overlayEnabled !== undefined)
-        next.overlayEnabled = patch.overlayEnabled;
-      if (
-        patch.postProcessing?.model !== undefined &&
-        !applyModel(next, Purpose.Cleanup, patch.postProcessing.model.trim())
-      )
-        throw new Error("Reload settings before selecting a model.");
-      if (patch.postProcessing) {
-        next.postProcessing = {
-          ...next.postProcessing,
-          ...patch.postProcessing,
-        };
-      }
+      const next = quickSettingsDraft(this.applied, patch);
 
       const saved = await this.#service.settings.SaveSettings({
         ...this.#connectionExpectation(),
