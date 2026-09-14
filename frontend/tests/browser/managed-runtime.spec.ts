@@ -112,9 +112,10 @@ test("startup stage is visible collapsed and expanded with output and cancellati
 for (const provider of ["llama-cpp", "whisper-cpp"]) {
   test(`${provider} switches CPU to CUDA and back without replacing its selected model`, async ({
     page,
-  }) => {
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(
-      `/tests/browser/app/?runtime&runtime-ready&runtime-provider=${provider}`,
+      `/tests/browser/app/?runtime&runtime-ready&runtime-provider=${provider}&theme=dark`,
     );
     await page.locator('[data-settings-section="local-runtime"]').click();
     const before = await page.evaluate(() => window.testRuntime.snapshot()[0]);
@@ -129,10 +130,18 @@ for (const provider of ["llama-cpp", "whisper-cpp"]) {
       exact: true,
     });
     await expect(cpu).toHaveAttribute("aria-pressed", "true");
+    await expect(cpu).toBeDisabled();
     await expect(cuda).toBeDisabled();
-    await page
-      .getByRole("button", { name: "Stop runtime", exact: true })
-      .click();
+    await expect(
+      page.getByRole("button", { name: "Stop", exact: true }),
+    ).toBeInViewport();
+    if (provider === "llama-cpp") {
+      await page.screenshot({
+        path: testInfo.outputPath("expanded-running-llama.png"),
+        fullPage: true,
+      });
+    }
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(cuda).toBeEnabled();
     await cuda.click();
     await expect(cuda).toHaveAttribute("aria-pressed", "true");
@@ -140,14 +149,10 @@ for (const provider of ["llama-cpp", "whisper-cpp"]) {
     await manage.click();
     await expect(page.getByText(/NVIDIA GPU \(CUDA\) binary/)).toBeVisible();
     await manage.click();
-    await page
-      .getByRole("button", { name: "Start runtime", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
     await expect(cpu).toBeDisabled();
     await expect(cuda).toBeDisabled();
-    await page
-      .getByRole("button", { name: "Stop runtime", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
     await cpu.click();
     await expect(cpu).toHaveAttribute("aria-pressed", "true");
     await expect(cuda).toHaveAttribute("aria-pressed", "false");
@@ -161,9 +166,19 @@ for (const provider of ["llama-cpp", "whisper-cpp"]) {
         () => window.testConnectionWindows.settings().savedConnections,
       ),
     ).toEqual(connections);
+    const selectedModel = page.getByRole("article", {
+      name: before.status.models![0].name,
+      exact: true,
+    });
     await expect(
-      page.getByRole("region", { name: "Runtime setup", exact: true }),
-    ).toContainText(`Selected: ${before.status.models![0].name}`);
+      selectedModel.getByText("Selected", { exact: true }),
+    ).toHaveCount(1);
+    await expect(
+      selectedModel.getByRole("button", {
+        name: "Delete " + before.status.models![0].name,
+        exact: true,
+      }),
+    ).toBeEnabled();
     expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
       `Stop:${before.instance.id}`,
       `InstallBackend:${before.instance.id}:cuda`,
@@ -241,12 +256,18 @@ test("collapsed runtime controls can stop, download and restart without opening 
   const toggle = page.getByRole("button", { name: "Manage", exact: true });
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await page.getByRole("button", { name: "Download", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Download selected model", exact: true })
+    .click();
   await expect(
     page.getByRole("progressbar", { name: "Runtime download progress" }),
   ).toBeInViewport();
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("button", { name: "Download", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Cancel operation", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Download selected model", exact: true })
+    .click();
   await page.evaluate((id) => window.testRuntime.finishDownload(id), id);
   await page.getByRole("button", { name: "Start", exact: true }).click();
   await expect(
@@ -318,7 +339,7 @@ for (const viewport of [
     });
     await expect(download).toBeInViewport();
     await expect(
-      page.getByRole("button", { name: "Start runtime", exact: true }),
+      page.getByRole("button", { name: "Start", exact: true }),
     ).toHaveCount(0);
     await download.click();
     await expect(
@@ -373,7 +394,7 @@ for (const viewport of [
       0,
     );
     await expect(
-      page.getByRole("button", { name: "Start runtime", exact: true }),
+      page.getByRole("button", { name: "Start", exact: true }),
     ).toHaveCount(0);
     await page.evaluate(
       (id) => window.testRuntime.finishDownload(id),
@@ -386,13 +407,13 @@ for (const viewport of [
       `Start:${instanceID}`,
     );
     const start = page.getByRole("button", {
-      name: "Start runtime",
+      name: "Start",
       exact: true,
     });
     await expect(start).toBeInViewport();
     await start.click();
     await expect(
-      page.getByRole("button", { name: "Stop runtime", exact: true }),
+      page.getByRole("button", { name: "Stop", exact: true }),
     ).toBeInViewport();
   });
 }
@@ -429,7 +450,7 @@ test("unsaved drafts guard immediate runtime operations", async ({ page }) => {
   await page.locator("#max-duration").fill("90");
   await page.locator('[data-settings-section="local-runtime"]').click();
   await page.getByRole("button", { name: "Manage", exact: true }).click();
-  await page.getByRole("button", { name: "Stop runtime", exact: true }).click();
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText(
     "Save settings before continuing?",
   );

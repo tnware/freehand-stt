@@ -125,6 +125,16 @@ No live inference was performed as part of the implementation-agent checks.
 
 Required deterministic coverage exercises the real ownership boundaries:
 
+- Source projection tests compare metadata with actual acquisition specifications,
+  including companion archives and NeMo release-index pins. Intercept the real
+  GGML HTTP request before network access to verify the advertised source.
+  Browser tests inspect sources before installation without mutation calls,
+  distinguish NeMo's model manager from direct downloads, and follow explicit
+  CPU/CUDA preview choices without fetching files.
+- llama.cpp normal-output tests retain consent-gated memory-only capture, reject
+  environment/config logging overrides, and qualify the exact pinned CPU binary
+  with a model-free upstream warning through the owned launcher. This does not
+  establish native viewer behavior or GPU inference acceptance.
 - Recipe/host selection checks Windows x64 CPU/CUDA choices, NVIDIA device 0,
   driver 551.78 and compute capability 5.0 thresholds, unknown or malformed
   metadata, unsupported platforms, and explicit CPU override. The metadata

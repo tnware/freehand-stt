@@ -37,14 +37,15 @@ type Endpoint struct {
 	Profile  string
 }
 type Model struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	SizeBytes   int64  `json:"sizeBytes"`
-	Installed   bool   `json:"installed"`
-	Recommended bool   `json:"recommended"`
-	Realtime    bool   `json:"realtime"`
-	Profile     string `json:"profile"`
+	Source      *ModelSource `json:"source,omitempty"`
+	ID          string       `json:"id"`
+	Name        string       `json:"name"`
+	Description string       `json:"description"`
+	SizeBytes   int64        `json:"sizeBytes"`
+	Installed   bool         `json:"installed"`
+	Recommended bool         `json:"recommended"`
+	Realtime    bool         `json:"realtime"`
+	Profile     string       `json:"profile"`
 	// Contracts is the authoritative per-role capability catalog for this model.
 	Contracts []Contract `json:"contracts"`
 	// Behavior is the resolved model/backend contract, independent of manual settings.

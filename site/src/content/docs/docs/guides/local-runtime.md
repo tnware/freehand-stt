@@ -29,6 +29,26 @@ only.
 Runtime binaries and downloaded weights stay under Freehand's per-user local
 application-data directory. They are not installed globally or added to PATH.
 
+### Download sources
+
+Runtime details show the source of the binary and each model. Review these
+before downloading; viewing source information does not download or load a
+model. Source links open in your browser.
+
+- **NeMo-Speech.cpp:** official releases from `NVIDIA/NeMo-Speech.cpp` on GitHub.
+  Model downloads use NeMo's built-in model manager and its model index.
+- **llama.cpp:** official releases from `ggml-org/llama.cpp` on GitHub.
+  Freehand downloads S1-mini directly from `superwhisper/s1-mini-GGUF` on
+  Hugging Face, not through a llama.cpp model downloader.
+- **whisper.cpp:** official releases from `ggml-org/whisper.cpp` on GitHub.
+  Freehand downloads the qualified Whisper models directly from
+  `ggerganov/whisper.cpp` on Hugging Face.
+
+Freehand uses specific versions rather than fetching the latest release
+automatically. Expand **Binary download details** or **Model download details**
+to see filenames and checksums. NeMo model details come from its bundled model
+index; NeMo's model manager handles the download.
+
 ## Set up local transcription
 
 1. Open **Settings → Local runtime**, under **Connections & vocabulary**.
@@ -36,10 +56,10 @@ application-data directory. They are not installed globally or added to PATH.
    recommended Nemotron 3.5 Streaming model. Installation does not download it.
 3. The row opens its setup controls. Progress and cancellation stay in that area;
    use the chevron beside the runtime to collapse or reopen its details.
-4. When installation finishes, the action changes to **Download selected model**.
+4. When installation finishes, the action changes to **Download**.
    Choose it to download Nemotron, or use the catalog below to choose an alternative.
    Browsing the catalog does not download or load any model.
-5. After downloading, choose **Start runtime** in the same area. Wait for **Running**.
+5. After downloading, choose **Start** in the runtime header. Wait for **Running**.
 6. In Voice's connection picker, select the built-in **NeMo-Speech.cpp** Connection.
    It appears automatically; no URL, API key, or additional connection setup is needed.
    Complete the microphone and recording setup.
@@ -71,7 +91,7 @@ selected model at a time. Different runtimes can run together.
 ### whisper.cpp transcription
 
 Choose **Install** on the whisper.cpp row, review and confirm the binary choice,
-download a model from its catalog, and choose **Start runtime**. Select its
+download a model from its catalog, and choose **Start**. Select its
 built-in Connection for Voice or audio files. Voice uses completed transcription, not
 realtime; file response streaming is also unavailable. CPU and NVIDIA CUDA
 execution are available. Larger models need more memory and take longer to process.
@@ -104,9 +124,9 @@ Existing installations do not change automatically. Recommendations do not
 reserve GPU memory, stop other runtimes, or change as free GPU memory fluctuates.
 
 For llama.cpp or whisper.cpp, open its details using the chevron. If it is
-running, choose **Stop runtime**. Under **Runtime binary**, choose
+running, choose **Stop**. Under **Runtime binary**, choose
 **NVIDIA GPU (CUDA)** and wait for installation to finish, then choose
-**Start runtime**. Runtime management, quick settings, and Connection details
+**Start**. Runtime management, quick settings, and Connection details
 show the installed backend separately from the Connection name. Built-in
 llama.cpp and whisper.cpp Connections omit the old default **(CPU)** name suffix;
 changing the backend does not rename custom Connections or alter task selections.
@@ -140,7 +160,7 @@ including NeMo downloads. Preparation and verification use an activity indicator
 A full transfer is not finished until verification succeeds. The setup area and
 the model's catalog row show progress and offer cancellation. The row stays in
 place with a completion, cancellation, or failure message. Successful downloads
-also receive a **Downloaded** badge.
+also show **Downloaded** beside their size.
 
 Downloads can be cancelled and retried. Stop active transcription before
 switching or removing the loaded model. In task quick settings, choose the
@@ -171,8 +191,7 @@ You can inspect recent process output while startup is still in progress:
 1. Choose **View output** in Local runtime or the task’s runtime quick controls.
 2. The separate **Process output** window opens with a blank viewer and disabled
    output controls. Read its warning banner and choose **Show output** only if
-   displaying it on your screen is safe. The banner disappears without moving
-   the viewer or toolbar.
+   displaying it on your screen is safe.
 3. Use **Pause scrolling** to inspect earlier text, **Resume scrolling** to follow
    new output, or **Clear** to discard the captured tail. Collection continues
    while scrolling is paused.
@@ -181,8 +200,10 @@ The viewer is read-only and offers no Copy, export, or file logging. Closing it
 does not stop the runtime. Each opening requires consent again; closing or
 switching runtimes clears the displayed text and revokes access, but the private
 bounded tail remains until cleared, the next start attempt, runtime removal, or
-Quit. Older output is discarded as the buffer fills. Some runtimes, especially
-llama.cpp, emit little or no output; an empty viewer is not proof of a failed start.
+Quit. Older output is discarded as the buffer fills. llama.cpp captures normal
+informational, warning, and error output without debug logging. This can still
+include prompts or other sensitive text. Output can be sparse or absent; an
+empty viewer is not proof of a failed start.
 See [diagnostics privacy](../privacy-and-safety/#diagnostics) before displaying
 output during screen sharing.
 

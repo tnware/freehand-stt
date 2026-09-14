@@ -241,7 +241,11 @@ func ggmlEnvironment(inherited []string) []string {
 func (g ggmlProvider) arguments(model string, s modelSpec, root string, port int) []string {
 	args := []string{"-m", s.path(root), "--host", "127.0.0.1", "--port", strconv.Itoa(port)}
 	if g.id == LlamaCPP {
-		return append(args, "--alias", model, "--reasoning", "off", "--no-warmup", "--parallel", "1", "--ctx-size", "4096", "--gpu-layers", "0", "--no-op-offload", "--offline", "--no-ui", "--no-agent", "--no-ui-mcp-proxy", "--log-disable")
+		// b10809 normal (non-trace/debug) logs go only to the existing private
+		// bounded stdout/stderr capture. No --log-file/--log-prompts-dir: the
+		// upstream file sink defaults to null, and ggmlEnvironment excludes
+		// logging/config overrides. See testdata/ggml-startup-source.md.
+		return append(args, "--alias", model, "--reasoning", "off", "--no-warmup", "--parallel", "1", "--ctx-size", "4096", "--gpu-layers", "0", "--no-op-offload", "--offline", "--no-ui", "--no-agent", "--no-ui-mcp-proxy", "--log-verbosity", "3", "--log-colors", "off")
 	}
 	return append(args, "--no-gpu", "--no-flash-attn")
 }

@@ -35,11 +35,12 @@ type Contract struct {
 }
 
 type ProviderDescriptor struct {
-	ID        ProviderID `json:"id"`
-	Name      string     `json:"name"`
-	Version   string     `json:"version"`
-	Supported bool       `json:"supported"`
-	Models    []Model    `json:"models"`
+	Source    *RuntimeSource `json:"source,omitempty"`
+	ID        ProviderID     `json:"id"`
+	Name      string         `json:"name"`
+	Version   string         `json:"version"`
+	Supported bool           `json:"supported"`
+	Models    []Model        `json:"models"`
 }
 
 // Providers own their metadata, qualification and adapter construction. This

@@ -118,9 +118,18 @@ provided. Lifecycle notification events may identify the viewer state, not carry
 output text.
 
 Keep Wails at `Info`: bridge debug tracing can serialize these sensitive binding
-results as well as credential drafts and transcripts. llama.cpp retains
-`--log-disable`, and whisper.cpp does not enable verbose logging for this viewer.
-Sparse or absent upstream output is valid and does not establish startup failure.
+results as well as credential drafts and transcripts. Under ADR 0020's explicit
+superseding clarification, llama.cpp `b10809` uses `--log-verbosity 3 --log-colors off`
+instead of `--log-disable` for both CPU and CUDA. Normal info/warnings/errors go
+only to the existing bounded private capture; trace/debug is not enabled.
+Normal logging is not redaction and can still contain sensitive content.
+
+The pinned common logger has no default disk sink. Do not pass `--log-file` or
+`--log-prompts-dir`, and preserve the fixed environment allowlist: upstream
+logging environment variables and Windows `APPDATA`/`PROGRAMDATA` config files
+are processed before argv and must not enable a file sink or change verbosity.
+Whisper.cpp verbosity is unchanged. Sparse or absent output does not establish
+startup failure, and level 3 does not expose all low-level loading details.
 Do not enable broad logging to manufacture progress; startup phases come from
 owned lifecycle boundaries and contain no raw text.
 

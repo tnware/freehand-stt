@@ -14,7 +14,7 @@ func TestBinarySelectionCUDAWarmup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if slices.Contains(args, "--no-warmup") != (backend == "cpu") || !slices.Contains(args, "--log-disable") {
+		if slices.Contains(args, "--no-warmup") != (backend == "cpu") {
 			t.Fatalf("%s args=%v", backend, args)
 		}
 	}

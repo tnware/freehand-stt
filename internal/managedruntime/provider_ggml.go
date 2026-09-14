@@ -63,9 +63,10 @@ func (g ggmlProvider) descriptor() ProviderDescriptor {
 		models[i].Behavior = &c.Behavior
 		models[i].Profile = string(g.profile)
 		models[i].SizeBytes = g.specs[models[i].ID].size
+		models[i].Source = g.specs[models[i].ID].source(FreehandHuggingFace)
 	}
 	_, supported := recipeFor(g.id, runtime.GOOS, runtime.GOARCH, "cpu")
-	return ProviderDescriptor{ID: g.id, Name: g.name, Version: g.version, Supported: supported, Models: models}
+	return ProviderDescriptor{ID: g.id, Name: g.name, Version: g.version, Supported: supported, Models: models, Source: runtimeSource(g.id)}
 }
 func (g ggmlProvider) newAdapter(root string) runtimeAdapter {
 	return &ggmlAdapter{root: root, recipe: g, launch: launchOwned, listenerOwner: ownsListener}

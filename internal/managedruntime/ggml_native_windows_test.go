@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -44,7 +46,29 @@ func TestGGMLPinnedRuntimeZIPs(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 			defer cancel()
 			model := g.models[0].ID
-			args := append(g.arguments(model, g.specs[model], root, 18080), "--help")
+			args := g.arguments(model, g.specs[model], root, 18080)
+			if g.id == LlamaCPP {
+				// b10809 arg.cpp emits a LOG_WRN for duplicate flags. Unlike
+				// printf-based help, this catches --log-disable without loading
+				// a model, serving requests, or depending on a startup failure.
+				args = append(args, "--offline")
+			}
+			args = append(args, "--help")
+			files := func() []string {
+				t.Helper()
+				var paths []string
+				if err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					paths = append(paths, path)
+					return nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+				return paths
+			}
+			before := files()
 			p, err := a.launch(ctx, a.executable(), args, filepath.Dir(a.executable()), ggmlEnvironment(os.Environ()))
 			if err != nil {
 				t.Fatal(err)
@@ -54,6 +78,17 @@ func TestGGMLPinnedRuntimeZIPs(t *testing.T) {
 			}
 			if len(p.stdout.bytes())+len(p.stderr.bytes()) == 0 {
 				t.Fatal("no CLI help output")
+			}
+			if g.id == LlamaCPP {
+				if !strings.Contains(string(p.stderr.bytes()), "argument '--offline' specified multiple times") {
+					t.Fatal("normal upstream warning missing from owned stderr capture")
+				}
+				if strings.Contains(string(p.stderr.bytes()), "\x1b[") {
+					t.Fatal("upstream logging emitted ANSI color escapes")
+				}
+			}
+			if !slices.Equal(before, files()) {
+				t.Fatal("metadata-only launch created files (including possible disk logs)")
 			}
 			t.Log("official ZIP installed and reverified; owned Windows --help exited successfully")
 		})

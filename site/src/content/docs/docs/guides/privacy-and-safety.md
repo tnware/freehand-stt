@@ -182,9 +182,11 @@ model IDs, URL paths and queries, and destination-window identity.
 Managed runtime **View output** is separate from those logs. Freehand privately
 captures recent process output in memory even with the viewer closed. The tail
 is limited to 256 KiB and 1,024 chunks, with older text discarded as it fills.
-It can contain transcripts, prompts, file paths, or other sensitive upstream
-text; Freehand does not promise complete redaction. Transcript history being
-off does not prevent such text appearing in process output.
+For llama.cpp this includes normal informational, warning, and error output,
+not debug logging. It can still contain transcripts, prompts, file paths, or
+other sensitive upstream text; Freehand does not promise complete redaction.
+Transcript history being off does not prevent such text appearing in process
+output. This private capture is not saved as a log file.
 
 The separate viewer requires **Show output** consent each time it opens or
 switches runtime. Avoid displaying it during screen sharing. It is read-only,

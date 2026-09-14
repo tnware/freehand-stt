@@ -17,7 +17,7 @@ func (n nemoProvider) descriptor() ProviderDescriptor {
 		m := n.model(id)
 		models = append(models, m)
 	}
-	return ProviderDescriptor{ID: NeMoSpeechCPP, Name: "NeMo-Speech.cpp", Version: Version, Supported: runtime.GOOS == "windows" && runtime.GOARCH == "amd64", Models: models}
+	return ProviderDescriptor{ID: NeMoSpeechCPP, Name: "NeMo-Speech.cpp", Version: Version, Supported: runtime.GOOS == "windows" && runtime.GOARCH == "amd64", Models: models, Source: runtimeSource(NeMoSpeechCPP)}
 }
 func (n nemoProvider) model(id string) Model {
 	m := qualified[id]
@@ -33,6 +33,9 @@ func (n nemoProvider) model(id string) Model {
 		}
 	}
 	m.SizeBytes = modelSpecs[id].size
+	if spec, ok := modelSpecs[id]; ok {
+		m.Source = spec.source(NeMoModelManager)
+	}
 	return m
 }
 

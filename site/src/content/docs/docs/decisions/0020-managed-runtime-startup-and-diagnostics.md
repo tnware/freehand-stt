@@ -119,8 +119,34 @@ prefix remains for existing diagnostic parsers, not for viewer reads. Cursor
 deltas require consent per opening or runtime switch. Closing/switching clears
 visible data and revokes retrieval; disabling access does not erase private
 memory. Clear discards the tail. Follow/pause controls scrolling only, and no
-Copy/export is offered. llama.cpp retains `--log-disable`; whisper verbosity is
-not enabled. Sparse output is therefore expected, not a readiness signal.
+Copy/export is offered.
+
+### Superseding clarification: normal llama.cpp logging
+
+The initial checkpoint retained llama.cpp `--log-disable` and treated sparse
+output as expected. That **logging-suppression decision is superseded** by the
+user's explicit authorization to capture normal, non-debug upstream logs in the
+existing bounded private memory. It is not authorization for persistent logs,
+application-log forwarding, raw events, or consent-free viewer reads.
+
+For the pinned Windows CPU and CUDA llama.cpp `b10809` recipes, replace
+`--log-disable` with `--log-verbosity 3 --log-colors off`. Upstream level 3 admits
+normal info, warnings, and errors, not trace/debug. The common logger's file
+sink defaults to null; neither `--log-file` nor `--log-prompts-dir` is supplied.
+The fixed sanitized environment remains mandatory: it excludes logging
+overrides and `APPDATA`/`PROGRAMDATA` config discovery, which upstream processes
+before command-line arguments. See the repository's
+`internal/managedruntime/testdata/ggml-startup-source.md` for pinned source and
+model-free owned-process qualification.
+
+Normal output can still include prompts, transcripts, paths, and upstream
+exception text. Capture remains private even while the viewer is closed;
+consent, capacity, lifetime, inert rendering, and all prohibited destinations
+above are unchanged. Wails remains at Info and application logs content-free.
+Whisper verbosity is not enabled. Output volume is never a readiness signal;
+level 3 omits low-level trace details and upstream exit can lose unflushed logs.
+These flags apply on subsequent ordinary launches; the change does not restart
+or modify an already-running user runtime.
 
 ## Validation boundary
 

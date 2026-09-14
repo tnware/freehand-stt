@@ -3,10 +3,11 @@ import type {
   InstanceStatus,
   Status,
   ProviderDescriptor,
+  Model,
 } from "$bindings/managedruntime";
 import type { ManagedRuntimeService } from "$lib/stores/managed-runtime.svelte";
 import { ID, type Profile } from "$bindings/modelprofile";
-import { ProviderID } from "$bindings/managedruntime";
+import { ProviderID, ModelAcquisitionMethod } from "$bindings/managedruntime";
 import { ID as CompatibilityID, Role } from "$bindings/compatibility";
 
 // Small UI-only contract fixture; production catalog metadata comes from Go.
@@ -60,7 +61,7 @@ export function createRuntimeFixture(
   ready = true,
   providerID = ProviderID.NeMoSpeechCPP,
 ) {
-  let models = [
+  let models: Model[] = [
     {
       id: "nemotron-3.5",
       name: "Nemotron 3.5 Streaming",
@@ -128,6 +129,31 @@ export function createRuntimeFixture(
       },
     ];
   }
+  // Source fixtures exercise presentation/ownership only; Go tests verify real pins.
+  const upstream =
+    providerID === ProviderID.NeMoSpeechCPP
+      ? "NVIDIA/NeMo-Speech.cpp"
+      : `ggml-org/${providerID === ProviderID.LlamaCPP ? "llama.cpp" : "whisper.cpp"}`;
+  const repository =
+    providerID === ProviderID.LlamaCPP
+      ? "superwhisper/s1-mini-GGUF"
+      : "ggerganov/whisper.cpp";
+  models = models.map((model) => ({
+    ...model,
+    source: {
+      acquisitionMethod: ggml
+        ? ModelAcquisitionMethod.FreehandHuggingFace
+        : ModelAcquisitionMethod.NeMoModelManager,
+      metadataOrigin: ggml
+        ? "freehand_pinned_catalog"
+        : "nemo_release_model_index",
+      repository: ggml ? repository : "fixture-index-repository",
+      repositoryURL: ggml ? `https://huggingface.co/${repository}` : undefined,
+      revision: "fixture-revision",
+      filename: `${model.id}.bin`,
+      sha256: "fixture-checksum",
+    },
+  }));
   const providers: ProviderDescriptor[] = [
     {
       id: providerID,
@@ -140,6 +166,19 @@ export function createRuntimeFixture(
       version: "0.1.0",
       supported,
       models,
+      source: {
+        repositoryURL: `https://github.com/${upstream}`,
+        releaseURL: `https://github.com/${upstream}/releases/tag/fixture-release`,
+        artifacts: ["cpu", "cuda"].map((backend) => ({
+          os: "windows",
+          architecture: "amd64",
+          backend,
+          filename: `fixture-${backend}.zip`,
+          url: `https://github.com/${upstream}/releases/download/fixture-release/fixture-${backend}.zip`,
+          sha256: "fixture-checksum",
+          sizeBytes: 1024,
+        })),
+      },
     },
   ];
   const initial = (instance: Instance): InstanceStatus => ({

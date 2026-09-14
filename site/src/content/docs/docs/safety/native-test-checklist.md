@@ -121,8 +121,16 @@ recipe contracts do not supply native packages or acceptance.
   Closing revokes retrieval but preserves private capture until Clear, the next
   start attempt, removal, or Quit. Check retained output after process exit,
   generation isolation on restart, and no Copy/export, file, event, application
-  log, or crash-report output path. Sparse llama.cpp output with `--log-disable`
-  is expected; do not enable verbose logging to make this check pass.
+  log, or crash-report output path. After an ordinary subsequent llama.cpp start,
+  verify normal info/warning/error output reaches the consent-gated viewer on
+  CPU and CUDA, with `--log-verbosity 3 --log-colors off`, not `--log-disable` or
+  trace/debug logging. Check the runtime working directory for no new log or
+  prompt files; inherited logging/config overrides must remain excluded.
+  Use only explicitly selected models and non-sensitive requests. Normal logs
+  may still contain sensitive text; an empty tail is not proof of startup failure.
+  The opt-in pinned CPU ZIP regression checks a real parser warning through the
+  owned launcher plus no new temporary-installation files, without loading a
+  model. It does not replace native startup/request, CUDA, or viewer acceptance.
 - Check viewer focus, keyboard navigation, light/dark appearance, mixed DPI,
   scrolling, and shutdown with real Wails windows. Opening/closing/clearing or
   pausing the viewer must never start, stop, restart, or orphan the runtime.

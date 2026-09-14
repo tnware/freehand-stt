@@ -139,6 +139,20 @@ mutation, model execution, or free-VRAM-driven switching occurs during selection
 NeMo retains its own binary-selection policy. macOS has only the shared extension
 contract, not qualified packages or native managed-runtime acceptance.
 
+### Download source metadata
+
+Download provenance is additive metadata on `GetProviders`: runtime sources
+project the platform recipes and NeMo assets; model sources project the same
+specifications used for acquisition and verification. It is not a second pin
+registry or evidence of the currently installed files. The renderer uses the
+generated `RuntimeSource`/`ModelSource` DTOs, with provider-catalog metadata as
+the source for status rows. No filesystem, network, or model execution is needed
+to inspect sources. Runtime artifacts identify platform/backend and include
+companion archives. Direct GGML model downloads identify their Hugging Face
+repository; NeMo identifies delegated acquisition and its release-index pins
+without fabricating an upstream hosting URL. Source links open through Wails'
+external browser API, never as remote content inside the settings WebView.
+
 ### Startup ownership and progress
 
 Windows owns children through a Job Object, including model-manager subprocesses.
@@ -193,7 +207,11 @@ Closing/switching clears visible renderer data and revokes retrieval. Disabling
 access does not erase private memory. The tail may survive process exit for
 inspection; Clear, the next start attempt, runtime removal, and shutdown release
 it. Viewer actions never start, stop, restart, or orphan a process. llama.cpp
-retains `--log-disable`, so output may be sparse; whisper verbosity is not enabled.
+uses normal non-debug `--log-verbosity 3 --log-colors off` output in the existing
+private capture, superseding the initial `--log-disable` policy in ADR 0020.
+The pinned logger defaults to no disk sink; file/prompt logging flags and
+inherited logging/config overrides remain excluded. Normal logs may contain
+sensitive content; whisper verbosity is not enabled.
 See the [logging contract](../../safety/logging/#managed-process-output) for the
 narrow renderer exception and unchanged application-log prohibitions.
 
