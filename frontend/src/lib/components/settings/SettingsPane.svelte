@@ -24,8 +24,13 @@
     session,
     navigation,
     onReturn,
-  }: { session: Session; navigation: ShellNavigation; onReturn: () => void } =
-    $props();
+    onOpenRuntimes = onReturn,
+  }: {
+    session: Session;
+    navigation: ShellNavigation;
+    onReturn: () => void;
+    onOpenRuntimes?: () => void;
+  } = $props();
   let manager = $state<ConnectionManagerWindow>();
   let pending = $state<(() => void) | null>(null);
   let overlayPreviewing = $state(false);
@@ -181,6 +186,7 @@
       bind:session
       bind:active={navigation.active}
       onClose={() => requestClose()}
+      onOpenRuntimes={() => requestClose(onOpenRuntimes)}
       decisionOpen={pending !== null}
       onNavigate={selectSection}
       onOpenConnection={openConnection}

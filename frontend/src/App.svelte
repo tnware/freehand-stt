@@ -379,7 +379,12 @@
         onOpenHistorySettings={() => openSettings("history")}
       />
     {:else if auxPane !== null}
-      <SettingsPane {session} {navigation} onReturn={closeSettings} />
+      <SettingsPane
+        {session}
+        {navigation}
+        onReturn={closeSettings}
+        onOpenRuntimes={() => (auxPane = "runtimes")}
+      />
     {/if}
   </div>
 

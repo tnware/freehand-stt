@@ -1,7 +1,6 @@
 <script lang="ts">
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import { SETTINGS_NAVIGATION } from "$lib/navigation";
-  import LocalRuntimeSection from "./sections/LocalRuntimeSection.svelte";
   import VocabularySection from "./sections/VocabularySection.svelte";
   import { setContext, tick, untrack } from "svelte";
   import {
@@ -39,6 +38,7 @@
     active = $bindable(),
     navigationRef = $bindable(null),
     onClose,
+    onOpenRuntimes = onClose,
     onSaved = () => {},
     saveReturnsToTask = false,
     decisionOpen = false,
@@ -57,6 +57,8 @@
     active: SettingsSectionID;
     navigationRef?: HTMLElement | null;
     onClose: () => void;
+    /** Leaves configuration for the runtime pane on the rail. */
+    onOpenRuntimes?: () => void;
     onSaved?: () => void;
     saveReturnsToTask?: boolean;
     decisionOpen?: boolean;
@@ -376,13 +378,20 @@
             />
           {/if}
           {#if active === "local-runtime"}
-            <LocalRuntimeSection
-              runtime={session.runtime}
-              disabled={session.editor.saving}
-              workBusy={speechWorkBusy}
-              onConnections={browseConnections}
-              onAction={withSavedSettings}
-            />
+            <!-- The runtime inventory has a place of its own on the rail, with
+                 room for the model table and the process output drawer. One
+                 screen, one implementation: this points at it rather than
+                 rendering a second, smaller copy here. -->
+            <div class="rounded-lg border border-hairline p-4">
+              <p class="text-[13px] text-secondary-foreground">
+                Local runtimes have their own place, alongside the workflows on
+                the rail. Install and remove engines, pick models, and read
+                process output there.
+              </p>
+              <Button class="mt-3" size="sm" onclick={onOpenRuntimes}
+                >Open Local runtime</Button
+              >
+            </div>
           {:else if active === "connections"}
             <Button onclick={browseConnections}>Open connections</Button>
           {:else if active === "voice-transcription"}
