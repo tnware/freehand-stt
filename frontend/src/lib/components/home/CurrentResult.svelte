@@ -133,7 +133,7 @@
       <div class="flex min-h-full flex-col">
         {#if message || recovery}
           <p
-            class="mx-4 mt-3 rounded-lg border border-hairline bg-secondary px-3 py-2 text-sm leading-relaxed"
+            class="mx-4 mt-3 rounded-md border border-hairline bg-secondary px-3 py-2 text-[13px] leading-relaxed"
             class:text-warning={recovery}
             class:text-destructive={failed && !recovery}
             role="status"
@@ -143,7 +143,7 @@
           </p>
         {/if}
         {#if live || text}
-          <div class="mx-auto w-full max-w-[76ch] px-5 py-6 @min-[600px]:px-8">
+          <div class="w-full max-w-[76ch] px-4 py-3.5">
             {#if live}
               <p class="mb-3 text-xs text-muted-foreground" role="status">
                 Live preview · text may change

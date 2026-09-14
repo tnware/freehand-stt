@@ -280,7 +280,7 @@
             <TranscriptText
               content={{ key: `file:${live.generation}`, text: live.text }}
               label="Audio file transcript"
-              class="mt-2.5 min-h-5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+              class="mt-2.5 min-h-5 w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
             />
           {:else}
             <p class="mt-2.5 min-h-5 text-sm leading-7 text-muted-foreground">
@@ -339,7 +339,7 @@
           : HistoryTextVersion.HistoryTextFinal}
         <article
           class={cn(
-            "history-entry group mb-2 rounded-xl border border-hairline px-4 pt-3.5 pb-2 transition-colors",
+            "history-entry group border-b border-hairline px-4 pt-2.5 pb-2 transition-colors",
             isExpanded ? "bg-card" : "bg-layer-fill/40",
           )}
         >
@@ -456,7 +456,7 @@
                         parts: comparison.raw,
                       }}
                       label="Raw transcript text"
-                      class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                      class="w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
                     />
                   </section>
 
@@ -499,7 +499,7 @@
                         parts: comparison.processed,
                       }}
                       label="Cleaned transcript text"
-                      class="mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                      class="w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
                     />
                   </section>
                 </div>
@@ -507,7 +507,7 @@
                 <TranscriptText
                   content={{ key: String(entry.id), text: entry.text }}
                   label={`Transcript from ${completedDateTime(entry.completedAt)}`}
-                  class="mt-2.5 mx-auto w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                  class="mt-2.5 w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
                 />
               {/if}
             {:else}
