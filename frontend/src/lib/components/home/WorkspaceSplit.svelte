@@ -10,6 +10,7 @@
     result,
     history,
     output,
+    diagnostics,
     hasHistory,
     historyCount,
     working,
@@ -17,16 +18,19 @@
   }: {
     result: Snippet;
     history: Snippet;
-    /** Runtime output, shown as a second tab when a local runtime is running. */
+    /** Runtime output. */
     output?: Snippet;
+    /** Endpoint diagnostics for the active workflow. */
+    diagnostics?: Snippet;
     hasHistory: boolean;
     historyCount: number;
     working: boolean;
     outputAvailable?: boolean;
   } = $props();
 
-  let tab = $state<"recent" | "output">("recent");
-  const active = $derived(tab === "output" && outputAvailable ? "output" : "recent");
+  type Tab = "recent" | "output" | "diagnostics";
+  let tab = $state<Tab>("recent");
+  const active = $derived(tab);
 
   // The chain already owns the full width above this, so history sits under
   // the transcript rather than beside it: a side pane would squeeze the one
@@ -35,7 +39,7 @@
   let collapsed = $state(false);
   let selectedView = $state<"result" | "history">("result");
   const visibleView = $derived(working ? "result" : selectedView);
-  const stacked = $derived(roomy.current && (hasHistory || outputAvailable));
+  const stacked = $derived(roomy.current);
 </script>
 
 {#if stacked}
@@ -60,8 +64,7 @@
           class="flex h-7 shrink-0 items-center justify-between border-b border-hairline"
         >
           <div class="flex min-w-0" role="tablist" aria-label="Workspace panel">
-            {#each [{ id: "recent", label: `Recent · ${historyCount}`, show: hasHistory }, { id: "output", label: "Runtime output", show: outputAvailable }] as entry (entry.id)}
-              {#if entry.show}
+            {#each [{ id: "recent", label: hasHistory ? `Recent · ${historyCount}` : "Recent" }, { id: "output", label: "Runtime output" }, { id: "diagnostics", label: "Diagnostics" }] as entry (entry.id)}
                 <button
                   type="button"
                   role="tab"
@@ -71,11 +74,10 @@
                     ? 'text-secondary-foreground'
                     : 'text-ink-quiet hover:text-secondary-foreground'}"
                   onclick={() => {
-                    tab = entry.id as "recent" | "output";
+                    tab = entry.id as Tab;
                     collapsed = false;
                   }}>{entry.label}</button
                 >
-              {/if}
             {/each}
           </div>
           <Button
@@ -83,8 +85,8 @@
             size="xs"
             class="mr-1 size-6 rounded-sm p-0"
             aria-expanded={!collapsed}
-            aria-label={collapsed ? "Show recent history" : "Hide recent history"}
-            title={collapsed ? "Show recent history" : "Hide recent history"}
+            aria-label={collapsed ? "Show panel" : "Hide panel"}
+            title={collapsed ? "Show panel" : "Hide panel"}
             onclick={() => (collapsed = !collapsed)}
           >
             {#if collapsed}
@@ -96,7 +98,13 @@
         </div>
         {#if !collapsed}
           <div class="flex min-h-0 flex-1 flex-col">
-            {#if active === "output" && output}{@render output()}{:else}{@render history()}{/if}
+            {#if active === "output" && output}
+              {@render output()}
+            {:else if active === "diagnostics" && diagnostics}
+              {@render diagnostics()}
+            {:else}
+              {@render history()}
+            {/if}
           </div>
         {/if}
       </div>

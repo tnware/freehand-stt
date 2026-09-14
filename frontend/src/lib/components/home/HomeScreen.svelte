@@ -11,6 +11,7 @@
   import WorkspaceSplit from "./WorkspaceSplit.svelte";
   import PaneHeader from "./PaneHeader.svelte";
   import RuntimeOutputDrawer from "$lib/components/runtimes/RuntimeOutputDrawer.svelte";
+  import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   import { Button } from "$lib/components/ui/button";
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
@@ -379,9 +380,31 @@
       >
         {#snippet output()}
           <RuntimeOutputDrawer
-            instanceID={instanceID}
+            {instanceID}
             running={runtime?.status.state === "running"}
           />
+        {/snippet}
+        {#snippet diagnostics()}
+          <div class="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            {#if inputMode === "file" ? session.editor.connection : session.editor.currentVoiceConnection}
+              <ConnectionDiagnostics
+                result={(inputMode === "file"
+                  ? session.editor.connection
+                  : session.editor.currentVoiceConnection)!}
+                busy={inputMode === "file"
+                  ? session.editor.sttConnectionTesting
+                  : session.editor.voiceConnectionTesting}
+                onCheck={() =>
+                  session.editor.testAppliedConnection(
+                    inputMode === "file" ? Purpose.Transcription : Purpose.Voice,
+                  )}
+              />
+            {:else}
+              <p class="text-[13px] text-muted-foreground">
+                No endpoint check has run for this workflow yet.
+              </p>
+            {/if}
+          </div>
         {/snippet}
         {#snippet result()}
           <div class="task-main">
@@ -652,7 +675,7 @@
     flex: 1;
     flex-direction: column;
     gap: 0;
-    padding: 0 1.25rem 1rem;
+    padding: 0;
   }
   .task-main {
     height: 100%;
@@ -662,9 +685,8 @@
     flex-direction: column;
     gap: 0;
     overflow: hidden;
-    border: 1px solid var(--hairline);
-    border-radius: 0.5rem;
-    background: var(--card);
+    border-top: 1px solid var(--hairline);
+    background: transparent;
   }
   .history-sidebar {
     height: 100%;
