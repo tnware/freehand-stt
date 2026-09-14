@@ -1,17 +1,19 @@
 <script lang="ts">
-  import type {
-    InstanceStatus,
-    Model,
-    ProviderDescriptor,
+  import {
+    ProviderID,
+    type BinaryOptions,
+    type InstanceStatus,
+    type Model,
+    type ProviderDescriptor,
   } from "$bindings/managedruntime";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import DownloadIcon from "@lucide/svelte/icons/download";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
+  import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import { Button } from "$lib/components/ui/button";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
-  import LocalRuntimeSection from "$lib/components/settings/sections/LocalRuntimeSection.svelte";
   import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
 
@@ -44,6 +46,79 @@
   let preferencesOpen = $state(false);
   let sourceOpen = $state(false);
   let manageOpen = $state(false);
+  let probing = $state(false);
+  let recommendation = $state<BinaryOptions | null>(null);
+  let binaryChoice = $state("auto");
+  let confirming = $state<"files" | "instance" | null>(null);
+
+  const problem = $derived(
+    (instance && runtime.errorFor(instance.id)) || status?.error || "",
+  );
+  const chosenBackend = $derived(
+    binaryChoice === "auto"
+      ? (recommendation?.recommendedBackend ?? "")
+      : binaryChoice,
+  );
+  const choiceAvailable = $derived(
+    !!recommendation?.supported &&
+      !!recommendation.options?.some(
+        (option) =>
+          option.backend === chosenBackend &&
+          option.supported &&
+          option.available,
+      ),
+  );
+  // llama.cpp and whisper.cpp ship per-backend binaries, so they are probed
+  // before anything is fetched. Everything else installs directly.
+  const switchable = $derived(
+    entry.id === ProviderID.LlamaCPP || entry.id === ProviderID.WhisperCPP,
+  );
+
+  function install(backend?: string) {
+    if (locked || runtime.busy || probing || !entry.supported) return;
+    if (switchable && !backend) {
+      probing = true;
+      recommendation = null;
+      void runtime
+        .binaryOptions(entry.id)
+        .then((options) => {
+          recommendation = options;
+          binaryChoice = "auto";
+        })
+        .finally(() => (probing = false));
+      return;
+    }
+    void (async () => {
+      let target = instance;
+      if (!target) {
+        const model =
+          entry.models?.find((item) => item.recommended) ?? entry.models?.[0];
+        if (!model) return;
+        target = {
+          id: entry.id,
+          name: entry.name,
+          provider: entry.id,
+          model: model.id,
+          autoStart: false,
+        };
+        if (!(await runtime.saveInstance(target))) return;
+      }
+      recommendation = null;
+      if (backend) await runtime.installBackend(target.id, backend);
+      else await runtime.run(target.id, "Install");
+    })();
+  }
+
+  function confirmRemoval() {
+    if (!confirming || !instance || locked) return;
+    const kind = confirming;
+    confirming = null;
+    act(() =>
+      kind === "files"
+        ? runtime.run(instance.id, "Remove")
+        : runtime.deleteInstance(instance.id),
+    );
+  }
 
   function size(bytes: number): string {
     if (!bytes) return "—";
@@ -145,18 +220,107 @@
 
   <div class="min-h-0 flex-1 overflow-y-auto px-5">
     {#if !installed}
-      <!-- Not installed yet: the install flow owns binary probing, backend
-           choice and the first model download, so this defers to it whole. -->
-      <div class="py-4">
-        <LocalRuntimeSection
-          {runtime}
-          focus={entry.id}
-          chrome={false}
-          {workBusy}
-          disabled={locked}
-          onAction={(action) => action()}
-          onConnections={onOpenConnections}
-        />
+      <!-- Nothing is fetched until a binary is chosen and install is pressed:
+           probing reads host capability only. -->
+      <div class="flex flex-col gap-3 py-4">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-[13px] font-medium">
+              {entry.supported ? "Not installed" : "Unavailable on this machine"}
+            </p>
+            <p class="mt-0.5 font-mono text-[10px] text-ink-quiet">
+              {entry.unavailableReason ||
+                (switchable
+                  ? "per-backend binaries · choose one to install"
+                  : "installs the pinned official release")}
+            </p>
+          </div>
+          <Button
+            size="xs"
+            disabled={locked || probing || runtime.busy || !entry.supported}
+            onclick={() => install()}
+          >
+            <DownloadIcon class="size-3" />
+            {probing ? "Checking…" : recommendation ? "Re-check" : "Install"}
+          </Button>
+        </div>
+
+        {#if probing}
+          <p class="font-mono text-[10px] text-ink-quiet" role="status">
+            Checking host binary options · no files are downloaded
+          </p>
+        {/if}
+
+        {#if recommendation}
+          <div class="rounded-lg border border-hairline p-3">
+            <p class="text-[12.5px] font-medium">
+              Recommended: {backendLabel(recommendation.recommendedBackend)}
+            </p>
+            <p class="mt-0.5 font-mono text-[10px] text-ink-quiet">
+              {recommendation.os} · {recommendation.architecture}{recommendation.reason
+                ? ` · ${recommendation.reason}`
+                : ""}
+            </p>
+            <div class="mt-2.5 flex flex-wrap gap-1.5">
+              {#each [{ backend: "auto", label: "Auto", supported: true, available: true, reason: "Use the recommended binary" }, ...(recommendation.options ?? [])] as option (option.backend)}
+                <button
+                  type="button"
+                  class="h-6 rounded-md border px-2 text-[11px] transition-colors disabled:opacity-40 {binaryChoice ===
+                  option.backend
+                    ? 'border-accent-edge bg-accent-wash text-accent-text'
+                    : 'border-border text-secondary-foreground hover:bg-subtle-fill-hover'}"
+                  aria-pressed={binaryChoice === option.backend}
+                  disabled={!option.supported || !option.available}
+                  title={option.reason}
+                  onclick={() => (binaryChoice = option.backend)}
+                  >{option.backend === "auto"
+                    ? "Auto"
+                    : backendLabel(option.backend)}</button
+                >
+              {/each}
+            </div>
+            <div class="mt-3 flex items-center justify-between gap-3">
+              <p class="font-mono text-[10px] text-ink-quiet">
+                downloads on install · checksum pinned
+              </p>
+              <Button
+                size="xs"
+                disabled={locked || runtime.busy || !choiceAvailable}
+                onclick={() => install(chosenBackend)}
+                >Download and install</Button
+              >
+            </div>
+          </div>
+        {/if}
+
+        {#if entry.models?.length}
+          <div class="mt-1">
+            <p
+              class="mb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+            >
+              Models it can run
+            </p>
+            {#each entry.models as model (model.id)}
+              <div class="flex h-11 items-center gap-3 border-b border-hairline">
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-[12.5px]">{model.name}</span>
+                  <span class="block truncate font-mono text-[10px] text-ink-quiet"
+                    >{model.id}</span
+                  >
+                </span>
+                <span class="shrink-0 font-mono text-[10px] text-ink-quiet"
+                  >{size(model.sizeBytes)}</span
+                >
+                {#if model.recommended}
+                  <span
+                    class="shrink-0 rounded-sm border border-accent-edge px-1.5 py-0.5 text-[10px] text-accent-text"
+                    >Recommended</span
+                  >
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
       </div>
     {:else}
     <div class="flex h-10 items-center justify-between gap-3">
@@ -338,16 +502,64 @@
       >
     </button>
     {#if manageOpen}
-      <div class="border-b border-hairline py-3">
-        <LocalRuntimeSection
-          {runtime}
-          focus={entry.id}
-          chrome={false}
-          {workBusy}
-          disabled={locked}
-          onAction={(action) => action()}
-          onConnections={onOpenConnections}
-        />
+      <div class="flex flex-col gap-2 border-b border-hairline py-3">
+        {#if problem}
+          <p
+            class="flex items-start gap-1.5 text-[11.5px] leading-snug text-destructive"
+            role="alert"
+          >
+            <TriangleAlertIcon class="mt-0.5 size-3.5 shrink-0" />
+            {problem}
+          </p>
+        {/if}
+        <div class="flex flex-wrap items-center gap-1.5">
+          {#if instance && runtime.canRetry(instance.id) && !busy}
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={locked}
+              onclick={() => act(() => runtime.retry(instance.id))}>Retry</Button
+            >
+          {/if}
+          <Button
+            variant="outline"
+            size="xs"
+            disabled={locked || busy || running}
+            onclick={() => (confirming = "files")}
+          >
+            <Trash2Icon class="size-3" />
+            Remove downloaded files
+          </Button>
+          <Button
+            variant="outline"
+            size="xs"
+            class="text-destructive"
+            disabled={locked || busy || running}
+            onclick={() => (confirming = "instance")}>Delete runtime</Button
+          >
+        </div>
+        {#if confirming}
+          <!-- Removal is explicit and says exactly what it takes with it. -->
+          <div
+            class="rounded-lg border border-warning/30 bg-warning/[0.08] p-3"
+            role="alertdialog"
+            aria-label="Confirm removal"
+          >
+            <p class="text-[12px] leading-snug text-secondary-foreground">
+              {confirming === "files"
+                ? "Stops this runtime and deletes its binary and downloaded models. The instance and its saved Connections stay, so it can be repaired."
+                : "Deletes this runtime instance. Saved Connections that point at it will need a new target."}
+            </p>
+            <div class="mt-2.5 flex gap-1.5">
+              <Button size="xs" onclick={confirmRemoval}>
+                {confirming === "files" ? "Remove files" : "Delete"}
+              </Button>
+              <Button variant="ghost" size="xs" onclick={() => (confirming = null)}
+                >Cancel</Button
+              >
+            </div>
+          </div>
+        {/if}
       </div>
     {/if}
     {/if}
