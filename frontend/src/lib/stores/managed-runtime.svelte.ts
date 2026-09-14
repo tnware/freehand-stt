@@ -1,5 +1,7 @@
 import type {
   BackendRequest,
+  BinaryOptions,
+  ProviderID,
   Instance,
   InstanceStatus,
   ProviderDescriptor,
@@ -7,22 +9,31 @@ import type {
 import type * as Manager from "$bindings/managedruntime/manager";
 
 export type ManagedRuntimeService = {
-  [K in
-    | "GetInstances"
-    | "GetProviders"
-    | "SetInstance"
-    | "DeleteInstance"
-    | "Install"
-    | "InstallBackend"
-    | "Remove"
-    | "Start"
-    | "Stop"
-    | "Cancel"
-    | "RefreshCatalog"
-    | "DownloadModel"
-    | "RemoveModel"]: (
+  [
+    K in
+      | "GetInstances"
+      | "GetProviders"
+      | "GetBinaryOptions"
+      | "SetInstance"
+      | "DeleteInstance"
+      | "Install"
+      | "InstallBackend"
+      | "Remove"
+      | "Start"
+      | "Stop"
+      | "Cancel"
+      | "RefreshCatalog"
+      | "DownloadModel"
+      | "RemoveModel"
+  ]: (
     ...args: Parameters<(typeof Manager)[K]>
   ) => Promise<Awaited<ReturnType<(typeof Manager)[K]>>>;
+} & {
+  OpenProcessOutput?: (
+    request: Parameters<
+      typeof import("$bindings/windowing/service").OpenProcessOutput
+    >[0],
+  ) => Promise<void>;
 };
 type Operation = "Install" | "Remove" | "Start" | "Stop" | "RefreshCatalog";
 
@@ -166,6 +177,28 @@ export class ManagedRuntimeState {
     } finally {
       if (!this.#disposed && this.#pending[id] === label)
         this.#pending[id] = "";
+    }
+  }
+  async binaryOptions(provider: ProviderID): Promise<BinaryOptions | null> {
+    if (!this.service || this.#disposed) return null;
+    try {
+      return await this.service.GetBinaryOptions({ provider });
+    } catch {
+      this.error = "Could not check runtime binary options. Try Install again.";
+      return null;
+    }
+  }
+  async openOutput(id: string): Promise<boolean> {
+    if (this.#disposed || !this.statusFor(id)) return false;
+    try {
+      const open =
+        this.service?.OpenProcessOutput ??
+        (await import("$bindings/windowing/service")).OpenProcessOutput;
+      await open({ instanceID: id });
+      return true;
+    } catch {
+      this.#errors[id] = "Could not open runtime output. Try again.";
+      return false;
     }
   }
   run(id: string, operation: Operation) {

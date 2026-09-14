@@ -312,10 +312,12 @@ func (a *ggmlAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	if !a.recipe.descriptor().Supported {
 		return nil, Endpoint{}, errors.New("Managed runtimes require Windows x64.")
 	}
+	reportStartupProgress(ctx, "verifying_runtime")
 	backend, err := a.installedBackend(ctx)
 	if err != nil {
 		return nil, Endpoint{}, err
 	}
+	reportStartupProgress(ctx, "verifying_model")
 	if err := verifyFile(ctx, s.path(a.root), s.size, s.sha256); err != nil {
 		return nil, Endpoint{}, err
 	}
@@ -338,14 +340,25 @@ func (a *ggmlAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	if backend == "cuda" {
 		env = append(env, "CUDA_VISIBLE_DEVICES=0")
 	}
-	p, err := a.launch(ctx, a.executable(), args, filepath.Dir(a.executable()), env)
+	reportStartupProgress(ctx, "launching")
+	p, err := a.launch(runtimeProcessContext(ctx), a.executable(), args, filepath.Dir(a.executable()), env)
 	if err != nil {
 		return nil, Endpoint{}, err
 	}
 	base := "http://127.0.0.1:" + strconv.Itoa(port)
 	bounded, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-	if err = a.waitReady(bounded, p, base, port, id); err != nil {
+	if backend == "cuda" && a.recipe.id == LlamaCPP {
+		reportStartupProgress(ctx, "loading_warming")
+	} else {
+		reportStartupProgress(ctx, "waiting_ready")
+	}
+	err = a.waitReady(bounded, p, base, port, id)
+	if err == nil && backend == "cuda" && a.recipe.id == WhisperCPP {
+		reportStartupProgress(ctx, "warming_up")
+		err = warmWhisper(bounded, base)
+	}
+	if err != nil {
 		p.kill()
 		stop, done := context.WithTimeout(context.WithoutCancel(ctx), 4*time.Second)
 		defer done()

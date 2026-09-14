@@ -117,20 +117,88 @@ Keep this distinction at the adapter boundary, not in shared client URL handling
 
 llama.cpp likewise publishes `/v1` for the cleanup client, with S1-mini reasoning
 disabled. whisper.cpp instead publishes the server origin for native `/inference`
-requests and `/health` metadata. Both adapters default to CPU and offer explicit
-NVIDIA CUDA installation under [ADR 0019](../../decisions/0019-managed-ggml-gpu/).
+requests and `/health` metadata. Their pinned CPU/CUDA installation and
+replacement contract follows [ADR 0019](../../decisions/0019-managed-ggml-gpu/);
+[ADR 0020](../../decisions/0020-managed-runtime-startup-and-diagnostics/) adds
+host-aware recommendations, selected-model GPU warm-up, and a private output viewer.
 The adapter verifies the server and companion libraries as a pinned installation;
 its recorded backend determines controlled launch arguments. Backend changes
 require stopped, idle worker ownership and preserve model files, instance IDs,
 Connections, and startup preferences. Failed or cancelled acquisition retains
 the previous installation. NeMo's device policy is unchanged.
 
+`GetBinaryOptions` is an advisory, metadata-only boundary for new GGML
+installations. Shared platform recipes separate OS/architecture, pinned archives,
+layout, accelerator, and dependencies from provider/model contracts. On Windows
+x64, NVIDIA device 0 with driver >=551.78 and compute capability >=5.0 qualifies
+the pinned CUDA 12.4 recommendation; unknown or unsupported metadata selects CPU.
+Recommendation and installation admission share compatibility rules. The UI
+requires explicit acceptance before `InstallBackend`; the legacy `Install`
+operation retains its CPU default. No latest-release lookup, installation
+mutation, model execution, or free-VRAM-driven switching occurs during selection.
+NeMo retains its own binary-selection policy. macOS has only the shared extension
+contract, not qualified packages or native managed-runtime acceptance.
+
+### Startup ownership and progress
+
 Windows owns children through a Job Object, including model-manager subprocesses.
-The server listens only on `127.0.0.1`; readiness and loaded model metadata are
-verified before the endpoint is admitted. Wails shutdown cancels work and closes
-all owned process trees against one overall eight-second bound. Child output stays in private bounded
-memory and is not application log content. Other platforms expose unsupported
-managed-runtime status without changing their native capture or manual endpoints.
+The server listens only on `127.0.0.1`; verification, selected-model readiness,
+and required GPU warm-up precede endpoint admission. Runtime/model hashing before
+launch is cancellable. After process creation, readiness and warm-up share a 120-second timeout;
+failure or cancellation has an additional four-second owned-process drain bound.
+A deadline is not proof of child exit: retain ownership and reject replacement
+until the process has actually stopped. Wails shutdown cancels work and closes
+all owned process trees against its separate overall eight-second bound.
+
+GPU llama.cpp and NeMo retain upstream built-in warm-up before readiness; CPU
+launches retain `--no-warmup`. CUDA whisper.cpp instead receives one multipart
+`/inference` request containing one second of synthetic silence after readiness,
+against only its already-loaded selected model. The response is bounded and
+discarded, never routed through cleanup, history, or user result publication.
+This is startup work, including saved start-at-launch intent, not a health probe
+or model-discovery operation. No inventory is invoked and no remote fallback
+is admitted.
+
+`Status.startupProgress` reports phase-specific elapsed time for
+`verifying_runtime`, `verifying_model`, `launching`, `waiting_ready`,
+`loading_warming`, and `warming_up` as applicable. Upstream loading and warm-up
+share `loading_warming` when their boundary is not observable. Status derives
+from lifecycle transitions, not output parsing or elapsed-time percentages.
+
+Terminal operation state and admission reopening commit together under the worker
+mutex. A separate publication mutex orders the captured terminal snapshot before
+the next operation's initial notification; callbacks run outside the worker mutex.
+The manager consumes that immutable status/active-model snapshot rather than
+rereading mutable worker state. Seeing a completed operation must not itself
+cause an immediate follow-up action to fail as still busy.
+
+### Explicit process-output observation
+
+Each worker privately captures a rolling stdout/stderr tail by default, bounded
+to 256 KiB, 1,024 chunks, and 4 KiB per chunk. A separate bounded prefix remains
+for existing diagnostic parsers; it is not the viewer source. Strict command
+metadata capture remains distinct from both, so tail truncation cannot validate
+an incomplete catalog. Process-generation fencing rejects stale callbacks.
+
+`internal/windowing` owns one reusable **Process output** window, opened from
+runtime management or quick controls even during startup. It observes rather
+than owns the runtime. Each opening or runtime switch requires sensitive-output
+consent before enabling reads. Cursor-based, bounded request/response deltas are
+polled without overlap; no output is published in events, application logs,
+bridge tracing, crash reports, or files. Frontend accumulation is also bounded.
+Text nodes display output without HTML or terminal interpretation; scrolling can
+follow or pause, and Clear drops the tail. There is no Copy/export or shell input.
+
+Closing/switching clears visible renderer data and revokes retrieval. Disabling
+access does not erase private memory. The tail may survive process exit for
+inspection; Clear, the next start attempt, runtime removal, and shutdown release
+it. Viewer actions never start, stop, restart, or orphan a process. llama.cpp
+retains `--log-disable`, so output may be sparse; whisper verbosity is not enabled.
+See the [logging contract](../../safety/logging/#managed-process-output) for the
+narrow renderer exception and unchanged application-log prohibitions.
+
+Other platforms expose unsupported managed-runtime status without changing
+native capture or manual endpoints.
 
 ## macOS platform boundary
 

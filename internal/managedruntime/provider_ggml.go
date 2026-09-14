@@ -14,34 +14,24 @@ import (
 // independently checked against downloaded ZIPs. Model pins are HF LFS metadata.
 // No catalog operation downloads or executes a model.
 type ggmlProvider struct {
-	id                        ProviderID
-	name, version, executable string
-	release                   asset
-	cuda                      runtimeBundle
-	backend                   compatibility.ID
-	profile                   modelprofile.ID
-	role                      compatibility.Role
-	models                    []Model
-	specs                     map[string]modelSpec
+	id   ProviderID
+	name string
+	platformRecipe
+	backend compatibility.ID
+	profile modelprofile.ID
+	role    compatibility.Role
+	models  []Model
+	specs   map[string]modelSpec
 }
 
 var llamaProvider = ggmlProvider{
-	id: LlamaCPP, name: "llama.cpp", version: "b10809", executable: "llama-server.exe",
-	release: asset{"cpu", "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-win-cpu-x64.zip", "9df3158ed228a641a4b127942d7f459f24c9e13f04682659d05c00c80099b6b5", 18407457},
-	cuda: runtimeBundle{executable: "llama-server.exe", required: []string{"ggml-cuda.dll", "cudart64_12.dll", "cublas64_12.dll", "cublasLt64_12.dll"}, archives: []asset{
-		{"cuda", "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-win-cuda-12.4-x64.zip", "c77bfcd9ed8d91e8721a2d6a290b907fddd4fa5412a47b21c6fa1709116b85f9", 253938543},
-		{"cuda", "https://github.com/ggml-org/llama.cpp/releases/download/b10809/cudart-llama-bin-win-cuda-12.4-x64.zip", "8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6", 391443627},
-	}},
+	id: LlamaCPP, name: "llama.cpp", platformRecipe: windowsCPURecipe(LlamaCPP),
 	backend: compatibility.LlamaCPP, profile: modelprofile.S1Mini, role: compatibility.PostProcessing,
 	models: []Model{{ID: "s1-mini", Name: "S1-mini by Superwhisper", Description: "v1 Q4_K_M. English transcript cleanup; not speech recognition.", Recommended: true}},
 	specs:  map[string]modelSpec{"s1-mini": {"superwhisper/s1-mini-GGUF", "34add00a48a2e5d24e5a4ee5405a99620a3a240c", "s1-mini-q4_k_m.gguf", "3b41ebe2502cbd03e811d5d16b022f5ab551eda58d62597d152f89535003c634", 484219808}},
 }
 var whisperProvider = ggmlProvider{
-	id: WhisperCPP, name: "whisper.cpp", version: "v1.8.3", executable: "Release/whisper-server.exe",
-	release: asset{"cpu", "https://github.com/ggml-org/whisper.cpp/releases/download/v1.8.3/whisper-bin-x64.zip", "d824b1e37599f882b396e73f1ee0bfd5d0529f700314c48311dcbd00b803321d", 3968674},
-	cuda: runtimeBundle{executable: "Release/whisper-server.exe", required: []string{"Release/ggml-cuda.dll", "Release/cudart64_12.dll", "Release/cublas64_12.dll", "Release/cublasLt64_12.dll"}, archives: []asset{
-		{"cuda", "https://github.com/ggml-org/whisper.cpp/releases/download/v1.8.3/whisper-cublas-12.4.0-bin-x64.zip", "c12a563333d3c3707be70754dc0e87c1cb58aa6333a87055bbcf9b524488dfb0", 459854042},
-	}},
+	id: WhisperCPP, name: "whisper.cpp", platformRecipe: windowsCPURecipe(WhisperCPP),
 	backend: compatibility.WhisperCPP, profile: modelprofile.Generic, role: compatibility.Transcription,
 	models: []Model{
 		{ID: "base", Name: "Whisper Base", Description: "Multilingual completed transcription.", Recommended: true},
@@ -74,7 +64,8 @@ func (g ggmlProvider) descriptor() ProviderDescriptor {
 		models[i].Profile = string(g.profile)
 		models[i].SizeBytes = g.specs[models[i].ID].size
 	}
-	return ProviderDescriptor{ID: g.id, Name: g.name, Version: g.version, Supported: runtime.GOOS == "windows" && runtime.GOARCH == "amd64", Models: models}
+	_, supported := recipeFor(g.id, runtime.GOOS, runtime.GOARCH, "cpu")
+	return ProviderDescriptor{ID: g.id, Name: g.name, Version: g.version, Supported: supported, Models: models}
 }
 func (g ggmlProvider) newAdapter(root string) runtimeAdapter {
 	return &ggmlAdapter{root: root, recipe: g, launch: launchOwned, listenerOwner: ownsListener}

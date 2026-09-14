@@ -99,6 +99,7 @@ type App struct {
 	settingsShell   *shellNavigation
 	aboutWindow     *windowController
 	detailsWindow   *windowController
+	outputWindow    *windowController
 	windowState     *windowstate.Store
 	mainPlacement   *windowstate.Placement
 	levels          *levelPump
@@ -149,6 +150,7 @@ func New(opts Options) (*App, error) {
 		settingsShell:  &shellNavigation{},
 		aboutWindow:    &windowController{},
 		detailsWindow:  &windowController{},
+		outputWindow:   &windowController{},
 		windowState:    windowState,
 		mainPlacement:  mainPlacement,
 		logger:         logger,
@@ -260,6 +262,7 @@ func New(opts Options) (*App, error) {
 		a.aboutWindow.open,
 	)
 	windowing.ConfigureSettings(a.windowing, windowing.SettingsNavigation{Ready: a.settingsReady, Visible: a.settingsWindow.open, Finish: a.finishSettings})
+	a.configureProcessOutput()
 	windowing.ConfigureTrayPopover(a.windowing, windowing.TrayPopoverNavigation{OpenMain: a.showMain, Hide: a.hideTrayPopover, Visible: a.trayPopover.open})
 	windowing.ConfigureConnections(a.windowing, windowing.ConnectionNavigation{
 		Exists: func(id string) bool {
@@ -456,6 +459,7 @@ func (a *App) onStarted(*application.ApplicationEvent) {
 	a.newSettingsWindow()
 	a.newAboutWindow()
 	a.newHistoryDetailsWindow()
+	a.newProcessOutputWindow()
 	a.tray.ApplyDictation(dictation.Snapshot(a.dictation))
 	a.tray.ApplyFile(a.files.CurrentFileTranscription())
 	overlayservice.Start(a.overlay)

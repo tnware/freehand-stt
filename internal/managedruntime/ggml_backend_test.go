@@ -39,7 +39,7 @@ func TestGGMLBackendAdmissionAndArguments(t *testing.T) {
 				if backend == "cuda" {
 					want = "auto"
 				}
-				if i < 0 || args[i+1] != want || !slices.Contains(args, "--no-warmup") || !slices.Contains(args, "--offline") {
+				if i < 0 || args[i+1] != want || slices.Contains(args, "--no-warmup") != (backend == "cpu") || !slices.Contains(args, "--offline") {
 					t.Fatal("unsafe llama flags", args)
 				}
 				if backend == "cuda" && (!slices.Contains(args, "CUDA0") || !slices.Contains(args, "--split-mode")) {

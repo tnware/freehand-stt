@@ -21,6 +21,28 @@ const status: Status = {
   models: [],
 };
 describe("local runtime presentation", () => {
+  it("reports elapsed time for the current startup stage, never a percentage", () => {
+    const starting = {
+      ...status,
+      state: "starting",
+      progress: 0.5,
+      startupProgress: { phase: "warming_up", startedAt: 1000 },
+    };
+    expect(runtimePresentation(starting, 6500)).toMatchObject({
+      activity: "Warming up selected model",
+      startup: "Warming up selected model · 5s in this stage",
+      percent: null,
+    });
+    expect(
+      runtimePresentation(
+        {
+          ...starting,
+          startupProgress: { phase: "launching", startedAt: 6000 },
+        },
+        6500,
+      ).startup,
+    ).toBe("Launching runtime · 0s in this stage");
+  });
   it("tracks transferred bytes without treating a full transfer as verified success", () => {
     const downloading = {
       ...status,

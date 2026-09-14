@@ -54,6 +54,14 @@ func launchOwned(ctx context.Context, exe string, args []string, dir string, env
 	cmd.Env = env
 	cmd.Stdout = &p.stdout
 	cmd.Stderr = &p.stderr
+	var observer *startupObserver
+	if marked, _ := ctx.Value(runtimeProcessKey{}).(bool); marked {
+		observer, _ = ctx.Value(startupObserverKey{}).(*startupObserver)
+	}
+	if observer != nil {
+		cmd.Stdout = observedOutput{&p.stdout, observer, "stdout"}
+		cmd.Stderr = observedOutput{&p.stderr, observer, "stderr"}
+	}
 	cmd.WaitDelay = 2 * time.Second
 	closeJob, err := startInJob(cmd)
 	if err != nil {
@@ -61,6 +69,9 @@ func launchOwned(ctx context.Context, exe string, args []string, dir string, env
 	}
 	p.closeJob = closeJob
 	p.pid = cmd.Process.Pid
+	if observer != nil {
+		observer.child(p)
+	}
 	go func() { p.err = cmd.Wait(); p.kill(); close(p.done) }()
 	go func() {
 		select {

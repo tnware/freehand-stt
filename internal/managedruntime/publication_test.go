@@ -1,12 +1,14 @@
 package managedruntime
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestInventoryReservationRejectsDrainingIDBeforeDurableWrite(t *testing.T) {
@@ -99,5 +101,48 @@ func TestInventoryReservationReentrantCommitAndRollback(t *testing.T) {
 			}
 			r.Finish(false)
 		})
+	}
+}
+
+// A terminal event must permit the next action, and must precede that action's
+// initial event even when the consumer immediately submits it from the callback.
+func TestTerminalPublicationAdmitsNextActionInOrder(t *testing.T) {
+	var w *worker
+	events := make(chan Operation, 4)
+	admitted := make(chan error, 1)
+	m := NewManager(ManagerOptions{
+		Directory: t.TempDir(),
+		Instances: []Instance{{ID: "test", Name: "Test", Provider: NeMoSpeechCPP, Model: "nemotron-3.5"}},
+		Changed: func(st InstanceStatus) {
+			events <- st.Status.Operation
+			if st.Status.Operation.Kind == "first" && st.Status.Operation.Outcome == "succeeded" {
+				admitted <- w.run("second", "", false, func(context.Context) error { return nil })
+			}
+		},
+	})
+	w = m.workers["test"]
+	w.ctx = t.Context()
+	w.status.Supported = true
+	if err := w.run("first", "", false, func(context.Context) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	defer w.wg.Wait()
+	select {
+	case err := <-admitted:
+		if err != nil {
+			t.Fatalf("terminal status still rejected the next action: %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("terminal publication missing")
+	}
+	for _, want := range [][2]string{{"first", "running"}, {"first", "succeeded"}, {"second", "running"}, {"second", "succeeded"}} {
+		select {
+		case got := <-events:
+			if got.Kind != want[0] || got.Outcome != want[1] {
+				t.Fatalf("publication reordered: %+v, want %v", got, want)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatal("publication missing")
+		}
 	}
 }

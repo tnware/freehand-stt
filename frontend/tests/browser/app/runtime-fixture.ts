@@ -205,6 +205,26 @@ export function createRuntimeFixture(
   const service: ManagedRuntimeService = {
     GetInstances: async () => structuredClone(rows),
     GetProviders: async () => structuredClone(providers),
+    GetBinaryOptions: async ({ provider }) => {
+      calls.push(`GetBinaryOptions:${provider}`);
+      return {
+        provider,
+        os: "windows",
+        architecture: "amd64",
+        supported: true,
+        recommendedBackend: "cuda",
+        reason: "Compatible NVIDIA GPU detected.",
+        options: ["cpu", "cuda"].map((backend) => ({
+          backend,
+          supported: true,
+          available: true,
+          reason: "Available",
+        })),
+      };
+    },
+    OpenProcessOutput: async ({ instanceID }) => {
+      calls.push(`OpenProcessOutput:${instanceID}`);
+    },
     SetInstance: async (instance) => {
       calls.push(`SetInstance:${instance.id}`);
       const old = rows.find((r) => r.instance.id === instance.id);

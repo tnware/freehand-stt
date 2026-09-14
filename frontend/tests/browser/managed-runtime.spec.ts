@@ -1,6 +1,37 @@
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
 
+test("quick runtime controls expose startup elapsed, output and cancel", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?main&runtime&runtime-ready");
+  await page.evaluate(() =>
+    window.testRuntime.change("nemo-default", {
+      state: "starting",
+      phase: "start",
+      startupProgress: {
+        phase: "loading_warming",
+        startedAt: Date.now() - 5000,
+      },
+    }),
+  );
+  await page
+    .getByRole("button", { name: "Transcription settings", exact: true })
+    .click();
+  const panel = page.getByRole("dialog", { name: "Transcription settings" });
+  await expect(
+    panel
+      .getByRole("status")
+      .filter({ hasText: "Loading and warming up selected model" }),
+  ).toContainText("in this stage");
+  await panel.getByRole("button", { name: "View output", exact: true }).click();
+  await panel.getByRole("button", { name: "Cancel", exact: true }).click();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "OpenProcessOutput:nemo-default",
+    "Cancel:nemo-default",
+  ]);
+});
+
 async function installRuntime(page: Page) {
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(
@@ -14,6 +45,69 @@ async function installRuntime(page: Page) {
     return call.slice("SetInstance:".length);
   });
 }
+
+for (const backend of ["cuda", "cpu"]) {
+  test(`GGML setup probes before explicit ${backend} installation`, async ({
+    page,
+  }) => {
+    await page.goto("/tests/browser/app/?runtime&runtime-provider=whisper-cpp");
+    await page.locator('[data-settings-section="local-runtime"]').click();
+    await page.getByRole("button", { name: "Install", exact: true }).click();
+    await expect(
+      page.getByText("Recommended: NVIDIA GPU (CUDA)", { exact: true }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+      "GetBinaryOptions:whisper-cpp",
+    ]);
+    if (backend === "cpu")
+      await page.getByRole("button", { name: "CPU", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Download and install", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", {
+        name: "Download selected model",
+        exact: true,
+      }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+      "GetBinaryOptions:whisper-cpp",
+      "SetInstance:whisper-cpp",
+      `InstallBackend:whisper-cpp:${backend}`,
+    ]);
+  });
+}
+
+test("startup stage is visible collapsed and expanded with output and cancellation", async ({
+  page,
+}) => {
+  await page.goto(
+    "/tests/browser/app/?runtime&runtime-ready&runtime-provider=whisper-cpp",
+  );
+  await page.evaluate(() =>
+    window.testRuntime.change("whisper-cpp-default", {
+      state: "starting",
+      phase: "start",
+      startupProgress: { phase: "warming_up", startedAt: Date.now() - 5000 },
+    }),
+  );
+  await page.locator('[data-settings-section="local-runtime"]').click();
+  await expect(
+    page.getByText(/Warming up selected model · \d+s in this stage/),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "View output", exact: true }).click();
+  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await expect(
+    page.getByText(/Warming up selected model · \d+s in this stage/),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Cancel operation", exact: true })
+    .click();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "OpenProcessOutput:whisper-cpp-default",
+    "Cancel:whisper-cpp-default",
+  ]);
+});
 
 for (const provider of ["llama-cpp", "whisper-cpp"]) {
   test(`${provider} switches CPU to CUDA and back without replacing its selected model`, async ({

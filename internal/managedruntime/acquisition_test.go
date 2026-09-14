@@ -123,17 +123,19 @@ func TestDownloadCannotSucceedWithoutInstalledModel(t *testing.T) {
 	}
 }
 
-func TestTerminalPublicationReservesAdmission(t *testing.T) {
+func TestTerminalPublicationAllowsNextAdmission(t *testing.T) {
 	s := testService(t, &serviceAdapter{installed: true})
 	waitService(t, s, "installed")
 	entered, release := make(chan struct{}), make(chan struct{})
 	defer close(release)
-	s.changed = func(st Status) {
+	s.publicationMu.Lock()
+	s.changed = func(st workerSnapshot) {
 		if st.Operation.Kind == "download" && st.Operation.Outcome == "succeeded" {
 			close(entered)
 			<-release
 		}
 	}
+	s.publicationMu.Unlock()
 	if err := s.DownloadModel("nemotron-3.5"); err != nil {
 		t.Fatal(err)
 	}
@@ -142,8 +144,8 @@ func TestTerminalPublicationReservesAdmission(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("no terminal notification")
 	}
-	if err := s.RefreshCatalog(); err != errBusy {
-		t.Fatalf("new operation can replace terminal before publication: %v", err)
+	if err := s.RefreshCatalog(); err != nil {
+		t.Fatalf("terminal operation still blocks admission: %v", err)
 	}
 }
 

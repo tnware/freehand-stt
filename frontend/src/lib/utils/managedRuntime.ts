@@ -6,7 +6,26 @@ export function backendLabel(backend: string): string {
   return backend.toUpperCase();
 }
 
-export function runtimePresentation(status: Status | null | undefined) {
+export function runtimePresentation(
+  status: Status | null | undefined,
+  now = Date.now(),
+) {
+  const starting = status?.state === "starting";
+  const stages: Record<string, string> = {
+    verifying_runtime: "Verifying runtime",
+    verifying_model: "Verifying selected model",
+    launching: "Launching runtime",
+    waiting_ready: "Waiting for runtime readiness",
+    warming_up: "Warming up selected model",
+    loading_warming: "Loading and warming up selected model",
+  };
+  const stage = starting
+    ? (stages[status.startupProgress?.phase ?? ""] ?? "Starting runtime")
+    : "";
+  const since = status?.startupProgress?.startedAt;
+  const startup = starting
+    ? `${stage}${since && Number.isFinite(since) ? ` · ${Math.max(0, Math.floor((now - since) / 1000))}s in this stage` : ""}`
+    : "";
   const supported = status?.supported === true;
   const labels: Record<string, string> = {
     not_installed: "Not installed",
@@ -50,9 +69,10 @@ export function runtimePresentation(status: Status | null | undefined) {
     remove_model: "Removing model",
   };
   const activity =
-    active && operation.kind === "download"
+    stage ||
+    (active && operation.kind === "download"
       ? (phaseLabels[acquisition?.phase ?? ""] ?? "Preparing download")
-      : (operationLabels[status?.phase ?? ""] ?? "Working");
+      : (operationLabels[status?.phase ?? ""] ?? "Working"));
   const completionLabels: Record<string, string> = {
     install: "Runtime installed.",
     download: "Model downloaded and verified.",
@@ -84,6 +104,7 @@ export function runtimePresentation(status: Status | null | undefined) {
   return {
     backend: backendLabel(status?.backend ?? ""),
     activity,
+    startup,
     completion,
     operationModel: modelName ?? "",
     transferred: measured
@@ -106,8 +127,9 @@ export function runtimePresentation(status: Status | null | undefined) {
         : installed
           ? 1
           : 0,
-    percent:
-      active && operation.kind === "download"
+    percent: starting
+      ? null
+      : active && operation.kind === "download"
         ? measured && total > 0
           ? Math.floor(Math.min(1, bytes / total) * 100)
           : null

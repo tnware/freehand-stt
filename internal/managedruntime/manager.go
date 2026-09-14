@@ -93,7 +93,7 @@ func (m *Manager) newWorker(i Instance) *worker {
 		m.processes[i.Provider] = &providerProcess{}
 	}
 	w.providerProcess = m.processes[i.Provider]
-	w.changed = func(Status) { m.notifyWorker(i.ID, w) }
+	w.changed = func(snapshot workerSnapshot) { m.notifyWorker(i.ID, w, snapshot) }
 	return w
 }
 func (m *Manager) GetProviders() []ProviderDescriptor {
@@ -122,7 +122,7 @@ func (m *Manager) GetInstances() []InstanceStatus {
 	}
 	return out
 }
-func (m *Manager) notifyWorker(id string, w *worker) {
+func (m *Manager) notifyWorker(id string, w *worker, snapshot workerSnapshot) {
 	m.mu.Lock()
 	if m.closed || m.workers[id] != w || m.changed == nil {
 		m.mu.Unlock()
@@ -131,7 +131,7 @@ func (m *Manager) notifyWorker(id string, w *worker) {
 	var st InstanceStatus
 	for _, i := range m.instances {
 		if i.ID == id {
-			st = instanceSnapshot(i, w)
+			st = InstanceStatus{Instance: i, Status: snapshot.Status, ActiveModel: snapshot.activeModel}
 			break
 		}
 	}
@@ -146,8 +146,8 @@ func (m *Manager) notifyAll() {
 		pairs[id] = w
 	}
 	m.mu.Unlock()
-	for id, w := range pairs {
-		m.notifyWorker(id, w)
+	for _, w := range pairs {
+		w.notify()
 	}
 }
 func (m *Manager) ResolveFor(expected Instance, role compatibility.Role) (ResolvedEndpoint, error) {

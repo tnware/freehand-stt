@@ -20,9 +20,16 @@
     onManage: () => void;
   } = $props();
   const uid = $props.id();
+  let now = $state(Date.now());
+  $effect(() => {
+    const timer = setInterval(() => {
+      now = Date.now();
+    }, 1000);
+    return () => clearInterval(timer);
+  });
   const row = $derived(runtime.statusFor(instanceID));
   const status = $derived(row?.status);
-  const view = $derived(runtimePresentation(status));
+  const view = $derived(runtimePresentation(status, now));
   const provider = $derived(
     runtime.providers.find((p) => p.id === row?.instance.provider),
   );
@@ -81,7 +88,10 @@
       {#if operating}<LoaderCircleIcon
           class="size-3 shrink-0 animate-spin"
         />{/if}
-      {[view.backend, runtime.pendingFor(instanceID) || view.label]
+      {[
+        view.backend,
+        view.startup || runtime.pendingFor(instanceID) || view.label,
+      ]
         .filter(Boolean)
         .join(" · ")}
     </p>
@@ -93,6 +103,12 @@
         title="Manage runtime"
         onclick={onManage}><SettingsIcon class="size-4" /></Button
       >
+      {#if row}<Button
+          variant="ghost"
+          size="sm"
+          onclick={() => void runtime.openOutput(instanceID)}
+          >View output</Button
+        >{/if}
       {#if operating}
         <Button
           variant="ghost"

@@ -24,7 +24,9 @@ type Service struct {
 
 func NewService(o Options) *Service {
 	s := &Service{worker: newWorker(o.Directory, providers[NeMoSpeechCPP], legacyConfig(o.Preferences), o.Logger, o.CheckIdle), save: o.SavePreferences}
-	s.changed = o.Changed
+	if o.Changed != nil {
+		s.changed = func(snapshot workerSnapshot) { o.Changed(snapshot.Status) }
+	}
 	if err := Validate(o.Preferences); err != nil {
 		s.status.State = "error"
 		s.status.Error = err.Error()

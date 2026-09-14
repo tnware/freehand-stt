@@ -342,11 +342,13 @@ func (a *nemoAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	if !ok {
 		return nil, Endpoint{}, errors.New("Choose a supported managed speech model.")
 	}
+	reportStartupProgress(ctx, "verifying_runtime")
 	backend, err := a.installedBackend(ctx)
 	if err != nil {
 		return nil, Endpoint{}, err
 	}
 	spec := modelSpecs[id]
+	reportStartupProgress(ctx, "verifying_model")
 	if err = verifyFile(ctx, spec.path(a.root), spec.size, spec.sha256); err != nil {
 		return nil, Endpoint{}, err
 	}
@@ -360,14 +362,23 @@ func (a *nemoAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	if backend != "cpu" {
 		device = "gpu:0"
 	}
-	args := []string{"serve", "--host", "127.0.0.1", "--port", strconv.Itoa(port), "--asr-model", spec.path(a.root), "--device", device, "--no-ui", "--no-warmup"}
-	p, err := a.launch(ctx, a.executable(), args, filepath.Join(a.root, "runtime"), childEnvironment(a.root, os.Environ()))
+	args := []string{"serve", "--host", "127.0.0.1", "--port", strconv.Itoa(port), "--asr-model", spec.path(a.root), "--device", device, "--no-ui"}
+	if backend == "cpu" {
+		args = append(args, "--no-warmup")
+	}
+	reportStartupProgress(ctx, "launching")
+	p, err := a.launch(runtimeProcessContext(ctx), a.executable(), args, filepath.Join(a.root, "runtime"), childEnvironment(a.root, os.Environ()))
 	if err != nil {
 		return nil, Endpoint{}, err
 	}
 	bounded, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 	base := "http://127.0.0.1:" + strconv.Itoa(port)
+	if backend != "cpu" {
+		reportStartupProgress(ctx, "loading_warming")
+	} else {
+		reportStartupProgress(ctx, "waiting_ready")
+	}
 	model, err := a.waitReady(bounded, p, base, port)
 	if err != nil {
 		p.kill()

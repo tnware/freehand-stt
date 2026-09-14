@@ -21,8 +21,9 @@ type runtimeAdapter interface {
 }
 type worker struct {
 	mu                   sync.Mutex
+	publicationMu        sync.Mutex
 	configuration        workerConfig
-	changed              func(Status)
+	changed              func(workerSnapshot)
 	logger               *slog.Logger
 	checkIdle            func() error
 	status               Status
@@ -35,6 +36,9 @@ type worker struct {
 	cancel               context.CancelFunc
 	operationCancel      context.CancelFunc
 	processCancel        context.CancelFunc
+	output               processOutput
+	outputLaunch         uint64
+	startingProcess      *ownedProcess
 	process              *ownedProcess
 	providerProcess      *providerProcess
 	wg                   sync.WaitGroup
@@ -61,15 +65,35 @@ func newWorker(root string, p provider, cfg workerConfig, logger *slog.Logger, i
 func (s *worker) GetStatus() Status { s.mu.Lock(); defer s.mu.Unlock(); return s.snapshotLocked() }
 func (s *worker) snapshotLocked() Status {
 	st := s.status
+	if st.StartupProgress != nil {
+		progress := *st.StartupProgress
+		st.StartupProgress = &progress
+	}
 	st.Enabled = s.configuration.Enabled
 	st.SelectedModel = s.configuration.Model
 	st.Realtime = s.configuration.Realtime
 	st.Models = append([]Model{}, st.Models...)
 	return st
 }
+
+// Private publication data keeps endpoint identity coherent without adding it
+// to the renderer status DTO. Callbacks run outside the state mutex.
+type workerSnapshot struct {
+	Status
+	activeModel string
+}
+
+func (s *worker) publicationLocked() workerSnapshot {
+	return workerSnapshot{Status: s.snapshotLocked(), activeModel: s.endpoint.Model}
+}
 func (s *worker) notify() {
+	s.publicationMu.Lock()
+	defer s.publicationMu.Unlock()
+	s.mu.Lock()
+	snapshot := s.publicationLocked()
+	s.mu.Unlock()
 	if s.changed != nil {
-		s.changed(s.GetStatus())
+		s.changed(snapshot)
 	}
 }
 func (s *worker) resolveLocked() (Endpoint, error) {
@@ -175,6 +199,7 @@ func (s *worker) runOperation(phase, state string, guard bool, model string, wor
 	}
 	ctx, cancel := context.WithCancel(s.ctx)
 	s.operationCancel = cancel
+	s.status.StartupProgress = nil
 	s.status.Phase = phase
 	s.status.Acquisition = AcquisitionProgress{}
 	s.status.Operation = Operation{ID: operationSequence.Add(1), Kind: phase, Model: model, Outcome: "running"}
@@ -193,12 +218,17 @@ func (s *worker) runOperation(phase, state string, guard bool, model string, wor
 		}
 		s.notify()
 		err := work(ctx)
+		// Publish this terminal snapshot before a newly admitted operation's
+		// initial notification, without advertising a terminal-but-busy state.
+		s.publicationMu.Lock()
 		s.mu.Lock()
 		keep := (phase == "start" || phase == "startup") && err == nil && s.process != nil
 		if !keep {
 			cancel()
 		}
 		s.operationCancel = nil
+		s.status.StartupProgress = nil
+		s.startingProcess = nil
 		s.status.Phase = ""
 		s.status.Progress = -1
 		kind := "none"
@@ -237,15 +267,16 @@ func (s *worker) runOperation(phase, state string, guard bool, model string, wor
 			s.status.State = "stopped"
 			s.endpoint = Endpoint{}
 		}
+		s.busy = false
+		snapshot := s.publicationLocked()
 		s.mu.Unlock()
 		if s.logger != nil {
 			s.logger.Info("managed operation finished", "operation", phase, "error_kind", kind, "duration_ms", time.Since(started).Milliseconds())
 		}
-		// Publish the terminal result before another admission can replace it.
-		s.notify()
-		s.mu.Lock()
-		s.busy = false
-		s.mu.Unlock()
+		if s.changed != nil {
+			s.changed(snapshot)
+		}
+		s.publicationMu.Unlock()
 	}()
 	return nil
 }
@@ -388,6 +419,10 @@ func (s *worker) Remove() error {
 		if err := s.stopProcess(ctx); err != nil {
 			return err
 		}
+		s.mu.Lock()
+		s.outputLaunch++
+		s.output.clear()
+		s.mu.Unlock()
 		if err := s.adapter.Remove(ctx); err != nil {
 			return err
 		}
@@ -415,6 +450,7 @@ func (s *worker) startProcess(ctx context.Context) error {
 	if !p.Enabled || !installed {
 		return errNotReady
 	}
+	ctx = s.observeStartup(ctx)
 	proc, endpoint, err := s.providerProcess.start(ctx, s.adapter, p.Model)
 	if err != nil {
 		if proc != nil {
@@ -570,6 +606,12 @@ func (s *worker) startup(ctx context.Context) error {
 func (s *worker) closeNow() {
 	s.mu.Lock()
 	s.closed = true
+	s.outputLaunch++
+	s.output.enabled = false
+	s.output.clear()
+	s.status.StartupProgress = nil
+	starting := s.startingProcess
+	s.startingProcess = nil
 	if s.cancel != nil {
 		s.cancel()
 	}
@@ -581,6 +623,9 @@ func (s *worker) closeNow() {
 	s.endpoint = Endpoint{}
 	s.status.State = "stopped"
 	s.mu.Unlock()
+	if starting != nil {
+		starting.kill()
+	}
 	if p != nil {
 		p.kill()
 	}

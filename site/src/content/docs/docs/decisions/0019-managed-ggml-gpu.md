@@ -6,6 +6,7 @@ description: Add pinned NVIDIA CUDA runtime binaries without changing model cata
 - Status: Accepted
 - Extends [ADR 0017](../0017-managed-provider-installations/), replacing its CPU-only qualification for llama.cpp and whisper.cpp.
 - Retains [ADR 0018](../0018-built-in-runtime-connections/)'s built-in Connections and acquisition ownership.
+- [ADR 0020](../0020-managed-runtime-startup-and-diagnostics/) supersedes the initial CPU-only recommendation policy with host-aware qualified recommendations and adds selected-model startup preparation and explicit private diagnostics.
 
 ## Decision
 

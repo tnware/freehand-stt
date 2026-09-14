@@ -91,6 +91,39 @@ Never log:
 
 Classify errors with `diagnostics.ErrorKind`; do not attach `err`, `err.Error()`, or `%v` to a runtime record. User-facing error messages belong in the existing bounded status/error surfaces. A frontend failure that requires action must be shown there rather than existing only in `console.*` output.
 
+## Managed process output
+
+[ADR 0020](../../decisions/0020-managed-runtime-startup-and-diagnostics/) permits
+one narrow exception to raw child output staying outside the renderer: the
+explicitly authorized **Process output** viewer. This is not an application log
+or a relaxation of the prohibited-content rules above. Arbitrary upstream output
+may include prompts, transcripts, paths, and other sensitive content; terminal
+control filtering is not comprehensive redaction.
+
+The worker keeps a private rolling tail by default, limited to 256 KiB, 1,024
+chunks, and 4 KiB per chunk. Existing bounded-prefix diagnostics parsing and
+strict command metadata capture remain separate and are not viewer data.
+The tail is generation-fenced and may remain after child exit. Clear, the next
+start attempt, runtime removal, and shutdown release it. Disabling viewer access
+revokes reads but does not erase this private capture.
+
+Require sensitive-output consent per viewer opening or runtime switch. Use only
+bounded cursor-delta binding reads while authorized, never raw output events.
+Clear visible frontend data and revoke access on close/switch; fence late reads
+and bound renderer accumulation. Render text nodes, not HTML, a terminal, links,
+or executable instructions. Follow/pause affects scrolling only; Clear and window
+lifecycle must not affect process ownership. No Copy/export, file retention,
+clipboard automation, crash-report attachment, or application-log forwarding is
+provided. Lifecycle notification events may identify the viewer state, not carry
+output text.
+
+Keep Wails at `Info`: bridge debug tracing can serialize these sensitive binding
+results as well as credential drafts and transcripts. llama.cpp retains
+`--log-disable`, and whisper.cpp does not enable verbose logging for this viewer.
+Sparse or absent upstream output is valid and does not establish startup failure.
+Do not enable broad logging to manufacture progress; startup phases come from
+owned lifecycle boundaries and contain no raw text.
+
 ## Noise limits
 
 Do not log PCM callbacks, audio levels, every VAD frame/state oscillation, upload ticks, streamed transcript deltas, renderer events, or routine polling/snapshot reads. Log segment/checkpoint boundaries and whole-operation results instead. The UI and native overlay own live feedback.

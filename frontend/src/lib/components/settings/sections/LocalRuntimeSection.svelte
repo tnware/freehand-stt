@@ -3,6 +3,7 @@
   import {
     ProviderID,
     type ProviderDescriptor,
+    type BinaryOptions,
   } from "$bindings/managedruntime";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Role } from "$bindings/compatibility";
@@ -40,6 +41,27 @@
     onConnections: () => void;
   } = $props();
   const uid = $props.id();
+  let now = $state(Date.now());
+  $effect(() => {
+    const timer = setInterval(() => {
+      now = Date.now();
+    }, 1000);
+    return () => clearInterval(timer);
+  });
+  let recommendation = $state<BinaryOptions | null>(null);
+  let probing = $state(false);
+  let binaryChoice = $state("auto");
+  const chosenBackend = $derived(
+    binaryChoice === "auto"
+      ? (recommendation?.recommendedBackend ?? "")
+      : binaryChoice,
+  );
+  const choiceAvailable = $derived(
+    recommendation?.supported &&
+      recommendation.options?.some(
+        (o) => o.backend === chosenBackend && o.supported && o.available,
+      ),
+  );
   let selectedID = $state("");
   let recoveryID = $state("");
   const provider = $derived(runtime.providers.find((p) => p.id === selectedID));
@@ -52,7 +74,7 @@
   );
   const id = $derived(row?.instance.id ?? provider?.id ?? "");
   const status = $derived(row?.status);
-  const view = $derived(runtimePresentation(status));
+  const view = $derived(runtimePresentation(status, now));
   const models = $derived(
     (status?.models?.length ? status.models : (provider?.models ?? [])).filter(
       (m) => provider?.models?.some((q) => q.id === m.id),
@@ -92,17 +114,32 @@
         void action();
       });
   }
-  function install(provider: ProviderDescriptor) {
+  function install(provider: ProviderDescriptor, backend?: string) {
     if (
       disabled ||
       workBusy ||
       runtime.loading ||
       runtime.busy ||
+      probing ||
       !provider.supported
     )
       return;
     selectedID = provider.id;
     recoveryID = "";
+    if (switchableProvider(provider.id) && !backend) {
+      probing = true;
+      recommendation = null;
+      void runtime
+        .binaryOptions(provider.id)
+        .then((options) => {
+          recommendation = options;
+          binaryChoice = "auto";
+        })
+        .finally(() => {
+          probing = false;
+        });
+      return;
+    }
     onAction(() => {
       void (async () => {
         let instance = runtime.instances.find(
@@ -121,7 +158,9 @@
           };
           if (!(await runtime.saveInstance(instance))) return;
         }
-        await runtime.run(instance.id, "Install");
+        recommendation = null;
+        if (backend) await runtime.installBackend(instance.id, backend);
+        else await runtime.run(instance.id, "Install");
       })();
     });
   }
@@ -159,7 +198,7 @@
         {@const item = runtime.instances.find(
           (item) => item.instance.provider === entry.id,
         )}
-        {@const presentation = runtimePresentation(item?.status)}
+        {@const presentation = runtimePresentation(item?.status, now)}
         {@const itemID = item?.instance.id ?? entry.id}
         {@const itemBusy = runtime.isBusy(itemID)}
         {@const itemLocked =
@@ -190,7 +229,7 @@
                 {!entry.supported
                   ? "Unavailable on this platform"
                   : item
-                    ? presentation.label
+                    ? presentation.startup || presentation.label
                     : "Not installed"}{itemModel
                   ? ` · ${itemModel.name}`
                   : ""}{switchableProvider(entry.id) && item?.status.backend
@@ -207,6 +246,7 @@
                   workBusy ||
                   runtime.loading ||
                   runtime.busy ||
+                  probing ||
                   !entry.supported ||
                   !entry.models?.length}
                 onclick={() => install(entry)}
@@ -259,6 +299,12 @@
             {#if item}
               <Button
                 variant="ghost"
+                size="sm"
+                onclick={() => void runtime.openOutput(itemID)}
+                >View output</Button
+              >
+              <Button
+                variant="ghost"
                 size="icon-sm"
                 aria-label="Manage"
                 title={expanded
@@ -301,6 +347,66 @@
             {/if}
           {/if}
         </div>
+        {#if selectedID === entry.id && probing}<p
+            role="status"
+            class="py-3 text-sm"
+          >
+            Checking host binary options… No files are downloaded.
+          </p>{/if}
+        {#if recommendation?.provider === entry.id}
+          <section
+            aria-label="Runtime binary recommendation"
+            class="space-y-3 rounded-xl border border-hairline p-4"
+          >
+            <p class="text-sm font-medium">
+              Recommended: {backendLabel(recommendation.recommendedBackend)}
+            </p>
+            <p class="text-xs text-muted-foreground">
+              {recommendation.os} · {recommendation.architecture} · {recommendation.reason}
+            </p>
+            <p class="text-xs text-muted-foreground">
+              No files downloaded yet. Choose a binary, then explicitly download
+              and install it.
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                aria-pressed={binaryChoice === "auto"}
+                onclick={() => {
+                  binaryChoice = "auto";
+                }}>Auto (recommended)</Button
+              >
+              {#each recommendation.options ?? [] as option (option.backend)}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-pressed={binaryChoice === option.backend}
+                  disabled={!option.supported || !option.available}
+                  title={option.reason}
+                  onclick={() => {
+                    binaryChoice = option.backend;
+                  }}>{backendLabel(option.backend)}</Button
+                >
+              {/each}
+              <Button
+                disabled={!choiceAvailable ||
+                  disabled ||
+                  workBusy ||
+                  runtime.busy ||
+                  runtime.loading}
+                onclick={() => install(entry, chosenBackend)}
+                >Download and install</Button
+              >
+              <Button
+                variant="ghost"
+                onclick={() => {
+                  recommendation = null;
+                }}>Not now</Button
+              >
+            </div>
+          </section>
+        {/if}
         {#if row && status && selectedID === entry.id}
           {#if providerRows.length > 1}
             <div class="space-y-2 py-3" role="status">
@@ -365,7 +471,7 @@
                 >
               {:else if !view.installed}<Button
                   disabled={locked}
-                  onclick={() => act(() => runtime.run(id, "Install"))}
+                  onclick={() => install(entry)}
                   ><DownloadIcon class="size-4" />Install runtime</Button
                 >
               {:else if !selected?.installed}<Button
@@ -410,15 +516,18 @@
                   {running
                     ? "Stop the runtime to change its binary. "
                     : ""}Switching keeps downloaded models and saved
-                  Connections. CPU is the default; CUDA 12.4 requires an NVIDIA
-                  GPU with compute capability 5.0+ and driver 551.78 or newer.
-                  It may share GPU memory with NeMo or other apps.
+                  Connections. Existing installations are never changed
+                  automatically. CUDA 12.4 requires an NVIDIA GPU with compute
+                  capability 5.0+ and driver 551.78 or newer. It may share GPU
+                  memory with NeMo or other apps.
                 </p>
               </fieldset>
             {/if}
             {#if operating}<div class="mt-3" role="status">
                 <p class="text-xs text-muted-foreground">
-                  {view.operationModel || view.activity}{view.percent !== null
+                  {view.startup ||
+                    view.operationModel ||
+                    view.activity}{view.percent !== null
                     ? ` · ${view.percent}%`
                     : ""}
                 </p>

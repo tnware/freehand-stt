@@ -16,9 +16,10 @@ only.
 
 ## Before installing
 
-- Use Windows 11 x64. NeMo selects its backend automatically. llama.cpp and
-  whisper.cpp initially install CPU binaries, with an explicit NVIDIA CUDA
-  option. Performance depends on the selected model and PC.
+- Use Windows 11 x64. NeMo selects its backend automatically. For llama.cpp and
+  whisper.cpp, Freehand recommends CPU or NVIDIA CUDA from your PC’s hardware
+  information; you confirm the binary before installation. Performance depends
+  on the selected model and PC.
 - Allow internet access for the runtime and explicit model downloads. Model
   weights use additional disk space; the catalog shows download sizes when the
   runtime provides them.
@@ -69,19 +70,20 @@ selected model at a time. Different runtimes can run together.
 
 ### whisper.cpp transcription
 
-Choose **Install** on the whisper.cpp row, download a model from its catalog,
-and choose **Start runtime**. Select its built-in Connection for Voice or audio
-files. Voice uses completed transcription, not
+Choose **Install** on the whisper.cpp row, review and confirm the binary choice,
+download a model from its catalog, and choose **Start runtime**. Select its
+built-in Connection for Voice or audio files. Voice uses completed transcription, not
 realtime; file response streaming is also unavailable. CPU and NVIDIA CUDA
 execution are available. Larger models need more memory and take longer to process.
 
 ### Local cleanup with S1-mini
 
-Install **llama.cpp**, download **S1-mini by Superwhisper**, and start the runtime.
+Choose **Install** for **llama.cpp**, review and confirm the binary choice,
+download **S1-mini by Superwhisper**, and start the runtime.
 Select its built-in Connection in **Cleanup**, and enable cleanup.
 NeMo can continue handling Voice while llama.cpp cleans up its completed text.
-CPU is the default, leaving NeMo's GPU allocation alone. You can explicitly
-switch llama.cpp to NVIDIA CUDA when your GPU has room for both models.
+Choose CPU if you want to leave GPU memory for NeMo. A CUDA recommendation
+checks compatibility, not whether your GPU has room for both models.
 
 S1-mini is English-only and runs with reasoning disabled. If the input language
 is unknown, Freehand assumes English for cleanup; explicitly non-English input
@@ -90,6 +92,16 @@ general chat assistant or a speech-synthesis model. See
 [transcript cleanup](../post-processing/) for its style and structure controls.
 
 ### Use NVIDIA GPU acceleration
+
+For a new llama.cpp or whisper.cpp installation, **Install** first shows a
+binary recommendation and its reason without downloading files. Keep
+**Auto (recommended)** or explicitly choose **CPU** or **NVIDIA GPU (CUDA)**,
+then choose **Download and install**. Unknown or unsupported NVIDIA hardware or
+driver information produces a CPU recommendation. The choice is between Freehand’s
+pinned CPU and CUDA 12.4 packages, not an upgrade to the latest upstream release.
+
+Existing installations do not change automatically. Recommendations do not
+reserve GPU memory, stop other runtimes, or change as free GPU memory fluctuates.
 
 For llama.cpp or whisper.cpp, open its details using the chevron. If it is
 running, choose **Stop runtime**. Under **Runtime binary**, choose
@@ -137,6 +149,42 @@ switching or removing the loaded model. In task quick settings, choose the
 it. **Manage runtime** opens installation, downloads, and runtime details.
 Removing a downloaded model frees its
 managed cache data; using it again requires another download.
+
+## Startup and process output
+
+Starting verifies the installed files, launches the selected runtime, and waits
+for the selected model to be ready. Status shows the current phase and its
+elapsed time rather than an estimated percentage. GPU startup includes warm-up;
+loading and warm-up may appear as one phase when the runtime cannot report them
+separately. Wait for **Running** before using the runtime.
+
+Warm-up uses only the selected installed model. For CUDA whisper.cpp, Freehand
+sends one second of synthetic silence to the local runtime after it is ready
+and discards the response. It never records your microphone, warms other catalog
+models, or sends the warm-up to a remote server. GPU llama.cpp and NeMo use their
+built-in startup warm-up. This also applies when **Start when Freehand launches**
+is enabled; browsing models and connection checks remain metadata-only.
+
+If startup fails or takes too long, use **Cancel**, check resources, and retry.
+You can inspect recent process output while startup is still in progress:
+
+1. Choose **View output** in Local runtime or the task’s runtime quick controls.
+2. The separate **Process output** window opens with a blank viewer and disabled
+   output controls. Read its warning banner and choose **Show output** only if
+   displaying it on your screen is safe. The banner disappears without moving
+   the viewer or toolbar.
+3. Use **Pause scrolling** to inspect earlier text, **Resume scrolling** to follow
+   new output, or **Clear** to discard the captured tail. Collection continues
+   while scrolling is paused.
+
+The viewer is read-only and offers no Copy, export, or file logging. Closing it
+does not stop the runtime. Each opening requires consent again; closing or
+switching runtimes clears the displayed text and revokes access, but the private
+bounded tail remains until cleared, the next start attempt, runtime removal, or
+Quit. Older output is discarded as the buffer fills. Some runtimes, especially
+llama.cpp, emit little or no output; an empty viewer is not proof of a failed start.
+See [diagnostics privacy](../privacy-and-safety/#diagnostics) before displaying
+output during screen sharing.
 
 ## Stop, disable, or remove
 

@@ -72,17 +72,18 @@ type AcquisitionProgress struct {
 }
 
 type Status struct {
-	Acquisition   AcquisitionProgress `json:"acquisition"`
-	Operation     Operation           `json:"operation"`
-	Supported     bool                `json:"supported"`
-	State         string              `json:"state"`
-	Enabled       bool                `json:"enabled"`
-	SelectedModel string              `json:"selectedModel"`
-	Realtime      bool                `json:"realtime"`
-	Backend       string              `json:"backend"`
-	Version       string              `json:"version"`
-	Progress      float64             `json:"progress"`
-	Phase         string              `json:"phase"`
-	Error         string              `json:"error"`
-	Models        []Model             `json:"models"`
+	StartupProgress *StartupProgress    `json:"startupProgress,omitempty"`
+	Acquisition     AcquisitionProgress `json:"acquisition"`
+	Operation       Operation           `json:"operation"`
+	Supported       bool                `json:"supported"`
+	State           string              `json:"state"`
+	Enabled         bool                `json:"enabled"`
+	SelectedModel   string              `json:"selectedModel"`
+	Realtime        bool                `json:"realtime"`
+	Backend         string              `json:"backend"`
+	Version         string              `json:"version"`
+	Progress        float64             `json:"progress"`
+	Phase           string              `json:"phase"`
+	Error           string              `json:"error"`
+	Models          []Model             `json:"models"`
 }

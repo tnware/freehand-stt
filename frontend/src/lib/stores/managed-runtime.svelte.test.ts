@@ -39,6 +39,25 @@ function boundary(
   return {
     GetInstances: async () => [row("one"), row("two")],
     GetProviders: async () => [],
+    GetBinaryOptions: async ({ provider }) => {
+      return {
+        provider,
+        os: "windows",
+        architecture: "amd64",
+        supported: true,
+        recommendedBackend: "cuda",
+        reason: "Compatible NVIDIA GPU detected.",
+        options: ["cpu", "cuda"].map((backend) => ({
+          backend,
+          supported: true,
+          available: true,
+          reason: "Available",
+        })),
+      };
+    },
+    OpenProcessOutput: async ({ instanceID }) => {
+      void instanceID;
+    },
     SetInstance: async () => {},
     DeleteInstance: async () => {},
     Install: async () => {},
@@ -54,6 +73,24 @@ function boundary(
   };
 }
 describe("managed runtime inventory", () => {
+  it("allows output while startup is busy and settings are dirty without runtime mutations", async () => {
+    const OpenProcessOutput = vi.fn(async () => {});
+    const runtime = new ManagedRuntimeState(
+      boundary({ OpenProcessOutput }),
+      () => false,
+    );
+    await runtime.load();
+    runtime.applyStatus({
+      ...row("one"),
+      status: { ...row("one").status, state: "starting" },
+    });
+    expect(await runtime.openOutput("one")).toBe(true);
+    expect(OpenProcessOutput).toHaveBeenCalledExactlyOnceWith({
+      instanceID: "one",
+    });
+    expect(await runtime.openOutput("missing")).toBe(false);
+    expect(runtime.isBusy("one")).toBe(true);
+  });
   it("fences late inventory reads per instance and ignores deleted or disposed events", async () => {
     let resolve!: (rows: InstanceStatus[]) => void;
     let rows = [row("one"), row("two")];

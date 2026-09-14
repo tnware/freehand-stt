@@ -114,6 +114,56 @@ selected again. Browser fixtures are not native inference evidence. No model
 inventory inference belongs in CI. See the
 [Windows checklist](../../safety/native-test-checklist/#managed-local-runtime).
 
+### Startup, recommendation, and output-viewer validation
+
+[ADR 0020](../../decisions/0020-managed-runtime-startup-and-diagnostics/) is an
+implemented checkpoint, not completed native acceptance. The earlier CPU/CUDA
+checkpoint was user-tested on Windows; that evidence does not qualify the new
+host recommendation, GPU warm-up, startup-phase reporting, or auxiliary viewer.
+Record deterministic test/build results separately from native observations.
+No live inference was performed as part of the implementation-agent checks.
+
+Required deterministic coverage exercises the real ownership boundaries:
+
+- Recipe/host selection checks Windows x64 CPU/CUDA choices, NVIDIA device 0,
+  driver 551.78 and compute capability 5.0 thresholds, unknown or malformed
+  metadata, unsupported platforms, and explicit CPU override. The metadata
+  recommendation cannot download, start, upgrade, or replace an installation;
+  installation admission uses the same compatibility rule, not free VRAM.
+- Launch-argument checks preserve GPU llama.cpp/NeMo built-in warm-up and CPU
+  `--no-warmup`. Synthetic HTTP fixtures validate only CUDA whisper.cpp's
+  selected-model startup multipart request, one-second silence, bounded/discarded
+  response, failure, and cancellation. Assert that ready metadata alone cannot
+  admit a warm-up-pending endpoint. Pinned-source evidence belongs with the
+  fixtures; fixture success is not first-request latency evidence.
+- Startup lifecycle checks cover cancellable prelaunch hashing, phase transitions
+  and phase-specific elapsed time, the shared 120-second post-creation readiness/warm-up
+  deadline, and the additional four-second drain. A cancelled or timed-out start
+  cannot mark Running or release ownership while the child is still alive.
+- Operation publication checks immediately admit a follow-up action from a
+  terminal notification while preserving terminal-before-next-start event order.
+- Output checks cover 256 KiB/1,024-chunk/4 KiB-per-chunk limits, cursor deltas and
+  truncation, interleaved streams, split UTF-8 and terminal controls, generation
+  fencing, opt-in reads, revocation without private-tail erasure, explicit Clear,
+  next-start/remove/shutdown cleanup, and the separate bounded parser prefix.
+- Windowing and frontend state tests must cover viewer reuse, consent per opening or
+  runtime switch, bounded non-overlapping polling, late-read rejection, visible
+  state clearing, and no process lifecycle calls from viewer actions. Browser
+  fixtures must cover recommendation before installation, explicit acceptance,
+  phase/elapsed display without fake percentages, **View output** during startup
+  from management and quick controls, warning/consent, text-only rendering,
+  follow/pause scrolling, Clear, close/reopen, and sparse upstream output.
+
+Native Windows acceptance of these additions remains pending. Use only a
+user-selected model to measure startup and first/subsequent request behavior,
+confirm actual GPU preparation and CPU behavior, inspect host recommendations,
+and exercise real window close/reuse, cancellation, and process-tree shutdown.
+Neither browser mocks, `--help`, a docs build, nor successful deterministic tests
+establish those results. Keep these checks in the existing
+[native runtime acceptance section](../../safety/native-test-checklist/#managed-local-runtime),
+not a second delivery checklist. macOS currently has shared recipe-extension
+contracts only: no qualified managed packages or native acceptance.
+
 ## Shortcut recovery regression checks
 
 The controller and input-service tests cover unavailable startup toggle/show
