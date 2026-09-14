@@ -41,6 +41,15 @@ export function managedConnectionSupports(
     ?.models?.find((m) => m.id === instance?.model);
   return !!model?.contracts?.some((contract) => contract.role === role);
 }
+export function connectionProvider(
+  connection: Connection | undefined,
+  instances: InstanceStatus[] = [],
+): string | undefined {
+  const id = connection?.details.managedInstanceID;
+  return id
+    ? instances.find((entry) => entry.instance.id === id)?.instance.provider
+    : connection?.details.compatibilityProfile;
+}
 export function connectionTargetLabel(
   connection: Connection,
   instances: InstanceStatus[] = [],

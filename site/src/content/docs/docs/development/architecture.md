@@ -65,6 +65,13 @@ operation success.
 The runtime manager renders this same status at the setup action and the matching
 model's catalog row, including cancellation and terminal outcomes. Catalog rows
 retain their position instead of regrouping on installation state changes.
+Collapsed provider rows expose selected-model acquisition, start/stop, cancellation,
+and bounded status through the same runtime store and dirty-draft action guard.
+Expanding the chevron reveals setup and maintenance, not another lifecycle owner.
+Provider artwork comes from the shared local branding registry. Managed Connection
+icons resolve the referenced instance's provider, since durable managed details
+intentionally contain no manual API profile. Quick settings pass their runtime
+inventory into connection pickers so artwork and status use the same session.
 
 Following [ADR 0016](../../decisions/0016-managed-runtime-connections/), the
 settings owner persists runtime instance definitions and ordinary Connections

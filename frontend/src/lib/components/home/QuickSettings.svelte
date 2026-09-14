@@ -100,7 +100,11 @@
     onEnterCleanup?: () => void;
     sttMetadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     processingMetadataStatus?:
-      "idle" | "loading" | "ready" | "empty" | "failed";
+      | "idle"
+      | "loading"
+      | "ready"
+      | "empty"
+      | "failed";
     onTestConnection: () => Promise<void>;
     onTestProcessingConnection: () => Promise<void>;
     onOpenServerSettings: () => void;
@@ -253,6 +257,7 @@
           <ConnectionSelect
             id="quick-stt-endpoint"
             catalog={settings.savedConnections}
+            runtimeInstances={runtime?.instances}
             purpose={Purpose.Transcription}
             onAdd={onAddConnection
               ? () => onAddConnection(Purpose.Transcription)
@@ -377,6 +382,7 @@
           <ConnectionSelect
             id="quick-processing-endpoint"
             catalog={settings.savedConnections}
+            runtimeInstances={runtime?.instances}
             purpose={Purpose.Cleanup}
             onAdd={onAddConnection
               ? () => onAddConnection(Purpose.Cleanup)

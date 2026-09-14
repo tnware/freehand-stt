@@ -29,6 +29,8 @@ const assets: Record<string, string> = {
 
 /** Presentation only. Capability and availability decisions belong to the Go catalog. */
 export function providerIdentity(id: string | null | undefined) {
+  // The runtime provider and API profile share NVIDIA's family mark.
+  if (id === "nemo-speech-cpp") id = "nemo-speech-v1";
   const entry =
     manifest[Object.hasOwn(manifest, id ?? "") ? (id as keyof typeof manifest) : "generic"];
   return { ...entry, src: assets[entry.asset] ?? generic };

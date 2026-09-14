@@ -8,6 +8,7 @@
   import { connectionWorkflows } from "$lib/utils/connectionChoices";
   import type { Purpose } from "$bindings/savedconnection";
   import SettingsCard from "$lib/components/settings/SettingsCard.svelte";
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Button } from "$lib/components/ui/button";
 
   let {
@@ -50,7 +51,16 @@
       <dt class="text-muted-foreground">Name</dt>
       <dd class="break-words">{connection.name}</dd>
       <dt class="text-muted-foreground">Runtime</dt>
-      <dd>{provider?.name ?? instance?.provider ?? "Unavailable runtime"}</dd>
+      <dd class="flex items-center gap-2">
+        <ProviderIcon
+          profile={instance?.provider ??
+            connection.details.compatibilityProfile}
+          size={22}
+        />
+        <span
+          >{provider?.name ?? instance?.provider ?? "Unavailable runtime"}</span
+        >
+      </dd>
       <dt class="text-muted-foreground">Transport</dt>
       <dd>Local, runtime-owned endpoint · No connection credentials</dd>
       <dt class="text-muted-foreground">Model</dt>

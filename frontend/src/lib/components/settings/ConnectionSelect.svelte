@@ -8,6 +8,7 @@
     ((request: ConnectionManagerRequest) => void) | undefined
   >(TASK_CONNECTION_NAVIGATION);
   import { session } from "$lib/stores/session.svelte";
+  import type { InstanceStatus } from "$bindings/managedruntime";
   import { Combobox } from "bits-ui";
   import {
     Action,
@@ -19,6 +20,7 @@
   import { Button } from "$lib/components/ui/button";
   import {
     connectionTargetLabel,
+    connectionProvider,
     connectionMatches,
   } from "$lib/utils/connectionChoices";
   import CheckIcon from "@lucide/svelte/icons/check";
@@ -27,6 +29,7 @@
   let {
     id,
     catalog,
+    runtimeInstances,
     purpose,
     disabled = false,
     compact = false,
@@ -36,6 +39,7 @@
   }: {
     id: string;
     catalog: Catalog;
+    runtimeInstances?: InstanceStatus[];
     purpose: Purpose;
     disabled?: boolean;
     compact?: boolean;
@@ -46,6 +50,7 @@
   let open = $state(false),
     query = $state(""),
     choosing = $state(false);
+  const instances = $derived(runtimeInstances ?? session.runtime.instances);
   const entries = $derived(
     (catalog.entries ?? []).filter(
       (c) => c.uses?.includes(purpose) || c.id === catalog.selected?.[purpose],
@@ -56,7 +61,7 @@
   );
   const matches = $derived(
     entries
-      .filter((c) => connectionMatches(c, query, session.runtime.instances))
+      .filter((c) => connectionMatches(c, query, instances))
       .sort(
         (a, b) =>
           Number(b.id === selected?.id) - Number(a.id === selected?.id) ||
@@ -129,7 +134,7 @@
         class="pointer-events-none absolute inset-y-0 left-3 flex items-center"
       >
         <ProviderIcon
-          profile={selected.details.compatibilityProfile}
+          profile={connectionProvider(selected, instances)}
           size={16}
         />
       </span>{/if}
@@ -168,11 +173,14 @@
             label={c.name}
             class="flex cursor-default items-center gap-3 rounded-sm px-3 py-2.5 outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
           >
-            <ProviderIcon profile={c.details.compatibilityProfile} size={20} />
+            <ProviderIcon
+              profile={connectionProvider(c, instances)}
+              size={20}
+            />
             <span class="min-w-0 flex-1"
               ><span class="block truncate text-sm font-medium">{c.name}</span
               ><span class="block truncate text-xs text-muted-foreground"
-                >{connectionTargetLabel(c, session.runtime.instances)}</span
+                >{connectionTargetLabel(c, instances)}</span
               ></span
             >
             {#if c.id === selected?.id}<CheckIcon

@@ -16,6 +16,17 @@ for (const task of ["Voice", "Audio file"]) {
     await expect(
       panel.getByLabel("Selected model", { exact: true }),
     ).toHaveText("Nemotron 3.5 Streaming");
+    const shortcutMark = page
+      .getByRole("button", { name: "Transcription settings", exact: true })
+      .locator("img");
+    const connectionMark = panel.locator(
+      '[data-provider="nemo-speech-cpp"] img',
+    );
+    await expect(shortcutMark).toBeVisible();
+    await expect(shortcutMark).toHaveAttribute(
+      "src",
+      (await connectionMark.getAttribute("src"))!,
+    );
     const connection = await panel
       .getByRole("combobox", { name: "Choose connection", exact: true })
       .boundingBox();

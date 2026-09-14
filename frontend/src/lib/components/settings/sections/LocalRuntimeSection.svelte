@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import type { ProviderDescriptor } from "$bindings/managedruntime";
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Role } from "$bindings/compatibility";
   import { modelSize, runtimePresentation } from "$lib/utils/managedRuntime";
   import { Button } from "$lib/components/ui/button";
@@ -14,6 +15,7 @@
   import SquareIcon from "@lucide/svelte/icons/square";
   import RefreshIcon from "@lucide/svelte/icons/refresh-cw";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 
   import TrashIcon from "@lucide/svelte/icons/trash-2";
 
@@ -141,16 +143,39 @@
           (item) => item.instance.provider === entry.id,
         )}
         {@const presentation = runtimePresentation(item?.status)}
+        {@const itemID = item?.instance.id ?? entry.id}
+        {@const itemBusy = runtime.isBusy(itemID)}
+        {@const itemLocked =
+          disabled ||
+          workBusy ||
+          runtime.loading ||
+          itemBusy ||
+          !item?.status.supported}
+        {@const expanded = selectedID === entry.id}
+        {@const itemModel = item?.status.models?.find(
+          (model) => model.id === item.instance.model,
+        )}
         <div class="flex flex-wrap items-center justify-between gap-3 py-4">
           <div class="min-w-0">
-            <h3 class="text-sm font-semibold">{entry.name}</h3>
-            <p class="mt-1 text-xs text-muted-foreground">
-              {!entry.supported
-                ? "Unavailable on this platform"
-                : item
-                  ? presentation.label
-                  : "Not installed"}{entry.version ? ` · ${entry.version}` : ""}
-            </p>
+            <h3 class="flex items-center gap-2 text-sm font-semibold">
+              <ProviderIcon profile={entry.id} size={24} />{entry.name}
+            </h3>
+            {#if !expanded}<p
+                class="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
+              >
+                {#if itemBusy}<LoaderCircleIcon
+                    class="size-3 shrink-0 animate-spin motion-reduce:animate-none"
+                  />
+                {:else}<span
+                    class={`size-1.5 shrink-0 rounded-full ${item?.status.state === "running" ? "bg-success" : item?.status.state === "error" ? "bg-destructive" : "bg-muted-foreground"}`}
+                    aria-hidden="true"
+                  ></span>{/if}
+                {!entry.supported
+                  ? "Unavailable on this platform"
+                  : item
+                    ? presentation.label
+                    : "Not installed"}{itemModel ? ` · ${itemModel.name}` : ""}
+              </p>{/if}
           </div>
           <div class="flex items-center gap-2">
             {#if !presentation.installed && !runtime.isBusy(item?.instance.id ?? entry.id)}
@@ -167,18 +192,93 @@
                 ><DownloadIcon class="size-4" />Install</Button
               >
             {/if}
+            {#if item && !expanded}
+              {#if itemBusy}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={disabled ||
+                    runtime.pendingFor(itemID) === "Cancelling"}
+                  onclick={() => void runtime.cancel(itemID)}>Cancel</Button
+                >
+              {:else if presentation.installed}
+                {#if item.status.state === "running"}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={itemLocked}
+                    onclick={() =>
+                      onAction(() => {
+                        void runtime.run(itemID, "Stop");
+                      })}><SquareIcon class="size-3.5" />Stop</Button
+                  >
+                {:else if !itemModel?.installed}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={itemLocked || !item.instance.model}
+                    onclick={() =>
+                      onAction(() => {
+                        void runtime.downloadModel(itemID, item.instance.model);
+                      })}><DownloadIcon class="size-3.5" />Download</Button
+                  >
+                {:else}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={itemLocked}
+                    onclick={() =>
+                      onAction(() => {
+                        void runtime.run(itemID, "Start");
+                      })}><PlayIcon class="size-3.5" />Start</Button
+                  >
+                {/if}
+              {/if}
+            {/if}
             {#if item}
               <Button
                 variant="ghost"
-                size="sm"
-                aria-expanded={selectedID === entry.id}
+                size="icon-sm"
+                aria-label="Manage"
+                title={expanded
+                  ? "Hide runtime details"
+                  : "Show runtime details"}
+                aria-expanded={expanded}
                 onclick={() => {
                   selectedID = selectedID === entry.id ? "" : entry.id;
                   recoveryID = "";
-                }}>Manage</Button
+                }}
+                ><ChevronDownIcon
+                  class={`size-4 transition-transform motion-reduce:transition-none ${expanded ? "rotate-180" : ""}`}
+                /></Button
               >
             {/if}
           </div>
+          {#if item && !expanded}
+            {#if itemBusy && item.status.operation?.kind === "download"}
+              <div class="w-full space-y-1" role="status">
+                <p class="text-xs tabular-nums text-muted-foreground">
+                  {presentation.operationModel}{presentation.transferred
+                    ? ` · ${presentation.transferred}`
+                    : ""}{presentation.percent !== null
+                    ? ` · ${presentation.percent}%`
+                    : ""}
+                </p>
+                {#if presentation.percent !== null}<progress
+                    class="h-1.5 w-full accent-primary"
+                    max="100"
+                    value={presentation.percent}
+                    aria-label="Runtime download progress"
+                  ></progress>{/if}
+              </div>
+            {:else if !itemBusy && (runtime.errorFor(itemID) || item.status.error || presentation.completion)}
+              <p class="w-full text-xs text-muted-foreground" role="status">
+                {runtime.errorFor(itemID) ||
+                  item.status.error ||
+                  presentation.completion}
+              </p>
+            {/if}
+          {/if}
         </div>
         {#if row && status && selectedID === entry.id}
           {#if providerRows.length > 1}

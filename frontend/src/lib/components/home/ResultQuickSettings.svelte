@@ -2,7 +2,6 @@
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
-  import ServerIcon from "@lucide/svelte/icons/server";
 
   import MicIcon from "@lucide/svelte/icons/mic";
   import TextCursorInputIcon from "@lucide/svelte/icons/text-cursor-input";
@@ -94,7 +93,13 @@
         {#if panel === "audio"}<MicIcon class="size-4" />
         {:else if panel === "delivery"}<TextCursorInputIcon class="size-4" />
         {:else if panel === "stt" && managed}
-          <ServerIcon class="size-4" />
+          <ProviderIcon
+            profile={runtime?.instance.provider ??
+              (showCapture
+                ? settings.voiceTranscription.compatibilityProfile
+                : settings.compatibilityProfile)}
+            size={16}
+          />
           <span class="max-w-48 truncate text-[13px]" title={localModel}
             >{localModel}</span
           >

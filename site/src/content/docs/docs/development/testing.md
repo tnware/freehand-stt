@@ -73,6 +73,11 @@ Repeat from an alternative model's catalog row after scrolling to it: progress,
 Cancel, and terminal feedback must stay in the viewport without an additional
 scroll, including after the model becomes installed. Check quick-settings geometry
 puts Connection above the runtime model selector for Voice and audio files.
+Verify provider images load from bundled assets and agree across runtime headings,
+built-in Connection details/pickers, and managed task shortcuts. Check both themes;
+status text and action labels must stay readable independently of the artwork.
+Exercise download/cancel/retry and start/stop directly from a collapsed runtime
+row, checking that details stay collapsed and dirty drafts still guard mutations.
 Exercise keyboard navigation, narrow layouts, light/dark appearance, and reduced
 motion. Generated Wails DTOs remain the fixture contract.
 

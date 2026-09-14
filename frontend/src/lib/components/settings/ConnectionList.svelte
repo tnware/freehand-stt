@@ -5,6 +5,7 @@
   import { Button } from "$lib/components/ui/button";
   import {
     connectionTargetLabel,
+    connectionProvider,
     connectionMatches,
     connectionWorkflows,
   } from "$lib/utils/connectionChoices";
@@ -75,7 +76,7 @@
         class={`flex w-full items-center gap-3 rounded-md px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${connection.id === selected ? "bg-accent text-accent-foreground" : "hover:bg-subtle-fill-hover"}`}
       >
         <ProviderIcon
-          profile={connection.details.compatibilityProfile}
+          profile={connectionProvider(connection, instances)}
           size={22}
         />
         <span class="min-w-0 flex-1"

@@ -138,6 +138,7 @@
         <ConnectionSelect
           id="voice-connection"
           catalog={settings.savedConnections}
+          runtimeInstances={runtime?.instances}
           purpose={Purpose.Voice}
           disabled={busy || testing}
           onChange={(change) => editor.changeConnection(change)}

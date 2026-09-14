@@ -11,6 +11,19 @@ test("runtime connections have read-only details and navigate to their owners", 
     exact: true,
   });
   await expect(details).toBeVisible();
+  const connectionMark = page
+    .getByRole("navigation", { name: "Saved connections" })
+    .getByRole("button", { name: /Local speech/ })
+    .locator("img");
+  const markSource = await connectionMark.getAttribute("src");
+  const detailMark = details.locator("img");
+  await expect(detailMark).toBeVisible();
+  await expect(detailMark).toHaveAttribute("src", markSource!);
+  expect(
+    await detailMark.evaluate(
+      (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
+    ),
+  ).toBe(true);
   await expect(details).toContainText("nemotron-3.5");
   await expect(details.locator("input")).toHaveCount(0);
   await expect(details.getByRole("switch")).toHaveCount(0);
@@ -36,6 +49,9 @@ test("runtime connections have read-only details and navigate to their owners", 
   await expect(
     page.locator('[data-settings-section="local-runtime"]'),
   ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.locator('[aria-label="Runtime inventory"] img'),
+  ).toHaveAttribute("src", markSource!);
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });
 

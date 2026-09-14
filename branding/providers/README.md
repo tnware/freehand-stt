@@ -12,6 +12,13 @@ package these files locally; there is no runtime CDN, provider request, or icon
 package dependency. Unknown IDs receive the Generic symbol. Presentation never
 enables a profile or grants a capability; the Go compatibility catalog owns that.
 
+Managed runtime headings, task shortcuts, and built-in Connection details use
+the same assets as Connection lists and pickers. The `nemo-speech-cpp` runtime ID
+resolves to the `nemo-speech-v1` NVIDIA family mark; llama.cpp and whisper.cpp use
+their existing IDs. Runtime marks identify the runtime, not a model's publisher.
+Keep Download, Start, Stop, and Cancel as action glyphs, and do not repeat the
+provider mark on each model row or progress indicator.
+
 Use an icon next to a visible provider name. Decorative icons have empty alt
 text; availability and connection status remain explicit text and controls.
 Preserve the source viewBox and proportions inside the shared square tile. The

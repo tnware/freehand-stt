@@ -34,7 +34,7 @@ application-data directory. They are not installed globally or added to PATH.
 2. Find **NeMo-Speech.cpp** in the runtime list and choose **Install**. Keep the
    recommended Nemotron 3.5 Streaming model. Installation does not download it.
 3. The row opens its setup controls. Progress and cancellation stay in that area;
-   use **Manage** to reopen it later.
+   use the chevron beside the runtime to collapse or reopen its details.
 4. When installation finishes, the action changes to **Download selected model**.
    Choose it to download Nemotron, or use the catalog below to choose an alternative.
    Browsing the catalog does not download or load any model.
@@ -56,6 +56,12 @@ completed requests rather than a live microphone stream. Turning realtime off
 in Voice keeps its connection and model selected and uses completed recording.
 
 ## Choose another model
+
+With details collapsed, each runtime row shows its status and selected model.
+Use **Download**, **Start**, **Stop**, or **Cancel** directly from that row; download
+progress and its result remain visible there. The chevron opens the full setup,
+model catalog, and runtime preferences. These actions never select a different
+Connection for your tasks.
 
 The runtime list also offers **whisper.cpp** for completed transcription and
 **llama.cpp** for local cleanup. Each runtime is installed once and runs one

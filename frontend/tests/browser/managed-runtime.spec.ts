@@ -15,6 +15,33 @@ async function installRuntime(page: Page) {
   });
 }
 
+test("collapsed runtime controls can stop, download and restart without opening details", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?runtime");
+  await page.locator('[data-settings-section="local-runtime"]').click();
+  const id = await installRuntime(page);
+  const toggle = page.getByRole("button", { name: "Manage", exact: true });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  await expect(
+    page.getByRole("progressbar", { name: "Runtime download progress" }),
+  ).toBeInViewport();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Download", exact: true }).click();
+  await page.evaluate((id) => window.testRuntime.finishDownload(id), id);
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Stop", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Start", exact: true }),
+  ).toBeEnabled();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+});
+
 test("catalog downloads keep progress, cancellation and completion at the model", async ({
   page,
 }) => {
