@@ -6,13 +6,24 @@ for (const task of ["Voice", "Audio file"]) {
   }) => {
     await page.goto("/tests/browser/app/?main&runtime&runtime-ready");
     await page.evaluate(() =>
-      window.testRuntime.change("nemo-default", { state: "stopped" }),
+      window.testRuntime.change("nemo-default", {
+        state: "stopped",
+        backend: "cpu",
+      }),
     );
     await page.getByRole("tab", { name: task, exact: true }).click();
     await page
       .getByRole("button", { name: "Transcription settings", exact: true })
       .click();
     const panel = page.getByRole("dialog", { name: "Transcription settings" });
+    const runtimeStatus = panel
+      .getByRole("status")
+      .filter({ hasText: "Stopped" });
+    await expect(runtimeStatus).toContainText("CPU");
+    await page.evaluate(() =>
+      window.testRuntime.change("nemo-default", { backend: "cuda" }),
+    );
+    await expect(runtimeStatus).toContainText("NVIDIA GPU (CUDA)");
     await expect(
       panel.getByLabel("Selected model", { exact: true }),
     ).toHaveText("Nemotron 3.5 Streaming");

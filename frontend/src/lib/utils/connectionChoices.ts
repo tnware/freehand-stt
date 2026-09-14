@@ -6,6 +6,7 @@ import type {
   ProviderDescriptor,
 } from "$bindings/managedruntime";
 import type { SettingsSectionID } from "$lib/navigation";
+import { runtimePresentation } from "./managedRuntime";
 
 export const connectionWorkflows: {
   id: Purpose;
@@ -57,7 +58,8 @@ export function connectionTargetLabel(
   const id = connection.details.managedInstanceID;
   if (!id) return connection.details.baseURL;
   const row = instances.find((entry) => entry.instance.id === id);
-  return `Local · ${row?.instance.name ?? id} · ${row?.status.state === "running" ? "Running" : row?.status.state || "Unavailable"}`;
+  const view = runtimePresentation(row?.status);
+  return ["Local", view.backend, view.label].filter(Boolean).join(" · ");
 }
 export function connectionMatches(
   connection: Connection,
@@ -69,7 +71,7 @@ export function connectionMatches(
     (entry) => entry.instance.id === connection.details.managedInstanceID,
   );
   const text =
-    `${connection.name} ${connectionTargetLabel(connection, instances)} ${connection.details.compatibilityProfile} ${row?.instance.provider ?? ""} ${row?.instance.model ?? ""} ${connection.details.managedInstanceID ? "managed local runtime instance offline" : "manual server"}`.toLocaleLowerCase();
+    `${connection.name} ${connectionTargetLabel(connection, instances)} ${connection.details.compatibilityProfile} ${row?.instance.name ?? ""} ${row?.instance.provider ?? ""} ${row?.instance.model ?? ""} ${connection.details.managedInstanceID ? "managed local runtime instance offline" : "manual server"}`.toLocaleLowerCase();
   return words.every((word) => text.includes(word));
 }
 export function connectionSection(purpose: Purpose): SettingsSectionID {

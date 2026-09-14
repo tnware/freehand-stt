@@ -16,20 +16,40 @@ import (
 // Shared acquisition and process boundary for the two pinned GGML recipes.
 // NeMo keeps its own CLI model manager and automatic accelerator policy.
 type ggmlAdapter struct {
-	root          string
-	recipe        ggmlProvider
-	launch        func(context.Context, string, []string, string, []string) (*ownedProcess, error)
-	listenerOwner func(int, int) (bool, error)
+	root           string
+	downloadClient *http.Client
+	recipe         ggmlProvider
+	launch         func(context.Context, string, []string, string, []string) (*ownedProcess, error)
+	listenerOwner  func(int, int) (bool, error)
 }
 
 func (a *ggmlAdapter) executable() string {
 	return filepath.Join(a.root, "runtime", filepath.FromSlash(a.recipe.executable))
 }
+func (a *ggmlAdapter) installedBackend(ctx context.Context) (string, error) {
+	if err := recoverRuntime(a.root); err != nil {
+		return "", err
+	}
+	marker, err := os.ReadFile(filepath.Join(a.root, "runtime", ".backend"))
+	if err != nil {
+		return "", err
+	}
+	b, err := a.recipe.bundle(string(marker))
+	if err != nil {
+		return "", errIntegrity
+	}
+	if err := verifyRuntimeBundle(ctx, filepath.Join(a.root, "runtime"), b); err != nil {
+		return "", err
+	}
+	return string(marker), nil
+}
 func (a *ggmlAdapter) installed(ctx context.Context) error {
-	return verifyRuntime(ctx, a.root, a.recipe.release)
+	_, err := a.installedBackend(ctx)
+	return err
 }
 func (a *ggmlAdapter) Inspect(ctx context.Context) (string, []Model, error) {
-	if err := a.installed(ctx); err != nil {
+	backend, err := a.installedBackend(ctx)
+	if err != nil {
 		return "", nil, err
 	}
 	models := a.recipe.descriptor().Models
@@ -40,26 +60,47 @@ func (a *ggmlAdapter) Inspect(ctx context.Context) (string, []Model, error) {
 			return "", nil, ctx.Err()
 		}
 	}
-	return "cpu", models, nil
+	return backend, models, nil
 }
 func (a *ggmlAdapter) Install(ctx context.Context, progress func(float64)) (string, error) {
 	if !a.recipe.descriptor().Supported {
-		return "", errors.New("Managed runtimes require Windows x64.")
+		return "", errUnsupported
 	}
-	if err := a.installed(ctx); err == nil {
-		return "cpu", nil
+	if backend, err := a.installedBackend(ctx); err == nil {
+		return backend, nil
 	} else if !os.IsNotExist(err) {
 		return "", err
 	}
+	return a.InstallBackend(ctx, "cpu", progress)
+}
+func (a *ggmlAdapter) InstallBackend(ctx context.Context, backend string, progress func(float64)) (string, error) {
+	if !a.recipe.descriptor().Supported {
+		return "", errUnsupported
+	}
+	b, err := a.recipe.bundle(backend)
+	if err != nil {
+		return "", err
+	}
+	if err := recoverRuntime(a.root); err != nil {
+		return "", err
+	}
+	if selected, err := a.installedBackend(ctx); err == nil && selected == backend {
+		return backend, nil
+	}
+	if backend == "cuda" {
+		if err := a.admitCUDA(ctx); err != nil {
+			return "", err
+		}
+	}
 	client := releaseClient()
 	defer client.CloseIdleConnections()
-	if err := installBinaryAsset(ctx, a.root, a.recipe.release, a.recipe.executable, client, progress); err != nil {
+	if a.downloadClient != nil {
+		client = a.downloadClient
+	}
+	if err := installRuntimeBundle(ctx, a.root, b, client, progress); err != nil {
 		return "", err
 	}
-	if err := a.installed(ctx); err != nil {
-		return "", err
-	}
-	return "cpu", nil
+	return backend, nil
 }
 
 // Public model files only. Signed CDN redirects are allowed on exact HF hosts;
@@ -189,7 +230,9 @@ func ggmlEnvironment(inherited []string) []string {
 	for _, v := range inherited {
 		key, _, _ := strings.Cut(v, "=")
 		switch strings.ToUpper(key) {
-		case "SYSTEMROOT", "WINDIR", "TEMP", "TMP":
+		// NVIDIA NVML requires ProgramFiles even with an absolute nvidia-smi
+		// path. Keep this OS location, never the user's PATH or CUDA overrides.
+		case "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "PROGRAMFILES":
 			env = append(env, v)
 		}
 	}
@@ -269,7 +312,8 @@ func (a *ggmlAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	if !a.recipe.descriptor().Supported {
 		return nil, Endpoint{}, errors.New("Managed runtimes require Windows x64.")
 	}
-	if err := a.installed(ctx); err != nil {
+	backend, err := a.installedBackend(ctx)
+	if err != nil {
 		return nil, Endpoint{}, err
 	}
 	if err := verifyFile(ctx, s.path(a.root), s.size, s.sha256); err != nil {
@@ -281,7 +325,20 @@ func (a *ggmlAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	}
 	port := l.Addr().(*net.TCPAddr).Port
 	l.Close()
-	p, err := a.launch(ctx, a.executable(), a.recipe.arguments(id, s, a.root, port), filepath.Dir(a.executable()), ggmlEnvironment(os.Environ()))
+	if backend == "cuda" {
+		if err := a.admitCUDA(ctx); err != nil {
+			return nil, Endpoint{}, err
+		}
+	}
+	args, err := a.recipe.backendArguments(id, s, a.root, port, backend)
+	if err != nil {
+		return nil, Endpoint{}, err
+	}
+	env := ggmlEnvironment(os.Environ())
+	if backend == "cuda" {
+		env = append(env, "CUDA_VISIBLE_DEVICES=0")
+	}
+	p, err := a.launch(ctx, a.executable(), args, filepath.Dir(a.executable()), env)
 	if err != nil {
 		return nil, Endpoint{}, err
 	}

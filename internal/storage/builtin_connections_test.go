@@ -89,6 +89,39 @@ func TestBuiltInsDoNotConsumeManualConnectionCapacity(t *testing.T) {
 	}
 }
 
+func TestLegacyCPUDefaultNameDoesNotBecomeConnectionBackend(t *testing.T) {
+	for _, tc := range []struct {
+		provider    managedruntime.ProviderID
+		name, model string
+		purpose     savedconnection.Purpose
+	}{{managedruntime.LlamaCPP, "llama.cpp", "s1-mini", savedconnection.Cleanup}, {managedruntime.WhisperCPP, "whisper.cpp", "base", savedconnection.Voice}} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := testStore(t)
+			v := loadStore(t, s)
+			i := managedruntime.Instance{ID: "local", Name: tc.name + " (CPU)", Provider: tc.provider, Model: tc.model}
+			v.ManagedRuntimes = []managedruntime.Instance{i}
+			if err := s.Save(v); err != nil {
+				t.Fatal(err)
+			}
+			id := savedconnection.BuiltInID(i.ID)
+			v = selectConnection(t, s, v, tc.purpose, id)
+			s = reopen(t, s)
+			v = loadStore(t, s)
+			catalog := s.ConnectionCatalog()
+			if catalog.Entries[0].Name != tc.name || catalog.Selected[tc.purpose] != id || v.ManagedRuntimes[0] != i {
+				t.Fatal("legacy name leaked into display or projection rewrote identity/selection", catalog)
+			}
+			v.ManagedRuntimes[0].Name = "My CPU worker"
+			if err := s.Save(v); err != nil {
+				t.Fatal(err)
+			}
+			if s.ConnectionCatalog().Entries[0].Name != "My CPU worker" {
+				t.Fatal("custom name was rewritten")
+			}
+		})
+	}
+}
+
 func TestConfiguredRuntimeAutomaticallyJoinsConnectionCatalog(t *testing.T) {
 	s := testStore(t)
 	v := loadStore(t, s)

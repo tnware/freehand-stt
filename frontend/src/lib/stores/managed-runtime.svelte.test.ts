@@ -42,6 +42,7 @@ function boundary(
     SetInstance: async () => {},
     DeleteInstance: async () => {},
     Install: async () => {},
+    InstallBackend: async () => {},
     Remove: async () => {},
     Start: async () => {},
     Stop: async () => {},

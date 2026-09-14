@@ -55,12 +55,31 @@ directory containing the pinned `llama.zip` and `whisper.zip`. It verifies the
 official archives through the installer, then launches owned processes with the
 managed arguments and `--help`; it neither downloads nor loads models.
 
-The Windows CPU pins are llama.cpp `b10809` and whisper.cpp `v1.8.3`; release and
+`TestGGMLPinnedCUDABundles` uses `FREEHAND_TEST_GGML_GPU_ZIPS` with the official
+CUDA ZIP filenames from the pinned recipes. It verifies and installs both
+providers through the real backend-selection path, reopens the installation,
+executes owned `--help` commands, and enumerates llama.cpp's CUDA device. It
+requires compatible NVIDIA hardware and a driver; it never downloads or loads
+a model. NVIDIA's NVML probe requires the OS `ProgramFiles` variable even with
+an absolute executable path. Keep this explicit environment allowance rather
+than inheriting user PATH or CUDA configuration.
+
+The Windows runtime pins are llama.cpp `b10809` and whisper.cpp `v1.8.3`; release and
 model URL/size/SHA-256 metadata live in `internal/managedruntime/provider_ggml.go`.
 Qualify pin changes using the exact official binary, not only fixtures matching
 the intended arguments. Native acceptance separately covers explicitly selected
 S1-mini cleanup alongside NeMo, whisper completed requests, cancellation, and
 Quit with both providers running.
+
+For CPU/CUDA backend changes, exercise the real installer against bounded archive
+fixtures: preserve models and Connections, verify every companion archive, and
+retain the old installation on cancellation or corrupt downloads. Reject changes
+while running or active speech work holds admission. Exercise the UI action in
+both directions without implicitly starting a model. Qualify official CUDA
+archives with the production sanitized child environment, not a developer PATH
+that happens to provide missing libraries. CLI help and device metadata are not
+GPU inference acceptance; record selected-model execution separately, including
+GPU memory contention when NeMo and cleanup run together.
 
 Browser fixtures should cover a fresh installation with no manual connections,
 recommended Nemotron realtime setup, supported catalog browsing without pulls,
@@ -76,6 +95,11 @@ puts Connection above the runtime model selector for Voice and audio files.
 Verify provider images load from bundled assets and agree across runtime headings,
 built-in Connection details/pickers, and managed task shortcuts. Check both themes;
 status text and action labels must stay readable independently of the artwork.
+Exercise CPU/CUDA status updates in quick settings and Connection details without
+changing the Connection selection. Reopen real SQLite settings containing the
+historical `llama.cpp (CPU)` and `whisper.cpp (CPU)` default names: built-in names
+must be backend-neutral while instance preferences, selected IDs, and custom
+names remain intact. These checks establish display consistency, not GPU offload.
 Exercise download/cancel/retry and start/stop directly from a collapsed runtime
 row, checking that details stay collapsed and dirty drafts still guard mutations.
 Exercise keyboard navigation, narrow layouts, light/dark appearance, and reduced

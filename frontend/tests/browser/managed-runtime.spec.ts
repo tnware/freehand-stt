@@ -15,6 +15,129 @@ async function installRuntime(page: Page) {
   });
 }
 
+for (const provider of ["llama-cpp", "whisper-cpp"]) {
+  test(`${provider} switches CPU to CUDA and back without replacing its selected model`, async ({
+    page,
+  }) => {
+    await page.goto(
+      `/tests/browser/app/?runtime&runtime-ready&runtime-provider=${provider}`,
+    );
+    await page.locator('[data-settings-section="local-runtime"]').click();
+    const before = await page.evaluate(() => window.testRuntime.snapshot()[0]);
+    const connections = await page.evaluate(
+      () => window.testConnectionWindows.settings().savedConnections,
+    );
+    const manage = page.getByRole("button", { name: "Manage", exact: true });
+    await manage.click();
+    const cpu = page.getByRole("button", { name: "CPU", exact: true });
+    const cuda = page.getByRole("button", {
+      name: "NVIDIA GPU (CUDA)",
+      exact: true,
+    });
+    await expect(cpu).toHaveAttribute("aria-pressed", "true");
+    await expect(cuda).toBeDisabled();
+    await page
+      .getByRole("button", { name: "Stop runtime", exact: true })
+      .click();
+    await expect(cuda).toBeEnabled();
+    await cuda.click();
+    await expect(cuda).toHaveAttribute("aria-pressed", "true");
+    await expect(cpu).toHaveAttribute("aria-pressed", "false");
+    await manage.click();
+    await expect(page.getByText(/NVIDIA GPU \(CUDA\) binary/)).toBeVisible();
+    await manage.click();
+    await page
+      .getByRole("button", { name: "Start runtime", exact: true })
+      .click();
+    await expect(cpu).toBeDisabled();
+    await expect(cuda).toBeDisabled();
+    await page
+      .getByRole("button", { name: "Stop runtime", exact: true })
+      .click();
+    await cpu.click();
+    await expect(cpu).toHaveAttribute("aria-pressed", "true");
+    await expect(cuda).toHaveAttribute("aria-pressed", "false");
+    const after = await page.evaluate(() => window.testRuntime.snapshot()[0]);
+    expect(after.instance).toEqual(before.instance);
+    expect(after.status.selectedModel).toBe(before.status.selectedModel);
+    expect(after.status.models).toEqual(before.status.models);
+    expect(after.status.backend).toBe("cpu");
+    expect(
+      await page.evaluate(
+        () => window.testConnectionWindows.settings().savedConnections,
+      ),
+    ).toEqual(connections);
+    await expect(
+      page.getByRole("region", { name: "Runtime setup", exact: true }),
+    ).toContainText(`Selected: ${before.status.models![0].name}`);
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+      `Stop:${before.instance.id}`,
+      `InstallBackend:${before.instance.id}:cuda`,
+      `Start:${before.instance.id}`,
+      `Stop:${before.instance.id}`,
+      `InstallBackend:${before.instance.id}:cpu`,
+    ]);
+  });
+}
+
+test("binary switching respects ongoing runtime work and unsaved settings", async ({
+  page,
+}) => {
+  await page.goto(
+    "/tests/browser/app/?runtime&runtime-ready&runtime-provider=whisper-cpp",
+  );
+  await page.evaluate(() =>
+    window.testRuntime.change("whisper-cpp-default", {
+      state: "installing",
+      phase: "install",
+    }),
+  );
+  await page.locator('[data-settings-section="local-runtime"]').click();
+  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  const cuda = page.getByRole("button", {
+    name: "NVIDIA GPU (CUDA)",
+    exact: true,
+  });
+  await expect(cuda).toBeDisabled();
+  await page.evaluate(() =>
+    window.testRuntime.change("whisper-cpp-default", {
+      state: "stopped",
+      phase: "",
+    }),
+  );
+  await expect(cuda).toBeEnabled();
+  await page.locator('[data-settings-section="audio"]').click();
+  await page.locator("#max-duration").fill("90");
+  await page.locator('[data-settings-section="local-runtime"]').click();
+  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await cuda.click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Save settings before continuing?",
+  );
+  await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+  expect(
+    await page.evaluate(() => window.testRuntime.snapshot()[0].status.backend),
+  ).toBe("cpu");
+});
+
+test("active dictation blocks a stopped runtime's binary switch", async ({
+  page,
+}) => {
+  await page.goto(
+    "/tests/browser/app/?runtime&runtime-ready&runtime-provider=llama-cpp&work-busy",
+  );
+  await page.evaluate(() =>
+    window.testRuntime.change("llama-cpp-default", { state: "stopped" }),
+  );
+  await page.locator('[data-settings-section="local-runtime"]').click();
+  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "NVIDIA GPU (CUDA)", exact: true }),
+  ).toBeDisabled();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+});
+
 test("collapsed runtime controls can stop, download and restart without opening details", async ({
   page,
 }) => {

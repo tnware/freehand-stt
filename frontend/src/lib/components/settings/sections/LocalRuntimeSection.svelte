@@ -1,9 +1,16 @@
 <script lang="ts">
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
-  import type { ProviderDescriptor } from "$bindings/managedruntime";
+  import {
+    ProviderID,
+    type ProviderDescriptor,
+  } from "$bindings/managedruntime";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Role } from "$bindings/compatibility";
-  import { modelSize, runtimePresentation } from "$lib/utils/managedRuntime";
+  import {
+    backendLabel,
+    modelSize,
+    runtimePresentation,
+  } from "$lib/utils/managedRuntime";
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
 
@@ -58,6 +65,16 @@
     disabled || workBusy || runtime.loading || operating || !status?.supported,
   );
   const running = $derived(status?.state === "running");
+  const backendOptions = [
+    { id: "cpu", label: "CPU" },
+    { id: "cuda", label: "NVIDIA GPU (CUDA)" },
+  ] as const;
+  function switchableProvider(providerID: ProviderID) {
+    return (
+      providerID === ProviderID.LlamaCPP || providerID === ProviderID.WhisperCPP
+    );
+  }
+
   const problem = $derived(
     runtime.errorFor(id) || runtime.error || status?.error || "",
   );
@@ -174,7 +191,11 @@
                   ? "Unavailable on this platform"
                   : item
                     ? presentation.label
-                    : "Not installed"}{itemModel ? ` · ${itemModel.name}` : ""}
+                    : "Not installed"}{itemModel
+                  ? ` · ${itemModel.name}`
+                  : ""}{switchableProvider(entry.id) && item?.status.backend
+                  ? ` · ${backendLabel(item.status.backend)} binary`
+                  : ""}
               </p>{/if}
           </div>
           <div class="flex items-center gap-2">
@@ -310,7 +331,7 @@
               <div>
                 <p class="mt-1 text-xs text-muted-foreground">
                   {status.backend
-                    ? `${status.backend.toUpperCase()} · `
+                    ? `${switchableProvider(entry.id) ? `${backendLabel(status.backend)} binary` : status.backend.toUpperCase()} · `
                     : ""}{status.version ||
                     provider?.version ||
                     "Not installed"}
@@ -364,6 +385,37 @@
                   onclick={() => act(() => runtime.retry(id))}>Retry</Button
                 >{/if}
             </div>
+            {#if switchableProvider(entry.id) && status.supported && status.backend}
+              <fieldset class="mt-4 space-y-2" disabled={locked || running}>
+                <legend class="text-xs font-medium">Runtime binary</legend>
+                <div class="flex flex-wrap gap-2">
+                  {#each backendOptions as option (option.id)}
+                    <Button
+                      variant={status.backend === option.id
+                        ? "secondary"
+                        : "outline"}
+                      size="sm"
+                      aria-pressed={status.backend === option.id}
+                      disabled={locked ||
+                        running ||
+                        status.backend === option.id}
+                      onclick={() => {
+                        if (!running)
+                          act(() => runtime.installBackend(id, option.id));
+                      }}>{option.label}</Button
+                    >
+                  {/each}
+                </div>
+                <p class="text-xs text-muted-foreground">
+                  {running
+                    ? "Stop the runtime to change its binary. "
+                    : ""}Switching keeps downloaded models and saved
+                  Connections. CPU is the default; CUDA 12.4 requires an NVIDIA
+                  GPU with compute capability 5.0+ and driver 551.78 or newer.
+                  It may share GPU memory with NeMo or other apps.
+                </p>
+              </fieldset>
+            {/if}
             {#if operating}<div class="mt-3" role="status">
                 <p class="text-xs text-muted-foreground">
                   {view.operationModel || view.activity}{view.percent !== null

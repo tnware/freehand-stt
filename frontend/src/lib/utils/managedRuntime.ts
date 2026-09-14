@@ -1,5 +1,11 @@
 import type { Model, Status } from "$bindings/managedruntime";
 
+export function backendLabel(backend: string): string {
+  if (backend === "cpu") return "CPU";
+  if (backend === "cuda") return "NVIDIA GPU (CUDA)";
+  return backend.toUpperCase();
+}
+
 export function runtimePresentation(status: Status | null | undefined) {
   const supported = status?.supported === true;
   const labels: Record<string, string> = {
@@ -76,6 +82,7 @@ export function runtimePresentation(status: Status | null | undefined) {
   const bytes = acquisition?.bytes ?? 0;
   const total = acquisition?.totalBytes ?? 0;
   return {
+    backend: backendLabel(status?.backend ?? ""),
     activity,
     completion,
     operationModel: modelName ?? "",

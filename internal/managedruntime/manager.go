@@ -27,6 +27,10 @@ type InstanceStatus struct {
 type InstanceRequest struct {
 	InstanceID string `json:"instanceID"`
 }
+type BackendRequest struct {
+	InstanceID string `json:"instanceID"`
+	Backend    string `json:"backend"`
+}
 type ModelRequest struct {
 	InstanceID string `json:"instanceID"`
 	Model      string `json:"model"`
@@ -407,20 +411,31 @@ func (m *Manager) operation(id string, f func(*worker) error) error {
 	return err
 }
 func (m *Manager) Install(r InstanceRequest) error {
-	return m.operation(r.InstanceID, func(w *worker) error {
+	return m.install(r.InstanceID, (*worker).Install)
+}
+func (m *Manager) InstallBackend(r BackendRequest) error {
+	if r.Backend != "cpu" && r.Backend != "cuda" {
+		return errors.New("Choose CPU or NVIDIA CUDA.")
+	}
+	return m.install(r.InstanceID, func(w *worker) error { return w.InstallBackend(r.Backend) })
+}
+func (m *Manager) install(id string, install func(*worker) error) error {
+	return m.operation(id, func(w *worker) error {
 		m.mu.Lock()
-		defer m.mu.Unlock()
 		for _, other := range m.workers {
 			if other != w && other.providerProcess == w.providerProcess {
+				m.mu.Unlock()
 				return errors.New("Resolve duplicate runtime installations before installing this provider. Existing installations and Connections have been preserved.")
 			}
 		}
 		for _, other := range m.retired {
 			if other.providerProcess == w.providerProcess {
+				m.mu.Unlock()
 				return errors.New("Wait for the previous runtime installation to finish stopping.")
 			}
 		}
-		return w.Install()
+		m.mu.Unlock()
+		return install(w)
 	})
 }
 func (m *Manager) RefreshCatalog(r InstanceRequest) error {

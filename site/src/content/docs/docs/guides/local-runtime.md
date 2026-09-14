@@ -16,9 +16,9 @@ only.
 
 ## Before installing
 
-- Use Windows 11 x64. Freehand selects a supported runtime artifact and prefers
-  GPU execution where available; CPU operation remains an option through its
-  automatic hardware policy. Performance depends on the selected model and PC.
+- Use Windows 11 x64. NeMo selects its backend automatically. llama.cpp and
+  whisper.cpp initially install CPU binaries, with an explicit NVIDIA CUDA
+  option. Performance depends on the selected model and PC.
 - Allow internet access for the runtime and explicit model downloads. Model
   weights use additional disk space; the catalog shows download sizes when the
   runtime provides them.
@@ -72,21 +72,49 @@ selected model at a time. Different runtimes can run together.
 Choose **Install** on the whisper.cpp row, download a model from its catalog,
 and choose **Start runtime**. Select its built-in Connection for Voice or audio
 files. Voice uses completed transcription, not
-realtime; file response streaming is also unavailable. This managed adapter uses
-CPU execution. Larger models need more memory and take longer to process.
+realtime; file response streaming is also unavailable. CPU and NVIDIA CUDA
+execution are available. Larger models need more memory and take longer to process.
 
 ### Local cleanup with S1-mini
 
 Install **llama.cpp**, download **S1-mini by Superwhisper**, and start the runtime.
 Select its built-in Connection in **Cleanup**, and enable cleanup.
 NeMo can continue handling Voice while llama.cpp cleans up its completed text.
-This managed llama.cpp adapter runs on CPU, leaving NeMo's GPU allocation alone.
+CPU is the default, leaving NeMo's GPU allocation alone. You can explicitly
+switch llama.cpp to NVIDIA CUDA when your GPU has room for both models.
 
 S1-mini is English-only and runs with reasoning disabled. If the input language
 is unknown, Freehand assumes English for cleanup; explicitly non-English input
 skips S1-mini. Failed cleanup keeps the raw transcript. The model is not a
 general chat assistant or a speech-synthesis model. See
 [transcript cleanup](../post-processing/) for its style and structure controls.
+
+### Use NVIDIA GPU acceleration
+
+For llama.cpp or whisper.cpp, open its details using the chevron. If it is
+running, choose **Stop runtime**. Under **Runtime binary**, choose
+**NVIDIA GPU (CUDA)** and wait for installation to finish, then choose
+**Start runtime**. Runtime management, quick settings, and Connection details
+show the installed backend separately from the Connection name. Built-in
+llama.cpp and whisper.cpp Connections omit the old default **(CPU)** name suffix;
+changing the backend does not rename custom Connections or alter task selections.
+
+CUDA 12.4 requires a compatible NVIDIA GPU with compute capability 5.0 or newer
+and driver 551.78 or newer; newer GPUs also need a driver that supports them.
+Freehand downloads the runtime's required CUDA libraries, not a developer
+toolkit or driver. AMD and Intel GPU acceleration are not offered by these
+managed adapters.
+
+Switching binaries keeps your downloaded models, selected model, built-in
+Connections, and startup preference. A cancelled or failed download leaves the
+previous installation in place. To return to CPU, stop the runtime and choose
+**CPU** in the same controls. Do not use **Remove runtime files** to switch
+backends: that action also deletes downloaded models.
+
+GPU memory is shared with NeMo and other applications. If a GPU start fails,
+check your NVIDIA driver and available memory, or switch back to CPU. The CUDA
+label identifies the installed binary; it does not measure how much of a model
+is currently running on the GPU. Backend changes never select a remote server.
 
 ### NeMo models
 

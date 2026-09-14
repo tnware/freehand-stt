@@ -184,6 +184,10 @@ func verifyRuntime(ctx context.Context, root string, a asset) error {
 	}
 	base := filepath.Join(root, "runtime")
 	archive := filepath.Join(base, ".release.zip")
+	return verifyRuntimeArchive(ctx, base, archive, a)
+}
+
+func verifyRuntimeArchive(ctx context.Context, base, archive string, a asset) error {
 	if e := verifyFile(ctx, archive, a.size, a.sha256); e != nil {
 		return e
 	}

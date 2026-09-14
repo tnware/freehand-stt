@@ -56,6 +56,13 @@ intact. Runtime-owned transport/model fields are read-only in Connections, while
 task options retain their existing owners. Stopped rows remain available for
 explicit selection and repair, but requests fail closed until ready.
 
+Built-in name projection removes only the historical GGML default `(CPU)` suffix
+for its matching provider, leaving durable instance preferences, custom names,
+legacy aliases, IDs, and task selections intact. Installed backend presentation
+comes from the referenced runtime's `Status.backend`, never from a saved name.
+Runtime management, quick controls, and Connection status share that formatter;
+the binary label is not an inference-offload measurement.
+
 Acquisition events contain only bounded operation IDs, phases, counters, and
 terminal outcomes. GGML reports bytes written; NeMo observes metadata for the
 selected model's exact owned partial/final paths while its own manager runs.
@@ -110,9 +117,13 @@ Keep this distinction at the adapter boundary, not in shared client URL handling
 
 llama.cpp likewise publishes `/v1` for the cleanup client, with S1-mini reasoning
 disabled. whisper.cpp instead publishes the server origin for native `/inference`
-requests and `/health` metadata. Both new managed adapters initially use CPU
-execution and share the existing process ownership boundary; they do not acquire
-CUDA runtimes or change NeMo's device policy.
+requests and `/health` metadata. Both adapters default to CPU and offer explicit
+NVIDIA CUDA installation under [ADR 0019](../../decisions/0019-managed-ggml-gpu/).
+The adapter verifies the server and companion libraries as a pinned installation;
+its recorded backend determines controlled launch arguments. Backend changes
+require stopped, idle worker ownership and preserve model files, instance IDs,
+Connections, and startup preferences. Failed or cancelled acquisition retains
+the previous installation. NeMo's device policy is unchanged.
 
 Windows owns children through a Job Object, including model-manager subprocesses.
 The server listens only on `127.0.0.1`; readiness and loaded model metadata are

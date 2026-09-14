@@ -221,6 +221,9 @@ func (s *worker) runOperation(phase, state string, guard bool, model string, wor
 				if errors.Is(err, errProviderRunning) {
 					s.status.Error = errProviderRunning.Error()
 				}
+				if errors.Is(err, errCUDAUnavailable) {
+					s.status.Error = errCUDAUnavailable.Error()
+				}
 				// Metadata failure does not invalidate a separately supervised live
 				// process. Its monitor still clears the endpoint on process exit.
 				if phase != "catalog" || s.process == nil || s.status.State != "running" || !s.endpoint.Enabled || s.endpoint.BaseURL == "" || s.endpoint.Model == "" {
@@ -270,15 +273,55 @@ func (s *worker) inspect(ctx context.Context) error {
 	}
 	return nil
 }
+
+type backendInstaller interface {
+	InstallBackend(context.Context, string, func(float64)) (string, error)
+}
+
+func (s *worker) InstallBackend(backend string) error {
+	if backend != "cpu" && backend != "cuda" {
+		return errors.New("Choose CPU or NVIDIA CUDA.")
+	}
+	a, ok := s.adapter.(backendInstaller)
+	if !ok {
+		return errors.New("This provider does not support explicit backend selection.")
+	}
+	// Fence a child whose endpoint was cleared but whose Job Object is still
+	// draining, and prevent another owner starting until publication finishes.
+	owner := s.providerProcess
+	if !owner.mu.TryLock() {
+		return errProviderRunning
+	}
+	if owner.process != nil {
+		select {
+		case <-owner.process.done:
+			owner.process = nil
+		default:
+			owner.mu.Unlock()
+			return errProviderRunning
+		}
+	}
+	err := s.install(func(ctx context.Context, progress func(float64)) (string, error) {
+		defer owner.mu.Unlock()
+		return a.InstallBackend(ctx, backend, progress)
+	}, true)
+	if err != nil {
+		owner.mu.Unlock()
+	}
+	return err
+}
 func (s *worker) Install() error {
-	return s.run("install", "installing", false, func(ctx context.Context) error {
+	return s.install(s.adapter.Install, false)
+}
+func (s *worker) install(install func(context.Context, func(float64)) (string, error), guard bool) error {
+	return s.run("install", "installing", guard, func(ctx context.Context) error {
 		s.mu.Lock()
 		running := s.process != nil
 		s.mu.Unlock()
 		if running {
 			return errBusy
 		}
-		_, err := s.adapter.Install(ctx, func(p float64) {
+		_, err := install(ctx, func(p float64) {
 			if math.IsNaN(p) || math.IsInf(p, 0) {
 				p = -1
 			}

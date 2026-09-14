@@ -4,6 +4,7 @@ description: List built-in runtimes directly and bound each provider to one inst
 ---
 
 - Status: Accepted
+- Extended by [ADR 0019](../0019-managed-ggml-gpu/): explicit NVIDIA CUDA execution replaces the initial CPU-only GGML qualification below.
 - Extended by [ADR 0018](../0018-built-in-runtime-connections/): automatic built-in Connections and explicit acquisition outcomes.
 - Supersedes: ADR 0016's user-created, named instances of the same provider. Its Connections routing, transactional publication, credential isolation, and lifecycle contracts remain in force.
 

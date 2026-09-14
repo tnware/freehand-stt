@@ -81,7 +81,9 @@
       {#if operating}<LoaderCircleIcon
           class="size-3 shrink-0 animate-spin"
         />{/if}
-      {runtime.pendingFor(instanceID) || view.label}
+      {[view.backend, runtime.pendingFor(instanceID) || view.label]
+        .filter(Boolean)
+        .join(" · ")}
     </p>
     <div class="flex shrink-0 items-center gap-1">
       <Button

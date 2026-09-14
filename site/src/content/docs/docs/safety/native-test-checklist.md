@@ -71,6 +71,14 @@ Do not delete personal runtime installations or pull every catalog model.
   On local failure, confirm no request reaches the manual server. Select the
   manual Connection explicitly and check it still works. Stop a files-only
   runtime and confirm independently configured manual Voice remains usable.
+- For llama.cpp and whisper.cpp, stop the runtime and switch CPU to NVIDIA CUDA
+  without removing models or changing Connections. Cancel an isolated replacement
+  and confirm the old backend still starts; then complete the switch and restart
+  Freehand to confirm its selection persists. Exercise only an explicitly chosen
+  model on the GPU, including concurrent NeMo and S1-mini if that is the selected
+  workflow. Record actual GPU use and driver/GPU compatibility separately from
+  installation, CLI help, and browser results. Switch back to CPU and verify that
+  model data and task selections remain intact.
 - Confirm destructive actions explain their scope and protect active work.
   Remove an inactive downloaded model, then remove the runtime and its owned
   model data. Other installations, connections, credentials, and source files

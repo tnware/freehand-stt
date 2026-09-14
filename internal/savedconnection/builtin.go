@@ -30,6 +30,14 @@ func BuiltIn(instance managedruntime.Instance) Connection {
 	if name == "" {
 		name = string(instance.Provider)
 	}
+	// Early GGML setup included the binary backend in the default name.
+	// Keep identity/preferences intact, but never present that saved name as
+	// execution status. Custom names and legacy aliases remain untouched.
+	if instance.Provider == managedruntime.LlamaCPP && name == "llama.cpp (CPU)" {
+		name = "llama.cpp"
+	} else if instance.Provider == managedruntime.WhisperCPP && name == "whisper.cpp (CPU)" {
+		name = "whisper.cpp"
+	}
 	c := Connection{
 		ID: BuiltInID(instance.ID), Name: name, BuiltIn: true,
 		Uses:    []Purpose{},

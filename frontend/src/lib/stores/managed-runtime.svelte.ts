@@ -1,4 +1,5 @@
 import type {
+  BackendRequest,
   Instance,
   InstanceStatus,
   ProviderDescriptor,
@@ -6,21 +7,20 @@ import type {
 import type * as Manager from "$bindings/managedruntime/manager";
 
 export type ManagedRuntimeService = {
-  [
-    K in
-      | "GetInstances"
-      | "GetProviders"
-      | "SetInstance"
-      | "DeleteInstance"
-      | "Install"
-      | "Remove"
-      | "Start"
-      | "Stop"
-      | "Cancel"
-      | "RefreshCatalog"
-      | "DownloadModel"
-      | "RemoveModel"
-  ]: (
+  [K in
+    | "GetInstances"
+    | "GetProviders"
+    | "SetInstance"
+    | "DeleteInstance"
+    | "Install"
+    | "InstallBackend"
+    | "Remove"
+    | "Start"
+    | "Stop"
+    | "Cancel"
+    | "RefreshCatalog"
+    | "DownloadModel"
+    | "RemoveModel"]: (
     ...args: Parameters<(typeof Manager)[K]>
   ) => Promise<Awaited<ReturnType<(typeof Manager)[K]>>>;
 };
@@ -171,6 +171,11 @@ export class ManagedRuntimeState {
   run(id: string, operation: Operation) {
     return this.#perform(id, operation, () =>
       this.service![operation]({ instanceID: id }),
+    );
+  }
+  installBackend(id: string, backend: BackendRequest["backend"]) {
+    return this.#perform(id, "Switch runtime binary", () =>
+      this.service!.InstallBackend({ instanceID: id, backend }),
     );
   }
   downloadModel(id: string, model: string) {

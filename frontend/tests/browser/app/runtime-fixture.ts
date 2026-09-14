@@ -58,8 +58,9 @@ export function createRuntimeFixture(
   supported: boolean,
   preferencesChanged: (instances: Instance[]) => void,
   ready = true,
+  providerID = ProviderID.NeMoSpeechCPP,
 ) {
-  const models = [
+  let models = [
     {
       id: "nemotron-3.5",
       name: "Nemotron 3.5 Streaming",
@@ -97,10 +98,45 @@ export function createRuntimeFixture(
       ],
     },
   ];
+  const ggml = providerID !== ProviderID.NeMoSpeechCPP;
+  if (ggml) {
+    const llama = providerID === ProviderID.LlamaCPP;
+    const behavior = {
+      ...parakeet,
+      id: llama ? ID.S1Mini : ID.Generic,
+      name: llama ? "S1-mini" : "Whisper Small",
+    };
+    models = [
+      {
+        ...models[0],
+        id: llama ? "s1-mini" : "whisper-small",
+        name: behavior.name,
+        description: "Downloaded GGML model for browser interaction tests.",
+        realtime: false,
+        profile: behavior.id,
+        behavior,
+        contracts: [
+          {
+            role: llama ? Role.PostProcessing : Role.Transcription,
+            compatibilityProfile: llama
+              ? CompatibilityID.LlamaCPP
+              : CompatibilityID.WhisperCPP,
+            modelProfile: behavior.id,
+            behavior,
+          },
+        ],
+      },
+    ];
+  }
   const providers: ProviderDescriptor[] = [
     {
-      id: ProviderID.NeMoSpeechCPP,
-      name: "NeMo-Speech.cpp",
+      id: providerID,
+      name:
+        providerID === ProviderID.LlamaCPP
+          ? "llama.cpp"
+          : providerID === ProviderID.WhisperCPP
+            ? "whisper.cpp"
+            : "NeMo-Speech.cpp",
       version: "0.1.0",
       supported,
       models,
@@ -128,10 +164,10 @@ export function createRuntimeFixture(
   let rows: InstanceStatus[] = ready
     ? [
         initial({
-          id: "nemo-default",
+          id: ggml ? `${providerID}-default` : "nemo-default",
           name: "Local speech",
           provider: providers[0].id,
-          model: "nemotron-3.5",
+          model: models[0].id,
           autoStart: false,
         }),
       ]
@@ -139,7 +175,7 @@ export function createRuntimeFixture(
   if (ready)
     rows[0] = {
       ...rows[0],
-      activeModel: "nemotron-3.5",
+      activeModel: models[0].id,
       status: {
         ...rows[0].status,
         state: "running",
@@ -195,6 +231,12 @@ export function createRuntimeFixture(
         backend: "cpu",
         version: "0.1.0",
       });
+    },
+    InstallBackend: async ({ instanceID, backend }) => {
+      calls.push(`InstallBackend:${instanceID}:${backend}`);
+      if (get(instanceID).status.state === "running")
+        throw new Error("Stop the runtime before changing its binary");
+      change(instanceID, { state: "installed", backend });
     },
     Start: async ({ instanceID }) => {
       calls.push(`Start:${instanceID}`);
@@ -268,6 +310,7 @@ export function createRuntimeFixture(
   const control = {
     calls,
     change,
+    snapshot: () => structuredClone(rows),
     finishDownload: (instanceID: string) => {
       const model = downloading.get(instanceID);
       if (!model) throw new Error("No pending fixture download");

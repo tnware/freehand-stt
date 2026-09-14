@@ -21,6 +21,8 @@
   });
   import { configurePickerFixture } from "./picker-data";
   import { createRuntimeFixture } from "./runtime-fixture";
+  import { ProviderID } from "$bindings/managedruntime";
+  import { State } from "$lib/state";
   import { CancellablePromise } from "@wailsio/runtime";
   import { Action, Purpose } from "$bindings/savedconnection";
   import { CheckKind, CheckStatus } from "$bindings/connection";
@@ -201,12 +203,18 @@
           current = { ...current, managedRuntimes: p };
         },
         params.has("runtime-ready"),
+        params.get("runtime-provider") === "llama-cpp"
+          ? ProviderID.LlamaCPP
+          : params.get("runtime-provider") === "whisper-cpp"
+            ? ProviderID.WhisperCPP
+            : ProviderID.NeMoSpeechCPP,
       )
     : null;
   if (runtimeFixture) window.testRuntime = runtimeFixture.control;
   if (
     runtimeFixture &&
     current.managedRuntimes?.length &&
+    runtimeFixture.providers[0].id === ProviderID.NeMoSpeechCPP &&
     params.has("runtime-ready")
   ) {
     const instance = current.managedRuntimes[0];
@@ -258,46 +266,52 @@
     };
   }
   const session = new Session({
-    ...serviceWithStatus(() => CancellablePromise.resolve(idle), {
-      input: {
-        ListMicrophones: () =>
-          CancellablePromise.resolve([
-            { id: "default", name: "Fixture microphone", default: true },
-          ]),
-      },
-      connection: {
-        TestConnection: () =>
-          CancellablePromise.resolve(
-            new URLSearchParams(location.search).has("attention")
-              ? {
-                  ...connectionResult,
-                  checks: [
-                    {
-                      kind: CheckKind.CheckModel,
-                      status: CheckStatus.CheckAttention,
-                      summary: "The selected model was not listed.",
-                      detail: "Refresh models to choose another model.",
-                    },
-                  ],
-                }
-              : connectionResult,
-          ),
-      },
-      settings: {
-        GetSettings: () =>
-          CancellablePromise.resolve(
+    ...serviceWithStatus(
+      () =>
+        CancellablePromise.resolve(
+          params.has("work-busy") ? { ...idle, state: State.Recording } : idle,
+        ),
+      {
+        input: {
+          ListMicrophones: () =>
+            CancellablePromise.resolve([
+              { id: "default", name: "Fixture microphone", default: true },
+            ]),
+        },
+        connection: {
+          TestConnection: () =>
+            CancellablePromise.resolve(
+              new URLSearchParams(location.search).has("attention")
+                ? {
+                    ...connectionResult,
+                    checks: [
+                      {
+                        kind: CheckKind.CheckModel,
+                        status: CheckStatus.CheckAttention,
+                        summary: "The selected model was not listed.",
+                        detail: "Refresh models to choose another model.",
+                      },
+                    ],
+                  }
+                : connectionResult,
+            ),
+        },
+        settings: {
+          GetSettings: () =>
+            CancellablePromise.resolve(
+              child
+                ? wire(window.testConnectionWindows.settings())
+                : structuredClone(current),
+            ),
+          SaveSettings: (request) =>
             child
-              ? wire(window.testConnectionWindows.settings())
-              : structuredClone(current),
-          ),
-        SaveSettings: (request) =>
-          child
-            ? CancellablePromise.resolve(
-                window.testConnectionWindows.save(wire(request)),
-              )
-            : saves.save(wire(request)),
+              ? CancellablePromise.resolve(
+                  window.testConnectionWindows.save(wire(request)),
+                )
+              : saves.save(wire(request)),
+        },
       },
-    }),
+    ),
     runtime: runtimeFixture?.service,
   });
   session.editor.applySettingsSnapshot(structuredClone(current));

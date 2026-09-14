@@ -6,6 +6,7 @@
     ProviderDescriptor,
   } from "$bindings/managedruntime";
   import { connectionWorkflows } from "$lib/utils/connectionChoices";
+  import { runtimePresentation } from "$lib/utils/managedRuntime";
   import type { Purpose } from "$bindings/savedconnection";
   import SettingsCard from "$lib/components/settings/SettingsCard.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
@@ -29,6 +30,7 @@
     onWorkflow: (purpose: Purpose) => void;
   } = $props();
   const provider = $derived(providers.find((p) => p.id === instance?.provider));
+  const view = $derived(runtimePresentation(status?.status));
   const model = $derived(
     provider?.models?.find((m) => m.id === instance?.model),
   );
@@ -71,7 +73,9 @@
           >{/if}
       </dd>
       <dt class="text-muted-foreground">Status</dt>
-      <dd>{status?.status.state ?? "Unavailable"}</dd>
+      <dd>{view.label}</dd>
+      <dt class="text-muted-foreground">Installed binary</dt>
+      <dd>{view.backend || "Not reported"}</dd>
       <dt class="text-muted-foreground">Supported tasks</dt>
       <dd>
         {uses.map((role) => role.label).join(" · ") ||

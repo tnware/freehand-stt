@@ -25,6 +25,16 @@ test("runtime connections have read-only details and navigate to their owners", 
     ),
   ).toBe(true);
   await expect(details).toContainText("nemotron-3.5");
+  await page.evaluate(() =>
+    window.testRuntime.change("nemo-default", { backend: "cpu" }),
+  );
+  await expect(details.getByText("CPU", { exact: true })).toBeVisible();
+  await page.evaluate(() =>
+    window.testRuntime.change("nemo-default", { backend: "cuda" }),
+  );
+  await expect(
+    details.getByText("NVIDIA GPU (CUDA)", { exact: true }),
+  ).toBeVisible();
   await expect(details.locator("input")).toHaveCount(0);
   await expect(details.getByRole("switch")).toHaveCount(0);
   await expect(
