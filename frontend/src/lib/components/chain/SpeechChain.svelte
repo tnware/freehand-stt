@@ -10,15 +10,21 @@
   import { endpointHost } from "$lib/utils/endpoint";
   import { taskConnectionStatus } from "$lib/utils/connection";
   import { TTSPhase } from "$lib/state";
+  import type { Purpose } from "$bindings/savedconnection";
+  import SpeechQuickSettings from "$lib/components/home/SpeechQuickSettings.svelte";
 
   let {
     session,
     now,
     onOpenSpeech,
+    onOpenRuntimes,
+    onAddConnection,
   }: {
     session: Session;
     now: number;
     onOpenSpeech: () => void;
+    onOpenRuntimes: () => void;
+    onAddConnection: (purpose: Purpose) => void;
   } = $props();
 
   const status = $derived(session.speech.status);
@@ -92,7 +98,22 @@
     state={speech?.enabled === false ? "Off" : connection.label}
     notice={failed ? (status.message ?? "") : ""}
     onOpen={onOpenSpeech}
+    panel={settings ? speechPanel : undefined}
   />
+{/snippet}
+
+{#snippet speechPanel()}
+  <div class="p-3">
+    <SpeechQuickSettings
+      settings={settings!}
+      runtime={session.runtime}
+      onManageRuntime={onOpenRuntimes}
+      editor={session.editor}
+      disabled={session.editor.saving}
+      {onAddConnection}
+      onOpenSettings={onOpenSpeech}
+    />
+  </div>
 {/snippet}
 
 {#snippet clean()}

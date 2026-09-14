@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { Switch } from "$lib/components/ui/switch";
   import Stage, { type StageTone } from "./Stage.svelte";
@@ -14,6 +15,7 @@
     unused = false,
     onToggle,
     onOpen,
+    panel,
   }: {
     ordinal?: string;
     enabled: boolean;
@@ -26,6 +28,8 @@
     unused?: boolean;
     onToggle: (next: boolean) => void;
     onOpen: () => void;
+    /** The stage's own settings, shown in place. */
+    panel?: Snippet;
   } = $props();
 
   const tone = $derived<StageTone>(
@@ -63,6 +67,7 @@
       meta={enabled ? source : "transcripts pass through unchanged"}
       label="Cleanup model"
       {onOpen}
+      {panel}
     />
   {/if}
 

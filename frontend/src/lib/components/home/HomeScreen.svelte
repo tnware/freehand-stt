@@ -129,6 +129,7 @@
       : null,
   );
   let dismissedRecoveryKey = $state("");
+  const onAddConnection = addConnection;
   function addConnection(purpose: Purpose) {
     if (quickSettingsDisabled) return;
     onOpenConnection({ id: "", purpose, create: true });
@@ -247,6 +248,8 @@
                   : onOpenSettingsSection("voice-transcription")}
               onOpenCleanup={onOpenProcessingSettings}
               onOpenDelivery={onOpenGeneralSettings}
+              onOpenRuntimes={openLocalRuntime}
+              {onAddConnection}
             />
           {:else if inputMode === "file"}
             <FileChain
@@ -266,12 +269,16 @@
                 : onOpenServerSettings}
               onOpenCleanup={onOpenProcessingSettings}
               onOpenDelivery={onOpenHistorySettings}
+              onOpenRuntimes={openLocalRuntime}
+              {onAddConnection}
             />
           {:else}
             <SpeechChain
               {session}
               {now}
               onOpenSpeech={onOpenSpeechSettings}
+              onOpenRuntimes={openLocalRuntime}
+              {onAddConnection}
             />
           {/if}
       {/if}

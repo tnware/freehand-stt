@@ -10,6 +10,9 @@
   import { taskConnectionStatus } from "$lib/utils/connection";
   import { isCopyRequired, isFailure, statusMessage } from "$lib/utils/status";
   import { State } from "$lib/state";
+  import { Purpose } from "$bindings/savedconnection";
+  import VoiceTranscriptionSettings from "$lib/components/home/VoiceTranscriptionSettings.svelte";
+  import QuickSettings from "$lib/components/home/QuickSettings.svelte";
 
   let {
     session,
@@ -23,6 +26,8 @@
     onOpenTranscribe,
     onOpenCleanup,
     onOpenDelivery,
+    onOpenRuntimes,
+    onAddConnection,
   }: {
     session: Session;
     now: number;
@@ -37,6 +42,8 @@
     onOpenTranscribe: () => void;
     onOpenCleanup: () => void;
     onOpenDelivery: () => void;
+    onOpenRuntimes: () => void;
+    onAddConnection: (purpose: Purpose) => void;
   } = $props();
 
   const status = $derived(session.dictation.status);
@@ -114,6 +121,7 @@
     live={streaming ? (status.liveFinal ?? "") : ""}
     partial={streaming ? (status.livePartial ?? "") : ""}
     onOpen={onOpenTranscribe}
+    panel={settings ? transcribePanel : undefined}
   />
 {/snippet}
 
@@ -126,8 +134,64 @@
     busy={cleanupBusy}
     onToggle={toggleCleanup}
     onOpen={onOpenCleanup}
+    panel={settings ? cleanupPanel : undefined}
   />
 {/snippet}
+
+{#snippet transcribePanel()}
+  <div class="p-3">
+    <VoiceTranscriptionSettings
+      runtime={session.runtime}
+      onManageRuntime={onOpenRuntimes}
+      editor={session.editor}
+      settings={settings!}
+      disabled={session.editor.saving}
+      {onAddConnection}
+    />
+  </div>
+{/snippet}
+
+{#snippet cleanupPanel()}
+  <div class="p-3">
+    <QuickSettings
+      embedded
+      showCapture={false}
+      showTranscription={false}
+      settings={settings!}
+      runtime={session.runtime}
+      onManageRuntime={onOpenRuntimes}
+      devices={session.editor.devices}
+      processingProfiles={session.editor.processingProfiles}
+      connection={session.editor.connection}
+      processingConnection={session.editor.processingConnection}
+      processingStale={session.editor.processingConnectionStale ||
+        session.editor.connectionResultStale(Purpose.Cleanup, settings)}
+      pending={session.editor.quickSettingsPending}
+      savedField={session.editor.quickSettingsSaved}
+      failedField={session.editor.quickSettingsFailed}
+      processingTesting={session.editor.processingConnectionTesting}
+      processingMetadataStatus={session.editor.connectionMetadataStatus(
+        Purpose.Cleanup,
+      )}
+      onEnterCleanup={() =>
+        void session.editor.ensureConnectionMetadata(Purpose.Cleanup, true)}
+      onUpdate={(patch, field) =>
+        session.editor.updateQuickSettings(patch, field)}
+      onChangeConnection={(change) => session.editor.changeConnection(change)}
+      onTestConnection={() =>
+        session.editor.testConnection(session.editor.applied, "")}
+      onTestProcessingConnection={() =>
+        session.editor.testPostProcessingConnection(session.editor.applied, "")}
+      onAddConnection={onAddConnection}
+      onOpenServerSettings={onOpenCleanup}
+      onOpenProcessingSettings={onOpenCleanup}
+      onOpenAudioSettings={onOpenCleanup}
+      onOpenDeliverySettings={onOpenCleanup}
+      disabled={session.editor.saving}
+    />
+  </div>
+{/snippet}
+
 
 {#snippet deliver()}
   <DeliverStage

@@ -16,6 +16,7 @@
     extra,
     control,
     onOpen,
+    panel,
   }: {
     ordinal?: string;
     label?: string;
@@ -37,6 +38,8 @@
     /** Replaces the state lamp, for a stage that owns a mode control. */
     control?: Snippet;
     onOpen: () => void;
+    /** The stage's own settings, shown in place. */
+    panel?: Snippet;
   } = $props();
 
   const streaming = $derived(Boolean(live || partial));
@@ -48,6 +51,7 @@
     meta={source}
     label="Transcription model"
     {onOpen}
+    {panel}
   />
 
   {#if streaming}

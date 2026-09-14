@@ -11,6 +11,8 @@
   import { FileTranscriptionPhase } from "$lib/state";
   import { Button } from "$lib/components/ui/button";
   import { Switch } from "$lib/components/ui/switch";
+  import { Purpose } from "$bindings/savedconnection";
+  import QuickSettings from "$lib/components/home/QuickSettings.svelte";
 
   let {
     session,
@@ -21,6 +23,8 @@
     onOpenTranscribe,
     onOpenCleanup,
     onOpenDelivery,
+    onOpenRuntimes,
+    onAddConnection,
   }: {
     session: Session;
     now: number;
@@ -31,6 +35,8 @@
     onOpenTranscribe: () => void;
     onOpenCleanup: () => void;
     onOpenDelivery: () => void;
+    onOpenRuntimes: () => void;
+    onAddConnection: (purpose: Purpose) => void;
   } = $props();
 
   const status = $derived(session.files.status);
@@ -106,6 +112,7 @@
     live={streaming ? (status.transcript ?? "") : ""}
     notice={status.streamingNotice ?? ""}
     onOpen={onOpenTranscribe}
+    panel={settings ? transcribePanel : undefined}
   >
     {#snippet extra()}
       {#if status.streamingUnavailable && !working}
@@ -140,8 +147,95 @@
     busy={session.editor.isQuickSettingsPending("processing-enabled")}
     onToggle={toggleCleanup}
     onOpen={onOpenCleanup}
+    panel={settings ? cleanupPanel : undefined}
   />
 {/snippet}
+
+{#snippet transcribePanel()}
+  <div class="p-3">
+    <QuickSettings
+      embedded
+      showCapture={false}
+      showCleanup={false}
+      settings={settings!}
+      runtime={session.runtime}
+      onManageRuntime={onOpenRuntimes}
+      devices={session.editor.devices}
+      processingProfiles={session.editor.processingProfiles}
+      connection={session.editor.connection}
+      processingConnection={session.editor.processingConnection}
+      sttStale={session.editor.sttConnectionStale ||
+        session.editor.connectionResultStale(Purpose.Transcription, settings)}
+      pending={session.editor.quickSettingsPending}
+      savedField={session.editor.quickSettingsSaved}
+      failedField={session.editor.quickSettingsFailed}
+      sttTesting={session.editor.sttConnectionTesting}
+      sttMetadataStatus={session.editor.connectionMetadataStatus(
+        Purpose.Transcription,
+      )}
+      onEnterTranscription={() =>
+        void session.editor.ensureConnectionMetadata(
+          Purpose.Transcription,
+          true,
+        )}
+      onUpdate={(patch, field) =>
+        session.editor.updateQuickSettings(patch, field)}
+      onChangeConnection={(change) => session.editor.changeConnection(change)}
+      onTestConnection={() =>
+        session.editor.testConnection(session.editor.applied, "")}
+      onTestProcessingConnection={() =>
+        session.editor.testPostProcessingConnection(session.editor.applied, "")}
+      onAddConnection={onAddConnection}
+      onOpenServerSettings={onOpenTranscribe}
+      onOpenProcessingSettings={onOpenCleanup}
+      onOpenAudioSettings={onOpenTranscribe}
+      onOpenDeliverySettings={onOpenDelivery}
+      disabled={session.editor.saving}
+    />
+  </div>
+{/snippet}
+
+{#snippet cleanupPanel()}
+  <div class="p-3">
+    <QuickSettings
+      embedded
+      showCapture={false}
+      showTranscription={false}
+      settings={settings!}
+      runtime={session.runtime}
+      onManageRuntime={onOpenRuntimes}
+      devices={session.editor.devices}
+      processingProfiles={session.editor.processingProfiles}
+      connection={session.editor.connection}
+      processingConnection={session.editor.processingConnection}
+      processingStale={session.editor.processingConnectionStale ||
+        session.editor.connectionResultStale(Purpose.Cleanup, settings)}
+      pending={session.editor.quickSettingsPending}
+      savedField={session.editor.quickSettingsSaved}
+      failedField={session.editor.quickSettingsFailed}
+      processingTesting={session.editor.processingConnectionTesting}
+      processingMetadataStatus={session.editor.connectionMetadataStatus(
+        Purpose.Cleanup,
+      )}
+      onEnterCleanup={() =>
+        void session.editor.ensureConnectionMetadata(Purpose.Cleanup, true)}
+      onUpdate={(patch, field) =>
+        session.editor.updateQuickSettings(patch, field)}
+      onChangeConnection={(change) => session.editor.changeConnection(change)}
+      onTestConnection={() =>
+        session.editor.testConnection(session.editor.applied, "")}
+      onTestProcessingConnection={() =>
+        session.editor.testPostProcessingConnection(session.editor.applied, "")}
+      onAddConnection={onAddConnection}
+      onOpenServerSettings={onOpenCleanup}
+      onOpenProcessingSettings={onOpenCleanup}
+      onOpenAudioSettings={onOpenCleanup}
+      onOpenDeliverySettings={onOpenCleanup}
+      disabled={session.editor.saving}
+    />
+  </div>
+{/snippet}
+
 
 {#snippet deliver()}
   <!-- A file transcript is never inserted anywhere: this workflow has no
