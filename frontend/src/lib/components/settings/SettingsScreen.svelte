@@ -269,7 +269,7 @@
     >
       <section
         aria-labelledby="settings-section-title"
-        class="@container mx-auto flex w-full max-w-[820px] flex-col gap-4"
+        class="@container flex w-full max-w-[880px] flex-col gap-3"
       >
         <div
           bind:clientHeight={headingHeight}
@@ -282,7 +282,7 @@
           >
             {section.label}
           </h3>
-          <p class="max-w-xl text-sm leading-5 text-muted-foreground">
+          <p class="max-w-2xl text-[12px] leading-5 text-muted-foreground">
             {section.blurb}
           </p>
         </div>
