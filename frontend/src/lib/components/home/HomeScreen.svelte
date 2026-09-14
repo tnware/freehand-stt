@@ -44,6 +44,8 @@
     onOpenShortcutSettings,
     onOpenSpeechSettings,
     onOpenGeneralSettings,
+    onOpenSettingsSection,
+    onOpenConnection,
     quickSettingsDisabled = false,
   }: {
     session: Session;
@@ -57,23 +59,18 @@
     onOpenShortcutSettings: () => void;
     onOpenSpeechSettings: () => void;
     onOpenGeneralSettings: () => void;
+    /** Navigates the shell to a settings section; there is no second window. */
+    onOpenSettingsSection: (section: SettingsSectionID) => void;
+    onOpenConnection: (request: ConnectionManagerRequest) => void;
     quickSettingsDisabled?: boolean;
   } = $props();
 
-  setContext(SETTINGS_NAVIGATION, (section: SettingsSectionID) => {
-    void WindowingService.OpenTaskSettings(section, inputMode).catch((cause) =>
-      session.messages.fail(cause),
-    );
-  });
-  setContext(
-    TASK_CONNECTION_NAVIGATION,
-    (request: ConnectionManagerRequest) => {
-      if (!quickSettingsDisabled)
-        void WindowingService.OpenTaskConnection(request, inputMode).catch(
-          (cause) => session.messages.fail(cause),
-        );
-    },
+  setContext(SETTINGS_NAVIGATION, (section: SettingsSectionID) =>
+    onOpenSettingsSection(section),
   );
+  setContext(TASK_CONNECTION_NAVIGATION, (request: ConnectionManagerRequest) => {
+    if (!quickSettingsDisabled) onOpenConnection(request);
+  });
 
   const fileWorking = $derived(
     session.files.starting ||
@@ -115,9 +112,7 @@
       : "",
   );
   function openLocalRuntime() {
-    void WindowingService.OpenTaskSettings("local-runtime", inputMode).catch(
-      (cause) => session.messages.fail(cause),
-    );
+    onOpenSettingsSection("local-runtime");
   }
   const readiness = $derived(
     runtimeSettings
@@ -136,10 +131,7 @@
   let dismissedRecoveryKey = $state("");
   function addConnection(purpose: Purpose) {
     if (quickSettingsDisabled) return;
-    void WindowingService.OpenTaskConnection(
-      { id: "", purpose, create: true },
-      inputMode,
-    ).catch((cause) => session.messages.reportFailure(String(cause)));
+    onOpenConnection({ id: "", purpose, create: true });
   }
   const showReadiness = $derived(
     Boolean(
@@ -252,10 +244,7 @@
               onOpenTranscribe={() =>
                 managed
                   ? openLocalRuntime()
-                  : void WindowingService.OpenTaskSettings(
-                      "voice-transcription",
-                      inputMode,
-                    ).catch((cause) => session.messages.fail(cause))}
+                  : onOpenSettingsSection("voice-transcription")}
               onOpenCleanup={onOpenProcessingSettings}
               onOpenDelivery={onOpenGeneralSettings}
             />
@@ -447,10 +436,7 @@
                     else if (section === "audio") onOpenAudioSettings();
                     else if (section === "shortcuts") onOpenShortcutSettings();
                     else if (section === "voice-transcription")
-                      void WindowingService.OpenTaskSettings(
-                        "voice-transcription",
-                        inputMode,
-                      ).catch((cause) => session.messages.fail(cause));
+                      onOpenSettingsSection("voice-transcription");
                     else onOpenServerSettings();
                   }}
                 >

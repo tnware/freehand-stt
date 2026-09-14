@@ -10,6 +10,8 @@
   import TitleBar from "$lib/components/shell/TitleBar.svelte";
   import HomeScreen from "$lib/components/home/HomeScreen.svelte";
   import StatusBar from "$lib/components/shell/StatusBar.svelte";
+  import SettingsPane from "$lib/components/settings/SettingsPane.svelte";
+  import { ShellNavigation } from "$lib/shell-navigation.svelte";
   import { paneByID, type PaneID } from "$lib/panes";
   import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
   import type { SettingsSectionID } from "$lib/navigation";
@@ -28,7 +30,9 @@
   } from "$lib/utils/connection";
 
   let { session = defaultSession }: { session?: Session } = $props();
-  let settingsOpen = $state(false);
+  const navigation = new ShellNavigation();
+  /** Non-workflow places. Null means a workflow chain is on screen. */
+  let auxPane = $state<"runtimes" | "settings" | null>(null);
   let aboutOpen = $state(false);
   let inputMode = $state("voice");
   // The status strip carries the same release identity About shows, read from
@@ -49,9 +53,16 @@
     return () => clearInterval(timer);
   });
 
+  // Runtimes is its own place on the rail but resolves to the settings pane's
+  // runtime section, so there is one implementation of that screen, not two.
   const activePane = $derived<PaneID>(
-    settingsOpen ? "settings" : (inputMode as PaneID),
+    auxPane === null
+      ? (inputMode as PaneID)
+      : navigation.active === "local-runtime"
+        ? "runtimes"
+        : "settings",
   );
+  const settingsOpen = $derived(auxPane !== null);
 
   const fileWorking = $derived(
     session.files.status.phase ===
@@ -133,17 +144,21 @@
         "Freehand is already running — that launch revealed this window instead of starting a second recorder.",
       );
     });
-    const offSettingsVisibility = Events.On(
-      "settings:visibility",
-      (event: { data: boolean }) => {
-        settingsOpen = event.data;
+    // The tray's Settings entry is now main-window navigation, carrying the
+    // section it asked for.
+    const offSettings = Events.On(
+      "settings:open",
+      (event: { data: string }) => {
+        openSettings((event.data || "general") as SettingsSectionID);
       },
     );
     const offTask = Events.On(
       "workspace:select-task",
       (event: { data: string }) => {
-        if (["voice", "file", "tts"].includes(event.data))
+        if (["voice", "file", "tts"].includes(event.data)) {
+          auxPane = null;
           inputMode = event.data;
+        }
       },
     );
     const offClose = Events.On("shell:close-requested", () => {
@@ -151,13 +166,6 @@
         if (alive) session.messages.fail(cause);
       });
     });
-    void WindowingService.SettingsVisible()
-      .then((visible) => {
-        if (alive) settingsOpen = visible;
-      })
-      .catch((cause) => {
-        if (alive) session.messages.fail(cause);
-      });
     const offAboutVisibility = Events.On(
       "about:visibility",
       (event: { data: boolean }) => {
@@ -192,7 +200,7 @@
       session.dispose();
       offLevel();
       offSecondInstance();
-      offSettingsVisibility();
+      offSettings();
       offTask();
       offClose();
       offAboutVisibility();
@@ -201,14 +209,19 @@
   });
 
   function openSettings(sectionID: SettingsSectionID = "general") {
-    void WindowingService.OpenTaskSettings(sectionID, inputMode).catch(
-      (cause) => session.messages.fail(cause),
-    );
+    navigation.openSettings(sectionID, inputMode);
+    auxPane = sectionID === "local-runtime" ? "runtimes" : "settings";
   }
   function openConnection(request: ConnectionManagerRequest) {
-    void WindowingService.OpenTaskConnection(request, inputMode).catch(
-      (cause) => session.messages.fail(cause),
-    );
+    navigation.openConnection(request, inputMode);
+    auxPane = "settings";
+  }
+  /** Leaving configuration returns to the workflow that opened it. */
+  function closeSettings() {
+    const origin = navigation.origin;
+    navigation.done();
+    auxPane = null;
+    if (origin && ["voice", "file", "tts"].includes(origin)) inputMode = origin;
   }
 
   function openAbout() {
@@ -234,17 +247,17 @@
       {voiceActive}
       {fileWorking}
       onSelect={(id) => {
-        if (id === "settings") {
-          void WindowingService.OpenSettings("general").catch((cause) =>
-            session.messages.fail(cause),
-          );
-          return;
-        }
+        if (id === "settings") return openSettings("general");
+        if (id === "runtimes") return openSettings("local-runtime");
+        auxPane = null;
         inputMode = id;
       }}
     />
 
-    <div class="flex min-w-0 flex-1 flex-col">
+    <div
+      class="flex min-w-0 flex-1 flex-col"
+      style:display={auxPane === null ? "flex" : "none"}
+    >
       <HomeScreen
         {session}
         {now}
@@ -256,9 +269,15 @@
         onOpenShortcutSettings={() => openSettings("shortcuts")}
         onOpenSpeechSettings={() => openSettings("speech")}
         onOpenGeneralSettings={() => openSettings("general")}
+        onOpenSettingsSection={openSettings}
+        onOpenConnection={openConnection}
         quickSettingsDisabled={settingsOpen}
       />
     </div>
+
+    {#if auxPane !== null}
+      <SettingsPane {session} {navigation} onReturn={closeSettings} />
+    {/if}
   </div>
 
   <StatusBar

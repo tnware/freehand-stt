@@ -39,8 +39,7 @@
     connectionResult,
   } from "$lib/stores/session-fixtures-data";
   import App from "../../../src/App.svelte";
-  import SettingsHost from "../../../src/SettingsHost.svelte";
-  import { controlledSaves } from "./save-control";
+    import { controlledSaves } from "./save-control";
   import { installConnectionWindows, wire } from "./connection-window-bridge";
   const params = new URLSearchParams(location.search);
   const child = params.has("settings-frame");
@@ -350,8 +349,6 @@
   }
 </script>
 
-{#if integrated}
-  <App {session} />
-{:else}
-  <SettingsHost {session} />
-{/if}
+<!-- Settings is a pane of the main window, so every scenario mounts the one
+     shell rather than a standalone settings renderer. -->
+<App {session} />

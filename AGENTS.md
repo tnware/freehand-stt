@@ -98,7 +98,7 @@ Use `freehand.db` with its distinct application identity. Start from defaults an
 - Preserve Unicode text.
 - Clipboard insertion must not destroy unrelated clipboard state or paste into the wrong HWND.
 - Use Wails single-instance ownership with encrypted second-instance messages. A second launch should reveal the main window rather than starting another recorder.
-- Tray Quit is the authoritative shutdown path; main-window close hides the task workspace. One reusable Settings window owns configuration and its inline Connections editor; its close action resolves drafts before hiding. Never open a separate native Connection Manager.
+- Tray Quit is the authoritative shutdown path; main-window close hides the workspace. The main window owns every place through one activity rail: the workflow chains, local runtimes, and configuration with its inline Connections editor. Settings is a pane, not a window — leaving it resolves drafts and returns to the workflow that opened it. Never open a separate native Settings or Connection Manager window.
 
 ## macOS interaction requirements
 

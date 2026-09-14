@@ -1,6 +1,7 @@
 import type { Component } from "svelte";
 import FileAudioIcon from "@lucide/svelte/icons/file-audio";
 import MicIcon from "@lucide/svelte/icons/mic";
+import CpuIcon from "@lucide/svelte/icons/cpu";
 import SlidersIcon from "@lucide/svelte/icons/sliders-horizontal";
 import Volume2Icon from "@lucide/svelte/icons/volume-2";
 
@@ -12,7 +13,7 @@ import Volume2Icon from "@lucide/svelte/icons/volume-2";
 export const WORKFLOW_PANES = ["voice", "file", "tts"] as const;
 export type WorkflowPane = (typeof WORKFLOW_PANES)[number];
 
-export const AUXILIARY_PANES = ["settings"] as const;
+export const AUXILIARY_PANES = ["runtimes", "settings"] as const;
 export type AuxiliaryPane = (typeof AUXILIARY_PANES)[number];
 
 export type PaneID = WorkflowPane | AuxiliaryPane;
@@ -34,6 +35,7 @@ export const PANES: Pane[] = [
   { id: "voice", label: "Voice transcription", icon: MicIcon, place: "top" },
   { id: "file", label: "Audio file", icon: FileAudioIcon, place: "top" },
   { id: "tts", label: "Text to speech", icon: Volume2Icon, place: "top" },
+  { id: "runtimes", label: "Local runtimes", icon: CpuIcon, place: "top" },
   { id: "settings", label: "Settings", icon: SlidersIcon, place: "foot" },
 ];
 

@@ -9,15 +9,17 @@ import (
 )
 
 func TestOpeningMainOrSettingsDismissesOnlyPopover(t *testing.T) {
-	a := &App{mainWindow: &windowController{}, trayPopover: &windowController{pending: true}, settingsWindow: &windowController{}, settingsShell: &shellNavigation{}}
+	a := &App{mainWindow: &windowController{}, trayPopover: &windowController{pending: true}, shell: &shellNavigation{}}
 	a.showMain()
 	if a.trayPopover.pending || !a.mainWindow.pending {
 		t.Fatal("main did not dismiss popover and queue itself")
 	}
 	a.mainWindow.pending = false
 	a.trayPopover.pending = true
+	// Settings is a pane of the main window, so the tray entry reveals main
+	// and dismisses only the popover.
 	a.revealSettings("general")
-	if a.trayPopover.pending || a.mainWindow.pending || !a.settingsWindow.pending {
+	if a.trayPopover.pending || !a.mainWindow.pending {
 		t.Fatal("settings changed unrelated window or left popover")
 	}
 }

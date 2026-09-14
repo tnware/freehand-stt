@@ -647,6 +647,10 @@
     onOpenShortcutSettings={() => (openedSettings = "Shortcut settings")}
     onOpenSpeechSettings={() => (openedSettings = "Speech settings")}
     onOpenGeneralSettings={noop}
+    onOpenSettingsSection={(section) =>
+      (openedSettings = `${section} settings`)}
+    onOpenConnection={(request) =>
+      (openedSettings = `Edit ${request.id || "connections"} for ${request.purpose}`)}
   />
     </div>
   </div>

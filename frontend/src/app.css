@@ -483,11 +483,12 @@ html.dark[data-material="mica"] #app {
   }
 }
 
-/* The settings shell is fixed to the WebView. Only its navigation and content
- * panes scroll; a viewport-height body would add an outer scroller under zoom. */
-html:has([data-window="settings"]) {
+/* Settings is a pane inside the main window now, not a window of its own.
+ * Only its navigation and content columns scroll; a viewport-height body would
+ * add an outer scroller under zoom. */
+html:has([data-pane="settings"]) {
   overflow: clip;
 }
-html:has([data-window="settings"]) body {
+html:has([data-pane="settings"]) body {
   min-height: 0;
 }

@@ -3,64 +3,58 @@ package app
 import (
 	"reflect"
 	"testing"
-
-	"github.com/tnware/freehand-stt/internal/config"
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-func TestSettingsTaskReturnWaitsForMainListeners(t *testing.T) {
-	a := &App{mainWindow: &windowController{}, settingsWindow: &windowController{}, shell: &shellNavigation{}, settingsShell: &shellNavigation{}}
-	a.settingsReady()
-	a.finishSettings("file")
-	if !a.settingsShell.runtimeReady || a.shell.runtimeReady || a.shell.event != "workspace:select-task" || a.shell.value != "file" {
-		t.Fatal("task return crossed renderer readiness boundaries")
+// Settings is a pane of the main window. Revealing it must therefore be main
+// window navigation, delivered through the one shell readiness handshake
+// rather than a second renderer's.
+func TestSettingsRevealNavigatesTheMainShell(t *testing.T) {
+	a := &App{mainWindow: &windowController{}, shell: &shellNavigation{}}
+	a.revealSettings("speech")
+	if !a.mainWindow.pending {
+		t.Fatal("revealing settings did not reveal the main window")
 	}
+	if a.shell.event != settingsOpenEvent || a.shell.value != "speech" {
+		t.Fatalf("queued event=%q value=%q", a.shell.event, a.shell.value)
+	}
+
 	var got []string
 	a.shell.ready(func(event, value string) { got = append(got, event+":"+value) })
-	a.shell.ready(func(event, value string) { t.Fatal("task return replayed") })
-	if !reflect.DeepEqual(got, []string{"workspace:select-task:file"}) {
-		t.Fatalf("return event=%v", got)
+	a.shell.ready(func(string, string) { t.Fatal("settings request replayed") })
+	if !reflect.DeepEqual(got, []string{"settings:open:speech"}) {
+		t.Fatalf("delivered=%v", got)
 	}
 }
 
-func TestSettingsConstructorRetainsExistingWindow(t *testing.T) {
-	window := &application.WebviewWindow{}
-	a := &App{settingsWindow: &windowController{window: window}}
-	// No native factory is configured: an existing Settings window must suffice.
-	a.newSettingsWindow()
-	a.newSettingsWindow()
-	if a.settingsWindow.current() != window {
-		t.Fatal("settings constructor replaced the retained window")
+// A tray request without a section still has to land somewhere specific.
+func TestSettingsRevealDefaultsToGeneral(t *testing.T) {
+	a := &App{mainWindow: &windowController{}, shell: &shellNavigation{}}
+	a.revealSettings("")
+	if a.shell.value != "general" {
+		t.Fatalf("section=%q, want general", a.shell.value)
 	}
 }
 
-func TestDedicatedSettingsNativeReadinessAndClose(t *testing.T) {
-	a := &App{mainWindow: &windowController{}, settingsWindow: &windowController{}, shell: &shellNavigation{}, settingsShell: &shellNavigation{}}
-	a.requestSettingsClose()
-	a.revealSettings("speech")
-	a.revealSettings("audio")
-	if a.mainWindow.pending || !a.settingsWindow.pending {
-		t.Fatal("Settings revealed unrelated main or lost reveal")
+// Leaving configuration returns to whichever workflow opened it, and only when
+// one did: a general visit has nowhere in particular to go back to.
+func TestSettingsFinishReturnsToTheOriginWorkflow(t *testing.T) {
+	a := &App{mainWindow: &windowController{}, shell: &shellNavigation{}}
+	a.finishSettings("file")
+	if a.shell.event != "workspace:select-task" || a.shell.value != "file" {
+		t.Fatalf("queued event=%q value=%q", a.shell.event, a.shell.value)
 	}
+
 	var got []string
-	a.shellReady()
-	if a.settingsShell.runtimeReady {
-		t.Fatal("main readiness leaked to Settings")
+	a.shell.ready(func(event, value string) { got = append(got, event+":"+value) })
+	if !reflect.DeepEqual(got, []string{"workspace:select-task:file"}) {
+		t.Fatalf("delivered=%v", got)
 	}
-	a.settingsShell.ready(func(e, v string) { got = append(got, e) })
-	if !reflect.DeepEqual(got, []string{"settings:open", "settings:close-requested"}) {
-		t.Fatalf("events=%v", got)
-	}
+}
+
+func TestSettingsFinishWithoutOriginNavigatesNowhere(t *testing.T) {
+	a := &App{mainWindow: &windowController{}, shell: &shellNavigation{}}
 	a.finishSettings("")
-	if a.mainWindow.pending || a.settingsWindow.pending {
-		t.Fatal("general finish revealed main or retained pending reveal")
-	}
-	a.finishSettings("tts")
-	if !a.mainWindow.pending {
-		t.Fatal("task finish did not reveal main")
-	}
-	options := settingsWindowOptions(false, config.AppearanceModeSystem, false)
-	if options.URL != "/?window=settings" || options.Name != "settings" || options.MinWidth != 560 || options.MinHeight != 520 || !options.Hidden {
-		t.Fatalf("settings options=%+v", options)
+	if a.mainWindow.pending || a.shell.event != "" {
+		t.Fatalf("general finish navigated: pending=%v event=%q", a.mainWindow.pending, a.shell.event)
 	}
 }

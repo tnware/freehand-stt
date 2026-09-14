@@ -49,7 +49,6 @@ const (
 	settingsChangedEvent        = "settings:changed"
 	settingsOpenEvent           = "settings:open"
 	settingsCloseRequestedEvent = "settings:close-requested"
-	settingsVisibilityEvent     = "settings:visibility"
 	aboutVisibilityEvent        = "about:visibility"
 )
 
@@ -95,8 +94,6 @@ type App struct {
 	mainWindow      *windowController
 	trayPopover     *windowController
 	shell           *shellNavigation
-	settingsWindow  *windowController
-	settingsShell   *shellNavigation
 	aboutWindow     *windowController
 	detailsWindow   *windowController
 	outputWindow    *windowController
@@ -146,8 +143,6 @@ func New(opts Options) (*App, error) {
 		mainWindow:     &windowController{},
 		trayPopover:    &windowController{},
 		shell:          &shellNavigation{},
-		settingsWindow: &windowController{},
-		settingsShell:  &shellNavigation{},
 		aboutWindow:    &windowController{},
 		detailsWindow:  &windowController{},
 		outputWindow:   &windowController{},
@@ -261,7 +256,9 @@ func New(opts Options) (*App, error) {
 		a.hideAbout,
 		a.aboutWindow.open,
 	)
-	windowing.ConfigureSettings(a.windowing, windowing.SettingsNavigation{Ready: a.settingsReady, Visible: a.settingsWindow.open, Finish: a.finishSettings})
+	// Settings lives in the main window, so its visibility is the main
+	// window's and its ready handshake is the shell's.
+	windowing.ConfigureSettings(a.windowing, windowing.SettingsNavigation{Ready: a.shellReady, Visible: a.mainWindow.open, Finish: a.finishSettings})
 	a.configureProcessOutput()
 	windowing.ConfigureTrayPopover(a.windowing, windowing.TrayPopoverNavigation{OpenMain: a.showMain, Hide: a.hideTrayPopover, Visible: a.trayPopover.open})
 	windowing.ConfigureConnections(a.windowing, windowing.ConnectionNavigation{
@@ -456,7 +453,6 @@ func (a *App) onStarted(*application.ApplicationEvent) {
 	// without post-creation movement or a visible placement correction.
 	a.newMainWindow()
 	a.newTrayPopoverWindow()
-	a.newSettingsWindow()
 	a.newAboutWindow()
 	a.newHistoryDetailsWindow()
 	a.newProcessOutputWindow()

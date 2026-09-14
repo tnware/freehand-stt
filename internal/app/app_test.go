@@ -131,7 +131,6 @@ func assertWindowThemeColour(t *testing.T, theme *application.WindowTheme, name 
 func TestAppWindowsDenyUnusedWebViewCapabilities(t *testing.T) {
 	for name, options := range map[string]application.WebviewWindowOptions{
 		"main":            mainWindowOptions(false, true, false, config.AppearanceModeSystem, false),
-		"settings":        settingsWindowOptions(false, config.AppearanceModeSystem, false),
 		"about":           aboutWindowOptions(false, config.AppearanceModeSystem, false),
 		"history details": historyDetailsWindowOptions(false, config.AppearanceModeSystem, false),
 		"Windows popover": trayPopoverWindowOptionsForPlatform("windows", config.AppearanceModeSystem, false),
