@@ -29,13 +29,21 @@ Switching models preserves your cleanup style, structure, and context choices.
 
 ## Choose a backend
 
+For local cleanup on supported Windows and macOS computers, follow
+[managed llama.cpp setup](../../guides/local-runtime/#local-cleanup-with-s1-mini).
+Freehand installs the runtime and downloads S1-mini only when you choose those
+actions. Select its built-in Connection for Cleanup and enable cleanup; the
+runtime supplies the S1-mini profile and disables reasoning.
+
+For a service you manage separately:
+
 - **[llama.cpp](../../backends/llama-cpp/#run-llamacpp-on-windows)** provides a native Windows launch recipe. Freehand sends `reasoning_effort: "none"` for S1-mini; the server and model template must honor it. Keep `--reasoning off` in the launch command.
 - **[vLLM](../../backends/vllm/#start-s1-mini-cleanup)** provides a Docker launch recipe. Freehand sends `reasoning_effort: "none"` for S1-mini; use the qualified server version and a template that honors it.
 - **[Generic OpenAI-compatible](../../backends/generic/)** can connect an existing chat endpoint. Configure reasoning off on that server; Settings shows **Disable on server**.
 
-Select the saved connection in **Settings → Cleanup**, enable cleanup, choose
-the model ID exposed by the server, and select **S1-mini by Superwhisper** as
-the model profile. Choose your output controls and save.
+For these manual services, select the saved connection in **Settings → Cleanup**,
+enable cleanup, choose the model ID exposed by the server, and select
+**S1-mini by Superwhisper** as the model profile. Choose your output controls and save.
 
 ## Language and results
 

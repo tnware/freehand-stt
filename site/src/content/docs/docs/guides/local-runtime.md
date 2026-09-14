@@ -3,17 +3,34 @@ title: Local runtimes
 description: Set up local transcription and cleanup with NeMo, whisper.cpp, and llama.cpp on Windows and macOS.
 ---
 
-On Windows and macOS, Freehand can install and manage NeMo-Speech.cpp for local Voice and
-audio-file transcription. The recommended model is **Nemotron 3.5 ASR streaming**
-with realtime enabled: words appear while you speak, and the final transcript
-uses the same cleanup and safe insertion rules as other dictation.
+Freehand can install local runtimes for speech recognition and transcript cleanup.
+Choose managed setup to let Freehand install the runtime, download a supported
+model when you ask, and start or stop it. You do not need to enter a server URL
+or API key. For live dictation, start with NeMo and its recommended Nemotron model.
 
-You can still connect to your own local, network, or hosted service. Each task
-selects a Connection; a managed Connection uses a runtime installed by Freehand.
-Your manual connections remain intact. Managed NeMo and llama.cpp support Apple
-Silicon and Intel Macs. Managed whisper.cpp is available on Windows only; its
-upstream release does not include a macOS server executable. On a Mac, use NeMo
-for managed transcription or a [manual whisper.cpp connection](../../backends/whisper-cpp/).
+## Choose a runtime and model
+
+| Runtime | Managed models and tasks | Supported computers |
+| --- | --- | --- |
+| NeMo-Speech.cpp | [Nemotron 3.5 Streaming](../../models/nemotron/) (recommended): live and completed transcription. [Parakeet TDT v3](../../models/parakeet/): completed transcription only. | Windows 11 x64; macOS 13+ on Apple Silicon or Intel |
+| whisper.cpp | Whisper Base (recommended), Small, or Medium: completed transcription only. | Windows 11 x64 only |
+| llama.cpp | [S1-mini by Superwhisper](../../models/s1-mini/) v1 Q4_K_M: English transcript cleanup only. | Windows 11 x64; macOS 13.3+ on Apple Silicon or Intel |
+
+Runtime binaries and models are **not bundled with Freehand**. Installation and
+model downloads are separate, explicit actions; browsing the catalog downloads
+nothing. Managed setup supports only the models above, not arbitrary Whisper
+checkpoints or llama.cpp models. There is no managed text-to-speech runtime.
+
+You can instead [configure a service manually](../connect-a-server/) on this
+computer, your network, or a hosted provider. Freehand connects to that service
+but does not install or manage it. Each task selects its own Connection; using
+a managed runtime leaves your manual connections intact and never falls back
+to them after a local failure. Different runtimes can run together, with one
+installation and one selected model at a time per runtime.
+
+Managed whisper.cpp is unavailable on macOS because upstream does not publish
+a macOS server executable. Use NeMo for managed transcription or a
+[manual whisper.cpp connection](../../backends/whisper-cpp/).
 
 ## Before installing
 
@@ -86,9 +103,7 @@ progress and its result remain visible there. The chevron opens the full setup,
 model catalog, and runtime preferences. These actions never select a different
 Connection for your tasks.
 
-The runtime list also offers **whisper.cpp** for completed transcription and
-**llama.cpp** for local cleanup. Each runtime is installed once and runs one
-selected model at a time. Different runtimes can run together.
+Choose a model from the runtime's catalog for the task you need.
 
 ### whisper.cpp transcription
 
@@ -265,5 +280,5 @@ startup fails, retry after freeing computer resources or return explicitly to a 
 endpoint. Freehand does not replay a failed realtime recording; start a new one.
 
 Advanced backend flags, custom model files, alternative runtime versions, and
-LAN serving belong in a separately managed server. Use a
-[manual NeMo connection](../../backends/nemo-speech/) for those deployments.
+LAN serving belong in a separately managed server. Follow the
+[backend guides](../../backends/) for those deployments.

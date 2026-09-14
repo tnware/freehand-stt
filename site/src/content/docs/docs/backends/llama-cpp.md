@@ -5,6 +5,11 @@ description: Connect llama.cpp for transcript cleanup with S1-mini or your own i
 
 Use **llama.cpp** to clean up completed transcripts with a text model you host.
 
+For S1-mini, [managed local setup](../../guides/local-runtime/#local-cleanup-with-s1-mini)
+can install and run llama.cpp inside Freehand on supported Windows and macOS
+computers. It supports S1-mini cleanup only. The instructions below are for a
+manually configured service, including custom cleanup models.
+
 ## Run llama.cpp on Windows
 
 Install the Windows package, then open a new PowerShell window:
@@ -57,6 +62,8 @@ explains raw fallback and the trained S1-mini controls.
 
 ## Configure Freehand
 
+For a manually configured service:
+
 1. Create a **Cleanup** connection in **Settings → Connections**, using the **llama.cpp** profile.
 2. Name it and enter the chat API base URL, normally ending in `/v1`.
 3. Configure authentication and HTTP permission, then **Save connection**. In **Settings → Cleanup**, select that connection, enable cleanup, and list models or enter the served model ID.
@@ -76,9 +83,9 @@ Freehand sends the model, system/user string messages, temperature zero, and
 reporting `finish_reason=length` causes Freehand to use the raw transcript
 instead of incomplete cleanup output.
 
-Choose the **model profile** separately: Generic uses your instruction; S1-mini
-uses its fixed prompt and trained controls. Selecting llama.cpp does not select
-or load a cleanup model for you.
+For a manual Connection, choose the **model profile** separately: Generic uses
+your instruction; S1-mini uses its fixed prompt and trained controls. Choosing
+the llama.cpp backend profile does not select or load a cleanup model for you.
 
 ## Scope and limits
 

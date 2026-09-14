@@ -7,9 +7,13 @@ The **Nemotron 3.5 ASR streaming** model profile supports NVIDIA's
 **Nemotron 3.5 ASR streaming 0.6B** through **[NeMo-Speech.cpp](../../backends/nemo-speech/)**.
 NeMo-Speech.cpp is the server; Nemotron is the model it runs.
 
+For local use on Windows or macOS, follow [managed NeMo setup](../../guides/local-runtime/#set-up-local-transcription).
+Nemotron is the recommended managed speech model. Freehand supplies its profile
+when you select the built-in Connection; you enable live mode in Voice.
+
 ## What the profile adds
 
-Choose **Nemotron 3.5 ASR streaming** beneath the model picker in
+For a manual Connection, choose **Nemotron 3.5 ASR streaming** beneath the model picker in
 **Settings → Voice transcription** or **Audio-file transcription**.
 Voice's **Transcription** quick settings offers the same profile selection.
 
@@ -27,6 +31,8 @@ turning it off restores completed recording and checkpoint behavior.
 Audio-file settings remain independent.
 
 ## Connect and select the model
+
+For a manually configured NeMo service:
 
 1. Follow the [NeMo-Speech.cpp setup guide](../../backends/nemo-speech/#connect-freehand) to add the server connection.
 2. In the workflow's settings, select that connection and the loaded model ID.

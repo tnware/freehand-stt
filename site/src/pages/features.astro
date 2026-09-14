@@ -2,6 +2,8 @@
 import ProductLayout from "../layouts/ProductLayout.astro";
 import OverlayExplorer from "../components/OverlayExplorer.astro";
 import FeatureIcon from "../components/FeatureIcon.astro";
+import ProviderIcon from "../components/ProviderIcon.astro";
+import { managedRuntimes } from "../data/managed-runtimes";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const href = (path: string) => `${base}${path}`;
 const recording = [
@@ -15,10 +17,10 @@ const results = [
   { title: "Files & speech playback", description: "Transcribe an audio file without a microphone shortcut. With text to speech enabled, listen to results or generate and save speech from text you enter.", link: "File and speech workflows", path: "/docs/guides/using-freehand/#audio-files" },
 ];
 ---
-<ProductLayout current="features" path="features/" title="Features — Freehand" description="Explore Freehand’s customizable overlay, recording controls, vocabulary, transcript recovery, and optional session history.">
+<ProductLayout current="features" path="features/" title="Features — Freehand" description="Set up local speech runtimes, customize the overlay, and explore recording controls, vocabulary, transcript recovery, and optional history.">
   <header class="page-heading">
     <h1>Features</h1>
-    <p class="lede">Set your recording shortcuts, customize the overlay, and keep completed transcripts ready to copy.</p>
+    <p class="lede">Run speech models locally or connect your own service. Set your recording shortcuts, customize the overlay, and keep completed transcripts ready to copy.</p>
   </header>
   <section class="overlay-feature" aria-labelledby="overlay-title">
     <div class="overlay-copy">
@@ -32,6 +34,22 @@ const results = [
       <a class="text-link" href={href("/docs/guides/using-freehand/#finding-and-adjusting-settings")}>Overlay settings →</a>
     </div>
     <OverlayExplorer />
+  </section>
+  <section class="feature-section" aria-labelledby="local-runtimes">
+    <div class="section-heading">
+      <div><h2 id="local-runtimes">Run locally</h2><p>Install a runtime, download a model, and start it from Freehand. Its Connection appears automatically, ready to select for your task.</p></div>
+      <a class="text-link" href={href("/docs/guides/local-runtime/")}>Local setup guide →</a>
+    </div>
+    <div class="runtime-list">{managedRuntimes.map(runtime => <article>
+      <div class="runtime-heading"><ProviderIcon profile={runtime.backend} size={30} /><h3>{runtime.name}</h3><span>{runtime.platforms}</span></div>
+      <div><p class="runtime-models">{runtime.models}</p><p>{runtime.purpose}</p></div>
+      <a class="text-link" href={href(runtime.guide)}>Set up {runtime.name} →</a>
+    </article>)}</div>
+    <div class="runtime-details">
+      <p>Use CPU or supported GPU acceleration: NVIDIA CUDA on Windows and Metal on Apple Silicon. Intel Macs use CPU. Freehand checks your host before offering an installation.</p>
+      <p>Start and stop runtimes, follow downloads, and inspect recent output with your consent. Different runtimes can run together; each loads one model at a time. Quitting Freehand stops the processes it owns.</p>
+    </div>
+    <p class="runtime-note">Models are separate downloads, not bundled with the app. These managed runtimes cover recognition and cleanup; text to speech uses your own service. Local recognition stays on this computer, but a remote cleanup connection receives the transcript.</p>
   </section>
   <section class="feature-section" aria-labelledby="recording-title">
     <h2 id="recording-title">Recording controls</h2>
@@ -53,6 +71,15 @@ const results = [
   dd { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.65; }
   .feature-section { padding: 34px 0; border-top: 1px solid var(--line); }
   .feature-section > h2 { margin-bottom: 26px; font-size: 25px; }
+  .runtime-list article { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr) auto; align-items: center; gap: 24px; padding: 24px 0; border-top: 1px solid var(--line); }
+  .runtime-heading { display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; align-items: center; }
+  .runtime-heading h3 { font-size: 18px; }
+  .runtime-heading span { grid-column: 2; color: var(--muted); font-size: 12px; margin-top: 5px; }
+  .runtime-list p { margin: 5px 0 0; font-size: 13px; color: var(--muted); }
+  .runtime-list .runtime-models { color: var(--ink); font-size: 14px; margin: 0; }
+  .runtime-details { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .runtime-details p { color: var(--muted); font-size: 14px; }
+  .runtime-note { color: var(--muted); font-size: 12px; margin: 12px 0 0; }
   .feature-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 36px; }
   .feature-list article { min-width: 0; display: flex; flex-direction: column; }
   .feature-list h3 { font-size: 18px; }
@@ -62,6 +89,8 @@ const results = [
   .feature-reference p { margin: 0; }
   .feature-reference a { flex: none; }
   @media (max-width: 800px) {
+    .runtime-list article, .runtime-details { grid-template-columns: 1fr; gap: 12px; }
+    .feature-section .section-heading { flex-direction: column; gap: 12px; }
     .overlay-feature { grid-template-columns: 1fr; gap: 28px; }
     .feature-list { grid-template-columns: 1fr; gap: 26px; }
     .feature-reference { flex-direction: column; gap: 8px; }

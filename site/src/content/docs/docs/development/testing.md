@@ -335,6 +335,14 @@ descriptions. Keep page titles consistent and supporting feature sections
 text-first. The app-preview suite checks hero icon visibility on narrow screens
 and without JavaScript, while preserving the explanatory text and guide links.
 
+For local setup discovery, check the homepage's local and manual setup paths,
+the runtime/model choices on Features, and installation labels in the Backends
+and Models directories. Only NeMo, Windows whisper.cpp, and llama.cpp with
+S1-mini should offer installation in Freehand; compatible remote models and
+speech generation must not inherit that label. Follow the local setup links
+through to their guide sections with the production base path. Check narrow
+layouts and no-JavaScript access as well as desktop presentation.
+
 ## CI workflow acceptance
 
 Run the dependency-free selection/gate regressions and workflow wiring checks:

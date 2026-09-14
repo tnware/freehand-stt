@@ -44,6 +44,11 @@ apps display **Freehand**. Grant access to the app you actually run.
 
 ## Choose a workflow
 
+For recognition and optional cleanup on this Mac, use [managed local setup](../local-runtime/).
+That guide lists supported runtimes, models, and macOS versions. You can also
+connect a service you manage yourself or a hosted provider. Text to speech needs
+a manually configured service.
+
 - **Voice dictation** needs a microphone and a selected transcription service.
 - **Audio file transcription** needs its selected service, but no microphone,
   Accessibility permission, or recording shortcut.

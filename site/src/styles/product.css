@@ -74,6 +74,12 @@ p { text-wrap: pretty; }
 .section-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; margin-bottom: 30px; }
 .section-heading p { max-width: 590px; margin: 12px 0 0; color: var(--muted); font-size: 15px; }
 .product-section { padding: 44px 0; border-top: 1px solid var(--line); }
+.setup-options { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+.setup-options h2 { font-size: 24px; }
+.setup-options p { color: var(--muted); font-size: 15px; max-width: 520px; }
+.backend-setup-note { color: var(--muted); font-size: 14px; max-width: 850px; }
+.backend-setup-note strong { color: var(--ink); font-weight: 500; }
+@media (max-width: 800px) { .setup-options { grid-template-columns: 1fr; gap: 28px; } }
 .compact-hero { display: grid; grid-template-columns: minmax(0,.78fr) minmax(0,1.22fr); gap: clamp(32px, 4vw, 64px); align-items: center; padding: 66px 0 58px; }
 .compact-hero h1 span { color: var(--accent); }
 .compact-hero .lede { font-size: 17px; max-width: 510px; }

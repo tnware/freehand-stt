@@ -7,9 +7,10 @@ import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 
 Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
 services you choose. Start with voice dictation, transcribe an audio file, or
-generate speech from text. Windows users can choose the optional
-[managed local speech runtime](../guides/local-runtime/) instead of configuring
-a speech server.
+generate speech from text. For local recognition and cleanup, choose an optional
+[managed local runtime](../guides/local-runtime/) instead of configuring a server.
+Available runtimes vary by platform. Models are not bundled with Freehand;
+runtime installation and model downloads are explicit setup actions.
 
 Freehand is **free forever and open source**, with no Freehand subscription or
 account. Your chosen provider or hosting may have its own costs. A dedicated
@@ -19,8 +20,9 @@ service if your PC lacks the resources, or you want to keep them for other work.
 ## What you need
 
 - Windows 11 x64 with WebView2, or macOS 13+ on Apple Silicon or Intel.
-- The managed NeMo runtime on Windows or macOS for recognition, or a reachable compatible
-  service for your task (see the [backend guides](../backends/)).
+- A [managed local runtime](../guides/local-runtime/) for recognition or cleanup,
+  or a reachable compatible service for your task (see the [backend guides](../backends/)).
+  Text to speech requires a manually configured service.
 - For a manual service: its base URL, model ID (except whisper.cpp's server-loaded model), and API key
   when authentication is required.
 
@@ -50,11 +52,13 @@ Freehand opens **Voice** with a **Set up voice transcription** screen. To work
 with a recording or generate speech instead, choose **Audio file** or **Text to
 speech** at the top. You can set up each task independently.
 
-For the recommended Windows local setup, follow
-[Local speech runtime](../guides/local-runtime/) to install NeMo and download
-Nemotron 3.5 streaming. It enables live microphone transcription without a
-manually entered server URL. Audio files use the same local model in completed
-mode. Cleanup and speech generation still need their own services.
+For the recommended local setup on Windows or macOS, follow
+[Local runtimes](../guides/local-runtime/) to install NeMo, download
+Nemotron 3.5 Streaming, and enable live microphone transcription without entering
+a server URL. Select its built-in Connection separately for Voice and Audio file;
+files use the runtime's selected model in completed mode. Optional local cleanup
+uses managed llama.cpp with S1-mini. Speech generation needs a manually configured
+service.
 
 To connect a manual service from your chosen task:
 

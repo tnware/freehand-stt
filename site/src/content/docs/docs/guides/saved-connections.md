@@ -12,7 +12,7 @@ picker. Search by name, backend, or address, then select an entry to edit it.
 
 ## Built-in local connections
 
-On Windows, each configured [local runtime](../local-runtime/) appears automatically
+On supported Windows and macOS computers, each configured [local runtime](../local-runtime/) appears automatically
 as a **Built-in** Connection. Install its runtime and model, start it, then select
 it directly from a compatible task's connection picker. No separate connection
 creation, URL, or API key is needed. llama.cpp with S1-mini appears for Cleanup;

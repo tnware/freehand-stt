@@ -8,6 +8,11 @@ both a model and a backend that can serve it, then select the matching Freehand
 profile from the table below. A different size, quantization, or server alias
 does not automatically change the profile; check the model guide's requirements.
 
+To install a model through Freehand rather than manage a server yourself, see
+the [managed runtime and model choices](../../guides/local-runtime/#choose-a-runtime-and-model).
+Only that catalog is available for managed downloads; the families below also
+include models that need a manually configured service.
+
 ## Families with a Freehand path
 
 | Family | Backend | Freehand model profile |

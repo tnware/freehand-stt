@@ -37,9 +37,12 @@ guide's server version and model requirements before configuring a connection.
 
 ## Run a backend
 
-Choose a server for the operation you need. The optional
-[managed Windows NeMo runtime](../guides/local-runtime/) handles local speech
-installation and model downloads. The other servers below are managed separately.
+For installation inside Freehand, start with [Local runtimes](../guides/local-runtime/).
+That guide lists the supported NeMo, whisper.cpp, and llama.cpp models, tasks,
+and platforms. Downloads are explicit; managed setup does not include text to speech.
+
+The launch recipes below are for services you manage separately. Use them for
+other models, custom runtime settings, or a server on another machine.
 
 | Server                    | Launch instructions                                                                                             | Freehand operation                         |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
@@ -77,11 +80,13 @@ runs transcription. Use a short recording or voice preview to try your selection
 ## Choose profiles per operation
 
 Voice transcription, Audio-file transcription, Cleanup, and Text to speech each
-have their own connection and model settings. They can share a saved connection
-or use different servers. Manage
-endpoint, authentication, and backend profile in **Settings → Connections**.
-Choose models, model profiles, voices, and other model options in feature settings;
-Freehand remembers those options for each connection and model.
+select their own connection. Tasks using the same managed runtime share its
+selected model and get the matching model profile automatically.
+
+For manual connections, manage endpoint, authentication, and backend profile in
+**Settings → Connections**. Choose models, model profiles, voices, and other
+model options in feature settings; Freehand remembers those options for each
+connection and model.
 
 ## Beyond the current contract
 

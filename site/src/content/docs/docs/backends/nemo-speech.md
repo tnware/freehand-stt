@@ -13,7 +13,7 @@ For automatic language detection with completed recordings, choose the
 
 ## Run the server
 
-On Windows, [managed local setup](../../guides/local-runtime/) can install NeMo,
+On Windows and macOS, [managed local setup](../../guides/local-runtime/) can install NeMo,
 download a supported speech model, and start the server for you. The instructions
 below are for manually managed local or remote servers.
 

@@ -6,12 +6,17 @@ description: Choose model behavior independently of your server connection.
 A **connection** tells Freehand where your server is and which backend API it
 uses. A **model** is the ID that server should run. A **model profile** tells
 Freehand how to use that model, including its languages, recognition hints, and
-output controls. Select the profile yourself, even when the server uses a
-familiar model name or a custom alias.
+output controls. For a manual Connection, select the profile yourself, even
+when the server uses a familiar model name or a custom alias.
+
+For installation inside Freehand, see [Local runtimes](../guides/local-runtime/#choose-a-runtime-and-model).
+That guide lists the managed models and supported computers. A managed
+Connection gets its model profile from the selected runtime model; you do not
+need to enter a model ID or choose its profile manually.
 
 ## Choose a model profile
 
-Open **Settings → Voice transcription**, **Audio-file transcription**, **Cleanup**, or **Text to speech**.
+For a manual Connection, open **Settings → Voice transcription**, **Audio-file transcription**, **Cleanup**, or **Text to speech**.
 Choose an active connection, choose or enter the model, and review **Model
 profile** directly beneath it. Choose a specialized profile only when you know
 that is the model your server is running, then choose **Save** or **Save and return**.
@@ -29,11 +34,12 @@ Kokoro speech, and cleanup with your own instructions. A dedicated model profile
 adds controls for that model and shows the options its backend supports.
 Explore the [model directory](../../models/) for what each profile adds in Freehand.
 
-Model discovery reads metadata only. Freehand does not infer a model profile
-from a name, download a model, or run one to detect its capabilities. For
-whisper.cpp, the model remains the one already loaded by the server.
+Model discovery reads metadata only. It does not infer a model profile from a
+name, download a model, or run one to detect its capabilities. Manual whisper.cpp
+connections use the model already loaded by the server; managed whisper.cpp
+loads the model you select in Local runtime.
 
-Voice's **Transcription** quick settings also let you choose a model profile.
+For a manual Connection, Voice's **Transcription** quick settings also let you choose a model profile.
 With NeMo-Speech.cpp/Nemotron, vLLM/Qwen3-ASR, or vLLM/Voxtral Mini Realtime,
 enable **Realtime transcription** for live results and optional overlay captions.
 Turning realtime off keeps the same connection and model for completed
@@ -50,6 +56,10 @@ recordings. Audio-file transcription has its own selection.
 - [Qwen3-TTS](./qwen3-tts/): text to speech with preset voices, languages, and style instructions.
 
 ## Remember settings for each model
+
+The model ID picker below applies to manual Connections. For a managed
+Connection, choose a downloaded model in the runtime controls; every task using
+that runtime shares its selected model.
 
 Voice, Audio file, Cleanup, and Text to speech use the same searchable **Model**
 picker in quick controls and Settings. **Saved** identifies remembered options,

@@ -2,6 +2,7 @@
 import ProductLayout from "../layouts/ProductLayout.astro";
 import ModelIcon from "../components/ModelIcon.astro";
 import ProviderIcon from "../components/ProviderIcon.astro";
+import ManagedAvailability from "../components/ManagedAvailability.astro";
 import { modelProfiles } from "../data/models";
 import { modelFamilies } from "../data/model-families";
 import { availableBackends } from "../data/backends";
@@ -16,6 +17,7 @@ const backendIcon = (guide: string) => availableBackends.find((backend) => backe
 ---
 <ProductLayout current="models" title="Models & model families — Freehand" description="Whisper, Kokoro, and dedicated model profiles for transcription, cleanup, and speech. Compare controls and compatible backends by task." path="models/">
   <header class="page-heading"><h1>Models</h1><p class="lede">Speech and text models you can use with Freehand. Some use Generic model behavior; others have a dedicated profile for model-specific controls.</p></header>
+  <p class="backend-setup-note">Look for <strong>Install in Freehand</strong> to find models available through local setup. Other entries describe models you can connect to through your own service, not downloads Freehand manages. <a class="text-link" href={href("/docs/guides/local-runtime/#choose-a-runtime-and-model")}>Compare local choices →</a></p>
   <p class="catalog-note"><strong>Check your release.</strong> Some profiles listed here may not yet be in your installed version. Support also depends on the backend, server version, and checkpoint. Each entry identifies which model behavior to select in Freehand.</p>
   {groups.map((group) => <section class="model-section" aria-label={group.title}>
     <h2>{group.title}</h2>
@@ -24,6 +26,7 @@ const backendIcon = (guide: string) => availableBackends.find((backend) => backe
       <p class="model-behavior">{model.behavior}</p>
       <dl class="model-controls">{model.controls.map((control) => <div><dt>{control.name}</dt><dd>{control.detail}</dd></div>)}</dl>
       <p class="model-note">{model.note}</p>
+      <ManagedAvailability model={model.id} />
       <div class="model-connections" aria-label="Compatible backends">{model.backends.map((backend) => <a href={href(backend.guide)}><ProviderIcon profile={backendIcon(backend.guide)} size={24} />{backend.name}</a>)}</div>
       <a class="text-link" href={href(model.guide)}>Set up {model.name} →</a>
     </article>)}</div>

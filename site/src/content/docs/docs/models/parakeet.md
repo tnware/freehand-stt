@@ -10,13 +10,18 @@ detects the spoken language automatically and produces punctuated text across
 
 ## Set up the model
 
-Install [NeMo-Speech.cpp v0.1.0](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/install.md)
+For local use on Windows or macOS, follow [managed NeMo setup](../../guides/local-runtime/#set-up-local-transcription),
+but choose **Parakeet TDT v3** from the catalog instead of Nemotron. Download and
+start it, then select the built-in NeMo Connection for Voice, Audio file, or both.
+Freehand supplies the model profile; Parakeet uses completed transcription only.
+
+For a manually configured service, install [NeMo-Speech.cpp v0.1.0](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/install.md)
 on your inference machine. Its `parakeet-tdt` model entry selects
 [nvidia/parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3).
 Follow the runtime's [model and server instructions](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/asr/models.md)
 to load it and expose the HTTP API.
 
-In Freehand:
+Connect that manual service in Freehand:
 
 1. Add a **NeMo-Speech.cpp** [connection](../../backends/nemo-speech/).
 2. Select that connection in **Voice transcription**, **Audio-file transcription**, or both.

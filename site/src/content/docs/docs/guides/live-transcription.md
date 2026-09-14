@@ -17,7 +17,7 @@ to be focused; manual-copy mode leaves the result ready to copy.
 | [Qwen3-ASR](../../models/qwen3-asr/)                 | [vLLM](../../backends/vllm/)                   | Automatic language detection                                   |
 | [Voxtral Mini Realtime](../../models/voxtral-realtime/) | [vLLM](../../backends/vllm/) | Automatic language detection |
 
-On Windows, the optional [managed local runtime](../local-runtime/) recommends Nemotron 3.5 with
+On Windows and macOS, the optional [managed local runtime](../local-runtime/) recommends Nemotron 3.5 with
 realtime enabled. Freehand installs and starts that runtime after your explicit
 setup actions. You can also use a manually configured server on Windows or
 macOS; follow the model guide for its setup and supported version.
@@ -50,8 +50,8 @@ Silence trimming, checkpoints, and automatic stop apply to completed recording
 and are bypassed in live mode. Turning realtime off keeps the same connection
 and model and restores your completed capture preferences.
 
-In manual mode, audio-file transcription has its own connection, model,
-language, and options; changing Voice does not change it. Managed mode uses its
-selected local model for both tasks, while files remain completed requests.
+Audio-file transcription has its own connection, language, and options. If Voice
+and Audio file select the same managed runtime, they share its selected model;
+otherwise, their model choices are independent. Files remain completed requests.
 Streaming results from an uploaded file is a separate feature from live
 microphone transcription.

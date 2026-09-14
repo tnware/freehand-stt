@@ -1,0 +1,27 @@
+---
+import { managedRuntimes } from "../data/managed-runtimes";
+interface Props {
+  backend?: string;
+  model?: string;
+}
+const { backend, model } = Astro.props;
+const runtime = managedRuntimes.find((entry) =>
+  model ? entry.modelProfiles.includes(model) : entry.backend === backend,
+);
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+{runtime ? (
+  <div class="managed-availability">
+    <a href={`${base}${runtime.guide}`}>Install in Freehand{model ? ` with ${runtime.name}` : ""} →</a>
+    <span>{runtime.platforms}</span>
+    {(!model || model === "whisper-family") && <span>{runtime.models}</span>}
+  </div>
+) : (
+  <p class="managed-availability manual-availability">Connect your own service</p>
+)}
+<style>
+  .managed-availability { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin: 18px 0 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.6; color: var(--muted); }
+  .managed-availability a { color: var(--accent); min-height: 32px; display: inline-flex; align-items: center; }
+  .managed-availability a:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .manual-availability { color: var(--muted); }
+</style>

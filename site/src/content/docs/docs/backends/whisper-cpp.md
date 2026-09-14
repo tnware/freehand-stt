@@ -4,14 +4,20 @@ description: Connect the native whisper.cpp HTTP server for microphone and file 
 ---
 
 The **whisper.cpp** transcription profile supports completed microphone and
-file uploads to the native HTTP server. Load the model and configure acceleration
-on that server. Freehand never calls its model-loading route.
+file uploads to the native HTTP server. Freehand never calls its model-loading
+route; the model loads when the server starts.
 
 ## Choose a deployment
 
-whisper.cpp runs natively on Windows. Docker is optional. Both expose the same
-HTTP API to Freehand, so choose the deployment that suits your server.
-The instructions below use PowerShell and the same model folder and local port.
+On Windows, [managed local setup](../../guides/local-runtime/#whispercpp-transcription)
+can install whisper.cpp, download a supported model, and start it inside
+Freehand. See the [managed model and platform choices](../../guides/local-runtime/)
+before installing; the large-v3 example below is a manual setup, not a managed
+catalog option. Managed whisper.cpp is unavailable on macOS.
+
+For a service you manage yourself, run whisper.cpp natively or in Docker and
+configure its model and acceleration there. The instructions below use PowerShell
+and the same model folder and local port.
 
 ## Download a model
 
@@ -75,8 +81,8 @@ prove GPU offload. In Freehand, choose **whisper.cpp**, base URL
 The model is **Server-loaded**. Save, then test a short recording.
 
 Press **Ctrl+C** in the server terminal to stop. Run the same command to
-restart. To change models, restart with a different `-m` path; Freehand does
-not load or switch server models. If another server already occupies 8051,
+restart. To change models, restart with a different `-m` path; a manual Freehand
+connection does not load or switch server models. If another server already occupies 8051,
 stop it or use a different port and update Freehand's base URL to match.
 
 ### Build a native CUDA server when needed

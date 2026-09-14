@@ -20,7 +20,7 @@ checks or explicit-copy setting; cancellation prevents automatic insertion.
 | ----------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Leave transcription unchanged | Keep **Cleanup** off; no chat endpoint is needed.                                                         |
 | Use your own cleanup model    | Enable processing, select **Generic**, and supply a compatible chat endpoint and model.                   |
-| Use S1-mini by Superwhisper   | Enable processing, select its dedicated profile, and connect a server hosting that English cleanup model. |
+| Use S1-mini by Superwhisper   | Enable cleanup with [managed llama.cpp](../local-runtime/#local-cleanup-with-s1-mini), or select its dedicated profile on a manually configured service. |
 
 :::tip[Compare both versions]
 Cleanup changes text and can make mistakes. Enable **History** before a run if
@@ -56,15 +56,19 @@ Credential Manager or macOS Keychain. Write instructions for how to edit the
 text, without a transcript placeholder. Freehand supplies the raw transcript
 separately and uses the selected cleanup connection's credentials.
 
-Select the model profile explicitly. Freehand does not recognize S1-mini from
-the model's name. Switching profiles preserves your custom instruction and
+For a manual connection, select the model profile explicitly. Freehand does not
+recognize S1-mini from the model's name. Switching profiles preserves your custom instruction and
 S1-mini choices for when you switch back.
 
 ## S1-mini by Superwhisper with llama.cpp
 
-Choose the **S1-mini by Superwhisper** model profile for English cleanup with
-styling, structure, and context controls. The [S1-mini model guide](../../models/s1-mini/)
-explains these controls and links to launch recipes for llama.cpp and vLLM.
+For English cleanup on this computer, follow [managed llama.cpp setup](../local-runtime/#local-cleanup-with-s1-mini)
+and select its built-in Connection in Cleanup. Check that guide for supported
+platforms. Local recognition and cleanup use separate runtimes and can run together.
+
+For a manual service, choose the **S1-mini by Superwhisper** model profile.
+The [S1-mini model guide](../../models/s1-mini/) explains its styling, structure,
+and context controls and links to launch recipes for llama.cpp and vLLM.
 For an existing Generic endpoint, disable reasoning on the server.
 
 ## Generation controls

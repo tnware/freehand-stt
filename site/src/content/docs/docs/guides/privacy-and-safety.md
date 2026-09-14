@@ -31,10 +31,13 @@ models requires internet access; browsing the catalog does not run inference.
 Other software running on the same computer can potentially access a loopback
 service, so a local listener is not a sandbox against other local programs.
 
-Managed mode affects Voice and audio-file recognition. If transcript cleanup is
-enabled, its separately configured server still receives the recognized text.
-Text-to-speech also keeps its own endpoint. Turn those features off or configure
-them locally if you do not want their text sent to a remote service.
+Each task selects its own Connection. Local Voice or audio-file recognition does
+not make cleanup local: if cleanup is enabled, its selected connection receives
+the recognized text. Choose [managed llama.cpp with S1-mini](../local-runtime/#local-cleanup-with-s1-mini)
+or another local cleanup service to keep that stage on this computer. Text to
+speech needs a manually configured endpoint; Freehand has no managed TTS runtime.
+Turn cleanup and speech off or configure them locally if you do not want their
+text sent to a remote service.
 
 Freehand keeps your manual connections and their API keys when you enable local
 recognition. It does not send those keys to the managed runtime. A runtime
