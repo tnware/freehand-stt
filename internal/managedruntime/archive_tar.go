@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -213,7 +214,12 @@ func verifyTarEntries(ctx context.Context, base string, entries []tarEntry) erro
 			return err
 		}
 		st, err := os.Lstat(filename)
-		if err != nil || !st.Mode().IsRegular() || st.Mode().Perm() != e.mode {
+		wantMode := e.mode
+		if runtime.GOOS == "windows" {
+			// Windows reports writable files as 0666, without POSIX execute bits.
+			wantMode = 0666
+		}
+		if err != nil || !st.Mode().IsRegular() || st.Mode().Perm() != wantMode {
 			return errIntegrity
 		}
 	}

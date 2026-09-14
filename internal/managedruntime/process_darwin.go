@@ -51,6 +51,11 @@ func runRuntimeSupervisor() int {
 	if child.Start() != nil {
 		return 125
 	}
+	return superviseRuntimeChild(kq, child, life, ready)
+}
+
+// The caller transfers the started child without reaping it first.
+func superviseRuntimeChild(kq int, child *exec.Cmd, life, ready *os.File) int {
 	pid := child.Process.Pid
 	// Observe exit without reaping the group leader. Its reserved PID prevents
 	// group-ID reuse until descendants have been killed and Wait reaps it.
@@ -58,14 +63,23 @@ func runRuntimeSupervisor() int {
 		{Ident: uint64(pid), Filter: unix.EVFILT_PROC, Flags: unix.EV_ADD | unix.EV_ENABLE, Fflags: unix.NOTE_EXIT},
 		{Ident: uint64(life.Fd()), Filter: unix.EVFILT_READ, Flags: unix.EV_ADD | unix.EV_ENABLE},
 	}
-	_, err = unix.Kevent(kq, changes, nil, nil)
+	_, err := unix.Kevent(kq, changes[:1], nil, nil)
+	// XNU's EVFILT_PROC attach returns ESRCH once the child has exited, even
+	// while its unreaped PID is still reserved. Only this registration error
+	// means there is no exit event left to await; other failures stay fatal.
+	exited := err == unix.ESRCH
+	if exited {
+		err = nil
+	} else if err == nil {
+		_, err = unix.Kevent(kq, changes[1:], nil, nil)
+	}
 	if err == nil {
 		var message [8]byte
 		binary.LittleEndian.PutUint64(message[:], uint64(pid))
 		_, err = ready.Write(message[:])
 	}
 	ready.Close()
-	if err == nil {
+	if err == nil && !exited {
 		events := make([]unix.Kevent_t, 2)
 		for {
 			_, err = unix.Kevent(kq, nil, events, nil)

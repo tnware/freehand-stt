@@ -16,9 +16,14 @@ model download failure/removal, unsupported platforms, premature child exit,
 readiness timeout, port conflicts, and shutdown during install/pull/start/run.
 Windows process tests must prove descendants cannot outlive the owner's Job
 Object, not just that the immediate child receives a kill request. macOS native
-tests exercise cancellation, natural exit, parent SIGKILL, descendant cleanup,
-and libproc rejection of foreign and dead listeners. Temporary fixture roots use
+tests exercise cancellation, natural exit (including commands that exit before
+exit-watch registration), parent SIGKILL, descendant cleanup, and libproc
+rejection of foreign and dead listeners. Temporary fixture roots use
 the physical macOS temporary directory so production path guards remain strict.
+Owned-process output lifecycle tests run only on Windows and macOS; portable
+output-buffer tests still run on Linux. Synthetic tar extraction tests run on
+all hosts, checking regular-file content and host file-mode semantics: exact
+POSIX permissions on Unix and writable-file attributes on Windows.
 
 `TestDarwinOfficialRuntimeArchives` is opt-in via
 `FREEHAND_MACOS_RUNTIME_ARCHIVES`, an isolated directory containing the official

@@ -4,13 +4,18 @@ package managedruntime
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
 
@@ -130,16 +135,136 @@ func TestDarwinOwnedTreeCancellationAndNaturalExit(t *testing.T) {
 }
 
 func TestDarwinImmediateCommandExit(t *testing.T) {
-	for i := 0; i < 10; i++ {
-		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-		p, err := launchOwned(ctx, "/usr/bin/true", nil, "", nil)
-		if err == nil {
-			err = p.wait(ctx)
-		}
-		cancel()
-		if err != nil {
-			t.Fatal("immediate successful exit lost", err)
-		}
+	for _, tc := range []struct {
+		exe  string
+		code int
+	}{{"/usr/bin/true", 0}, {"/usr/bin/false", 1}} {
+		t.Run(filepath.Base(tc.exe), func(t *testing.T) {
+			for i := 0; i < 10; i++ {
+				ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+				p, err := launchOwned(ctx, tc.exe, nil, "", nil)
+				if err != nil {
+					cancel()
+					t.Fatal("immediate exit failed supervision", err)
+				}
+				err = p.wait(ctx)
+				cancel()
+				if tc.code == 0 {
+					if err != nil {
+						t.Fatal("immediate successful exit lost", err)
+					}
+				} else {
+					var exitErr *exec.ExitError
+					if !errors.As(err, &exitErr) || exitErr.ExitCode() != tc.code {
+						t.Fatalf("immediate exit code %d lost: %v", tc.code, err)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestDarwinExitBeforeSupervisorRegistration(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		code         int
+		invalidQueue bool
+	}{{"success", 0, false}, {"nonzero", 7, false}, {"registration_error", 0, true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			kq, err := unix.Kqueue()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer unix.Close(kq)
+			unix.CloseOnExec(kq)
+			life, lifeWrite, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer life.Close()
+			defer lifeWrite.Close() // Keep lifetime open: exit alone must finish supervision.
+			readyRead, ready, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer readyRead.Close()
+			defer ready.Close()
+			child := exec.Command("/bin/sh", "-c", fmt.Sprintf("/bin/sleep 60 & echo $!; exit %d", tc.code))
+			child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+			output, err := child.StdoutPipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = child.Start(); err != nil {
+				t.Fatal(err)
+			}
+			pid := child.Process.Pid
+			reaped := false
+			defer func() {
+				if !reaped {
+					_ = unix.Kill(-pid, unix.SIGKILL)
+					_ = child.Wait()
+				}
+			}()
+			_ = output.(*os.File).SetReadDeadline(time.Now().Add(5 * time.Second))
+			var leaf int
+			if _, err = fmt.Fscanln(output, &leaf); err != nil || leaf <= 0 {
+				t.Fatal("descendant PID missing", err)
+			}
+			// Observe an actual zombie, without Wait (which would release the PID).
+			// No scheduling delay is used to manufacture the registration race.
+			deadline := time.Now().Add(5 * time.Second)
+			for {
+				info, err := unix.SysctlKinfoProc("kern.proc.pid", pid)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if info.Proc.P_stat == 5 { // SZOMB, from <sys/proc.h>.
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Fatal("child did not exit before registration")
+				}
+				runtime.Gosched()
+			}
+			if err := unix.Kill(leaf, 0); err != nil {
+				t.Fatal("descendant did not survive the leader", err)
+			}
+			queue := kq
+			if tc.invalidQueue {
+				queue = -1 // EBADF must not be mistaken for an already-exited child.
+			}
+			watchdog := time.AfterFunc(5*time.Second, func() { _ = lifeWrite.Close() })
+			defer watchdog.Stop()
+			got := superviseRuntimeChild(queue, child, life, ready)
+			reaped = true
+			if !watchdog.Stop() {
+				t.Fatal("supervisor waited for lifetime EOF after child exit")
+			}
+			want := tc.code
+			if tc.invalidQueue {
+				want = 125
+			}
+			if got != want {
+				t.Fatalf("pre-registration exit code = %d, want %d", got, want)
+			}
+			var message [8]byte
+			n, err := io.ReadFull(readyRead, message[:])
+			if tc.invalidQueue {
+				if n != 0 || err != io.EOF {
+					t.Fatalf("registration failure published readiness: %d bytes, %v", n, err)
+				}
+			} else {
+				if err != nil {
+					t.Fatal("pre-registration exit did not publish readiness", err)
+				}
+				if got := binary.LittleEndian.Uint64(message[:]); got != uint64(pid) {
+					t.Fatalf("ready PID = %d, want %d", got, pid)
+				}
+			}
+			awaitNativeExit(t, pid)
+			awaitNativeExit(t, leaf)
+		})
 	}
 }
 

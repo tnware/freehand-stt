@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -42,6 +43,9 @@ func TestProcessOutputChild(t *testing.T) {
 	os.Exit(0)
 }
 func TestProcessOutputDuringStartupAndFailure(t *testing.T) {
+	if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
+		t.Skip("owned runtime processes are supported only on Windows and macOS")
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	a := &outputStartupAdapter{launched: make(chan struct{}), finish: make(chan struct{})}
