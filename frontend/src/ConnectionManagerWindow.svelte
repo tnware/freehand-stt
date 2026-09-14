@@ -544,6 +544,7 @@
 <style>
   .manager-body {
     display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
     overflow: hidden;
@@ -552,20 +553,23 @@
     width: 100%;
     min-height: 0;
   }
+  /* The table keeps the full width and the detail sits under it, so the
+     columns that matter - endpoint, provider, used by - stay readable while
+     one connection is open. */
   .editing .connection-list {
-    display: none;
+    flex: 0 1 auto;
+    max-height: 46%;
+    border-bottom: 1px solid var(--hairline);
   }
   .connection-fields :global([role="group"]) {
     padding-top: 0.65rem;
     padding-bottom: 0.65rem;
     gap: 0.4rem;
   }
-  @media (min-width: 760px) {
+  @media (max-height: 620px) {
+    /* Not enough height for both: the detail wins, as it did before. */
     .editing .connection-list {
-      display: block;
-      width: 270px;
-      flex-shrink: 0;
-      border-right: 1px solid var(--hairline);
+      display: none;
     }
   }
 </style>
