@@ -47,6 +47,20 @@ Assert external behavior at these boundaries rather than source strings, markup
 snapshots, or private call ordering. Existing realtime fixtures continue
 to check loaded-model identity, final-only delivery, and no automatic replay.
 
+Rejected dictation starts must publish user feedback before capture, including
+unavailable managed profiles reached through toggle and hold commands. Exercise
+repeated rejection, a subsequent successful start, and rejection while a prior
+result remains available to copy. Keep cancellation, shutdown, and active-work
+fences intact. Native acceptance separately checks that an offline hotkey attempt
+shows the configured error overlay without activation, and that stopping or
+starting a runtime leaves the recording controls mounted at the same height.
+
+Overlay timeout tests use Go's virtual-time `synctest` to verify the five-second
+failure/copy notification lifetime, retained result state, renewed attempts,
+active-work protection, settings replay, preview isolation, and shutdown. Native
+acceptance checks the fade (or immediate hide with reduced motion) without focus
+changes; the in-app transcript and Copy action must remain available afterward.
+
 `TestManagedEndpointReachesSpeechClients` passes the real adapter's published
 endpoint to the production microphone, file, and realtime clients against a
 versioned NeMo fixture. It covers both qualified completed profiles and the

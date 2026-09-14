@@ -640,6 +640,24 @@ Owners still fence late preparation, cancel their contexts, and join their
 workers; file worker registration occurs inside its closed-state admission
 fence. Recording rechecks closure after potentially blocking speech preemption.
 
+Dictation owns rejected-start feedback as well as active-run status. Rejection
+before microphone capture must reach the status subscribers used by both the
+workspace and passive overlay, even when a global shortcut has no renderer call
+awaiting its error. Failure presentation must not replace pending copy recovery,
+release retained result capabilities, or overwrite active work. `StartRejected`
+distinguishes admission feedback from the retained result's delivery outcome, so
+the overlay shows a failure without old run timing and the workspace keeps Copy
+available alongside recovery. Runtime readiness
+changes update the mounted recording transport rather than replacing it with a
+different layout; Go remains authoritative for start admission.
+
+The overlay owner dismisses failed and copy-required presentations after five
+seconds without changing dictation state or retained result capabilities. Its
+version-fenced timer cannot hide newer feedback, active work, or a preview.
+Settings updates and closing a preview do not revive an expired outcome; a fresh
+status publication starts a new presentation interval. Shutdown stops the timer
+and fences callbacks before releasing the native surface.
+
 ## Shared post-processing outcome policy
 
 Dictation and stored-file transcription remain separate state machines. Each

@@ -61,6 +61,27 @@ func TestOverlayForStatus(t *testing.T) {
 	}
 }
 
+func TestRejectedStartShowsFailureWithoutPreviousRunMetadata(t *testing.T) {
+	settings := config.Default()
+	fake := &statusOverlayFake{}
+	service := NewService(settings, nil, nil)
+	service.newOverlay = func() (statusOverlay, error) { return fake, nil }
+	if err := service.ServiceStartup(context.Background(), application.ServiceOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	defer service.ServiceShutdown()
+	Start(service)
+	ApplyStatus(service, dictation.Status{State: dictation.Recording, Generation: 4, StartedAt: time.Now(), RecordingMode: dictation.RecordingHold, SegmentNumber: 2})
+	ApplyStatus(service, dictation.Status{State: dictation.Failed, Generation: 4, CanCopy: true})
+	for range 2 {
+		ApplyStatus(service, dictation.Status{State: dictation.Failed, Generation: 4, CanCopy: true, StartRejected: true})
+		last := fake.updates[len(fake.updates)-1]
+		if last.Kind != platform.OverlayFailed || !last.StartedAt.IsZero() || !last.FinishedAt.IsZero() || last.Checkpoints != 0 || last.Shortcut != "" {
+			t.Fatalf("rejected start showed old result metadata instead of failure: %+v", last)
+		}
+	}
+}
+
 func TestOptionsMapAllCuratedPreferences(t *testing.T) {
 	preferences := config.OverlayPreferences{
 		Layout: config.OverlayLayoutDetailed, Anchor: config.OverlayAnchorBottomRight,

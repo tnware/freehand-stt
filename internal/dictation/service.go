@@ -144,21 +144,26 @@ func (s *Service) StartRecording(mode RecordingMode) error {
 	if s.closed.Load() {
 		return errors.New("application is shutting down")
 	}
+	attempt := s.recorder.prepareStart()
 	if s.settings == nil {
-		return errors.New("complete setup before starting a recording")
+		err := errors.New("complete setup before starting a recording")
+		return s.recorder.rejectStart(attempt, err, "Complete setup before starting a recording.")
 	}
 	if err := config.ValidateVoiceRecording(s.settings.Current().VoiceTranscription); err != nil {
-		return err
+		return s.recorder.rejectStart(attempt, err, "Cannot start recording. Check the Voice connection, model, and settings.")
 	}
 	release, err := s.activity.BeginRecording()
 	if err != nil {
-		return err
+		if errors.Is(err, activity.ErrClosed) {
+			return err
+		}
+		return s.recorder.rejectStart(attempt, err, "Cannot start recording. Finish the audio-file transcription or stop speech playback, then try again.")
 	}
 	defer release()
 	if s.closed.Load() {
 		return activity.ErrClosed
 	}
-	return s.recorder.start(mode)
+	return s.recorder.startWithAttempt(mode, attempt)
 }
 
 func (s *Service) StopRecording() error {

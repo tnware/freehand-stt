@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { State, type Status } from "$lib/state";
-import { railPhase, showIdleShortcutGuidance, statusMessage } from "$lib/utils/status";
+import {
+  isCopyRequired,
+  isFailure,
+  canToggleRecording,
+  railPhase,
+  showIdleShortcutGuidance,
+  statusMessage,
+} from "$lib/utils/status";
 
 const status = (state: State, canCopy = false, message?: string): Status => ({
   live: false,
@@ -13,13 +20,35 @@ const status = (state: State, canCopy = false, message?: string): Status => ({
 });
 
 describe("status guidance", () => {
+  it("shows a rejected start as an error without losing a previous copy capability", () => {
+    const rejected: Status = {
+      ...status(
+        State.Failed,
+        true,
+        "Start the selected runtime, then try again.",
+      ),
+      startRejected: true,
+      transcript: "Previous result",
+    };
+    expect(isFailure(rejected)).toBe(true);
+    expect(isCopyRequired(rejected)).toBe(false);
+    expect(railPhase(rejected)).toBe("error");
+    expect(statusMessage(rejected)).toBe(rejected.message);
+    expect(canToggleRecording(rejected, false)).toBe(true);
+    expect(rejected.canCopy).toBe(true);
+  });
+
   it("shows the configured shortcut only while idle", () => {
     const shortcut = "Ctrl+Shift+Space";
 
     expect(showIdleShortcutGuidance(status(State.Idle), shortcut)).toBe(true);
     expect(showIdleShortcutGuidance(status(State.Idle), "")).toBe(false);
-    expect(showIdleShortcutGuidance(status(State.Failed), shortcut)).toBe(false);
-    expect(showIdleShortcutGuidance(status(State.Failed, true), shortcut)).toBe(false);
+    expect(showIdleShortcutGuidance(status(State.Failed), shortcut)).toBe(
+      false,
+    );
+    expect(showIdleShortcutGuidance(status(State.Failed, true), shortcut)).toBe(
+      false,
+    );
   });
 
   // The transport's stage has room for a clause, not a sentence, so the reason
@@ -32,7 +61,9 @@ describe("status guidance", () => {
   });
 
   it("falls back to a reason when the coordinator gives none", () => {
-    expect(statusMessage(status(State.Failed))).toContain("could not be transcribed");
+    expect(statusMessage(status(State.Failed))).toContain(
+      "could not be transcribed",
+    );
   });
 
   it("does not infer focus movement or zero dispatch from copy-required", () => {

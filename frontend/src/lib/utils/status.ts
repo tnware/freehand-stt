@@ -6,7 +6,8 @@ const TOGGLEABLE: State[] = [State.Idle, State.Failed, State.Recording];
 export const canToggleRecording = (status: Status, busy: boolean): boolean =>
   !busy && TOGGLEABLE.includes(status.state);
 
-export const isRecording = (status: Status): boolean => status.state === State.Recording;
+export const isRecording = (status: Status): boolean =>
+  status.state === State.Recording;
 
 /**
  * Copy-required preserves the transcript for explicit action. It may mean
@@ -14,10 +15,10 @@ export const isRecording = (status: Status): boolean => status.state === State.R
  * alone proves neither focus movement nor that no text was posted.
  */
 export const isCopyRequired = (status: Status): boolean =>
-  status.state === State.Failed && status.canCopy;
+  status.state === State.Failed && status.canCopy && !status.startRejected;
 
 export const isFailure = (status: Status): boolean =>
-  status.state === State.Failed && !status.canCopy;
+  status.state === State.Failed && (!status.canCopy || !!status.startRejected);
 
 /**
  * What the progress rail under the transport is doing.
@@ -64,5 +65,7 @@ export const statusMessage = (status: Status): string => {
 };
 
 /** Shortcut guidance describes how to begin, so it belongs only to idle. */
-export const showIdleShortcutGuidance = (status: Status, shortcut: string): boolean =>
-  status.state === State.Idle && shortcut.length > 0;
+export const showIdleShortcutGuidance = (
+  status: Status,
+  shortcut: string,
+): boolean => status.state === State.Idle && shortcut.length > 0;

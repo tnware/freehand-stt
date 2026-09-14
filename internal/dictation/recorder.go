@@ -74,6 +74,7 @@ type Status struct {
 	Generation                   uint64        `json:"generation"`
 	StartedAt                    time.Time     `json:"startedAt,omitempty"`
 	Message                      string        `json:"message,omitempty"`
+	StartRejected                bool          `json:"startRejected,omitempty"` // Admission feedback; the retained result generation is unchanged.
 	CanCancel                    bool          `json:"canCancel"`
 	CanCopy                      bool          `json:"canCopy"`
 	SegmentNumber                int           `json:"segmentNumber,omitempty"`
@@ -229,14 +230,27 @@ func (c *recorder) start(mode RecordingMode) error {
 	return c.startWithMode(mode)
 }
 
+type startAttempt struct {
+	epoch      uint64
+	generation uint64
+}
+
+// Fence the whole request, including service validation and activity admission.
+func (c *recorder) prepareStart() startAttempt {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return startAttempt{epoch: c.cancelEpoch, generation: c.status.Generation}
+}
+
 func (c *recorder) startWithMode(mode RecordingMode) error {
+	return c.startWithAttempt(mode, c.prepareStart())
+}
+
+func (c *recorder) startWithAttempt(mode RecordingMode, attempt startAttempt) error {
 	if mode != RecordingToggle && mode != RecordingHold {
 		return errors.New("recording mode is invalid")
 	}
 	startRequested := time.Now()
-	c.mu.Lock()
-	epoch := c.cancelEpoch
-	c.mu.Unlock()
 	c.transition.Lock()
 	defer c.transition.Unlock()
 	c.mu.Lock()
@@ -248,13 +262,18 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 		c.mu.Unlock()
 		return errors.New("dictation is already active")
 	}
-	if c.cancelEpoch != epoch {
+	if c.cancelEpoch != attempt.epoch || c.status.Generation != attempt.generation || c.rootContext.Err() != nil {
 		c.mu.Unlock()
 		return context.Canceled
 	}
 	c.mu.Unlock()
 	profile, err := c.captureRequestProfile()
 	if err != nil {
+		message := "Cannot start recording. Check Voice settings, connection, and credentials."
+		if errors.Is(err, settings.ErrManagedUnavailable) {
+			message = "Managed runtime is unavailable. Start or repair the selected runtime, then try again."
+		}
+		c.rejectStartLocked(attempt, err, message)
 		return err
 	}
 	defer func() {
@@ -278,7 +297,7 @@ func (c *recorder) startWithMode(mode RecordingMode) error {
 		c.mu.Unlock()
 		return errors.New("dictation is already active")
 	}
-	if c.cancelEpoch != epoch {
+	if c.cancelEpoch != attempt.epoch || c.status.Generation != attempt.generation || c.rootContext.Err() != nil {
 		c.mu.Unlock()
 		return context.Canceled
 	}
@@ -1033,6 +1052,32 @@ func (c *recorder) copyPending() error {
 	}
 	c.mu.Unlock()
 	return errors.New("pending transcript changed before copy completed")
+}
+
+func (c *recorder) rejectStart(attempt startAttempt, err error, message string) error {
+	c.transition.Lock()
+	defer c.transition.Unlock()
+	c.rejectStartLocked(attempt, err, message)
+	return err
+}
+
+// rejectStartLocked publishes admission feedback, not a failed recording run.
+// The caller holds transition; cancellation can still signal through mu.
+// Keep the previous result and its copy capability/generation intact.
+// Messages are fixed application text, never external error strings.
+func (c *recorder) rejectStartLocked(attempt startAttempt, err error, message string) {
+	c.mu.Lock()
+	if c.closed.Load() || c.rootContext.Err() != nil || c.cancelEpoch != attempt.epoch || c.status.Generation != attempt.generation ||
+		(c.status.State != Idle && c.status.State != Failed) || errors.Is(err, context.Canceled) {
+		c.mu.Unlock()
+		return
+	}
+	c.status.State = Failed
+	c.status.StartRejected = true
+	c.status.Message = message
+	status := c.status
+	c.mu.Unlock()
+	c.publish(status)
 }
 
 func (c *recorder) fail(gen uint64, msg string) {

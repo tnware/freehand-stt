@@ -105,6 +105,11 @@
   const localModel = $derived(
     local.selected?.name || runtime?.instance.model || "Local speech",
   );
+  const recordingAvailability = $derived(
+    managed && (!local.ready || session.runtime.isBusy(instanceID))
+      ? `Local speech: ${session.runtime.isBusy(instanceID) ? "Updating" : local.label}`
+      : "",
+  );
   function openLocalRuntime() {
     void WindowingService.OpenTaskSettings("local-runtime", inputMode).catch(
       (cause) => session.messages.fail(cause),
@@ -224,22 +229,11 @@
   {#if inputMode !== "tts"}
     <div class="transport-frame">
       {#if session.editor.draft}
-        {#if !showReadiness}
-          {#if managed && (!local.ready || session.runtime.isBusy(instanceID)) && !voiceActive && !fileWorking}
-            <div class="px-5 py-4" role="status" aria-live="polite">
-              <h2 class="text-base font-semibold">
-                Local speech: {session.runtime.isBusy(instanceID)
-                  ? "Updating"
-                  : local.label}
-              </h2>
-              <p class="mt-1 text-sm text-muted-foreground">
-                Use transcription quick settings below to start or manage the
-                runtime.
-              </p>
-            </div>
-          {:else if inputMode === "voice"}
+        {#if !readiness?.initialSetup}
+          {#if inputMode === "voice"}
             <TransportBar
               status={session.dictation.status}
+              availability={recordingAvailability}
               busy={fileWorking}
               toggleShortcut={session.editor.draft.toggleShortcut}
               model={managed

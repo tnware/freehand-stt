@@ -39,6 +39,7 @@
     model = "",
     processingModel = "",
     microphone = "default",
+    availability = "",
     onToggle,
     onCancel,
     onCopy,
@@ -50,6 +51,7 @@
     model?: string;
     processingModel?: string;
     microphone?: string;
+    availability?: string;
     onToggle: () => void;
     onCancel: () => void;
     onCopy: () => Promise<boolean>;
@@ -57,22 +59,34 @@
   } = $props();
 
   const recording = $derived(isRecording(status));
-  const holdRecording = $derived(recording && status.recordingMode === RecordingMode.RecordingHold);
-  const vadSilence = $derived(recording && status.vadState === VADState.VADSilence);
-  const vadSpeech = $derived(recording && status.vadState === VADState.VADSpeech);
+  const holdRecording = $derived(
+    recording && status.recordingMode === RecordingMode.RecordingHold,
+  );
+  const vadSilence = $derived(
+    recording && status.vadState === VADState.VADSilence,
+  );
+  const vadSpeech = $derived(
+    recording && status.vadState === VADState.VADSpeech,
+  );
   const autoStopCountdown = $derived(
     recording && status.autoStopState === AutoStopState.AutoStopCountdown,
   );
-  const showShortcut = $derived(showIdleShortcutGuidance(status, toggleShortcut));
+  const showShortcut = $derived(
+    showIdleShortcutGuidance(status, toggleShortcut),
+  );
   // Copy-required is an outcome waiting on the user, not a fault: it keeps the
   // accent rather than a dead grey dot.
   const waiting = $derived(isCopyRequired(status));
   const failed = $derived(isFailure(status));
   const canToggle = $derived(canToggleRecording(status, busy));
   const showRecordControl = $derived(
-    status.state === State.Idle || recording || (status.state === State.Failed && !waiting),
+    status.state === State.Idle ||
+      recording ||
+      (status.state === State.Failed && !waiting),
   );
-  const manualCopy = $derived(waiting && status.message === "Transcript ready to copy");
+  const manualCopy = $derived(
+    waiting && status.message === "Transcript ready to copy",
+  );
   // Once a take is sent, the meter is a record of what was captured rather than
   // a live level, so it holds its shape at a lower weight.
   const held = $derived(
@@ -129,7 +143,9 @@
 
   const phase = $derived(railPhase(status));
 
-  const checkpointGeneration = $derived(status.state === State.Recording ? status.generation : 0);
+  const checkpointGeneration = $derived(
+    status.state === State.Recording ? status.generation : 0,
+  );
   const checkpointSegment = $derived(status.segmentNumber);
   const checkpointPhase = $derived(status.segmentPhase);
 
@@ -181,8 +197,12 @@
     if (next !== "hidden") completed = false;
   });
 
-  const postRecordingRail = $derived(phase === "hidden" && completed ? "done" : phase);
-  const rail = $derived(postRecordingRail === "hidden" ? checkpointRail : postRecordingRail);
+  const postRecordingRail = $derived(
+    phase === "hidden" && completed ? "done" : phase,
+  );
+  const rail = $derived(
+    postRecordingRail === "hidden" ? checkpointRail : postRecordingRail,
+  );
 
   let copied = $state(false);
   let stateAnnouncement = $state("");
@@ -206,13 +226,17 @@
     else if (state === State.PostProcessing)
       stateAnnouncement = "Raw transcript ready. Post-processing transcript.";
     else if (state === State.Ready)
-      stateAnnouncement = "Transcript ready. Verifying the original focus target.";
-    else if (state === State.Cancelling) stateAnnouncement = "Cancelling dictation.";
-    else if (waiting) stateAnnouncement = message || "Transcript ready to copy.";
+      stateAnnouncement =
+        "Transcript ready. Verifying the original focus target.";
+    else if (state === State.Cancelling)
+      stateAnnouncement = "Cancelling dictation.";
+    else if (waiting)
+      stateAnnouncement = message || "Transcript ready to copy.";
     else if (state === State.Failed)
       stateAnnouncement = message || "Dictation failed. Nothing was inserted.";
     else if (state === State.Idle && previousState !== State.Idle) {
-      stateAnnouncement = message || "Dictation complete. Ready for another recording.";
+      stateAnnouncement =
+        message || "Dictation complete. Ready for another recording.";
     }
 
     previousState = state;
@@ -255,7 +279,9 @@
         {#if status.state === State.PostProcessing}
           <WandSparklesIcon class="size-[22px]" />
         {:else}
-          <LoaderCircleIcon class="size-[22px] animate-spin motion-reduce:animate-none" />
+          <LoaderCircleIcon
+            class="size-[22px] animate-spin motion-reduce:animate-none"
+          />
         {/if}
       </span>
     {:else}
@@ -288,34 +314,64 @@
       </p>
     {:else if failed}
       <div class="flex min-w-0 items-center justify-between gap-2">
-        <p class="truncate text-[13.5px] font-semibold">Dictation could not be completed</p>
+        <p class="truncate text-[13.5px] font-semibold">
+          {status.startRejected
+            ? "Recording could not start"
+            : "Dictation could not be completed"}
+        </p>
         <FeedbackDetails
-          title="Dictation could not be completed"
+          title={status.startRejected
+            ? "Recording could not start"
+            : "Dictation could not be completed"}
           label="Dictation error details"
-          message={status.message || "The endpoint did not return a transcript."}
+          message={status.message ||
+            "The endpoint did not return a transcript."}
           actionLabel="Transcription settings"
           onAction={onOpenSettings}
         />
       </div>
-      <p class="figure mt-1 truncate text-[11px] text-destructive" title={status.message}>
+      <p
+        class="figure mt-1 truncate text-[11px] text-destructive"
+        title={status.message}
+      >
         {status.message || "The endpoint did not return a transcript."}
       </p>
       <p class="roomy figure mt-1 text-[10.5px] text-muted-foreground">
-        Nothing was inserted. The audio has been discarded.
+        {status.startRejected
+          ? status.transcript
+            ? "No new audio was recorded. Your previous result is unchanged."
+            : "No audio was recorded."
+          : "Nothing was inserted. The audio has been discarded."}
       </p>
     {:else}
       {#if status.state === State.Idle}
-        <p class="font-display text-xl font-medium tracking-tight text-foreground">
-          Ready to dictate
+        <p
+          class="font-display text-xl font-medium tracking-tight text-foreground"
+        >
+          {availability || "Ready to dictate"}
         </p>
       {:else}
-        <Waveform active={recording} quiet={vadSilence} {held} history={levels.history} />
+        <Waveform
+          active={recording}
+          quiet={vadSilence}
+          {held}
+          history={levels.history}
+        />
       {/if}
       <div class="mt-1 flex min-h-5 items-center justify-between gap-3">
-        {#if showShortcut}
-          <span class="flex min-w-0 items-center gap-2 text-[11.5px] text-secondary-foreground">
+        {#if status.state === State.Idle && availability}
+          <span class="truncate text-[11.5px] text-secondary-foreground">
+            Start or manage the runtime in transcription quick settings below.
+          </span>
+        {:else if showShortcut}
+          <span
+            class="flex min-w-0 items-center gap-2 text-[11.5px] text-secondary-foreground"
+          >
             <span class="roomy shrink-0">Press</span>
-            <ShortcutKeys value={toggleShortcut} label="Toggle recording shortcut" />
+            <ShortcutKeys
+              value={toggleShortcut}
+              label="Toggle recording shortcut"
+            />
             <span class="roomy shrink-0">to record</span>
           </span>
           <span
@@ -328,33 +384,55 @@
           <span class="min-w-0 truncate text-[11.5px] font-medium text-warning">
             Silence detected — speak again to keep recording
           </span>
-          <span class="figure shrink-0 text-[9.5px] text-ink-quiet">{clock}</span>
+          <span class="figure shrink-0 text-[9.5px] text-ink-quiet"
+            >{clock}</span
+          >
         {:else if recording}
-          <span class="min-w-0 truncate text-[11.5px] text-secondary-foreground">
-            {holdRecording ? "Release the shortcut to finish" : "Use the shortcut again to finish"}
+          <span
+            class="min-w-0 truncate text-[11.5px] text-secondary-foreground"
+          >
+            {holdRecording
+              ? "Release the shortcut to finish"
+              : "Use the shortcut again to finish"}
           </span>
-          <span class="figure flex shrink-0 items-center gap-3 text-[9.5px] text-ink-quiet">
+          <span
+            class="figure flex shrink-0 items-center gap-3 text-[9.5px] text-ink-quiet"
+          >
             {#each ruler as tick (tick)}
               <span>{tick}</span>
             {/each}
           </span>
         {:else if status.state === State.Transcribing}
-          <span class="figure min-w-0 truncate text-[11px] text-secondary-foreground">
+          <span
+            class="figure min-w-0 truncate text-[11px] text-secondary-foreground"
+          >
             Waiting on {model || "the speech-to-text endpoint"}
           </span>
-          <span class="figure shrink-0 text-[9.5px] text-success">audio sent ✓</span>
+          <span class="figure shrink-0 text-[9.5px] text-success"
+            >audio sent ✓</span
+          >
         {:else if status.state === State.PostProcessing}
-          <span class="figure min-w-0 truncate text-[11px] text-secondary-foreground">
+          <span
+            class="figure min-w-0 truncate text-[11px] text-secondary-foreground"
+          >
             Cleaning up with {processingModel || "the post-processor"}
           </span>
-          <span class="figure shrink-0 text-[9.5px] text-success">raw transcript kept ✓</span>
+          <span class="figure shrink-0 text-[9.5px] text-success"
+            >raw transcript kept ✓</span
+          >
         {:else if status.state === State.Ready}
-          <span class="figure min-w-0 truncate text-[11px] text-secondary-foreground">
+          <span
+            class="figure min-w-0 truncate text-[11px] text-secondary-foreground"
+          >
             Verifying the original focus target
           </span>
-          <span class="figure shrink-0 text-[9.5px] text-success">transcript ready ✓</span>
+          <span class="figure shrink-0 text-[9.5px] text-success"
+            >transcript ready ✓</span
+          >
         {:else if status.state === State.Cancelling}
-          <span class="figure min-w-0 truncate text-[11px] text-secondary-foreground">
+          <span
+            class="figure min-w-0 truncate text-[11px] text-secondary-foreground"
+          >
             Discarding this recording
           </span>
         {/if}
@@ -366,7 +444,9 @@
     <span
       class={cn(
         "figure text-2xl leading-none font-medium tracking-[-0.02em]",
-        status.state === State.Idle || textStage ? "text-secondary-foreground" : "text-foreground",
+        status.state === State.Idle || textStage
+          ? "text-secondary-foreground"
+          : "text-foreground",
       )}
       aria-label="Recording duration"
     >
@@ -376,16 +456,22 @@
     <div class="flex min-h-5 items-center gap-3.5">
       {#if autoStopCountdown}
         <span class="flex items-center gap-2">
-          <span class="size-[7px] rounded-full bg-warning shadow-[0_0_8px_var(--warning)]"></span>
+          <span
+            class="size-[7px] rounded-full bg-warning shadow-[0_0_8px_var(--warning)]"
+          ></span>
           <span class="caption text-warning">Stopping</span>
         </span>
-        <span class="figure text-xs font-semibold text-warning">{autoStopRemaining}</span>
+        <span class="figure text-xs font-semibold text-warning"
+          >{autoStopRemaining}</span
+        >
       {:else if recording}
         <span class="flex items-center gap-2">
           <span
             class={cn(
               "size-[7px] rounded-full",
-              vadSpeech ? "bg-primary shadow-[0_0_8px_var(--primary)]" : "bg-meter-rest",
+              vadSpeech
+                ? "bg-primary shadow-[0_0_8px_var(--primary)]"
+                : "bg-meter-rest",
             )}
           ></span>
           <span class="caption text-secondary-foreground">
@@ -402,7 +488,9 @@
         {/if}
       {:else if held}
         <span class="flex items-center gap-2">
-          <span class="size-[7px] rounded-full bg-primary shadow-[0_0_8px_var(--primary)]"></span>
+          <span
+            class="size-[7px] rounded-full bg-primary shadow-[0_0_8px_var(--primary)]"
+          ></span>
           <span class="caption text-secondary-foreground">
             {status.state === State.PostProcessing
               ? "Cleanup"
@@ -423,8 +511,15 @@
         </span>
       {:else}
         <span class="flex items-center gap-2">
-          <span class="size-[7px] rounded-full bg-success"></span>
-          <span class="caption text-secondary-foreground">Ready</span>
+          <span
+            class={cn(
+              "size-[7px] rounded-full",
+              availability ? "bg-warning" : "bg-success",
+            )}
+          ></span>
+          <span class="caption text-secondary-foreground"
+            >{availability ? "Unavailable" : "Ready"}</span
+          >
         </span>
       {/if}
     </div>
@@ -449,11 +544,29 @@
           aria-label={copied ? "Transcript copied" : "Copy transcript"}
           onclick={() => void copyTranscript()}
         >
-          {#if copied}<CheckIcon class="size-3.5" />{:else}<ClipboardIcon class="size-3.5" />{/if}
+          {#if copied}<CheckIcon class="size-3.5" />{:else}<ClipboardIcon
+              class="size-3.5"
+            />{/if}
           {copied ? "Copied" : "Copy transcript"}
         </button>
       {:else if failed}
-        <button type="button" class="act quiet flex-1" onclick={onToggle} disabled={!canToggle}>
+        {#if status.canCopy}
+          <button
+            type="button"
+            class="act quiet"
+            onclick={() => void copyTranscript()}
+            aria-label="Copy previous transcript"
+          >
+            <ClipboardIcon class="size-3" />
+            Copy
+          </button>
+        {/if}
+        <button
+          type="button"
+          class="act quiet flex-1"
+          onclick={onToggle}
+          disabled={!canToggle}
+        >
           <MicIcon class="size-3 shrink-0" />
           Record again
         </button>

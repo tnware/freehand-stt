@@ -19,6 +19,7 @@ import (
 )
 
 const previewStepDuration = 1500 * time.Millisecond
+const outcomeDisplayDuration = 5 * time.Second
 
 type statusOverlay interface {
 	SetLevelSource(platform.LevelSource)
@@ -57,6 +58,10 @@ type Service struct {
 	rootContext context.Context
 	started     bool
 	closed      bool
+
+	outcomeTimer     *time.Timer
+	outcomeVersion   uint64
+	outcomeDismissed bool
 
 	preview        bool
 	previewRequest PreviewRequest
@@ -125,6 +130,7 @@ func (s *Service) ServiceShutdown() error {
 	}
 	s.closed = true
 	s.started = false
+	s.stopOutcomeTimerLocked()
 	s.stopPreviewLocked()
 	overlay := s.overlay
 	s.overlay = nil
@@ -177,7 +183,12 @@ func (s *Service) applySettings(settings config.Settings) {
 
 func (s *Service) applyStatus(status dictation.Status) {
 	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return
+	}
 	s.status = status
+	s.scheduleOutcomeDismissalLocked(status)
 	s.trackRunLocked(status)
 	preempted := false
 	if status.State != dictation.Idle && s.preview {
@@ -384,6 +395,37 @@ func (s *Service) closeOverlay(overlay statusOverlay) error {
 	return nil
 }
 
+// The timer owns presentation only: it never clears dictation or copy recovery.
+// Version fencing handles callbacks already queued when Stop returns false.
+func (s *Service) stopOutcomeTimerLocked() {
+	s.outcomeVersion++
+	if s.outcomeTimer != nil {
+		s.outcomeTimer.Stop()
+		s.outcomeTimer = nil
+	}
+}
+
+func (s *Service) scheduleOutcomeDismissalLocked(status dictation.Status) {
+	s.stopOutcomeTimerLocked()
+	s.outcomeDismissed = false
+	if status.State != dictation.Failed || s.rootContext.Err() != nil {
+		return
+	}
+	version := s.outcomeVersion
+	s.outcomeTimer = time.AfterFunc(outcomeDisplayDuration, func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if s.closed || s.rootContext.Err() != nil || version != s.outcomeVersion {
+			return
+		}
+		s.outcomeTimer = nil
+		s.outcomeDismissed = true
+		if s.started && s.settings.OverlayEnabled && !s.preview {
+			s.updateLocked(s.presentationLocked(s.status))
+		}
+	})
+}
+
 func (s *Service) trackRunLocked(status dictation.Status) {
 	if status.State == dictation.Recording && s.run.generation != status.Generation {
 		s.run = runPresentation{
@@ -403,8 +445,13 @@ func (s *Service) trackRunLocked(status dictation.Status) {
 
 func (s *Service) presentationLocked(status dictation.Status) platform.OverlayStatus {
 	presentation := overlayForStatus(status)
-	if !visibilityIncludes(s.settings.OverlayVisibility, presentation.Kind) {
+	if s.outcomeDismissed || !visibilityIncludes(s.settings.OverlayVisibility, presentation.Kind) {
 		presentation.Kind = platform.OverlayHidden
+	}
+	if status.StartRejected {
+		// No new run started. Do not present the retained result's timing,
+		// shortcut or checkpoints as metadata for the rejected attempt.
+		return presentation
 	}
 	if presentation.Generation == 0 {
 		presentation.Generation = s.run.generation
@@ -458,7 +505,7 @@ func overlayForStatus(status dictation.Status) platform.OverlayStatus {
 	case dictation.Cancelling:
 		kind = platform.OverlayCancelling
 	case dictation.Failed:
-		if status.CanCopy {
+		if status.CanCopy && !status.StartRejected {
 			kind = platform.OverlayCopyRequired
 		} else {
 			kind = platform.OverlayFailed
