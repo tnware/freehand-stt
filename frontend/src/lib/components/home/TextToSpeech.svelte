@@ -130,7 +130,7 @@
   aria-label="Speech composer"
 >
   <div
-    class="flex h-8 shrink-0 items-center gap-2 border-b border-hairline px-4"
+    class="flex h-8 shrink-0 items-center gap-2 border-b border-hairline px-5"
   >
     <h2
       class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
@@ -164,7 +164,7 @@
       aria-describedby="speech-character-count speech-compose-shortcut"
       aria-keyshortcuts="Control+Enter"
       onkeydown={composerKey}
-      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-4 py-3.5 text-[15px] leading-8 focus-visible:ring-2 focus-visible:ring-inset"
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-8 focus-visible:ring-2 focus-visible:ring-inset"
       placeholder="Write or paste text to speak…"
     />
   </div>
@@ -174,7 +174,7 @@
     the current audio.
   </p>
   <div
-    class="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline px-4 py-2"
+    class="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline px-5 py-2"
   >
     <span
       id="speech-character-count"

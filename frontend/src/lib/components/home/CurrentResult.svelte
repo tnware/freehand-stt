@@ -57,7 +57,7 @@
   aria-label="Current result"
 >
   <div
-    class="flex h-8 shrink-0 items-center gap-2 border-b border-hairline px-4"
+    class="flex h-8 shrink-0 items-center gap-2 border-b border-hairline px-5"
   >
     <h2
       class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
@@ -143,7 +143,7 @@
           </p>
         {/if}
         {#if live || text}
-          <div class="w-full max-w-[760px] px-4 py-3.5">
+          <div class="w-full max-w-[760px] px-5 py-3.5">
             {#if live}
               <p class="mb-3 text-xs text-muted-foreground" role="status">
                 Live preview · text may change

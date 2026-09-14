@@ -265,7 +265,7 @@
     <div
       bind:this={contentPane}
       style:scroll-padding-top={`${headingHeight + 16}px`}
-      class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 sm:px-7"
+      class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6"
     >
       <section
         aria-labelledby="settings-section-title"
@@ -561,7 +561,7 @@
     </div>
 
     <div
-      class="flex min-h-14 shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-border bg-card px-6 py-3"
+      class="flex min-h-14 shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline px-5 py-2.5"
     >
       {#if session.editor.draft}
         <span

@@ -357,7 +357,7 @@
           >
             <button
               type="button"
-              class="history-disclosure flex min-w-0 flex-1 items-center gap-2.5 px-4 py-1 text-left"
+              class="history-disclosure flex min-w-0 flex-1 items-center gap-2.5 px-5 py-1 text-left"
               class:min-h-8={isExpanded}
               aria-label={`${isExpanded ? "Collapse" : "Expand"} transcript from ${completedDateTime(entry.completedAt)}`}
               aria-expanded={isExpanded}
