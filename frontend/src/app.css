@@ -63,8 +63,13 @@
   --success: #197f60;
   --warning: #b45309;
   --destructive: #dc2626;
-  /* The record control is the one saturated constant in both themes. */
+  /* The record control is the one saturated constant in both themes. The
+   * wash/edge/text trio carries the same hue onto a surface, so the status
+   * bar can state "recording" without a second colour entering the palette. */
   --record: #cf4d62;
+  --record-wash: rgb(207 77 98 / 10%);
+  --record-edge: rgb(207 77 98 / 26%);
+  --record-text: #a82f44;
 
   --border: #dddddd;
   --input: #d2d2d2;
@@ -150,6 +155,9 @@
   --warning: #fbbf24;
   --destructive: #f87171;
   --record: #cf4d62;
+  --record-wash: rgb(207 77 98 / 16%);
+  --record-edge: rgb(207 77 98 / 34%);
+  --record-text: #f0a8b3;
 
   --border: #383838;
   --input: #424242;
@@ -244,6 +252,9 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-record: var(--record);
+  --color-record-wash: var(--record-wash);
+  --color-record-edge: var(--record-edge);
+  --color-record-text: var(--record-text);
   --shadow-lift: var(--lift);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

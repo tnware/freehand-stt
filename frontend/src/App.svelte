@@ -6,9 +6,11 @@
   import { ModeWatcher, setMode } from "mode-watcher";
   import * as BuildInfoService from "$bindings/buildinfo/service";
   import * as WindowingService from "$bindings/windowing/service";
-  import AppHeader from "$lib/components/shell/AppHeader.svelte";
+  import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
+  import TitleBar from "$lib/components/shell/TitleBar.svelte";
   import HomeScreen from "$lib/components/home/HomeScreen.svelte";
-  import StatusStrip from "$lib/components/shell/StatusStrip.svelte";
+  import StatusBar from "$lib/components/shell/StatusBar.svelte";
+  import { paneByID, type PaneID } from "$lib/panes";
   import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
   import type { SettingsSectionID } from "$lib/navigation";
   import { FileTranscriptionPhase, State } from "$lib/state";
@@ -39,10 +41,17 @@
   const footerStatus = $derived(
     taskConnectionStatus(inputMode, session.editor, now),
   );
+  // Endpoint freshness only needs a coarse tick, but the status bar now shows
+  // a running clock, so pay for the fast timer only while capture is live.
   $effect(() => {
-    const timer = setInterval(() => (now = Date.now()), 30_000);
+    const interval = voiceActive ? 1_000 : 30_000;
+    const timer = setInterval(() => (now = Date.now()), interval);
     return () => clearInterval(timer);
   });
+
+  const activePane = $derived<PaneID>(
+    settingsOpen ? "settings" : (inputMode as PaneID),
+  );
 
   const fileWorking = $derived(
     session.files.status.phase ===
@@ -217,33 +226,45 @@
 <div
   class="fixed inset-0 flex flex-col overflow-hidden bg-transparent text-foreground"
 >
-  <AppHeader
-    bind:inputMode
-    settings={session.editor.applied ?? session.editor.draft}
-    {voiceActive}
-    {fileWorking}
-    onSettings={() => {
-      void WindowingService.OpenSettings("general").catch((cause) =>
-        session.messages.fail(cause),
-      );
-    }}
-    {settingsOpen}
-  />
+  <TitleBar paneLabel={paneByID(activePane).label} />
 
-  <HomeScreen
-    {session}
-    bind:inputMode
-    onOpenHistorySettings={() => openSettings("history")}
-    onOpenServerSettings={() => openSettings("server")}
-    onOpenProcessingSettings={() => openSettings("processing")}
-    onOpenAudioSettings={() => openSettings("audio")}
-    onOpenShortcutSettings={() => openSettings("shortcuts")}
-    onOpenSpeechSettings={() => openSettings("speech")}
-    onOpenGeneralSettings={() => openSettings("general")}
-    quickSettingsDisabled={settingsOpen}
-  />
+  <div class="flex min-h-0 flex-1">
+    <ActivityRail
+      pane={activePane}
+      {voiceActive}
+      {fileWorking}
+      onSelect={(id) => {
+        if (id === "settings") {
+          void WindowingService.OpenSettings("general").catch((cause) =>
+            session.messages.fail(cause),
+          );
+          return;
+        }
+        inputMode = id;
+      }}
+    />
 
-  <StatusStrip
+    <div class="flex min-w-0 flex-1 flex-col">
+      <HomeScreen
+        {session}
+        bind:inputMode
+        onOpenHistorySettings={() => openSettings("history")}
+        onOpenServerSettings={() => openSettings("server")}
+        onOpenProcessingSettings={() => openSettings("processing")}
+        onOpenAudioSettings={() => openSettings("audio")}
+        onOpenShortcutSettings={() => openSettings("shortcuts")}
+        onOpenSpeechSettings={() => openSettings("speech")}
+        onOpenGeneralSettings={() => openSettings("general")}
+        quickSettingsDisabled={settingsOpen}
+      />
+    </div>
+  </div>
+
+  <StatusBar
+    dictation={session.dictation.status}
+    {now}
+    toggleShortcut={(session.editor.applied ?? session.editor.draft)
+      ?.toggleShortcut ?? ""}
     connectionState={footerStatus}
     connectionDetails={footerConnection}
     disabled={session.editor.saving ||

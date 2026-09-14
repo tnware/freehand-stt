@@ -625,7 +625,7 @@
   .transport-frame :global(.transport) {
     overflow: hidden;
     border: 1px solid var(--hairline);
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     background: linear-gradient(115deg, var(--card), var(--layer-fill));
   }
   .body {
@@ -645,7 +645,7 @@
     gap: 0;
     overflow: hidden;
     border: 1px solid var(--hairline);
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     background: var(--card);
   }
   .history-sidebar {
