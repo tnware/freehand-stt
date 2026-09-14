@@ -44,6 +44,7 @@ func TestManagedEndpointReachesSpeechClients(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
 			cfg := config.DefaultVoiceTranscription()
+			cfg.ManagedInstanceID = "speech"
 			cfg.BaseURL = ep.BaseURL
 			cfg.Model = ep.Model
 			cfg.ModelProfile = modelprofile.ID(ep.Profile)

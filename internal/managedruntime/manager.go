@@ -51,6 +51,7 @@ type Manager struct {
 	instances    []Instance
 	workers      map[string]*worker
 	retired      map[string]*worker
+	processes    map[ProviderID]*providerProcess
 	save         func([]Instance) error
 	changed      func(InstanceStatus)
 	logger       *slog.Logger
@@ -81,6 +82,13 @@ func instanceConfig(i Instance) workerConfig {
 }
 func (m *Manager) newWorker(i Instance) *worker {
 	w := newWorker(instanceDirectory(m.directory, i.ID), providers[i.Provider], instanceConfig(i), m.logger, m.checkIdle)
+	if m.processes == nil {
+		m.processes = make(map[ProviderID]*providerProcess)
+	}
+	if m.processes[i.Provider] == nil {
+		m.processes[i.Provider] = &providerProcess{}
+	}
+	w.providerProcess = m.processes[i.Provider]
 	w.changed = func(Status) { m.notifyWorker(i.ID, w) }
 	return w
 }
@@ -246,6 +254,23 @@ func (m *Manager) validateUpdateLocked(next []Instance) error {
 	if err := ValidateInstances(next); err != nil {
 		return err
 	}
+	// Existing duplicate providers remain repairable without rewriting IDs,
+	// directories or Connections. Only retained identities may coexist; a
+	// publication may reduce that legacy set, never add or replace a copy.
+	seenProviders := make(map[ProviderID]string)
+	for _, i := range next {
+		if m.workers[i.ID] == nil {
+			for _, old := range m.instances {
+				if old.Provider == i.Provider {
+					return errors.New("This runtime provider is already configured. Use its existing installation.")
+				}
+			}
+			if _, exists := seenProviders[i.Provider]; exists {
+				return errors.New("Only one instance per runtime provider may be configured.")
+			}
+		}
+		seenProviders[i.Provider] = i.ID
+	}
 	// Deleted owners still count while draining: neither their process trees
 	// nor directory mutations may be replaced by an unbounded stream of IDs.
 	owners := len(m.workers) + len(m.retired)
@@ -382,7 +407,21 @@ func (m *Manager) operation(id string, f func(*worker) error) error {
 	return err
 }
 func (m *Manager) Install(r InstanceRequest) error {
-	return m.operation(r.InstanceID, (*worker).Install)
+	return m.operation(r.InstanceID, func(w *worker) error {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		for _, other := range m.workers {
+			if other != w && other.providerProcess == w.providerProcess {
+				return errors.New("Resolve duplicate runtime installations before installing this provider. Existing installations and Connections have been preserved.")
+			}
+		}
+		for _, other := range m.retired {
+			if other.providerProcess == w.providerProcess {
+				return errors.New("Wait for the previous runtime installation to finish stopping.")
+			}
+		}
+		return w.Install()
+	})
 }
 func (m *Manager) RefreshCatalog(r InstanceRequest) error {
 	return m.operation(r.InstanceID, (*worker).RefreshCatalog)

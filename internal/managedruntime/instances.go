@@ -85,6 +85,10 @@ func windowsReservedID(id string) bool {
 	}
 	return len(id) == 4 && (strings.HasPrefix(id, "com") || strings.HasPrefix(id, "lpt")) && id[3] >= '1' && id[3] <= '9'
 }
+
+// ValidateInstances validates durable shape, not new-provider admission. Older
+// inventories may contain copies; rejecting them here would prevent loading
+// otherwise repairable settings. Manager reservations prohibit adding copies.
 func ValidateInstances(instances []Instance) error {
 	if len(instances) > MaxInstances {
 		return errors.New("Too many managed runtime instances.")

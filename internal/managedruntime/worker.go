@@ -36,6 +36,7 @@ type worker struct {
 	operationCancel      context.CancelFunc
 	processCancel        context.CancelFunc
 	process              *ownedProcess
+	providerProcess      *providerProcess
 	wg                   sync.WaitGroup
 }
 
@@ -53,7 +54,7 @@ type workerConfig struct {
 
 func newWorker(root string, p provider, cfg workerConfig, logger *slog.Logger, idle func() error) *worker {
 	d := p.descriptor()
-	return &worker{configuration: cfg, provider: p, adapter: p.newAdapter(root), logger: logger, checkIdle: idle, generation: leaseGeneration.Add(1),
+	return &worker{configuration: cfg, provider: p, adapter: p.newAdapter(root), providerProcess: &providerProcess{}, logger: logger, checkIdle: idle, generation: leaseGeneration.Add(1),
 		status: Status{Supported: d.Supported, State: "not_installed", Version: d.Version, Progress: -1, Models: []Model{}}}
 }
 func (s *worker) GetStatus() Status { s.mu.Lock(); defer s.mu.Unlock(); return s.snapshotLocked() }
@@ -209,6 +210,9 @@ func (s *worker) run(phase, state string, guard bool, work func(context.Context)
 			} else {
 				kind = "runtime"
 				s.status.Error = "Managed speech could not complete the operation. Check setup and try again."
+				if errors.Is(err, errProviderRunning) {
+					s.status.Error = errProviderRunning.Error()
+				}
 				// Metadata failure does not invalidate a separately supervised live
 				// process. Its monitor still clears the endpoint on process exit.
 				if phase != "catalog" || s.process == nil || s.status.State != "running" || !s.endpoint.Enabled || s.endpoint.BaseURL == "" || s.endpoint.Model == "" {
@@ -345,8 +349,11 @@ func (s *worker) startProcess(ctx context.Context) error {
 	if !p.Enabled || !installed {
 		return errNotReady
 	}
-	proc, endpoint, err := s.adapter.Start(ctx, p.Model)
+	proc, endpoint, err := s.providerProcess.start(ctx, s.adapter, p.Model)
 	if err != nil {
+		if proc != nil {
+			s.discardProcess(proc)
+		}
 		return err
 	}
 	if proc == nil || !endpoint.Enabled || endpoint.BaseURL == "" || endpoint.Model == "" {

@@ -43,3 +43,40 @@ func TestManagedFilesDoNotOverrideManualVoice(t *testing.T) {
 		t.Fatal("failure damaged unrelated Voice")
 	}
 }
+
+func TestManagedVoiceAdmitsResolvedTransportWithoutPersistingIt(t *testing.T) {
+	for _, realtime := range []bool{false, true} {
+		s, log, _, keys := transactionalService(false)
+		i := testInstance()
+		endpoint, err := readyManagedEndpoint(i, compatibility.Transcription)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.cfg.ManagedRuntimes = []managedruntime.Instance{i}
+		voice := config.DefaultVoiceTranscription()
+		voice.ManagedInstanceID, voice.Model = i.ID, i.Model
+		voice.ModelProfile = endpoint.Contract.ModelProfile
+		voice.CompatibilityProfile = endpoint.Contract.CompatibilityProfile
+		voice.Realtime = realtime
+		s.cfg.VoiceTranscription = voice
+		s.voiceKeys = keys
+		keys.getErr = errors.New("locked")
+		WithManagedRuntimes(readyManagedEndpoint, nil)(s)
+		if err := config.ValidateVoiceRecording(CurrentSource(s).Current().VoiceTranscription); err != nil {
+			t.Fatalf("managed recording admission (realtime=%v): %v", realtime, err)
+		}
+		profile, err := DictationProfiles(s).Capture()
+		if err != nil {
+			t.Fatalf("managed request capture (realtime=%v): %v", realtime, err)
+		}
+		if profile.Settings.BaseURL != endpoint.BaseURL || profile.Settings.Model != endpoint.Model || profile.STTCredential != "" || len(*log) != 0 {
+			t.Fatal("managed capture did not retain its credential-free resolved endpoint")
+		}
+		if !reflect.DeepEqual(s.current().VoiceTranscription, voice) {
+			t.Fatal("request resolution changed saved Voice settings")
+		}
+		if err := config.ValidateVoiceTranscription(profile.Settings.VoiceTranscription); err == nil {
+			t.Fatal("resolved transport was accepted as persistable settings")
+		}
+	}
+}

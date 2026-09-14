@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
+  import type { ProviderDescriptor } from "$bindings/managedruntime";
   import {
     catalogGroups,
     modelSize,
@@ -7,15 +8,15 @@
   } from "$lib/utils/managedRuntime";
   import { Button } from "$lib/components/ui/button";
   import { Badge } from "$lib/components/ui/badge";
-  import { Input } from "$lib/components/ui/input";
+
   import { Switch } from "$lib/components/ui/switch";
   import * as Dialog from "$lib/components/ui/dialog";
-  import * as Select from "$lib/components/ui/select";
+
   import DownloadIcon from "@lucide/svelte/icons/download";
   import PlayIcon from "@lucide/svelte/icons/play";
   import SquareIcon from "@lucide/svelte/icons/square";
   import RefreshIcon from "@lucide/svelte/icons/refresh-cw";
-  import PlusIcon from "@lucide/svelte/icons/plus";
+
   import TrashIcon from "@lucide/svelte/icons/trash-2";
 
   let {
@@ -33,19 +34,12 @@
   } = $props();
   const uid = $props.id();
   let selectedID = $state("");
-  let adding = $state(false);
-  let providerID = $state("");
-  let modelID = $state("");
-  let name = $state("");
-  let addID = $state("");
-  let rename = $state("");
-  let renaming = $state(false);
-  const row = $derived(runtime.statusFor(selectedID) ?? runtime.instances[0]);
+  const provider = $derived(runtime.providers.find((p) => p.id === selectedID));
+  const row = $derived(
+    runtime.instances.find((item) => item.instance.provider === provider?.id),
+  );
   const id = $derived(row?.instance.id ?? "");
   const status = $derived(row?.status);
-  const provider = $derived(
-    runtime.providers.find((p) => p.id === row?.instance.provider),
-  );
   const view = $derived(runtimePresentation(status));
   const models = $derived(
     (status?.models ?? []).filter((m) =>
@@ -62,18 +56,7 @@
   const problem = $derived(
     runtime.errorFor(id) || runtime.error || status?.error || "",
   );
-  const availableProviders = $derived(
-    runtime.providers.filter((p) => p.supported),
-  );
-  const addProvider = $derived(
-    availableProviders.find((p) => p.id === providerID) ??
-      availableProviders[0],
-  );
-  const addModel = $derived(
-    addProvider?.models?.find((m) => m.id === modelID) ??
-      addProvider?.models?.find((m) => m.recommended) ??
-      addProvider?.models?.[0],
-  );
+
   type Confirmation = {
     instanceID: string;
     kind: "files" | "instance" | "model";
@@ -87,37 +70,36 @@
         void action();
       });
   }
-  function beginAdd() {
-    addID = crypto.randomUUID();
-    name = "";
-    modelID = "";
-    providerID = "";
-    adding = true;
-  }
-  function add() {
+  function install(provider: ProviderDescriptor) {
     if (
-      !addProvider ||
-      !addModel ||
-      !name.trim() ||
       disabled ||
       workBusy ||
-      runtime.busy
+      runtime.loading ||
+      runtime.busy ||
+      !provider.supported
     )
       return;
-    const instance = {
-      id: addID,
-      name: name.trim(),
-      provider: addProvider.id,
-      model: addModel.id,
-      autoStart: false,
-    };
+    selectedID = provider.id;
     onAction(() => {
-      void runtime.saveInstance(instance).then((ok) => {
-        if (ok) {
-          selectedID = instance.id;
-          adding = false;
+      void (async () => {
+        let instance = runtime.instances.find(
+          (item) => item.instance.provider === provider.id,
+        )?.instance;
+        if (!instance) {
+          const model =
+            provider.models?.find((m) => m.recommended) ?? provider.models?.[0];
+          if (!model) return;
+          instance = {
+            id: provider.id,
+            name: provider.name,
+            provider: provider.id,
+            model: model.id,
+            autoStart: false,
+          };
+          if (!(await runtime.saveInstance(instance))) return;
         }
-      });
+        await runtime.run(instance.id, "Install");
+      })();
     });
   }
   function confirm() {
@@ -145,54 +127,62 @@
     <div class="flex items-center gap-1">
       <Button variant="ghost" size="sm" onclick={onConnections}
         >Manage connections</Button
-      ><Button
-        variant="outline"
-        size="sm"
-        disabled={disabled ||
-          workBusy ||
-          runtime.loading ||
-          runtime.busy ||
-          !availableProviders.length}
-        onclick={beginAdd}><PlusIcon class="size-4" />Add runtime</Button
       >
     </div>
   </div>
-  {#if runtime.instances.length}
-    <div class="flex flex-wrap gap-2" aria-label="Runtime inventory">
-      {#each runtime.instances as item (item.instance.id)}
-        <Button
-          variant={id === item.instance.id ? "secondary" : "outline"}
-          size="sm"
-          aria-pressed={id === item.instance.id}
-          onclick={() => {
-            selectedID = item.instance.id;
-            renaming = false;
-          }}
-        >
-          {item.instance.name}<span class="text-xs text-muted-foreground"
-            >{runtimePresentation(item.status).label}</span
-          >
-        </Button>
+  {#if runtime.providers.length}
+    <div class="divide-y divide-hairline" aria-label="Runtime inventory">
+      {#each runtime.providers as entry (entry.id)}
+        {@const item = runtime.instances.find(
+          (item) => item.instance.provider === entry.id,
+        )}
+        {@const presentation = runtimePresentation(item?.status)}
+        <div class="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div class="min-w-0">
+            <h3 class="text-sm font-semibold">{entry.name}</h3>
+            <p class="mt-1 text-xs text-muted-foreground">
+              {!entry.supported
+                ? "Unavailable on this platform"
+                : item
+                  ? presentation.label
+                  : "Not installed"}{entry.version ? ` · ${entry.version}` : ""}
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            {#if !presentation.installed && !runtime.isBusy(item?.instance.id ?? entry.id)}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={disabled ||
+                  workBusy ||
+                  runtime.loading ||
+                  runtime.busy ||
+                  !entry.supported ||
+                  !entry.models?.length}
+                onclick={() => install(entry)}
+                ><DownloadIcon class="size-4" />Install</Button
+              >
+            {/if}
+            {#if item}
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-expanded={selectedID === entry.id}
+                onclick={() => {
+                  selectedID = selectedID === entry.id ? "" : entry.id;
+                }}>Manage</Button
+              >
+            {/if}
+          </div>
+        </div>
       {/each}
     </div>
   {:else}
-    <div class="rounded-xl border border-dashed border-hairline p-5">
-      <h3 class="text-sm font-medium">
-        {runtime.loading
-          ? "Reading runtime inventory…"
-          : "No managed runtimes yet"}
-      </h3>
-      <p class="mt-2 text-[13px] text-muted-foreground">
-        Add an available provider and choose a qualified model. Nothing
-        downloads or starts until you ask.
-      </p>
-      {#if !runtime.loading && !availableProviders.length}<p
-          class="mt-2 text-xs text-muted-foreground"
-        >
-          No managed provider is available on this platform. You can use your
-          own server in Connections.
-        </p>{/if}
-    </div>
+    <p class="text-sm text-muted-foreground">
+      {runtime.loading
+        ? "Reading runtime inventory…"
+        : "No runtime adapters available. Use your own server in Connections."}
+    </p>
   {/if}
   {#if row && status}
     <section
@@ -201,7 +191,7 @@
     >
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 class="font-semibold">{row.instance.name}</h3>
+          <h3 class="font-semibold">{provider?.name}</h3>
           <p class="mt-1 text-xs text-muted-foreground">
             {provider?.name ?? row.instance.provider} · {status.version ||
               provider?.version ||
@@ -285,47 +275,16 @@
     </section>
     <details class="rounded-xl border border-hairline bg-card p-4">
       <summary class="cursor-pointer text-sm font-medium"
-        >Instance preferences</summary
+        >Runtime preferences</summary
       >
       <div class="mt-4 space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <span class="text-sm">{row.instance.name}</span><Button
-            variant="ghost"
-            size="sm"
-            disabled={locked}
-            onclick={() => {
-              rename = row.instance.name;
-              renaming = true;
-            }}>Rename</Button
-          >
-        </div>
-        {#if renaming}<div class="flex gap-2">
-            <Input
-              aria-label="Runtime name"
-              bind:value={rename}
-              maxlength={80}
-            /><Button
-              size="sm"
-              disabled={locked || !rename.trim()}
-              onclick={() =>
-                act(async () => {
-                  if (
-                    await runtime.saveInstance({
-                      ...row.instance,
-                      name: rename.trim(),
-                    })
-                  )
-                    renaming = false;
-                })}>Save name</Button
-            >
-          </div>{/if}
         <div class="flex items-center justify-between gap-3">
           <div>
             <label for={`${uid}-autostart`} class="text-sm font-medium"
               >Start when Freehand launches</label
             >
             <p class="mt-1 text-xs text-muted-foreground">
-              Uses this instance’s selected model. Does not download missing
+              Uses this runtime’s selected model. Does not download missing
               files.
             </p>
           </div>
@@ -475,88 +434,6 @@
     >
   </div>
 </div>
-
-<Dialog.Root bind:open={adding}
-  ><Dialog.Content
-    ><Dialog.Header
-      ><Dialog.Title>Add runtime</Dialog.Title><Dialog.Description
-        >Choose an available provider and a qualified model. Installation,
-        download, and Start remain separate explicit steps.</Dialog.Description
-      ></Dialog.Header
-    >
-    <div class="space-y-4">
-      <div class="space-y-1.5">
-        <label for={`${uid}-provider`} class="text-sm">Provider</label
-        ><Select.Root
-          type="single"
-          value={addProvider?.id ?? ""}
-          onValueChange={(value) => {
-            providerID = value;
-            modelID = "";
-          }}
-          ><Select.Trigger id={`${uid}-provider`} class="w-full"
-            >{addProvider?.name ?? "No available providers"}</Select.Trigger
-          ><Select.Content
-            >{#each availableProviders as p (p.id)}<Select.Item
-                value={p.id}
-                label={p.name}>{p.name}</Select.Item
-              >{/each}</Select.Content
-          ></Select.Root
-        >
-      </div>
-      <div class="space-y-1.5">
-        <label for={`${uid}-new-name`} class="text-sm">Runtime name</label
-        ><Input
-          id={`${uid}-new-name`}
-          bind:value={name}
-          maxlength={80}
-          placeholder={addProvider?.name ?? "Runtime name"}
-        />
-      </div>
-      <div class="space-y-1.5">
-        <label for={`${uid}-new-model`} class="text-sm">Model</label
-        ><Select.Root
-          type="single"
-          value={addModel?.id ?? ""}
-          onValueChange={(value) => {
-            modelID = value;
-          }}
-          ><Select.Trigger id={`${uid}-new-model`} class="w-full"
-            >{addModel?.name ?? "Choose a model"}</Select.Trigger
-          ><Select.Content
-            >{#each addProvider?.models ?? [] as m (m.id)}<Select.Item
-                value={m.id}
-                label={m.name}
-                >{m.name}{m.recommended ? " · Recommended" : ""}</Select.Item
-              >{/each}</Select.Content
-          ></Select.Root
-        >
-        <p class="text-xs text-muted-foreground">{addModel?.description}</p>
-      </div>
-      {#if runtime.errorFor(addID)}<p
-          role="alert"
-          class="text-sm text-destructive"
-        >
-          {runtime.errorFor(addID)}
-        </p>{/if}
-    </div>
-    <Dialog.Footer
-      ><Button
-        variant="outline"
-        onclick={() => {
-          adding = false;
-        }}>Cancel</Button
-      ><Button
-        disabled={disabled ||
-          workBusy ||
-          runtime.busy ||
-          !name.trim() ||
-          !addModel}
-        onclick={add}>Add runtime</Button
-      ></Dialog.Footer
-    ></Dialog.Content
-  ></Dialog.Root
->
 
 <Dialog.Root
   open={confirmation !== null}

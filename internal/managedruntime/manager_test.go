@@ -28,9 +28,10 @@ func waitInstance(t *testing.T, m *Manager, id, state string) InstanceStatus {
 }
 
 func TestManagerRealAdaptersIsolatePathsAndRestartGenerations(t *testing.T) {
+	secondProvider := registerTestProvider(t)
 	root := t.TempDir()
 	one := Instance{ID: LegacyInstanceID, Name: "Legacy", Provider: NeMoSpeechCPP, Model: "nemotron-3.5"}
-	two := Instance{ID: "second", Name: "Second", Provider: NeMoSpeechCPP, Model: "nemotron-3.5"}
+	two := Instance{ID: "second", Name: "Second", Provider: secondProvider, Model: "nemotron-3.5"}
 	m := NewManager(ManagerOptions{Directory: root, Instances: []Instance{one, two}})
 	if _, err := os.Stat(filepath.Join(root, "managed-runtime")); !os.IsNotExist(err) {
 		t.Fatal("constructor performed I/O", err)
@@ -100,8 +101,9 @@ func TestManagerRealAdaptersIsolatePathsAndRestartGenerations(t *testing.T) {
 }
 
 func TestManagerIndependentlySupervisesInstances(t *testing.T) {
+	secondProvider := registerTestProvider(t)
 	one := Instance{ID: LegacyInstanceID, Name: "Voice", Provider: NeMoSpeechCPP, Model: "nemotron-3.5"}
-	two := Instance{ID: "second", Name: "Files", Provider: NeMoSpeechCPP, Model: "nemotron-3.5"}
+	two := Instance{ID: "second", Name: "Files", Provider: secondProvider, Model: "nemotron-3.5"}
 	m := NewManager(ManagerOptions{Directory: t.TempDir(), Instances: []Instance{one, two}})
 	adapters := map[string]*serviceAdapter{}
 	for id, w := range m.workers {

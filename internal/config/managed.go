@@ -5,6 +5,8 @@ import (
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/managedruntime"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
+	"net/url"
+	"strconv"
 )
 
 func ManagedContract(s Settings, id string, role compatibility.Role) (managedruntime.Instance, managedruntime.Contract, error) {
@@ -22,6 +24,21 @@ func validateManagedTransport(url string, insecure bool, auth AuthenticationMode
 	}
 	return nil
 }
+func validateResolvedManagedTransport(baseURL string, auth AuthenticationMode, health string, headers map[string]string) error {
+	u, err := url.Parse(baseURL)
+	if err != nil || u.Scheme != "http" || u.Hostname() != "127.0.0.1" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" {
+		return errors.New("managed recording requires a resolved loopback endpoint")
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil || port < 1 || port > 65535 {
+		return errors.New("managed recording requires a resolved loopback port")
+	}
+	if auth != AuthenticationModeNone || health != "" || len(headers) != 0 {
+		return errors.New("managed recording cannot use manual credentials or headers")
+	}
+	return nil
+}
+
 func validateManagedReferences(s Settings) error {
 	check := func(id string, role compatibility.Role, model string, profile modelprofile.ID, backend compatibility.ID) error {
 		if id == "" {

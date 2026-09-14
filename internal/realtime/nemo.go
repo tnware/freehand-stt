@@ -67,7 +67,7 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 	if !cfg.Realtime {
 		return nil, errors.New("realtime transcription is not enabled")
 	}
-	if err := config.ValidateVoiceTranscription(cfg); err != nil {
+	if err := config.ValidateVoiceRecording(cfg); err != nil {
 		return nil, err
 	}
 	if cfg.AuthenticationMode == config.AuthenticationModeAPIKey && key == "" {

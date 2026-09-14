@@ -37,6 +37,13 @@ func ValidateVoiceTranscription(v VoiceTranscriptionSettings) error {
 }
 
 func validateVoiceTranscription(v VoiceTranscriptionSettings, stored bool) error {
+	if err := validateVoiceOptions(v, stored); err != nil {
+		return err
+	}
+	return validatePersistedSTTSettings(WithVoiceTranscription(Settings{VoiceTranscription: v}))
+}
+
+func validateVoiceOptions(v VoiceTranscriptionSettings, stored bool) error {
 	validateTranscription := modelprofile.ValidateTranscription
 	if stored {
 		validateTranscription = modelprofile.ValidateStoredTranscription
@@ -44,9 +51,7 @@ func validateVoiceTranscription(v VoiceTranscriptionSettings, stored bool) error
 	if err := validateTranscription(v.ModelProfile, v.CompatibilityProfile, v.Language, v.TranscriptionOptions.Inference()); err != nil {
 		return err
 	}
-	if err := validatePersistedSTTSettings(WithVoiceTranscription(Settings{VoiceTranscription: v})); err != nil {
-		return err
-	}
+
 	if v.ManagedInstanceID == "" && v.BaseURL == "" && (v.AuthenticationMode != AuthenticationModeNone || v.Model != "") {
 		return errors.New("voice transcription requires a connection")
 	}
@@ -103,8 +108,19 @@ func VoiceRealtimeEligible(v VoiceTranscriptionSettings) bool {
 	c, err := modelprofile.Resolve(v.ModelProfile, v.CompatibilityProfile, compatibility.Transcription)
 	return err == nil && c.Capabilities.Realtime
 }
+
+// ValidateVoiceRecording admits an already resolved request, not a durable
+// managed reference. Runtime identity/ownership is resolved by settings first.
 func ValidateVoiceRecording(v VoiceTranscriptionSettings) error {
-	if err := ValidateVoiceTranscription(v); err != nil {
+	if err := validateVoiceOptions(v, false); err != nil {
+		return err
+	}
+	if v.ManagedInstanceID != "" {
+		if err := validateResolvedManagedTransport(v.BaseURL, v.AuthenticationMode, v.HealthPath, v.Headers); err != nil {
+			return err
+		}
+	}
+	if err := ValidateSTTConnection(v.BaseURL, v.AllowInsecureHTTP, v.AuthenticationMode, v.Model, v.HealthPath, v.Headers); err != nil {
 		return err
 	}
 	c, err := modelprofile.Resolve(v.ModelProfile, v.CompatibilityProfile, compatibility.Transcription)
