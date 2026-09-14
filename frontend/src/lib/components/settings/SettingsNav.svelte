@@ -108,10 +108,10 @@
 <nav
   bind:this={navigationRef}
   aria-label="Settings sections"
-  class="flex min-h-0 w-14 shrink-0 flex-col gap-4 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill px-2 py-5 min-[760px]:w-56 min-[760px]:px-3"
+  class="flex min-h-0 w-14 shrink-0 flex-col gap-3 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill px-2 pt-0 pb-4 min-[760px]:w-[252px] min-[760px]:px-0"
 >
   <p
-    class="hidden h-[33px] items-center border-b border-hairline pl-3.5 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase min-[760px]:flex"
+    class="hidden h-[33px] shrink-0 items-center border-b border-hairline pl-3.5 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase min-[760px]:flex"
   >
     Settings
   </p>
@@ -119,7 +119,7 @@
     Use the arrow keys to move between settings sections. Press Home or End to
     jump to the first or last section.
   </p>
-  <div class="relative hidden shrink-0 min-[760px]:block">
+  <div class="relative hidden shrink-0 px-1.5 pt-2 min-[760px]:block">
     <SearchIcon
       class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
     />
@@ -137,7 +137,7 @@
       >{/if}
   </div>
   {#if !matches.length}<p
-      class="px-2 text-xs text-muted-foreground"
+      class="px-3.5 text-xs text-muted-foreground"
       role="status"
     >
       No matching settings.
@@ -145,9 +145,9 @@
   {#each groups as group (group)}
     {@const sections = matches.filter((section) => section.group === group)}
     {#if sections.length}
-      <div class="flex shrink-0 flex-col gap-1">
+      <div class="flex shrink-0 flex-col gap-0.5 px-1.5">
         <p
-          class="hidden px-2.5 pb-1.5 text-[11px] font-semibold text-muted-foreground min-[760px]:block"
+          class="hidden px-2.5 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase min-[760px]:block"
         >
           {GROUP_LABELS[group]}
         </p>
@@ -184,7 +184,7 @@
   {/each}
 
   {#if onOpenChain}
-    <div class="mt-auto hidden pt-4 min-[760px]:block">
+    <div class="mt-auto hidden px-1.5 pt-4 min-[760px]:block">
       <!-- These pages are the full form. The chain carries the same few
            controls inline and saves them immediately, which is where most
            visits actually want to go. -->
