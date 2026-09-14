@@ -63,7 +63,7 @@
           <Button
             variant="outline"
             class={status.backend === backend
-              ? "border-primary/50 bg-accent-wash text-primary disabled:opacity-100"
+              ? "border-accent-edge bg-accent-wash text-accent-text disabled:opacity-100"
               : ""}
             size="sm"
             aria-pressed={status.backend === backend}
@@ -143,8 +143,9 @@
   {act}
   {onRemoveModel}
 />
-<details class="border-t border-hairline pt-4">
-  <summary class="cursor-pointer text-sm font-medium"
+<details class="rounded-lg border border-hairline bg-background px-3 py-2.5">
+  <summary
+    class="cursor-pointer rounded-sm text-sm font-medium text-accent-text focus-visible:outline-ring"
     >Runtime preferences</summary
   >
   <div class="mt-4 space-y-4">

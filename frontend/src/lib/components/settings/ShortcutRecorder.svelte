@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import KeyboardIcon from "@lucide/svelte/icons/keyboard";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
@@ -57,8 +58,8 @@
 
 <div
   class={capturing
-    ? "bg-primary/5 px-5 py-[19px] transition-colors"
-    : "px-5 py-[19px] transition-colors"}
+    ? "bg-accent-wash px-5 py-3.5 transition-colors"
+    : "px-5 py-3.5 transition-colors"}
   aria-busy={capturing}
   role="group"
   aria-labelledby={`${id}-title`}
@@ -67,9 +68,9 @@
   <div
     class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
   >
-    <div class="min-w-0">
+    <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2">
-        <p id={`${id}-title`} class="text-sm font-medium">{title}</p>
+        <p id={`${id}-title`} class="text-sm font-semibold">{title}</p>
         <span
           class="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
         >
@@ -78,12 +79,9 @@
       </div>
       <p
         id={`${id}-description`}
-        class="mt-1 text-[13px] leading-relaxed text-muted-foreground"
+        class="mt-1 max-w-md text-[13px] leading-5 text-muted-foreground"
       >
         {description}
-      </p>
-      <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground/90">
-        {requirement}
       </p>
     </div>
     <div class="flex shrink-0 flex-wrap items-center gap-2">
@@ -120,10 +118,11 @@
         </Button>
       {/if}
       <Button
-        variant={capturing ? "default" : "secondary"}
+        variant={capturing ? "default" : "soft"}
         size="sm"
         onclick={capturing ? onCancel : onRecord}
         disabled={disabled || (!capturing && captureUnavailable)}
+        aria-describedby={`${id}-requirement`}
       >
         {#if capturing}
           <LoaderCircleIcon class="animate-spin" />
@@ -135,19 +134,31 @@
       </Button>
     </div>
   </div>
-  <div
-    class="mt-2.5 min-h-5 text-xs font-medium"
-    aria-live="polite"
-    aria-atomic="true"
-  >
+  <details class="group/keys mt-2">
+    <summary
+      class="inline-flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+    >
+      Allowed keys
+      <ChevronDownIcon
+        class="size-3 transition-transform group-open/keys:rotate-180 motion-reduce:transition-none"
+      />
+    </summary>
+    <p
+      id={`${id}-requirement`}
+      class="mt-1.5 max-w-xl text-xs leading-5 text-muted-foreground"
+    >
+      {requirement}
+    </p>
+  </details>
+  <div class="text-xs font-medium" aria-live="polite" aria-atomic="true">
     {#if capturing}
-      <p class="text-primary" role="status">
+      <p class="mt-2 text-accent-text" role="status">
         Listening for this chord. Press Escape to cancel; captured keys will not
         trigger an action.
       </p>
     {:else if feedback}
       <p
-        class={feedbackTone}
+        class={`mt-2 ${feedbackTone}`}
         role={feedback.state === "error" ? "alert" : "status"}
       >
         {feedback.message}

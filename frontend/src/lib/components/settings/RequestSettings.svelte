@@ -22,7 +22,9 @@
   const attention = $derived(
     connection &&
       (!connection.reachable ||
-        connection.checks?.some((check) => check.status === CheckStatus.CheckAttention)),
+        connection.checks?.some(
+          (check) => check.status === CheckStatus.CheckAttention,
+        )),
   );
   const description = $derived(
     stale
@@ -36,7 +38,7 @@
 <SettingsDisclosure title="Request settings" {description}>
   {@render children()}
   {#if connection}
-    <div class="p-5">
+    <div class="px-5 py-4">
       <ConnectionDiagnostics result={connection} {stale} {busy} {onCheck} />
     </div>
   {/if}

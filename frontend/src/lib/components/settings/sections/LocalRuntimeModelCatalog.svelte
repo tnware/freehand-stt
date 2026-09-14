@@ -8,6 +8,7 @@
   import { modelSize, runtimePresentation } from "$lib/utils/managedRuntime";
   import ModelDownloadSource from "$lib/components/settings/ModelDownloadSource.svelte";
   import { Button } from "$lib/components/ui/button";
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
   import DownloadIcon from "@lucide/svelte/icons/download";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
@@ -39,14 +40,14 @@
   const status = $derived(row.status);
   const running = $derived(status.state === "running");
   const models = $derived(
-    (status.models?.length ? status.models : entry.models ?? []).filter(
+    (status.models?.length ? status.models : (entry.models ?? [])).filter(
       (model) => entry.models?.some((qualified) => qualified.id === model.id),
     ),
   );
 </script>
 
 <section
-  class="space-y-3 border-t border-hairline pt-5"
+  class="space-y-3 border-t border-hairline pt-4"
   aria-label="Model catalog"
 >
   <div class="flex flex-wrap items-center justify-between gap-3">
@@ -57,7 +58,7 @@
       </p>
     </div>
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       disabled={locked || !view.installed}
       onclick={() => act(() => runtime.run(id, "RefreshCatalog"))}
@@ -75,7 +76,7 @@
       status.operation?.kind === "download" &&
       status.operation.model === model.id}
     <article
-      class="border-b border-hairline py-3 last:border-b-0"
+      class={`rounded-lg border p-3 ${model.id === row.instance.model ? "border-accent-edge bg-accent-wash" : "border-hairline bg-background"}`}
       aria-label={model.name}
     >
       <div class="flex flex-wrap items-start justify-between gap-3">
@@ -83,27 +84,23 @@
           <h5 class="text-sm font-semibold" title={model.description}>
             {model.name}
           </h5>
-          <p class="mt-1.5 text-[13px] text-secondary-foreground">
-            {model.description}
-          </p>
           <p class="mt-1 text-xs text-secondary-foreground">
-            {modelSize(model.sizeBytes)}
-            {#if model.installed}<span class="text-success">
-                · Downloaded</span
-              >{/if}
-            {#if model.recommended}
+            {modelSize(model.sizeBytes)}{#if model.recommended}
               · Recommended{/if}
+            {#if model.installed}
+              · Downloaded{/if}
           </p>
         </div>
-        <div class="flex flex-wrap gap-1">
+        <div class="ml-auto flex shrink-0 items-center gap-2">
           {#if model.id === row.instance.model}
-            <span
-              class="inline-flex h-8 items-center gap-1.5 px-2 text-xs font-medium text-primary"
-              ><CheckIcon class="size-3.5" />Selected</span
+            <StatusBadge tone="accent"
+              ><span class="inline-flex items-center gap-1.5"
+                ><CheckIcon class="size-3.5" />Selected</span
+              ></StatusBadge
             >
           {:else}
             <Button
-              variant="ghost"
+              variant="soft"
               size="sm"
               disabled={locked || running}
               onclick={() =>
@@ -130,7 +127,7 @@
                 onRemoveModel(model);
               }}><TrashIcon class="size-3.5" /></Button
             >{:else}<Button
-              variant="outline"
+              variant="soft"
               size="sm"
               disabled={locked || running || !view.installed}
               onclick={() => act(() => runtime.downloadModel(id, model.id))}
@@ -138,22 +135,9 @@
             >{/if}
         </div>
       </div>
-      {#if source}<div class="mt-2">
-          <ModelDownloadSource {source} />
-        </div>{/if}
       {#if downloading}
-        <div class="mt-3 space-y-1" role="status">
+        <div class="mt-2 space-y-1" role="status">
           {#if operating}
-            <p class="text-xs text-secondary-foreground">
-              {runtime.pendingFor(id) || view.activity}{view.percent !== null
-                ? ` · ${view.percent}%`
-                : ""}
-            </p>
-            {#if view.transferred}<p
-                class="text-xs tabular-nums text-secondary-foreground"
-              >
-                {view.transferred}
-              </p>{/if}
             {#if view.percent !== null}
               <progress
                 class="h-1.5 w-full accent-primary"
@@ -167,6 +151,16 @@
                 aria-label={view.activity}
               />
             {/if}
+            <p class="text-xs text-secondary-foreground">
+              {runtime.pendingFor(id) || view.activity}{view.percent !== null
+                ? ` · ${view.percent}%`
+                : ""}
+            </p>
+            {#if view.transferred}<p
+                class="text-xs tabular-nums text-secondary-foreground"
+              >
+                {view.transferred}
+              </p>{/if}
           {:else if view.completion}
             <p class="text-sm">{view.completion}</p>
             {#if status.operation.error}<p class="text-xs text-destructive">
@@ -175,6 +169,13 @@
           {/if}
         </div>
       {/if}
+      {#if source}<div class="mt-2">
+          <ModelDownloadSource {source} description={model.description} />
+        </div>{:else}<p
+          class="mt-2 text-xs leading-relaxed text-secondary-foreground"
+        >
+          {model.description}
+        </p>{/if}
     </article>
   {/each}
   {#if !models.length}<p class="text-sm text-secondary-foreground">

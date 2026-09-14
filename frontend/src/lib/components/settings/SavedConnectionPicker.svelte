@@ -40,11 +40,11 @@
 </script>
 
 <section
-  class="border-b border-hairline pb-4"
+  class="rounded-xl border border-border bg-card px-5 py-4 shadow-xs"
   aria-label={inactive ? "Saved manual connection" : "Active connection"}
 >
   <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-    <label for={`saved-connection-${purpose}`} class="text-sm font-medium"
+    <label for={`saved-connection-${purpose}`} class="text-sm font-semibold"
       >Connection</label
     >
     <div class="min-w-44 flex-1">
@@ -59,7 +59,7 @@
       />
     </div>
     <Button
-      variant="ghost"
+      variant="soft"
       size="sm"
       disabled={busy}
       onclick={selected ? onManage : onAdd}

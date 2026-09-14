@@ -5,6 +5,7 @@
     type ProviderDescriptor,
     type BinaryOptions,
   } from "$bindings/managedruntime";
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import RuntimeDownloadSource from "$lib/components/settings/RuntimeDownloadSource.svelte";
   import ModelDownloadSource from "$lib/components/settings/ModelDownloadSource.svelte";
@@ -48,7 +49,7 @@
   let binaryChoice = $state("auto");
   const chosenBackend = $derived(
     binaryChoice === "auto"
-      ? recommendation?.recommendedBackend ?? ""
+      ? (recommendation?.recommendedBackend ?? "")
       : binaryChoice,
   );
   const choiceAvailable = $derived(
@@ -161,7 +162,7 @@
   }
 </script>
 
-<div class="@container/runtime flex min-w-0 flex-col gap-5">
+<div class="@container/runtime flex min-w-0 flex-col gap-4">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <h2 class="text-base font-semibold">Managed runtimes</h2>
@@ -170,13 +171,13 @@
       </p>
     </div>
     <div class="flex items-center gap-1">
-      <Button variant="ghost" size="sm" onclick={onConnections}
+      <Button variant="soft" size="sm" onclick={onConnections}
         >Manage connections</Button
       >
     </div>
   </div>
   {#if runtime.providers.length}
-    <div class="divide-y divide-hairline" aria-label="Runtime inventory">
+    <div class="space-y-3" aria-label="Runtime inventory">
       {#each runtime.providers as entry (entry.id)}
         {@const item =
           selectedID === entry.id
@@ -197,51 +198,62 @@
         {@const itemModel = item?.status.models?.find(
           (model) => model.id === item.instance.model,
         )}
-        <div class="py-4">
+        <div
+          class={`rounded-xl border p-3 ${expanded ? "border-accent-edge bg-card" : "border-hairline bg-card"}`}
+        >
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <h3 class="flex items-center gap-2 text-sm font-semibold">
-                <ProviderIcon profile={entry.id} size={24} />{entry.name}
-              </h3>
-              <p
-                class="mt-2 flex items-center gap-2 text-[13px] text-secondary-foreground"
+            <div class="flex min-w-0 flex-[1_1_15rem] items-center gap-3">
+              <span
+                class={`flex size-10 shrink-0 items-center justify-center rounded-lg border ${expanded ? "border-accent-edge bg-accent-wash" : "border-hairline bg-background"}`}
               >
-                {#if itemBusy}<LoaderCircleIcon
-                    class="size-3 shrink-0 animate-spin text-primary motion-reduce:animate-none"
-                  />
-                {:else}<span
-                    class={`size-1.5 shrink-0 rounded-full ${item?.status.state === "running" ? "bg-success" : item?.status.state === "error" ? "bg-destructive" : "bg-secondary-foreground"}`}
-                    aria-hidden="true"
-                  ></span>{/if}
-                <span
-                  class={item?.status.state === "running"
-                    ? "font-medium text-success"
-                    : item?.status.state === "error"
-                      ? "text-destructive"
-                      : itemBusy
-                        ? "text-primary"
-                        : ""}
+                <ProviderIcon profile={entry.id} size={24} />
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <h3 class="text-sm font-semibold">{entry.name}</h3>
+                  <StatusBadge
+                    tone={!entry.supported
+                      ? "warning"
+                      : item?.status.state === "running"
+                        ? "success"
+                        : item?.status.state === "error"
+                          ? "danger"
+                          : itemBusy
+                            ? "accent"
+                            : "neutral"}
+                    dot={!itemBusy}
+                  >
+                    <span class="inline-flex items-center gap-1.5"
+                      >{#if itemBusy}<LoaderCircleIcon
+                          class="size-3 animate-spin motion-reduce:animate-none"
+                        />{/if}
+                      {!entry.supported
+                        ? "Unavailable"
+                        : item
+                          ? presentation.label
+                          : "Not installed"}</span
+                    >
+                  </StatusBadge>
+                </div>
+                <p
+                  class={`mt-1 text-xs text-secondary-foreground ${presentation.startup || !entry.supported ? "break-words" : "truncate"}`}
+                  title={!entry.supported
+                    ? entry.unavailableReason
+                    : presentation.startup || itemModel?.name}
                 >
                   {!entry.supported
                     ? entry.unavailableReason || "Unavailable on this platform"
-                    : item
-                      ? presentation.startup || presentation.label
-                      : "Not installed"}
-                </span>
-                {#if !expanded && itemModel}
-                  <span class="min-w-0 truncate">
-                    · {itemModel.name}{switchableProvider(entry.id) &&
-                    item?.status.backend
-                      ? ` · ${backendLabel(item.status.backend)} binary`
-                      : ""}
-                  </span>
-                {/if}
-              </p>
+                    : presentation.startup ||
+                      (itemModel
+                        ? `${itemModel.name}${switchableProvider(entry.id) && item?.status.backend ? ` · ${backendLabel(item.status.backend)} binary` : ""}`
+                        : "Install a runtime, then download a model.")}
+                </p>
+              </div>
             </div>
-            <div class="ml-auto flex items-center gap-2">
+            <div class="ml-auto flex shrink-0 items-center gap-2">
               {#if !presentation.installed && !runtime.isBusy(item?.instance.id ?? entry.id)}
                 <Button
-                  variant="outline"
+                  variant="soft"
                   size="sm"
                   disabled={disabled ||
                     workBusy ||
@@ -267,7 +279,7 @@
                 {:else if presentation.installed}
                   {#if item.status.state === "running"}
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       disabled={itemLocked}
                       onclick={() =>
@@ -315,14 +327,14 @@
               {/if}
               {#if item}
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onclick={() => void runtime.openOutput(itemID)}
                   >View output</Button
                 >
               {/if}
               <Button
-                variant="ghost"
+                variant={expanded ? "soft" : "ghost"}
                 size="icon-sm"
                 aria-label="Manage"
                 title={expanded
@@ -369,12 +381,12 @@
             {/if}
           </div>
           {#if entry.source && (expanded || !item)}
-            <div class="mt-3">
+            <div class="mt-3 border-t border-hairline pt-3">
               <RuntimeDownloadSource
                 source={entry.source}
                 backend={recommendation?.provider === entry.id
                   ? chosenBackend
-                  : item?.status.backend ?? ""}
+                  : (item?.status.backend ?? "")}
               />
             </div>
           {/if}
@@ -462,7 +474,10 @@
           {/if}
           {#if row && status && selectedID === entry.id}
             {#if providerRows.length > 1}
-              <div class="space-y-2 py-3" role="status">
+              <div
+                class="my-3 space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-3"
+                role="status"
+              >
                 <p class="text-sm text-secondary-foreground">
                   Multiple saved installations need review. Keep one; remove
                   unwanted files and reassign their Connections before deleting
@@ -483,7 +498,10 @@
                 </div>
               </div>
             {/if}
-            <div id={`${uid}-${entry.id}-details`} class="mt-5 space-y-5">
+            <div
+              id={`${uid}-${entry.id}-details`}
+              class="mt-4 space-y-4 border-t border-hairline pt-4"
+            >
               <LocalRuntimeDetails
                 {runtime}
                 {row}
@@ -529,7 +547,7 @@
     </p>{/if}
   <div>
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       disabled={runtime.loading}
       onclick={() => void runtime.load()}>Refresh inventory</Button

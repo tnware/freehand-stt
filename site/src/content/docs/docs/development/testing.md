@@ -254,6 +254,11 @@ startup, rendering, clipboard, and selected-model inference observations:
   follow/pause scrolling, Clear, close/reopen, and sparse upstream output. Use bounded
   synthetic output; viewer interactions must never send input or change process lifetime.
 
+`process-output.spec.ts` checks both themes at wide and narrow widths, stable
+consent geometry, terminal content fitting its viewport, and actual clicks on
+search and Follow controls. Searching forward and backward to the same match
+must leave Copy enabled when the terminal still has a selection.
+
 For native Windows acceptance, use only a user-selected model to measure startup
 and first/subsequent request behavior, confirm actual GPU preparation and CPU
 behavior, inspect host recommendations,
@@ -588,6 +593,10 @@ generating bindings and installing frontend dependencies. This uses the standard
 `frontend/playwright.config.ts` owns the browser, viewport, test server lifecycle,
 and failure reports; `frontend/tests/browser/vite.config.ts` serves the fixture without
 the native Wails bridge. Vitest excludes the browser specs.
+For HTML injected by a browser test, import shared Svelte and singleton state
+through a fixture module processed by Vite, such as `presentation-runtime.ts`.
+Raw inline imports can otherwise create a second singleton when Vite adds a
+module-version URL to the production component's import.
 
 The browser fixture mounts the actual Settings screen, connection picker, and dialogs
 with the installed Bits UI library. Fake services reuse synthetic DTOs at the Wails
@@ -616,6 +625,18 @@ verify both recording-limit modes, nested validation causes, safe error JSON,
 and rejection before applied settings, credentials, native adapters, or events
 can change. Frontend metadata fixtures distinguish independent STT/TTS outcomes
 and prevent unsaved-draft checks from being attributed to applied settings.
+
+`visual-hierarchy.spec.ts` mounts the actual Settings screen in light and dark
+modes at desktop and narrow widths. It checks enabled primary-action contrast in
+normal and hover states, reachable save actions, horizontal overflow, and
+keyboard access to shortcut rules. `builtin-connections.spec.ts` covers compact
+resource rows, selected-connection semantics, visible runtime controls, and
+expansion into the model catalog; opening these views must issue no runtime
+commands. Their screenshots support visual review rather than replacing
+behavioral assertions. Inspect heading and label hierarchy, readable secondary
+text, status labels, and disclosure focus alongside the existing navigation,
+shortcut-recovery, source-provenance, and managed-runtime interaction suites.
+Keep checks tied to user outcomes rather than exact class names or palette values.
 
 Repeat the audit interactively on Windows before native acceptance: scroll long
 pages and navigate by mouse/keyboard, use connection-editor Back/Cancel, save an

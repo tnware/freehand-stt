@@ -51,7 +51,7 @@
       aria-label="Speech settings"
       title="Speech settings"
       class={cn(
-        buttonVariants({ variant: "ghost", size: "sm" }),
+        buttonVariants({ variant: "outline", size: "sm" }),
         "gap-2 px-2 text-secondary-foreground aria-expanded:bg-accent-wash aria-expanded:text-accent-text",
       )}
     >

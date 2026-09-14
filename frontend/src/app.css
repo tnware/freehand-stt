@@ -34,6 +34,11 @@
   --primary: #326fe5;
   --primary-foreground: #ffffff;
   --primary-hover: #245fcf;
+  /* Filled actions reuse the existing brand blue in both themes so their
+   * white labels stay readable; brighter dark-mode blue remains an accent. */
+  --action-primary: #326fe5;
+  --action-primary-hover: #245fcf;
+  --action-primary-foreground: #ffffff;
   --accent-text: #245fcf;
   --accent-wash: rgb(50 111 229 / 9%);
   --accent-wash-strong: rgb(50 111 229 / 14%);
@@ -227,8 +232,10 @@
 
 @theme inline {
   --font-display: "Archivo Variable", var(--font-sans);
-  --font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Cascadia Mono", "SFMono-Regular", Consolas, ui-monospace, monospace;
+  --font-sans:
+    "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    "Cascadia Mono", "SFMono-Regular", Consolas, ui-monospace, monospace;
   --color-hairline: var(--hairline);
   --color-highlight: var(--highlight);
   --color-scrollbar-thumb-hover: var(--scrollbar-thumb-hover);
@@ -272,6 +279,9 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-action-primary: var(--action-primary);
+  --color-action-primary-hover: var(--action-primary-hover);
+  --color-action-primary-foreground: var(--action-primary-foreground);
   --color-control-fill: var(--control-fill);
   --color-control-fill-hover: var(--control-fill-hover);
   --color-control-fill-pressed: var(--control-fill-pressed);
@@ -412,6 +422,12 @@ html.dark[data-material="mica"] #app {
 [data-slot="textarea"],
 [data-slot="select-trigger"] {
   border-radius: 0.5rem;
+  color: var(--foreground);
+}
+[data-slot="input"]:not(:focus-visible):not([aria-invalid="true"]),
+[data-slot="textarea"]:not(:focus-visible):not([aria-invalid="true"]),
+[data-slot="select-trigger"]:not(:focus-visible):not([aria-invalid="true"]) {
+  border-color: color-mix(in srgb, var(--muted-foreground) 75%, var(--well));
 }
 [data-slot="popover-content"],
 [data-slot="dropdown-menu-content"],

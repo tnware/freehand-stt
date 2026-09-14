@@ -22,18 +22,18 @@
   }
 </script>
 
-<div class="min-w-0 space-y-1 text-xs text-foreground/80">
+<div class="min-w-0 space-y-1 text-xs text-secondary-foreground">
   <p class="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
     <span>Source</span>
     <a
-      class="break-all text-primary underline underline-offset-2 hover:text-primary/80"
+      class="break-all text-accent-text underline underline-offset-2 hover:text-accent-text"
       href={source.repositoryURL}
       onclick={(event) => void open(event, source.repositoryURL)}
       >{source.repositoryURL.replace("https://github.com/", "")}</a
     >
     <span aria-hidden="true">·</span>
     <a
-      class="text-primary underline underline-offset-2 hover:text-primary/80"
+      class="text-accent-text underline underline-offset-2 hover:text-accent-text"
       href={source.releaseURL}
       onclick={(event) => void open(event, source.releaseURL)}
       >Official release</a
@@ -41,10 +41,12 @@
   </p>
   <details class="group">
     <summary
-      class="w-fit cursor-pointer py-1 text-foreground/80 hover:text-foreground"
+      class="w-fit cursor-pointer rounded-sm py-1 font-medium text-accent-text hover:underline focus-visible:outline-ring"
       >Binary download details</summary
     >
-    <div class="mt-2 space-y-3 border-l border-border pl-3">
+    <div
+      class="mt-2 space-y-3 rounded-lg border border-hairline bg-background p-3"
+    >
       {#each artifacts as artifact (`${artifact.os}/${artifact.architecture}/${artifact.backend}/${artifact.filename}`)}
         <div class="min-w-0 space-y-1">
           <p class="font-medium text-foreground">

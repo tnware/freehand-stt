@@ -36,7 +36,7 @@
 >
   <div class="flex items-center justify-between gap-3">
     <div>
-      <p class="text-sm font-medium">Connection check</p>
+      <p class="text-sm font-semibold">Connection check</p>
       <p class="mt-1 text-xs text-muted-foreground">
         {stale
           ? "Settings changed. Check again for current results."
@@ -44,7 +44,7 @@
       </p>
     </div>
     {#if onCheck}<Button
-        variant="ghost"
+        variant="soft"
         size="sm"
         onclick={onCheck}
         disabled={busy}>{busy ? "Checking…" : "Check again"}</Button
@@ -53,9 +53,11 @@
   {#if stale}<p class="text-xs text-muted-foreground">
       Previous results apply to the settings that were tested.
     </p>
-  {:else if result.checks?.length}<dl class="space-y-3">
+  {:else if result.checks?.length}<dl
+      class="divide-y divide-hairline rounded-lg border border-hairline bg-subtle-fill px-3"
+    >
       {#each result.checks as check (check.kind)}<div
-          class="grid grid-cols-[18px_1fr] gap-x-2"
+          class="grid grid-cols-[18px_1fr] gap-x-2 py-2.5"
         >
           {#if check.status === CheckStatus.CheckPassed}<CircleCheckIcon
               class="mt-0.5 size-4 text-success"
@@ -65,7 +67,9 @@
               class="mt-0.5 size-4 text-muted-foreground"
             />{/if}
           <div>
-            <dt class="text-xs text-muted-foreground">{labels[check.kind]}</dt>
+            <dt class="text-xs font-semibold text-secondary-foreground">
+              {labels[check.kind]}
+            </dt>
             <dd class="mt-0.5 text-sm">{check.summary}</dd>
             {#if check.detail && check.status !== CheckStatus.CheckPassed}<dd
                 class="mt-1 text-xs leading-relaxed text-muted-foreground"
@@ -79,7 +83,7 @@
     </p>{/if}
   {#if !stale}
     <div
-      class="space-y-1 border-t border-hairline pt-3 text-[11px] leading-relaxed text-muted-foreground"
+      class="space-y-1 border-t border-hairline pt-3 text-xs leading-5 text-muted-foreground"
     >
       <p>Inference support and inference authorization remain unverified.</p>
       {#if result.httpStatus || result.latencyMilliseconds > 0}

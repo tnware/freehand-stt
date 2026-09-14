@@ -24,6 +24,16 @@ test("runtime connections have read-only details and navigate to their owners", 
       (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
     ),
   ).toBe(true);
+  const ownership = details.locator("details").filter({
+    has: page.getByText("Connection ownership & safety", { exact: true }),
+  });
+  await expect(ownership).not.toHaveAttribute("open", "");
+  await ownership
+    .getByText("Connection ownership & safety", { exact: true })
+    .click();
+  await expect(ownership).toContainText(
+    "Requests never fall back to a remote server.",
+  );
   await expect(details).toContainText("nemotron-3.5");
   await page.evaluate(() =>
     window.testRuntime.change("nemo-default", { backend: "cpu" }),
@@ -84,3 +94,72 @@ test("new manual connections never offer managed-target creation, while legacy a
   await expect(page.locator("#connection-target")).toHaveCount(0);
   await expect(page.locator("#connection-instance")).toHaveCount(0);
 });
+
+for (const theme of ["dark", "light"] as const) {
+  test(`resource views retain visible controls at compact width in ${theme} mode`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 860, height: 1000 });
+    await page.emulateMedia({ colorScheme: theme });
+    await page.goto(`/tests/browser/app/?runtime&runtime-ready&theme=${theme}`);
+    await page.locator('[data-settings-section="connections"]').click();
+    const connections = page.getByRole("navigation", {
+      name: "Saved connections",
+    });
+    await expect(
+      connections.getByText("Running", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Add connection", exact: true }),
+    ).toBeInViewport();
+    await page.screenshot({
+      path: testInfo.outputPath(`connections-${theme}.png`),
+      fullPage: true,
+    });
+    await connections.getByRole("button", { name: /Local speech/ }).click();
+    await expect(
+      connections.getByRole("button", { name: /Local speech/ }),
+    ).toHaveAttribute("aria-current", "true");
+    await expect(
+      page.getByRole("button", { name: "Manage runtime", exact: true }),
+    ).toBeInViewport();
+    await page.screenshot({
+      path: testInfo.outputPath(`connection-details-${theme}.png`),
+      fullPage: true,
+    });
+    await page
+      .getByRole("button", { name: "Manage runtime", exact: true })
+      .click();
+    const inventory = page.locator('[aria-label="Runtime inventory"]');
+    await expect(inventory.getByText("Running", { exact: true })).toBeVisible();
+    await expect(
+      inventory.getByRole("button", { name: "Stop", exact: true }),
+    ).toBeInViewport();
+    await expect(
+      inventory.getByRole("button", { name: "View output", exact: true }),
+    ).toBeInViewport();
+    await page.screenshot({
+      path: testInfo.outputPath(`runtime-list-${theme}.png`),
+      fullPage: true,
+    });
+    const manage = inventory.getByRole("button", {
+      name: "Manage",
+      exact: true,
+    });
+    await manage.click();
+    await expect(manage).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      page.getByRole("region", { name: "Model catalog" }),
+    ).toBeVisible();
+    await page.screenshot({
+      path: testInfo.outputPath(`runtime-expanded-${theme}.png`),
+      fullPage: true,
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+  });
+}

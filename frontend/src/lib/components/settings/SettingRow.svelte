@@ -25,7 +25,7 @@
 </script>
 
 <div
-  class={compact ? "px-5 py-3" : "px-5 py-4"}
+  class={compact ? "px-5 py-3" : "px-5 py-3.5"}
   role="group"
   aria-labelledby={titleID}
   aria-describedby={description ? descriptionID : undefined}
@@ -33,25 +33,32 @@
   <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
     <div class="min-w-0 flex-[1_1_12rem]">
       {#if controlID}
-        <label id={titleID} for={controlID} class="cursor-pointer text-sm font-medium"
-          >{title}</label
+        <label
+          id={titleID}
+          for={controlID}
+          class="cursor-pointer text-sm font-semibold">{title}</label
         >
       {:else}
-        <p id={titleID} class="text-sm font-medium">{title}</p>
+        <p id={titleID} class="text-sm font-semibold">{title}</p>
       {/if}
       {#if description}
-        <p id={descriptionID} class="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+        <p
+          id={descriptionID}
+          class="mt-1 text-[13px] leading-5 text-muted-foreground"
+        >
           {description}
         </p>
       {/if}
     </div>
     {#if control}
-      <div class="ml-auto flex max-w-full shrink-0 flex-wrap items-center gap-2">
+      <div
+        class="ml-auto flex max-w-full shrink-0 flex-wrap items-center gap-2"
+      >
         {@render control()}
       </div>
     {/if}
   </div>
   {#if children}
-    <div class="mt-3.5">{@render children()}</div>
+    <div class="mt-3">{@render children()}</div>
   {/if}
 </div>

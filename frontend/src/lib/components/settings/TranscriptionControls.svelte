@@ -23,7 +23,9 @@
     options.temperatureOverride = enabled;
     if (
       !enabled &&
-      (!Number.isFinite(options.temperature) || options.temperature < 0 || options.temperature > 1)
+      (!Number.isFinite(options.temperature) ||
+        options.temperature < 0 ||
+        options.temperature > 1)
     ) {
       options.temperature = 0;
     }
@@ -31,13 +33,19 @@
   const promptBytes = $derived(new TextEncoder().encode(options.prompt).length);
 </script>
 
-<SettingsDisclosure title="Transcription controls" description="Context hints and temperature">
-  <div class="border-t border-hairline px-5 py-4">
+<SettingsDisclosure
+  title="Transcription controls"
+  description="Context hints and temperature"
+>
+  <div class="px-5 py-4">
     <p class="text-xs leading-relaxed text-muted-foreground">
-      Give the model context for recognizing speech. Shared terms are managed in Vocabulary.
+      Give the model context for recognizing speech. Shared terms are managed in
+      Vocabulary.
     </p>
-    <div class="mt-4 space-y-2">
-      <label for="transcription-prompt" class="text-sm font-medium">Transcription context</label>
+    <div class="mt-3 space-y-2">
+      <label for="transcription-prompt" class="text-sm font-semibold"
+        >Transcription context</label
+      >
       <Textarea
         id="transcription-prompt"
         bind:value={options.prompt}
@@ -49,7 +57,8 @@
         placeholder="Names, subject matter, or examples of expected wording"
       />
       <p id="transcription-prompt-help" class="text-xs text-muted-foreground">
-        A recognition hint, separate from the cleanup instruction. Leave blank to omit.
+        A recognition hint, separate from the cleanup instruction. Leave blank
+        to omit.
         {promptBytes.toLocaleString()} / 8,192 UTF-8 bytes.
       </p>
       {#if promptBytes > 8192}<p role="alert" class="text-xs text-destructive">

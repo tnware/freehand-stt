@@ -35,16 +35,18 @@
     children: Snippet;
   } = $props();
 
-  const collapsible = $derived(open !== undefined && Boolean(controls) && Boolean(onToggle));
+  const collapsible = $derived(
+    open !== undefined && Boolean(controls) && Boolean(onToggle),
+  );
 
   const metaClass = $derived(
     metaTone === "ok"
-      ? "text-success"
+      ? "bg-success/10 text-success"
       : metaTone === "warn"
-        ? "text-warning"
+        ? "bg-warning/10 text-warning"
         : metaTone === "bad"
-          ? "text-destructive"
-          : "text-muted-foreground",
+          ? "bg-destructive/10 text-destructive"
+          : "bg-secondary text-secondary-foreground",
   );
 </script>
 
@@ -58,30 +60,38 @@
     {#if collapsible}
       <button
         type="button"
-        class="module-trigger flex h-5 min-w-0 flex-1 items-center gap-2 text-left"
+        class="module-trigger flex min-h-7 min-w-0 flex-1 items-center gap-2 text-left"
         aria-expanded={open}
         aria-controls={controls}
         onclick={onToggle}
       >
         {#if dot}
-          <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"></span>
+          <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"
+          ></span>
         {/if}
         {@render icon?.()}
-        <h2 class="caption shrink-0">{label}</h2>
+        <h2 class="shrink-0 text-sm font-semibold">{label}</h2>
         <span class="flex-1"></span>
         {#if meta}
-          <span class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}">{meta}</span>
+          <span
+            class="min-w-0 max-w-[58%] truncate rounded-md px-2 py-1 text-xs font-medium {metaClass}"
+            >{meta}</span
+          >
         {/if}
       </button>
     {:else}
       {#if dot}
-        <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"></span>
+        <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"
+        ></span>
       {/if}
       {@render icon?.()}
-      <h2 class="caption">{label}</h2>
+      <h2 class="text-sm font-semibold">{label}</h2>
       <span class="flex-1"></span>
       {#if meta}
-        <span class="figure min-w-0 max-w-[58%] truncate text-[10px] {metaClass}">{meta}</span>
+        <span
+          class="min-w-0 max-w-[58%] truncate rounded-md px-2 py-1 text-xs font-medium {metaClass}"
+          >{meta}</span
+        >
       {/if}
     {/if}
     {@render actions?.()}
@@ -106,7 +116,9 @@
         onclick={onToggle}
       >
         <ChevronRightIcon
-          class="size-[14px] transition-transform duration-200 {open ? 'rotate-90' : ''}"
+          class="size-[14px] transition-transform duration-200 {open
+            ? 'rotate-90'
+            : ''}"
         />
       </button>
     {/if}
@@ -125,8 +137,11 @@
 
 <style>
   .framed {
-    border-top: 1px solid var(--hairline);
-    padding: 0.75rem 0;
+    border: 1px solid var(--card-stroke);
+    border-radius: var(--radius-lg);
+    background: var(--card);
+    padding: 0.875rem;
+    margin-block: 0.5rem;
   }
   .module-card {
     display: flex;
@@ -159,7 +174,8 @@
     height: 2rem;
     flex-shrink: 0;
     border-radius: var(--radius-sm);
-    color: var(--ink-quiet);
+    color: var(--accent-text);
+    background: var(--accent-wash);
     transition:
       background-color 120ms ease,
       color 120ms ease;

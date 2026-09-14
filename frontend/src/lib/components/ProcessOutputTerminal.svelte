@@ -9,6 +9,8 @@
   import { ProcessOutputRenderer } from "$lib/process-output-renderer";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
+  import ArrowDownToLineIcon from "@lucide/svelte/icons/arrow-down-to-line";
+  import CopyIcon from "@lucide/svelte/icons/copy";
 
   let {
     chunks,
@@ -37,6 +39,7 @@
   let selected = $state(false);
   let query = $state("");
   let feedback = $state("");
+  let fontReady = $state(false);
   let terminal: Terminal | undefined;
   let search: SearchAddon | undefined;
   let fit: FitAddon | undefined;
@@ -54,6 +57,14 @@
         .trim(),
       // A transparent bar hides the caret without hiding the cell beneath it.
       cursor: "#00000000",
+      red: styles.getPropertyValue("--destructive").trim(),
+      brightRed: styles.getPropertyValue("--destructive").trim(),
+      green: styles.getPropertyValue("--success").trim(),
+      brightGreen: styles.getPropertyValue("--success").trim(),
+      yellow: styles.getPropertyValue("--warning").trim(),
+      brightYellow: styles.getPropertyValue("--warning").trim(),
+      blue: styles.getPropertyValue("--accent-text").trim(),
+      brightBlue: styles.getPropertyValue("--accent-text").trim(),
     };
   }
   function resize() {
@@ -73,6 +84,9 @@
     const found = previous
       ? search.findPrevious(query, { regex: false })
       : search.findNext(query, { regex: false });
+    // Search can clear and reselect the same match without a second selection
+    // event. Read the final selection so Copy reflects the highlighted text.
+    selected = terminal.hasSelection();
     feedback = found ? "" : "No match in retained output.";
   }
   async function copySelection() {
@@ -100,8 +114,8 @@
         scrollback: 4096,
         reflowCursorLine: true,
         fontFamily: '"IBM Plex Mono", monospace',
-        fontSize: 12,
-        lineHeight: 1.25,
+        fontSize: 13,
+        lineHeight: 1.4,
         cursorBlink: false,
         cursorStyle: "bar",
         cursorInactiveStyle: "none",
@@ -161,9 +175,16 @@
       attributeFilter: ["class", "style", "data-material"],
     });
     let mounted = true;
-    void document.fonts.ready.then(() => {
-      if (mounted) resize();
-    });
+    function finishFontLoad() {
+      if (!mounted) return;
+      fontReady = true;
+      resize();
+    }
+    // An unused webfont is not covered by fonts.ready. Load it before xterm
+    // caches glyph widths; otherwise a late font swap can clip wrapped text.
+    void document.fonts
+      .load('13px "IBM Plex Mono"')
+      .then(finishFontLoad, finishFontLoad);
     return () => {
       mounted = false;
       observer.disconnect();
@@ -175,7 +196,12 @@
   $effect.pre(() => {
     // Imperative xterm lifecycle, not derived UI state. Do not subscribe to
     // incidental reads of selection/follow/theme while creating the terminal.
-    const snapshot = { chunks, revision, enabled, renderer };
+    const snapshot = {
+      chunks,
+      revision,
+      enabled: enabled && fontReady,
+      renderer,
+    };
     untrack(() =>
       snapshot.renderer?.sync(
         snapshot.chunks,
@@ -188,71 +214,79 @@
 
 <div class="flex min-h-0 flex-1 flex-col gap-3">
   <div
-    class="flex shrink-0 flex-wrap items-center gap-1"
+    class="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-card-stroke bg-card p-2"
     role="group"
     aria-label="Output controls"
   >
-    <Input
-      class="h-8 w-44"
-      type="search"
-      aria-label="Search retained output"
-      placeholder="Search output"
-      maxlength={256}
-      disabled={!enabled}
-      bind:value={query}
-      oninput={() => (feedback = "")}
-      onkeydown={(event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          find(event.shiftKey);
-        }
-      }}
-    />
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!enabled || !query}
-      onclick={() => find(true)}>Previous</Button
-    >
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!enabled || !query}
-      onclick={() => find()}>Next</Button
-    >
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!enabled}
-      aria-pressed={following}
-      onclick={() => {
-        following = !following;
-        if (following) terminal?.scrollToBottom();
-      }}>Follow</Button
-    >
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!enabled || !selected}
-      onclick={() => void copySelection()}>Copy selection</Button
-    >
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={!enabled || busy}
-      onclick={onclear}>Clear</Button
-    >
-    <span class="truncate text-xs text-muted-foreground" role="status"
-      >{feedback}</span
+    <div class="flex min-w-0 flex-1 basis-72 items-center gap-1.5">
+      <Input
+        class="h-8 min-w-28 max-w-72 flex-1"
+        type="search"
+        aria-label="Search retained output"
+        placeholder="Search output"
+        maxlength={256}
+        disabled={!enabled}
+        bind:value={query}
+        oninput={() => (feedback = "")}
+        onkeydown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            find(event.shiftKey);
+          }
+        }}
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!enabled || !query}
+        onclick={() => find(true)}>Previous</Button
+      >
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!enabled || !query}
+        onclick={() => find()}>Next</Button
+      >
+    </div>
+    <div class="flex flex-wrap items-center gap-1.5">
+      <Button
+        variant={following ? "soft" : "outline"}
+        size="sm"
+        disabled={!enabled}
+        aria-pressed={following}
+        onclick={() => {
+          following = !following;
+          if (following) terminal?.scrollToBottom();
+        }}><ArrowDownToLineIcon class="size-3.5" />Follow</Button
+      >
+      <Button
+        variant="soft"
+        size="sm"
+        disabled={!enabled || !selected}
+        onclick={() => void copySelection()}
+        ><CopyIcon class="size-3.5" />Copy selection</Button
+      >
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!enabled || busy}
+        onclick={onclear}>Clear</Button
+      >
+    </div>
+    <span
+      class="w-full text-xs text-muted-foreground empty:hidden"
+      role="status">{feedback}</span
     >
   </div>
-  <div class="relative min-h-0 flex-1 border border-hairline bg-background">
+  <div
+    class="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-background"
+  >
     <div
       bind:this={viewport}
       role="region"
       aria-label="Read-only process output"
       aria-describedby={describedby}
-      class="output-terminal absolute inset-0 overflow-hidden p-3"
+      class="output-terminal absolute inset-3 overflow-hidden"
     ></div>
     {@render children?.()}
   </div>
@@ -261,5 +295,8 @@
 <style>
   .output-terminal :global(.xterm) {
     height: 100%;
+  }
+  .output-terminal :global(.xterm-viewport) {
+    background-color: var(--background);
   }
 </style>

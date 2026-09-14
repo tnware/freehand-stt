@@ -34,18 +34,15 @@
 </script>
 
 <div
-  class="grid gap-3 px-5 py-4 @min-[600px]:grid-cols-[minmax(0,1fr)_minmax(180px,1fr)] @min-[600px]:items-start @min-[600px]:gap-6"
+  class="grid gap-3 px-5 py-3.5 @min-[600px]:grid-cols-[minmax(0,1fr)_minmax(180px,1fr)] @min-[600px]:items-start @min-[600px]:gap-6"
   role="group"
   aria-labelledby={labelID}
   aria-describedby={hint ? hintID : undefined}
 >
   <div class="min-w-0">
-    <Label id={labelID} for={id} class="text-sm font-medium">{label}</Label>
+    <Label id={labelID} for={id} class="text-sm font-semibold">{label}</Label>
     {#if hint}
-      <p
-        id={hintID}
-        class="mt-1 text-[13px] leading-relaxed text-muted-foreground"
-      >
+      <p id={hintID} class="mt-1 text-[13px] leading-5 text-muted-foreground">
         {hint}
       </p>
     {/if}

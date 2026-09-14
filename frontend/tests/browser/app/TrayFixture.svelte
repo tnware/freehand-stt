@@ -47,6 +47,20 @@
             })
           : CancellablePromise.resolve(initial),
       {
+        input: {
+          ListMicrophones: () =>
+            CancellablePromise.resolve(
+              params.has("no-microphone")
+                ? []
+                : [
+                    {
+                      id: "default",
+                      name: "Fixture microphone",
+                      default: true,
+                    },
+                  ],
+            ),
+        },
         dictation: {
           StartRecording: () => {
             calls.push("start");

@@ -8,6 +8,7 @@
   import { connectionWorkflows } from "$lib/utils/connectionChoices";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
   import type { Purpose } from "$bindings/savedconnection";
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import SettingsCard from "$lib/components/settings/SettingsCard.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -40,68 +41,94 @@
 </script>
 
 <SettingsCard>
-  <div class="space-y-4 px-5 py-4">
-    <div>
-      <p class="text-sm font-medium">Built-in connection</p>
-      <p class="mt-1 text-xs text-muted-foreground">
-        Available automatically from this local runtime. Its name, transport,
-        model, and supported tasks are managed by the runtime, not by a saved
-        server configuration.
-      </p>
-    </div>
-    <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-3 text-sm">
-      <dt class="text-muted-foreground">Name</dt>
-      <dd class="break-words">{connection.name}</dd>
-      <dt class="text-muted-foreground">Runtime</dt>
-      <dd class="flex items-center gap-2">
+  <div class="space-y-4 p-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <span
+        class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-hairline bg-background"
+      >
         <ProviderIcon
           profile={instance?.provider ??
             connection.details.compatibilityProfile}
-          size={22}
+          size={24}
         />
-        <span
-          >{provider?.name ?? instance?.provider ?? "Unavailable runtime"}</span
-        >
-      </dd>
-      <dt class="text-muted-foreground">Transport</dt>
-      <dd>Local, runtime-owned endpoint · No connection credentials</dd>
-      <dt class="text-muted-foreground">Model</dt>
-      <dd class="break-words">
-        {model?.name ?? instance?.model ?? "Unavailable"}{#if model}<span
-            class="mt-1 block font-mono text-xs text-muted-foreground"
-            >{model.id}</span
-          >{/if}
-      </dd>
-      <dt class="text-muted-foreground">Status</dt>
-      <dd>{view.label}</dd>
-      <dt class="text-muted-foreground">Installed binary</dt>
-      <dd>{view.backend || "Not reported"}</dd>
-      <dt class="text-muted-foreground">Supported tasks</dt>
-      <dd>
+      </span>
+      <div class="min-w-0 flex-1">
+        <h3 class="text-sm font-semibold">
+          {provider?.name ?? instance?.provider ?? "Unavailable runtime"}
+        </h3>
+        <p class="mt-1 text-xs text-secondary-foreground">
+          Built-in connection · Runtime-owned
+        </p>
+      </div>
+      <StatusBadge
+        tone={status?.status.state === "running"
+          ? "success"
+          : status?.status.state === "error"
+            ? "danger"
+            : "neutral"}
+        dot>{view.label}</StatusBadge
+      >
+    </div>
+    <div class="rounded-lg border border-hairline bg-background px-3 py-2.5">
+      <p class="text-xs font-medium text-secondary-foreground">
+        Selected model
+      </p>
+      <p class="mt-1 break-words text-sm font-semibold">
+        {model?.name ?? instance?.model ?? "Unavailable"}
+      </p>
+      <p class="mt-1 text-xs text-secondary-foreground">
         {uses.map((role) => role.label).join(" · ") ||
           "No qualified tasks for this model"}
-      </dd>
-    </dl>
-    <p class="text-xs text-muted-foreground">
-      Stopping the runtime keeps task selections. Requests never fall back to a
-      remote server.
-    </p>
-    <Button variant="outline" disabled={busy} onclick={onManageRuntime}
-      >Manage runtime</Button
-    >
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <p class="text-xs text-secondary-foreground">
+        Local endpoint · No connection credentials
+      </p>
+      <Button variant="soft" disabled={busy} onclick={onManageRuntime}
+        >Manage runtime</Button
+      >
+    </div>
+    <details class="border-t border-hairline pt-3">
+      <summary
+        class="w-fit cursor-pointer rounded-sm text-xs font-medium text-accent-text focus-visible:outline-ring"
+        >Connection ownership &amp; safety</summary
+      >
+      <div
+        class="mt-3 space-y-3 text-xs leading-relaxed text-secondary-foreground"
+      >
+        <p>
+          Available automatically from this local runtime. Its name, transport,
+          model, and supported tasks are managed by the runtime, not by a saved
+          server configuration.
+        </p>
+        <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2">
+          <dt>Name</dt>
+          <dd class="break-words text-foreground">{connection.name}</dd>
+          <dt>Installed binary</dt>
+          <dd class="text-foreground">{view.backend || "Not reported"}</dd>
+          {#if model}<dt>Model ID</dt>
+            <dd class="break-all font-mono text-foreground">{model.id}</dd>{/if}
+        </dl>
+        <p>
+          Stopping the runtime keeps task selections. Requests never fall back
+          to a remote server.
+        </p>
+      </div>
+    </details>
   </div>
 </SettingsCard>
 <SettingsCard>
-  <div class="space-y-3 px-5 py-4">
-    <h3 class="text-sm font-medium">Task settings</h3>
-    <p class="text-xs text-muted-foreground">
+  <div class="space-y-3 p-4">
+    <h3 class="text-sm font-semibold">Task settings</h3>
+    <p class="text-xs leading-relaxed text-secondary-foreground">
       Choose this connection in each task. Language, recording mode, cleanup
       intent, and other task options stay with that task.
     </p>
     <div class="flex flex-wrap gap-2">
       {#each uses as role (role.id)}
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           disabled={busy}
           onclick={() => onWorkflow(role.id)}>{role.label} settings</Button

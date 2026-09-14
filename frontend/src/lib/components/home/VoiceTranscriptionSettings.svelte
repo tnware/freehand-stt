@@ -131,7 +131,7 @@
   {#if !draft}
     {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
     <div class="space-y-1.5">
-      <label for="voice-connection" class="text-xs font-medium"
+      <label for="voice-connection" class="text-sm font-semibold"
         >Connection</label
       >
       <div class="flex gap-2">
@@ -238,11 +238,11 @@
   {#if profile?.capabilities.realtime}
     <div
       class={draft
-        ? "flex items-center justify-between gap-4 px-5 py-4"
+        ? "flex items-center justify-between gap-4 px-5 py-3.5"
         : "flex items-center justify-between gap-3 border-t border-hairline pt-3"}
     >
       <div>
-        <label for="voice-realtime" class="text-sm font-medium"
+        <label for="voice-realtime" class="text-sm font-semibold"
           >Realtime transcription</label
         >
         <p class="mt-1 text-xs text-muted-foreground">
@@ -261,7 +261,7 @@
   {#if cfg.realtime && cfg.modelProfile === ID.Qwen3ASR}
     <p
       class={draft
-        ? "px-5 py-4 text-xs leading-relaxed text-muted-foreground"
+        ? "px-5 py-3.5 text-xs leading-relaxed text-muted-foreground"
         : "text-xs leading-relaxed text-muted-foreground"}
     >
       Qwen realtime uses automatic language detection. Language, context,
@@ -269,8 +269,8 @@
     </p>
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
-    <div class={draft ? "space-y-2 px-5 py-4" : "space-y-1.5"}>
-      <label for="voice-language" class="text-sm font-medium"
+    <div class={draft ? "space-y-2 px-5 py-3.5" : "space-y-1.5"}>
+      <label for="voice-language" class="text-sm font-semibold"
         >Spoken language</label
       >
       <LanguagePicker
@@ -285,8 +285,9 @@
     </div>
   {/if}
   {#if !cfg.realtime && profile?.capabilities.transcriptionPrompt}
-    <div class={draft ? "space-y-2 px-5 py-4" : "space-y-1.5"}>
-      <label for="voice-prompt" class="text-sm font-medium">Context hint</label
+    <div class={draft ? "space-y-2 px-5 py-3.5" : "space-y-1.5"}>
+      <label for="voice-prompt" class="text-sm font-semibold"
+        >Context hint</label
       ><textarea
         id="voice-prompt"
         rows="2"
@@ -300,8 +301,7 @@
               ...cfg.transcriptionOptions,
               prompt: event.currentTarget.value,
             },
-          })}
-      ></textarea>
+          })}></textarea>
     </div>
   {/if}
 {/snippet}
@@ -313,14 +313,16 @@
       title="Request settings"
       description="Timeout and supported temperature controls"
     >
-      <div class="space-y-4 px-5 py-4">{@render requestControls()}</div>
+      <div class="space-y-4 px-5 py-3.5">{@render requestControls()}</div>
     </SettingsDisclosure>
   {:else}
     {@render requestControls()}
   {/if}
   {#if cfg.realtime}
     <div class="flex items-center justify-between gap-3">
-      <label for="voice-captions" class="text-sm">Live overlay captions</label>
+      <label for="voice-captions" class="text-sm font-semibold"
+        >Live overlay captions</label
+      >
       <Switch
         id="voice-captions"
         checked={cfg.captions}
@@ -341,7 +343,7 @@
 {#snippet requestControls()}
   {#if !cfg.realtime && profile?.capabilities.transcriptionTemperature}
     <div class="flex items-center justify-between gap-3">
-      <label for="voice-temperature-override" class="text-sm"
+      <label for="voice-temperature-override" class="text-sm font-semibold"
         >Override temperature</label
       ><Switch
         id="voice-temperature-override"
@@ -376,7 +378,7 @@
   {/if}
   {#if draft && !cfg.realtime}
     <div class="space-y-1.5">
-      <label for="voice-timeout" class="text-xs font-medium"
+      <label for="voice-timeout" class="text-sm font-semibold"
         >Recording request timeout (seconds)</label
       ><input
         id="voice-timeout"

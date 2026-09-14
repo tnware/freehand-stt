@@ -786,6 +786,19 @@ decorative container frames do not own workflow or scrolling behavior.
 The shared switch uses a pill track and an inset circular thumb, retaining
 Bits UI state, keyboard semantics, and visible focus indicators.
 
+The renderer retains the existing neutral light and charcoal surfaces and brand
+accents. Page headings and field labels establish the reading order; descriptions
+use readable secondary text. Primary actions use dedicated action tokens for
+legible normal and hover states. The shared `Button` soft variant identifies
+contextual actions, and `StatusBadge` pairs status text with semantic tones;
+color alone never communicates readiness, failure, or selection. Compact
+Connection and runtime rows keep identity, current state, and the next action
+visible together. Their source provenance and ownership explanations remain in
+contextual disclosures. Shortcut rows give the action and chord priority, show
+capture feedback only when present, and keep allowed-key rules in a keyboard
+accessible disclosure associated with the recording control. Shared visual
+primitives do not own credentials, runtime lifecycles, or saved values.
+
 Task-local connection creation opens the inline Connections editor in the reusable
 Settings window, preserving the originating task for Save and return. Home's
 first-run Voice panel reuses quick connection/model controls. Connection changes

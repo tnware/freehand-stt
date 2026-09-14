@@ -56,9 +56,16 @@
   class="@container flex min-h-40 flex-1 flex-col overflow-hidden bg-card"
   aria-label="Current result"
 >
-  <div class="flex h-14 shrink-0 items-center gap-1 border-b border-hairline px-3">
-    <h2 class={quickSettings ? "sr-only" : "text-sm font-medium"}>Current result</h2>
-    <span class={quickSettings ? "sr-only" : "mr-auto text-xs text-muted-foreground"}
+  <div
+    class="flex h-14 shrink-0 items-center gap-2 border-b border-hairline bg-secondary/50 px-3"
+  >
+    <h2 class={quickSettings ? "sr-only" : "text-sm font-medium"}>
+      Current result
+    </h2>
+    <span
+      class={quickSettings
+        ? "sr-only"
+        : "mr-auto text-xs text-muted-foreground"}
       >{working
         ? "In progress"
         : recovery
@@ -75,14 +82,18 @@
       <div class="min-w-0 flex-1">{@render quickSettings()}</div>
     {/if}
     {#if text}
-      {#if quickSettings}<span class="mx-1 h-4 w-px shrink-0 bg-hairline" aria-hidden="true"
+      {#if quickSettings}<span
+          class="mx-1 h-4 w-px shrink-0 bg-hairline"
+          aria-hidden="true"
         ></span>{/if}
       {#if onListen}<Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           class="min-w-16"
           disabled={working || !canCopy || listenDisabled}
-          aria-label={listenBusy ? "Preparing speech for this transcript" : "Listen"}
+          aria-label={listenBusy
+            ? "Preparing speech for this transcript"
+            : "Listen"}
           aria-busy={listenBusy}
           title={listenBusy
             ? "Preparing speech for this transcript"
@@ -94,9 +105,11 @@
               class="animate-spin motion-reduce:animate-none"
             />{:else}Listen{/if}</Button
         >{/if}
-      <Button variant="ghost" size="sm" disabled={working} onclick={onClear}>Clear</Button>
+      <Button variant="ghost" size="sm" disabled={working} onclick={onClear}
+        >Clear</Button
+      >
       <Button
-        variant="outline"
+        variant="soft"
         size="sm"
         class="min-w-18"
         disabled={working || !canCopy}
@@ -118,7 +131,7 @@
       <div class="flex min-h-full flex-col">
         {#if message || recovery}
           <p
-            class="px-4 pt-3 text-xs leading-relaxed"
+            class="mx-4 mt-3 rounded-lg border border-hairline bg-secondary px-3 py-2 text-sm leading-relaxed"
             class:text-warning={recovery}
             class:text-destructive={failed && !recovery}
             role="status"
@@ -147,7 +160,9 @@
             />
           </div>
         {:else if !message}
-          <div class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-4 text-center">
+          <div
+            class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-4 text-center"
+          >
             <span
               class="mb-3 grid size-12 place-items-center rounded-2xl bg-accent-wash text-accent-text"
               aria-hidden="true"
@@ -158,7 +173,8 @@
                 fill="none"
                 stroke="currentColor"
                 stroke-width="1.5"
-                stroke-linecap="round"><path d="M5 10v4M9 6v12M13 3v18M17 7v10M21 10v4" /></svg
+                stroke-linecap="round"
+                ><path d="M5 10v4M9 6v12M13 3v18M17 7v10M21 10v4" /></svg
               >
             </span>
             <p class="font-display text-xl font-medium tracking-tight">
@@ -170,7 +186,9 @@
                     ? "Turn an audio file into text"
                     : "Speak into the application you’re using"}
             </p>
-            <p class="max-w-lg text-[13px] leading-relaxed text-muted-foreground">
+            <p
+              class="max-w-lg text-[13px] leading-relaxed text-muted-foreground"
+            >
               {failed
                 ? mode === "file"
                   ? "Use Retry above, or choose another file."
@@ -186,8 +204,12 @@
       </div>
     </div>
     {#if !following && (text || liveFinal || livePartial)}
-      <div class="flex h-11 shrink-0 items-center justify-center border-t border-hairline px-3">
-        <Button variant="ghost" size="sm" onclick={() => jump++}>Jump to latest</Button>
+      <div
+        class="flex h-11 shrink-0 items-center justify-center border-t border-hairline px-3"
+      >
+        <Button variant="ghost" size="sm" onclick={() => jump++}
+          >Jump to latest</Button
+        >
       </div>
     {/if}
   </div>

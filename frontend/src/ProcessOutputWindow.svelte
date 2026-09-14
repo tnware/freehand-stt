@@ -8,6 +8,7 @@
   import { ProcessOutputState } from "$lib/stores/process-output.svelte";
   import ProcessOutputTerminal from "$lib/components/ProcessOutputTerminal.svelte";
   import { Button } from "$lib/components/ui/button";
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import { activeAppearanceMode } from "$lib/appearance";
   import { windowMaterial } from "$lib/platform";
   import type { Settings } from "$lib/state";
@@ -116,12 +117,18 @@
   <header
     class="flex shrink-0 flex-wrap items-center justify-between gap-3 px-5 py-4"
   >
-    <h1 class="text-base font-semibold">
-      {runtimeName ? `${runtimeName} output` : "Process output"}
-    </h1>
-    <div class="flex items-center gap-1">
+    <div class="space-y-1">
+      <h1 class="text-lg font-semibold tracking-tight">
+        {runtimeName ? `${runtimeName} output` : "Process output"}
+      </h1>
+      <p class="text-xs text-muted-foreground">
+        Inspect retained output from this runtime.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <StatusBadge>Read-only</StatusBadge>
       <Button
-        variant="ghost"
+        variant="outline"
         size="sm"
         disabled={closing}
         onclick={() => void close()}>Close</Button
@@ -144,12 +151,15 @@
     >
       {#if !output.accepted}
         <div
-          class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-4 border-b border-hairline bg-background px-4 py-3"
+          class="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-warning/25 bg-card px-5 py-5"
         >
           <p
             id="output-consent"
-            class="text-sm leading-relaxed text-muted-foreground"
+            class="text-sm leading-relaxed text-secondary-foreground"
           >
+            <span class="mb-1 block font-semibold text-foreground"
+              >Show sensitive output</span
+            >
             Output may include transcripts, prompts, and file paths.
             <span class="block">Kept in memory; never saved automatically.</span
             >
@@ -164,7 +174,7 @@
     </ProcessOutputTerminal>
     <p
       role={error || output.error ? "alert" : undefined}
-      class="h-4 shrink-0 truncate text-xs text-muted-foreground"
+      class="shrink-0 text-xs leading-relaxed text-muted-foreground"
       class:text-destructive={!!(error || output.error)}
     >
       {error ||

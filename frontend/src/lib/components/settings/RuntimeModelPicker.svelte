@@ -96,14 +96,14 @@
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
   <div class="flex items-center justify-between gap-3">
     <div class="flex items-center gap-1">
-      <label for={id} class="text-sm font-medium">Model</label><FieldHelp
+      <label for={id} class="text-sm font-semibold">Model</label><FieldHelp
         label="About model settings"
         text={help}
       />
     </div>
     <div class="flex items-center gap-1">
       <Button
-        variant="ghost"
+        variant="soft"
         size="sm"
         disabled={locked || busy}
         onclick={onDiscover}

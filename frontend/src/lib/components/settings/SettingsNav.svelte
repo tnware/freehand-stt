@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { GROUP_LABELS, SETTINGS_GROUPS, matchingSettingsSections } from "$lib/navigation";
+  import {
+    GROUP_LABELS,
+    SETTINGS_GROUPS,
+    matchingSettingsSections,
+  } from "$lib/navigation";
   import type { SettingsSectionID } from "$lib/navigation";
   import SearchIcon from "@lucide/svelte/icons/search";
   import XIcon from "@lucide/svelte/icons/x";
@@ -39,12 +43,16 @@
       const id = matches[0].id;
       choose(id);
       queueMicrotask(() =>
-        navigationRef?.querySelector<HTMLElement>(`[data-settings-section="${id}"]`)?.focus(),
+        navigationRef
+          ?.querySelector<HTMLElement>(`[data-settings-section="${id}"]`)
+          ?.focus(),
       );
     } else if (event.key === "ArrowDown" && matches.length) {
       event.preventDefault();
       navigationRef
-        ?.querySelector<HTMLElement>(`[data-settings-section="${matches[0].id}"]`)
+        ?.querySelector<HTMLElement>(
+          `[data-settings-section="${matches[0].id}"]`,
+        )
         ?.focus();
     }
   }
@@ -56,12 +64,19 @@
       "flex min-h-9 w-full items-center justify-center gap-2.5 rounded-lg px-0 text-[13px] transition-colors min-[760px]:justify-start min-[760px]:px-3",
       "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
       id === active
-        ? "bg-accent-wash font-medium text-accent-text"
+        ? "bg-accent-wash font-semibold text-accent-text ring-1 ring-inset ring-primary/20"
         : "text-secondary-foreground hover:bg-subtle-fill-hover hover:text-foreground active:bg-subtle-fill-pressed",
     );
 
   function moveSelection(event: KeyboardEvent, current: SettingsSectionID) {
-    const keys = ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"];
+    const keys = [
+      "ArrowDown",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowLeft",
+      "Home",
+      "End",
+    ];
     if (!keys.includes(event.key)) return;
 
     event.preventDefault();
@@ -72,13 +87,17 @@
         : event.key === "End"
           ? matches.length - 1
           : (currentIndex +
-              (event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1) +
+              (event.key === "ArrowDown" || event.key === "ArrowRight"
+                ? 1
+                : -1) +
               matches.length) %
             matches.length;
     const next = matches[nextIndex];
     if (next.id !== "connections") onSelect(next.id);
     queueMicrotask(() => {
-      navigationRef?.querySelector<HTMLElement>(`[data-settings-section="${next.id}"]`)?.focus();
+      navigationRef
+        ?.querySelector<HTMLElement>(`[data-settings-section="${next.id}"]`)
+        ?.focus();
     });
   }
 </script>
@@ -86,14 +105,16 @@
 <nav
   bind:this={navigationRef}
   aria-label="Settings sections"
-  class="flex min-h-0 w-14 shrink-0 flex-col gap-5 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill/50 px-2 py-5 min-[760px]:w-56 min-[760px]:px-3"
+  class="flex min-h-0 w-14 shrink-0 flex-col gap-4 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill px-2 py-5 min-[760px]:w-56 min-[760px]:px-3"
 >
-  <p class="hidden px-3 font-display text-lg font-semibold tracking-tight min-[760px]:block">
+  <p
+    class="hidden px-3 font-display text-xl font-bold tracking-tight min-[760px]:block"
+  >
     Settings
   </p>
   <p id="settings-nav-help" class="sr-only">
-    Use the arrow keys to move between settings sections. Press Home or End to jump to the first or
-    last section.
+    Use the arrow keys to move between settings sections. Press Home or End to
+    jump to the first or last section.
   </p>
   <div class="relative hidden shrink-0 min-[760px]:block">
     <SearchIcon
@@ -112,20 +133,29 @@
         onclick={() => (query = "")}><XIcon /></TooltipButton
       >{/if}
   </div>
-  {#if !matches.length}<p class="px-2 text-xs text-muted-foreground" role="status">
+  {#if !matches.length}<p
+      class="px-2 text-xs text-muted-foreground"
+      role="status"
+    >
       No matching settings.
     </p>{/if}
   {#each groups as group (group)}
     {@const sections = matches.filter((section) => section.group === group)}
     {#if sections.length}
       <div class="flex shrink-0 flex-col gap-1">
-        <p class="caption hidden px-2.5 pb-1.5 min-[760px]:block">{GROUP_LABELS[group]}</p>
+        <p
+          class="hidden px-2.5 pb-1.5 text-[11px] font-semibold text-muted-foreground min-[760px]:block"
+        >
+          {GROUP_LABELS[group]}
+        </p>
         {#each sections as section (section.id)}
           <button
             type="button"
             class={itemClass(section.id)}
             aria-current={section.id === active ? "page" : undefined}
-            aria-describedby={section.id === active ? "settings-nav-help" : undefined}
+            aria-describedby={section.id === active
+              ? "settings-nav-help"
+              : undefined}
             tabindex={section.id === tabStop ? 0 : -1}
             data-settings-section={section.id}
             aria-label={`${section.label}. ${section.blurb}${invalidSection === section.id ? " Needs attention." : ""}`}
@@ -134,7 +164,9 @@
             onkeydown={(event) => moveSelection(event, section.id)}
           >
             <section.icon class="size-4 shrink-0" />
-            <span class="hidden truncate min-[760px]:inline">{section.label}</span>
+            <span class="hidden truncate min-[760px]:inline"
+              >{section.label}</span
+            >
             {#if section.id === "connections"}<ExternalLinkIcon
                 class="ml-auto hidden size-3 text-muted-foreground min-[760px]:block"
               />{/if}

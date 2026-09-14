@@ -2,6 +2,7 @@
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
   import { Button } from "$lib/components/ui/button";
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import * as Select from "$lib/components/ui/select";
   import PlayIcon from "@lucide/svelte/icons/play";
   import SquareIcon from "@lucide/svelte/icons/square";
@@ -80,45 +81,54 @@
       </Select.Root>
     </div>
   {/if}
-  <div class="flex items-center justify-between gap-3">
+  <div class="space-y-3 rounded-lg border border-hairline bg-secondary/50 p-3">
     <p
-      class="flex min-w-0 items-center gap-2 text-xs text-muted-foreground"
+      class="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground"
       role="status"
     >
       {#if operating}<LoaderCircleIcon
           class="size-3 shrink-0 animate-spin"
         />{/if}
-      {[
-        view.backend,
-        view.startup || runtime.pendingFor(instanceID) || view.label,
-      ]
-        .filter(Boolean)
-        .join(" · ")}
+      <StatusBadge
+        tone={problem
+          ? "danger"
+          : operating
+            ? "accent"
+            : view.ready
+              ? "success"
+              : "neutral"}
+      >
+        {runtime.pendingFor(instanceID) || view.label}
+      </StatusBadge>
+      {#if view.backend}<span>{view.backend}</span>{/if}
+      {#if view.startup}<span class="w-full leading-relaxed"
+          >{view.startup}</span
+        >{/if}
     </p>
-    <div class="flex shrink-0 items-center gap-1">
+    <div class="flex flex-wrap items-center gap-2">
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon-sm"
         aria-label="Manage runtime"
         title="Manage runtime"
         onclick={onManage}><SettingsIcon class="size-4" /></Button
       >
       {#if row}<Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onclick={() => void runtime.openOutput(instanceID)}
           >View output</Button
         >{/if}
       {#if operating}
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           disabled={disabled || runtime.pendingFor(instanceID) === "Cancelling"}
           onclick={() => void runtime.cancel(instanceID)}>Cancel</Button
         >
       {:else if status?.state === "running"}
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           disabled={locked}
           onclick={() => void runtime.run(instanceID, "Stop")}
@@ -126,7 +136,7 @@
         >
       {:else}
         <Button
-          variant="ghost"
+          variant="soft"
           size="sm"
           disabled={locked || !view.installed || !selected?.installed}
           onclick={() => void runtime.run(instanceID, "Start")}
@@ -137,7 +147,7 @@
   </div>
 
   {#if !view.installed || !selected?.installed}<Button
-      variant="outline"
+      variant="soft"
       size="sm"
       class="w-full"
       onclick={onManage}>Set up runtime</Button

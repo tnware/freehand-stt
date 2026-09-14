@@ -72,7 +72,7 @@
 </script>
 
 <div
-  class="@container/quick-settings flex h-12 min-w-0 items-center gap-1"
+  class="@container/quick-settings flex h-12 min-w-0 items-center gap-1.5"
   role="group"
   aria-label="Quick settings"
 >
@@ -86,7 +86,7 @@
         aria-label={labels[panel]}
         title={labels[panel]}
         class={cn(
-          buttonVariants({ variant: "ghost", size: "sm" }),
+          buttonVariants({ variant: "outline", size: "sm" }),
           "min-w-0 gap-2 px-2 text-secondary-foreground aria-expanded:bg-accent-wash aria-expanded:text-accent-text",
         )}
       >

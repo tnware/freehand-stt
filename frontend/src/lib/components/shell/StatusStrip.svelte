@@ -40,18 +40,22 @@
 <!-- Endpoint reachability is different from dictation state. Keep it quiet,
      persistent, and truthful about whether a probe has actually run. -->
 <footer
-  class="flex h-7 shrink-0 items-center justify-between gap-2 border-t border-hairline bg-layer-fill px-3 text-[11px] leading-none"
+  class="flex h-9 shrink-0 items-center justify-between gap-2 border-t border-hairline bg-layer-fill px-3 text-xs leading-none"
 >
   <Popover.Root bind:open>
     <Popover.Trigger
       aria-label={`${connectionState.scope} connection status: ${connectionState.label}`}
-      class="-ml-2 flex min-w-0 items-center gap-1.5 h-6 rounded-md px-2 text-left transition-colors hover:bg-subtle-fill-hover aria-expanded:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
+      class="-ml-2 flex min-w-0 items-center gap-2 h-7 rounded-md px-2 text-left transition-colors hover:bg-subtle-fill-hover aria-expanded:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
     >
-      <span class="size-1.5 shrink-0 rounded-full {connectionState.dot}"></span>
-      <span class="truncate text-secondary-foreground"
+      <span
+        class="size-2 shrink-0 rounded-full {connectionState.dot}"
+        aria-hidden="true"
+      ></span>
+      <span class="truncate font-medium text-secondary-foreground"
         >{connectionState.scope}: {connectionState.label}</span
       >
-      {#if connectionState.detail}<span class="hidden truncate text-ink-quiet sm:inline"
+      {#if connectionState.detail}<span
+          class="hidden truncate text-ink-quiet sm:inline"
           >{connectionState.detail}</span
         >{/if}
       <ChevronUpIcon class="size-3 shrink-0 text-muted-foreground" />

@@ -123,15 +123,15 @@
           <Label
             for={`appearance-${mode.value}`}
             class={mica
-              ? "flex cursor-not-allowed items-center gap-2.5 rounded-lg bg-transparent px-3 py-2.5 has-data-checked:bg-accent-wash"
-              : "flex cursor-pointer items-center gap-2.5 rounded-lg bg-transparent px-3 py-2.5 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"}
+              ? "flex cursor-not-allowed items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-3 py-2.5 has-data-checked:border-primary/25 has-data-checked:bg-accent-wash"
+              : "flex cursor-pointer items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-3 py-2.5 transition-colors has-data-checked:border-primary/25 has-data-checked:bg-accent-wash hover:bg-accent/55"}
           >
             <RadioGroup.Item
               id={`appearance-${mode.value}`}
               value={mode.value}
             />
             <span class="min-w-0">
-              <span class="block text-xs font-medium text-foreground"
+              <span class="block text-sm font-semibold text-foreground"
                 >{mode.label}</span
               >
               <span class="block text-xs leading-relaxed text-muted-foreground">
@@ -180,7 +180,7 @@
     >
       <Label
         for="delivery-direct-input"
-        class="flex cursor-pointer items-start gap-3 rounded-lg bg-transparent px-3 py-3 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"
+        class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent bg-transparent px-3 py-3 transition-colors has-data-checked:border-primary/25 has-data-checked:bg-accent-wash hover:bg-accent/55"
       >
         <RadioGroup.Item
           id="delivery-direct-input"
@@ -188,7 +188,7 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-xs font-medium text-foreground"
+          <span class="block text-sm font-semibold text-foreground"
             >Direct input</span
           >
           <span
@@ -203,7 +203,7 @@
 
       <Label
         for="delivery-manual-copy"
-        class="flex cursor-pointer items-start gap-3 rounded-lg bg-transparent px-3 py-3 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"
+        class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent bg-transparent px-3 py-3 transition-colors has-data-checked:border-primary/25 has-data-checked:bg-accent-wash hover:bg-accent/55"
       >
         <RadioGroup.Item
           id="delivery-manual-copy"
@@ -211,7 +211,7 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-xs font-medium text-foreground"
+          <span class="block text-sm font-semibold text-foreground"
             >Manual copy</span
           >
           <span

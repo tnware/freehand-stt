@@ -293,9 +293,14 @@
           disabled={busy}
           onclick={() => leave(false)}><ArrowLeftIcon />All connections</Button
         >{/if}
-      <h1 class="truncate text-base font-semibold">Connections</h1>
+      <div class="min-w-0">
+        <h1 class="truncate text-lg font-semibold">Connections</h1>
+        <p class="mt-0.5 text-xs text-secondary-foreground">
+          Saved servers and built-in runtimes
+        </p>
+      </div>
     </div>
-    <Button variant="ghost" disabled={busy} onclick={() => leave(true)}
+    <Button variant="outline" disabled={busy} onclick={() => leave(true)}
       >Done</Button
     >
   </header>
@@ -310,7 +315,7 @@
         {session.messages.error}
       </p>{/if}
     <div class="manager-body" class:editing={showingDetails}>
-      <aside class="connection-list bg-layer-fill">
+      <aside class="connection-list bg-background">
         <ConnectionList
           catalog={editor.applied.savedConnections}
           instances={session.runtime.instances}
@@ -341,7 +346,7 @@
                     {#snippet child({ props })}<Button
                         {...props}
                         size="sm"
-                        variant="outline">Use for…</Button
+                        variant="soft">Use for…</Button
                       >{/snippet}
                   </Menu.Trigger><Menu.Content
                     align="end"
@@ -417,7 +422,7 @@
               </div>{/if}
           </div>
           <main
-            class="connection-fields min-h-0 flex-1 overflow-y-auto overscroll-contain p-4"
+            class="connection-fields space-y-4 min-h-0 flex-1 overflow-y-auto overscroll-contain p-4"
           >
             {#if selected?.builtIn}
               <BuiltInConnectionDetails
@@ -440,8 +445,11 @@
                 onBack={() => leave(false)}
                 onSaved={saved}
               />{/if}
-            {#if selected}<details class="mt-4 border-t border-hairline py-3">
-                <summary class="cursor-pointer text-xs font-medium"
+            {#if selected}<details
+                class="rounded-xl border border-hairline bg-card p-3"
+              >
+                <summary
+                  class="cursor-pointer rounded-sm text-xs font-medium text-accent-text focus-visible:outline-ring"
                   >Connection check · {connectionStatusLabel(
                     editor.savedConnectionChecks[selected.id] ?? null,
                   )}</summary

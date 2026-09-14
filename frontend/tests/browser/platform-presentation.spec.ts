@@ -26,9 +26,8 @@ for (const platform of ["darwin", "windows"]) {
     await entry(
       page,
       `
-      import { mount } from '/tests/browser/app/presentation-runtime.ts';
+      import { mount, session } from '/tests/browser/app/presentation-runtime.ts';
       import Composer from '/src/lib/components/home/TextToSpeech.svelte';
-      import { session } from '/src/lib/stores/session.svelte.ts';
       import { settings } from '/src/lib/stores/session-fixtures-data.ts';
       session.editor.applySettingsSnapshot({...settings, platform: '${platform}'});
       window.speechCalls = 0;

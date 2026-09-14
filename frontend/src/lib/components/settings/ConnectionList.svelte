@@ -9,6 +9,8 @@
     connectionMatches,
     connectionWorkflows,
   } from "$lib/utils/connectionChoices";
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
+  import { runtimePresentation } from "$lib/utils/managedRuntime";
   import SearchIcon from "@lucide/svelte/icons/search";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -38,17 +40,19 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
-  <div class="shrink-0 space-y-3 border-b border-hairline p-3">
+  <div
+    class="flex shrink-0 flex-wrap items-center gap-2 border-b border-hairline p-3"
+  >
     <Button
-      variant={creating ? "secondary" : "outline"}
-      class="w-full justify-start"
+      variant={creating ? "soft" : "default"}
+      class="justify-start"
       disabled={busy}
       onclick={() => {
         query = "";
         onAdd();
       }}><PlusIcon />Add connection</Button
     >
-    <div class="relative">
+    <div class="relative min-w-40 flex-1">
       <SearchIcon
         class="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground"
       />
@@ -62,43 +66,77 @@
   </div>
   <nav
     aria-label="Saved connections"
-    class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
+    class="connection-list-content min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-1.5 p-3"
   >
     {#each entries as connection (connection.id)}
       {@const active = connectionWorkflows.filter(
         (role) => catalog.selected?.[role.id] === connection.id,
       )}
+      {@const instance = instances.find(
+        (item) => item.instance.id === connection.details.managedInstanceID,
+      )}
+      {@const runtimeView = runtimePresentation(instance?.status)}
+      {@const metadata = connection.details.managedInstanceID
+        ? [
+            connection.builtIn ? "Built-in" : "Local runtime",
+            runtimeView.backend,
+            active.map((role) => role.label).join(", "),
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : [
+            connectionTargetLabel(connection, instances),
+            active.length
+              ? `In use: ${active.map((role) => role.label).join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")}
       <button
         type="button"
         disabled={busy}
         aria-current={connection.id === selected ? "true" : undefined}
         onclick={() => onSelect(connection)}
-        class={`flex w-full items-center gap-3 rounded-md px-3 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${connection.id === selected ? "bg-accent text-accent-foreground" : "hover:bg-subtle-fill-hover"}`}
+        class={`connection-row w-full items-center gap-x-3 gap-y-1.5 rounded-xl border px-3 py-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${connection.id === selected ? "border-accent-edge bg-accent-wash" : "border-hairline bg-card hover:border-accent-edge hover:bg-subtle-fill-hover"}`}
       >
-        <ProviderIcon
-          profile={connectionProvider(connection, instances)}
-          size={22}
-        />
-        <span class="min-w-0 flex-1"
-          ><span class="block truncate text-sm font-medium"
+        <span
+          class="connection-icon flex size-10 shrink-0 items-center justify-center rounded-lg border border-hairline bg-background"
+        >
+          <ProviderIcon
+            profile={connectionProvider(connection, instances)}
+            size={24}
+          />
+        </span>
+        <span class="connection-copy min-w-0">
+          <span class="block truncate text-sm font-semibold text-foreground"
             >{connection.name}</span
           >
           <span
-            class="mt-0.5 block truncate text-xs text-muted-foreground"
-            title={connectionTargetLabel(connection, instances)}
-            >{connectionTargetLabel(connection, instances)}</span
+            class="mt-1 block truncate text-xs text-secondary-foreground"
+            title={metadata}>{metadata}</span
           >
-          {#if connection.builtIn}<span
-              class="mt-1 block text-[11px] text-muted-foreground"
-              >Built-in · Runtime-owned</span
-            >{/if}
-          {#if active.length}<span
-              class="mt-1 block truncate text-[11px] text-muted-foreground"
-              >In use · {active.map((role) => role.label).join(" · ")}</span
-            >{/if}
-        </span><ChevronRightIcon
-          class="size-3.5 shrink-0 text-muted-foreground"
-        />
+        </span>
+        <span class="connection-status min-w-0">
+          {#if connection.details.managedInstanceID}
+            <StatusBadge
+              tone={instance?.status.state === "running"
+                ? "success"
+                : instance?.status.state === "error"
+                  ? "danger"
+                  : instance?.status.state === "starting"
+                    ? "accent"
+                    : "neutral"}
+              dot>{runtimeView.label}</StatusBadge
+            >
+          {:else if active.length}
+            <span title={active.map((role) => role.label).join(" · ")}
+              ><StatusBadge tone="accent">In use</StatusBadge></span
+            >
+          {/if}
+        </span>
+        <span class="connection-chevron"
+          ><ChevronRightIcon class="size-4 text-secondary-foreground" /></span
+        >
       </button>
     {:else}<p class="px-3 py-6 text-center text-sm text-muted-foreground">
         {query
@@ -112,3 +150,37 @@
     {catalog.entries?.length ?? 0} connections
   </p>
 </div>
+
+<style>
+  .connection-list-content {
+    container-type: inline-size;
+  }
+  .connection-row {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto 1rem;
+  }
+  @container (max-width: 20rem) {
+    .connection-row {
+      grid-template-columns: 2.5rem minmax(0, 1fr) 1rem;
+    }
+    .connection-icon {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+    .connection-copy {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .connection-status {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .connection-status:empty {
+      display: none;
+    }
+    .connection-chevron {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+    }
+  }
+</style>
