@@ -53,7 +53,7 @@
         />
       </span>
       <div class="min-w-0 flex-1">
-        <h3 class="text-sm font-semibold">
+        <h3 class="text-[13px] font-medium">
           {provider?.name ?? instance?.provider ?? "Unavailable runtime"}
         </h3>
         <p class="mt-1 text-xs text-secondary-foreground">
@@ -120,7 +120,7 @@
 </SettingsCard>
 <SettingsCard>
   <div class="space-y-3 p-4">
-    <h3 class="text-sm font-semibold">Task settings</h3>
+    <h3 class="text-[13px] font-medium">Task settings</h3>
     <p class="text-xs leading-relaxed text-secondary-foreground">
       Choose this connection in each task. Language, recording mode, cleanup
       intent, and other task options stay with that task.

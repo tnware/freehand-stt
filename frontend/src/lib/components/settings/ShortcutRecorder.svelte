@@ -58,19 +58,19 @@
 
 <div
   class={capturing
-    ? "bg-accent-wash px-5 py-3.5 transition-colors"
-    : "px-5 py-3.5 transition-colors"}
+    ? "bg-accent-wash px-4 py-2.5 transition-colors"
+    : "px-4 py-2.5 transition-colors"}
   aria-busy={capturing}
   role="group"
   aria-labelledby={`${id}-title`}
   aria-describedby={`${id}-description`}
 >
   <div
-    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
   >
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2">
-        <p id={`${id}-title`} class="text-sm font-semibold">{title}</p>
+        <p id={`${id}-title`} class="text-[13px] font-medium">{title}</p>
         <span
           class="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
         >
@@ -79,7 +79,7 @@
       </div>
       <p
         id={`${id}-description`}
-        class="mt-1 max-w-md text-[13px] leading-5 text-muted-foreground"
+        class="mt-0.5 max-w-md text-[11.5px] leading-[1.45] text-muted-foreground"
       >
         {description}
       </p>
@@ -134,7 +134,7 @@
       </Button>
     </div>
   </div>
-  <details class="group/keys mt-2">
+  <details class="group/keys mt-1.5">
     <summary
       class="inline-flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
     >
@@ -145,7 +145,7 @@
     </summary>
     <p
       id={`${id}-requirement`}
-      class="mt-1.5 max-w-xl text-xs leading-5 text-muted-foreground"
+      class="mt-1.5 max-w-xl text-[11.5px] leading-[1.45] text-muted-foreground"
     >
       {requirement}
     </p>

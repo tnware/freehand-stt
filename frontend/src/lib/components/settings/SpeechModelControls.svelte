@@ -127,7 +127,7 @@
       <div class="space-y-1.5">
         <label
           for={compact ? "quick-speech-language" : "tts-language"}
-          class="text-sm font-medium">Speech language</label
+          class="text-[13px] font-medium">Speech language</label
         >
         <LanguagePicker
           id={compact ? "quick-speech-language" : "tts-language"}
@@ -147,7 +147,7 @@
       <div class="space-y-1.5">
         <label
           for={compact ? "quick-speech-instructions" : "tts-instructions"}
-          class="text-sm font-medium">Voice style</label
+          class="text-[13px] font-medium">Voice style</label
         >
         <textarea
           id={compact ? "quick-speech-instructions" : "tts-instructions"}

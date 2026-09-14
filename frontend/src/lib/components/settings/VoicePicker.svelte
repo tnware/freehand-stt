@@ -95,7 +95,7 @@
 
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <label for={id} class="text-sm font-medium">Voice</label>
+    <label for={id} class="text-[13px] font-medium">Voice</label>
     <div class="flex flex-wrap items-center gap-2">
       {#if supported}<Button
           variant="ghost"

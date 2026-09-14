@@ -43,7 +43,7 @@
       Vocabulary.
     </p>
     <div class="mt-3 space-y-2">
-      <label for="transcription-prompt" class="text-sm font-semibold"
+      <label for="transcription-prompt" class="text-[13px] font-medium"
         >Transcription context</label
       >
       <Textarea

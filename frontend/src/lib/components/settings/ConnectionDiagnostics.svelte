@@ -36,7 +36,7 @@
 >
   <div class="flex items-center justify-between gap-3">
     <div>
-      <p class="text-sm font-semibold">Connection check</p>
+      <p class="text-[13px] font-medium">Connection check</p>
       <p class="mt-1 text-xs text-muted-foreground">
         {stale
           ? "Settings changed. Check again for current results."

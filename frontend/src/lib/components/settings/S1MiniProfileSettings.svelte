@@ -36,7 +36,7 @@
       and context choices.
     </Card.Description>
   </Card.Header>
-  <Card.Content class="flex flex-col gap-4">
+  <Card.Content class="flex flex-col gap-3">
     <S1MiniControls
       {processor}
       {profile}

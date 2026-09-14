@@ -28,10 +28,10 @@
 </script>
 
 <div
-  class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline bg-subtle-fill px-4 py-3"
+  class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline px-4 py-2.5"
 >
   <div>
-    <p class="text-sm font-semibold">Shared vocabulary</p>
+    <p class="text-[13px] font-medium">Shared vocabulary</p>
     <p class="mt-1 text-xs text-muted-foreground">
       {enabled ? "On for supported models" : "Off for this workflow"}
     </p>

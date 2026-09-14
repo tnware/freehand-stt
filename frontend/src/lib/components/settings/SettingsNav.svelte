@@ -13,12 +13,15 @@
 
   let {
     active,
+    counts = {},
     onSelect,
     onOpenChain,
     invalidSection,
     navigationRef = $bindable(null),
   }: {
     active: SettingsSectionID;
+    /** Per-section tallies, shown as the design draws them. */
+    counts?: Partial<Record<SettingsSectionID, number>>;
     onSelect: (id: SettingsSectionID) => void;
     /** Returns to the workflow chain, where the same controls save at once. */
     onOpenChain?: () => void;
@@ -170,8 +173,14 @@
             <span class="hidden truncate min-[760px]:inline"
               >{section.label}</span
             >
+            {#if counts[section.id] !== undefined}
+              <span
+                class="figure ml-auto hidden font-mono text-[10px] text-ink-quiet min-[760px]:inline"
+                >{counts[section.id]}</span
+              >
+            {/if}
             {#if section.id === "connections"}<ExternalLinkIcon
-                class="ml-auto hidden size-3 text-muted-foreground min-[760px]:block"
+                class="hidden size-3 text-muted-foreground min-[760px]:block"
               />{/if}
             {#if invalidSection === section.id}<span
                 class="font-semibold text-destructive"

@@ -117,7 +117,7 @@
 <div class="settings-group">
   <div class="space-y-3 p-4">
     <div class="flex items-center justify-between gap-3">
-      <label for="vocabulary-terms" class="text-sm font-semibold"
+      <label for="vocabulary-terms" class="text-[13px] font-medium"
         >Names and phrases</label
       >
       <FieldHelp
@@ -239,7 +239,7 @@
 
   <div class="border-t border-hairline" aria-label="Vocabulary workflows">
     <div class="px-4 pt-3 pb-1">
-      <h3 class="text-sm font-semibold">Use vocabulary in</h3>
+      <h3 class="text-[13px] font-medium">Use vocabulary in</h3>
       <p class="mt-1 text-xs text-muted-foreground">
         Changes apply after saving.
       </p>
@@ -248,7 +248,7 @@
       <div class="flex items-center gap-3 px-4 py-3">
         <ProviderIcon profile={use.backend} />
         <div class="min-w-0 flex-1">
-          <label for={`vocabulary-${use.key}`} class="text-sm font-semibold"
+          <label for={`vocabulary-${use.key}`} class="text-[13px] font-medium"
             >{use.label}</label
           >
           <p

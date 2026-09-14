@@ -52,7 +52,7 @@
 >
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h4 class="text-sm font-semibold">Models</h4>
+      <h4 class="text-[13px] font-medium">Models</h4>
       <p class="mt-1 text-xs text-secondary-foreground">
         Browsing is metadata-only. Only Download fetches model files.
       </p>
@@ -81,7 +81,7 @@
     >
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0 flex-[1_1_12rem]">
-          <h5 class="text-sm font-semibold" title={model.description}>
+          <h5 class="text-[13px] font-medium" title={model.description}>
             {model.name}
           </h5>
           <p class="mt-1 text-xs text-secondary-foreground">

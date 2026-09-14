@@ -82,7 +82,7 @@
   });
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-3">
   <SettingsCard>
     <SettingRow
       title="Enable text to speech"

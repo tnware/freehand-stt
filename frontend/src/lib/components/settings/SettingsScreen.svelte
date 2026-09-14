@@ -71,7 +71,15 @@
     onStopOverlayPreview: () => void;
   } = $props();
 
+  /** Terms are separated by newlines or commas. */
+  const SPLIT_TERMS = /[\r\n,]/;
   const section = $derived(sectionByID(active));
+  const vocabularyTermCount = $derived(
+    (session.editor.draft?.vocabulary.terms ?? "")
+      .split(SPLIT_TERMS)
+      .map((term) => term.trim())
+      .filter(Boolean).length,
+  );
   const dirty = $derived(session.editor.dirty);
   const speechWorkBusy = $derived(
     ![State.Idle, State.Failed].includes(session.dictation.status.state) ||
@@ -255,6 +263,10 @@
 <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
   <SettingsNav
   onOpenChain={onClose}
+  counts={{
+    connections: session.editor.draft?.savedConnections.entries?.length ?? 0,
+    vocabulary: vocabularyTermCount,
+  }}
     {active}
     onSelect={selectSection}
     bind:navigationRef
@@ -269,7 +281,7 @@
     >
       <section
         aria-labelledby="settings-section-title"
-        class="@container flex w-full max-w-[880px] flex-col gap-3"
+        class="@container flex w-full flex-col gap-3"
       >
         <div
           bind:clientHeight={headingHeight}

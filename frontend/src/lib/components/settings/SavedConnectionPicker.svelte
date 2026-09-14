@@ -44,7 +44,7 @@
   aria-label={inactive ? "Saved manual connection" : "Active connection"}
 >
   <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-    <label for={`saved-connection-${purpose}`} class="text-sm font-semibold"
+    <label for={`saved-connection-${purpose}`} class="text-[13px] font-medium"
       >Connection</label
     >
     <div class="min-w-44 flex-1">

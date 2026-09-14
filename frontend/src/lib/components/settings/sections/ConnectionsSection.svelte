@@ -243,7 +243,7 @@
       {#snippet supportedUses()}
         {#if form}
           <div class="space-y-3 px-5 py-4">
-            <h4 class="text-sm font-medium">Used for</h4>
+            <h4 class="text-[13px] font-medium">Used for</h4>
             <p class="text-xs text-muted-foreground">
               Choose where this connection appears. Each workflow keeps its own
               model and options.

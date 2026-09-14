@@ -48,7 +48,7 @@
 
 <section class="space-y-3" aria-label="Runtime setup">
   <div class="flex flex-wrap items-center justify-between gap-2">
-    <h4 class="text-sm font-semibold">Runtime binary</h4>
+    <h4 class="text-[13px] font-medium">Runtime binary</h4>
     <span class="text-xs text-secondary-foreground">
       {status.version || entry.version || "Not installed"}
       {#if status.backend && !switchable}
@@ -163,7 +163,7 @@
     </div>
     <div class="flex items-center justify-between gap-3">
       <div>
-        <label for={`${uid}-autostart`} class="text-sm font-medium"
+        <label for={`${uid}-autostart`} class="text-[13px] font-medium"
           >Start when Freehand launches</label
         >
         <p class="mt-1 text-xs text-secondary-foreground">
