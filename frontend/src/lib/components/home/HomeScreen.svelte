@@ -10,6 +10,7 @@
   import SpeechQuickSettings from "./SpeechQuickSettings.svelte";
   import WorkspaceSplit from "./WorkspaceSplit.svelte";
   import PaneHeader from "./PaneHeader.svelte";
+  import RuntimeOutputDrawer from "$lib/components/runtimes/RuntimeOutputDrawer.svelte";
   import { Button } from "$lib/components/ui/button";
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
@@ -374,7 +375,14 @@
         {hasHistory}
         historyCount={session.history.entries.length}
         working={voiceActive || fileWorking}
+        outputAvailable={managed && runtime?.status.state === "running"}
       >
+        {#snippet output()}
+          <RuntimeOutputDrawer
+            instanceID={instanceID}
+            running={runtime?.status.state === "running"}
+          />
+        {/snippet}
         {#snippet result()}
           <div class="task-main">
             {#if session.editor.draft && inputMode !== "tts" && (!showReadiness || (inputMode === "file" ? session.files.status.transcript : session.dictation.status.transcript))}
@@ -576,18 +584,6 @@
         {/snippet}
         {#snippet history()}
           <aside class="history-sidebar" aria-label="Recent history">
-            <div
-              class="flex min-h-12 shrink-0 flex-wrap items-baseline gap-x-2 gap-y-1 px-4 py-2.5"
-            >
-              <h2 class="text-sm font-semibold">
-                Recent history <span class="ml-1 text-muted-foreground"
-                  >{session.history.entries.length}</span
-                >
-              </h2>
-              <span class="text-xs text-muted-foreground"
-                >In memory until you quit</span
-              >
-            </div>
             <div class="history-area">
               <HistoryPanel
                 enabled={session.editor.applied?.historyEnabled ?? false}

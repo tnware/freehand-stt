@@ -9,16 +9,24 @@
   let {
     result,
     history,
+    output,
     hasHistory,
     historyCount,
     working,
+    outputAvailable = false,
   }: {
     result: Snippet;
     history: Snippet;
+    /** Runtime output, shown as a second tab when a local runtime is running. */
+    output?: Snippet;
     hasHistory: boolean;
     historyCount: number;
     working: boolean;
+    outputAvailable?: boolean;
   } = $props();
+
+  let tab = $state<"recent" | "output">("recent");
+  const active = $derived(tab === "output" && outputAvailable ? "output" : "recent");
 
   // The chain already owns the full width above this, so history sits under
   // the transcript rather than beside it: a side pane would squeeze the one
@@ -27,7 +35,7 @@
   let collapsed = $state(false);
   let selectedView = $state<"result" | "history">("result");
   const visibleView = $derived(working ? "result" : selectedView);
-  const stacked = $derived(roomy.current && hasHistory);
+  const stacked = $derived(roomy.current && (hasHistory || outputAvailable));
 </script>
 
 {#if stacked}
@@ -51,10 +59,25 @@
         <div
           class="flex h-7 shrink-0 items-center justify-between border-b border-hairline"
         >
-          <span
-            class="px-3 text-[10px] font-semibold tracking-[0.08em] text-secondary-foreground uppercase"
-            >Recent · {historyCount}</span
-          >
+          <div class="flex min-w-0" role="tablist" aria-label="Workspace panel">
+            {#each [{ id: "recent", label: `Recent · ${historyCount}`, show: hasHistory }, { id: "output", label: "Runtime output", show: outputAvailable }] as entry (entry.id)}
+              {#if entry.show}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={active === entry.id}
+                  class="panel-tab relative h-7 px-3 text-[10px] font-semibold tracking-[0.08em] uppercase transition-colors {active ===
+                  entry.id
+                    ? 'text-secondary-foreground'
+                    : 'text-ink-quiet hover:text-secondary-foreground'}"
+                  onclick={() => {
+                    tab = entry.id as "recent" | "output";
+                    collapsed = false;
+                  }}>{entry.label}</button
+                >
+              {/if}
+            {/each}
+          </div>
           <Button
             variant="ghost"
             size="xs"
@@ -72,7 +95,9 @@
           </Button>
         </div>
         {#if !collapsed}
-          <div class="flex min-h-0 flex-1 flex-col">{@render history()}</div>
+          <div class="flex min-h-0 flex-1 flex-col">
+            {#if active === "output" && output}{@render output()}{:else}{@render history()}{/if}
+          </div>
         {/if}
       </div>
     </Resizable.Pane>
@@ -104,3 +129,16 @@
     {#if hasHistory && visibleView === "history"}{@render history()}{:else}{@render result()}{/if}
   </div>
 {/if}
+
+<style>
+  /* The selected tab is underlined rather than filled, so the strip reads as
+     panel chrome instead of a row of buttons. */
+  .panel-tab[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0.75rem;
+    bottom: 0;
+    height: 1px;
+    background: var(--muted-foreground);
+  }
+</style>

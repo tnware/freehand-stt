@@ -1,7 +1,4 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
-  import { Clipboard } from "@wailsio/runtime";
-  import * as Manager from "$bindings/managedruntime/manager";
   import type {
     InstanceStatus,
     Model,
@@ -13,8 +10,7 @@
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import { Button } from "$lib/components/ui/button";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
-  import ProcessOutputTerminal from "$lib/components/ProcessOutputTerminal.svelte";
-  import { ProcessOutputState } from "$lib/stores/process-output.svelte";
+  import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
   import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
 
@@ -42,23 +38,8 @@
   const busy = $derived(!!instance && runtime.isBusy(instance.id));
   const models = $derived(status?.models ?? entry.models ?? []);
 
-  const output = new ProcessOutputState(Manager);
-  let following = $state(true);
   let preferencesOpen = $state(false);
   let sourceOpen = $state(false);
-
-  // Output is per instance and bounded to memory, so it follows the selection
-  // and is released the moment the pane goes away.
-  $effect(() => {
-    const id = running ? (instance?.id ?? "") : "";
-    if (output.instanceID !== id) void output.select(id);
-  });
-  $effect(() => {
-    if (!output.accepted) return;
-    const timer = setInterval(() => void output.poll(), 1000);
-    return () => clearInterval(timer);
-  });
-  onDestroy(() => output.dispose());
 
   function size(bytes: number): string {
     if (!bytes) return "—";
@@ -114,14 +95,6 @@
     </div>
     <div class="flex shrink-0 items-center gap-1.5">
       {#if installed}
-        <Button
-          variant="outline"
-          size="xs"
-          disabled={!running}
-          onclick={() => void output.select(instance?.id ?? "")}
-        >
-          View output
-        </Button>
         <Button
           variant="outline"
           size="xs"
@@ -337,47 +310,6 @@
         >memory only · not written to disk</span
       >
     </div>
-    <div class="relative min-h-0 flex-1">
-      {#if !running}
-        <p
-          class="flex h-full items-center justify-center px-4 text-center text-[12px] text-muted-foreground"
-        >
-          Output is available while this runtime is running.
-        </p>
-      {:else}
-        <ProcessOutputTerminal
-          chunks={output.chunks}
-          revision={output.revision}
-          enabled={output.accepted}
-          busy={output.busy}
-          bind:following
-          onclear={() => void output.clear()}
-          oncopy={Clipboard.SetText}
-          describedby={!output.accepted ? "runtime-output-consent" : undefined}
-        >
-          {#if !output.accepted}
-            <div
-              class="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-warning/25 bg-card px-4 py-3"
-            >
-              <p
-                id="runtime-output-consent"
-                class="text-[12px] leading-relaxed text-secondary-foreground"
-              >
-                <span class="block font-semibold text-foreground"
-                  >Show sensitive output</span
-                >
-                Output may include transcripts, prompts and file paths.
-              </p>
-              <Button
-                size="xs"
-                class="shrink-0"
-                disabled={!output.instanceID || output.busy}
-                onclick={() => void output.show()}>Show output</Button
-              >
-            </div>
-          {/if}
-        </ProcessOutputTerminal>
-      {/if}
-    </div>
+    <RuntimeOutputDrawer instanceID={instance?.id ?? ""} {running} />
   </div>
 </div>
