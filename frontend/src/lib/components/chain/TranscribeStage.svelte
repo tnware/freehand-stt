@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import Stage, { type StageTone } from "./Stage.svelte";
   import StagePick from "./StagePick.svelte";
 
@@ -11,6 +12,9 @@
     state = "",
     live = "",
     partial = "",
+    notice = "",
+    extra,
+    control,
     onOpen,
   }: {
     ordinal?: string;
@@ -25,13 +29,20 @@
     live?: string;
     /** The unstable tail the recogniser may still revise. */
     partial?: string;
+    /** A transcribe-mode fallback worth explaining, such as streaming being
+     *  unavailable for the selected profile. */
+    notice?: string;
+    /** Extra footer content: the file workflow puts its streaming switch here. */
+    extra?: Snippet;
+    /** Replaces the state lamp, for a stage that owns a mode control. */
+    control?: Snippet;
     onOpen: () => void;
   } = $props();
 
   const streaming = $derived(Boolean(live || partial));
 </script>
 
-<Stage {ordinal} {label} {tone}>
+<Stage {ordinal} {label} {tone} {control}>
   <StagePick
     value={model || "Not selected"}
     meta={source}
@@ -51,6 +62,10 @@
     </p>
   {/if}
 
+  {#if notice}
+    <p class="px-1 text-[11px] leading-snug text-muted-foreground">{notice}</p>
+  {/if}
+
   {#snippet footer()}
     {#if state}
       <span
@@ -60,5 +75,6 @@
     {:else}
       <span></span>
     {/if}
+    {#if extra}{@render extra()}{/if}
   {/snippet}
 </Stage>

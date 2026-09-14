@@ -8,13 +8,13 @@
   import CurrentResult from "$lib/components/home/CurrentResult.svelte";
   import * as WindowingService from "$bindings/windowing/service";
   import SpeechQuickSettings from "./SpeechQuickSettings.svelte";
-  import ResultQuickSettings from "./ResultQuickSettings.svelte";
   import WorkspaceSplit from "./WorkspaceSplit.svelte";
   import { Button } from "$lib/components/ui/button";
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
   import ReadinessPanel from "$lib/components/home/ReadinessPanel.svelte";
-  import AudioFileTranscription from "$lib/components/home/AudioFileTranscription.svelte";
+  import FileChain from "$lib/components/chain/FileChain.svelte";
+  import SpeechChain from "$lib/components/chain/SpeechChain.svelte";
   import HistoryPanel from "$lib/components/home/HistoryPanel.svelte";
   import Notifications from "$lib/components/shell/Notifications.svelte";
   import VoiceChain from "$lib/components/chain/VoiceChain.svelte";
@@ -230,10 +230,9 @@
   class:onboarding={showReadiness}
   aria-label="Freehand workspace"
 >
-  {#if inputMode !== "tts"}
-    <div class="transport-frame">
-      {#if session.editor.draft}
-        {#if !readiness?.initialSetup}
+  <div class="transport-frame">
+    {#if session.editor.draft}
+      {#if inputMode === "tts" || !readiness?.initialSetup}
           {#if inputMode === "voice"}
             <VoiceChain
               {session}
@@ -261,31 +260,36 @@
               onOpenDelivery={onOpenGeneralSettings}
             />
           {:else if inputMode === "file"}
-            <AudioFileTranscription
-              status={session.files.status}
-              choosing={session.files.choosing}
-              starting={session.files.starting}
-              cancelling={session.files.cancelling}
-              clearing={session.files.clearing}
-              streamingEnabled={session.files.streamingEnabled}
-              resettingStreaming={session.files.resettingStreaming}
-              onStreamingChange={(enabled) =>
-                (session.files.streamingPreferred = enabled)}
-              voiceActive={voiceActive || ttsWorking}
-              onOpenSettings={managed ? openLocalRuntime : onOpenServerSettings}
-              onChoose={() => session.files.chooseAudioFile()}
-              onStart={() => session.files.startFileTranscription()}
-              onTryStreamingAgain={() => session.files.tryFileStreamingAgain()}
-              onCancel={() => session.files.cancelFileTranscription()}
-              onClear={() => session.files.clearAudioFile()}
+            <FileChain
+              {session}
+              {now}
+              blocked={voiceActive || ttsWorking
+                ? "Finish the current job first"
+                : ""}
+              transcribeModel={managed
+                ? localModel
+                : (runtimeSettings?.model ?? "")}
+              transcribeSource={managed
+                ? local.label
+                : endpointHost(runtimeSettings?.baseURL ?? "")}
+              onOpenTranscribe={managed
+                ? openLocalRuntime
+                : onOpenServerSettings}
+              onOpenCleanup={onOpenProcessingSettings}
+              onOpenDelivery={onOpenHistorySettings}
+            />
+          {:else}
+            <SpeechChain
+              {session}
+              {now}
+              onOpenSpeech={onOpenSpeechSettings}
             />
           {/if}
-        {/if}
-      {:else}
-        <Skeleton class="h-[132px] w-full rounded-none" />
       {/if}
-    </div>
-  {/if}
+    {:else}
+      <Skeleton class="h-[132px] w-full rounded-none" />
+    {/if}
+  </div>
   <div class="body">
     {#if messages.length}<Notifications
         {messages}
@@ -413,21 +417,6 @@
                           )
                   : undefined}
               >
-                {#snippet quickSettings()}
-                  <ResultQuickSettings
-                    settings={runtimeSettings!}
-                    editor={session.editor}
-                    runtimeState={session.runtime}
-                    onOpenLocalRuntime={openLocalRuntime}
-                    showCapture={inputMode === "voice"}
-                    disabled={quickSettingsDisabled || session.editor.saving}
-                    onAddConnection={addConnection}
-                    {onOpenServerSettings}
-                    {onOpenProcessingSettings}
-                    {onOpenAudioSettings}
-                    {onOpenGeneralSettings}
-                  />
-                {/snippet}
               </CurrentResult>
             {/if}
 
