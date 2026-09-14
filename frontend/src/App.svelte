@@ -11,6 +11,7 @@
   import HomeScreen from "$lib/components/home/HomeScreen.svelte";
   import StatusBar from "$lib/components/shell/StatusBar.svelte";
   import SettingsPane from "$lib/components/settings/SettingsPane.svelte";
+  import HistoryPane from "$lib/components/history/HistoryPane.svelte";
   import { ShellNavigation } from "$lib/shell-navigation.svelte";
   import { paneByID, type PaneID } from "$lib/panes";
   import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
@@ -32,7 +33,7 @@
   let { session = defaultSession }: { session?: Session } = $props();
   const navigation = new ShellNavigation();
   /** Non-workflow places. Null means a workflow chain is on screen. */
-  let auxPane = $state<"runtimes" | "settings" | null>(null);
+  let auxPane = $state<"runtimes" | "history" | "settings" | null>(null);
   let aboutOpen = $state(false);
   let inputMode = $state("voice");
   // The status strip carries the same release identity About shows, read from
@@ -58,11 +59,13 @@
   const activePane = $derived<PaneID>(
     auxPane === null
       ? (inputMode as PaneID)
-      : navigation.active === "local-runtime"
-        ? "runtimes"
-        : "settings",
+      : auxPane === "history"
+        ? "history"
+        : navigation.active === "local-runtime"
+          ? "runtimes"
+          : "settings",
   );
-  const settingsOpen = $derived(auxPane !== null);
+  const settingsOpen = $derived(auxPane === "settings" || auxPane === "runtimes");
 
   const fileWorking = $derived(
     session.files.status.phase ===
@@ -249,6 +252,10 @@
       onSelect={(id) => {
         if (id === "settings") return openSettings("general");
         if (id === "runtimes") return openSettings("local-runtime");
+        if (id === "history") {
+          auxPane = "history";
+          return;
+        }
         auxPane = null;
         inputMode = id;
       }}
@@ -275,7 +282,12 @@
       />
     </div>
 
-    {#if auxPane !== null}
+    {#if auxPane === "history"}
+      <HistoryPane
+        {session}
+        onOpenHistorySettings={() => openSettings("history")}
+      />
+    {:else if auxPane !== null}
       <SettingsPane {session} {navigation} onReturn={closeSettings} />
     {/if}
   </div>

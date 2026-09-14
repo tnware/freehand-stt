@@ -9,6 +9,7 @@
   import * as WindowingService from "$bindings/windowing/service";
   import SpeechQuickSettings from "./SpeechQuickSettings.svelte";
   import WorkspaceSplit from "./WorkspaceSplit.svelte";
+  import PaneHeader from "./PaneHeader.svelte";
   import { Button } from "$lib/components/ui/button";
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
   import QuickSettings from "$lib/components/home/QuickSettings.svelte";
@@ -157,6 +158,24 @@
       runtimeSettings?.historyEnabled && inputMode !== "tts" && !showReadiness,
     ),
   );
+  const paneTitle = $derived(
+    inputMode === "file"
+      ? "Audio file"
+      : inputMode === "tts"
+        ? "Text to speech"
+        : "Voice transcription",
+  );
+  const paneSummary = $derived(
+    inputMode === "file"
+      ? "file → transcribe → clean up → copy"
+      : inputMode === "tts"
+        ? "text → synthesize → play or save"
+        : "mic → transcribe → clean up → deliver",
+  );
+  const liveDictation = $derived(
+    inputMode === "voice" && !!runtimeSettings?.voiceTranscription.realtime,
+  );
+
   const microphoneLabel = $derived.by(() => {
     const selectedID = runtimeSettings?.microphoneID ?? "";
     if (!selectedID) return "system default";
@@ -223,6 +242,17 @@
   class:onboarding={showReadiness}
   aria-label="Freehand workspace"
 >
+  <PaneHeader title={paneTitle} summary={paneSummary}>
+    {#snippet actions()}
+      {#if liveDictation}
+        <span
+          class="inline-flex h-5 items-center rounded-sm border border-accent-edge bg-accent-wash px-1.5 text-[11px] text-accent-text"
+          >Live dictation</span
+        >
+      {/if}
+    {/snippet}
+  </PaneHeader>
+
   <div class="transport-frame">
     {#if session.editor.draft}
       {#if inputMode === "tts" || !readiness?.initialSetup}
@@ -612,7 +642,7 @@
   }
   .transport-frame {
     flex-shrink: 0;
-    padding: 0 1.25rem 1rem;
+    padding: 0.875rem 1.25rem 1rem;
   }
   .transport-frame :global(.transport) {
     overflow: hidden;

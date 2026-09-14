@@ -32,13 +32,6 @@ export type SettingsSection = {
   blurb: string;
   icon: Component;
   group: "workflows" | "shared" | "capture" | "application";
-  /**
-   * The section is configured somewhere else now: on the activity rail, or
-   * inline in the chain stage it belongs to. It stays a valid destination —
-   * deep links and search results still resolve — but configuration does not
-   * list it a second time.
-   */
-  relocated?: boolean;
 };
 
 /**
@@ -53,7 +46,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       "Choose a microphone transcription provider, model, and supported recording mode.",
     icon: MicIcon,
     group: "workflows",
-    relocated: true,
   },
   {
     id: "server",
@@ -61,7 +53,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     blurb: "Choose a connection, model, language, and transcription options.",
     icon: FileAudioIcon,
     group: "workflows",
-    relocated: true,
   },
   {
     id: "processing",
@@ -70,7 +61,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       "Optionally clean completed transcripts with a separate language model.",
     icon: WandSparklesIcon,
     group: "workflows",
-    relocated: true,
   },
   {
     id: "speech",
@@ -78,7 +68,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     blurb: "Write text to speak, or listen to completed transcripts.",
     icon: Volume2Icon,
     group: "workflows",
-    relocated: true,
   },
   {
     id: "connections",
@@ -89,11 +78,10 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   },
   {
     id: "local-runtime",
-    label: "Local runtimes",
+    label: "Local runtime",
     blurb: "Manage on-device speech and downloaded models.",
     icon: ServerIcon,
     group: "shared",
-    relocated: true,
   },
   {
     id: "vocabulary",
@@ -157,9 +145,7 @@ export const SETTINGS_GROUPS = [
 export const sectionsInGroup = (
   group: SettingsSection["group"],
 ): SettingsSection[] =>
-  SETTINGS_SECTIONS.filter(
-    (section) => section.group === group && !section.relocated,
-  );
+  SETTINGS_SECTIONS.filter((section) => section.group === group);
 
 export const sectionByID = (id: SettingsSectionID): SettingsSection =>
   SETTINGS_SECTIONS.find((section) => section.id === id) ??
@@ -190,7 +176,6 @@ const SETTINGS_KEYWORDS: Record<SettingsSectionID, string> = {
 export function matchingSettingsSections(query: string): SettingsSection[] {
   const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   return SETTINGS_SECTIONS.filter((section) => {
-    if (section.relocated) return false;
     const text =
       `${section.label} ${section.blurb} ${SETTINGS_KEYWORDS[section.id]}`.toLocaleLowerCase();
     return words.every((word) => text.includes(word));
