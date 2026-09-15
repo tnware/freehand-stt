@@ -352,9 +352,12 @@ func (m *Manager) change(update func([]Instance) ([]Instance, error)) error {
 		return err
 	}
 	if m.checkIdle != nil {
-		err = m.checkIdle()
+		if err := m.checkIdle(); err != nil {
+			r.Finish(false)
+			return errors.New("Could not change managed runtimes. Finish active work and try again.")
+		}
 	}
-	if err == nil && m.save != nil {
+	if m.save != nil {
 		m.mu.Lock()
 		r.transaction.joinable = true
 		m.mu.Unlock()
@@ -365,7 +368,7 @@ func (m *Manager) change(update func([]Instance) ([]Instance, error)) error {
 	}
 	r.Finish(err == nil)
 	if err != nil {
-		return errors.New("Could not change managed runtimes. Finish active work and try again.")
+		return errors.New("Could not save managed runtime changes. Review Connections and task settings, then try again.")
 	}
 	return nil
 }

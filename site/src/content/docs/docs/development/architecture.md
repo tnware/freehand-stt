@@ -58,6 +58,13 @@ intact. Runtime-owned transport/model fields are read-only in Connections, while
 task options retain their existing owners. Stopped rows remain available for
 explicit selection and repair, but requests fail closed until ready.
 
+When the runtime inventory changes, the settings owner reprojects selected
+Connections and gates managed Voice's realtime flag against the new model's
+capabilities before validation. The model and compatible mode commit together;
+switching back to a realtime-capable model does not enable realtime implicitly.
+Manual Voice connections retain their mode and settings. Runtime admission and
+settings-save failures return distinct bounded errors.
+
 Built-in name projection removes only the GGML default `(CPU)` suffix
 for its matching provider, leaving durable instance preferences, custom names,
 legacy aliases, IDs, and task selections intact. Installed backend presentation

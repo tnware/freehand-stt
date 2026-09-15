@@ -105,6 +105,12 @@ Connection for your tasks.
 
 Choose a model from the runtime's catalog for the task you need.
 
+When Voice uses that runtime, selecting a model without realtime support, such
+as Parakeet, automatically switches Voice to completed transcription. You do
+not need to turn realtime off first. Switching back to Nemotron keeps completed
+mode until you enable **Realtime transcription** again. Voice settings for an
+independent Connection are unaffected.
+
 ### whisper.cpp transcription
 
 On Windows, choose **Install** on the whisper.cpp row, review and confirm the binary choice,

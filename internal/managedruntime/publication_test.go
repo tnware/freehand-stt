@@ -7,9 +7,53 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestInventoryChangeDistinguishesActivityFromSaveFailure(t *testing.T) {
+	for _, active := range []bool{true, false} {
+		t.Run(map[bool]string{true: "active work", false: "save failure"}[active], func(t *testing.T) {
+			before := Instance{ID: "voice", Name: "Voice", Provider: NeMoSpeechCPP, Model: "nemotron-3.5"}
+			next := before
+			next.Model = "parakeet-tdt"
+			failed := true
+			saved := false
+			m := NewManager(ManagerOptions{
+				Directory: t.TempDir(), Instances: []Instance{before},
+				CheckIdle: func() error {
+					if active && failed {
+						return errors.New("private activity detail")
+					}
+					return nil
+				},
+				SaveInstances: func([]Instance) error {
+					saved = true
+					if failed {
+						return errors.New("private storage detail")
+					}
+					return nil
+				},
+			})
+			defer m.ServiceShutdown()
+			err := m.SetInstance(next)
+			if err == nil || strings.Contains(err.Error(), "private") || strings.Contains(err.Error(), "Finish active work") != active {
+				t.Fatalf("misleading or unsafe binding error: %v", err)
+			}
+			if saved == active || m.GetInstances()[0].Instance != before {
+				t.Fatal("failed mutation persisted or published inventory")
+			}
+			failed = false
+			if err := m.SetInstance(next); err != nil {
+				t.Fatalf("failed mutation retained reservation: %v", err)
+			}
+			if m.GetInstances()[0].Instance != next {
+				t.Fatal("retry did not publish inventory")
+			}
+		})
+	}
+}
 
 func TestInventoryReservationRejectsDrainingIDBeforeDurableWrite(t *testing.T) {
 	i := Instance{ID: "draining", Name: "Runtime", Provider: NeMoSpeechCPP, Model: "nemotron-3.5"}

@@ -67,6 +67,9 @@
       ? "Custom server value…"
       : (known?.label ?? (restricted ? "Choose language" : "Server default")),
   );
+  const automaticOnly = $derived(
+    restricted && languages.length === 1 && languages[0]?.code === "auto",
+  );
   const filtered = $derived(
     choices.filter(
       (choice) =>
@@ -88,78 +91,90 @@
 </script>
 
 <div class="flex flex-col gap-2">
-  <Combobox.Root
-    type="single"
-    bind:value={() => selected, choose}
-    inputValue={open ? query : selectedLabel}
-    bind:open
-    items={choices}
-    onOpenChange={(isOpen) => {
-      if (!isOpen) query = "";
-    }}
-    allowDeselect={false}
-    {disabled}
-  >
-    <div class="relative">
-      <Combobox.Input
-        data-slot="combobox-input"
-        {id}
-        class="h-8 w-full rounded-md border border-input bg-well px-3 pr-9 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-        aria-describedby={`${id}-help`}
-        placeholder="Search languages…"
-        oninput={(event) => {
-          query = event.currentTarget.value;
-          open = true;
-        }}
-      >
-        {#snippet child({ props })}
-          <input {...props} value={open ? query : selectedLabel} />
-        {/snippet}
-      </Combobox.Input>
-      <Combobox.Trigger
-        class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
-        aria-label="Show languages"
-        ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
-      >
-    </div>
-    <Combobox.Portal>
-      <Combobox.Content
-        data-slot="combobox-content"
-        class="z-50 max-h-[min(18rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-56 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
-        sideOffset={4}
-        collisionPadding={12}
-      >
-        <!-- Recreate filtered options so keyboard highlighting cannot retain a reused DOM node. -->
-        {#key query}
-          {#each filtered as choice (choice.value)}
-            <Combobox.Item
-              value={choice.value}
-              label={choice.label}
-              class="flex cursor-default items-center justify-between gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
-            >
-              <span class="min-w-0 flex-1 break-words">{choice.label}</span>
-              {#if selected === choice.value}<CheckIcon
-                  class="size-3.5 shrink-0"
-                />{/if}
-            </Combobox.Item>
-          {:else}
-            <p class="px-2 py-3 text-xs text-muted-foreground" role="status">
-              {restricted
-                ? "No matching language in this model profile."
-                : "No matching language. Use Custom server value for an unlisted value."}
-            </p>
-          {/each}
-        {/key}
-        <p
-          class="mt-1 border-t border-hairline px-3 py-2 text-xs leading-relaxed text-muted-foreground"
+  {#if automaticOnly && known}
+    <input
+      {id}
+      type="text"
+      value={selectedLabel}
+      readonly
+      {disabled}
+      aria-describedby={`${id}-help`}
+      class="h-8 w-full rounded-md border border-input bg-well px-3 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+    />
+  {:else}
+    <Combobox.Root
+      type="single"
+      bind:value={() => selected, choose}
+      inputValue={open ? query : selectedLabel}
+      bind:open
+      items={choices}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) query = "";
+      }}
+      allowDeselect={false}
+      {disabled}
+    >
+      <div class="relative">
+        <Combobox.Input
+          data-slot="combobox-input"
+          {id}
+          class="h-8 w-full rounded-md border border-input bg-well px-3 pr-9 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          aria-describedby={`${id}-help`}
+          placeholder="Search languages…"
+          oninput={(event) => {
+            query = event.currentTarget.value;
+            open = true;
+          }}
         >
-          {restricted
-            ? "Languages supported by this model profile."
-            : "Choose a spoken language, or a custom value from your server. This does not translate audio."}
-        </p>
-      </Combobox.Content>
-    </Combobox.Portal>
-  </Combobox.Root>
+          {#snippet child({ props })}
+            <input {...props} value={open ? query : selectedLabel} />
+          {/snippet}
+        </Combobox.Input>
+        <Combobox.Trigger
+          class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
+          aria-label="Show languages"
+          ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
+        >
+      </div>
+      <Combobox.Portal>
+        <Combobox.Content
+          data-slot="combobox-content"
+          class="z-50 max-h-[min(18rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-56 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          sideOffset={4}
+          collisionPadding={12}
+        >
+          <!-- Recreate filtered options so keyboard highlighting cannot retain a reused DOM node. -->
+          {#key query}
+            {#each filtered as choice (choice.value)}
+              <Combobox.Item
+                value={choice.value}
+                label={choice.label}
+                class="flex cursor-default items-center justify-between gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+              >
+                <span class="min-w-0 flex-1 break-words">{choice.label}</span>
+                {#if selected === choice.value}<CheckIcon
+                    class="size-3.5 shrink-0"
+                  />{/if}
+              </Combobox.Item>
+            {:else}
+              <p class="px-2 py-3 text-xs text-muted-foreground" role="status">
+                {restricted
+                  ? "No matching language in this model profile."
+                  : "No matching language. Use Custom server value for an unlisted value."}
+              </p>
+            {/each}
+          {/key}
+          <p
+            class="mt-1 border-t border-hairline px-3 py-2 text-xs leading-relaxed text-muted-foreground"
+          >
+            {restricted
+              ? "Language selection options for this model profile."
+              : "Choose a spoken language, or a custom value from your server. This does not translate audio."}
+          </p>
+        </Combobox.Content>
+      </Combobox.Portal>
+    </Combobox.Root>
+  {/if}
   {#if customVisible}
     <label class="text-xs text-muted-foreground" for={`${id}-custom`}
       >Custom language value</label
@@ -188,12 +203,14 @@
   {/if}
   <p
     id={`${id}-help`}
-    class={unavailableReason || customVisible
+    class={unavailableReason || customVisible || automaticOnly
       ? "text-xs leading-relaxed text-muted-foreground"
       : "sr-only"}
   >
     {#if unavailableReason}{unavailableReason}
     {:else if customVisible}Custom values are sent to the server unchanged.
+    {:else if automaticOnly}This model detects the spoken language
+      automatically. Choosing a specific language is not supported.
     {:else}Search by language name or code. {restricted
         ? "Choose from this model profile’s supported languages."
         : "Your model must support the selected language."}{/if}

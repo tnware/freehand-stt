@@ -35,7 +35,13 @@ Microphone transcription completes when you stop recording or at a pause-aware
 checkpoint. You can use cleanup and focus-safe insertion as usual. Select the
 model separately for audio-file transcription, then copy the result when ready.
 
-The profile uses automatic language detection. It does not offer language hints,
+**Spoken language** shows **Automatic detection** with an explanation instead of
+a language dropdown. Parakeet recognizes its 25 supported languages automatically;
+it cannot be forced to use a particular language like Nemotron. See
+[NVIDIA's model card](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3)
+for the supported languages.
+
+The profile does not offer language hints,
 context, vocabulary boosting, temperature overrides, or realtime microphone
 streaming with NeMo-Speech.cpp.
 Shared vocabulary remains saved for other compatible selections.

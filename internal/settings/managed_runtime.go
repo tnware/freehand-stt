@@ -85,6 +85,11 @@ func SaveManagedInstances(s *Service, instances []managedruntime.Instance) error
 		}); ok {
 			next = store.ApplySelectedConnections(next)
 		}
+		// A runtime model change also changes the selected Voice capabilities.
+		// Keep completed mode when switching back; realtime remains an explicit choice.
+		if next.VoiceTranscription.ManagedInstanceID != "" {
+			next.VoiceTranscription.Realtime = next.VoiceTranscription.Realtime && config.VoiceRealtimeEligible(next.VoiceTranscription)
+		}
 		if err := config.Validate(next); err != nil {
 			return err
 		}

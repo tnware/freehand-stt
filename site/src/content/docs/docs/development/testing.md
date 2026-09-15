@@ -175,6 +175,14 @@ Browser fixtures should cover a fresh installation with no manual connections,
 recommended Nemotron realtime setup, supported catalog browsing without pulls,
 explicit download/cancel/retry, switching models, unsupported realtime, status
 refresh across windows, removal confirmation, and dirty-draft protection.
+The settings integration fixture switches a stopped NeMo inventory from Nemotron
+with realtime enabled to Parakeet through the manager and real SQLite owner.
+Assert that completed mode and the new model persist together, task preferences
+survive reload, switching back does not enable realtime, and independent manual
+Voice settings remain unchanged. Runtime error fixtures distinguish active work
+from save failures, redact private failure details, and verify retry admission.
+Repeat the model switch in native acceptance using already downloaded models;
+the deterministic fixtures do not start a runtime or perform inference.
 At compact desktop sizes, assert that provider-row install, selected-model download,
 progress/cancel, and start/stop remain in view without scrolling or Playwright's
 automatic click scrolling. Download completion must not implicitly start inference.
