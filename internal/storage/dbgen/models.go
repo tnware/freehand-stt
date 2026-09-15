@@ -28,11 +28,12 @@ type CredentialGc struct {
 }
 
 type ManagedRuntimeInstance struct {
-	ID        string
-	Name      string
-	Provider  string
-	Model     string
-	AutoStart int64
+	ID          string
+	Name        string
+	Provider    string
+	Model       string
+	AutoStart   int64
+	SpeechModel string
 }
 
 type PreferencesSetting struct {
@@ -75,20 +76,24 @@ type PreferencesSetting struct {
 }
 
 type RememberedModel struct {
-	ConnectionID        string
-	Purpose             string
-	Model               string
-	Selected            int64
-	Profile             string
-	Prompt              string
-	TemperatureOverride int64
-	Temperature         float64
-	LimitOutputTokens   int64
-	MaxOutputTokens     int64
-	DisableReasoning    int64
-	Voice               string
-	SpeechLanguage      string
-	SpeechInstructions  string
+	ConnectionID           string
+	Purpose                string
+	Model                  string
+	Selected               int64
+	Profile                string
+	Prompt                 string
+	TemperatureOverride    int64
+	Temperature            float64
+	LimitOutputTokens      int64
+	MaxOutputTokens        int64
+	DisableReasoning       int64
+	Voice                  string
+	SpeechLanguage         string
+	SpeechInstructions     string
+	NemoDisablePunctuation int64
+	NemoNormalize          int64
+	NemoProfanityFilter    int64
+	NemoEndpointingMs      int64
 }
 
 type SavedConnection struct {
@@ -141,6 +146,10 @@ type TranscriptionSetting struct {
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
 	ModelProfile                            string
+	NemoDisablePunctuation                  int64
+	NemoNormalize                           int64
+	NemoProfanityFilter                     int64
+	NemoEndpointingMs                       int64
 }
 
 type VocabularySetting struct {
@@ -152,14 +161,18 @@ type VocabularySetting struct {
 }
 
 type VoiceTranscriptionSetting struct {
-	ID                  int64
-	Realtime            int64
-	ModelProfile        string
-	Model               string
-	Language            string
-	TimeoutSeconds      int64
-	Prompt              string
-	TemperatureOverride int64
-	Temperature         float64
-	Captions            int64
+	ID                     int64
+	Realtime               int64
+	ModelProfile           string
+	Model                  string
+	Language               string
+	TimeoutSeconds         int64
+	Prompt                 string
+	TemperatureOverride    int64
+	Temperature            float64
+	Captions               int64
+	NemoDisablePunctuation int64
+	NemoNormalize          int64
+	NemoProfanityFilter    int64
+	NemoEndpointingMs      int64
 }

@@ -138,6 +138,17 @@ results as well as credential drafts and transcripts. llama.cpp `b10809` uses
 only to the existing bounded private capture; trace/debug is not enabled.
 Normal logging is not redaction and can still contain sensitive content.
 
+NeMo uses `--access-log --log-format json` for HTTP access records while retaining
+plain startup diagnostics. It does not enable global `--json`; upstream native
+messages can remain plain text. Request IDs, methods, paths, statuses, and remote
+addresses in these records stay in the private bounded output buffer. They must
+not be copied into application logs or renderer events.
+
+**Highlight logs** applies display-only colors to recognized severity/status and
+JSON tokens. It preserves native ANSI and original search/copy text; it never
+decodes JSON escapes into terminal actions. The toggle does not enable logging,
+change capture limits, or relax output filtering.
+
 The pinned common logger has no default disk sink. Do not pass `--log-file` or
 `--log-prompts-dir`, and preserve the fixed environment allowlist: upstream
 logging environment variables and Windows `APPDATA`/`PROGRAMDATA` config files

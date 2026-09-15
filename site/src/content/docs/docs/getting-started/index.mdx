@@ -7,7 +7,8 @@ import { CardGrid, LinkCard, Steps } from "@astrojs/starlight/components";
 
 Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
 services you choose. Start with voice dictation, transcribe an audio file, or
-generate speech from text. For local recognition and cleanup, choose an optional
+generate speech from text. For local transcription, speech generation, and
+cleanup, choose an optional
 [managed local runtime](../guides/local-runtime/) instead of configuring a server.
 Available runtimes vary by platform. Models are not bundled with Freehand;
 runtime installation and model downloads are explicit setup actions.
@@ -20,9 +21,8 @@ service if your PC lacks the resources, or you want to keep them for other work.
 ## What you need
 
 - Windows 11 x64 with WebView2, or macOS 13+ on Apple Silicon or Intel.
-- A [managed local runtime](../guides/local-runtime/) for recognition or cleanup,
+- A [managed local runtime](../guides/local-runtime/) for your task,
   or a reachable compatible service for your task (see the [backend guides](../backends/)).
-  Text to speech requires a manually configured service.
 - For a manual service: its base URL, model ID (except whisper.cpp's server-loaded model), and API key
   when authentication is required.
 
@@ -50,15 +50,16 @@ keys are left untouched but are not imported or reused.
 
 Freehand opens **Voice** with a **Set up voice transcription** screen. To work
 with a recording or generate speech instead, choose **Audio file** or **Text to
-speech** at the top. You can set up each task independently.
+speech** on the activity rail at the left. You can set up each task independently.
 
 For the recommended local setup on Windows or macOS, follow
 [Local runtimes](../guides/local-runtime/) to install NeMo, download
 Nemotron 3.5 Streaming, and enable live microphone transcription without entering
 a server URL. Select its built-in Connection separately for Voice and Audio file;
 files use the runtime's selected model in completed mode. Optional local cleanup
-uses managed llama.cpp with S1-mini. Speech generation needs a manually configured
-service.
+uses managed llama.cpp with S1-mini. Add optional
+[MagpieTTS](../guides/local-runtime/#local-speech-with-magpietts) to NeMo for speech
+generation in the same runtime.
 
 To connect a manual service from your chosen task, use its **Settings** cog to
 open options on the right: **Transcription** for Voice or Audio file, or **Speech**
@@ -77,7 +78,8 @@ for Text to speech. The first-run setup screen also offers connection selection.
 
 :::note[Connection checks read metadata]
 The connection check never submits audio and never invokes a discovered model.
-A successful check does not test transcription quality.
+A successful check does not test transcription quality. For a managed runtime,
+checks wait for loading and warm-up to finish and refresh when it is ready.
 :::
 
 Voice and Audio file keep separate model and connection choices. To use the
@@ -94,7 +96,7 @@ See [language selection](../guides/languages/) for detection and fallback behavi
 
 ## Configure the speech endpoint
 
-For Generic, Speaches, and vLLM transcription, include the OpenAI API prefix in
+For Generic, Speaches, NeMo, and vLLM transcription, include the OpenAI API prefix in
 the base URL, typically:
 
 ```text title="Speech endpoint base URL"
@@ -186,7 +188,9 @@ File transcripts are available to copy; Freehand does not insert them automatica
 ## Generate speech
 
 Text to speech is optional and off by default. It needs a speech synthesis
-connection, not a microphone, recording shortcut, or STT setup.
+connection. A microphone and recording shortcut are unnecessary. For a local
+service, first [add MagpieTTS to NeMo](../guides/local-runtime/#local-speech-with-magpietts).
+You can also use a [manually configured speech server](../backends/).
 
 <Steps>
 

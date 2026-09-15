@@ -31,6 +31,12 @@ func (s *connectionState) forgetModels(id string) {
 func (s connectionState) restoreModel(v config.Settings, p savedconnection.Purpose, id string) config.Settings {
 	if d := s.entries[id].Details; d.ManagedInstanceID != "" {
 		v = savedconnection.QualifyProjection(v, p, d.ManagedInstanceID)
+		defaults := modelsettings.Defaults()[p]
+		defaults.Profile = modelsettings.Extract(v, p).Profile
+		if defaults.Profile == modelprofile.MagpieTTS {
+			defaults.Voice = "default"
+		}
+		v = modelsettings.Select(v, p, modelsettings.Model(v, p), defaults)
 		for _, e := range s.models {
 			if e.ConnectionID == id && e.Purpose == p && e.Model == modelsettings.Model(v, p) {
 				v = modelsettings.Select(v, p, e.Model, e.Options)
@@ -54,6 +60,7 @@ func readRememberedModels(ctx context.Context, q *dbgen.Queries, state *connecti
 	counts := map[string]int{}
 	for _, r := range rows {
 		e := modelsettings.Entry{ConnectionID: r.ConnectionID, Purpose: savedconnection.Purpose(r.Purpose), Model: r.Model, Selected: r.Selected != 0, Options: modelsettings.Options{Speech: modelprofile.SpeechOptions{Language: r.SpeechLanguage, Instructions: r.SpeechInstructions}, Profile: modelprofile.ID(r.Profile), Cleanup: compatibility.CleanupOptions{LimitOutputTokens: r.LimitOutputTokens != 0, MaxOutputTokens: int(r.MaxOutputTokens), DisableReasoning: r.DisableReasoning != 0}, Voice: r.Voice}}
+		e.Options.Transcription.NeMo = compatibility.NeMoOptions{DisablePunctuation: r.NemoDisablePunctuation != 0, Normalize: r.NemoNormalize != 0, ProfanityFilter: r.NemoProfanityFilter != 0, EndpointingMilliseconds: int(r.NemoEndpointingMs)}
 		e.Options.Transcription.Prompt = r.Prompt
 		e.Options.Transcription.TemperatureOverride = r.TemperatureOverride != 0
 		e.Options.Transcription.Temperature = r.Temperature
@@ -82,7 +89,7 @@ func writeRememberedModels(ctx context.Context, q *dbgen.Queries, state *connect
 	}
 	for _, e := range state.models {
 		o := e.Options
-		if err := q.PutRememberedModel(ctx, dbgen.PutRememberedModelParams{SpeechLanguage: o.Speech.Language, SpeechInstructions: o.Speech.Instructions, ConnectionID: e.ConnectionID, Purpose: string(e.Purpose), Model: e.Model, Selected: boolean(e.Selected), Profile: string(o.Profile), Prompt: o.Transcription.Prompt, TemperatureOverride: boolean(o.Transcription.TemperatureOverride), Temperature: o.Transcription.Temperature, LimitOutputTokens: boolean(o.Cleanup.LimitOutputTokens), MaxOutputTokens: int64(o.Cleanup.MaxOutputTokens), DisableReasoning: boolean(o.Cleanup.DisableReasoning), Voice: o.Voice}); err != nil {
+		if err := q.PutRememberedModel(ctx, dbgen.PutRememberedModelParams{NemoDisablePunctuation: boolean(o.Transcription.NeMo.DisablePunctuation), NemoNormalize: boolean(o.Transcription.NeMo.Normalize), NemoProfanityFilter: boolean(o.Transcription.NeMo.ProfanityFilter), NemoEndpointingMs: int64(o.Transcription.NeMo.EndpointingMilliseconds), SpeechLanguage: o.Speech.Language, SpeechInstructions: o.Speech.Instructions, ConnectionID: e.ConnectionID, Purpose: string(e.Purpose), Model: e.Model, Selected: boolean(e.Selected), Profile: string(o.Profile), Prompt: o.Transcription.Prompt, TemperatureOverride: boolean(o.Transcription.TemperatureOverride), Temperature: o.Transcription.Temperature, LimitOutputTokens: boolean(o.Cleanup.LimitOutputTokens), MaxOutputTokens: int64(o.Cleanup.MaxOutputTokens), DisableReasoning: boolean(o.Cleanup.DisableReasoning), Voice: o.Voice}); err != nil {
 			return err
 		}
 	}

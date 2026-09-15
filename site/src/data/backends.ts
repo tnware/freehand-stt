@@ -5,11 +5,11 @@ import catalog from "./compatibility.generated.json";
 const editorial = [
   {
     id: "nemo-speech-v1",
-    summary: "Transcribe recordings with Parakeet or follow live dictation with Nemotron.",
+    summary: "Transcribe with Parakeet or Nemotron and generate speech with MagpieTTS.",
     guide: "/docs/backends/nemo-speech/",
-    highlight: "Live text and captions",
+    highlight: "Transcription and speech together",
     detail:
-      "Choose the Nemotron model profile for realtime transcription, language options, and vocabulary hints.",
+      "Run one transcription model and optional MagpieTTS in the same process, with model-specific language and voice controls.",
   },
   {
     id: "generic",
@@ -104,7 +104,7 @@ export const features = [
   { key: "files", label: "Audio files" },
   { key: "realtime", label: "Live dictation" },
   { key: "streaming", label: "File streaming" },
-  { key: "language", label: "Language selection" },
+  { key: "language", label: "STT language" },
   { key: "prompt", label: "STT context" },
   { key: "hotwords", label: "STT hotwords" },
   { key: "temperature", label: "STT temperature" },
@@ -113,6 +113,9 @@ export const features = [
   { key: "reasoningOff", label: "Disable reasoning" },
   { key: "playback", label: "Speech playback" },
   { key: "voices", label: "Voice discovery" },
+  { key: "speechLanguage", label: "Speech language" },
+  { key: "speechStyle", label: "Speech style" },
+  { key: "speechSpeed", label: "Speaking speed" },
 ] as const;
 const descriptions = new Map(editorial.map((entry) => [entry.id, entry]));
 const ids = [...new Set(roles.flatMap(({ key }) => catalog[key].map((profile) => profile.id)))];
@@ -154,6 +157,9 @@ export const backends = ids.map((id) => {
         chat?.available && chat.capabilities.cleanupDisableReasoning ? "available" : "none",
       playback: status(speech),
       voices: speech?.available && speech.capabilities.voiceDiscovery ? "available" : "none",
+      speechLanguage: speech?.available && speech.capabilities.speechLanguage ? "available" : "none",
+      speechStyle: speech?.available && speech.capabilities.speechInstructions ? "available" : "none",
+      speechSpeed: speech?.available && speech.capabilities.speechSpeed ? "available" : "none",
     } satisfies Record<(typeof features)[number]["key"], Support>,
   };
 });

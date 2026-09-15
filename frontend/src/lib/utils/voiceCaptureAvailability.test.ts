@@ -27,6 +27,7 @@ const reachable: ConnectionResult = {
 };
 const connection: TaskConnectionDetails = {
   purpose: Purpose.Voice,
+  runtime: null,
   platform: "windows",
   task: "Voice transcription",
   loading: false,

@@ -15,6 +15,7 @@ const (
 // TranscriptionOptions is a value-only snapshot of optional request controls.
 // TemperatureOverride distinguishes an explicit zero from the server default.
 type TranscriptionOptions struct {
+	NeMo NeMoOptions `json:"nemo"`
 	// Request-only projections of shared vocabulary; never model preferences.
 	Vocabulary          string  `json:"-"`
 	VocabularyBoost     float64 `json:"-"`
@@ -27,6 +28,12 @@ type TranscriptionOptions struct {
 // ValidateTranscriptionOptions is shared by persisted settings and the transport.
 // Errors describe the field, never the user-provided contents.
 func ValidateTranscriptionOptions(id ID, options TranscriptionOptions) error {
+	if err := options.NeMo.Validate(); err != nil {
+		return err
+	}
+	if options.NeMo != (NeMoOptions{}) && id != NeMoSpeechV1 {
+		return errors.New("NeMo transcription controls require the NeMo-Speech.cpp backend")
+	}
 	contract, err := Resolve(id, Transcription)
 	if err != nil {
 		return err

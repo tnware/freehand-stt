@@ -57,6 +57,9 @@ func ValidateSpeechOptions(id ID, backend compatibility.ID, voice string, option
 			return errors.New("speech instructions contain unsupported control characters")
 		}
 	}
+	if id == MagpieTTS {
+		return validateMagpieOptions(voice, options)
+	}
 	if id == Qwen3TTS {
 		if SpeechLanguageName(options.Language) == "" {
 			return errors.New("choose one of the ten Qwen3-TTS languages")

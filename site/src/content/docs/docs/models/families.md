@@ -24,6 +24,7 @@ include models that need a manually configured service.
 | Cohere Transcribe | vLLM | [Cohere Transcribe](../cohere-transcribe/) |
 | Voxtral Mini 4B Realtime | vLLM | [Voxtral Mini Realtime](../voxtral-realtime/) |
 | Kokoro | Speaches, Kokoro-FastAPI | Generic |
+| MagpieTTS Multilingual 357M v2602 | NeMo-Speech.cpp | [MagpieTTS](../magpie-tts/) |
 | Qwen3-TTS 1.7B CustomVoice | vLLM-Omni | [Qwen3-TTS](../qwen3-tts/) |
 | S1-mini | llama.cpp, vLLM, compatible chat servers | [S1-mini](../s1-mini/) |
 

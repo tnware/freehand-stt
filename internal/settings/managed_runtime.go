@@ -65,6 +65,9 @@ func SaveManagedInstances(s *Service, instances []managedruntime.Instance) error
 				if prev.ID == i.ID && prev.Provider != i.Provider {
 					return errors.New("runtime provider cannot change in place")
 				}
+				if prev.ID == i.ID && prev.SpeechModel != "" && i.SpeechModel == "" && old.TextToSpeech.ManagedInstanceID == i.ID {
+					return errors.New("Deselect this runtime in Text to speech before disabling its speech model.")
+				}
 			}
 		}
 		if store, ok := s.store.(interface {
@@ -90,8 +93,13 @@ func SaveManagedInstances(s *Service, instances []managedruntime.Instance) error
 		if next.VoiceTranscription.ManagedInstanceID != "" {
 			next.VoiceTranscription.Realtime = next.VoiceTranscription.Realtime && config.VoiceRealtimeEligible(next.VoiceTranscription)
 		}
-		if err := config.Validate(next); err != nil {
+		// Inventory changes preserve task language; request admission still requires
+		// a language supported by the newly selected model.
+		if err := config.ValidateStored(next); err != nil {
 			return err
+		}
+		if store, ok := s.store.(interface{ SaveManagedInventory(config.Settings) error }); ok {
+			return store.SaveManagedInventory(next)
 		}
 		return s.store.Save(next)
 	}()
@@ -132,7 +140,7 @@ func (s *Service) resolveManaged(v config.Settings, id string, role compatibilit
 		return managedruntime.ResolvedEndpoint{}, ErrManagedUnavailable
 	}
 	e, err := s.managedResolve(i, role)
-	if err != nil || e.InstanceID != i.ID || e.Provider != i.Provider || e.CatalogModel != i.Model || e.Generation == 0 || e.Model == "" || !reflect.DeepEqual(e.Contract, c) {
+	if err != nil || e.InstanceID != i.ID || e.Provider != i.Provider || e.CatalogModel != i.ModelForRole(role) || e.Generation == 0 || e.Model == "" || !reflect.DeepEqual(e.Contract, c) {
 		return managedruntime.ResolvedEndpoint{}, ErrManagedUnavailable
 	}
 	u, err := url.Parse(e.BaseURL)

@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { CancellablePromise } from "@wailsio/runtime";
 import { Purpose } from "$bindings/savedconnection";
 import { modelFor } from "$lib/utils/modelSettings";
+import { ProviderID, type InstanceStatus } from "$bindings/managedruntime";
+import { SettingsEditor } from "./editor.svelte";
+import { SessionMessages } from "./messages.svelte";
 import {
   createEditor,
   settings,
@@ -37,11 +40,164 @@ function fixture() {
 
 describe("shared metadata lifecycle", () => {
   it.each(roles)(
+    "filters a shared server inventory for %s without mutating catalog diagnostics",
+    async (purpose) => {
+      const { editor, probe, snapshot } = fixture();
+      snapshot.textToSpeech.enabled = true;
+      editor.applySettingsSnapshot(snapshot);
+      const inventory = {
+        ...connectionResult,
+        modelIDs: ["asr", "tts", "chat", "legacy", "other"],
+        models: [
+          { id: "asr", capability: "transcription", device: "cuda" },
+          { id: "tts", capability: "speech", device: "cuda" },
+          { id: "chat", capability: "chat", device: "cpu" },
+          { id: "legacy", capability: "", device: "" },
+          { id: "other", capability: "unknown", device: "" },
+        ],
+      };
+      probe.mockImplementation(() => CancellablePromise.resolve(inventory));
+      await editor.testAppliedConnection(purpose);
+      const expected =
+        purpose === Purpose.Speech
+          ? "tts"
+          : purpose === Purpose.Cleanup
+            ? "chat"
+            : "asr";
+      expect(editor.connectionMetadataResult(purpose)?.modelIDs).toEqual([
+        expected,
+        "legacy",
+      ]);
+      expect(inventory.modelIDs).toEqual([
+        "asr",
+        "tts",
+        "chat",
+        "legacy",
+        "other",
+      ]);
+      expect(editor.connectionMetadataResult(purpose)?.models).toEqual(
+        inventory.models,
+      );
+    },
+  );
+  it.each(roles)(
+    "waits for the selected runtime and retries once after restart for %s",
+    async (role) => {
+      const services = serviceWithStatus(() =>
+        CancellablePromise.resolve(idle),
+      );
+      const probe = vi.fn(() => CancellablePromise.resolve(connectionResult));
+      services.connection.TestSavedConnection = probe;
+      let row: InstanceStatus = {
+        instance: {
+          id: "local",
+          name: "Local",
+          model: "selected",
+          provider: ProviderID.NeMoSpeechCPP,
+          autoStart: false,
+        },
+        activeModel: "",
+        status: {
+          state: "starting",
+          supported: true,
+          enabled: true,
+          selectedModel: "selected",
+          realtime: false,
+          backend: "cpu",
+          version: "0.1.0",
+          progress: -1,
+          phase: "",
+          error: "",
+          models: [],
+          acquisition: { phase: "", bytes: 0, totalBytes: 0 },
+          operation: {
+            id: 1,
+            kind: "start",
+            model: "selected",
+            outcome: "running",
+            error: "",
+          },
+        },
+      };
+      const editor = new SettingsEditor(
+        services,
+        new SessionMessages(),
+        async () => {},
+        { statusFor: () => row, pendingFor: () => "" },
+      );
+      const snapshot = structuredClone(settings);
+      snapshot.savedConnections.selected = {
+        voice: "a",
+        stt: "a",
+        cleanup: "a",
+        speech: "a",
+      };
+      snapshot.managedInstanceID = "local";
+      snapshot.voiceTranscription.managedInstanceID = "local";
+      snapshot.postProcessing.managedInstanceID = "local";
+      snapshot.textToSpeech.managedInstanceID = "local";
+      snapshot.textToSpeech.enabled = true;
+      editor.applySettingsSnapshot(snapshot);
+      await editor.ensureConnectionMetadata(role);
+      await editor.testAppliedConnection(role);
+      expect(probe).not.toHaveBeenCalled();
+      expect(editor.managedMetadata(role)?.label).toBe("Starting runtime");
+      row = {
+        ...row,
+        status: { ...row.status, state: "running" },
+      };
+      await editor.ensureConnectionMetadata(role);
+      await editor.ensureConnectionMetadata(role);
+      expect(probe).toHaveBeenCalledTimes(1);
+      let finish!: (value: typeof connectionResult) => void;
+      probe.mockImplementationOnce(
+        () =>
+          new CancellablePromise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      const old = editor.testAppliedConnection(role);
+      // Starting a replacement invalidates the in-flight result even with the same saved connection/model.
+      row = {
+        ...row,
+        status: { ...row.status, state: "starting" },
+      };
+      finish(connectionResult);
+      await old;
+      expect(editor.connectionMetadataResult(role)).toBeNull();
+      await editor.ensureConnectionMetadata(role);
+      expect(probe).toHaveBeenCalledTimes(2);
+      row = {
+        ...row,
+        status: {
+          ...row.status,
+          state: "running",
+          operation: {
+            id: 2,
+            kind: "restart",
+            model: "",
+            outcome: "succeeded",
+            error: "",
+          },
+        },
+      };
+      await editor.ensureConnectionMetadata(role);
+      await editor.ensureConnectionMetadata(role);
+      expect(probe).toHaveBeenCalledTimes(3);
+      expect(editor.connectionMetadataResult(role)).not.toBeNull();
+    },
+  );
+  it.each(roles)(
     "rejects late %s metadata after a dirty same-ID external snapshot without losing drafts",
     async (role) => {
       const { editor, probe, snapshot } = fixture();
       let finish!: (value: typeof connectionResult) => void;
-      probe.mockImplementationOnce(() => new CancellablePromise(resolve => { finish = resolve; }));
+      probe.mockImplementationOnce(
+        () =>
+          new CancellablePromise((resolve) => {
+            finish = resolve;
+          }),
+      );
       const pending = editor.ensureConnectionMetadata(role);
       editor.draft!.language = "ja";
       editor.apiKey = "uncommitted-stt";
@@ -59,9 +215,14 @@ describe("shared metadata lifecycle", () => {
       expect(editor.connectionMetadataStatus(role)).toBe("idle");
       await editor.ensureConnectionMetadata(role);
       expect(probe).toHaveBeenCalledTimes(2);
-      expect(editor.connectionMetadataResult(role)?.modelIDs).toEqual(connectionResult.modelIDs);
+      expect(editor.connectionMetadataResult(role)?.modelIDs).toEqual(
+        connectionResult.modelIDs,
+      );
       if (role === Purpose.Voice) expect(probe.mock.calls[1]).toEqual(["a"]);
-      else expect(probe.mock.calls[1]).toEqual([expect.objectContaining({ credentialDraft: "" })]);
+      else
+        expect(probe.mock.calls[1]).toEqual([
+          expect.objectContaining({ credentialDraft: "" }),
+        ]);
       expect(editor.apiKey).toBe("uncommitted-stt");
       expect(editor.processingAPIKey).toBe("uncommitted-cleanup");
       expect(editor.ttsAPIKey).toBe("uncommitted-speech");
@@ -74,7 +235,13 @@ describe("shared metadata lifecycle", () => {
   );
   it.each(roles)("keeps mutation guards for %s model drafts", (role) => {
     const { editor } = fixture();
-    for (const flag of ["saving", "setupCompleting", "managedConnectionTesting", "configurationRetrying", "configurationResetting"] as const) {
+    for (const flag of [
+      "saving",
+      "setupCompleting",
+      "managedConnectionTesting",
+      "configurationRetrying",
+      "configurationResetting",
+    ] as const) {
       editor[flag] = true;
       expect(editor.chooseModel(role, "blocked/model"), flag).toBe(false);
       editor[flag] = false;
@@ -132,7 +299,9 @@ describe("shared metadata lifecycle", () => {
       expect(editor.connectionMetadataResult(role)).toBeNull();
       expect(editor.connectionMetadataStatus(role)).toBe("idle");
       await editor.ensureConnectionMetadata(role);
-      expect(editor.connectionMetadataResult(role)?.modelIDs).toEqual(connectionResult.modelIDs);
+      expect(editor.connectionMetadataResult(role)?.modelIDs).toEqual(
+        connectionResult.modelIDs,
+      );
       expect(editor.connectionMetadataStatus(role)).toBe("ready");
     },
   );

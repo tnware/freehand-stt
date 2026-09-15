@@ -436,7 +436,11 @@ func validate(s Settings, stored bool) error {
 			return err
 		}
 	}
-	if s.TextToSpeech.Enabled {
+	if s.TextToSpeech.ManagedInstanceID != "" {
+		if err := validateTextToSpeech(s.TextToSpeech, s.TextToSpeech.Enabled, true); err != nil {
+			return err
+		}
+	} else if s.TextToSpeech.Enabled {
 		if err := ValidateTextToSpeech(s.TextToSpeech, true); err != nil {
 			return err
 		}
@@ -447,6 +451,13 @@ func validate(s Settings, stored bool) error {
 }
 
 func ValidateTextToSpeech(s TextToSpeechSettings, requireConnection bool) error {
+	return validateTextToSpeech(s, requireConnection, false)
+}
+
+func validateTextToSpeech(s TextToSpeechSettings, requireConnection, managedPreferences bool) error {
+	if s.ModelProfile == modelprofile.MagpieTTS && s.Speed != 0 && s.Speed != 1 {
+		return fieldError("textToSpeech.speed", "MagpieTTS uses normal speed. Set speaking speed to 1.0 before choosing this model or connection.", errors.New("MagpieTTS does not support adjustable speaking speed"))
+	}
 	if err := modelprofile.ValidateSpeech(s.ModelProfile, s.CompatibilityProfile, s.Speed); err != nil {
 		return fieldError("textToSpeech.modelProfile", "Choose a compatible speech model profile and speaking speed.", err)
 	}
@@ -461,6 +472,15 @@ func ValidateTextToSpeech(s TextToSpeechSettings, requireConnection bool) error 
 	}
 	if (requireConnection && strings.TrimSpace(s.Voice) == "") || len(s.Voice) > 200 {
 		return fieldError("textToSpeech.voice", "Choose a speech voice of at most 200 characters.", errors.New("speech playback voice is required and must be at most 200 characters"))
+	}
+	if managedPreferences {
+		if err := validateManagedTransport(s.BaseURL, s.AllowInsecureHTTP, s.AuthenticationMode, "", nil); err != nil {
+			return err
+		}
+		if s.Speed < 0.25 || s.Speed > 4 {
+			return fieldError("textToSpeech.speed", "Enter a speaking speed from 0.25 to 4.", errors.New("speech playback speed must be between 0.25 and 4"))
+		}
+		return nil
 	}
 	if !requireConnection && strings.TrimSpace(s.BaseURL) == "" && strings.TrimSpace(s.Model) == "" {
 		if s.Speed == 0 {

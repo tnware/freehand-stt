@@ -19,7 +19,7 @@ func (q *Queries) DeleteManagedInstance(ctx context.Context, id string) error {
 }
 
 const listManagedInstances = `-- name: ListManagedInstances :many
-SELECT id, name, provider, model, auto_start FROM managed_runtime_instances ORDER BY id LIMIT 9
+SELECT id, name, provider, model, auto_start, speech_model FROM managed_runtime_instances ORDER BY id LIMIT 9
 `
 
 func (q *Queries) ListManagedInstances(ctx context.Context) ([]ManagedRuntimeInstance, error) {
@@ -37,6 +37,7 @@ func (q *Queries) ListManagedInstances(ctx context.Context) ([]ManagedRuntimeIns
 			&i.Provider,
 			&i.Model,
 			&i.AutoStart,
+			&i.SpeechModel,
 		); err != nil {
 			return nil, err
 		}
@@ -52,15 +53,16 @@ func (q *Queries) ListManagedInstances(ctx context.Context) ([]ManagedRuntimeIns
 }
 
 const putManagedInstance = `-- name: PutManagedInstance :exec
-INSERT INTO managed_runtime_instances(id,name,provider,model,auto_start) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,provider=excluded.provider,model=excluded.model,auto_start=excluded.auto_start
+INSERT INTO managed_runtime_instances(id,name,provider,model,auto_start,speech_model) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,provider=excluded.provider,model=excluded.model,auto_start=excluded.auto_start,speech_model=excluded.speech_model
 `
 
 type PutManagedInstanceParams struct {
-	ID        string
-	Name      string
-	Provider  string
-	Model     string
-	AutoStart int64
+	ID          string
+	Name        string
+	Provider    string
+	Model       string
+	AutoStart   int64
+	SpeechModel string
 }
 
 func (q *Queries) PutManagedInstance(ctx context.Context, arg PutManagedInstanceParams) error {
@@ -70,6 +72,7 @@ func (q *Queries) PutManagedInstance(ctx context.Context, arg PutManagedInstance
 		arg.Provider,
 		arg.Model,
 		arg.AutoStart,
+		arg.SpeechModel,
 	)
 	return err
 }

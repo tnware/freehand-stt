@@ -73,6 +73,7 @@ func TestCatalogBehaviorMatchesProductionContracts(t *testing.T) {
 	wantProfiles := map[string]modelprofile.ID{
 		"nemotron-3.5": modelprofile.Nemotron35,
 		"parakeet-tdt": modelprofile.ParakeetTDT,
+		"magpie-tts":   modelprofile.ID("magpie-tts-multilingual-357m"),
 	}
 	if len(rendered) != len(wantProfiles) {
 		t.Fatalf("got %d models, want %d", len(rendered), len(wantProfiles))
@@ -83,7 +84,11 @@ func TestCatalogBehaviorMatchesProductionContracts(t *testing.T) {
 			if !ok || model.Profile != id {
 				t.Fatalf("unexpected model/profile: %s/%s", model.ID, model.Profile)
 			}
-			contract, err := modelprofile.Resolve(id, compatibility.NeMoSpeechV1, compatibility.Transcription)
+			role := compatibility.Transcription
+			if model.ID == "magpie-tts" {
+				role = compatibility.Speech
+			}
+			contract, err := modelprofile.Resolve(id, compatibility.NeMoSpeechV1, role)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -98,6 +103,12 @@ func TestCatalogBehaviorMatchesProductionContracts(t *testing.T) {
 			}
 			if len(model.Behavior.Languages) == 0 {
 				t.Fatal("missing authoritative language options")
+			}
+			if role == compatibility.Speech {
+				if model.Realtime || !contract.Capabilities.SpeechLanguage || contract.Capabilities.SpeechSpeed {
+					t.Fatal("Magpie must advertise its qualified speech contract only")
+				}
+				return
 			}
 			for _, language := range model.Behavior.Languages {
 				if err := modelprofile.ValidateTranscription(id, compatibility.NeMoSpeechV1, language.Code, compatibility.TranscriptionOptions{}); err != nil {
@@ -139,7 +150,7 @@ func TestOfficialMetadataOnlyCatalog(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if len(ms) != 2 || ms[0].ID != "nemotron-3.5" || ms[1].ID != "parakeet-tdt" || ms[0].Installed || ms[0].SizeBytes != 741548352 {
+	if len(ms) != 3 || ms[0].ID != "nemotron-3.5" || ms[1].ID != "parakeet-tdt" || ms[2].ID != "magpie-tts" || ms[0].Installed || ms[0].SizeBytes != 741548352 {
 		t.Fatalf("catalog %+v", ms)
 	}
 	if _, e = parseCatalog([]byte(`{"models":[{"repo":"nvidia/nemotron-3.5-asr-streaming-0.6b","aliases":["nemotron-3.5"],"revision":"bad","roles":["asr"],"commands":["serve"]}]}`)); e == nil {

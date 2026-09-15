@@ -23,7 +23,7 @@ func TestRememberedOptionsWireContainsOnlyModelPreferences(t *testing.T) {
 	want := map[string]any{
 		"profile": "", "voice": "",
 		"speech":        map[string]any{"language": "", "instructions": ""},
-		"transcription": map[string]any{"prompt": "", "temperatureOverride": false, "temperature": float64(0)},
+		"transcription": map[string]any{"nemo": map[string]any{"disablePunctuation": false, "normalize": false, "profanityFilter": false, "endpointingMilliseconds": float64(0)}, "prompt": "", "temperatureOverride": false, "temperature": float64(0)},
 		"cleanup":       map[string]any{"limitOutputTokens": false, "maxOutputTokens": float64(0), "disableReasoning": false},
 	}
 	if !reflect.DeepEqual(got, want) {

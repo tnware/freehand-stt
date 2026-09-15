@@ -15,6 +15,7 @@
   import ArrowDownIcon from "@lucide/svelte/icons/arrow-down";
   import SearchIcon from "@lucide/svelte/icons/search";
   import EraserIcon from "@lucide/svelte/icons/eraser";
+  import HighlighterIcon from "@lucide/svelte/icons/highlighter";
 
   let {
     chunks,
@@ -44,6 +45,7 @@
   let query = $state("");
   let feedback = $state("");
   let fontReady = $state(false);
+  let highlight = $state(true);
   let terminal: Terminal | undefined;
   let search: SearchAddon | undefined;
   let fit: FitAddon | undefined;
@@ -204,6 +206,7 @@
       chunks,
       revision,
       enabled: enabled && fontReady,
+      highlight,
       renderer,
     };
     untrack(() =>
@@ -211,6 +214,7 @@
         snapshot.chunks,
         snapshot.revision,
         snapshot.enabled,
+        snapshot.highlight,
       ),
     );
   });
@@ -267,6 +271,19 @@
       >
     </div>
     <div class="flex shrink-0 items-center gap-0.5">
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        class={highlight
+          ? "rounded-sm bg-accent-wash text-accent-text"
+          : "rounded-sm"}
+        aria-label="Highlight logs"
+        title="Highlight recognized log events and severity"
+        disabled={!enabled}
+        aria-pressed={highlight}
+        onclick={() => (highlight = !highlight)}
+        ><HighlighterIcon class="size-3.5" aria-hidden="true" /></Button
+      >
       <Button
         variant="ghost"
         size="icon-xs"

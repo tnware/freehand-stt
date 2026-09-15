@@ -47,6 +47,12 @@ const settings: Settings = {
     realtime: [],
   },
   transcriptionOptions: {
+    nemo: {
+      disablePunctuation: false,
+      normalize: false,
+      profanityFilter: false,
+      endpointingMilliseconds: 0,
+    },
     prompt: "",
     temperatureOverride: false,
     temperature: 0,
@@ -66,6 +72,12 @@ const settings: Settings = {
     headers: {},
     timeoutSeconds: 120,
     transcriptionOptions: {
+      nemo: {
+        disablePunctuation: false,
+        normalize: false,
+        profanityFilter: false,
+        endpointingMilliseconds: 0,
+      },
       prompt: "",
       temperatureOverride: false,
       temperature: 0,

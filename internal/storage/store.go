@@ -108,6 +108,19 @@ func (s *Store) Save(v config.Settings) error {
 	if err := config.Validate(v); err != nil {
 		return err
 	}
+	return s.save(v)
+}
+
+// SaveManagedInventory is an internal inventory callback, never renderer admission.
+// Retained task language can require review after a catalog model change.
+func (s *Store) SaveManagedInventory(v config.Settings) error {
+	if err := config.ValidateStored(v); err != nil {
+		return err
+	}
+	return s.save(v)
+}
+
+func (s *Store) save(v config.Settings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.db == nil || s.closed || s.uncertain {

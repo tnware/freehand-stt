@@ -3,8 +3,61 @@ import {
   runtimePresentation,
   modelSize,
   catalogGroups,
+  runtimeModelSelection,
+  runtimeModelsDownloaded,
 } from "./managedRuntime";
-import type { Status } from "$bindings/managedruntime";
+import {
+  ProviderID,
+  type Instance,
+  type Model,
+  type Status,
+} from "$bindings/managedruntime";
+import { Role, ID as CompatibilityID } from "$bindings/compatibility";
+import { ID } from "$bindings/modelprofile";
+import { settings } from "$lib/stores/session-fixtures";
+
+it("selects and checks both task models without replacing the other task's selection", () => {
+  const instance: Instance = {
+    id: "nemo",
+    name: "NeMo",
+    provider: ProviderID.NeMoSpeechCPP,
+    model: "asr",
+    speechModel: "",
+    autoStart: false,
+  };
+  const speech: Model = {
+    id: "magpie-tts",
+    name: "Magpie",
+    description: "Speech synthesis",
+    sizeBytes: 1,
+    installed: true,
+    recommended: false,
+    realtime: false,
+    profile: ID.MagpieTTS,
+    contracts: [
+      {
+        role: Role.Speech,
+        compatibilityProfile: CompatibilityID.NeMoSpeechV1,
+        modelProfile: ID.MagpieTTS,
+        behavior: settings.modelProfiles.speech![0],
+      },
+    ],
+  };
+  const asr: Model = { ...speech, id: "asr", contracts: [] };
+  const selected = runtimeModelSelection(instance, speech);
+  expect(selected).toMatchObject({ model: "asr", speechModel: "magpie-tts" });
+  expect(
+    runtimeModelSelection(selected, { ...asr, id: "other-asr" }),
+  ).toMatchObject({ model: "other-asr", speechModel: "magpie-tts" });
+  expect(runtimeModelsDownloaded(selected, [asr, speech])).toBe(true);
+  expect(
+    runtimeModelsDownloaded(selected, [asr, { ...speech, installed: false }]),
+  ).toBe(false);
+  expect(runtimeModelsDownloaded(instance, [asr])).toBe(true);
+  expect(runtimeModelsDownloaded({ ...instance, model: "" }, [asr])).toBe(
+    false,
+  );
+});
 const status: Status = {
   acquisition: { phase: "", bytes: 0, totalBytes: 0 },
   operation: { id: 0, kind: "", model: "", outcome: "", error: "" },

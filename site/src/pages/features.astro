@@ -11,16 +11,21 @@ const recording = [
   { title: "Speech detection", description: "Trim silence, stop toggle recordings after a pause, or split longer recordings at checkpoints. These controls apply to completed dictation, not realtime.", link: "Speech detection", path: "/docs/guides/using-freehand/#long-dictation-and-vad" },
   { title: "Shared vocabulary", description: "Keep names and specialist terms in one list for Voice and audio files. Supported models receive them as recognition hints, not guaranteed corrections.", link: "Vocabulary support", path: "/docs/guides/vocabulary/" },
 ];
+const workspace = [
+  { title: "One workspace for speech", description: "Move between tasks, Connections, local runtimes, and History from the activity rail. Resize sidebars, open settings beside your work, and find commands from the title bar.", link: "Explore the workspace", path: "/docs/guides/using-freehand/" },
+  { title: "CPU, RAM & GPU at a glance", description: "Watch activity and memory in the status bar, with adapter details and high-use indicators. Readings cover all apps on this computer; GPU metrics depend on driver support. Remote server usage is separate.", link: "Resource readings", path: "/docs/guides/using-freehand/#check-this-computers-resource-use" },
+  { title: "Startup & runtime output", description: "Connection checks wait while a local runtime loads, then refresh when it is ready. Inspect output in the shared panel with search and log highlighting while keeping your task open.", link: "Startup and output", path: "/docs/guides/local-runtime/#startup-and-process-output" },
+];
 const results = [
   { title: "Current result & recovery", description: "Copy a completed transcript without enabling history. If the original destination is no longer safe for insertion, the result stays available for explicit copy.", link: "Results and delivery", path: "/docs/guides/using-freehand/#current-result-and-task-settings" },
   { title: "Optional session history", description: "Revisit recent transcripts and compare raw and cleaned versions. History is off by default, stays in memory, and clears when you quit. It never retains audio.", link: "History details", path: "/docs/guides/using-freehand/#history" },
   { title: "Files & speech playback", description: "Transcribe an audio file without a microphone shortcut. With text to speech enabled, listen to results or generate and save speech from text you enter.", link: "File and speech workflows", path: "/docs/guides/using-freehand/#audio-files" },
 ];
 ---
-<ProductLayout current="features" path="features/" title="Features — Freehand" description="Set up local speech runtimes, customize the overlay, and explore recording controls, vocabulary, transcript recovery, and optional history.">
+<ProductLayout current="features" path="features/" title="Features — Freehand" description="Use one speech workspace with local MagpieTTS and transcription, CPU/RAM/GPU readings, runtime output, recording controls, and optional history.">
   <header class="page-heading">
     <h1>Features</h1>
-    <p class="lede">Run speech models locally or connect your own service. Set your recording shortcuts, customize the overlay, and keep completed transcripts ready to copy.</p>
+    <p class="lede">Run speech models locally or connect your own service. Dictate, transcribe files, generate speech, and manage your runtimes in one workspace.</p>
   </header>
   <section class="overlay-feature" aria-labelledby="overlay-title">
     <div class="overlay-copy">
@@ -47,9 +52,13 @@ const results = [
     </article>)}</div>
     <div class="runtime-details">
       <p>Use CPU or supported GPU acceleration: NVIDIA CUDA on Windows and Metal on Apple Silicon. Intel Macs use CPU. Freehand checks your host before offering an installation.</p>
-      <p>Start and stop runtimes, follow downloads, and inspect recent output with your consent. Different runtimes can run together; each loads one model at a time. Quitting Freehand stops the processes it owns.</p>
+      <p>Start and stop runtimes and follow explicit downloads in a catalog grouped by Transcription, Text to speech, and Cleanup. NeMo loads one transcription model and optional MagpieTTS together. Quitting Freehand stops the runtimes it owns.</p>
     </div>
-    <p class="runtime-note">Models are separate downloads, not bundled with the app. These managed runtimes cover recognition and cleanup; text to speech uses your own service. Local recognition stays on this computer, but a remote cleanup connection receives the transcript.</p>
+    <p class="runtime-note">Models are separate downloads. Managed NeMo covers recognition and MagpieTTS speech, and llama.cpp covers cleanup. Each task uses its selected connection; choosing remote cleanup sends the transcript to that server.</p>
+  </section>
+  <section class="feature-section" aria-labelledby="workspace-title">
+    <h2 id="workspace-title">Your desktop workspace</h2>
+    <div class="feature-list">{workspace.map(feature => <article><h3>{feature.title}</h3><p>{feature.description}</p><a class="text-link" href={href(feature.path)}>{feature.link} →</a></article>)}</div>
   </section>
   <section class="feature-section" aria-labelledby="recording-title">
     <h2 id="recording-title">Recording controls</h2>

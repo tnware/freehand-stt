@@ -19,6 +19,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
+	"github.com/tnware/freehand-stt/internal/speechlanguage"
 )
 
 const MaxTranscriptBytes = 256 * 1024
@@ -34,14 +35,17 @@ type Update struct {
 type Result struct {
 	Text              string
 	Language          string
+	Languages         []string
 	AudioMilliseconds int64
 	Err               error
 }
 type wireEvent struct {
-	Type       string  `json:"type"`
-	Delta      string  `json:"delta"`
-	Transcript string  `json:"transcript"`
-	Text       *string `json:"text"`
+	Type       string   `json:"type"`
+	Delta      string   `json:"delta"`
+	Transcript string   `json:"transcript"`
+	Text       *string  `json:"text"`
+	Language   string   `json:"language"`
+	Languages  []string `json:"languages"`
 	Session    struct {
 		Model string `json:"model"`
 	} `json:"session"`
@@ -77,7 +81,11 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 	if err != nil || u.Host == "" {
 		return nil, errors.New("invalid realtime endpoint")
 	}
-	u.Path = path.Join(u.Path, "realtime")
+	contract, err := compatibility.Resolve(cfg.CompatibilityProfile, compatibility.Realtime)
+	if err != nil {
+		return nil, err
+	}
+	u.Path = path.Join(u.Path, contract.Path)
 	if u.Scheme == "https" {
 		u.Scheme = "wss"
 	} else {
@@ -137,7 +145,11 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 			phrases = append(phrases, line)
 		}
 	}
-	options := map[string]any{"sample_rate": audio.SampleRate, "language": cfg.Language, "automatic_punctuation": true, "verbatim": true, "speaker_diarization": false}
+	nemo := cfg.TranscriptionOptions.NeMo
+	options := map[string]any{"sample_rate": audio.SampleRate, "language": cfg.Language, "automatic_punctuation": !nemo.DisablePunctuation, "verbatim": !nemo.Normalize, "profanity_filter": nemo.ProfanityFilter, "speaker_diarization": false}
+	if nemo.EndpointingMilliseconds != 0 {
+		options["endpointing_ms"] = nemo.EndpointingMilliseconds
+	}
 	if len(phrases) > 0 {
 		options["speech_contexts"] = []any{map[string]any{"phrases": phrases, "boost": cfg.RealtimeOptions().Boost}}
 	}
@@ -228,7 +240,7 @@ func (s *Session) run(publish func(Update)) {
 
 func (s *Session) read(publish func(Update)) Result {
 	update := Update{Turn: 1}
-	language := ""
+	var languages []string
 	for {
 		event, err := readEvent(s.ctx, s.conn)
 		if err != nil {
@@ -245,8 +257,17 @@ func (s *Session) read(publish func(Update)) Result {
 			}
 		case "conversation.item.input_audio_transcription.completed":
 			text, detected := modelprofile.StripNemotronLanguageTag(event.Transcript)
-			if detected != "" {
-				language = detected
+			for _, candidate := range append(event.Languages, event.Language, detected) {
+				if speechlanguage.Unspecified(candidate) {
+					continue
+				}
+				// Structured fields are optional in newer servers. Retain only qualified
+				// locale codes; unknown evidence blocks language-restricted cleanup without
+				// publishing arbitrary peer strings or reflected credentials.
+				if modelprofile.ValidateNemotron(candidate, modelprofile.NemotronOptions{}) != nil {
+					candidate = "mul"
+				}
+				languages = speechlanguage.MergeDetected(languages, []string{candidate})
 			}
 			if len(update.Final)+len(text)+1 > MaxTranscriptBytes || update.Turn > 1024 {
 				return Result{Err: errors.New("live transcript exceeded its size limit")}
@@ -261,7 +282,7 @@ func (s *Session) read(publish func(Update)) Result {
 			if !s.committed.Load() || update.Turn == 1 || update.Partial != "" {
 				return Result{Err: errors.New("realtime completion was missing its final transcript")}
 			}
-			return Result{Text: update.Final, Language: language}
+			return Result{Text: update.Final, Languages: languages}
 		case "error", "input_audio_buffer.cleared":
 			return Result{Err: errors.New("realtime server could not finish this recording")}
 		}

@@ -6,9 +6,11 @@ export function configurePickerFixture(settings: Settings) {
   const generic: Profile = {
     id: ID.Generic,
     name: "Generic",
-    description: "Use the standard transcription options supported by this connection.",
+    description:
+      "Use the standard transcription options supported by this connection.",
     reasoningOffRequired: false,
     capabilities: {
+      nemoTranscriptionControls: false,
       realtime: false,
       serverLoadedModel: false,
       vllmTranscriptionEvents: false,
@@ -56,7 +58,10 @@ export function configurePickerFixture(settings: Settings) {
     description:
       "Transcription with supported languages and context hints. Realtime uses automatic language detection.",
     languages,
-    capabilities: { ...generic.capabilities, realtime: true },
+    capabilities: {
+      ...generic.capabilities,
+      realtime: true,
+    },
   };
   settings.transcriptionLanguages = languages;
   settings.modelProfiles.voiceTranscription = [generic, qwen];

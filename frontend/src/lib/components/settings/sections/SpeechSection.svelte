@@ -172,6 +172,7 @@
             settings.textToSpeech.modelProfile = id;
             settings.textToSpeech.options = { language: "", instructions: "" };
             if (id === ID.Qwen3TTS) settings.textToSpeech.voice = "ryan";
+            if (id === ID.MagpieTTS) settings.textToSpeech.voice = "default";
           }}
         />
       {/snippet}

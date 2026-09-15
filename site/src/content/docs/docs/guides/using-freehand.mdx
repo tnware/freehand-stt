@@ -51,7 +51,10 @@ audio, or run a model. The panel explains failed checks; **Technical details**
 expands the individual checks and HTTP status.
 
 Choose **Edit connection** to change the server details or **Choose connection**
-to select a server. Checks use the saved connection, not unsaved edits.
+to select a server. Checks use the saved connection, not unsaved edits. A local
+connection shows **Starting runtime** during loading and warm-up; its check waits
+for readiness and refreshes automatically afterward. NeMo diagnostics identify
+each model’s advertised capability and the server version when available.
 
 ## Check this computer’s resource use
 
@@ -62,7 +65,7 @@ workspace is visible and pause when it is hidden or minimized.
 
 The indicator turns amber at 90% CPU, RAM, GPU activity, or dedicated GPU memory
 use. Sustained high activity or little available memory can help explain slower
-local transcription or cleanup.
+local transcription, cleanup, or speech generation.
 Try closing other demanding apps or stopping an unused local runtime before
 retrying. A brief spike is normal while a model loads or processes a request.
 
@@ -387,7 +390,9 @@ Cleanup's **Generation controls** include output limits and reasoning options.
 ## Text to speech
 
 Text to speech is off by default. Configure a speech service, model, and voice
-to generate audio from your own text or listen to transcripts.
+to generate audio from your own text or listen to transcripts. For local setup,
+[add MagpieTTS to NeMo](../local-runtime/#local-speech-with-magpietts); it shares
+the runtime with your selected transcription model.
 
 <Steps>
 

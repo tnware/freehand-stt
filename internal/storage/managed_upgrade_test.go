@@ -2,7 +2,9 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 	"testing"
 
 	"github.com/pressly/goose/v3"
@@ -20,7 +22,8 @@ func TestManagedUpgradePreservesManualState(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			ctx := context.Background()
+			defer db.Close()
+			ctx := t.Context()
 			p, err := goose.NewProvider(goose.DialectSQLite3, db, s.migrations, goose.WithLogger(goose.NopLogger()))
 			if err != nil {
 				t.Fatal(err)
@@ -31,7 +34,7 @@ func TestManagedUpgradePreservesManualState(t *testing.T) {
 			v := config.Default()
 			v.Language = "fr"
 			v.VoiceTranscription.Language = "de"
-			if err = writeSettings(ctx, dbgen.New(db), v); err != nil {
+			if err = writeVersionTwoSettings(ctx, db, v); err != nil {
 				t.Fatal(err)
 			}
 			statements := []string{
@@ -143,4 +146,87 @@ func TestManagedConversionClearsManualHeaders(t *testing.T) {
 	if got.VoiceTranscription.ManagedInstanceID != "local" || len(got.VoiceTranscription.Headers) != 0 {
 		t.Fatal("manual transport survived conversion")
 	}
+}
+
+// writeVersionTwoSettings seeds the historical schema before NeMo columns existed.
+func writeVersionTwoSettings(ctx context.Context, db *sql.DB, v config.Settings) error {
+	q := dbgen.New(db)
+	if err := q.PutVocabulary(ctx, dbgen.PutVocabularyParams{Terms: v.Vocabulary.Terms, Voice: boolean(v.Vocabulary.Voice), Files: boolean(v.Vocabulary.Files), Boost: v.Vocabulary.Boost}); err != nil {
+		return err
+	}
+	r := v.VoiceTranscription
+	if _, err := db.ExecContext(ctx, `INSERT INTO voice_transcription_settings(id,realtime,model_profile,model,language,timeout_seconds,prompt,temperature_override,temperature,captions) VALUES(1,?,?,?,?,?,?,?,?,?)`, boolean(r.Realtime), string(r.ModelProfile), r.Model, r.Language, r.TimeoutSeconds, r.TranscriptionOptions.Prompt, boolean(r.TranscriptionOptions.TemperatureOverride), r.TranscriptionOptions.Temperature, boolean(r.Captions)); err != nil {
+		return err
+	}
+
+	if err := q.PutPreferences(ctx, dbgen.PutPreferencesParams{
+		ToggleShortcut:          v.ToggleShortcut,
+		ShowShortcut:            v.ShowShortcut,
+		HoldShortcut:            v.HoldShortcut,
+		MicrophoneID:            v.MicrophoneID,
+		MaxDurationSeconds:      int64(v.MaxDurationSeconds),
+		AutoInsert:              boolean(v.AutoInsert),
+		StartWithWindows:        boolean(v.StartWithWindows),
+		ShowWindowOnLaunch:      boolean(v.ShowWindowOnLaunch),
+		CheckForUpdates:         boolean(v.CheckForUpdates),
+		SetupCompleted:          boolean(v.SetupCompleted),
+		UseMica:                 boolean(v.UseMica),
+		AppearanceMode:          string(v.AppearanceMode),
+		OverlayEnabled:          boolean(v.OverlayEnabled),
+		OverlaySizePercent:      int64(v.OverlaySizePercent),
+		OverlayOpacityPercent:   int64(v.OverlayOpacityPercent),
+		OverlayTopOffset:        int64(v.OverlayTopOffset),
+		OverlayGlowPercent:      int64(v.OverlayGlowPercent),
+		OverlayLayout:           string(v.OverlayLayout),
+		OverlayAnchor:           string(v.OverlayAnchor),
+		OverlayVisibility:       string(v.OverlayVisibility),
+		OverlayMotion:           string(v.OverlayMotion),
+		OverlaySurface:          string(v.OverlaySurface),
+		OverlayVisualizer:       string(v.OverlayVisualizer),
+		HistoryEnabled:          boolean(v.HistoryEnabled),
+		VadEnabled:              boolean(v.VADEnabled),
+		VadMode:                 string(v.VADMode),
+		VadActivitySilenceMs:    int64(v.VADActivitySilenceMS),
+		SilenceTrimming:         boolean(v.SilenceTrimming),
+		SpeechPaddingMs:         int64(v.SpeechPaddingMS),
+		AutoStopEnabled:         boolean(v.AutoStopEnabled),
+		AutoStopSilenceMs:       int64(v.AutoStopSilenceMS),
+		AutoStopMinimumSpeechMs: int64(v.AutoStopMinimumSpeechMS),
+		SilenceSplitting:        boolean(v.SilenceSplitting),
+		SegmentSeconds:          int64(v.SegmentSeconds),
+		SegmentSilenceMs:        int64(v.SegmentSilenceMS),
+	}); err != nil {
+		return err
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO transcription_settings(id,model_profile,model,language,transcription_timeout_seconds,file_transcription_timeout_seconds,transcription_options_prompt,transcription_options_temperature_override,transcription_options_temperature) VALUES(1,?,?,?,?,?,?,?,?)`, string(modelprofile.Effective(v.ModelProfile)), v.Model, v.Language, v.TranscriptionTimeoutSeconds, v.FileTranscriptionTimeoutSeconds, v.TranscriptionOptions.Prompt, boolean(v.TranscriptionOptions.TemperatureOverride), v.TranscriptionOptions.Temperature); err != nil {
+		return err
+	}
+	if err := q.PutCleanup(ctx, dbgen.PutCleanupParams{
+		GenerationOptionsLimitOutputTokens: boolean(v.PostProcessing.GenerationOptions.LimitOutputTokens),
+		GenerationOptionsMaxOutputTokens:   int64(v.PostProcessing.GenerationOptions.MaxOutputTokens),
+		GenerationOptionsDisableReasoning:  boolean(v.PostProcessing.GenerationOptions.DisableReasoning),
+		Enabled:                            boolean(v.PostProcessing.Enabled),
+		Model:                              v.PostProcessing.Model,
+		Preset:                             string(v.PostProcessing.Preset),
+		SystemPrompt:                       v.PostProcessing.SystemPrompt,
+		Styling:                            v.PostProcessing.Styling,
+		Structure:                          v.PostProcessing.Structure,
+		Context:                            v.PostProcessing.Context,
+		TimeoutSeconds:                     int64(v.PostProcessing.TimeoutSeconds),
+	}); err != nil {
+		return err
+	}
+	if err := q.PutSpeech(ctx, dbgen.PutSpeechParams{
+		SpeechLanguage:     v.TextToSpeech.Options.Language,
+		SpeechInstructions: v.TextToSpeech.Options.Instructions,
+		ModelProfile:       string(modelprofile.Effective(v.TextToSpeech.ModelProfile)),
+		Enabled:            boolean(v.TextToSpeech.Enabled),
+		Model:              v.TextToSpeech.Model,
+		Voice:              v.TextToSpeech.Voice,
+		Speed:              v.TextToSpeech.Speed,
+		TimeoutSeconds:     int64(v.TextToSpeech.TimeoutSeconds),
+	}); err != nil {
+		return err
+	}
+	return nil
 }

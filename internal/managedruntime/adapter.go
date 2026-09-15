@@ -124,8 +124,7 @@ func (a *nemoAdapter) Inspect(ctx context.Context) (string, []Model, error) {
 		return backend, nil, err
 	}
 	for i := range models {
-		spec := modelSpecs[models[i].ID]
-		err := verifyFile(ctx, spec.path(a.root), spec.size, spec.sha256)
+		err := verifyNeMoModel(ctx, a.root, models[i].ID)
 		models[i].Installed = err == nil
 		if ctx.Err() != nil {
 			return backend, nil, ctx.Err()
@@ -236,7 +235,7 @@ func (a *nemoAdapter) Pull(ctx context.Context, id string, progress func(Acquisi
 	bounded, cancel := context.WithTimeout(ctx, 45*time.Minute)
 	defer cancel()
 	_, pullErr := a.commandProgress(bounded, func() {
-		report.update(nemoAcquiredBytes(a.root, spec))
+		report.update(nemoModelAcquiredBytes(a.root, id))
 	}, "--json", "model", "pull", spec.repo)
 	if err := a.clearDownloadDiagnostics(); err != nil {
 		return err
@@ -247,10 +246,10 @@ func (a *nemoAdapter) Pull(ctx context.Context, id string, progress func(Acquisi
 	if err = safeRoot(a.root); err != nil {
 		return err
 	}
-	measured := nemoAcquiredBytes(a.root, spec)
+	measured := nemoModelAcquiredBytes(a.root, id)
 	measured.Phase = "verifying"
 	report.update(measured)
-	return verifyFile(ctx, spec.path(a.root), spec.size, spec.sha256)
+	return verifyNeMoModel(ctx, a.root, id)
 }
 func (a *nemoAdapter) RemoveModel(ctx context.Context, id string) error {
 	spec, ok := modelSpecs[id]
@@ -264,7 +263,14 @@ func (a *nemoAdapter) RemoveModel(ctx context.Context, id string) error {
 		return err
 	}
 	// v0.1.0 has list/pull/info, not remove. Delete only this pinned revision.
-	return os.RemoveAll(spec.directory(a.root))
+	if err := os.RemoveAll(spec.directory(a.root)); err != nil {
+		return err
+	}
+	if id == "magpie-tts" {
+		// This qualified codec belongs exclusively to the selected TTS bundle.
+		return os.RemoveAll(nemoCodecSpec.directory(a.root))
+	}
+	return nil
 }
 func (a *nemoAdapter) Remove(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
@@ -301,6 +307,11 @@ func metadataJSON(ctx context.Context, client *http.Client, url string, target a
 	return json.Unmarshal(b, target)
 }
 func (a *nemoAdapter) waitReady(ctx context.Context, p *ownedProcess, base string, port int) (string, error) {
+	model, _, err := a.waitReadyModels(ctx, p, base, port, false)
+	return model, err
+}
+
+func (a *nemoAdapter) waitReadyModels(ctx context.Context, p *ownedProcess, base string, port int, speech bool) (string, string, error) {
 	client := loopbackClient()
 	defer client.CloseIdleConnections()
 	tick := time.NewTicker(100 * time.Millisecond)
@@ -308,39 +319,40 @@ func (a *nemoAdapter) waitReady(ctx context.Context, p *ownedProcess, base strin
 	for {
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return "", "", ctx.Err()
 		case <-p.done:
-			return "", errors.New("Managed speech exited before becoming ready.")
+			return "", "", errors.New("Managed speech exited before becoming ready.")
 		default:
 		}
 		var ready struct{ Ready bool }
 		if metadataJSON(ctx, client, base+"/ready", &ready) == nil && ready.Ready {
 			owner, err := a.listenerOwner(port, p.pid)
 			if err != nil {
-				return "", err
+				return "", "", err
 			}
 			if owner {
 				var inventory struct {
-					Data []struct{ ID, Capability string }
+					Data []nemoLoadedModel
 				}
 				if err = metadataJSON(ctx, client, base+"/v1/models", &inventory); err == nil {
-					// The verified process was given one exact verified local GGUF and no
-					// companions. v0.1.0 reports its general.name here and in session.created.
-					if len(inventory.Data) != 1 || inventory.Data[0].Capability != "transcription" || strings.TrimSpace(inventory.Data[0].ID) == "" {
-						return "", errors.New("Managed speech returned an unexpected model identity.")
+					// Each configured engine was given exact verified local inputs.
+					// v0.1.0 reports the GGUF general.name as the request model identity.
+					model, speechModel, err := nemoModelIdentities(inventory.Data, speech)
+					if err != nil {
+						return "", "", err
 					}
 					owner, err = a.listenerOwner(port, p.pid)
 					if err != nil {
-						return "", err
+						return "", "", err
 					}
 					if owner {
 						select {
 						case <-p.done:
-							return "", errors.New("Managed speech stopped during readiness.")
+							return "", "", errors.New("Managed speech stopped during readiness.")
 						case <-ctx.Done():
-							return "", ctx.Err()
+							return "", "", ctx.Err()
 						default:
-							return inventory.Data[0].ID, nil
+							return model, speechModel, nil
 						}
 					}
 				}
@@ -348,17 +360,24 @@ func (a *nemoAdapter) waitReady(ctx context.Context, p *ownedProcess, base strin
 		}
 		select {
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return "", "", ctx.Err()
 		case <-p.done:
-			return "", errors.New("Managed speech exited before becoming ready.")
+			return "", "", errors.New("Managed speech exited before becoming ready.")
 		case <-tick.C:
 		}
 	}
 }
 func (a *nemoAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endpoint, error) {
+	return a.StartModels(ctx, id, "")
+}
+
+func (a *nemoAdapter) StartModels(ctx context.Context, id, speechID string) (*ownedProcess, Endpoint, error) {
 	q, ok := qualified[id]
-	if !ok {
+	if !ok || id == "magpie-tts" {
 		return nil, Endpoint{}, errors.New("Choose a supported managed speech model.")
+	}
+	if speechID != "" && speechID != "magpie-tts" {
+		return nil, Endpoint{}, errors.New("Choose a supported managed text-to-speech model.")
 	}
 	reportStartupProgress(ctx, "verifying_runtime")
 	backend, err := a.installedBackend(ctx)
@@ -367,8 +386,13 @@ func (a *nemoAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	}
 	spec := modelSpecs[id]
 	reportStartupProgress(ctx, "verifying_model")
-	if err = verifyFile(ctx, spec.path(a.root), spec.size, spec.sha256); err != nil {
+	if err = verifyNeMoModel(ctx, a.root, id); err != nil {
 		return nil, Endpoint{}, err
+	}
+	if speechID != "" {
+		if err = verifyNeMoModel(ctx, a.root, speechID); err != nil {
+			return nil, Endpoint{}, err
+		}
 	}
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
@@ -380,7 +404,10 @@ func (a *nemoAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	if backend != "cpu" {
 		device = "gpu:0"
 	}
-	args := []string{"serve", "--host", "127.0.0.1", "--port", strconv.Itoa(port), "--asr-model", spec.path(a.root), "--device", device, "--no-ui"}
+	args := []string{"serve", "--host", "127.0.0.1", "--port", strconv.Itoa(port), "--asr-model", spec.path(a.root), "--device", device, "--no-ui", "--access-log", "--log-format", "json"}
+	if speechID != "" {
+		args = append(args, "--tts-model", modelSpecs[speechID].path(a.root), "--codec-model", nemoCodecSpec.path(a.root), "--tokenizer-dir", nemoTokenizerDirectory(a.root))
+	}
 	if backend == "cpu" {
 		args = append(args, "--no-warmup")
 	}
@@ -397,7 +424,7 @@ func (a *nemoAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	} else {
 		reportStartupProgress(ctx, "waiting_ready")
 	}
-	model, err := a.waitReady(bounded, p, base, port)
+	model, speechModel, err := a.waitReadyModels(bounded, p, base, port, speechID != "")
 	if err != nil {
 		p.kill()
 		stop, done := context.WithTimeout(context.WithoutCancel(ctx), 4*time.Second)
@@ -407,5 +434,5 @@ func (a *nemoAdapter) Start(ctx context.Context, id string) (*ownedProcess, Endp
 	}
 	// Readiness uses the server origin; speech clients append their routes to
 	// the OpenAI-compatible API base, which includes NeMo's /v1 prefix.
-	return p, Endpoint{Enabled: true, BaseURL: base + "/v1", Model: model, Realtime: q.Realtime, Profile: q.Profile}, nil
+	return p, Endpoint{Enabled: true, BaseURL: base + "/v1", Model: model, SpeechModel: speechModel, Realtime: q.Realtime, Profile: q.Profile}, nil
 }

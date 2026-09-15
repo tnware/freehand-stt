@@ -20,11 +20,20 @@ const MaxInstances = 8
 const LegacyInstanceID = "nemo-default"
 
 type Instance struct {
-	ID        string     `json:"id"`
-	Name      string     `json:"name"`
-	Provider  ProviderID `json:"provider"`
-	Model     string     `json:"model"`
-	AutoStart bool       `json:"autoStart"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Provider    ProviderID `json:"provider"`
+	Model       string     `json:"model"`
+	SpeechModel string     `json:"speechModel,omitempty"`
+	AutoStart   bool       `json:"autoStart"`
+}
+
+// ModelForRole separates the optional NeMo speech engine from its ASR engine.
+func (i Instance) ModelForRole(role compatibility.Role) string {
+	if i.Provider == NeMoSpeechCPP && role == compatibility.Speech {
+		return i.SpeechModel
+	}
+	return i.Model
 }
 
 type Contract struct {
@@ -75,6 +84,18 @@ func ValidateInstance(i Instance) error {
 	p, ok := providers[i.Provider]
 	if !ok {
 		return errors.New("Choose a supported managed runtime provider.")
+	}
+	if i.SpeechModel != "" {
+		if i.Provider != NeMoSpeechCPP {
+			return errors.New("This runtime provider does not support a separate speech model.")
+		}
+		if _, err := p.qualify(i.SpeechModel, compatibility.Speech); err != nil {
+			return err
+		}
+	}
+	if i.Provider == NeMoSpeechCPP {
+		_, err := p.qualify(i.Model, compatibility.Transcription)
+		return err
 	}
 	for _, model := range p.descriptor().Models {
 		if model.ID == i.Model {

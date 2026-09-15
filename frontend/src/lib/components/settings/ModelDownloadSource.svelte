@@ -40,6 +40,10 @@
       Source: {source.repository}
     {/if}
   </p>
+  {#if source.companions?.length}<p>
+      Includes {source.companions.length} companion files, downloaded and verified
+      with the model.
+    </p>{/if}
   <details>
     <summary
       class="w-fit cursor-pointer rounded-sm py-1 font-medium text-accent-text hover:underline focus-visible:outline-ring"
@@ -60,6 +64,20 @@
       {#if source.sha256}<dt>SHA-256</dt>
         <dd class="break-all font-mono text-[11px]">{source.sha256}</dd>{/if}
     </dl>
+    {#each (source.companions ?? []).filter((companion) => companion !== null) as companion (companion.filename)}
+      <dl
+        class="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 border-t border-hairline pt-3 [&>dt]:text-muted-foreground"
+      >
+        <dt>Companion file</dt>
+        <dd class="break-all font-mono">{companion.filename}</dd>
+        <dt>Repository</dt>
+        <dd class="break-all">{companion.repository}</dd>
+        <dt>Revision</dt>
+        <dd class="break-all font-mono">{companion.revision}</dd>
+        <dt>SHA-256</dt>
+        <dd class="break-all font-mono text-[11px]">{companion.sha256}</dd>
+      </dl>
+    {/each}
     {#if delegated}<p class="mt-2">
         Model details from NeMo’s bundled index.
       </p>{/if}

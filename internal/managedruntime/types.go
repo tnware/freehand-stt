@@ -20,7 +20,7 @@ func Defaults() Preferences           { return Preferences{Model: "nemotron-3.5"
 func (p Preferences) Validate() error { return Validate(p) }
 func Validate(p Preferences) error {
 	q, ok := qualified[p.Model]
-	if !ok {
+	if !ok || p.Model == "magpie-tts" {
 		return errors.New("Choose a supported managed speech model.")
 	}
 	if p.Realtime && !q.Realtime {
@@ -30,11 +30,12 @@ func Validate(p Preferences) error {
 }
 
 type Endpoint struct {
-	Enabled  bool
-	BaseURL  string
-	Model    string
-	Realtime bool
-	Profile  string
+	Enabled     bool
+	BaseURL     string
+	Model       string
+	SpeechModel string
+	Realtime    bool
+	Profile     string
 }
 type Model struct {
 	Source      *ModelSource `json:"source,omitempty"`
@@ -73,18 +74,19 @@ type AcquisitionProgress struct {
 }
 
 type Status struct {
-	StartupProgress *StartupProgress    `json:"startupProgress,omitempty"`
-	Acquisition     AcquisitionProgress `json:"acquisition"`
-	Operation       Operation           `json:"operation"`
-	Supported       bool                `json:"supported"`
-	State           string              `json:"state"`
-	Enabled         bool                `json:"enabled"`
-	SelectedModel   string              `json:"selectedModel"`
-	Realtime        bool                `json:"realtime"`
-	Backend         string              `json:"backend"`
-	Version         string              `json:"version"`
-	Progress        float64             `json:"progress"`
-	Phase           string              `json:"phase"`
-	Error           string              `json:"error"`
-	Models          []Model             `json:"models"`
+	StartupProgress     *StartupProgress    `json:"startupProgress,omitempty"`
+	Acquisition         AcquisitionProgress `json:"acquisition"`
+	Operation           Operation           `json:"operation"`
+	Supported           bool                `json:"supported"`
+	State               string              `json:"state"`
+	Enabled             bool                `json:"enabled"`
+	SelectedModel       string              `json:"selectedModel"`
+	SelectedSpeechModel string              `json:"selectedSpeechModel,omitempty"`
+	Realtime            bool                `json:"realtime"`
+	Backend             string              `json:"backend"`
+	Version             string              `json:"version"`
+	Progress            float64             `json:"progress"`
+	Phase               string              `json:"phase"`
+	Error               string              `json:"error"`
+	Models              []Model             `json:"models"`
 }

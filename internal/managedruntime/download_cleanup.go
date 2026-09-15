@@ -13,7 +13,7 @@ func (a *nemoAdapter) clearDownloadDiagnostics() error {
 	if err := safeRoot(a.root); err != nil {
 		return err
 	}
-	for _, spec := range modelSpecs {
+	for _, spec := range nemoDownloadSpecs() {
 		path := spec.path(a.root) + ".partial.curl-errors"
 		info, err := os.Lstat(path)
 		if os.IsNotExist(err) {

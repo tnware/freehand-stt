@@ -16,7 +16,12 @@ describe("model preference ownership", () => {
     (purpose) => {
       const current = structuredClone(settings);
       current.language = "ja";
-      current.vocabulary = { terms: "Shared terms", boost: 4, voice: true, files: true };
+      current.vocabulary = {
+        terms: "Shared terms",
+        boost: 4,
+        voice: true,
+        files: true,
+      };
       const options = modelOptions(current, purpose);
       expect(Object.keys(options).sort()).toEqual([
         "cleanup",
@@ -26,6 +31,7 @@ describe("model preference ownership", () => {
         "voice",
       ]);
       expect(Object.keys(options.transcription).sort()).toEqual([
+        "nemo",
         "prompt",
         "temperature",
         "temperatureOverride",

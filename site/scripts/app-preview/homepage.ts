@@ -4,7 +4,12 @@ import { mount } from "svelte";
 import { CancellablePromise } from "@wailsio/runtime";
 import App from "../../../src/App.svelte";
 import "../../../src/app.css";
-import { ID } from "$bindings/compatibility";
+import { ID, Role } from "$bindings/compatibility";
+import { ID as ModelID } from "$bindings/modelprofile";
+import { ProviderID } from "$bindings/managedruntime";
+import { VoiceScope } from "$bindings/inference";
+import { createRuntimeFixture } from "../app/runtime-fixture";
+import { createResourceFixture } from "../app/resource-fixture";
 import { Purpose } from "$bindings/savedconnection";
 import {
   AppearanceMode,
@@ -28,33 +33,74 @@ current.historyEnabled = false;
 current.appearanceMode = AppearanceMode.AppearanceModeDark;
 current.authenticationMode = AuthenticationMode.AuthenticationModeNone;
 current.headers = {};
-current.baseURL = "http://localhost:8000/v1";
-current.allowInsecureHTTP = true;
-current.compatibilityProfile = ID.Speaches;
-current.model = "Systran/faster-whisper-large-v3";
+const runtime = createRuntimeFixture(
+  true,
+  (instances) => {
+    current.managedRuntimes = instances;
+  },
+  true,
+  ProviderID.NeMoSpeechCPP,
+  "NeMo-Speech.cpp",
+);
+const row = runtime.control.snapshot()[0];
+runtime.control.change(row.instance.id, {
+  state: "running",
+  backend: "cuda",
+  models: row.status.models?.map((model) => ({ ...model, installed: true })),
+});
+const profiles = (role: Role) =>
+  runtime.providers[0].models?.flatMap(
+    (model) =>
+      model.contracts
+        ?.filter((contract) => contract.role === role)
+        .map((contract) => contract.behavior) ?? [],
+  ) ?? [];
+current.modelProfiles.voiceTranscription = profiles(Role.Transcription);
+current.modelProfiles.transcription = profiles(Role.Transcription);
+current.modelProfiles.speech = profiles(Role.Speech);
+current.baseURL = "";
+current.managedInstanceID = row.instance.id;
+current.allowInsecureHTTP = false;
+current.compatibilityProfile = ID.NeMoSpeechV1;
+current.model = row.instance.model;
+current.modelProfile = ModelID.Nemotron35;
+current.voiceTranscription = {
+  ...current.voiceTranscription,
+  managedInstanceID: row.instance.id,
+  baseURL: "",
+  model: current.model,
+  compatibilityProfile: ID.NeMoSpeechV1,
+  modelProfile: ModelID.Nemotron35,
+  realtime: true,
+};
 current.postProcessing.enabled = false;
 current.textToSpeech = {
   ...current.textToSpeech,
   enabled: true,
-  compatibilityProfile: ID.Speaches,
+  compatibilityProfile: ID.NeMoSpeechV1,
+  managedInstanceID: row.instance.id,
   baseURL: current.baseURL,
-  allowInsecureHTTP: true,
+  allowInsecureHTTP: false,
   authenticationMode: AuthenticationMode.AuthenticationModeNone,
-  model: "hexgrad/Kokoro-82M",
-  voice: "af_heart",
+  model: "magpie-tts",
+  modelProfile: ModelID.MagpieTTS,
+  options: { language: "en-US", instructions: "" },
+  voice: "Sofia",
   speed: 1,
 };
 current.savedConnections = {
   entries: [
     {
       id: "local-speech",
-      name: "Local speech server",
-      uses: [Purpose.Transcription, Purpose.Speech],
+      name: "NeMo-Speech.cpp",
+      builtIn: true,
+      uses: [Purpose.Voice, Purpose.Transcription, Purpose.Speech],
       hasCredential: false,
       details: {
-        compatibilityProfile: ID.Speaches,
+        compatibilityProfile: ID.NeMoSpeechV1,
+        managedInstanceID: row.instance.id,
         baseURL: current.baseURL,
-        allowInsecureHTTP: true,
+        allowInsecureHTTP: false,
         authenticationMode: AuthenticationMode.AuthenticationModeNone,
         healthPath: "",
         headers: {},
@@ -62,6 +108,7 @@ current.savedConnections = {
     },
   ],
   selected: {
+    [Purpose.Voice]: "local-speech",
     [Purpose.Transcription]: "local-speech",
     [Purpose.Speech]: "local-speech",
   },
@@ -78,17 +125,45 @@ const narration = [
 ].join("\n\n");
 const connection = {
   ...structuredClone(connectionResult),
-  requestedURL: `${current.baseURL}/models`,
+  requestedURL: "http://127.0.0.1:17860/v1/models",
   checkedAt: new Date().toISOString(),
   modelIDs: [current.model, current.textToSpeech.model],
+  models: [
+    { id: current.model, capability: "transcription", device: "cuda" },
+    { id: current.textToSpeech.model, capability: "speech", device: "cuda" },
+  ],
 };
-const session = new Session(
-  serviceWithStatus(() => CancellablePromise.resolve(idle), {
+const resources = createResourceFixture();
+Object.assign(window.testResources.sample, {
+  cpuPercent: 8,
+  memoryAvailableBytes: 8 * 1024 ** 3,
+});
+Object.assign(window.testResources.sample.gpus![0], {
+  name: "NVIDIA GPU",
+  utilizationPercent: 12,
+  memoryUsedBytes: 3 * 1024 ** 3,
+});
+const session = new Session({
+  ...serviceWithStatus(() => CancellablePromise.resolve(idle), {
     settings: { GetSettings: () => CancellablePromise.resolve(current) },
     connection: {
       TestConnection: () => CancellablePromise.resolve(connection),
       TestSavedConnection: () => CancellablePromise.resolve(connection),
       TestTextToSpeechConnection: () => CancellablePromise.resolve(connection),
+      ListSpeechVoices: () =>
+        CancellablePromise.resolve({
+          voices: ["John", "Sofia", "Aria", "Jason", "Leo"].map((id) => ({
+            id,
+            name: id,
+            language: "",
+          })),
+          languages: ["en-US", "fr-FR"],
+          scope: VoiceScope.VoiceScopeModel,
+          errorKind: "",
+          httpStatus: 200,
+          latencyMilliseconds: 4,
+          truncated: false,
+        }),
     },
     files: {
       CurrentFileTranscription: () =>
@@ -128,6 +203,10 @@ const session = new Session(
         }),
     },
   }),
-);
+  runtime: runtime.service,
+  resources,
+});
+runtime.subscribe((row) => session.runtime.applyStatus(row));
+session.files.streamingPreferred = false;
 if (speech) session.speech.draft = narration;
 mount(App, { target: document.getElementById("app")!, props: { session } });

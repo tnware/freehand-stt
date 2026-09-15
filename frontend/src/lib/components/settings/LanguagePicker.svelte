@@ -39,7 +39,11 @@
   }
   const choices = $derived(
     restricted
-      ? languages.map((l) => ({ value: l.code, label: l.label, code: l.code }))
+      ? languages.map((l) => ({
+          value: l.code || "__default",
+          label: l.label,
+          code: l.code,
+        }))
       : [
           { value: "__default", label: "Server default", code: "" },
           { value: "auto", label: "Automatic detection", code: "auto" },
@@ -91,6 +95,10 @@
 </script>
 
 <div class="flex flex-col gap-2">
+  {#if restricted && !known}<p role="status" class="text-xs text-warning">
+      The saved language ({value}) is unavailable for this model. Choose a
+      supported language before transcribing.
+    </p>{/if}
   {#if automaticOnly && known}
     <input
       {id}

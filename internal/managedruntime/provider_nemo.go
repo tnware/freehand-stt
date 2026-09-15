@@ -13,7 +13,7 @@ type nemoProvider struct{}
 func (nemoProvider) newAdapter(root string) runtimeAdapter { return newAdapter(root) }
 func (n nemoProvider) descriptor() ProviderDescriptor {
 	models := make([]Model, 0, len(qualified))
-	for _, id := range []string{"nemotron-3.5", "parakeet-tdt"} {
+	for _, id := range []string{"nemotron-3.5", "parakeet-tdt", "magpie-tts"} {
 		m := n.model(id)
 		models = append(models, m)
 	}
@@ -29,13 +29,16 @@ func (n nemoProvider) model(id string) Model {
 			continue
 		}
 		m.Contracts = append(m.Contracts, c)
-		if role == compatibility.Transcription {
+		if role == compatibility.Transcription || role == compatibility.Speech {
 			m.Behavior = &c.Behavior
 		}
 	}
-	m.SizeBytes = modelSpecs[id].size
+	m.SizeBytes = nemoModelSize(id)
 	if spec, ok := modelSpecs[id]; ok {
 		m.Source = spec.source(NeMoModelManager)
+		if id == "magpie-tts" {
+			m.Source.Companions = []*ModelSource{nemoTokenizerArchive.source(NeMoModelManager), nemoCodecSpec.source(NeMoModelManager)}
+		}
 	}
 	return m
 }
@@ -45,7 +48,7 @@ func (nemoProvider) qualify(model string, role compatibility.Role) (Contract, er
 	if !ok {
 		return Contract{}, errors.New("Choose a supported managed speech model.")
 	}
-	if role != compatibility.Transcription && role != compatibility.Realtime {
+	if (model == "magpie-tts" && role != compatibility.Speech) || (model != "magpie-tts" && role != compatibility.Transcription && role != compatibility.Realtime) {
 		return Contract{}, errors.New("This runtime model does not support the selected role.")
 	}
 	c, err := modelprofile.Resolve(modelprofile.ID(q.Profile), compatibility.NeMoSpeechV1, role)
@@ -59,4 +62,5 @@ func (nemoProvider) qualify(model string, role compatibility.Role) (Contract, er
 var qualified = map[string]Model{
 	"nemotron-3.5": {ID: "nemotron-3.5", Name: "Nemotron 3.5 Streaming", Description: "Multilingual speech recognition with realtime dictation.", Recommended: true, Realtime: true, Profile: "nemotron-3.5-streaming"},
 	"parakeet-tdt": {ID: "parakeet-tdt", Name: "Parakeet TDT v3", Description: "Multilingual completed speech recognition.", Profile: "parakeet-tdt-v3"},
+	"magpie-tts":   {ID: "magpie-tts", Name: "Magpie TTS Multilingual 357M", Description: "Speech synthesis with the pinned v2602 model, tokenizer and NanoCodec.", Profile: "magpie-tts-multilingual-357m"},
 }

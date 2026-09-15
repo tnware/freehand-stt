@@ -53,3 +53,30 @@ func TestInstanceQualificationAndInventoryBounds(t *testing.T) {
 		t.Fatal("accepted unbounded inventory")
 	}
 }
+
+func TestNeMoInstanceSeparatesOptionalSpeechFromASR(t *testing.T) {
+	valid := Instance{ID: "combined", Name: "Combined", Provider: NeMoSpeechCPP, Model: "nemotron-3.5", SpeechModel: "magpie-tts"}
+	if err := ValidateInstance(valid); err != nil {
+		t.Fatal(err)
+	}
+	if valid.ModelForRole(compatibility.Speech) != "magpie-tts" || valid.ModelForRole(compatibility.Transcription) != "nemotron-3.5" || valid.ModelForRole(compatibility.Realtime) != "nemotron-3.5" {
+		t.Fatal("model selection crossed role boundaries")
+	}
+	for _, invalid := range []Instance{
+		{ID: valid.ID, Name: valid.Name, Provider: NeMoSpeechCPP, Model: "magpie-tts"},
+		{ID: valid.ID, Name: valid.Name, Provider: NeMoSpeechCPP, Model: valid.Model, SpeechModel: "parakeet-tdt"},
+		{ID: valid.ID, Name: valid.Name, Provider: NeMoSpeechCPP, Model: valid.Model, SpeechModel: "unknown"},
+		{ID: valid.ID, Name: valid.Name, Provider: LlamaCPP, Model: "s1-mini", SpeechModel: "magpie-tts"},
+	} {
+		if ValidateInstance(invalid) == nil {
+			t.Fatalf("accepted unqualified model combination: %+v", invalid)
+		}
+	}
+	valid.SpeechModel = ""
+	if err := ValidateInstance(valid); err != nil || valid.ModelForRole(compatibility.Speech) != "" {
+		t.Fatal("speech must be optional without changing the ASR selection", err)
+	}
+	if Validate(Preferences{Model: "magpie-tts"}) == nil {
+		t.Fatal("legacy ASR preferences accepted a speech-only model")
+	}
+}

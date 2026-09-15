@@ -92,6 +92,7 @@ export default defineConfig({
             { slug: "docs/models/cohere-transcribe" },
             { slug: "docs/models/nemotron" },
             { slug: "docs/models/parakeet" },
+            { slug: "docs/models/magpie-tts" },
             { slug: "docs/models/qwen3-asr" },
             { slug: "docs/models/qwen3-tts" },
             { slug: "docs/models/s1-mini" },

@@ -9,6 +9,12 @@ Search by language name or code, then choose **Save**. Voice and audio files kee
 when you change models or connections. This setting requests transcription in
 the source language, not translation.
 
+When you change a managed runtime's model, Freehand restores that model's saved
+recognition controls and keeps your task language. If that language is unavailable
+for the new model, the picker asks you to choose a supported value before
+transcribing. For Parakeet, choose **Automatic detection**. Check Voice and Audio
+file separately when both use the runtime.
+
 ## Choose a mode
 
 | Choice              | Behavior                                                                                                                      |

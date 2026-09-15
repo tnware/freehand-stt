@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ProviderID, type Model } from "$bindings/managedruntime";
-import { runtimeModelFamilies, runtimeVariantLabel } from "./runtimeCatalog";
+import {
+  runtimeModelFamilies,
+  runtimeModelGroups,
+  runtimeVariantLabel,
+} from "./runtimeCatalog";
+import { Role, ID as CompatibilityID } from "$bindings/compatibility";
+import { ID } from "$bindings/modelprofile";
+import { settings } from "$lib/stores/session-fixtures";
 
 const model = (id: string): Model => ({
   id,
@@ -15,6 +22,42 @@ const model = (id: string): Model => ({
 });
 
 describe("runtime catalog presentation", () => {
+  it("groups task capabilities once per model while preserving families inside each group", () => {
+    const withRoles = (id: string, roles: Role[]): Model => ({
+      ...model(id),
+      contracts: roles.map((role) => ({
+        role,
+        compatibilityProfile: CompatibilityID.NeMoSpeechV1,
+        modelProfile: ID.Generic,
+        behavior: settings.modelProfiles.transcription![0],
+      })),
+    });
+    const models = [
+      withRoles("tiny", [Role.Transcription, Role.Realtime]),
+      withRoles("magpie", [Role.Speech]),
+      withRoles("cleanup", [Role.PostProcessing]),
+      withRoles("unknown", []),
+    ];
+    const groups = runtimeModelGroups(ProviderID.WhisperCPP, models);
+    expect(groups.map((group) => group.label)).toEqual([
+      "Transcription",
+      "Text to speech",
+      "Cleanup",
+      "Other models",
+    ]);
+    expect(groups[0].families[0].label).toBe("Tiny");
+    expect(
+      groups.flatMap((group) =>
+        group.families.flatMap((family) => family.models),
+      ),
+    ).toHaveLength(models.length);
+    const single = runtimeModelGroups(
+      ProviderID.WhisperCPP,
+      models.slice(0, 1),
+    );
+    expect(single[0].label).toBe("");
+    expect(single[0].families[0].label).toBe("Tiny");
+  });
   it("orders known Whisper families without reclassifying unknown IDs or mutating models", () => {
     const models = [
       model("large-v3-turbo-q8_0"),

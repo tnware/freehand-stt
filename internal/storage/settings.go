@@ -22,7 +22,7 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 		return err
 	}
 	r := v.VoiceTranscription
-	if err := q.PutVoiceTranscription(ctx, dbgen.PutVoiceTranscriptionParams{Realtime: boolean(r.Realtime), ModelProfile: string(r.ModelProfile), Model: r.Model, Language: r.Language, Captions: boolean(r.Captions), TimeoutSeconds: int64(r.TimeoutSeconds), Prompt: r.TranscriptionOptions.Prompt, TemperatureOverride: boolean(r.TranscriptionOptions.TemperatureOverride), Temperature: r.TranscriptionOptions.Temperature}); err != nil {
+	if err := q.PutVoiceTranscription(ctx, dbgen.PutVoiceTranscriptionParams{NemoDisablePunctuation: boolean(r.TranscriptionOptions.NeMo.DisablePunctuation), NemoNormalize: boolean(r.TranscriptionOptions.NeMo.Normalize), NemoProfanityFilter: boolean(r.TranscriptionOptions.NeMo.ProfanityFilter), NemoEndpointingMs: int64(r.TranscriptionOptions.NeMo.EndpointingMilliseconds), Realtime: boolean(r.Realtime), ModelProfile: string(r.ModelProfile), Model: r.Model, Language: r.Language, Captions: boolean(r.Captions), TimeoutSeconds: int64(r.TimeoutSeconds), Prompt: r.TranscriptionOptions.Prompt, TemperatureOverride: boolean(r.TranscriptionOptions.TemperatureOverride), Temperature: r.TranscriptionOptions.Temperature}); err != nil {
 		return err
 	}
 
@@ -65,7 +65,7 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 	}); err != nil {
 		return err
 	}
-	if err := q.PutTranscription(ctx, dbgen.PutTranscriptionParams{
+	if err := q.PutTranscription(ctx, dbgen.PutTranscriptionParams{NemoDisablePunctuation: boolean(v.TranscriptionOptions.NeMo.DisablePunctuation), NemoNormalize: boolean(v.TranscriptionOptions.NeMo.Normalize), NemoProfanityFilter: boolean(v.TranscriptionOptions.NeMo.ProfanityFilter), NemoEndpointingMs: int64(v.TranscriptionOptions.NeMo.EndpointingMilliseconds),
 		ModelProfile:                            string(modelprofile.Effective(v.ModelProfile)),
 		Model:                                   v.Model,
 		Language:                                v.Language,
@@ -113,7 +113,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 		return v, err
 	}
 	for _, i := range managed {
-		v.ManagedRuntimes = append(v.ManagedRuntimes, managedruntime.Instance{ID: i.ID, Name: i.Name, Provider: managedruntime.ProviderID(i.Provider), Model: i.Model, AutoStart: i.AutoStart != 0})
+		v.ManagedRuntimes = append(v.ManagedRuntimes, managedruntime.Instance{ID: i.ID, Name: i.Name, Provider: managedruntime.ProviderID(i.Provider), Model: i.Model, SpeechModel: i.SpeechModel, AutoStart: i.AutoStart != 0})
 	}
 	vocabulary, err := q.GetVocabulary(ctx)
 	if err != nil {
@@ -168,6 +168,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	v.Language = rTranscription.Language
 	v.TranscriptionTimeoutSeconds = int(rTranscription.TranscriptionTimeoutSeconds)
 	v.FileTranscriptionTimeoutSeconds = int(rTranscription.FileTranscriptionTimeoutSeconds)
+	v.TranscriptionOptions.NeMo = compatibility.NeMoOptions{DisablePunctuation: rTranscription.NemoDisablePunctuation != 0, Normalize: rTranscription.NemoNormalize != 0, ProfanityFilter: rTranscription.NemoProfanityFilter != 0, EndpointingMilliseconds: int(rTranscription.NemoEndpointingMs)}
 	v.TranscriptionOptions.Prompt = rTranscription.TranscriptionOptionsPrompt
 	v.TranscriptionOptions.TemperatureOverride = rTranscription.TranscriptionOptionsTemperatureOverride != 0
 	v.TranscriptionOptions.Temperature = rTranscription.TranscriptionOptionsTemperature
@@ -201,7 +202,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	if err != nil {
 		return v, err
 	}
-	v.VoiceTranscription = config.VoiceTranscriptionSettings{CompatibilityProfile: v.VoiceTranscription.CompatibilityProfile, AuthenticationMode: v.VoiceTranscription.AuthenticationMode, Realtime: r.Realtime != 0, ModelProfile: modelprofile.ID(r.ModelProfile), Model: r.Model, Language: r.Language, Captions: r.Captions != 0, Headers: map[string]string{}, TimeoutSeconds: int(r.TimeoutSeconds), TranscriptionOptions: config.TranscriptionOptions{Prompt: r.Prompt, TemperatureOverride: r.TemperatureOverride != 0, Temperature: r.Temperature}}
+	v.VoiceTranscription = config.VoiceTranscriptionSettings{CompatibilityProfile: v.VoiceTranscription.CompatibilityProfile, AuthenticationMode: v.VoiceTranscription.AuthenticationMode, Realtime: r.Realtime != 0, ModelProfile: modelprofile.ID(r.ModelProfile), Model: r.Model, Language: r.Language, Captions: r.Captions != 0, Headers: map[string]string{}, TimeoutSeconds: int(r.TimeoutSeconds), TranscriptionOptions: config.TranscriptionOptions{NeMo: compatibility.NeMoOptions{DisablePunctuation: r.NemoDisablePunctuation != 0, Normalize: r.NemoNormalize != 0, ProfanityFilter: r.NemoProfanityFilter != 0, EndpointingMilliseconds: int(r.NemoEndpointingMs)}, Prompt: r.Prompt, TemperatureOverride: r.TemperatureOverride != 0, Temperature: r.Temperature}}
 	return projectSelectedConnections(ctx, q, v)
 }
 

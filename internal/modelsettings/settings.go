@@ -18,16 +18,18 @@ const MaxPerUse = 32
 // TranscriptionOptions contains model behavior, never task-owned vocabulary.
 // Runtime inference options remain in compatibility.TranscriptionOptions.
 type TranscriptionOptions struct {
-	Prompt              string  `json:"prompt"`
-	TemperatureOverride bool    `json:"temperatureOverride"`
-	Temperature         float64 `json:"temperature"`
+	NeMo                compatibility.NeMoOptions `json:"nemo"`
+	Prompt              string                    `json:"prompt"`
+	TemperatureOverride bool                      `json:"temperatureOverride"`
+	Temperature         float64                   `json:"temperature"`
 }
 
 func transcriptionOptions(o config.TranscriptionOptions) TranscriptionOptions {
-	return TranscriptionOptions{Prompt: o.Prompt, TemperatureOverride: o.TemperatureOverride, Temperature: o.Temperature}
+	return TranscriptionOptions{NeMo: o.NeMo, Prompt: o.Prompt, TemperatureOverride: o.TemperatureOverride, Temperature: o.Temperature}
 }
 
 func (o TranscriptionOptions) apply(v *config.TranscriptionOptions) {
+	v.NeMo = o.NeMo
 	v.Prompt = o.Prompt
 	v.TemperatureOverride = o.TemperatureOverride
 	v.Temperature = o.Temperature

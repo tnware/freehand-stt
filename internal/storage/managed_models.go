@@ -17,7 +17,11 @@ func validateRememberedModel(e modelsettings.Entry, d savedconnection.Details, i
 	found := false
 	for n := range v.ManagedRuntimes {
 		if v.ManagedRuntimes[n].ID == d.ManagedInstanceID {
-			v.ManagedRuntimes[n].Model = e.Model
+			if e.Purpose == savedconnection.Speech && v.ManagedRuntimes[n].Provider == managedruntime.NeMoSpeechCPP {
+				v.ManagedRuntimes[n].SpeechModel = e.Model
+			} else {
+				v.ManagedRuntimes[n].Model = e.Model
+			}
 			found = true
 		}
 	}

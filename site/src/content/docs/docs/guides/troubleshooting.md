@@ -77,7 +77,10 @@ languages or voices, cleanup behavior, or inference permissions.
 
 When you change the connection, model, or relevant model options, previous results
 are marked as applying to older settings or cleared. Run another check to assess
-the current settings.
+the current settings. Managed connections show **Starting runtime** while loading
+and warming up. Wait for **Running**; the metadata check refreshes automatically.
+If startup fails, inspect [runtime output](../local-runtime/#startup-and-process-output)
+and [this computer’s resource use](../using-freehand/#check-this-computers-resource-use).
 
 The **Check connection** action on the Connections page checks only that saved
 server and its authentication, without selecting it. Open a feature page to check
@@ -244,7 +247,12 @@ Automatic long-file segmentation is not currently provided.
 
 - Turn on **Enable text to speech**, save your settings, and confirm its
   endpoint implements `POST /v1/audio/speech`.
+- For managed NeMo, select MagpieTTS in its catalog and start the shared runtime.
+  Wait for **Running**, then select NeMo in **Speech** and save. See
+  [local speech setup](../local-runtime/#local-speech-with-magpietts).
 - Check the configured model and voice ID expected by that endpoint.
+- **Preview** uses unsaved voice settings. Choose **Save** to apply them to the
+  composer and **Listen** actions.
 - Verify the system default output device and system volume.
 - Choose **Speak** for text you enter, or **Listen** on a retained completed
   transcript. Playback never starts automatically after transcription.

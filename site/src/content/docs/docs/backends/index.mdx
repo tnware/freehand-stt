@@ -39,7 +39,8 @@ guide's server version and model requirements before configuring a connection.
 
 For installation inside Freehand, start with [Local runtimes](../guides/local-runtime/).
 That guide lists the supported NeMo, whisper.cpp, and llama.cpp models, tasks,
-and platforms. Downloads are explicit; managed setup does not include text to speech.
+and platforms, including optional MagpieTTS speech alongside NeMo transcription.
+Downloads are explicit.
 
 The launch recipes below are for services you manage separately. Use them for
 other models, custom runtime settings, or a server on another machine.
@@ -51,7 +52,7 @@ other models, custom runtime settings, or a server on another machine.
 | Speaches                  | [Docker GPU or CPU](./speaches/#run-speaches-with-docker)                                                       | Transcription; optional speech playback    |
 | Kokoro-FastAPI            | [Docker CPU or GPU](./kokoro-fastapi/#run-kokoro-fastapi-with-docker)                                           | Speech playback with voice discovery       |
 | llama.cpp                 | [Native Windows server](./llama-cpp/#run-llamacpp-on-windows)                                                   | S1-mini or compatible custom cleanup       |
-| NeMo-Speech.cpp           | [Runtime installation](./nemo-speech/#run-the-server)                                                           | Completed and live transcription           |
+| NeMo-Speech.cpp           | [Runtime installation](./nemo-speech/#run-the-server)                                                           | Completed/live transcription and MagpieTTS speech |
 | vLLM-Omni                 | [Qwen3-TTS serving guide](./vllm-omni/#run-the-server)                                                          | Text to speech with preset voices          |
 | Generic OpenAI-compatible | [Connect an existing endpoint](./generic/)                                                                      | The operations implemented by your server  |
 

@@ -2,9 +2,9 @@ package inference
 
 import (
 	"encoding/json"
+	"github.com/tnware/freehand-stt/internal/speechlanguage"
 	"math"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -215,9 +215,7 @@ func parseLanguages(raw json.RawMessage, single, key string) []string {
 	languages := make([]string, 0, maxLanguages)
 	appendLanguage := func(value string) {
 		value = safePeerString(value, key)
-		if value != "" && !slices.Contains(languages, value) && len(languages) < maxLanguages {
-			languages = append(languages, value)
-		}
+		languages = speechlanguage.MergeDetected(languages, []string{value})
 	}
 	appendLanguage(single)
 	if len(raw) == 0 || string(raw) == "null" {
@@ -360,17 +358,7 @@ func stableString(left, right string) string {
 	return ""
 }
 
-func mergeLanguages(left, right []string) []string {
-	result := append([]string(nil), left...)
-	for _, language := range right {
-		language = boundedMetadataString(language)
-		if language == "" || slices.Contains(result, language) || len(result) >= maxLanguages {
-			continue
-		}
-		result = append(result, language)
-	}
-	return result
-}
+func mergeLanguages(left, right []string) []string { return speechlanguage.MergeDetected(left, right) }
 
 func sumInt(left, right *int64) *int64 {
 	if left == nil {

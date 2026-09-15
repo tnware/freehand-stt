@@ -54,6 +54,9 @@ func (c *Client) SynthesizeSpeech(ctx context.Context, base, key string, input S
 		request.Instructions = input.Options.Instructions
 		request.TaskType = "CustomVoice"
 	}
+	if input.ModelProfile == modelprofile.MagpieTTS {
+		request.Language = input.Options.Language
+	}
 	if contract.ID == compatibility.KokoroFastAPI || contract.ID == compatibility.VLLMOmni {
 		buffered := false
 		request.Stream = &buffered

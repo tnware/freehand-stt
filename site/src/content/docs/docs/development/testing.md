@@ -231,6 +231,31 @@ selected again. Browser fixtures are not native inference evidence. No model
 inventory inference belongs in CI. See the
 [Windows checklist](../../safety/native-test-checklist/#managed-local-runtime).
 
+### Combined NeMo transcription and speech
+
+Use focused fixtures in `internal/managedruntime`, `internal/modelprofile`,
+`internal/inference`, `internal/connection`, and settings/storage to verify:
+
+- Complete Magpie generator/decoder/tokenizer acquisition, checksum failures,
+  cancellation, partial bundles, and rejection before launch.
+- One transcription plus one optional speech engine in fixed launch arguments,
+  readiness requiring both selected identities, and shared process teardown.
+- Role-specific metadata, bounded voice/language discovery, and the exact buffered
+  WAV request. Reject unsupported speed, style, and language without HTTP.
+- Runtime speech selection save/reopen, independent Voice and speech options,
+  removal admission while speech remains selected, and no credential or remote
+  fallback when a managed role is unavailable.
+- Catalog capability groups with Whisper variants retained, and speech composer
+  admission using the resolved managed endpoint and profile just like Preview.
+
+These fixtures do not establish native Magpie inference acceptance. On each
+supported native platform, explicitly Get and Select Magpie, start the combined
+runtime, and verify only the selected transcription and speech models. Check
+voice metadata and available languages, Preview and composer playback, shared
+Stop/Restart, deselect-then-Disable recovery, and release of both models on Quit.
+Observe memory use and failed startup with insufficient resources; do not turn
+this into an automatic model inventory or inference test.
+
 ### Startup, recommendation, and output-viewer validation
 
 Test host recommendations, GPU warm-up, startup reporting, and the output viewer
@@ -247,6 +272,11 @@ startup, rendering, clipboard, and selected-model inference observations:
   environment/config logging overrides, and qualify the exact pinned CPU binary
   with a model-free upstream warning through the owned launcher. This does not
   establish native viewer behavior or GPU inference acceptance.
+- NeMo argument fixtures require `--access-log --log-format json` while preserving
+  ordinary startup output. Highlight-log fixtures cover fragmented records,
+  severity/status colors, native ANSI, unchanged copy/search text, bounded
+  retention, reset/eviction, stream switches, and disabled highlighting. Native
+  viewer acceptance separately checks readability and explicit Copy selection.
 - Recipe/host selection checks Windows x64 CPU/CUDA choices, NVIDIA device 0,
   driver 551.78 and compute capability 5.0 thresholds, unknown or malformed
   metadata, unsupported platforms, and explicit CPU override. The metadata
@@ -445,8 +475,8 @@ and without JavaScript, while preserving the explanatory text and guide links.
 For local setup discovery, check the homepage's local and manual setup paths,
 the runtime/model choices on Features, and installation labels in the Backends
 and Models directories. Only NeMo, Windows whisper.cpp, and llama.cpp with
-S1-mini should offer installation in Freehand; compatible remote models and
-speech generation must not inherit that label. Follow the local setup links
+S1-mini should offer installation in Freehand. NeMo includes optional MagpieTTS
+speech; other compatible remote models must not inherit that label. Follow the local setup links
 through to their guide sections with the production base path. Check narrow
 layouts and no-JavaScript access as well as desktop presentation.
 
@@ -544,6 +574,13 @@ technical details at compact and desktop widths. The fixtures use synthetic
 metadata services and the production footer/panel components. Editor tests
 verify that explicit workspace checks use applied endpoints and empty credential
 drafts, route to the correct service, and respect disabled/pending states.
+
+Managed metadata tests cover all task roles: loading defers probes, readiness
+allows one check, restart invalidates cached and in-flight results, and repeated
+effects reuse the result. `voice-startup-readiness.spec.ts` verifies the footer
+and panel show **Starting runtime**, disable premature checks, and automatically
+refresh after readiness and restart. Repeat cold startup and restart on a native
+managed runtime; browser fixtures do not establish model readiness or inference.
 
 On Windows, separately verify that **Edit connection** opens the correct saved
 connection, **Choose connection** opens the manager for the current task, and
@@ -1169,6 +1206,25 @@ the server/runtime/model revision and distinguish transport inference evidence
 from interactive Windows acceptance. Exercise the native checklist below; a
 successful compilation or synthetic socket probe does not establish focus safety
 or window behavior. Never load inventories or add automatic inference to CI.
+
+### NeMo integration acceptance
+
+Run the focused tests in `internal/inference`, `internal/realtime`,
+`internal/speechlanguage`, `internal/modelprofile`, `internal/settings`, and
+`internal/storage`. Fixtures cover task-filtered metadata, optional health/version
+failure, credential reflection, explicit transcription WebSocket routing,
+completed/realtime option snapshots, mixed-language finals and S1-mini rejection,
+historical schema upgrades, and remembered controls across managed model changes.
+All HTTP/WebSocket servers in these tests are synthetic; they invoke no models.
+
+For native acceptance on each supported OS, use only the explicitly selected
+NeMo model. Check completed Voice, audio files, and realtime with punctuation on
+and off. Test normalization/filtering only on a server configured with the required
+assets, and endpointing only where it is enabled. Confirm the managed-asset
+explanation, independent Voice/file saves, restart persistence, and model-switch
+language review. Check metadata through a reverse-proxy prefix and verify that
+unavailable version metadata does not prevent model selection. Native capture,
+focus-safe insertion, and packaged macOS acceptance remain separate from builds.
 
 ### Unified Voice transcription
 

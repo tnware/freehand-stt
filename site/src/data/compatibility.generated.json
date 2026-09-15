@@ -6,6 +6,7 @@
       "available": true,
       "description": "vLLM 0.28.0 realtime JSON PCM16 transport. Requires an explicitly qualified realtime model profile.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": true,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -30,6 +31,7 @@
       "available": true,
       "description": "Live PCM16 transcription using the v0.1.0 WebSocket contract. Uses the server's loaded model.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": true,
         "serverLoadedModel": true,
         "vllmTranscriptionEvents": false,
@@ -56,6 +58,7 @@
       "available": true,
       "description": "Completed transcription and optional file streaming. Preserves support for typed events and legacy text segments; streaming and language hints depend on the selected model.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -80,6 +83,7 @@
       "available": true,
       "description": "Completed transcription, typed file events, and older Speaches text segments that finish at end of stream. Language and streaming support depend on the model and server version.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -104,6 +108,7 @@
       "available": false,
       "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -128,6 +133,7 @@
       "available": false,
       "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -152,6 +158,7 @@
       "available": true,
       "description": "Completed transcription and qualified realtime dictation with the server-loaded speech model; v0.1.0.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": true,
         "serverLoadedModel": true,
         "vllmTranscriptionEvents": false,
@@ -176,6 +183,7 @@
       "available": true,
       "description": "Completed transcription through the native /inference route. Uses the model already loaded by the server; connection checks use /health. File streaming is unavailable.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": true,
         "vllmTranscriptionEvents": false,
@@ -200,6 +208,7 @@
       "available": true,
       "description": "Completed transcription, file streams, and Qwen3-ASR and Voxtral realtime. Context, language, and temperature depend on the model and mode; v0.28.0.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": true,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": true,
@@ -226,6 +235,7 @@
       "available": true,
       "description": "Text chat completions with system/user messages. Choose the model profile separately in feature settings.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -250,6 +260,7 @@
       "available": true,
       "description": "Text cleanup with an optional output-token limit and disable-reasoning override. Reasoning control requires a compatible llama.cpp build and model template; S1-mini behavior uses a separate model profile.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -274,6 +285,7 @@
       "available": false,
       "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -298,6 +310,7 @@
       "available": false,
       "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -322,6 +335,7 @@
       "available": true,
       "description": "Text cleanup with output-token and reasoning-off controls, qualified against v0.28.0. Reasoning control requires a compatible model template.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -348,6 +362,7 @@
       "available": true,
       "description": "Buffered WAV speech with a voice ID and speed. The server must return PCM16 audio; model support varies.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -372,6 +387,7 @@
       "available": true,
       "description": "Buffered PCM16 WAV speech using the installed model and voice IDs. Speed support depends on the model.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -396,6 +412,7 @@
       "available": false,
       "description": "Dedicated profile not implemented. Model-specific fields and limits need qualification.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -420,6 +437,7 @@
       "available": false,
       "description": "Dedicated profile not implemented. Backend-specific capabilities need qualification.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -439,11 +457,37 @@
       }
     },
     {
+      "id": "nemo-speech-v1",
+      "label": "NeMo-Speech.cpp",
+      "available": true,
+      "description": "Buffered PCM16 WAV speech with the server-loaded MagpieTTS model, language selection, and model-scoped voices; v0.1.0. Speed remains 1.0.",
+      "capabilities": {
+        "nemoTranscriptionControls": false,
+        "realtime": false,
+        "serverLoadedModel": true,
+        "vllmTranscriptionEvents": false,
+        "cleanupOutputLimit": false,
+        "cleanupDisableReasoning": false,
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "voiceDiscovery": true,
+        "speechInstructions": false,
+        "speechLanguage": true,
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
+      }
+    },
+    {
       "id": "vllm-omni",
       "label": "vLLM-Omni",
       "available": true,
       "description": "Buffered WAV speech, voice discovery, and Qwen3-TTS language and style instructions; v0.18.0.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -468,6 +512,7 @@
       "available": true,
       "description": "Buffered PCM16 WAV speech, selectable server voices, and speed control. Requests explicitly disable streaming.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,
@@ -492,6 +537,7 @@
       "available": false,
       "description": "Dedicated profile not implemented. Server-configured voices and WAV output need qualification.",
       "capabilities": {
+        "nemoTranscriptionControls": false,
         "realtime": false,
         "serverLoadedModel": false,
         "vllmTranscriptionEvents": false,

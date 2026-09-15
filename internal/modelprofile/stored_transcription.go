@@ -15,6 +15,9 @@ import (
 // Migration may change the selected model without changing task language/options.
 // Request admission must use ValidateTranscription after resolving the selection.
 func ValidateStoredTranscription(id ID, backend compatibility.ID, language string, options compatibility.TranscriptionOptions) error {
+	if err := options.NeMo.Validate(); err != nil {
+		return err
+	}
 	if _, err := Resolve(id, backend, compatibility.Transcription); err != nil {
 		return err
 	}

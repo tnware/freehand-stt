@@ -83,3 +83,34 @@ it("bounds pending writes and forgets evicted, cleared and revoked output before
   renderer.sync([chunk(6)], 5, true);
   expect(terminals).toHaveLength(5);
 });
+
+it("rebuilds highlighting from retained output on toggles and discards old stream context", () => {
+  const terminals: DelayedTerminal[] = [];
+  const renderer = new ProcessOutputRenderer(() => {
+    const terminal = new DelayedTerminal();
+    terminals.push(terminal);
+    return terminal;
+  });
+  const prefix = chunk(1, '{"event":"http.request",');
+  const suffix = chunk(2, '"status":503}\n');
+  renderer.sync([prefix, suffix], 1, true);
+  terminals[0].acknowledge();
+  expect(terminals[0].content).toContain("\u001b[34m");
+
+  // Evicting a prefix cannot classify a retained suffix as that same record.
+  renderer.sync([suffix], 1, true);
+  terminals[0].acknowledge();
+  terminals[1].acknowledge();
+  expect(terminals[1].content).toBe(suffix.text);
+
+  renderer.sync([prefix, suffix], 2, true, false);
+  terminals[2].acknowledge();
+  terminals[2].acknowledge();
+  expect(terminals[2].content).toBe(prefix.text + suffix.text);
+  renderer.sync([prefix, suffix], 2, true, true);
+  expect(terminals[2].disposed).toBe(true);
+  terminals[3].acknowledge();
+  terminals[3].acknowledge();
+  expect(terminals[3].content).toContain("\u001b[31m503");
+  renderer.dispose();
+});

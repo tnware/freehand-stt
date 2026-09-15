@@ -86,16 +86,18 @@ const (
 )
 
 type ConnectionResult struct {
-	Checks              []Check             `json:"checks,omitempty"`
-	Reachable           bool                `json:"reachable"`
-	Probe               ConnectionProbe     `json:"probe"`
-	RequestedURL        string              `json:"requestedURL"`
-	HTTPStatus          int                 `json:"httpStatus"`
-	LatencyMilliseconds int64               `json:"latencyMilliseconds"`
-	ErrorKind           ConnectionErrorKind `json:"errorKind"`
-	CheckedAt           time.Time           `json:"checkedAt"`
-	ModelPresence       ModelPresence       `json:"modelPresence"`
-	ModelIDs            []string            `json:"modelIDs"`
+	Models              []inference.ModelMetadata `json:"models,omitempty"`
+	ServerVersion       string                    `json:"serverVersion,omitempty"`
+	Checks              []Check                   `json:"checks,omitempty"`
+	Reachable           bool                      `json:"reachable"`
+	Probe               ConnectionProbe           `json:"probe"`
+	RequestedURL        string                    `json:"requestedURL"`
+	HTTPStatus          int                       `json:"httpStatus"`
+	LatencyMilliseconds int64                     `json:"latencyMilliseconds"`
+	ErrorKind           ConnectionErrorKind       `json:"errorKind"`
+	CheckedAt           time.Time                 `json:"checkedAt"`
+	ModelPresence       ModelPresence             `json:"modelPresence"`
+	ModelIDs            []string                  `json:"modelIDs"`
 }
 
 type SavedConnectionSource interface {
@@ -272,7 +274,7 @@ func (s *Service) TestConnection(request ConnectionTestRequest) (result Connecti
 	defer func() { key = "" }()
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
-	metadata := s.client.TestMetadata(ctx, request.BaseURL, healthPath, key, request.Model, request.Headers)
+	metadata := s.client.TestProfileMetadata(ctx, request.CompatibilityProfile, compatibility.Transcription, request.BaseURL, healthPath, key, request.Model, request.Headers)
 	operationErr = ctx.Err()
 	result.Reachable = metadata.Reachable
 	result.Probe = ConnectionProbe(metadata.Probe)
@@ -282,6 +284,8 @@ func (s *Service) TestConnection(request ConnectionTestRequest) (result Connecti
 	result.ErrorKind = ConnectionErrorKind(metadata.ErrorKind)
 	result.ModelPresence = ModelPresence(metadata.ModelPresence)
 	result.ModelIDs = metadata.ModelIDs
+	result.Models = metadata.Models
+	result.ServerVersion = metadata.ServerVersion
 	return result
 }
 
@@ -431,7 +435,7 @@ func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestR
 	defer func() { key = "" }()
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
-	metadata := s.client.TestMetadata(ctx, request.BaseURL, "", key, request.Model, nil)
+	metadata := s.client.TestProfileMetadata(ctx, request.CompatibilityProfile, compatibility.Speech, request.BaseURL, "", key, request.Model, nil)
 	result.Reachable = metadata.Reachable
 	result.Probe = ConnectionProbe(metadata.Probe)
 	result.RequestedURL = metadata.RequestedURL
@@ -440,6 +444,8 @@ func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestR
 	result.ErrorKind = ConnectionErrorKind(metadata.ErrorKind)
 	result.ModelPresence = ModelPresence(metadata.ModelPresence)
 	result.ModelIDs = metadata.ModelIDs
+	result.Models = metadata.Models
+	result.ServerVersion = metadata.ServerVersion
 	operationErr = ctx.Err()
 	return result
 }
@@ -525,7 +531,7 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 	}
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
-	metadata := s.client.TestMetadata(ctx, c.Details.BaseURL, health, key, "", c.Details.Headers)
+	metadata := s.client.TestProfileMetadata(ctx, c.Details.CompatibilityProfile, "", c.Details.BaseURL, health, key, "", c.Details.Headers)
 	operationErr = ctx.Err()
 	result.Reachable = metadata.Reachable
 	result.Probe = ConnectionProbe(metadata.Probe)
@@ -535,5 +541,7 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 	result.ErrorKind = ConnectionErrorKind(metadata.ErrorKind)
 	result.ModelPresence = ModelPresence(metadata.ModelPresence)
 	result.ModelIDs = metadata.ModelIDs
+	result.Models = metadata.Models
+	result.ServerVersion = metadata.ServerVersion
 	return
 }

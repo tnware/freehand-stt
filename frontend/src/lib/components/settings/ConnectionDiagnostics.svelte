@@ -82,6 +82,25 @@
       {connectionDescription(result, platform)}
     </p>{/if}
   {#if !stale}
+    {#if result.serverVersion}<p class="content-meta">
+        Server version: {result.serverVersion}
+      </p>{/if}
+    {#if result.models?.some((model) => model.capability)}
+      <div class="space-y-1">
+        <p class="content-kicker">Advertised server models</p>
+        {#each result.models.filter((model) => model.capability) as model (model.id)}
+          <p class="content-meta break-words">
+            {model.id} · {model.capability}{model.device
+              ? ` · ${model.device}`
+              : ""}
+          </p>
+        {/each}
+        <p class="content-meta">
+          Model choices use the task’s advertised capability. Choose the model
+          behavior profile separately.
+        </p>
+      </div>
+    {/if}
     <div class="content-meta space-y-1 border-t border-hairline pt-3">
       <p>Inference support and inference authorization remain unverified.</p>
       {#if result.httpStatus || result.latencyMilliseconds > 0}
