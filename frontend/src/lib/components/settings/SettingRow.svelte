@@ -33,19 +33,14 @@
   <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
     <div class="min-w-0 flex-[1_1_12rem]">
       {#if controlID}
-        <label
-          id={titleID}
-          for={controlID}
-          class="cursor-pointer text-[13px] font-medium">{title}</label
+        <label id={titleID} for={controlID} class="content-value cursor-pointer"
+          >{title}</label
         >
       {:else}
-        <p id={titleID} class="text-[13px] font-medium">{title}</p>
+        <p id={titleID} class="content-value">{title}</p>
       {/if}
       {#if description}
-        <p
-          id={descriptionID}
-          class="mt-0.5 text-xs leading-relaxed text-muted-foreground"
-        >
+        <p id={descriptionID} class="content-meta mt-1 max-w-2xl">
           {description}
         </p>
       {/if}

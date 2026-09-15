@@ -379,6 +379,80 @@ export function createRuntimeFixture(
   const control = {
     calls,
     change,
+    useWhisperVariantCatalog: () => {
+      if (providerID !== ProviderID.WhisperCPP)
+        throw new Error("Whisper variants require the Whisper fixture");
+      const template = models[0];
+      // Known family names exercise presentation only; these are not download pins.
+      const variants = [
+        [
+          "tiny",
+          "Whisper Tiny",
+          "Multilingual model for lightweight completed transcription.",
+        ],
+        [
+          "tiny.en-q5_1",
+          "Whisper Tiny English Q5_1",
+          "English-only Q5_1 variant with a smaller download and memory footprint.",
+        ],
+        [
+          "base",
+          "Whisper Base",
+          "Multilingual baseline for completed transcription, balancing size and accuracy.",
+        ],
+        [
+          "base-q8_0",
+          "Whisper Base Q8_0",
+          "Multilingual Q8_0 variant with reduced model size.",
+        ],
+        [
+          "base.en-q5_1",
+          "Whisper Base English Q5_1",
+          "English-only Q5_1 variant with reduced model size.",
+        ],
+        [
+          "small",
+          "Whisper Small",
+          "Multilingual model with more capacity than Base.",
+        ],
+        [
+          "small.en",
+          "Whisper Small English",
+          "English-only model for completed transcription.",
+        ],
+        [
+          "large-v3-turbo-q8_0",
+          "Whisper Large v3 Turbo Q8_0",
+          "Multilingual Turbo Q8_0 variant with faster decoding than the full Large model.",
+        ],
+      ];
+      models = variants.map(([id, name, description], index) => ({
+        ...template,
+        id,
+        name,
+        description,
+        recommended: id === "base",
+        installed: false,
+        sizeBytes: 75_000_000 * (index + 1),
+        source: template.source
+          ? { ...template.source, filename: `ggml-${id}.bin` }
+          : undefined,
+      }));
+      providers[0].models = structuredClone(models);
+      for (const row of rows.filter(
+        (item) => item.instance.provider === providerID,
+      )) {
+        row.instance.model = "base";
+        change(row.instance.id, {
+          selectedModel: "base",
+          models: models.map((model) => ({
+            ...model,
+            installed: ready && model.id === "base",
+          })),
+        });
+      }
+      preferences();
+    },
     failNextStop: () => {
       failStop = true;
     },

@@ -1,5 +1,6 @@
 <script lang="ts">
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
+  import HistoryIcon from "@lucide/svelte/icons/history";
   import Notifications from "$lib/components/shell/Notifications.svelte";
   import type { Message } from "$lib/utils/messages";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
@@ -126,7 +127,7 @@
     {:else}
       <PaneHeader title="Transcription details" />
 
-      <p class="px-5 py-4 text-xs text-muted-foreground">
+      <p class="content-meta px-5 py-4">
         Select a transcript to inspect its details.
       </p>
     {/if}
@@ -154,6 +155,7 @@
   <div class="flex min-h-0 min-w-0 flex-1 flex-col">
     <PaneHeader
       title="History"
+      icon={HistoryIcon}
       summary={enabled
         ? `${entries.length} of ${retained.length} transcripts · in memory`
         : "retention is turned off"}
@@ -191,7 +193,7 @@
         <div
           class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-5 text-center"
         >
-          <p class="text-[15px] font-medium text-secondary-foreground">
+          <p class="content-title">
             {!enabled
               ? "History is turned off."
               : filtered && retained.length
@@ -199,7 +201,7 @@
                 : "No transcripts yet."}
           </p>
 
-          <p class="max-w-sm text-xs leading-relaxed text-muted-foreground">
+          <p class="content-meta max-w-sm">
             {!enabled
               ? "Turn retention on in History settings to keep recent transcripts for this session."
               : filtered && retained.length

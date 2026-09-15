@@ -268,8 +268,8 @@
     <div
       class="flex min-h-40 flex-col items-center justify-center px-5 py-4 text-center"
     >
-      <p class="text-[15px] font-medium">{emptyTitle}</p>
-      <p class="mt-1.5 max-w-md text-xs leading-relaxed text-muted-foreground">
+      <p class="content-title">{emptyTitle}</p>
+      <p class="content-meta mt-1.5 max-w-md">
         {emptyDescription}
       </p>
     </div>
@@ -307,9 +307,9 @@
                 {/if}
                 {live.status}
               </Badge>
-              <span class="truncate text-xs font-medium">{live.fileName}</span>
+              <span class="content-value truncate">{live.fileName}</span>
             </div>
-            <span class="figure shrink-0 text-xs text-muted-foreground">
+            <span class="content-meta shrink-0 tabular-nums">
               {characterLabel(live.characterCount)}
             </span>
           </div>
@@ -318,7 +318,7 @@
             <TranscriptText
               content={{ key: `file:${live.generation}`, text: live.text }}
               label="Audio file transcript"
-              class="mt-2.5 min-h-5 w-full max-w-[76ch] text-[15px] leading-[26px] break-words whitespace-pre-wrap"
+              class="mt-2.5 min-h-5 w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
             />
           {:else}
             <p
@@ -395,13 +395,13 @@
                 outcomeDot(entry.outcome),
               )}
             ></span>
-            {#if !reader && entry.id === newestID}<span
-                class="text-xs font-medium text-muted-foreground">Latest</span
+            {#if !reader && entry.id === newestID}<span class="content-kicker"
+                >Latest</span
               >{/if}
             <time
               datetime={entry.completedAt}
               title={completedDateTime(entry.completedAt)}
-              class="figure text-xs font-medium text-secondary-foreground"
+              class="content-value tabular-nums"
             >
               {completedLabel(entry.completedAt)}
             </time>
@@ -426,11 +426,10 @@
             {/if}
           </span>
           {#if !isExpanded}
-            <span
-              class="min-w-0 flex-[2] truncate text-[13px] text-secondary-foreground"
+            <span class="content-value min-w-0 flex-[2] truncate"
               >{entry.text}</span
             >
-            <span class="figure shrink-0 text-[11px] text-ink-quiet"
+            <span class="content-meta shrink-0 tabular-nums"
               >{characterLabel(entry.characterCount)}</span
             >
           {/if}
@@ -520,12 +519,8 @@
                     aria-label="Raw transcript"
                   >
                     <div class="mb-1.5 flex items-center justify-between gap-3">
-                      <span
-                        class="min-w-0 truncate text-xs text-muted-foreground"
-                      >
-                        <span class="font-medium text-secondary-foreground"
-                          >Raw</span
-                        >
+                      <span class="content-meta min-w-0 truncate">
+                        <span class="content-section-title">Raw</span>
                         ·
                         <span class="font-mono" title={entry.details.model}
                           >{compactModel(entry.details.model)}</span
@@ -558,7 +553,7 @@
                         parts: comparison.raw,
                       }}
                       label="Raw transcript text"
-                      class="w-full max-w-[76ch] text-[15px] leading-[26px] break-words whitespace-pre-wrap"
+                      class="w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
                     />
                   </section>
 
@@ -567,12 +562,8 @@
                     aria-label="Cleaned transcript"
                   >
                     <div class="mb-1.5 flex items-center justify-between gap-3">
-                      <span
-                        class="min-w-0 truncate text-xs text-muted-foreground"
-                      >
-                        <span class="font-medium text-secondary-foreground"
-                          >Cleaned</span
-                        >
+                      <span class="content-meta min-w-0 truncate">
+                        <span class="content-section-title">Cleaned</span>
                         ·
                         <span
                           class="font-mono"
@@ -613,7 +604,7 @@
                         parts: comparison.processed,
                       }}
                       label="Cleaned transcript text"
-                      class="w-full max-w-[76ch] text-[15px] leading-[26px] break-words whitespace-pre-wrap"
+                      class="w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
                     />
                   </section>
                 </div>
@@ -621,7 +612,7 @@
                 <TranscriptText
                   content={{ key: String(entry.id), text: entry.text }}
                   label={`Transcript from ${completedDateTime(entry.completedAt)}`}
-                  class="mt-2.5 w-full max-w-[76ch] text-[15px] leading-[26px] break-words whitespace-pre-wrap"
+                  class="mt-2.5 w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
                 />
               {/if}
             </div>
@@ -652,7 +643,7 @@
               class="history-footer mt-1.5 flex min-h-8 min-w-0 items-center justify-between gap-2"
             >
               <div
-                class="figure flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted-foreground"
+                class="content-meta flex min-w-0 flex-1 items-center gap-1.5 tabular-nums"
               >
                 <span class="shrink-0"
                   >{characterLabel(entry.characterCount)}</span

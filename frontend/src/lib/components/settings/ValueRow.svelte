@@ -40,12 +40,9 @@
   aria-describedby={hint ? hintID : undefined}
 >
   <div class="min-w-0">
-    <Label id={labelID} for={id} class="text-[13px] font-medium">{label}</Label>
+    <Label id={labelID} for={id} class="content-value">{label}</Label>
     {#if hint}
-      <p
-        id={hintID}
-        class="mt-0.5 text-xs leading-[1.45] text-muted-foreground"
-      >
+      <p id={hintID} class="content-meta mt-1 max-w-2xl">
         {hint}
       </p>
     {/if}

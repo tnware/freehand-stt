@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { Role } from "$bindings/compatibility";
   import {
     ProviderID,
     type BinaryOptions,
@@ -9,23 +8,24 @@
     type ProviderDescriptor,
   } from "$bindings/managedruntime";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import BoxIcon from "@lucide/svelte/icons/box";
+  import CpuIcon from "@lucide/svelte/icons/cpu";
   import DownloadIcon from "@lucide/svelte/icons/download";
-  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+  import PackageIcon from "@lucide/svelte/icons/package";
+  import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
+  import TagIcon from "@lucide/svelte/icons/tag";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
+  import WrenchIcon from "@lucide/svelte/icons/wrench";
   import { Button } from "$lib/components/ui/button";
   import { Switch } from "$lib/components/ui/switch";
   import * as Dialog from "$lib/components/ui/dialog";
   import RuntimeDownloadSource from "$lib/components/settings/RuntimeDownloadSource.svelte";
-  import ModelDownloadSource from "$lib/components/settings/ModelDownloadSource.svelte";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
+  import RuntimeModelCatalog from "./RuntimeModelCatalog.svelte";
   import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
-  import {
-    backendLabel,
-    modelSize,
-    runtimePresentation,
-  } from "$lib/utils/managedRuntime";
+  import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
 
   let {
@@ -67,6 +67,7 @@
       !entry.supported ||
       status?.supported === false,
   );
+  const modelActionsLocked = $derived(actionLocked || !installed || !instance);
   const models = $derived(
     (status?.models?.length ? status.models : (entry.models ?? [])).filter(
       (model) => entry.models?.some((qualified) => qualified.id === model.id),
@@ -74,6 +75,28 @@
   );
   const selectedModel = $derived(
     models.find((model) => model.id === instance?.model),
+  );
+  const metadata = $derived(
+    [
+      {
+        label: "Version",
+        value: status?.version || entry.version,
+        icon: TagIcon,
+        technical: true,
+      },
+      {
+        label: "Backend",
+        value: status?.backend ? backendLabel(status.backend) : "",
+        icon: CpuIcon,
+        technical: false,
+      },
+      {
+        label: "Selected model",
+        value: status?.selectedModel,
+        icon: BoxIcon,
+        technical: true,
+      },
+    ].filter((fact) => fact.value),
   );
   const problem = $derived(
     runtime.errorFor(instance?.id ?? entry.id) || status?.error || "",
@@ -176,12 +199,6 @@
       if (await runtime.run(id, "Stop")) await runtime.run(id, "Start");
     });
   }
-  const task = (model: Model): string =>
-    model.contracts?.some((contract) => contract.role === Role.PostProcessing)
-      ? "Cleanup"
-      : model.realtime
-        ? "Streaming"
-        : "Batch";
 </script>
 
 <div class="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -189,11 +206,9 @@
     class="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-hairline px-5 py-1.5"
   >
     <div class="flex min-w-0 items-center gap-2.5">
-      <h3
-        class="truncate font-display text-[15px] font-semibold tracking-tight"
-      >
+      <h2 class="content-title truncate font-display tracking-tight">
         {entry.name}
-      </h3>
+      </h2>
       <StatusBadge
         tone={running
           ? "success"
@@ -252,15 +267,27 @@
   <div
     class="flex min-h-[38px] shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline px-5 py-2"
   >
-    {#each [status?.version || entry.version, status?.backend ? backendLabel(status.backend) : "", status?.selectedModel].filter(Boolean) as fact, index (index)}
-      {#if index > 0}<span
-          class="h-3 w-px shrink-0 bg-border"
-          aria-hidden="true"
-        ></span>{/if}
-      <span class="min-w-0 truncate font-mono text-[11px] text-ink-quiet"
-        >{fact}</span
-      >
-    {/each}
+    <dl class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+      {#each metadata as fact (fact.label)}
+        <div
+          class="flex min-w-0 items-center gap-1.5"
+          title={`${fact.label}: ${fact.value}`}
+        >
+          <fact.icon
+            class="size-3.5 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <dt class="sr-only">{fact.label}</dt>
+          <dd
+            class="min-w-0 truncate text-xs {fact.technical
+              ? 'font-mono text-muted-foreground'
+              : 'font-medium text-foreground'}"
+          >
+            {fact.value}
+          </dd>
+        </div>
+      {/each}
+    </dl>
     <span class="flex-1"></span>
     {#if layout && instance}
       <Button
@@ -317,17 +344,17 @@
       </div>
     {/if}
     {#if !installed}
-      <div class="flex flex-col gap-3 py-3">
+      <div class="flex flex-col gap-3 border-b border-hairline py-3">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-[13px] font-medium">
+            <p class="content-section-title">
               {entry.supported
                 ? busy
                   ? "Installation in progress"
                   : "Not installed"
                 : "Unavailable on this machine"}
             </p>
-            <p class="mt-0.5 text-xs text-ink-quiet">
+            <p class="content-meta mt-0.5">
               {entry.unavailableReason ||
                 "Install the runtime, then explicitly download a model."}
             </p>
@@ -354,7 +381,7 @@
             class="border-y border-hairline py-3"
             aria-label="Runtime binary recommendation"
           >
-            <p class="text-[13px] font-medium">
+            <p class="content-section-title">
               Recommended: {backendLabel(recommendation.recommendedBackend)}
             </p>
             <p class="mt-0.5 font-mono text-[11px] text-ink-quiet">
@@ -398,210 +425,54 @@
             </div>
           </section>
         {/if}
-        <section aria-label="Available models">
-          <p
-            class="mb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-          >
-            Models it can run
-          </p>
-          {#each entry.models ?? [] as model (model.id)}
-            <article
-              class="border-b border-hairline py-2"
-              aria-label={model.name}
-            >
-              <div class="flex items-center justify-between gap-3">
-                <span class="min-w-0"
-                  ><span class="block truncate text-[13px]">{model.name}</span
-                  ><span
-                    class="block truncate font-mono text-[11px] text-ink-quiet"
-                    >{model.id}</span
-                  ></span
-                ><span class="shrink-0 text-[10px] text-ink-quiet"
-                  >{model.recommended ? "Recommended" : task(model)}</span
-                >
-              </div>
-              {#if model.source}<div class="mt-2">
-                  <ModelDownloadSource
-                    source={model.source}
-                    description={model.description}
-                  />
-                </div>{/if}
-            </article>
-          {/each}
-        </section>
-      </div>
-    {:else}
-      <div
-        class="flex min-h-10 flex-wrap items-center justify-between gap-2 py-2"
-      >
-        <span
-          class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-          >Models</span
-        ><Button
-          variant="outline"
-          size="xs"
-          disabled={actionLocked}
-          onclick={() => act(() => runtime.run(instance!.id, "RefreshCatalog"))}
-          ><RefreshCwIcon class="size-3" />Refresh catalog</Button
-        >
-      </div>
-      <p class="pb-2 text-xs text-ink-quiet">
-        {running
-          ? "Stop to download, change or remove models."
-          : "Browsing is metadata-only. Only Get fetches model files."}
-      </p>
-      <div class="overflow-x-auto" role="region" aria-label="Model catalog">
-        <div class="min-w-[520px]">
-          <div
-            class="flex h-[26px] items-center border-b border-hairline text-[10px] font-semibold tracking-[0.07em] text-ink-quiet uppercase"
-          >
-            <span class="min-w-0 flex-1">Model</span><span
-              class="w-[70px] shrink-0">Task</span
-            ><span class="w-[70px] shrink-0 text-right">Size</span><span
-              class="w-[90px] shrink-0 pl-3">State</span
-            ><span class="w-[120px] shrink-0 text-right">Action</span>
-          </div>
-          {#each models as model (model.id)}
-            {@const selected = model.id === instance?.model}
-            {@const loaded = selected && running}
-            {@const modelSource =
-              entry.models?.find((qualified) => qualified.id === model.id)
-                ?.source ?? model.source}
-            {@const downloading =
-              status?.operation?.kind === "download" &&
-              status.operation.model === model.id}
-            <article aria-label={model.name}>
-              <div
-                class="flex min-h-12 items-center border-b border-hairline {selected
-                  ? 'bg-accent-wash'
-                  : ''}"
-              >
-                <span class="min-w-0 flex-1 pl-2"
-                  ><span class="block truncate text-[13px] text-foreground"
-                    >{model.name}</span
-                  ><span
-                    class="block truncate font-mono text-[11px] text-ink-quiet"
-                    >{model.id}</span
-                  ></span
-                >
-                <span
-                  class="w-[70px] shrink-0 text-xs text-secondary-foreground"
-                  >{task(model)}</span
-                ><span
-                  class="w-[70px] shrink-0 text-right font-mono text-[11px]"
-                  title={modelSize(model.sizeBytes)}
-                  >{model.sizeBytes ? modelSize(model.sizeBytes) : "—"}</span
-                >
-                <span
-                  class="w-[90px] shrink-0 pl-3 text-xs {loaded
-                    ? 'text-success'
-                    : 'text-ink-quiet'}"
-                  >{loaded
-                    ? "Loaded"
-                    : selected
-                      ? "Selected"
-                      : model.installed
-                        ? "Downloaded"
-                        : "Not installed"}</span
-                >
-                <span
-                  class="flex w-[120px] shrink-0 items-center justify-end gap-1"
-                >
-                  {#if downloading && busy}<Button
-                      variant="outline"
-                      size="xs"
-                      disabled={runtime.pendingFor(instance!.id) ===
-                        "Cancelling"}
-                      onclick={() => void runtime.cancel(instance!.id)}
-                      >Cancel</Button
-                    >
-                  {:else}
-                    {#if !model.installed}<Button
-                        variant="outline"
-                        size="xs"
-                        disabled={actionLocked || running}
-                        onclick={() =>
-                          act(() =>
-                            runtime.downloadModel(instance!.id, model.id),
-                          )}><DownloadIcon class="size-3" />Get</Button
-                      >{/if}
-                    {#if !selected}<Button
-                        variant="outline"
-                        size="xs"
-                        disabled={actionLocked || running}
-                        onclick={() =>
-                          act(() =>
-                            runtime.saveInstance({
-                              ...instance!,
-                              model: model.id,
-                            }),
-                          )}>Select</Button
-                      >{/if}
-                    {#if model.installed}<Button
-                        variant="ghost"
-                        size="xs"
-                        class="size-6 p-0"
-                        disabled={actionLocked || running}
-                        aria-label={`Delete ${model.name}`}
-                        title="Remove downloaded files"
-                        onclick={() => (confirming = { kind: "model", model })}
-                        ><Trash2Icon class="size-3.5" /></Button
-                      >{/if}
-                  {/if}
-                </span>
-              </div>
-              {#if downloading}<div
-                  class="space-y-1 px-2 py-2 text-xs text-secondary-foreground"
-                  role="status"
-                >
-                  {#if busy}{#if view.percent !== null}<progress
-                        class="h-1.5 w-full accent-primary"
-                        max="100"
-                        value={view.percent}
-                        aria-label={`${model.name} download progress`}
-                      ></progress>{/if}
-                    <p>
-                      {view.activity}{view.transferred
-                        ? ` · ${view.transferred}`
-                        : ""}
-                    </p>{:else if view.completion}<p>{view.completion}</p>{/if}
-                </div>{/if}
-              <details
-                class="border-b border-hairline px-2 py-1 text-xs text-ink-quiet"
-              >
-                <summary
-                  class="w-fit cursor-pointer py-1 focus-visible:outline-ring"
-                  >Model source and details</summary
-                >
-                <div class="py-2">
-                  {#if modelSource}<ModelDownloadSource
-                      source={modelSource}
-                      description={model.description}
-                    />{:else}<p>{model.description}</p>{/if}
-                </div>
-              </details>
-            </article>
-          {:else}<p class="py-6 text-center text-[13px] text-muted-foreground">
-              No qualified models in this runtime's catalog yet.
-            </p>{/each}
-        </div>
       </div>
     {/if}
+    <RuntimeModelCatalog
+      {models}
+      {entry}
+      {row}
+      {installed}
+      {busy}
+      {view}
+      locked={modelActionsLocked}
+      cancelling={runtime.pendingFor(instance?.id ?? "") === "Cancelling"}
+      onRefresh={() => {
+        if (instance && installed)
+          act(() => runtime.run(instance.id, "RefreshCatalog"));
+      }}
+      onGet={(model) => {
+        if (instance && installed && !running)
+          act(() => runtime.downloadModel(instance.id, model.id));
+      }}
+      onSelect={(model) => {
+        if (instance && installed && !running)
+          act(() => runtime.saveInstance({ ...instance, model: model.id }));
+      }}
+      onRemove={(model) => {
+        if (instance && installed && !running && !actionLocked)
+          confirming = { kind: "model", model };
+      }}
+      onCancel={() => {
+        if (instance) void runtime.cancel(instance.id);
+      }}
+    />
     {#if instance}
       <button
         type="button"
-        class="flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        class="content-disclosure flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
         aria-expanded={preferencesOpen}
         onclick={() => (preferencesOpen = !preferencesOpen)}
-        ><span class="flex items-center gap-2"
+        ><span class="flex min-w-0 items-center gap-2"
           ><ChevronRightIcon
-            class="size-3.5 text-muted-foreground {preferencesOpen
+            aria-hidden="true"
+            class="size-3.5 shrink-0 text-muted-foreground {preferencesOpen
               ? 'rotate-90'
               : ''}"
-          /><span class="text-[13px] text-secondary-foreground"
-            >Runtime preferences</span
-          ></span
-        ><span class="truncate font-mono text-[11px] text-ink-quiet"
+          /><SlidersHorizontalIcon
+            class="content-section-icon"
+            aria-hidden="true"
+          /><span class="truncate">Runtime preferences</span></span
+        ><span class="content-meta max-w-[45%] truncate text-right"
           >{instance.autoStart ? "starts with Freehand" : "manual start"}</span
         ></button
       >
@@ -609,10 +480,10 @@
         <div class="space-y-3 border-b border-hairline py-3">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <label for={`${uid}-autostart`} class="text-[13px]"
+              <label for={`${uid}-autostart`} class="content-value"
                 >Start when Freehand launches</label
               >
-              <p class="mt-1 text-xs text-ink-quiet">
+              <p class="content-meta mt-1">
                 Uses the selected model. Does not download missing files.
               </p>
             </div>
@@ -630,7 +501,7 @@
           {#if switchable && installed}<fieldset
               disabled={actionLocked || running}
             >
-              <legend class="mb-2 text-[13px]">Runtime binary</legend>
+              <legend class="content-section-title mb-2">Runtime binary</legend>
               <div class="flex flex-wrap gap-1.5">
                 {#each entry.backends ?? [] as backend (backend)}<Button
                     variant="outline"
@@ -646,11 +517,11 @@
                   >{/each}
               </div>
             </fieldset>
-            <p class="text-xs text-ink-quiet">
+            <p class="content-meta">
               Stop to change binary. Switching downloads the selected binary and
               keeps models and saved Connections.
             </p>{/if}
-          <p class="text-xs text-ink-quiet">
+          <p class="content-meta">
             Stopping or removing files keeps saved Connections selected. There
             is no automatic fallback.
           </p>
@@ -660,18 +531,19 @@
     {#if entry.source}
       <button
         type="button"
-        class="flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        class="content-disclosure flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
         aria-expanded={sourceOpen}
         onclick={() => (sourceOpen = !sourceOpen)}
-        ><span class="flex items-center gap-2"
+        ><span class="flex min-w-0 items-center gap-2"
           ><ChevronRightIcon
-            class="size-3.5 text-muted-foreground {sourceOpen
+            aria-hidden="true"
+            class="size-3.5 shrink-0 text-muted-foreground {sourceOpen
               ? 'rotate-90'
               : ''}"
-          /><span class="text-[13px] text-secondary-foreground"
-            >Binary download source</span
+          /><PackageIcon class="content-section-icon" aria-hidden="true" /><span
+            class="truncate">Binary download source</span
           ></span
-        ><span class="truncate font-mono text-[11px] text-ink-quiet"
+        ><span class="content-meta max-w-[45%] truncate text-right"
           >official release · checksum pinned</span
         ></button
       >
@@ -685,18 +557,19 @@
     {#if instance}
       <button
         type="button"
-        class="flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        class="content-disclosure flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
         aria-expanded={manageOpen}
         onclick={() => (manageOpen = !manageOpen)}
-        ><span class="flex items-center gap-2"
+        ><span class="flex min-w-0 items-center gap-2"
           ><ChevronRightIcon
-            class="size-3.5 text-muted-foreground {manageOpen
+            aria-hidden="true"
+            class="size-3.5 shrink-0 text-muted-foreground {manageOpen
               ? 'rotate-90'
               : ''}"
-          /><span class="text-[13px] text-secondary-foreground"
-            >Manage runtime</span
+          /><WrenchIcon class="content-section-icon" aria-hidden="true" /><span
+            class="truncate">Manage runtime</span
           ></span
-        ><span class="font-mono text-[11px] text-ink-quiet"
+        ><span class="content-meta max-w-[45%] truncate text-right"
           >remove files · delete entry</span
         ></button
       >

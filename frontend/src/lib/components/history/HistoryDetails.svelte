@@ -3,6 +3,10 @@
   import CircleMinusIcon from "@lucide/svelte/icons/circle-minus";
   import CircleXIcon from "@lucide/svelte/icons/circle-x";
   import ClockIcon from "@lucide/svelte/icons/clock";
+  import AudioLinesIcon from "@lucide/svelte/icons/audio-lines";
+  import FileAudioIcon from "@lucide/svelte/icons/file-audio";
+  import MicIcon from "@lucide/svelte/icons/mic";
+  import SparklesIcon from "@lucide/svelte/icons/sparkles";
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import { Badge } from "$lib/components/ui/badge";
   import { Separator } from "$lib/components/ui/separator";
@@ -135,12 +139,8 @@
 
 {#snippet durationValue(value?: number, suffix?: string)}
   <span
-    class="inline-flex min-h-5 max-w-full items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-medium tabular-nums text-foreground"
+    class="inline-flex min-h-5 max-w-full items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
   >
-    <ClockIcon
-      class="size-3 shrink-0 text-muted-foreground"
-      aria-hidden="true"
-    />
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{duration(value)}{suffix ? ` ${suffix}` : ""}</span
     >
@@ -150,7 +150,7 @@
 {#snippet endpointValue(value?: string)}
   {#if value}
     <span
-      class="inline-block min-h-5 max-w-full rounded-md border border-hairline bg-muted/45 px-2.5 py-[2px] font-mono text-[10.5px] leading-[14px] font-normal text-foreground break-all"
+      class="inline-block min-h-5 max-w-full rounded-sm bg-well px-1.5 py-0.5 font-mono text-xs leading-tight font-normal text-foreground break-all"
     >
       {value}
     </span>
@@ -162,7 +162,7 @@
 {#snippet modelValue(value?: string)}
   {#if value}
     <span
-      class="inline-block min-h-5 max-w-full rounded-md bg-primary/10 px-2.5 py-[2px] font-mono text-[10.5px] leading-[14px] font-medium text-primary break-all"
+      class="inline-block min-h-5 max-w-full rounded-sm bg-well px-1.5 py-0.5 font-mono text-xs leading-tight font-medium text-foreground break-all"
     >
       {value}
     </span>
@@ -173,7 +173,7 @@
 
 {#snippet statusValue(label: string, status: FieldStatus)}
   <span
-    class={`inline-flex min-h-5 max-w-full items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] leading-tight font-medium [&>svg]:shrink-0 ${fieldStatusClass(status)}`}
+    class={`inline-flex min-h-5 max-w-full items-center gap-1.5 rounded-sm px-2 py-0.5 text-xs leading-tight font-medium [&>svg]:shrink-0 ${fieldStatusClass(status)}`}
   >
     {#if status === "positive"}
       <CircleCheckIcon class="size-3" aria-hidden="true" />
@@ -190,7 +190,7 @@
 
 {#snippet characterValue(value?: number, suffix?: string)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-semibold tabular-nums text-foreground shadow-[inset_0_-1px_0_var(--hairline)]"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
   >
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{(value ?? 0).toLocaleString()}</span
@@ -215,8 +215,8 @@
       >
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
-            <h1 class="text-base font-semibold">Transcription details</h1>
-            <p class="mt-1 font-mono text-[10.5px] text-muted-foreground">
+            <h1 class="content-title">Transcription details</h1>
+            <p class="content-meta mt-1">
               {sourceLabel(details.source)} · run #{entry.id.toLocaleString()}
             </p>
           </div>
@@ -236,23 +236,22 @@
       tabindex="0"
       role="region"
       aria-label="Run information"
-      class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-5 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground/90 [&_dt]:my-0.5 [&_dt]:text-[12px]"
+      class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-5 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground [&_dt]:my-0.5 [&_dt]:text-[12px]"
     >
       <section
-        class="flex min-w-0 flex-col gap-3"
+        class="content-summary flex min-w-0 flex-col gap-3"
         aria-labelledby={`${uid}-run-details-heading`}
       >
         <div class="flex items-center gap-2">
-          <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
-          ></span>
+          <ClockIcon class="content-section-icon" aria-hidden="true" />
           <svelte:element
             this={embedded ? "h3" : "h2"}
             id={`${uid}-run-details-heading`}
-            class="text-[13px] font-semibold">Run</svelte:element
+            class="content-section-title">Run</svelte:element
           >
         </div>
         <dl
-          class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+          class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
         >
           {#if embedded}
             <dt class="text-muted-foreground">Source</dt>
@@ -308,16 +307,15 @@
         aria-labelledby={`${uid}-request-details-heading`}
       >
         <div class="flex items-center gap-2">
-          <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
-          ></span>
+          <AudioLinesIcon class="content-section-icon" aria-hidden="true" />
           <svelte:element
             this={embedded ? "h3" : "h2"}
             id={`${uid}-request-details-heading`}
-            class="text-[13px] font-semibold">Speech recognition</svelte:element
+            class="content-section-title">Speech recognition</svelte:element
           >
         </div>
         <dl
-          class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+          class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
         >
           <dt class="text-muted-foreground">Server</dt>
           <dd class="text-right">{@render endpointValue(details.server)}</dd>
@@ -383,16 +381,15 @@
           aria-labelledby={`${uid}-source-details-heading`}
         >
           <div class="flex items-center gap-2">
-            <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
-            ></span>
+            <FileAudioIcon class="content-section-icon" aria-hidden="true" />
             <svelte:element
               this={embedded ? "h3" : "h2"}
               id={`${uid}-source-details-heading`}
-              class="text-[13px] font-semibold">Audio file</svelte:element
+              class="content-section-title">Audio file</svelte:element
             >
           </div>
           <dl
-            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
           >
             <dt class="text-muted-foreground">Filename</dt>
             <dd class="text-right break-all">
@@ -412,16 +409,15 @@
           aria-labelledby={`${uid}-source-details-heading`}
         >
           <div class="flex items-center gap-2">
-            <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
-            ></span>
+            <MicIcon class="content-section-icon" aria-hidden="true" />
             <svelte:element
               this={embedded ? "h3" : "h2"}
               id={`${uid}-source-details-heading`}
-              class="text-[13px] font-semibold">Voice capture</svelte:element
+              class="content-section-title">Voice capture</svelte:element
             >
           </div>
           <dl
-            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
           >
             <dt class="text-muted-foreground">Microphone</dt>
             <dd class="text-right break-words">
@@ -525,7 +521,7 @@
           {#if details.segments && details.segments.length > 0}
             <div class="min-w-0 rounded-sm border border-hairline">
               <div
-                class="checkpoint-heading grid grid-cols-[2.5rem_repeat(3,minmax(0,1fr))] gap-2 bg-layer-fill px-3 py-2 font-mono text-[10px] text-muted-foreground"
+                class="content-kicker checkpoint-heading grid grid-cols-[2.5rem_repeat(3,minmax(0,1fr))] gap-2 bg-well px-3 py-2"
                 aria-hidden="true"
               >
                 <span>#</span>
@@ -535,7 +531,7 @@
               </div>
               {#each details.segments as segment (segment.number)}
                 <dl
-                  class="checkpoint-row grid grid-cols-[2.5rem_repeat(3,minmax(0,1fr))] gap-2 border-t border-hairline px-3 py-2 text-[11px]"
+                  class="checkpoint-row grid grid-cols-[2.5rem_repeat(3,minmax(0,1fr))] gap-2 border-t border-hairline px-3 py-2 text-xs tabular-nums"
                 >
                   <div class="min-w-0">
                     <dt class="checkpoint-label text-muted-foreground">
@@ -586,12 +582,11 @@
         >
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
-              ></span>
+              <SparklesIcon class="content-section-icon" aria-hidden="true" />
               <svelte:element
                 this={embedded ? "h3" : "h2"}
                 id={`${uid}-processing-details-heading`}
-                class="text-[13px] font-semibold"
+                class="content-section-title"
               >
                 Post-processing
               </svelte:element>
@@ -604,7 +599,7 @@
             </Badge>
           </div>
           <dl
-            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
           >
             <dt class="text-muted-foreground">Server</dt>
             <dd class="text-right">

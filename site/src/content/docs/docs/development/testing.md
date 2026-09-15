@@ -648,7 +648,20 @@ commands. Their screenshots support visual review rather than replacing
 behavioral assertions. Inspect heading and label hierarchy, readable secondary
 text, status labels, and disclosure focus alongside the existing navigation,
 shortcut-recovery, source-provenance, and managed-runtime interaction suites.
+Apply the same visual review to Voice, audio files, Text to speech, History and
+its detail pane, Connections, runtimes, and global/contextual Settings. Check
+that key values stand out from helper text, neutral grouping surfaces remain
+subtle in both themes, and section icons supplement visible labels. Exercise
+narrow widths and zoom so added hierarchy does not hide actions or reduce
+transcript readability.
 Keep checks tied to user outcomes rather than exact class names or palette values.
+
+Runtime catalog coverage checks the same browsing controls before and after
+installation, family expansion and search, keyboard access to model sources,
+and disabled model actions while uninstalled or running. Browsing must make no
+runtime calls. Offline Go tests cover the published Whisper variant inventory,
+pin structure, completed-transcription qualification, and removal that preserves
+sibling models; they do not download or invoke catalog models.
 
 Repeat the audit interactively on Windows before native acceptance: scroll long
 pages and navigate by mouse/keyboard, use connection-editor Back/Cancel, save an

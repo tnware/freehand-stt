@@ -423,17 +423,17 @@
       >
         <div
           bind:clientHeight={headingHeight}
-          class="sticky top-0 z-10 flex min-h-11 items-center border-b border-hairline bg-background py-2"
+          class="sticky top-0 z-10 flex min-h-11 items-center gap-2.5 border-b border-hairline bg-background py-2"
         >
-          <h3
-            id="settings-page-heading"
-            tabindex="-1"
-            class="font-display text-[15px] font-semibold tracking-tight"
+          <span
+            class="content-section-icon flex items-center justify-center [&>svg]:size-4"
+            aria-hidden="true"><section.icon /></span
           >
+          <h3 id="settings-page-heading" tabindex="-1" class="content-title">
             {sectionTitle}
           </h3>
         </div>
-        <p class="max-w-2xl text-xs leading-5 text-muted-foreground">
+        <p class="content-meta max-w-2xl">
           {sectionBlurb}
         </p>
         {#if sharedNote}

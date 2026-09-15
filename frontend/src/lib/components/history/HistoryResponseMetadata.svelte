@@ -1,7 +1,6 @@
 <script lang="ts">
   import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
-  import ClockIcon from "@lucide/svelte/icons/clock";
-  import CoinsIcon from "@lucide/svelte/icons/coins";
+  import FileTextIcon from "@lucide/svelte/icons/file-text";
   import GaugeIcon from "@lucide/svelte/icons/gauge";
   import HashIcon from "@lucide/svelte/icons/hash";
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
@@ -102,19 +101,15 @@
 
 {#snippet durationValue(value: number)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-medium tabular-nums text-foreground"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
   >
-    <ClockIcon
-      class="size-3 shrink-0 text-muted-foreground"
-      aria-hidden="true"
-    />
     <span class="min-w-0 [overflow-wrap:anywhere]">{duration(value)}</span>
   </span>
 {/snippet}
 
 {#snippet modelValue(value: string)}
   <span
-    class="inline-block min-h-5 max-w-full rounded-md bg-primary/10 px-2.5 py-[2px] font-mono text-[10.5px] leading-[14px] font-medium text-primary break-all"
+    class="inline-block min-h-5 max-w-full rounded-sm bg-well px-1.5 py-0.5 font-mono text-xs leading-tight font-medium text-foreground break-all"
   >
     {value}
   </span>
@@ -122,12 +117,8 @@
 
 {#snippet tokenValue(value: number, suffix?: string)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-semibold tabular-nums text-foreground"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-semibold tabular-nums text-foreground"
   >
-    <HashIcon
-      class="size-3 shrink-0 text-muted-foreground"
-      aria-hidden="true"
-    />
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{value.toLocaleString()}</span
     >
@@ -139,12 +130,8 @@
 
 {#snippet metricValue(value: number, suffix: string, digits = 2)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-medium tabular-nums text-foreground"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
   >
-    <GaugeIcon
-      class="size-3 shrink-0 text-muted-foreground"
-      aria-hidden="true"
-    />
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{decimal(value, digits)}</span
     >
@@ -154,17 +141,16 @@
 
 {#snippet costValue(value: number, suffix: string)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-primary/20 bg-primary/8 px-2 py-0.5 font-mono text-[10.5px] leading-tight font-medium tabular-nums text-primary"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
   >
-    <CoinsIcon class="size-3 shrink-0" aria-hidden="true" />
     <span class="min-w-0 [overflow-wrap:anywhere]">{reportedCost(value)}</span>
-    <span class="font-normal opacity-75">{suffix}</span>
+    <span class="font-normal text-muted-foreground">{suffix}</span>
   </span>
 {/snippet}
 
 {#snippet identifierValue(value: string)}
   <span
-    class="inline-block min-h-5 max-w-full rounded-md border border-hairline bg-muted/45 px-2.5 py-[2px] font-mono text-[10px] leading-[14px] font-normal text-foreground break-all"
+    class="inline-block min-h-5 max-w-full rounded-sm bg-well px-1.5 py-0.5 font-mono text-xs leading-tight font-normal text-foreground break-all"
   >
     {value}
   </span>
@@ -193,13 +179,15 @@
   {#if usageVisible}
     <section class="flex flex-col gap-2" aria-label="Usage">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <h4 class="text-[11px] font-semibold text-foreground">Usage</h4>
+        <h4 class="content-kicker flex items-center gap-2">
+          <HashIcon class="content-section-icon" aria-hidden="true" />Usage
+        </h4>
         {#if response.usageReportCount || requests > 1}
           {@render coverageValue(response.usageReportCount ?? 0, requests)}
         {/if}
       </div>
       <dl
-        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]"
+        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-xs"
       >
         {#if usage.type}
           <dt class="text-muted-foreground">Basis</dt>
@@ -290,9 +278,12 @@
       <Separator />
     {/if}
     <section class="flex flex-col gap-2" aria-label="Request details">
-      <h4 class="text-[11px] font-semibold text-foreground">Request details</h4>
+      <h4 class="content-kicker flex items-center gap-2">
+        <FileTextIcon class="content-section-icon" aria-hidden="true" />Request
+        details
+      </h4>
       <dl
-        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]"
+        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-xs"
       >
         {#if requests > 1}
           <dt class="text-muted-foreground">Requests</dt>
@@ -354,7 +345,8 @@
     <Separator />
     <section class="flex flex-col gap-2" aria-label="Runtime performance">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <h4 class="text-[11px] font-semibold text-foreground">
+        <h4 class="content-kicker flex items-center gap-2">
+          <GaugeIcon class="content-section-icon" aria-hidden="true" />
           Runtime performance
         </h4>
         {#if response.performanceReportCount || requests > 1}
@@ -365,7 +357,7 @@
         {/if}
       </div>
       <dl
-        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]"
+        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-xs"
       >
         {#if performance.promptTokens != null}
           <dt class="text-muted-foreground">Prompt evaluated</dt>
@@ -442,6 +434,9 @@
 
   .response-grid > dd {
     min-width: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--foreground);
     overflow-wrap: anywhere;
   }
 

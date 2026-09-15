@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MicIcon from "@lucide/svelte/icons/mic";
   import { Button } from "$lib/components/ui/button";
   import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import ShortcutKeys from "$lib/components/common/ShortcutKeys.svelte";
@@ -98,18 +99,17 @@
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
     <div class="min-w-0 flex-1">
       <p
-        class="text-[13px] font-medium"
+        class="content-section-title flex items-center gap-2"
         class:text-destructive={failed}
         class:text-warning={recovery}
         role="status"
       >
+        <MicIcon class="content-section-icon" aria-hidden="true" />
         {label}
       </p>
-      <div
-        class="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
-      >
+      <div class="content-meta mt-1 flex flex-wrap items-center gap-2">
         {#if recording || captureClock.seconds > 0}<span
-            class="font-mono tabular-nums"
+            class="content-value font-mono tabular-nums"
             aria-label="Capture duration">{clock}</span
           >{/if}
         {#if recording && status.autoStopState === AutoStopState.AutoStopCountdown}
@@ -181,9 +181,8 @@
           history={levels.history}
         />
       </div>
-      <span
-        class="max-w-[40%] truncate text-xs text-muted-foreground"
-        title={microphone}>{microphone}</span
+      <span class="content-meta max-w-[40%] truncate" title={microphone}
+        >{microphone}</span
       >
     </div>{/if}
 </section>

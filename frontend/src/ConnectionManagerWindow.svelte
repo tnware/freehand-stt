@@ -11,6 +11,7 @@
   } from "$lib/utils/connectionChoices";
   import ConnectionList from "$lib/components/settings/ConnectionList.svelte";
   import BuiltInConnectionDetails from "$lib/components/settings/BuiltInConnectionDetails.svelte";
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import * as WindowingService from "$bindings/windowing/service";
   import ConnectionSaveActions from "$lib/components/settings/ConnectionSaveActions.svelte";
   import PendingChangesDialog from "$lib/components/settings/PendingChangesDialog.svelte";
@@ -22,6 +23,9 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
+  import ActivityIcon from "@lucide/svelte/icons/activity";
+  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import ServerIcon from "@lucide/svelte/icons/server";
   import * as Menu from "$lib/components/ui/dropdown-menu";
   import type { ConnectionManagerRequest } from "$bindings/windowing";
 
@@ -326,10 +330,8 @@
           onclick={() => leave(false)}><ArrowLeftIcon />All connections</Button
         >{/if}
       <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <h1 class="truncate font-display text-[15px] font-semibold">
-          Connections
-        </h1>
-        {#if !fullPage}<p class="text-xs text-muted-foreground">
+        <h1 class="content-title truncate font-display">Connections</h1>
+        {#if !fullPage}<p class="content-meta">
             Saved servers and built-in runtimes
           </p>{/if}
       </div>
@@ -382,13 +384,23 @@
           class="flex min-h-0 min-w-0 flex-1 flex-col"
         >
           <div
-            class="flex min-h-10 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
+            class="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
           >
-            <h2 class="truncate text-[13px] font-medium">
-              {editor.connectionDraft?.creating
-                ? "New connection"
-                : (selected?.name ?? "Edit connection")}
-            </h2>
+            <div class="flex min-w-0 items-center gap-2.5">
+              <ProviderIcon
+                profile={selected?.builtIn
+                  ? (runtimeInstance?.provider ??
+                    selected.details.compatibilityProfile)
+                  : (editor.connectionDraft?.details.compatibilityProfile ??
+                    selected?.details.compatibilityProfile)}
+                size={22}
+              />
+              <h2 class="content-title truncate">
+                {editor.connectionDraft?.creating
+                  ? "New connection"
+                  : (selected?.name ?? "Edit connection")}
+              </h2>
+            </div>
             {#if selected}<div class="flex items-center gap-1">
                 <Menu.Root
                   ><Menu.Trigger disabled={busy}>
@@ -494,14 +506,26 @@
                 onBack={() => leave(false)}
                 onSaved={saved}
               />{/if}
-            {#if selected}<details class="border-t border-hairline pt-3">
+            {#if selected}<details
+                class="group/connection-check border-t border-hairline"
+              >
                 <summary
-                  class="cursor-pointer rounded-sm text-[13px] font-medium focus-visible:outline-ring"
-                  >Connection check · {connectionStatusLabel(
-                    editor.savedConnectionChecks[selected.id] ?? null,
-                  )}</summary
+                  class="content-disclosure flex cursor-pointer list-none items-center gap-2 rounded-sm py-3 [&::-webkit-details-marker]:hidden"
+                  ><ActivityIcon
+                    class="content-section-icon"
+                    aria-hidden="true"
+                  />
+                  <span class="min-w-0 flex-1"
+                    >Connection check · {connectionStatusLabel(
+                      editor.savedConnectionChecks[selected.id] ?? null,
+                    )}</span
+                  >
+                  <ChevronDownIcon
+                    class="content-section-icon transition-transform group-open/connection-check:rotate-180 motion-reduce:transition-none"
+                    aria-hidden="true"
+                  /></summary
                 >
-                <div class="mt-3 space-y-3">
+                <div class="space-y-3 pb-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -511,7 +535,7 @@
                       ? "Checking…"
                       : "Check connection"}</Button
                   >
-                  <p class="text-xs text-muted-foreground">
+                  <p class="content-meta">
                     Checks metadata without running a model.
                   </p>
                   {#if editor.savedConnectionCheckErrors[selected.id]}<p
@@ -542,10 +566,11 @@
           aria-label="Connection details"
           class="min-h-0 flex-1 overflow-y-auto px-5 py-5"
         >
-          <h2 class="text-[13px] font-medium">Choose a connection</h2>
-          <p
-            class="mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground"
-          >
+          <h2 class="content-section-title flex items-center gap-2">
+            <ServerIcon class="content-section-icon" aria-hidden="true" />Choose
+            a connection
+          </h2>
+          <p class="content-meta mt-2 max-w-lg">
             Select a saved server or built-in runtime from the sidebar to review
             its settings, check its connection, or choose which workflows use
             it.

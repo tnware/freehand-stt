@@ -1,5 +1,6 @@
 <script lang="ts">
   import FolderOpenIcon from "@lucide/svelte/icons/folder-open";
+  import FileAudioIcon from "@lucide/svelte/icons/file-audio";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import XIcon from "@lucide/svelte/icons/x";
   import { Button } from "$lib/components/ui/button";
@@ -93,12 +94,12 @@
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
     <div class="flex min-w-[13rem] flex-[2] items-center gap-2.5">
       {#if hasFile}
+        <FileAudioIcon class="content-section-icon" aria-hidden="true" />
         <span class="min-w-0 flex-1">
-          <span
-            class="block truncate text-[13px] font-medium"
-            title={status.fileName}>{status.fileName || "Audio file"}</span
+          <span class="content-value block truncate" title={status.fileName}
+            >{status.fileName || "Audio file"}</span
           >
-          <span class="block truncate font-mono text-[11px] text-ink-quiet">
+          <span class="content-meta block truncate tabular-nums">
             {formatBytes(size) || "size unknown"}{uploading
               ? ` · ${percent}% sent`
               : ""}
@@ -129,9 +130,7 @@
           {/if}
           Choose audio file
         </Button>
-        <span class="text-xs text-ink-quiet"
-          >{blocked || "no microphone required"}</span
-        >
+        <span class="content-meta">{blocked || "no microphone required"}</span>
       {/if}
       {#if hasFile}
         <Button
@@ -203,7 +202,7 @@
       />
     </div>
   {:else if status.message || blocked}
-    <p class="text-xs text-muted-foreground" role="status">
+    <p class="content-meta" role="status">
       {blocked || status.message}
     </p>
   {/if}
@@ -225,7 +224,7 @@
   {/if}
 
   {#if status.streamingNotice}
-    <p class="text-xs leading-relaxed text-muted-foreground">
+    <p class="content-meta">
       {status.streamingNotice}
     </p>
   {/if}

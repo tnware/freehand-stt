@@ -36,8 +36,8 @@
 >
   <div class="flex items-center justify-between gap-3">
     <div>
-      <p class="text-[13px] font-medium">Connection check</p>
-      <p class="mt-1 text-xs text-muted-foreground">
+      <p class="content-section-title">Connection check</p>
+      <p class="content-meta mt-1">
         {stale
           ? "Settings changed. Check again for current results."
           : "Metadata only. No model was invoked."}
@@ -50,7 +50,7 @@
         disabled={busy}>{busy ? "Checking…" : "Check again"}</Button
       >{/if}
   </div>
-  {#if stale}<p class="text-xs text-muted-foreground">
+  {#if stale}<p class="content-meta">
       Previous results apply to the settings that were tested.
     </p>
   {:else if result.checks?.length}<dl
@@ -67,24 +67,22 @@
               class="mt-0.5 size-4 text-muted-foreground"
             />{/if}
           <div>
-            <dt class="text-xs font-medium text-secondary-foreground">
+            <dt class="content-kicker">
               {labels[check.kind]}
             </dt>
-            <dd class="mt-0.5 text-[13px]">{check.summary}</dd>
+            <dd class="content-value mt-1">{check.summary}</dd>
             {#if check.detail && check.status !== CheckStatus.CheckPassed}<dd
-                class="mt-1 text-xs leading-relaxed text-muted-foreground"
+                class="content-meta mt-1"
               >
                 {check.detail}
               </dd>{/if}
           </div>
         </div>{/each}
-    </dl>{:else}<p class="text-xs text-muted-foreground">
+    </dl>{:else}<p class="content-meta">
       {connectionDescription(result, platform)}
     </p>{/if}
   {#if !stale}
-    <div
-      class="space-y-1 border-t border-hairline pt-3 text-xs leading-5 text-muted-foreground"
-    >
+    <div class="content-meta space-y-1 border-t border-hairline pt-3">
       <p>Inference support and inference authorization remain unverified.</p>
       {#if result.httpStatus || result.latencyMilliseconds > 0}
         <p class="flex flex-wrap gap-x-3">

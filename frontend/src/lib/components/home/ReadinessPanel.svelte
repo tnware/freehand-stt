@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
+  import ListChecksIcon from "@lucide/svelte/icons/list-checks";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
@@ -74,6 +75,7 @@
   aria-label={readiness.initialSetup ? "First-run setup" : "Task recovery"}
 >
   <PaneHeader
+    icon={ListChecksIcon}
     title={readiness.initialSetup
       ? "Set up voice transcription"
       : recoveryTitle}
@@ -84,7 +86,7 @@
         : "Voice transcription"}
   />
   <div class="mx-auto flex w-full max-w-[960px] flex-col gap-4 px-5 py-4">
-    <p class="max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+    <p class="content-meta max-w-[65ch]">
       {readiness.initialSetup
         ? "Choose a connection and model, then check that you’re ready to record."
         : "Review what needs attention below. Other tasks are still available from the activity rail."}
@@ -97,7 +99,7 @@
       <div class="flex min-w-0 flex-col gap-3">
         <section class="settings-group" aria-label="Next setup step">
           <div class="space-y-3 py-3">
-            <h3 class="text-[13px] font-semibold" aria-live="polite">
+            <h3 class="content-section-title" aria-live="polite">
               {readiness.canComplete
                 ? "Ready to record"
                 : readiness.initialSetup
@@ -105,7 +107,7 @@
                   : "Needs attention"}
             </h3>
             {#if readiness.canComplete}
-              <p class="text-xs leading-relaxed text-muted-foreground">
+              <p class="content-meta">
                 Your connection check passed, and your microphone and shortcut
                 are ready.
               </p>
@@ -120,10 +122,8 @@
                         class="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none"
                       />{/if}
                     <div class="min-w-0 flex-1">
-                      <p class="text-[13px] font-medium">{step.label}</p>
-                      <p
-                        class="mt-1 text-xs leading-relaxed break-words text-muted-foreground"
-                      >
+                      <p class="content-value">{step.label}</p>
+                      <p class="content-meta mt-1 break-words">
                         {step.detail}
                       </p>
                     </div>
@@ -174,7 +174,7 @@
         {#if complete.length}
           <details class="group border-t border-hairline">
             <summary
-              class="flex min-h-11 cursor-pointer list-none items-center gap-2 py-3 text-[13px] focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
+              class="content-disclosure flex min-h-11 cursor-pointer list-none items-center gap-2 py-3 [&::-webkit-details-marker]:hidden"
             >
               <CheckIcon class="size-4 text-success" /><span class="flex-1"
                 >{complete.length}
@@ -192,7 +192,7 @@
         {#if !readiness.initialSetup && connectionNeedsAttention && serverControls}
           <details class="group border-t border-hairline">
             <summary
-              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-3 text-[13px] focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
+              class="content-disclosure flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-3 [&::-webkit-details-marker]:hidden"
             >
               Connection and model<ChevronDownIcon
                 class="size-4 text-muted-foreground group-open:rotate-180"
@@ -219,13 +219,11 @@
 {#snippet readyStep(step: ReadinessStep)}
   <div class="flex items-start gap-3 py-3">
     <div class="min-w-0 flex-1">
-      <p class="text-[13px] font-medium">{step.label}</p>
+      <p class="content-value">{step.label}</p>
       {#if step.id === "shortcut"}<div class="mt-1">
           <ShortcutKeys value={step.detail} label="Toggle recording shortcut" />
         </div>
-      {:else}<p
-          class="mt-1 text-xs leading-relaxed break-words text-muted-foreground"
-        >
+      {:else}<p class="content-meta mt-1 break-words">
           {step.detail}
         </p>{/if}
     </div>

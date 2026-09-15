@@ -325,7 +325,7 @@
         <header
           class="@container flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
         >
-          <h2 class="min-w-0 truncate font-display text-[15px] font-semibold">
+          <h2 class="content-title min-w-0 truncate">
             {paneTitle}
           </h2>
           <WorkflowSettingsButton

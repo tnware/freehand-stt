@@ -57,9 +57,7 @@
   <div
     class="flex h-11 shrink-0 items-center gap-2 border-b border-hairline px-5"
   >
-    <h2 class="font-display text-[15px] font-semibold tracking-tight">
-      Transcript
-    </h2>
+    <h2 class="content-title">Transcript</h2>
     <span
       class="mr-auto inline-flex h-5 items-center rounded-sm border px-1.5 text-[11px] {live ||
       working
@@ -141,7 +139,7 @@
         {#if live || text}
           <div class="w-full max-w-[760px] px-5 py-3.5">
             {#if live}
-              <p class="mb-3 text-xs text-muted-foreground" role="status">
+              <p class="content-meta mb-3" role="status">
                 Live preview · text may change
               </p>
             {/if}
@@ -154,7 +152,7 @@
                   : undefined,
               }}
               label={live ? "Live transcript" : "Current transcript"}
-              class="whitespace-pre-wrap break-words text-[15px] leading-[26px]"
+              class="whitespace-pre-wrap break-words text-[15px] leading-[26px] text-foreground"
             />
           </div>
         {:else if !message}
@@ -175,7 +173,7 @@
                 ><path d="M5 10v4M9 6v12M13 3v18M17 7v10M21 10v4" /></svg
               >
             </span>
-            <p class="text-[15px] font-medium">
+            <p class="content-title">
               {failed
                 ? "No transcript to show"
                 : working
@@ -184,7 +182,7 @@
                     ? "Turn an audio file into text"
                     : "Speak into the application you’re using"}
             </p>
-            <p class="max-w-lg text-xs leading-relaxed text-muted-foreground">
+            <p class="content-meta max-w-lg">
               {failed
                 ? mode === "file"
                   ? "Use Retry above, or choose another file."

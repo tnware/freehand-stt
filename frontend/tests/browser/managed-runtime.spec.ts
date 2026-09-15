@@ -22,6 +22,31 @@ for (const backend of ["cuda", "cpu"]) {
   }) => {
     await page.goto("/tests/browser/app/?runtime&runtime-provider=whisper-cpp");
     await openRuntimes(page);
+    const catalog = page.getByRole("region", {
+      name: "Model catalog",
+      exact: true,
+    });
+    const model = catalog.getByRole("article", {
+      name: "Whisper Small",
+      exact: true,
+    });
+    await expect(
+      page.getByRole("heading", { name: "Models", exact: true }),
+    ).toHaveCount(1);
+    await expect(
+      model.getByRole("button", { name: "Get", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      model.getByRole("button", { name: "Select", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Refresh catalog", exact: true }),
+    ).toBeDisabled();
+    await model.getByRole("button", { name: /^Model details:/ }).click();
+    await expect(
+      model.getByRole("button", { name: /^Model details:/ }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
     await page.getByRole("button", { name: "Install", exact: true }).click();
     await expect(
       page.getByText("Recommended: NVIDIA GPU (CUDA)", { exact: true }),
@@ -39,6 +64,21 @@ for (const backend of ["cuda", "cpu"]) {
         name: "Download selected model",
         exact: true,
       }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Models", exact: true }),
+    ).toHaveCount(1);
+    await expect(
+      model.getByRole("button", { name: "Get", exact: true }),
+    ).toBeEnabled();
+    // Creating the instance remounts its detail owner; the same catalog and
+    // source disclosure remain available after that lifecycle transition.
+    await model.getByRole("button", { name: /^Model details:/ }).click();
+    await expect(
+      model.getByRole("button", { name: /^Model details:/ }),
+    ).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      model.getByRole("link", { name: "ggerganov/whisper.cpp", exact: true }),
     ).toBeVisible();
     expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
       "GetBinaryOptions:whisper-cpp",

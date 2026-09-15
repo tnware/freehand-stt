@@ -30,20 +30,6 @@ var llamaProvider = ggmlProvider{
 	models: []Model{{ID: "s1-mini", Name: "S1-mini by Superwhisper", Description: "v1 Q4_K_M. English transcript cleanup; not speech recognition.", Recommended: true}},
 	specs:  map[string]modelSpec{"s1-mini": {"superwhisper/s1-mini-GGUF", "34add00a48a2e5d24e5a4ee5405a99620a3a240c", "s1-mini-q4_k_m.gguf", "3b41ebe2502cbd03e811d5d16b022f5ab551eda58d62597d152f89535003c634", 484219808}},
 }
-var whisperProvider = ggmlProvider{
-	id: WhisperCPP, name: "whisper.cpp", platformRecipe: hostCPURecipe(WhisperCPP),
-	backend: compatibility.WhisperCPP, profile: modelprofile.Generic, role: compatibility.Transcription,
-	models: []Model{
-		{ID: "base", Name: "Whisper Base", Description: "Multilingual completed transcription.", Recommended: true},
-		{ID: "small", Name: "Whisper Small", Description: "Multilingual completed transcription; more memory and time than Base."},
-		{ID: "medium", Name: "Whisper Medium", Description: "Multilingual completed transcription; substantial memory and processing time."},
-	},
-	specs: map[string]modelSpec{
-		"base":   {"ggerganov/whisper.cpp", "5359861c739e955e79d9a303bcbc70fb988958b1", "ggml-base.bin", "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe", 147951465},
-		"small":  {"ggerganov/whisper.cpp", "5359861c739e955e79d9a303bcbc70fb988958b1", "ggml-small.bin", "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b", 487601967},
-		"medium": {"ggerganov/whisper.cpp", "5359861c739e955e79d9a303bcbc70fb988958b1", "ggml-medium.bin", "6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208", 1533763059},
-	},
-}
 
 func (g ggmlProvider) qualify(id string, role compatibility.Role) (Contract, error) {
 	if _, ok := g.specs[id]; !ok || role != g.role {

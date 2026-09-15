@@ -13,13 +13,13 @@ or API key. For live dictation, start with NeMo and its recommended Nemotron mod
 | Runtime         | Managed models and tasks                                                                                                                                                   | Supported computers                                   |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | NeMo-Speech.cpp | [Nemotron 3.5 Streaming](../../models/nemotron/) (recommended): live and completed transcription. [Parakeet TDT v3](../../models/parakeet/): completed transcription only. | Windows 11 x64; macOS 13+ on Apple Silicon or Intel   |
-| whisper.cpp     | Whisper Base (recommended), Small, or Medium: completed transcription only.                                                                                                | Windows 11 x64 only                                   |
+| whisper.cpp     | Whisper Tiny, Base (recommended), Small, Medium, Large v1/v2/v3, and Large v3 Turbo, with published English-only and quantized variants: completed transcription only.     | Windows 11 x64 only                                   |
 | llama.cpp       | [S1-mini by Superwhisper](../../models/s1-mini/) v1 Q4_K_M: English transcript cleanup only.                                                                               | Windows 11 x64; macOS 13.3+ on Apple Silicon or Intel |
 
 Runtime binaries and models are **not bundled with Freehand**. Installation and
 model downloads are separate, explicit actions; browsing the catalog downloads
-nothing. Managed setup supports only the models above, not arbitrary Whisper
-checkpoints or llama.cpp models. There is no managed text-to-speech runtime.
+nothing. Managed setup supports the catalog models described here. Custom model
+files require a manually managed server. There is no managed text-to-speech runtime.
 
 You can instead [configure a service manually](../connect-a-server/) on this
 computer, your network, or a hosted provider. Freehand connects to that service
@@ -112,6 +112,29 @@ download a model from its catalog, and choose **Start**. Select its
 built-in Connection for Voice or audio files. Voice uses completed transcription, not
 realtime; file response streaming is also unavailable. CPU and NVIDIA CUDA
 execution are available. Larger models need more memory and take longer to process.
+
+The catalog includes all 33 standard Whisper GGML variants published in the
+[official model repository](https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1):
+
+- **Tiny, Base, Small, and Medium:** multilingual and English-only (`.en`) models,
+  plus the published Q5 and Q8 variants of each.
+- **Large v1, v2, and v3:** multilingual models, with Q5 and Q8 for v2 and Q5 for v3.
+- **Large v3 Turbo:** multilingual, with standard, Q5, and Q8 variants.
+
+**Whisper Base** remains the recommended starting point. Choose an `.en` variant
+only for English audio; use a multilingual model for other languages. Quantized
+variants use less disk space and memory than the corresponding standard model.
+The catalog shows each download's exact size; speed and transcription quality
+depend on the model, quantization, audio, and your computer. Review the model's
+download details and choose **Get** explicitly when you are ready to download it.
+Installing the runtime or browsing this list does not download model weights.
+
+Whisper variants are grouped by family. Expand a family or search the catalog
+to find a model. Descriptions appear below model names; expand a row to inspect
+its download source and technical details.
+The same catalog is available before and after runtime installation. Model
+downloads and selection become available after installation, while the runtime
+is stopped.
 
 ### Local cleanup with S1-mini
 

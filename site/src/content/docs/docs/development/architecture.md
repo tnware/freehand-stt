@@ -836,15 +836,24 @@ and clears buffered viewer output. Showing the region again resumes direct reads
 for the retained target; pending reads from a previous viewing cannot repopulate it.
 Recent history continues
 to use compact expandable rows.
+Runtime model browsing uses one catalog component before and after installation.
+Whisper families, search, and expanded model details are local presentation state;
+they do not change qualification or invoke runtime operations. The runtime detail
+owner retains action admission, process controls, and removal confirmations.
+Catalog data and model acquisition remain Go-owned and revision/checksum pinned.
 The title bar, activity rail, sidebar, and status bar share neutral surface roles;
 the status bar exposes capture state from every pane. The command palette routes
 through the same navigation and busy-state guards as the rail.
 Page content follows the same workbench geometry as the shell: 44px headers,
-20px horizontal gutters, 15px page titles, 13px interface text, and 12px help text.
+20px horizontal gutters, 16px page titles, 13px interface text, and 12px help text.
+Shared `content-*` roles in `app.css` distinguish page titles, section headings,
+field values, technical metadata, and compact uppercase labels. Small semantic
+icons identify sections; neutral summary surfaces group key facts. Brand and
+status accents retain their action, selection, and state meanings.
 Transcript and composer text use a separate 15px/26px reading rhythm. Recording,
 file, playback, and output controls sit in docked strips separated by hairlines.
-Settings clusters use `SettingsCard` and `SettingsDisclosure` for flat divided
-rows; `settings-group` aligns labels with the outer page gutter. Shared fields
+Settings clusters use `SettingsCard` and `SettingsDisclosure` for divided rows
+on faint neutral surfaces; the group owns a consistent 12px inner inset. Shared fields
 and pickers use 32px controls, actions use 28px controls, and compact toolbars
 use the smaller variants. Native control semantics, visible focus, input
 borders, and floating menu/dialog surfaces stay explicit. Page styling never

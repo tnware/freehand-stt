@@ -3,6 +3,7 @@
   import type { Snippet } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
+  import SquarePenIcon from "@lucide/svelte/icons/square-pen";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
   import WorkflowSettingsButton from "./WorkflowSettingsButton.svelte";
@@ -137,9 +138,8 @@
   <div
     class="flex h-11 shrink-0 items-center gap-2 border-b border-hairline px-5"
   >
-    <h2 class="font-display text-[15px] font-semibold tracking-tight">
-      Compose
-    </h2>
+    <SquarePenIcon class="content-section-icon" aria-hidden="true" />
+    <h2 class="content-title">Compose</h2>
     <span
       class={cn(
         "mr-auto inline-flex h-5 items-center rounded-sm border px-1.5 text-[11px]",
@@ -191,7 +191,7 @@
       aria-describedby={`speech-character-count speech-compose-shortcut${!configured ? ` ${setupGuidanceID}` : ""}`}
       aria-keyshortcuts="Control+Enter"
       onkeydown={composerKey}
-      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-[26px] focus-visible:ring-2 focus-visible:ring-inset"
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-[26px] text-foreground focus-visible:ring-2 focus-visible:ring-inset"
       placeholder="Write or paste text to speak…"
     />
   </div>
@@ -270,10 +270,10 @@
         />
       {:else}
         <div class="flex items-center gap-3 px-5 py-3">
-          <Volume2Icon class="size-4 shrink-0 text-muted-foreground" />
+          <Volume2Icon class="content-section-icon" aria-hidden="true" />
           <div class="min-w-0 space-y-1">
-            <p class="text-[15px] font-medium">Ready when you are</p>
-            <p class="text-xs text-muted-foreground">
+            <p class="content-section-title">Ready when you are</p>
+            <p class="content-meta">
               Press Speak to generate audio. Playback and save controls appear
               here.
             </p>

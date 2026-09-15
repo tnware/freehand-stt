@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PowerIcon from "@lucide/svelte/icons/power";
+  import PaletteIcon from "@lucide/svelte/icons/palette";
   import NativePermissionsCard from "$lib/components/settings/NativePermissionsCard.svelte";
   import { platformPresentation } from "$lib/platform";
   import { Badge } from "$lib/components/ui/badge";
@@ -58,7 +60,8 @@
 {#if !deliveryOnly}
   {#if native.mac}<NativePermissionsCard />{/if}
 
-  <SettingsCard>
+  <SettingsCard title="Startup">
+    {#snippet icon()}<PowerIcon />{/snippet}
     <SettingRow
       controlID="start-with-windows"
       title={native.startTitle}
@@ -102,7 +105,8 @@
     </SettingRow>
   </SettingsCard>
 
-  <SettingsCard>
+  <SettingsCard title="Appearance">
+    {#snippet icon()}<PaletteIcon />{/snippet}
     <SettingRow
       title="Color mode"
       description={mica
