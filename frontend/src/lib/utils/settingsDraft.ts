@@ -39,6 +39,7 @@ export const copySettings = (settings: Settings): Settings => ({
     headers: { ...settings.voiceTranscription.headers },
     transcriptionOptions: {
       ...settings.voiceTranscription.transcriptionOptions,
+      nemo: { ...settings.voiceTranscription.transcriptionOptions.nemo },
     },
   },
   savedConnections: {
@@ -49,7 +50,10 @@ export const copySettings = (settings: Settings): Settings => ({
       details: { ...c.details, headers: { ...c.details.headers } },
     })),
   },
-  transcriptionOptions: { ...settings.transcriptionOptions },
+  transcriptionOptions: {
+    ...settings.transcriptionOptions,
+    nemo: { ...settings.transcriptionOptions.nemo },
+  },
   headers:
     settings.headers == null ? settings.headers : { ...settings.headers },
   postProcessing: {

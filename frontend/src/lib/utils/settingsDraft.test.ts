@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { settings } from "$lib/stores/session-fixtures";
-import { quickSettingsDraft } from "./settingsDraft";
+import { copySettings, quickSettingsDraft } from "./settingsDraft";
 
 describe("audio-file language quick settings", () => {
   it.each(["fr", "auto"])(
@@ -19,4 +19,13 @@ describe("audio-file language quick settings", () => {
       expect(applied).toEqual(before);
     },
   );
+});
+
+it("NeMo drafts do not mutate confirmed Voice or file options", () => {
+  const applied = structuredClone(settings);
+  const before = structuredClone(applied);
+  const draft = copySettings(applied);
+  draft.voiceTranscription.transcriptionOptions.nemo.normalize = true;
+  draft.transcriptionOptions.nemo.disablePunctuation = true;
+  expect(applied).toEqual(before);
 });

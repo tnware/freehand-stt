@@ -133,6 +133,7 @@ func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract
 		return Contract{}, err
 	}
 	p.Capabilities = constrain(wire.Capabilities, p.Capabilities)
+	p.Capabilities.NeMoTranscriptionControls = backend == compatibility.NeMoSpeechV1 && (id == Nemotron35 || id == ParakeetTDT)
 	wire.Capabilities = p.Capabilities
 	return Contract{Profile: p, Backend: wire}, nil
 }
@@ -208,6 +209,9 @@ func ValidateLanguage(id ID, role compatibility.Role, selected string, detected 
 }
 
 func ValidateTranscription(id ID, backend compatibility.ID, language string, options compatibility.TranscriptionOptions) error {
+	if options.NeMo != (compatibility.NeMoOptions{}) && id != Nemotron35 && id != ParakeetTDT {
+		return errors.New("NeMo transcription controls require a qualified NeMo model profile")
+	}
 	if options.Vocabulary != "" || options.VocabularyBoost != 0 {
 		if VocabularyMode(id, backend, false) != "speech-contexts" {
 			return errors.New("speech contexts require the qualified Nemotron and NeMo profiles")

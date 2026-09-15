@@ -95,6 +95,12 @@
       onChange={(id) => {
         settings.modelProfile = id;
         settings.transcriptionOptions = {
+          nemo: {
+            disablePunctuation: false,
+            normalize: false,
+            profanityFilter: false,
+            endpointingMilliseconds: 0,
+          },
           prompt: "",
           temperatureOverride: false,
           temperature: 0,
@@ -144,6 +150,7 @@
 
 <VocabularyLink {settings} />
 <TranscriptionControls
+  managed={!!settings.managedInstanceID}
   bind:options={settings.transcriptionOptions}
   capabilities={compatibility?.capabilities}
 />

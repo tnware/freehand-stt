@@ -459,7 +459,11 @@ func (s *Store) ApplySelectedConnections(v config.Settings) config.Settings {
 	defer s.mu.Unlock()
 	for _, p := range []savedconnection.Purpose{savedconnection.Transcription, savedconnection.Cleanup, savedconnection.Speech, savedconnection.Voice} {
 		if c, ok := s.connections.entries[s.connections.selected[p]]; ok {
+			previousModel := modelsettings.Model(v, p)
 			v = savedconnection.Apply(v, p, c.Details)
+			if c.Details.ManagedInstanceID != "" && previousModel != modelsettings.Model(v, p) {
+				v = s.connections.restoreModel(v, p, c.ID)
+			}
 		} else {
 			v = savedconnection.Apply(v, p, savedconnection.Extract(config.Default(), p))
 			v = savedconnection.ClearModel(v, p)

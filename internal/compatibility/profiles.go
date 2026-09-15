@@ -33,6 +33,7 @@ const (
 // Capabilities are the implemented wire contract. Model-specific advanced
 // parameters must acquire their own qualified rules before being exposed.
 type Capabilities struct {
+	NeMoTranscriptionControls   bool `json:"nemoTranscriptionControls"`
 	Realtime                    bool `json:"realtime"`
 	ServerLoadedModel           bool `json:"serverLoadedModel"`
 	VLLMTranscriptionEvents     bool `json:"vllmTranscriptionEvents"`
@@ -148,6 +149,9 @@ func Resolve(id ID, role Role) (Contract, error) {
 		route := "chat/completions"
 		if role == Realtime {
 			route = "realtime"
+			if profile.ID == NeMoSpeechV1 {
+				route = "audio/transcriptions/realtime"
+			}
 		}
 		if role == Transcription {
 			route = "audio/transcriptions"

@@ -545,6 +545,13 @@ metadata services and the production footer/panel components. Editor tests
 verify that explicit workspace checks use applied endpoints and empty credential
 drafts, route to the correct service, and respect disabled/pending states.
 
+Managed metadata tests cover all task roles: loading defers probes, readiness
+allows one check, restart invalidates cached and in-flight results, and repeated
+effects reuse the result. `voice-startup-readiness.spec.ts` verifies the footer
+and panel show **Starting runtime**, disable premature checks, and automatically
+refresh after readiness and restart. Repeat cold startup and restart on a native
+managed runtime; browser fixtures do not establish model readiness or inference.
+
 On Windows, separately verify that **Edit connection** opens the correct saved
 connection, **Choose connection** opens the manager for the current task, and
 **Speech settings** focuses that settings section. Switch tasks and connections
@@ -1169,6 +1176,25 @@ the server/runtime/model revision and distinguish transport inference evidence
 from interactive Windows acceptance. Exercise the native checklist below; a
 successful compilation or synthetic socket probe does not establish focus safety
 or window behavior. Never load inventories or add automatic inference to CI.
+
+### NeMo integration acceptance
+
+Run the focused tests in `internal/inference`, `internal/realtime`,
+`internal/speechlanguage`, `internal/modelprofile`, `internal/settings`, and
+`internal/storage`. Fixtures cover task-filtered metadata, optional health/version
+failure, credential reflection, explicit transcription WebSocket routing,
+completed/realtime option snapshots, mixed-language finals and S1-mini rejection,
+historical schema upgrades, and remembered controls across managed model changes.
+All HTTP/WebSocket servers in these tests are synthetic; they invoke no models.
+
+For native acceptance on each supported OS, use only the explicitly selected
+NeMo model. Check completed Voice, audio files, and realtime with punctuation on
+and off. Test normalization/filtering only on a server configured with the required
+assets, and endpointing only where it is enabled. Confirm the managed-asset
+explanation, independent Voice/file saves, restart persistence, and model-switch
+language review. Check metadata through a reverse-proxy prefix and verify that
+unavailable version metadata does not prevent model selection. Native capture,
+focus-safe insertion, and packaged macOS acceptance remain separate from builds.
 
 ### Unified Voice transcription
 

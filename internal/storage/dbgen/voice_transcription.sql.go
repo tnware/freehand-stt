@@ -10,19 +10,23 @@ import (
 )
 
 const getVoiceTranscription = `-- name: GetVoiceTranscription :one
-SELECT realtime, model_profile, model, language, timeout_seconds, prompt, temperature_override, temperature, captions FROM voice_transcription_settings WHERE id=1
+SELECT realtime, model_profile, model, language, timeout_seconds, prompt, temperature_override, temperature, captions, nemo_disable_punctuation, nemo_normalize, nemo_profanity_filter, nemo_endpointing_ms FROM voice_transcription_settings WHERE id=1
 `
 
 type GetVoiceTranscriptionRow struct {
-	Realtime            int64
-	ModelProfile        string
-	Model               string
-	Language            string
-	TimeoutSeconds      int64
-	Prompt              string
-	TemperatureOverride int64
-	Temperature         float64
-	Captions            int64
+	Realtime               int64
+	ModelProfile           string
+	Model                  string
+	Language               string
+	TimeoutSeconds         int64
+	Prompt                 string
+	TemperatureOverride    int64
+	Temperature            float64
+	Captions               int64
+	NemoDisablePunctuation int64
+	NemoNormalize          int64
+	NemoProfanityFilter    int64
+	NemoEndpointingMs      int64
 }
 
 func (q *Queries) GetVoiceTranscription(ctx context.Context) (GetVoiceTranscriptionRow, error) {
@@ -38,26 +42,34 @@ func (q *Queries) GetVoiceTranscription(ctx context.Context) (GetVoiceTranscript
 		&i.TemperatureOverride,
 		&i.Temperature,
 		&i.Captions,
+		&i.NemoDisablePunctuation,
+		&i.NemoNormalize,
+		&i.NemoProfanityFilter,
+		&i.NemoEndpointingMs,
 	)
 	return i, err
 }
 
 const putVoiceTranscription = `-- name: PutVoiceTranscription :exec
-INSERT INTO voice_transcription_settings (id, realtime, model_profile, model, language, timeout_seconds, prompt, temperature_override, temperature, captions)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET realtime=excluded.realtime, model_profile=excluded.model_profile, model=excluded.model, language=excluded.language, timeout_seconds=excluded.timeout_seconds, prompt=excluded.prompt, temperature_override=excluded.temperature_override, temperature=excluded.temperature, captions=excluded.captions
+INSERT INTO voice_transcription_settings (id, realtime, model_profile, model, language, timeout_seconds, prompt, temperature_override, temperature, captions, nemo_disable_punctuation, nemo_normalize, nemo_profanity_filter, nemo_endpointing_ms)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET realtime=excluded.realtime, model_profile=excluded.model_profile, model=excluded.model, language=excluded.language, timeout_seconds=excluded.timeout_seconds, prompt=excluded.prompt, temperature_override=excluded.temperature_override, temperature=excluded.temperature, captions=excluded.captions, nemo_disable_punctuation=excluded.nemo_disable_punctuation, nemo_normalize=excluded.nemo_normalize, nemo_profanity_filter=excluded.nemo_profanity_filter, nemo_endpointing_ms=excluded.nemo_endpointing_ms
 `
 
 type PutVoiceTranscriptionParams struct {
-	Realtime            int64
-	ModelProfile        string
-	Model               string
-	Language            string
-	TimeoutSeconds      int64
-	Prompt              string
-	TemperatureOverride int64
-	Temperature         float64
-	Captions            int64
+	Realtime               int64
+	ModelProfile           string
+	Model                  string
+	Language               string
+	TimeoutSeconds         int64
+	Prompt                 string
+	TemperatureOverride    int64
+	Temperature            float64
+	Captions               int64
+	NemoDisablePunctuation int64
+	NemoNormalize          int64
+	NemoProfanityFilter    int64
+	NemoEndpointingMs      int64
 }
 
 func (q *Queries) PutVoiceTranscription(ctx context.Context, arg PutVoiceTranscriptionParams) error {
@@ -71,6 +83,10 @@ func (q *Queries) PutVoiceTranscription(ctx context.Context, arg PutVoiceTranscr
 		arg.TemperatureOverride,
 		arg.Temperature,
 		arg.Captions,
+		arg.NemoDisablePunctuation,
+		arg.NemoNormalize,
+		arg.NemoProfanityFilter,
+		arg.NemoEndpointingMs,
 	)
 	return err
 }

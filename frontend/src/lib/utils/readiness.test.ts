@@ -117,6 +117,12 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     selected: { voice: "voice" },
   },
   transcriptionOptions: {
+    nemo: {
+      disablePunctuation: false,
+      normalize: false,
+      profanityFilter: false,
+      endpointingMilliseconds: 0,
+    },
     prompt: "",
     temperatureOverride: false,
     temperature: 0,
@@ -145,6 +151,12 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
     headers: {},
     timeoutSeconds: 120,
     transcriptionOptions: {
+      nemo: {
+        disablePunctuation: false,
+        normalize: false,
+        profanityFilter: false,
+        endpointingMilliseconds: 0,
+      },
       prompt: "",
       temperatureOverride: false,
       temperature: 0,
@@ -429,6 +441,7 @@ it("accepts a catalog-declared server-loaded model without a client model ID", (
       description: "Native server",
       available: true,
       capabilities: {
+        nemoTranscriptionControls: false,
         speechInstructions: false,
         speechLanguage: false,
         realtime: false,

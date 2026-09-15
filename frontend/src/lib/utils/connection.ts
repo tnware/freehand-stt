@@ -31,7 +31,8 @@ type TaskConnectionSource = Pick<
   | "sttConnectionTesting"
   | "ttsConnectionTesting"
   | "connectionResultStale"
->;
+> &
+  Partial<Pick<SettingsEditor, "managedMetadata">>;
 
 export function taskConnectionDetails(
   mode: string,
@@ -52,6 +53,7 @@ export function taskConnectionDetails(
       : settings;
   return {
     purpose,
+    runtime: source.managedMetadata?.(purpose) ?? null,
     platform: settings?.platform ?? "windows",
     task: speech
       ? "Text to speech"
@@ -111,6 +113,8 @@ export function taskConnectionStatus(
   });
   if (detail.loading) return summary("Loading", "reading settings");
   if (!detail.enabled) return summary("Off", "generation disabled");
+  if (detail.runtime && !detail.runtime.ready)
+    return summary(detail.runtime.label, detail.runtime.detail, "bg-warning");
   // A draft check must never be attributed to the applied task.
   if (detail.busy) return summary("Checking", "metadata only");
   if (detail.stale)
@@ -178,6 +182,8 @@ export const connectionStatusLabel = (
       return "Check failed";
     case ConnectionErrorKind.ConnectionErrorTimeout:
       return "Timed out";
+    case ConnectionErrorKind.ConnectionErrorRuntimeUnavailable:
+      return "Runtime unavailable";
     default:
       return "Network failed";
   }
@@ -217,6 +223,8 @@ export const connectionDescription = (
       return "Review the displayed endpoint settings and credential draft before checking again.";
     case ConnectionErrorKind.ConnectionErrorTimeout:
       return "The metadata check did not respond within 15 seconds.";
+    case ConnectionErrorKind.ConnectionErrorRuntimeUnavailable:
+      return "The selected local runtime is not ready. Wait for startup or start it in runtime management.";
     default:
       return "The endpoint could not be reached over the network.";
   }

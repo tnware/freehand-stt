@@ -4,6 +4,10 @@ import {
   type QuickSettingsPatch,
 } from "$lib/utils/settingsDraft";
 import { VoiceScope, type VoicesResult } from "$bindings/inference";
+import {
+  managedConnectionMetadata,
+  type RuntimeMetadataSource,
+} from "$lib/utils/managedConnectionMetadata";
 import { connectionInputKey } from "$lib/utils/connectionInputs";
 import type { Edit } from "$bindings/modelsettings";
 import {
@@ -114,10 +118,23 @@ export class SettingsEditor {
     service: SettingsEditorServices,
     messages: SessionMessages,
     refreshHistory: () => Promise<void>,
+    private readonly runtimeMetadata?: RuntimeMetadataSource,
   ) {
     this.#service = service;
     this.#messages = messages;
     this.#refreshHistory = refreshHistory;
+  }
+  managedMetadata(purpose: Purpose, settings = this.applied) {
+    return managedConnectionMetadata(settings, purpose, this.runtimeMetadata);
+  }
+  #metadataInputKey(settings: Settings, purpose: Purpose) {
+    return (
+      connectionInputKey(settings, purpose) +
+      (this.managedMetadata(purpose, settings)?.key ?? "")
+    );
+  }
+  #metadataBlocked(purpose: Purpose, settings = this.applied) {
+    return this.managedMetadata(purpose, settings)?.ready === false;
   }
   #modelDrafts = $state<Edit[]>([]);
   draft = $state<Settings | null>(null);
@@ -970,7 +987,7 @@ export class SettingsEditor {
     return !!(
       tested &&
       settings &&
-      tested !== connectionInputKey(settings, purpose)
+      tested !== this.#metadataInputKey(settings, purpose)
     );
   }
 
@@ -981,8 +998,14 @@ export class SettingsEditor {
   async testVoiceConnection() {
     const settings = this.applied;
     const id = settings?.savedConnections.selected?.voice;
-    if (!settings || !id || this.voiceConnectionTesting) return;
-    const key = connectionInputKey(settings, Purpose.Voice);
+    if (
+      !settings ||
+      !id ||
+      this.voiceConnectionTesting ||
+      this.#metadataBlocked(Purpose.Voice, settings)
+    )
+      return;
+    const key = this.#metadataInputKey(settings, Purpose.Voice);
     const revision = this.#voiceConnectionRevision;
     this.voiceConnectionTesting = true;
     this.voiceConnection = null;
@@ -994,7 +1017,7 @@ export class SettingsEditor {
       if (
         revision === this.#voiceConnectionRevision &&
         this.applied &&
-        key === connectionInputKey(this.applied, Purpose.Voice)
+        key === this.#metadataInputKey(this.applied, Purpose.Voice)
       ) {
         this.voiceConnection = result;
         this.#testedInputs[Purpose.Voice] = key;
@@ -1012,12 +1035,12 @@ export class SettingsEditor {
   get voiceConnectionChecked(): boolean {
     return (
       !!this.applied &&
-      this.#voiceTestID === connectionInputKey(this.applied, Purpose.Voice)
+      this.#voiceTestID === this.#metadataInputKey(this.applied, Purpose.Voice)
     );
   }
   get currentVoiceConnection(): ConnectionResult | null {
     return this.applied &&
-      this.#voiceTestID === connectionInputKey(this.applied, Purpose.Voice)
+      this.#voiceTestID === this.#metadataInputKey(this.applied, Purpose.Voice)
       ? this.voiceConnection
       : null;
   }
@@ -1047,7 +1070,7 @@ export class SettingsEditor {
           : "empty";
     return this.applied &&
       this.#automaticMetadataInputs[purpose] ===
-        connectionInputKey(this.applied, purpose)
+        this.#metadataInputKey(this.applied, purpose)
       ? "failed"
       : "idle";
   }
@@ -1102,8 +1125,12 @@ export class SettingsEditor {
       this.quickSettingsPending.length
     )
       return;
-    if (this.connectionMetadataBusy(purpose)) return;
-    const key = connectionInputKey(settings, purpose);
+    if (
+      this.connectionMetadataBusy(purpose) ||
+      this.#metadataBlocked(purpose, settings)
+    )
+      return;
+    const key = this.#metadataInputKey(settings, purpose);
     const retry =
       deliberateEntry && this.connectionMetadataStatus(purpose) === "failed";
     if (
@@ -1134,8 +1161,13 @@ export class SettingsEditor {
     apiKey = this.apiKey,
     clearExistingMessages = true,
   ) {
-    if (this.sttConnectionTesting || !settings) return;
-    const inputKey = connectionInputKey(settings, Purpose.Transcription);
+    if (
+      this.sttConnectionTesting ||
+      !settings ||
+      this.#metadataBlocked(Purpose.Transcription, settings)
+    )
+      return;
+    const inputKey = this.#metadataInputKey(settings, Purpose.Transcription);
     const revision = this.#sttConnectionRevision;
     this.connection = null;
     delete this.#testedInputs[Purpose.Transcription];
@@ -1177,8 +1209,13 @@ export class SettingsEditor {
     settings = this.draft,
     apiKey = this.processingAPIKey,
   ) {
-    if (this.processingConnectionTesting || !settings) return;
-    const inputKey = connectionInputKey(settings, Purpose.Cleanup);
+    if (
+      this.processingConnectionTesting ||
+      !settings ||
+      this.#metadataBlocked(Purpose.Cleanup, settings)
+    )
+      return;
+    const inputKey = this.#metadataInputKey(settings, Purpose.Cleanup);
     const revision = this.#processingConnectionRevision;
     this.processingConnection = null;
     delete this.#testedInputs[Purpose.Cleanup];
@@ -1216,8 +1253,13 @@ export class SettingsEditor {
     settings = this.draft,
     apiKey = this.ttsAPIKey,
   ) {
-    if (this.ttsConnectionTesting || !settings) return;
-    const inputKey = connectionInputKey(settings, Purpose.Speech);
+    if (
+      this.ttsConnectionTesting ||
+      !settings ||
+      this.#metadataBlocked(Purpose.Speech, settings)
+    )
+      return;
+    const inputKey = this.#metadataInputKey(settings, Purpose.Speech);
     const revision = this.#ttsConnectionRevision;
     this.ttsConnection = null;
     delete this.#testedInputs[Purpose.Speech];

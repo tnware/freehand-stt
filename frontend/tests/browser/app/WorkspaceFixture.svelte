@@ -155,6 +155,7 @@
       description: "Synthetic speech profile",
       reasoningOffRequired: false,
       capabilities: {
+        nemoTranscriptionControls: false,
         speechInstructions: false,
         speechLanguage: false,
         realtime: false,

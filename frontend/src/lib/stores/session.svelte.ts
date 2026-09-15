@@ -63,8 +63,14 @@ export class Session {
     this.history = new HistoryState(bindings.history, this.messages, () =>
       this.files.acknowledgeHistory(),
     );
-    this.editor = new SettingsEditor(bindings, this.messages, () =>
-      this.history.refresh(),
+    this.editor = new SettingsEditor(
+      bindings,
+      this.messages,
+      () => this.history.refresh(),
+      {
+        statusFor: (id) => this.runtime?.statusFor(id),
+        pendingFor: (id) => this.runtime?.pendingFor(id) ?? "",
+      },
     );
     this.runtime = new ManagedRuntimeState(
       bindings.runtime,

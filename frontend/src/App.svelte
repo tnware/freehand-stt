@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Purpose } from "$bindings/savedconnection";
   import { windowMaterial } from "$lib/platform";
   import { onMount, tick, untrack } from "svelte";
   import { Events, Window } from "@wailsio/runtime";
@@ -62,7 +63,6 @@
   import { subscribeSessionEvents } from "$lib/stores/session-events";
   import { activeAppearanceMode } from "$lib/appearance";
   import {
-    shouldAutomaticallyTestConnection,
     taskConnectionStatus,
     taskConnectionDetails,
   } from "$lib/utils/connection";
@@ -426,37 +426,16 @@
     untrack(() => setMode(mode));
   });
 
-  // A bounded metadata-only probe makes readiness real rather than requiring
-  // the user to manufacture connection state manually. Failed checks remain
-  // stable until an explicit retry or a confirmed STT profile change.
+  // Managed metadata waits for model loading, then refreshes once per runtime
+  // lifecycle. Manual endpoint failures stay stable until an explicit retry.
   $effect(() => {
     const settings = session.editor.applied;
-    if (
-      inputMode !== "file" ||
-      !settings ||
-      settings.configuration.recoveryRequired ||
-      !shouldAutomaticallyTestConnection(
-        settings,
-        session.editor.sttConnectionChecked,
-        session.editor.sttConnectionTesting,
-      )
-    )
-      return;
-    void session.editor.testConnection(settings, "", false);
+    if (settings?.setupCompleted && inputMode === "file")
+      void session.editor.ensureConnectionMetadata(Purpose.Transcription);
   });
-
   $effect(() => {
-    const settings = session.editor.applied;
-    if (
-      inputMode !== "voice" ||
-      !settings ||
-      settings.configuration.recoveryRequired ||
-      !settings.savedConnections.selected?.voice ||
-      session.editor.voiceConnectionChecked ||
-      session.editor.voiceConnectionTesting
-    )
-      return;
-    void session.editor.testVoiceConnection();
+    if (inputMode === "voice")
+      void session.editor.ensureConnectionMetadata(Purpose.Voice);
   });
 
   onMount(() => {

@@ -26,7 +26,9 @@
     onSettings: () => void;
   } = $props();
   const current = $derived(
-    !details.stale && !details.busy ? details.result : null,
+    !details.stale && !details.busy && details.runtime?.ready !== false
+      ? details.result
+      : null,
   );
   const attention = $derived(
     current?.checks?.filter(
@@ -66,6 +68,9 @@
       <p class="text-xs text-muted-foreground">
         Choose a saved connection for this task.
       </p>
+    {:else if details.runtime && !details.runtime.ready}
+      <StatusBadge tone="warning">{details.runtime.label}</StatusBadge>
+      <p class="text-xs text-muted-foreground">{details.runtime.detail}</p>
     {:else if details.busy}<p class="flex items-center gap-2">
         <LoaderCircleIcon
           class="size-4 animate-spin motion-reduce:animate-none"
@@ -122,6 +127,7 @@
         disabled={disabled ||
           details.loading ||
           details.busy ||
+          details.runtime?.ready === false ||
           !details.selected}
         onclick={onCheck}
       >

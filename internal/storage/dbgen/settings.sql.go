@@ -215,7 +215,7 @@ func (q *Queries) GetSpeech(ctx context.Context) (GetSpeechRow, error) {
 }
 
 const getTranscription = `-- name: GetTranscription :one
-SELECT model_profile, model, language, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_temperature_override, transcription_options_temperature FROM transcription_settings WHERE id=1
+SELECT model_profile, model, language, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_temperature_override, transcription_options_temperature, nemo_disable_punctuation, nemo_normalize, nemo_profanity_filter, nemo_endpointing_ms FROM transcription_settings WHERE id=1
 `
 
 type GetTranscriptionRow struct {
@@ -227,6 +227,10 @@ type GetTranscriptionRow struct {
 	TranscriptionOptionsPrompt              string
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
+	NemoDisablePunctuation                  int64
+	NemoNormalize                           int64
+	NemoProfanityFilter                     int64
+	NemoEndpointingMs                       int64
 }
 
 func (q *Queries) GetTranscription(ctx context.Context) (GetTranscriptionRow, error) {
@@ -241,6 +245,10 @@ func (q *Queries) GetTranscription(ctx context.Context) (GetTranscriptionRow, er
 		&i.TranscriptionOptionsPrompt,
 		&i.TranscriptionOptionsTemperatureOverride,
 		&i.TranscriptionOptionsTemperature,
+		&i.NemoDisablePunctuation,
+		&i.NemoNormalize,
+		&i.NemoProfanityFilter,
+		&i.NemoEndpointingMs,
 	)
 	return i, err
 }
@@ -426,9 +434,9 @@ func (q *Queries) PutSpeech(ctx context.Context, arg PutSpeechParams) error {
 }
 
 const putTranscription = `-- name: PutTranscription :exec
-INSERT INTO transcription_settings (id, model_profile, model, language, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_temperature_override, transcription_options_temperature)
-VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, model=excluded.model, language=excluded.language, transcription_timeout_seconds=excluded.transcription_timeout_seconds, file_transcription_timeout_seconds=excluded.file_transcription_timeout_seconds, transcription_options_prompt=excluded.transcription_options_prompt, transcription_options_temperature_override=excluded.transcription_options_temperature_override, transcription_options_temperature=excluded.transcription_options_temperature
+INSERT INTO transcription_settings (id, model_profile, model, language, transcription_timeout_seconds, file_transcription_timeout_seconds, transcription_options_prompt, transcription_options_temperature_override, transcription_options_temperature, nemo_disable_punctuation, nemo_normalize, nemo_profanity_filter, nemo_endpointing_ms)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET model_profile=excluded.model_profile, model=excluded.model, language=excluded.language, transcription_timeout_seconds=excluded.transcription_timeout_seconds, file_transcription_timeout_seconds=excluded.file_transcription_timeout_seconds, transcription_options_prompt=excluded.transcription_options_prompt, transcription_options_temperature_override=excluded.transcription_options_temperature_override, transcription_options_temperature=excluded.transcription_options_temperature, nemo_disable_punctuation=excluded.nemo_disable_punctuation, nemo_normalize=excluded.nemo_normalize, nemo_profanity_filter=excluded.nemo_profanity_filter, nemo_endpointing_ms=excluded.nemo_endpointing_ms
 `
 
 type PutTranscriptionParams struct {
@@ -440,6 +448,10 @@ type PutTranscriptionParams struct {
 	TranscriptionOptionsPrompt              string
 	TranscriptionOptionsTemperatureOverride int64
 	TranscriptionOptionsTemperature         float64
+	NemoDisablePunctuation                  int64
+	NemoNormalize                           int64
+	NemoProfanityFilter                     int64
+	NemoEndpointingMs                       int64
 }
 
 func (q *Queries) PutTranscription(ctx context.Context, arg PutTranscriptionParams) error {
@@ -452,6 +464,10 @@ func (q *Queries) PutTranscription(ctx context.Context, arg PutTranscriptionPara
 		arg.TranscriptionOptionsPrompt,
 		arg.TranscriptionOptionsTemperatureOverride,
 		arg.TranscriptionOptionsTemperature,
+		arg.NemoDisablePunctuation,
+		arg.NemoNormalize,
+		arg.NemoProfanityFilter,
+		arg.NemoEndpointingMs,
 	)
 	return err
 }

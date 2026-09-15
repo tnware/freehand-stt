@@ -23,6 +23,7 @@ const nemotron: Profile = {
     { code: "fr-FR", label: "French (France)" },
   ],
   capabilities: {
+    nemoTranscriptionControls: true,
     realtime: true,
     serverLoadedModel: true,
     vllmTranscriptionEvents: false,

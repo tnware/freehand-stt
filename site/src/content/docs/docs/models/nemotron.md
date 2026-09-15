@@ -46,9 +46,14 @@ for Voice, audio files, or both. Nemotron accepts up to 32 phrases, each up to
 128 UTF-8 bytes, with 2048 bytes total. **Vocabulary strength** runs from 0 to 5.
 Reuse the list with other supported models; see [Vocabulary](../../guides/vocabulary/).
 
-Freehand requests verbatim output with the model's native punctuation and
-removes the terminal language tag from displayed text. Vocabulary guides
-recognition; use the separate Cleanup stage for rewrite instructions.
+By default, Freehand requests verbatim output with the model's native punctuation.
+[NeMo transcription controls](../../backends/nemo-speech/#transcription-controls)
+let you change punctuation and request server-side normalization or filtering.
+The terminal language tag is removed from displayed text and retained as language
+evidence, together with structured response metadata when available. Realtime
+finals retain languages across the whole recording so a later English turn does
+not erase earlier non-English evidence for cleanup. Vocabulary guides recognition;
+use the separate Cleanup stage for rewrite instructions.
 
 Live results are provisional. The final transcript replaces the preview when
 you stop recording, then follows your normal cleanup and delivery settings.

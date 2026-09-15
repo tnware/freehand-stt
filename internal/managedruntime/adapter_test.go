@@ -131,7 +131,7 @@ func managedAdapterFixture(t *testing.T, root string) (*nemoAdapter, *[]string) 
 				} else if r.URL.Path == "/v1/audio/transcriptions" && r.Method == http.MethodPost {
 					w.Header().Set("Content-Type", "application/json")
 					w.Write([]byte(`{"text":"fixture transcript"}`))
-				} else if r.URL.Path == "/v1/realtime" {
+				} else if r.URL.Path == "/v1/audio/transcriptions/realtime" {
 					conn, err := websocket.Accept(w, r, nil)
 					if err != nil {
 						return

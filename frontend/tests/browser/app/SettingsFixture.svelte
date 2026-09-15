@@ -126,6 +126,7 @@
       description: "Model options",
       reasoningOffRequired: false,
       capabilities: {
+        nemoTranscriptionControls: false,
         realtime: false,
         serverLoadedModel: false,
         vllmTranscriptionEvents: false,

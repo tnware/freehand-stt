@@ -1,4 +1,5 @@
 <script lang="ts">
+  import NeMoTranscriptionControls from "../settings/NeMoTranscriptionControls.svelte";
   import SettingsCard from "../settings/SettingsCard.svelte";
   import SettingsDisclosure from "../settings/SettingsDisclosure.svelte";
   import RuntimeModelPicker from "../settings/RuntimeModelPicker.svelte";
@@ -99,6 +100,12 @@
       modelProfile: selected.id,
       realtime: cfg.realtime && selected.capabilities.realtime,
       transcriptionOptions: {
+        nemo: {
+          disablePunctuation: false,
+          normalize: false,
+          profanityFilter: false,
+          endpointingMilliseconds: 0,
+        },
         prompt: "",
         temperatureOverride: false,
         temperature: 0,
@@ -373,6 +380,16 @@
 {/snippet}
 
 {#snippet finishingControls()}
+  {#if !sidebar && profile?.capabilities.nemoTranscriptionControls}
+    <NeMoTranscriptionControls
+      options={cfg.transcriptionOptions.nemo}
+      realtime={cfg.realtime}
+      {managed}
+      disabled={busy}
+      onChange={(nemo) =>
+        update({ transcriptionOptions: { ...cfg.transcriptionOptions, nemo } })}
+    />
+  {/if}
   <VocabularyLink {settings} voice />
   {#if draft && !cfg.realtime}
     <SettingsDisclosure

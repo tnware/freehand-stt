@@ -235,6 +235,12 @@ elapsed time rather than an estimated percentage. GPU startup includes warm-up;
 loading and warm-up may appear as one phase when the runtime cannot report them
 separately. Wait for **Running** before using the runtime.
 
+The workflow connection status shows **Starting runtime** during loading and
+warm-up. Its metadata check waits until the runtime is ready, then refreshes
+automatically. Stopping or restarting the runtime clears the relevance of an
+earlier check; a new check runs after startup finishes. You do not need to retry
+a connection check while the model is still loading.
+
 **Start** and **Stop** show their pending action immediately. The runtime page
 and workflow sidebar then follow the reported state, including startup stages,
 completion, and errors. Each selected local connection has these controls directly

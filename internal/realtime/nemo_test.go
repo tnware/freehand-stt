@@ -11,13 +11,15 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/tnware/freehand-stt/internal/audio"
+	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/config"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
 func fixtureServer(t *testing.T, after func(context.Context, *websocket.Conn), options chan<- map[string]any) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/v1/realtime" || r.URL.RawQuery != "" || r.Header.Get("Authorization") != "Bearer fixture-key" {
+		if r.URL.Path != "/v1/audio/transcriptions/realtime" || r.URL.RawQuery != "" || r.Header.Get("Authorization") != "Bearer fixture-key" {
 			t.Error("unexpected upgrade target or authentication")
 			http.Error(w, "bad request", 400)
 			return
@@ -59,6 +61,48 @@ func fixtureConfig(server *httptest.Server) config.VoiceTranscriptionSettings {
 	return v
 }
 
+func TestNeMoControlsAndMixedFinalLanguages(t *testing.T) {
+	opts := make(chan map[string]any, 1)
+	server := fixtureServer(t, func(ctx context.Context, c *websocket.Conn) {
+		for {
+			kind, body, err := c.Read(ctx)
+			if err != nil {
+				return
+			}
+			if kind == websocket.MessageText && strings.Contains(string(body), "input_audio_buffer.commit") {
+				for _, event := range []string{
+					`{"type":"conversation.item.input_audio_transcription.completed","transcript":"Bonjour. <fr-FR>"}`,
+					`{"type":"conversation.item.input_audio_transcription.completed","transcript":"Hello.","language":"en-US","languages":["de-DE"]}`,
+					`{"type":"input_audio_buffer.committed"}`,
+				} {
+					_ = c.Write(ctx, websocket.MessageText, []byte(event))
+				}
+				return
+			}
+		}
+	}, opts)
+	defer server.Close()
+	cfg := fixtureConfig(server)
+	cfg.TranscriptionOptions.NeMo = compatibility.NeMoOptions{DisablePunctuation: true, Normalize: true, ProfanityFilter: true, EndpointingMilliseconds: 1200}
+	session, err := Open(t.Context(), cfg, "fixture-key", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.TranscriptionOptions.NeMo = compatibility.NeMoOptions{}
+	session.Pipe.Close()
+	result := session.Wait()
+	if result.Err != nil || result.Text != "Bonjour. Hello." || strings.Join(result.Languages, ",") != "fr-FR,de-DE,en-US" {
+		t.Fatalf("lost language evidence: %+v", result)
+	}
+	if err := modelprofile.ValidateLanguage(modelprofile.S1Mini, compatibility.PostProcessing, "auto", result.Languages); err == nil {
+		t.Fatal("English-only cleanup admitted a multilingual final")
+	}
+	fields := (<-opts)["session"].(map[string]any)
+	if fields["automatic_punctuation"] != false || fields["verbatim"] != false || fields["profanity_filter"] != true || fields["endpointing_ms"] != float64(1200) {
+		t.Fatalf("controls were not snapshotted: %v", fields)
+	}
+}
+
 func TestFinalReplacesPartialAndConfigurationUsesVocabulary(t *testing.T) {
 	opts := make(chan map[string]any, 1)
 	server := fixtureServer(t, func(ctx context.Context, c *websocket.Conn) {
@@ -93,7 +137,7 @@ func TestFinalReplacesPartialAndConfigurationUsesVocabulary(t *testing.T) {
 	}
 	session.Pipe.Close()
 	result := session.Wait()
-	if result.Err != nil || result.Text != "Correct final words." || result.Language != "en-US" || result.AudioMilliseconds != 20 {
+	if result.Err != nil || result.Text != "Correct final words." || strings.Join(result.Languages, ",") != "en-US" || result.AudioMilliseconds != 20 {
 		t.Fatalf("wrong final result: %#v", result)
 	}
 	if len(updates) != 2 || updates[0].Partial != "provisional words" || updates[1].Partial != "" || updates[1].Final != result.Text {

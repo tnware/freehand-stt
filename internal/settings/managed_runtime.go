@@ -90,8 +90,13 @@ func SaveManagedInstances(s *Service, instances []managedruntime.Instance) error
 		if next.VoiceTranscription.ManagedInstanceID != "" {
 			next.VoiceTranscription.Realtime = next.VoiceTranscription.Realtime && config.VoiceRealtimeEligible(next.VoiceTranscription)
 		}
-		if err := config.Validate(next); err != nil {
+		// Inventory changes preserve task language; request admission still requires
+		// a language supported by the newly selected model.
+		if err := config.ValidateStored(next); err != nil {
 			return err
+		}
+		if store, ok := s.store.(interface{ SaveManagedInventory(config.Settings) error }); ok {
+			return store.SaveManagedInventory(next)
 		}
 		return s.store.Save(next)
 	}()

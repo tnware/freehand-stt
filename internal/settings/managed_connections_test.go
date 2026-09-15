@@ -58,6 +58,9 @@ func TestManagedModelSwitchReconcilesVoiceMode(t *testing.T) {
 				}
 			}
 			next := s.current()
+			next.Language = "de-DE"
+			next.VoiceTranscription.Language = "fr-FR"
+			next.VoiceTranscription.TranscriptionOptions.NeMo = compatibility.NeMoOptions{Normalize: true, DisablePunctuation: true, ProfanityFilter: true, EndpointingMilliseconds: 1200}
 			next.VoiceTranscription.Realtime = tc.realtime
 			next.VoiceTranscription.Captions = false
 			next.VoiceTranscription.TimeoutSeconds = 123
@@ -103,6 +106,9 @@ func TestManagedModelSwitchReconcilesVoiceMode(t *testing.T) {
 					}
 					wantVoice.Model, wantVoice.ModelProfile = model, contract.ModelProfile
 					wantVoice.Realtime = false
+					if model == "parakeet-tdt" {
+						wantVoice.TranscriptionOptions.NeMo = compatibility.NeMoOptions{}
+					}
 				}
 				reloaded, err := store.Load()
 				if err != nil {

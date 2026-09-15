@@ -19,6 +19,8 @@ const (
 )
 
 type MetadataResult struct {
+	Models              []ModelMetadata
+	ServerVersion       string
 	Reachable           bool
 	Probe               string
 	RequestedURL        string
@@ -85,11 +87,19 @@ func (c *Client) TestMetadata(ctx context.Context, base, health, key, model stri
 		return result
 	}
 	if health != "" {
+		var status struct {
+			Version string `json:"version"`
+		}
+		if json.Unmarshal(body, &status) == nil && len(status.Version) <= 64 {
+			result.ServerVersion = safePeerString(status.Version, key)
+		}
 		return result
 	}
 	var list struct {
 		Data []struct {
-			ID string `json:"id"`
+			ID         string `json:"id"`
+			Capability string `json:"capability"`
+			Device     string `json:"device"`
 		} `json:"data"`
 	}
 	if json.Unmarshal(body, &list) != nil || list.Data == nil {
@@ -114,6 +124,11 @@ func (c *Client) TestMetadata(ctx context.Context, base, health, key, model stri
 		}
 		seen[value.ID] = struct{}{}
 		result.ModelIDs = append(result.ModelIDs, value.ID)
+		device := ""
+		if len(value.Device) <= 64 {
+			device = safePeerString(value.Device, key)
+		}
+		result.Models = append(result.Models, ModelMetadata{ID: value.ID, Capability: advertisedCapability(value.Capability), Device: device})
 	}
 	return result
 }

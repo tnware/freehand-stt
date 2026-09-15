@@ -19,7 +19,7 @@ func (q *Queries) ClearRememberedModels(ctx context.Context) error {
 }
 
 const listRememberedModels = `-- name: ListRememberedModels :many
-SELECT connection_id,purpose,model,selected,profile,prompt,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,voice,speech_language,speech_instructions FROM remembered_models ORDER BY connection_id,purpose,model LIMIT 16385
+SELECT connection_id,purpose,model,selected,profile,prompt,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,voice,speech_language,speech_instructions, nemo_disable_punctuation, nemo_normalize, nemo_profanity_filter, nemo_endpointing_ms FROM remembered_models ORDER BY connection_id,purpose,model LIMIT 16385
 `
 
 func (q *Queries) ListRememberedModels(ctx context.Context) ([]RememberedModel, error) {
@@ -46,6 +46,10 @@ func (q *Queries) ListRememberedModels(ctx context.Context) ([]RememberedModel, 
 			&i.Voice,
 			&i.SpeechLanguage,
 			&i.SpeechInstructions,
+			&i.NemoDisablePunctuation,
+			&i.NemoNormalize,
+			&i.NemoProfanityFilter,
+			&i.NemoEndpointingMs,
 		); err != nil {
 			return nil, err
 		}
@@ -61,24 +65,28 @@ func (q *Queries) ListRememberedModels(ctx context.Context) ([]RememberedModel, 
 }
 
 const putRememberedModel = `-- name: PutRememberedModel :exec
-INSERT INTO remembered_models (connection_id,purpose,model,selected,profile,prompt,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,voice,speech_language,speech_instructions) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+INSERT INTO remembered_models (connection_id,purpose,model,selected,profile,prompt,temperature_override,temperature,limit_output_tokens,max_output_tokens,disable_reasoning,voice,speech_language,speech_instructions, nemo_disable_punctuation, nemo_normalize, nemo_profanity_filter, nemo_endpointing_ms) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type PutRememberedModelParams struct {
-	ConnectionID        string
-	Purpose             string
-	Model               string
-	Selected            int64
-	Profile             string
-	Prompt              string
-	TemperatureOverride int64
-	Temperature         float64
-	LimitOutputTokens   int64
-	MaxOutputTokens     int64
-	DisableReasoning    int64
-	Voice               string
-	SpeechLanguage      string
-	SpeechInstructions  string
+	ConnectionID           string
+	Purpose                string
+	Model                  string
+	Selected               int64
+	Profile                string
+	Prompt                 string
+	TemperatureOverride    int64
+	Temperature            float64
+	LimitOutputTokens      int64
+	MaxOutputTokens        int64
+	DisableReasoning       int64
+	Voice                  string
+	SpeechLanguage         string
+	SpeechInstructions     string
+	NemoDisablePunctuation int64
+	NemoNormalize          int64
+	NemoProfanityFilter    int64
+	NemoEndpointingMs      int64
 }
 
 func (q *Queries) PutRememberedModel(ctx context.Context, arg PutRememberedModelParams) error {
@@ -97,6 +105,10 @@ func (q *Queries) PutRememberedModel(ctx context.Context, arg PutRememberedModel
 		arg.Voice,
 		arg.SpeechLanguage,
 		arg.SpeechInstructions,
+		arg.NemoDisablePunctuation,
+		arg.NemoNormalize,
+		arg.NemoProfanityFilter,
+		arg.NemoEndpointingMs,
 	)
 	return err
 }

@@ -47,11 +47,14 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 	if !contract.Capabilities.ServerLoadedModel {
 		_ = mw.WriteField("model", model)
 	}
-	_ = mw.WriteField("response_format", "json")
+	format := "json"
 	if contract.ID == compatibility.NeMoSpeechV1 {
-		_ = mw.WriteField("automatic_punctuation", "true")
-		_ = mw.WriteField("verbatim", "true")
+		format = "verbose_json"
+		if err := writeNeMoOptions(mw, c.transcriptionOptions.NeMo); err != nil {
+			return TranscriptionResult{}, err
+		}
 	}
+	_ = mw.WriteField("response_format", format)
 	if language != "" {
 		_ = mw.WriteField("language", language)
 	}
@@ -101,11 +104,13 @@ func (c *Client) Transcribe(ctx context.Context, base, model, language, key stri
 		return TranscriptionResult{}, err
 	}
 	text := strings.TrimSpace(result.Text)
-	if c.modelProfile == modelprofile.Nemotron35 {
-		text, _ = modelprofile.StripNemotronLanguageTag(text)
-	}
 	if key != "" && strings.Contains(text, key) {
 		return TranscriptionResult{}, &Error{Kind: "credential_reflection", Message: "transcription response rejected"}
+	}
+	if c.modelProfile == modelprofile.Nemotron35 {
+		var detected string
+		text, detected = modelprofile.StripNemotronLanguageTag(text)
+		result.Metadata.DetectedLanguages = mergeLanguages(result.Metadata.DetectedLanguages, []string{detected})
 	}
 	if result.Metadata.RequestID == "" {
 		result.Metadata.RequestID = metadataFromHeaders(resp.Header, key).RequestID

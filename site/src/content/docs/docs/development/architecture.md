@@ -312,6 +312,27 @@ labels do not infer permissions from a user agent. Mica is Windows-only. AppKit
 operations belong to the main thread, and `internal/app` releases native target state
 and SQLite after feature shutdown through Wails `PostShutdown`.
 
+### NeMo metadata and model preferences
+
+NeMo connection checks retain bounded `/v1/models` IDs, capability labels, and
+device strings. Transcription choices exclude explicitly incompatible capabilities;
+missing capability metadata stays unknown. An optional, two-second `/health`
+probe beside the configured `/v1` prefix supplies the runtime version without
+changing origin or overriding a custom health path. Failure of this optional
+probe does not invalidate a successful model inventory. Metadata never chooses
+model profiles or triggers inference.
+
+`compatibility.NeMoOptions` is a value-only snapshot shared by completed and
+realtime transports. `config` owns active controls, `modelsettings` owns the
+per-connection/use/model subset, and migration 00004 plus sqlc queries persist
+both in the existing transaction. Zero values preserve punctuation-on, verbatim,
+filter-off behavior; endpointing zero omits the override. Asset availability is
+not inferred from metadata. Runtime inventory changes restore the selected
+model's remembered controls, or defaults for a newly selected model, preserving
+task languages and manual connection selections. The internal inventory save
+accepts bounded retained language preferences; renderer saves and request
+admission still enforce the selected model's language contract.
+
 ## Optional realtime dictation
 
 Qualified realtime combinations include Nemotron 3.5 on NeMo-Speech.cpp v0.1.0
@@ -326,6 +347,16 @@ the Voice credential for either transport, while files capture only their own ke
 The completed Voice snapshot adapts onto the existing STT request fields without
 changing persistent file settings. Native captions carry a bounded transient tail
 in one fixed row; they never become a delivery source or take focus.
+
+NeMo uses `audio/transcriptions/realtime` beneath the HTTP API root; vLLM retains
+its separate `realtime` route. Completed NeMo requests use `verbose_json` for
+language/duration metadata. Nemotron terminal language tags are stripped only
+from text and merged with reported languages. Realtime finals accumulate bounded
+language evidence into response details for the existing cleanup gate. Structured
+realtime fields are optional; v0.1.0 relies on the terminal tag. Unknown structured
+locale evidence and overflow are represented as multilingual without publishing
+arbitrary peer text. Provisional text never contributes authoritative language
+metadata or delivery content.
 
 The Qwen profile intersects model languages with the vLLM language map and
 publishes restricted choices plus mode-specific language-hint metadata. Realtime
@@ -1184,6 +1215,13 @@ loop on failure; deliberate picker re-entry or explicit refresh can retry.
 Discovery works before model selection or optional-feature enablement and never
 selects a model/profile, enables a feature, or invokes inference. Voice has no
 separate component-owned model cache.
+
+For managed connections, the editor includes the selected runtime's lifecycle
+and operation identity in each metadata cache key. Probes wait for the runtime
+to report `running` and for pending Start/Restart/Stop actions to settle. Runtime
+transitions invalidate earlier results, including late completions; readiness
+permits one fresh check without creating a retry loop. The footer and connection
+panel use that same state to show startup or shutdown before metadata outcomes.
 
 `RuntimeModelPicker` supplies model search, manual IDs, discovery actions, and
 saved/server/draft provenance across Voice, files, cleanup, and speech. Its profile

@@ -736,9 +736,11 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		text, e = result.Text, result.Err
 		details.AudioDurationMilliseconds = result.AudioMilliseconds
 		cfg.Language = cfg.VoiceTranscription.Language
+		languages := result.Languages
 		if result.Language != "" {
-			cfg.Language = result.Language
+			languages = append(languages, result.Language)
 		}
+		details.Transcription = history.NewResponseDetails(inference.ResponseMetadata{DetectedLanguages: languages, RequestCount: 1})
 	} else if segmented != nil {
 		result := segmented.wait()
 		if result.err != nil {

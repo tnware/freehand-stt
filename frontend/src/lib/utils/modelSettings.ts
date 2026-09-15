@@ -24,6 +24,7 @@ function transcriptionOptions(
   options: InferenceTranscriptionOptions,
 ): TranscriptionOptions {
   return {
+    nemo: { ...options.nemo },
     prompt: options.prompt,
     temperatureOverride: options.temperatureOverride,
     temperature: options.temperature,
@@ -35,6 +36,12 @@ export function modelOptions(settings: Settings, purpose: Purpose): Options {
     speech: { language: "", instructions: "" },
     profile: ID.Generic,
     transcription: {
+      nemo: {
+        disablePunctuation: false,
+        normalize: false,
+        profanityFilter: false,
+        endpointingMilliseconds: 0,
+      },
       prompt: "",
       temperatureOverride: false,
       temperature: 0,
@@ -107,7 +114,10 @@ export function applyModelOptions(
   // The remembered DTO represents model behavior only; task state stays in place.
   const o = {
     ...options,
-    transcription: { ...options.transcription },
+    transcription: {
+      ...options.transcription,
+      nemo: { ...options.transcription.nemo },
+    },
     cleanup: { ...options.cleanup },
   };
   if (purpose === Purpose.Voice) {
