@@ -65,6 +65,7 @@ export function createRuntimeFixture(
 ) {
   const macOS = new URLSearchParams(location.search).has("runtime-macos");
   const backends = macOS ? ["cpu", "metal"] : ["cpu", "cuda"];
+  const combined = new URLSearchParams(location.search).has("runtime-combined");
   let models: Model[] = [
     {
       id: "nemotron-3.5",
@@ -103,6 +104,44 @@ export function createRuntimeFixture(
       ],
     },
   ];
+  if (combined) {
+    const magpie: Profile = {
+      ...parakeet,
+      id: ID.MagpieTTS,
+      name: "Magpie TTS Multilingual",
+      languages: [
+        { code: "en-US", label: "English" },
+        { code: "fr-FR", label: "French" },
+        { code: "ja-JP", label: "Japanese" },
+      ],
+      voices: ["John", "Sofia", "Aria", "Jason", "Leo"],
+      capabilities: {
+        ...parakeet.capabilities,
+        nemoTranscriptionControls: false,
+        voiceDiscovery: true,
+        speechLanguage: true,
+      },
+    };
+    models.push({
+      id: "magpie-tts",
+      name: "Magpie TTS Multilingual",
+      description: "Speech generation in the same runtime.",
+      sizeBytes: 560_982_368,
+      installed: false,
+      recommended: false,
+      realtime: false,
+      profile: ID.MagpieTTS,
+      behavior: magpie,
+      contracts: [
+        {
+          role: Role.Speech,
+          compatibilityProfile: CompatibilityID.NeMoSpeechV1,
+          modelProfile: ID.MagpieTTS,
+          behavior: magpie,
+        },
+      ],
+    });
+  }
   const ggml = providerID !== ProviderID.NeMoSpeechCPP;
   if (ggml) {
     const llama = providerID === ProviderID.LlamaCPP;
@@ -197,6 +236,7 @@ export function createRuntimeFixture(
       enabled: false,
       realtime: false,
       selectedModel: instance.model,
+      selectedSpeechModel: instance.speechModel,
       backend: "",
       version: "",
       progress: -1,
@@ -212,6 +252,7 @@ export function createRuntimeFixture(
           name: instanceName,
           provider: providers[0].id,
           model: models[0].id,
+          speechModel: combined ? "magpie-tts" : "",
           autoStart: false,
         }),
       ]
@@ -222,10 +263,13 @@ export function createRuntimeFixture(
       activeModel: models[0].id,
       status: {
         ...rows[0].status,
-        state: "running",
+        state: combined ? "stopped" : "running",
         backend: "cpu",
         version: "0.1.0",
-        models: models.map((m) => ({ ...m, installed: true })),
+        models: models.map((m) => ({
+          ...m,
+          installed: !(combined && m.id === "magpie-tts"),
+        })),
       },
     };
   if (ready && new URLSearchParams(location.search).has("runtime-starting")) {
@@ -270,6 +314,8 @@ export function createRuntimeFixture(
     const row = get(id);
     row.status = { ...row.status, ...patch };
     row.activeModel = row.status.state === "running" ? row.instance.model : "";
+    row.activeSpeechModel =
+      row.status.state === "running" ? row.instance.speechModel : "";
     publish(structuredClone(row));
   };
   const runLifecycle = (id: string, kind: "start" | "stop" | "restart") => {
@@ -333,9 +379,15 @@ export function createRuntimeFixture(
       const old = rows.find((r) => r.instance.id === instance.id);
       const row = old ?? initial(instance);
       row.status.selectedModel = instance.model;
-      if (old && old.instance.model !== instance.model) {
+      row.status.selectedSpeechModel = instance.speechModel;
+      if (
+        old &&
+        (old.instance.model !== instance.model ||
+          old.instance.speechModel !== instance.speechModel)
+      ) {
         row.status.state = "stopped";
         row.activeModel = "";
+        row.activeSpeechModel = "";
       }
       row.instance = structuredClone(instance);
       if (!old) rows.push(row);

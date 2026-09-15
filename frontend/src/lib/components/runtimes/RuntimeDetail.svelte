@@ -27,7 +27,12 @@
   import RuntimeModelCatalog from "./RuntimeModelCatalog.svelte";
   import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
-  import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
+  import {
+    backendLabel,
+    runtimePresentation,
+    runtimeModelSelection,
+    runtimeModelsDownloaded,
+  } from "$lib/utils/managedRuntime";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
 
   let {
@@ -81,6 +86,15 @@
   const selectedModel = $derived(
     models.find((model) => model.id === instance?.model),
   );
+  const selectedSpeechModel = $derived(
+    models.find((model) => model.id === instance?.speechModel),
+  );
+  const selectedModelsReady = $derived(
+    !!instance && runtimeModelsDownloaded(instance, models),
+  );
+  const missingModel = $derived(
+    !selectedModel?.installed ? selectedModel : selectedSpeechModel,
+  );
   const metadata = $derived(
     [
       {
@@ -98,6 +112,12 @@
       {
         label: "Selected model",
         value: status?.selectedModel,
+        icon: BoxIcon,
+        technical: true,
+      },
+      {
+        label: "Selected speech model",
+        value: status?.selectedSpeechModel,
         icon: BoxIcon,
         technical: true,
       },
@@ -222,15 +242,19 @@
             disabled={actionLocked}
             onclick={restart}>Restart</Button
           >{/if}
-        {#if !running && !selectedModel?.installed}
+        {#if !running && !selectedModelsReady}
           <Button
             variant="outline"
             size="xs"
             aria-label="Download selected model"
-            disabled={actionLocked || !selectedModel}
+            disabled={actionLocked || !missingModel}
             onclick={() =>
-              act(() => runtime.downloadModel(instance.id, instance.model))}
-            ><DownloadIcon class="size-3" />Get model</Button
+              missingModel &&
+              act(() => runtime.downloadModel(instance.id, missingModel.id))}
+            ><DownloadIcon class="size-3" />Get {missingModel ===
+            selectedSpeechModel
+              ? "speech model"
+              : "model"}</Button
           >
         {:else}
           <Button
@@ -450,7 +474,13 @@
       }}
       onSelect={(model) => {
         if (instance && installed && !running)
-          act(() => runtime.saveInstance({ ...instance, model: model.id }));
+          act(() =>
+            runtime.saveInstance(runtimeModelSelection(instance, model)),
+          );
+      }}
+      onDisableSpeech={() => {
+        if (instance && installed && !running)
+          act(() => runtime.saveInstance({ ...instance, speechModel: "" }));
       }}
       onRemove={(model) => {
         if (instance && installed && !running && !actionLocked)
@@ -488,7 +518,7 @@
                 >Start when Freehand launches</label
               >
               <p class="content-meta mt-1">
-                Uses the selected model. Does not download missing files.
+                Uses the selected models. Does not download missing files.
               </p>
             </div>
             <Switch
@@ -502,6 +532,14 @@
           <p class="break-all font-mono text-[11px] text-ink-quiet">
             Active API model: {row?.activeModel || "None"}
           </p>
+          {#if instance.speechModel}<p
+              class="break-all font-mono text-[11px] text-ink-quiet"
+            >
+              Active speech API model: {row?.activeSpeechModel || "None"}
+            </p>
+            <p class="content-meta">
+              Start, Stop and Restart affect transcription and speech together.
+            </p>{/if}
           {#if switchable && installed}<fieldset
               disabled={actionLocked || running}
             >

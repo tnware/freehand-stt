@@ -143,5 +143,14 @@
     "revision": "a94750e3f5f8fc33757b839d85030e742284e43a",
     "license": "MIT",
     "notice": "licenses/lobe.txt"
+  },
+  "magpie-tts-multilingual-357m": {
+    "asset": "nvidia.svg",
+    "kind": "family",
+    "source": "https://github.com/lobehub/lobe-icons/blob/a94750e3f5f8fc33757b839d85030e742284e43a/packages/static-svg/icons/nvidia-color.svg",
+    "revision": "a94750e3f5f8fc33757b839d85030e742284e43a",
+    "license": "MIT",
+    "notice": "licenses/lobe.txt",
+    "note": "Uses NVIDIA's family mark to identify MagpieTTS."
   }
 }

@@ -130,6 +130,7 @@ func options(role Role) []Profile {
 	case PostProcessing:
 		result = append(result, Profile{ID: VLLM, Label: "vLLM", Available: true, Description: "Text cleanup with output-token and reasoning-off controls, qualified against v0.28.0. Reasoning control requires a compatible model template.", Capabilities: Capabilities{CleanupOutputLimit: true, CleanupDisableReasoning: true}})
 	case Speech:
+		result = append(result, Profile{ID: NeMoSpeechV1, Label: "NeMo-Speech.cpp", Available: true, Description: "Buffered PCM16 WAV speech with the server-loaded MagpieTTS model, language selection, and model-scoped voices; v0.1.0. Speed remains 1.0.", Capabilities: Capabilities{ServerLoadedModel: true, VoiceDiscovery: true, SpeechLanguage: true}})
 		result = append(result, Profile{ID: VLLMOmni, Label: "vLLM-Omni", Available: true, Description: "Buffered WAV speech, voice discovery, and Qwen3-TTS language and style instructions; v0.18.0.", Capabilities: Capabilities{SpeechSpeed: true, VoiceDiscovery: true, SpeechInstructions: true, SpeechLanguage: true}})
 		result = append(result, Profile{ID: KokoroFastAPI, Label: "Kokoro-FastAPI", Available: true, Description: "Buffered PCM16 WAV speech, selectable server voices, and speed control. Requests explicitly disable streaming.", Capabilities: Capabilities{SpeechSpeed: true, VoiceDiscovery: true}})
 		planned(OpenedAISpeech, "openedai-speech", "Server-configured voices and WAV output need qualification.")

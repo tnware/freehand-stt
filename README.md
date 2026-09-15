@@ -18,7 +18,8 @@ available for your other work, or run your models locally if you prefer.
 
 On Windows and macOS, you can let Freehand install and manage a local NeMo speech runtime,
 or connect to infrastructure you already run. The recommended local setup uses
-Nemotron 3.5 streaming for live transcription. Runtime and model downloads are
+Nemotron 3.5 streaming for live transcription, with optional MagpieTTS speech
+generation in the same runtime. Runtime and model downloads are
 optional and separate from the app; performance depends on your hardware, model,
 network, and optional cleanup stage.
 

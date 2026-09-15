@@ -6,8 +6,8 @@ description: Configure local, LAN, private remote, or hosted OpenAI-compatible s
 Connect Freehand to a speech service on your computer, another machine, or a
 hosted provider. You need its base URL, model ID, and API key if it requires one.
 This guide covers manually managed services. For installation inside Freehand,
-use [Local runtimes](../local-runtime/) for supported recognition and cleanup
-models on Windows and macOS. Text to speech still needs a manual connection.
+use [Local runtimes](../local-runtime/) for supported transcription, MagpieTTS
+speech generation, and cleanup models on Windows and macOS.
 
 Save a server once, then choose it for any task it supports. See
 [Saved connections](../saved-connections/) to manage multiple servers.
@@ -102,7 +102,7 @@ Choose the server software under **Backend** when adding or editing a connection
 | ------------------------------------- | ----------------------------------------------------------------------- |
 | Speech to text (microphone and files) | Generic OpenAI-compatible, Speaches, whisper.cpp, vLLM, NeMo-Speech.cpp |
 | Cleanup (optional stage after STT)    | Generic OpenAI-compatible, llama.cpp, vLLM                              |
-| Text to speech                        | Generic OpenAI-compatible, Speaches, Kokoro-FastAPI, vLLM-Omni          |
+| Text to speech                        | Generic OpenAI-compatible, Speaches, Kokoro-FastAPI, vLLM-Omni, NeMo-Speech.cpp |
 
 Choose the profile matching your server. For another OpenAI-compatible service,
 use **Generic OpenAI-compatible** and check its [requirements](../../backends/generic/).
@@ -110,7 +110,8 @@ Support depends on the server version and model; follow the relevant
 [backend guide](../../backends/) before enabling additional tasks.
 
 The **Model profile** is a separate choice in task settings. It adds controls
-for a particular model, such as S1-mini cleanup or Nemotron live transcription.
+for a particular model, such as S1-mini cleanup, Nemotron live transcription,
+or MagpieTTS voice and language selection.
 See [Model profiles](../../models/).
 
 Choose **Save connection** to store the profile and endpoint. Select that entry

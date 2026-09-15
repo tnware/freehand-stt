@@ -12,7 +12,7 @@ import (
 func ManagedContract(s Settings, id string, role compatibility.Role) (managedruntime.Instance, managedruntime.Contract, error) {
 	for _, i := range s.ManagedRuntimes {
 		if i.ID == id {
-			c, e := managedruntime.Qualify(i.Provider, i.Model, role)
+			c, e := managedruntime.Qualify(i.Provider, i.ModelForRole(role), role)
 			return i, c, e
 		}
 	}
@@ -48,7 +48,7 @@ func validateManagedReferences(s Settings) error {
 		if e != nil {
 			return e
 		}
-		if model != i.Model || profile != c.ModelProfile || backend != c.CompatibilityProfile {
+		if model != i.ModelForRole(role) || profile != c.ModelProfile || backend != c.CompatibilityProfile {
 			return errors.New("managed task model and profiles must match its runtime")
 		}
 		return nil

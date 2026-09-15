@@ -44,7 +44,7 @@ func BuiltIn(instance managedruntime.Instance) Connection {
 		Details: Details{ManagedInstanceID: instance.ID, AuthenticationMode: config.AuthenticationModeNone, Headers: map[string]string{}},
 	}
 	for _, p := range []Purpose{Voice, Transcription, Cleanup, Speech} {
-		if _, err := managedruntime.Qualify(instance.Provider, instance.Model, Role(p)); err == nil {
+		if _, err := managedruntime.Qualify(instance.Provider, instance.ModelForRole(Role(p)), Role(p)); err == nil {
 			c.Uses = append(c.Uses, p)
 		}
 	}

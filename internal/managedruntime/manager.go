@@ -20,9 +20,10 @@ type ManagerOptions struct {
 	CheckIdle     func() error
 }
 type InstanceStatus struct {
-	Instance    Instance `json:"instance"`
-	Status      Status   `json:"status"`
-	ActiveModel string   `json:"activeModel"`
+	Instance          Instance `json:"instance"`
+	Status            Status   `json:"status"`
+	ActiveModel       string   `json:"activeModel"`
+	ActiveSpeechModel string   `json:"activeSpeechModel,omitempty"`
 }
 type InstanceRequest struct {
 	InstanceID string `json:"instanceID"`
@@ -82,7 +83,7 @@ func NewManager(o ManagerOptions) *Manager {
 }
 func instanceConfig(i Instance) workerConfig {
 	_, realtimeErr := Qualify(i.Provider, i.Model, compatibility.Realtime)
-	return workerConfig{Model: i.Model, Enabled: true, Realtime: realtimeErr == nil, AutoStart: i.AutoStart}
+	return workerConfig{Model: i.Model, SpeechModel: i.SpeechModel, Enabled: true, Realtime: realtimeErr == nil, AutoStart: i.AutoStart}
 }
 func (m *Manager) newWorker(i Instance) *worker {
 	w := newWorker(instanceDirectory(m.directory, i.ID), providers[i.Provider], instanceConfig(i), m.logger, m.checkIdle)
@@ -111,7 +112,7 @@ func (m *Manager) GetProviders() []ProviderDescriptor {
 func instanceSnapshot(i Instance, w *worker) InstanceStatus {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return InstanceStatus{Instance: i, Status: w.snapshotLocked(), ActiveModel: w.endpoint.Model}
+	return InstanceStatus{Instance: i, Status: w.snapshotLocked(), ActiveModel: w.endpoint.Model, ActiveSpeechModel: w.endpoint.SpeechModel}
 }
 func (m *Manager) GetInstances() []InstanceStatus {
 	m.mu.Lock()
@@ -131,7 +132,7 @@ func (m *Manager) notifyWorker(id string, w *worker, snapshot workerSnapshot) {
 	var st InstanceStatus
 	for _, i := range m.instances {
 		if i.ID == id {
-			st = InstanceStatus{Instance: i, Status: snapshot.Status, ActiveModel: snapshot.activeModel}
+			st = InstanceStatus{Instance: i, Status: snapshot.Status, ActiveModel: snapshot.activeModel, ActiveSpeechModel: snapshot.activeSpeechModel}
 			break
 		}
 	}
@@ -163,7 +164,8 @@ func (m *Manager) ResolveFor(expected Instance, role compatibility.Role) (Resolv
 		if i != expected {
 			return ResolvedEndpoint{}, errNotReady
 		}
-		c, err := Qualify(i.Provider, i.Model, role)
+		catalogModel := i.ModelForRole(role)
+		c, err := Qualify(i.Provider, catalogModel, role)
 		if err != nil {
 			return ResolvedEndpoint{}, err
 		}
@@ -174,7 +176,14 @@ func (m *Manager) ResolveFor(expected Instance, role compatibility.Role) (Resolv
 		if err != nil {
 			return ResolvedEndpoint{}, err
 		}
-		return ResolvedEndpoint{InstanceID: i.ID, Provider: i.Provider, CatalogModel: i.Model, Generation: w.generation, BaseURL: ep.BaseURL, Model: ep.Model, Contract: c}, nil
+		model := ep.Model
+		if i.Provider == NeMoSpeechCPP && role == compatibility.Speech {
+			model = ep.SpeechModel
+		}
+		if model == "" {
+			return ResolvedEndpoint{}, errNotReady
+		}
+		return ResolvedEndpoint{InstanceID: i.ID, Provider: i.Provider, CatalogModel: catalogModel, Generation: w.generation, BaseURL: ep.BaseURL, Model: model, Contract: c}, nil
 	}
 	return ResolvedEndpoint{}, errNotReady
 }

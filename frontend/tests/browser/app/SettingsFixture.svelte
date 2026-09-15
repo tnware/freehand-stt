@@ -31,7 +31,7 @@
   import { CheckKind, CheckStatus } from "$bindings/connection";
   import { ID as ModelID, type Profile } from "$bindings/modelprofile";
   import { AuthenticationMode } from "$bindings/config";
-  import { ID as BackendID } from "$bindings/compatibility";
+  import { ID as BackendID, Role } from "$bindings/compatibility";
   import { Session } from "$lib/stores/session.svelte";
   import {
     settings,
@@ -273,16 +273,42 @@
   ) {
     const instance = current.managedRuntimes[0];
     const profiles =
-      runtimeFixture.providers[0].models?.flatMap((m) =>
-        m.behavior ? [m.behavior] : [],
-      ) ?? [];
+      runtimeFixture.providers[0].models
+        ?.filter((m) =>
+          m.contracts?.some((contract) => contract.role === Role.Transcription),
+        )
+        .flatMap((m) => (m.behavior ? [m.behavior] : [])) ?? [];
     current.modelProfiles.voiceTranscription = profiles;
     current.modelProfiles.transcription = profiles;
+    if (params.has("runtime-combined")) {
+      current.modelProfiles.speech =
+        runtimeFixture.providers[0].models
+          ?.filter((m) =>
+            m.contracts?.some((contract) => contract.role === Role.Speech),
+          )
+          .flatMap((m) => (m.behavior ? [m.behavior] : [])) ?? [];
+      current.textToSpeech = {
+        ...current.textToSpeech,
+        enabled: true,
+        managedInstanceID: instance.id,
+        model: "magpie-tts",
+        modelProfile: ModelID.MagpieTTS,
+        compatibilityProfile: BackendID.NeMoSpeechV1,
+        baseURL: "",
+        voice: "default",
+        speed: 1,
+        options: { language: "", instructions: "" },
+      };
+    }
     current.savedConnections.entries!.push({
       id: "local-speech",
       name: instance.name,
       builtIn: !params.has("legacy-runtime"),
-      uses: [Purpose.Voice, Purpose.Transcription],
+      uses: [
+        Purpose.Voice,
+        Purpose.Transcription,
+        ...(params.has("runtime-combined") ? [Purpose.Speech] : []),
+      ],
       hasCredential: false,
       details: {
         managedInstanceID: instance.id,
@@ -317,6 +343,9 @@
     current.savedConnections.selected = {
       [Purpose.Voice]: "local-speech",
       [Purpose.Transcription]: "local-speech",
+      ...(params.has("runtime-combined")
+        ? { [Purpose.Speech]: "local-speech" }
+        : {}),
     };
   }
   const metadata =

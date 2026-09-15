@@ -113,7 +113,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 		return v, err
 	}
 	for _, i := range managed {
-		v.ManagedRuntimes = append(v.ManagedRuntimes, managedruntime.Instance{ID: i.ID, Name: i.Name, Provider: managedruntime.ProviderID(i.Provider), Model: i.Model, AutoStart: i.AutoStart != 0})
+		v.ManagedRuntimes = append(v.ManagedRuntimes, managedruntime.Instance{ID: i.ID, Name: i.Name, Provider: managedruntime.ProviderID(i.Provider), Model: i.Model, SpeechModel: i.SpeechModel, AutoStart: i.AutoStart != 0})
 	}
 	vocabulary, err := q.GetVocabulary(ctx)
 	if err != nil {

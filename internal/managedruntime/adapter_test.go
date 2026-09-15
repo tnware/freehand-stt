@@ -32,7 +32,7 @@ func WithManagedEndpointFixture(t *testing.T, exercise func(Endpoint)) {
 	ctx := context.Background()
 	a, calls := managedAdapterFixture(t, root)
 	backend, models, err := a.Inspect(ctx)
-	if err != nil || backend != "cpu" || len(models) != 2 || models[0].Installed {
+	if err != nil || backend != "cpu" || len(models) != 3 || models[0].Installed {
 		t.Fatalf("inspect %s %+v %v", backend, models, err)
 	}
 	if len(*calls) != 1 || (*calls)[0] != "--json model list" {
@@ -118,6 +118,15 @@ func managedAdapterFixture(t *testing.T, root string) (*nemoAdapter, *[]string) 
 			if args[1] != "--host" || args[2] != "127.0.0.1" || args[5] != "--asr-model" || args[6] != spec.path(root) {
 				t.Fatalf("unsafe serve argv: %v", args)
 			}
+			speech := false
+			for n, arg := range args {
+				if arg == "--tts-model" {
+					speech = true
+					if n+1 >= len(args) || args[n+1] != modelSpecs["magpie-tts"].path(root) {
+						t.Fatalf("unverified speech path: %v", args)
+					}
+				}
+			}
 			port, _ := strconv.Atoi(args[4])
 			listener, err := net.Listen("tcp4", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
 			if err != nil {
@@ -127,7 +136,11 @@ func managedAdapterFixture(t *testing.T, root string) (*nemoAdapter, *[]string) 
 				if r.URL.Path == "/ready" {
 					w.Write([]byte(`{"ready":true}`))
 				} else if r.URL.Path == "/v1/models" {
-					w.Write([]byte(`{"data":[{"id":"actual GGUF name","capability":"transcription"}]}`))
+					if speech {
+						w.Write([]byte(`{"data":[{"id":"actual GGUF name","capability":"transcription"},{"id":"actual Magpie name","capability":"speech"}]}`))
+					} else {
+						w.Write([]byte(`{"data":[{"id":"actual GGUF name","capability":"transcription"}]}`))
+					}
 				} else if r.URL.Path == "/v1/audio/transcriptions" && r.Method == http.MethodPost {
 					w.Header().Set("Content-Type", "application/json")
 					w.Write([]byte(`{"text":"fixture transcript"}`))

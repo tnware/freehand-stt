@@ -42,6 +42,7 @@ export function managedConnectionMetadata(
       id,
       state,
       row?.instance.model,
+      row?.instance.speechModel,
       row?.status.operation?.id,
       starting,
       stopping,

@@ -28,11 +28,12 @@ type CredentialGc struct {
 }
 
 type ManagedRuntimeInstance struct {
-	ID        string
-	Name      string
-	Provider  string
-	Model     string
-	AutoStart int64
+	ID          string
+	Name        string
+	Provider    string
+	Model       string
+	AutoStart   int64
+	SpeechModel string
 }
 
 type PreferencesSetting struct {

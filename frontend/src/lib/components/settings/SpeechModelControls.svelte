@@ -3,6 +3,11 @@
   import ManagedRuntimeControls from "$lib/components/home/ManagedRuntimeControls.svelte";
   import LanguagePicker from "./LanguagePicker.svelte";
   import { ID } from "$bindings/modelprofile";
+  import { Role } from "$bindings/compatibility";
+  import {
+    speechLanguageOptions,
+    speechLanguageValue,
+  } from "$lib/utils/speechLanguages";
   import type { Snippet } from "svelte";
   import type { Settings } from "$lib/state";
   import type { VoicesResult } from "$bindings/inference";
@@ -74,6 +79,18 @@
       (p) => p.id === (speech.modelProfile || ID.Generic),
     ),
   );
+  const magpie = $derived(profile?.id === ID.MagpieTTS);
+  const languages = $derived(speechLanguageOptions(profile, voices));
+  const allowedVoices = $derived(
+    magpie
+      ? [
+          "default",
+          ...(!voices?.errorKind && voices?.voices?.length
+            ? voices.voices.map((voice) => voice.id)
+            : (profile?.voices ?? [])),
+        ].filter((voice, index, all) => all.indexOf(voice) === index)
+      : (profile?.voices ?? []),
+  );
 </script>
 
 {#if speech.managedInstanceID}
@@ -82,6 +99,7 @@
       sidebar={compact && !showAdvanced}
       workBusy={runtimeWorkBusy}
       {runtime}
+      role={Role.Speech}
       instanceID={speech.managedInstanceID}
       disabled={busy}
       onManage={onManageRuntime}
@@ -119,10 +137,12 @@
 {/if}
 <VoicePicker
   id={controlID("voice")}
-  value={speech.voice}
+  value={magpie && (!speech.voice || speech.voice === "alloy")
+    ? "default"
+    : speech.voice}
   supported={!!profile?.capabilities.voiceDiscovery}
   result={voices}
-  allowedVoices={profile?.voices ?? []}
+  {allowedVoices}
   busy={voicesBusy}
   disabled={busy}
   {compact}
@@ -132,6 +152,10 @@
     if (!busy && !voicesBusy) onDiscoverVoices();
   }}
 />
+{#if magpie}<p class="text-xs leading-relaxed text-muted-foreground">
+    Default uses the server's default voice. The listed voices share the same
+    supported languages.
+  </p>{/if}
 <SpeechSpeedControl
   id={controlID("speed")}
   value={speech.speed}
@@ -150,16 +174,22 @@
         >
         <LanguagePicker
           id={controlID("language")}
-          languages={profile.languages ?? []}
+          {languages}
           restricted
           disabled={busy}
           bind:value={
-            () => speech.options.language || "auto",
+            () => speechLanguageValue(profile, speech.options.language),
             (language) => {
               if (!busy) void onOptions({ ...speech.options, language });
             }
           }
         />
+        {#if magpie && !voices?.languages?.length}<p
+            class="text-xs leading-relaxed text-muted-foreground"
+          >
+            Japanese and Mandarin require optional server language support.
+            Refresh voices to discover enabled languages.
+          </p>{/if}
       </div>
     {/if}
     {#if profile.capabilities.speechInstructions}

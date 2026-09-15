@@ -46,5 +46,10 @@ context, vocabulary boosting, temperature overrides, or realtime microphone
 streaming with NeMo-Speech.cpp.
 Shared vocabulary remains saved for other compatible selections.
 
+[NeMo transcription controls](../../backends/nemo-speech/#transcription-controls)
+let you keep or strip punctuation and request optional server-side number/date
+normalization or profanity filtering. Those optional controls depend on the
+server’s configured assets; changing them does not download anything.
+
 This profile describes the **TDT v3** checkpoint. Parakeet CTC and RNNT variants
 have different behavior and should not use this profile.

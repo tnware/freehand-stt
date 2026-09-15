@@ -18,6 +18,7 @@ type ModelMetadata struct {
 
 // TestProfileMetadata narrows NeMo's mixed inventory to this task. An absent
 // capability remains unknown; metadata never enables an unqualified profile.
+// An empty role preserves the complete saved-connection catalog for all its tasks.
 func (c *Client) TestProfileMetadata(ctx context.Context, backend compatibility.ID, role compatibility.Role, base, health, key, model string, headers map[string]string) MetadataResult {
 	started := time.Now()
 	result := c.TestMetadata(ctx, base, health, key, model, headers)
@@ -33,7 +34,7 @@ func (c *Client) TestProfileMetadata(ctx context.Context, backend compatibility.
 		result.ModelIDs = nil
 		result.ModelPresence = "not-listed"
 		for _, item := range result.Models {
-			if item.Capability != "" && item.Capability != string(role) {
+			if role != "" && item.Capability != "" && item.Capability != string(role) {
 				continue
 			}
 			result.ModelIDs = append(result.ModelIDs, item.ID)

@@ -1,6 +1,12 @@
 <script lang="ts">
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
-  import { runtimePresentation } from "$lib/utils/managedRuntime";
+  import {
+    isSpeechRuntimeModel,
+    runtimeModelsDownloaded,
+    runtimePresentation,
+    runtimeModelSelection,
+  } from "$lib/utils/managedRuntime";
+  import { Role } from "$bindings/compatibility";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import { Button } from "$lib/components/ui/button";
   import * as Select from "$lib/components/ui/select";
@@ -16,6 +22,7 @@
     workBusy = false,
     sidebar = false,
     onManage,
+    role,
   }: {
     runtime: ManagedRuntimeState;
     instanceID: string;
@@ -23,6 +30,7 @@
     workBusy?: boolean;
     sidebar?: boolean;
     onManage: () => void;
+    role?: Role;
   } = $props();
   const uid = $props.id();
   const layout = getWorkbenchLayout();
@@ -46,11 +54,22 @@
   );
   const models = $derived(
     (status?.models ?? []).filter(
-      (m) => m.installed && provider?.models?.some((q) => q.id === m.id),
+      (m) =>
+        m.installed &&
+        provider?.models?.some((q) => q.id === m.id) &&
+        (role === Role.Speech
+          ? isSpeechRuntimeModel(m)
+          : !isSpeechRuntimeModel(m)),
     ),
   );
-  const selected = $derived(
-    status?.models?.find((m) => m.id === row?.instance.model),
+  const selectedID = $derived(
+    role === Role.Speech
+      ? (row?.instance.speechModel ?? "")
+      : (row?.instance.model ?? ""),
+  );
+  const selected = $derived(status?.models?.find((m) => m.id === selectedID));
+  const allModelsReady = $derived(
+    !!row && runtimeModelsDownloaded(row.instance, status?.models ?? []),
   );
   const choices = $derived(models.map((m) => ({ value: m.id, label: m.name })));
   const problem = $derived(
@@ -60,7 +79,9 @@
     !row && runtime.loading ? "Checking runtime" : view.label,
   );
   const needsSetup = $derived(
-    !!row && !operating && (!view.installed || !selected?.installed),
+    !!row &&
+      !operating &&
+      (!view.installed || !selected?.installed || !allModelsReady),
   );
   const modelLocked = $derived(locked || running || !models.length);
 
@@ -79,14 +100,19 @@
     if (
       !row ||
       modelLocked ||
-      model === row.instance.model ||
+      model === selectedID ||
       !models.some((m) => m.id === model)
     )
       return;
-    void runtime.saveInstance({ ...row.instance, model });
+    const chosen = models.find((m) => m.id === model);
+    if (chosen)
+      void runtime.saveInstance(runtimeModelSelection(row.instance, chosen));
   }
   function command() {
-    if (locked || (!running && (!view.installed || !selected?.installed)))
+    if (
+      locked ||
+      (!running && (!view.installed || !selected?.installed || !allModelsReady))
+    )
       return;
     void runtime.run(instanceID, running ? "Stop" : "Start");
   }
@@ -130,7 +156,8 @@
         variant={running ? "outline" : "soft"}
         size="xs"
         disabled={locked ||
-          (!running && (!view.installed || !selected?.installed))}
+          (!running &&
+            (!view.installed || !selected?.installed || !allModelsReady))}
         title={workBusy
           ? "Finish the current task before changing this runtime."
           : undefined}
@@ -168,11 +195,13 @@
       <label
         for={`${uid}-model`}
         class={sidebar ? "sr-only" : "text-xs font-medium"}
-        >Selected model</label
+        >{role === Role.Speech
+          ? "Selected speech model"
+          : "Selected model"}</label
       >
       <Select.Root
         type="single"
-        bind:value={() => row.instance.model, chooseModel}
+        bind:value={() => selectedID, chooseModel}
         items={choices}
         disabled={modelLocked}
       >
@@ -184,7 +213,11 @@
             : undefined}
         >
           <span class="min-w-0 truncate"
-            >{selected?.name || row.instance.model || "Choose a model"}</span
+            >{selected?.name ||
+              selectedID ||
+              (role === Role.Speech
+                ? "Speech not enabled"
+                : "Choose a model")}</span
           >
         </Select.Trigger>
         <Select.Content
@@ -206,6 +239,11 @@
         {[view.backend, status?.version].filter(Boolean).join(" · ")}
       </p>{/if}
   {/if}
+  {#if row?.instance.speechModel}<p
+      class="text-[11px] leading-relaxed text-muted-foreground"
+    >
+      Start and Stop affect transcription and speech together.
+    </p>{/if}
   <div
     class={sidebar
       ? "flex flex-wrap items-center gap-x-3 gap-y-1"

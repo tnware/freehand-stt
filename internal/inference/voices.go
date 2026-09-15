@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
 const MaxDiscoveredVoices = 500
@@ -29,6 +30,7 @@ type Voice struct {
 }
 
 type VoicesResult struct {
+	Languages           []string   `json:"languages,omitempty"`
 	Voices              []Voice    `json:"voices"`
 	Scope               VoiceScope `json:"scope"`
 	ErrorKind           string     `json:"errorKind"`
@@ -86,7 +88,7 @@ func (c *Client) ListVoices(ctx context.Context, backend compatibility.ID, base,
 		return body, true
 	}
 	var voices []json.RawMessage
-	if backend == compatibility.Speaches && model != "" {
+	if backend == compatibility.NeMoSpeechV1 || backend == compatibility.Speaches && model != "" {
 		body, ok := get("models")
 		if !ok && result.HTTPStatus != 404 && result.HTTPStatus != 405 {
 			return
@@ -94,8 +96,10 @@ func (c *Client) ListVoices(ctx context.Context, backend compatibility.ID, base,
 		if ok {
 			var catalog struct {
 				Data []struct {
-					ID     string            `json:"id"`
-					Voices []json.RawMessage `json:"voices"`
+					ID         string            `json:"id"`
+					Capability string            `json:"capability"`
+					Languages  []string          `json:"languages"`
+					Voices     []json.RawMessage `json:"voices"`
 				} `json:"data"`
 			}
 			if json.Unmarshal(body, &catalog) != nil || catalog.Data == nil {
@@ -103,13 +107,33 @@ func (c *Client) ListVoices(ctx context.Context, backend compatibility.ID, base,
 				return
 			}
 			for _, m := range catalog.Data {
-				if m.ID == model && m.Voices != nil {
+				if backend == compatibility.NeMoSpeechV1 && m.Capability != "speech" {
+					continue
+				}
+				if (m.ID == model || backend == compatibility.NeMoSpeechV1 && model == "") && m.Voices != nil {
 					voices = m.Voices
+					if backend == compatibility.NeMoSpeechV1 {
+						seenLanguages := map[string]bool{}
+						for _, language := range m.Languages {
+							if language != "" && modelprofile.MagpieLanguage(language) && safePeerString(language, key) != "" && !seenLanguages[language] {
+								seenLanguages[language] = true
+								result.Languages = append(result.Languages, language)
+							}
+						}
+					}
 					result.Scope = VoiceScopeModel
 					break
 				}
 			}
 		}
+	}
+	// NeMo has no /audio/voices endpoint. Never merge another capability or
+	// fall back to an unrelated server-wide inventory for the selected model.
+	if backend == compatibility.NeMoSpeechV1 && voices == nil {
+		if result.ErrorKind == "" {
+			result.ErrorKind = "model_not_listed"
+		}
+		return
 	}
 	if voices == nil {
 		result.ErrorKind = ""
@@ -131,7 +155,7 @@ func (c *Client) ListVoices(ctx context.Context, backend compatibility.ID, base,
 	for _, raw := range voices {
 		var v Voice
 		if len(raw) > 0 && raw[0] == '"' {
-			if (backend != compatibility.KokoroFastAPI && backend != compatibility.VLLMOmni) || json.Unmarshal(raw, &v.ID) != nil {
+			if (backend != compatibility.KokoroFastAPI && backend != compatibility.VLLMOmni && backend != compatibility.NeMoSpeechV1) || json.Unmarshal(raw, &v.ID) != nil {
 				result.ErrorKind = "response"
 				result.Voices = nil
 				return

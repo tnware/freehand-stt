@@ -114,4 +114,37 @@ describe("home task presentation", () => {
     });
     expect(body).toContain("Configure speech");
   });
+  it("enables a managed speech composer without requiring a saved endpoint URL", () => {
+    const noop = () => {};
+    const { body } = render(TextToSpeech, {
+      props: {
+        text: "A user-authored request",
+        settings: {
+          ...settings.textToSpeech,
+          enabled: true,
+          managedInstanceID: "nemo",
+          baseURL: "",
+          model: "magpie-tts",
+          voice: "Sofia",
+        },
+        status: idleSpeech,
+        onSpeak: noop,
+        onPause: noop,
+        onResume: noop,
+        onRestart: noop,
+        onStop: noop,
+        onSave: noop,
+        onClear: noop,
+        onOpenSettings: noop,
+      },
+    });
+    expect(body).toContain("Ready to generate");
+    expect(body).not.toContain("Setup needed");
+    const speak = body
+      .match(/<button\b[^>]*>/g)
+      ?.find((button) => button.includes('title="Generate this text'));
+    expect(speak).toBeDefined();
+    expect(speak).not.toMatch(/\sdisabled(?:=|[ >])/);
+    expect(body).not.toContain("Configure speech");
+  });
 });

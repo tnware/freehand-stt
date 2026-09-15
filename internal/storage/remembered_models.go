@@ -33,6 +33,9 @@ func (s connectionState) restoreModel(v config.Settings, p savedconnection.Purpo
 		v = savedconnection.QualifyProjection(v, p, d.ManagedInstanceID)
 		defaults := modelsettings.Defaults()[p]
 		defaults.Profile = modelsettings.Extract(v, p).Profile
+		if defaults.Profile == modelprofile.MagpieTTS {
+			defaults.Voice = "default"
+		}
 		v = modelsettings.Select(v, p, modelsettings.Model(v, p), defaults)
 		for _, e := range s.models {
 			if e.ConnectionID == id && e.Purpose == p && e.Model == modelsettings.Model(v, p) {

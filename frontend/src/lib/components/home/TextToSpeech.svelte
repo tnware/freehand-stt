@@ -92,7 +92,7 @@
   const configured = $derived(
     settings.enabled &&
       Boolean(
-        settings.baseURL.trim() &&
+        (settings.managedInstanceID || settings.baseURL.trim()) &&
         settings.model.trim() &&
         settings.voice.trim(),
       ),

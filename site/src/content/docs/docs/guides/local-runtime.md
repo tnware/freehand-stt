@@ -1,9 +1,10 @@
 ---
 title: Local runtimes
-description: Set up local transcription and cleanup with NeMo, whisper.cpp, and llama.cpp on Windows and macOS.
+description: Set up local transcription, MagpieTTS speech, and cleanup with NeMo, whisper.cpp, and llama.cpp.
 ---
 
-Freehand can install local runtimes for speech recognition and transcript cleanup.
+Freehand can install local runtimes for speech recognition, speech generation,
+and transcript cleanup.
 Choose managed setup to let Freehand install the runtime, download a supported
 model when you ask, and start or stop it. You do not need to enter a server URL
 or API key. For live dictation, start with NeMo and its recommended Nemotron model.
@@ -12,21 +13,22 @@ or API key. For live dictation, start with NeMo and its recommended Nemotron mod
 
 | Runtime         | Managed models and tasks                                                                                                                                                   | Supported computers                                   |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| NeMo-Speech.cpp | [Nemotron 3.5 Streaming](../../models/nemotron/) (recommended): live and completed transcription. [Parakeet TDT v3](../../models/parakeet/): completed transcription only. | Windows 11 x64; macOS 13+ on Apple Silicon or Intel   |
+| NeMo-Speech.cpp | [Nemotron 3.5 Streaming](../../models/nemotron/) (recommended): live and completed transcription. [Parakeet TDT v3](../../models/parakeet/): completed transcription. Optional [MagpieTTS](../../models/magpie-tts/): speech generation alongside either model. | Windows 11 x64; macOS 13+ on Apple Silicon or Intel   |
 | whisper.cpp     | Whisper Tiny, Base (recommended), Small, Medium, Large v1/v2/v3, and Large v3 Turbo, with published English-only and quantized variants: completed transcription only.     | Windows 11 x64 only                                   |
 | llama.cpp       | [S1-mini by Superwhisper](../../models/s1-mini/) v1 Q4_K_M: English transcript cleanup only.                                                                               | Windows 11 x64; macOS 13.3+ on Apple Silicon or Intel |
 
 Runtime binaries and models are **not bundled with Freehand**. Installation and
 model downloads are separate, explicit actions; browsing the catalog downloads
 nothing. Managed setup supports the catalog models described here. Custom model
-files require a manually managed server. There is no managed text-to-speech runtime.
+files require a manually managed server.
 
 You can instead [configure a service manually](../connect-a-server/) on this
 computer, your network, or a hosted provider. Freehand connects to that service
 but does not install or manage it. Each task selects its own Connection; using
 a managed runtime leaves your manual connections intact and never falls back
 to them after a local failure. Different runtimes can run together, with one
-installation and one selected model at a time per runtime.
+installation and one process per runtime. NeMo can load one transcription model
+and an optional MagpieTTS speech model together.
 
 Managed whisper.cpp is unavailable on macOS because upstream does not publish
 a macOS server executable. Use NeMo for managed transcription or a
@@ -95,10 +97,38 @@ Connection to share this runtime, or keep a different connection. Files use
 completed requests rather than a live microphone stream. Turning realtime off
 in Voice keeps its connection and model selected and uses completed recording.
 
+## Local speech with MagpieTTS
+
+1. Install **NeMo-Speech.cpp** and keep or select a transcription model using the
+   steps above. Stop the runtime before changing its model selections.
+2. In its model catalog, find **MagpieTTS Multilingual 357M** and choose **Get**.
+   This downloads its model, NanoCodec decoder, and tokenizer assets. Wait for
+   **Downloaded**; browsing or installing NeMo does not download this bundle.
+3. Choose **Select** on Magpie. It becomes the speech selection alongside your
+   existing transcription model.
+4. Choose **Start** and wait for **Running**. NeMo loads both selected models, so
+   allow enough system and GPU memory for both. Starting or stopping it from
+   any workflow affects the shared server.
+5. Open **Text to speech**, choose the built-in **NeMo-Speech.cpp** Connection,
+   turn on **Enable text to speech**, and choose your voice and language. Choose
+   **Save**, then **Preview** or **Speak** when you want audio.
+
+See [MagpieTTS](../../models/magpie-tts/) for the five voices, qualified languages,
+and server requirements. Voice transcription and audio files keep their
+transcription selection when you add speech.
+
+To remove speech from the shared process, first deselect NeMo in **Text to
+speech**. Stop NeMo, then choose **Disable** on its selected Magpie catalog row.
+This keeps the downloaded files and transcription selection, but removes NeMo's
+speech capability and its remembered speech-model options. Select Magpie again
+to restore the capability, then review the speech settings before enabling it.
+
 ## Choose another model
 
 Select a runtime in the inventory sidebar. Its detail pane shows state, setup
-actions, and a model table with download and selection controls. Open
+actions, and a model table with download and selection controls. Models are
+grouped by **Transcription**, **Text to speech**, or **Cleanup**. Whisper families
+and their variants remain grouped within Transcription. Open
 **Runtime preferences** for startup and binary options, or **Manage runtime**
 for removal and recovery actions. These actions never select a different
 Connection for your tasks.
@@ -219,18 +249,18 @@ the model's catalog row show progress and offer cancellation. The row stays in
 place with a completion, cancellation, or failure message. Successful downloads
 also show **Downloaded** beside their size.
 
-Downloads can be cancelled and retried. Stop active transcription before
+Downloads can be cancelled and retried. Stop active work and the runtime before
 switching or removing the loaded model. In the task's **Transcription** or **Cleanup** options, choose the
 **Connection** first, then choose one of that runtime's downloaded models under
-**Selected model**. The runtime shares its selected model with every task using
-it. **Manage runtime** opens installation, downloads, and runtime details.
+**Selected model**. Voice and audio files share the runtime's selected transcription model. NeMo's
+optional speech model is selected separately for Text to speech. **Manage runtime** opens installation, downloads, and runtime details.
 Removing a downloaded model frees its
 managed cache data; using it again requires another download.
 
 ## Startup and process output
 
 Starting verifies the installed files, launches the selected runtime, and waits
-for the selected model to be ready. Status shows the current phase and its
+for the selected models to be ready. Status shows the current phase and its
 elapsed time rather than an estimated percentage. GPU startup includes warm-up;
 loading and warm-up may appear as one phase when the runtime cannot report them
 separately. Wait for **Running** before using the runtime.
@@ -250,7 +280,7 @@ downloaded model. **Manage runtime** opens that exact runtime for downloads and
 installation options; **View output** opens its bottom-panel output tab.
 You can change pages while an operation continues.
 
-Warm-up uses only the selected installed model. For CUDA whisper.cpp, Freehand
+Warm-up uses only the selected installed models. For CUDA whisper.cpp, Freehand
 sends one second of synthetic silence to the local runtime after it is ready
 and discards the response. It never records your microphone, warms other catalog
 models, or sends the warm-up to a remote server. GPU llama.cpp and NeMo use their
@@ -263,15 +293,19 @@ You can inspect recent process output while startup is still in progress:
 1. Choose **View output** in Local runtime or the task's runtime controls.
 2. The shared **Runtime output** bottom panel opens and displays that runtime's
    available output immediately. Select another runtime's tab to inspect it.
-3. Use **Search** to find text, **Follow** to follow new output, or **Clear** to
-   discard the captured output. Collection continues when Follow is off.
+3. Use **Search** to find text, **Follow** to follow new output, **Highlight logs**
+   to toggle severity and structured-log colors, or **Clear** to discard the
+   captured output. Collection continues when Follow is off.
 4. Select text and choose **Copy selection** if you want it on your clipboard.
    Copied text can remain there after the viewer closes.
 
 If the viewer reports an error, choose **Retry output** to try reading again.
 
 The read-only viewer supports colors and in-place progress updates when the
-runtime emits them. It does not accept commands or save log files. Hiding it
+runtime emits them. **Highlight logs** also colors recognizable plain-text
+levels and structured request logs without changing their text. NeMo combines
+structured HTTP access records with its usual startup output. The viewer does
+not accept commands or save log files. Hiding it
 does not stop the runtime. The visible viewer and selected runtime stay available
 when you navigate between workflows, Connections, Local runtime, and History.
 Hiding the panel, changing its panel tab, opening global Settings, hiding the
@@ -290,7 +324,7 @@ output during screen sharing.
 ## Stop, disable, or remove
 
 Stopping releases the running server; starting it again reloads the selected
-model. **Restart** waits for the server to stop before loading that model again;
+models. **Restart** waits for the server to stop before loading them again;
 failed or cancelled stopping prevents the new launch.
 **Start when Freehand launches**, under **Runtime preferences**, enables
 startup for an installed runtime without downloading missing files.

@@ -132,7 +132,11 @@ func TestModelSourceProjectsAcquisitionPins(t *testing.T) {
 				default:
 					t.Fatalf("uncovered provider %q", d.ID)
 				}
-				if got.Repository != spec.repo || got.Revision != spec.revision || got.Filename != spec.filename || got.SHA256 != spec.sha256 || m.SizeBytes != spec.size {
+				wantSize := spec.size
+				if d.ID == NeMoSpeechCPP {
+					wantSize = nemoModelSize(m.ID)
+				}
+				if got.Repository != spec.repo || got.Revision != spec.revision || got.Filename != spec.filename || got.SHA256 != spec.sha256 || m.SizeBytes != wantSize {
 					t.Fatalf("model source differs from acquisition/verification pins: %+v", got)
 				}
 				if d.ID == NeMoSpeechCPP {

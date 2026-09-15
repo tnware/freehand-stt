@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as Slider from "$lib/components/ui/slider";
   import { Badge } from "$lib/components/ui/badge";
+  import { Button } from "$lib/components/ui/button";
   let {
     id,
     value,
@@ -46,14 +47,28 @@
       aria-label="Speech playback speed"
       aria-describedby={`${id}-help`}
     />
-    <Badge variant="outline" class="min-w-14 justify-center font-mono">{shown.toFixed(2)}×</Badge>
+    <Badge variant="outline" class="min-w-14 justify-center font-mono"
+      >{shown.toFixed(2)}×</Badge
+    >
   </div>
   <p
     id={`${id}-help`}
-    class={supported ? "sr-only" : "text-xs leading-relaxed text-muted-foreground"}
+    class={supported
+      ? "sr-only"
+      : "text-xs leading-relaxed text-muted-foreground"}
   >
     {supported
       ? "Applies to the next generation, from 0.25× to 4×."
       : "This model profile does not support adjustable speed."}
   </p>
+  {#if !supported && value !== 1}
+    <Button
+      variant="outline"
+      size="xs"
+      disabled={disabled || pending}
+      onclick={() => void commit(1)}
+    >
+      Use normal speed
+    </Button>
+  {/if}
 </div>

@@ -1,4 +1,5 @@
 import type { OutputChunk } from "$bindings/managedruntime/models";
+import { ProcessOutputHighlighter } from "./process-output-highlighter";
 
 // Only this boundary is asynchronous: xterm acknowledges after parsing a write.
 export interface OutputTerminal {
@@ -15,10 +16,17 @@ export class ProcessOutputRenderer {
   #next = 0;
   #writing = false;
   #disposed = false;
+  #highlight = true;
+  #highlighter = new ProcessOutputHighlighter();
 
   constructor(private readonly create: () => OutputTerminal) {}
 
-  sync(chunks: readonly OutputChunk[], revision: number, enabled: boolean) {
+  sync(
+    chunks: readonly OutputChunk[],
+    revision: number,
+    enabled: boolean,
+    highlight = true,
+  ) {
     if (this.#disposed) return;
     if (!enabled) {
       this.#reset();
@@ -33,10 +41,17 @@ export class ProcessOutputRenderer {
     const extendsPrevious = this.#chunks.every(
       (chunk, index) =>
         retained[index]?.sequence === chunk.sequence &&
-        retained[index]?.text === chunk.text,
+        retained[index]?.text === chunk.text &&
+        retained[index]?.stream === chunk.stream,
     );
-    if (revision !== this.#revision || !extendsPrevious) this.#reset();
+    if (
+      revision !== this.#revision ||
+      !extendsPrevious ||
+      highlight !== this.#highlight
+    )
+      this.#reset();
     this.#revision = revision;
+    this.#highlight = highlight;
     this.#chunks = retained;
     this.#terminal ??= this.create();
     this.#pump();
@@ -49,6 +64,7 @@ export class ProcessOutputRenderer {
     this.#chunks = [];
     this.#next = 0;
     this.#writing = false;
+    this.#highlighter = new ProcessOutputHighlighter();
   }
 
   #pump() {
@@ -59,7 +75,10 @@ export class ProcessOutputRenderer {
     this.#writing = true;
     // One bounded chunk in xterm's queue at a time. New polls replace the
     // retained snapshot instead of appending another unbounded write backlog.
-    this.#terminal.write(chunk.text, () => {
+    const text = this.#highlight
+      ? this.#highlighter.write(chunk.text, chunk.stream)
+      : chunk.text;
+    this.#terminal.write(text, () => {
       if (generation !== this.#generation || this.#disposed) return;
       this.#writing = false;
       this.#pump();

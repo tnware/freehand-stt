@@ -8,11 +8,10 @@ import { modelFamilies } from "../data/model-families";
 import { availableBackends } from "../data/backends";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const href = (path: string) => `${base}${path}`;
-const groups = [
-  { title: "Transcription", profiles: modelProfiles.filter((model) => model.id !== "s1-mini" && model.id !== "qwen3-tts-customvoice") },
-  { title: "Transcript cleanup", profiles: modelProfiles.filter((model) => model.id === "s1-mini") },
-  { title: "Text to speech", profiles: modelProfiles.filter((model) => model.id === "qwen3-tts-customvoice") },
-];
+const groups = ["Transcription", "Transcript cleanup", "Text to speech"].map((title) => ({
+  title,
+  profiles: modelProfiles.filter((model) => model.task === title),
+}));
 const backendIcon = (guide: string) => availableBackends.find((backend) => backend.guide === guide)?.id ?? "generic";
 ---
 <ProductLayout current="models" title="Models & model families — Freehand" description="Whisper, Kokoro, and dedicated model profiles for transcription, cleanup, and speech. Compare controls and compatible backends by task." path="models/">

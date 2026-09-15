@@ -18,7 +18,7 @@ func writeInstances(ctx context.Context, q *dbgen.Queries, v config.Settings) er
 				return errors.New("runtime provider is immutable")
 			}
 		}
-		if e = q.PutManagedInstance(ctx, dbgen.PutManagedInstanceParams{ID: i.ID, Name: i.Name, Provider: string(i.Provider), Model: i.Model, AutoStart: boolean(i.AutoStart)}); e != nil {
+		if e = q.PutManagedInstance(ctx, dbgen.PutManagedInstanceParams{ID: i.ID, Name: i.Name, Provider: string(i.Provider), Model: i.Model, SpeechModel: i.SpeechModel, AutoStart: boolean(i.AutoStart)}); e != nil {
 			return e
 		}
 	}

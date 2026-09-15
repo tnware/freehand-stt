@@ -57,6 +57,9 @@ func definition(id ID, role compatibility.Role) (Profile, error) {
 	if p, ok := familyProfile(id, role); ok {
 		return p, nil
 	}
+	if id == MagpieTTS && role == compatibility.Speech {
+		return magpieTTSProfile(), nil
+	}
 	if id == Qwen3TTS && role == compatibility.Speech {
 		return qwenTTSProfile(), nil
 	}
@@ -118,7 +121,7 @@ func Resolve(id ID, backend compatibility.ID, role compatibility.Role) (Contract
 	if (id == Qwen3ASR || id == CohereTranscribe || id == VoxtralRealtime) && backend != compatibility.VLLM {
 		return Contract{}, errors.New("this model profile requires the vLLM backend")
 	}
-	if (id == Nemotron35 || id == ParakeetTDT) && backend != compatibility.NeMoSpeechV1 {
+	if (id == Nemotron35 || id == ParakeetTDT || id == MagpieTTS) && backend != compatibility.NeMoSpeechV1 {
 		return Contract{}, errors.New("this model profile requires the NeMo-Speech.cpp backend")
 	}
 	if id == Qwen3TTS && backend != compatibility.VLLMOmni {
@@ -148,6 +151,9 @@ func options(backend compatibility.ID, role compatibility.Role) []Profile {
 	}
 	if role == compatibility.Realtime {
 		ids = []ID{Nemotron35, Qwen3ASR, VoxtralRealtime}
+	}
+	if role == compatibility.Speech && backend == compatibility.NeMoSpeechV1 {
+		ids = append(ids, MagpieTTS)
 	}
 	if role == compatibility.Speech && backend == compatibility.VLLMOmni {
 		ids = append(ids, Qwen3TTS)

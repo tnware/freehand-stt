@@ -231,6 +231,31 @@ selected again. Browser fixtures are not native inference evidence. No model
 inventory inference belongs in CI. See the
 [Windows checklist](../../safety/native-test-checklist/#managed-local-runtime).
 
+### Combined NeMo transcription and speech
+
+Use focused fixtures in `internal/managedruntime`, `internal/modelprofile`,
+`internal/inference`, `internal/connection`, and settings/storage to verify:
+
+- Complete Magpie generator/decoder/tokenizer acquisition, checksum failures,
+  cancellation, partial bundles, and rejection before launch.
+- One transcription plus one optional speech engine in fixed launch arguments,
+  readiness requiring both selected identities, and shared process teardown.
+- Role-specific metadata, bounded voice/language discovery, and the exact buffered
+  WAV request. Reject unsupported speed, style, and language without HTTP.
+- Runtime speech selection save/reopen, independent Voice and speech options,
+  removal admission while speech remains selected, and no credential or remote
+  fallback when a managed role is unavailable.
+- Catalog capability groups with Whisper variants retained, and speech composer
+  admission using the resolved managed endpoint and profile just like Preview.
+
+These fixtures do not establish native Magpie inference acceptance. On each
+supported native platform, explicitly Get and Select Magpie, start the combined
+runtime, and verify only the selected transcription and speech models. Check
+voice metadata and available languages, Preview and composer playback, shared
+Stop/Restart, deselect-then-Disable recovery, and release of both models on Quit.
+Observe memory use and failed startup with insufficient resources; do not turn
+this into an automatic model inventory or inference test.
+
 ### Startup, recommendation, and output-viewer validation
 
 Test host recommendations, GPU warm-up, startup reporting, and the output viewer
@@ -247,6 +272,11 @@ startup, rendering, clipboard, and selected-model inference observations:
   environment/config logging overrides, and qualify the exact pinned CPU binary
   with a model-free upstream warning through the owned launcher. This does not
   establish native viewer behavior or GPU inference acceptance.
+- NeMo argument fixtures require `--access-log --log-format json` while preserving
+  ordinary startup output. Highlight-log fixtures cover fragmented records,
+  severity/status colors, native ANSI, unchanged copy/search text, bounded
+  retention, reset/eviction, stream switches, and disabled highlighting. Native
+  viewer acceptance separately checks readability and explicit Copy selection.
 - Recipe/host selection checks Windows x64 CPU/CUDA choices, NVIDIA device 0,
   driver 551.78 and compute capability 5.0 thresholds, unknown or malformed
   metadata, unsupported platforms, and explicit CPU override. The metadata
@@ -445,8 +475,8 @@ and without JavaScript, while preserving the explanatory text and guide links.
 For local setup discovery, check the homepage's local and manual setup paths,
 the runtime/model choices on Features, and installation labels in the Backends
 and Models directories. Only NeMo, Windows whisper.cpp, and llama.cpp with
-S1-mini should offer installation in Freehand; compatible remote models and
-speech generation must not inherit that label. Follow the local setup links
+S1-mini should offer installation in Freehand. NeMo includes optional MagpieTTS
+speech; other compatible remote models must not inherit that label. Follow the local setup links
 through to their guide sections with the production base path. Check narrow
 layouts and no-JavaScript access as well as desktop presentation.
 

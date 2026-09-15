@@ -457,6 +457,31 @@
       }
     },
     {
+      "id": "nemo-speech-v1",
+      "label": "NeMo-Speech.cpp",
+      "available": true,
+      "description": "Buffered PCM16 WAV speech with the server-loaded MagpieTTS model, language selection, and model-scoped voices; v0.1.0. Speed remains 1.0.",
+      "capabilities": {
+        "nemoTranscriptionControls": false,
+        "realtime": false,
+        "serverLoadedModel": true,
+        "vllmTranscriptionEvents": false,
+        "cleanupOutputLimit": false,
+        "cleanupDisableReasoning": false,
+        "fileStreaming": false,
+        "typedTranscriptionEvents": false,
+        "legacyTranscriptionSegments": false,
+        "languageHint": false,
+        "voiceDiscovery": true,
+        "speechInstructions": false,
+        "speechLanguage": true,
+        "speechSpeed": false,
+        "transcriptionPrompt": false,
+        "transcriptionHotwords": false,
+        "transcriptionTemperature": false
+      }
+    },
+    {
       "id": "vllm-omni",
       "label": "vLLM-Omni",
       "available": true,

@@ -54,6 +54,7 @@ var operationSequence atomic.Uint64
 
 type workerConfig struct {
 	Model                        string
+	SpeechModel                  string
 	Enabled, Realtime, AutoStart bool
 }
 
@@ -71,6 +72,7 @@ func (s *worker) snapshotLocked() Status {
 	}
 	st.Enabled = s.configuration.Enabled
 	st.SelectedModel = s.configuration.Model
+	st.SelectedSpeechModel = s.configuration.SpeechModel
 	st.Realtime = s.configuration.Realtime
 	st.Models = append([]Model{}, st.Models...)
 	return st
@@ -80,11 +82,12 @@ func (s *worker) snapshotLocked() Status {
 // to the renderer status DTO. Callbacks run outside the state mutex.
 type workerSnapshot struct {
 	Status
-	activeModel string
+	activeModel       string
+	activeSpeechModel string
 }
 
 func (s *worker) publicationLocked() workerSnapshot {
-	return workerSnapshot{Status: s.snapshotLocked(), activeModel: s.endpoint.Model}
+	return workerSnapshot{Status: s.snapshotLocked(), activeModel: s.endpoint.Model, activeSpeechModel: s.endpoint.SpeechModel}
 }
 func (s *worker) notify() {
 	s.publicationMu.Lock()
@@ -143,7 +146,7 @@ func (s *worker) configureLocked(p workerConfig) *ownedProcess {
 		return nil
 	}
 	s.generation = leaseGeneration.Add(1)
-	if old.Model != p.Model || !p.Enabled {
+	if old.Model != p.Model || old.SpeechModel != p.SpeechModel || !p.Enabled {
 		if s.operationCancel != nil {
 			s.operationCancel()
 		}
@@ -401,7 +404,7 @@ func (s *worker) RemoveModel(id string) error {
 	}
 	return s.run("remove_model", "", true, func(ctx context.Context) error {
 		s.mu.Lock()
-		selected := s.configuration.Model == id
+		selected := s.configuration.Model == id || s.configuration.SpeechModel == id
 		s.mu.Unlock()
 		if selected {
 			if err := s.stopProcess(ctx); err != nil {
@@ -439,9 +442,13 @@ func (s *worker) startProcess(ctx context.Context) error {
 	generation := s.generation
 	running := s.process != nil
 	installed := false
+	speechInstalled := p.SpeechModel == ""
 	for _, m := range s.status.Models {
 		if m.ID == p.Model && m.Installed {
 			installed = true
+		}
+		if m.ID == p.SpeechModel && m.Installed {
+			speechInstalled = true
 		}
 	}
 	s.mu.Unlock()
@@ -451,7 +458,7 @@ func (s *worker) startProcess(ctx context.Context) error {
 		s.mu.Unlock()
 		return nil
 	}
-	if !p.Enabled || !installed {
+	if !p.Enabled || !installed || !speechInstalled {
 		return errNotReady
 	}
 	// Auto-start first inspects the installation, which reports "installed".
@@ -471,14 +478,14 @@ func (s *worker) startProcess(ctx context.Context) error {
 		return err
 	}
 	ctx = s.observeStartup(ctx)
-	proc, endpoint, err := s.providerProcess.start(ctx, s.adapter, p.Model)
+	proc, endpoint, err := s.providerProcess.startModels(ctx, s.adapter, p.Model, p.SpeechModel)
 	if err != nil {
 		if proc != nil {
 			s.discardProcess(proc)
 		}
 		return err
 	}
-	if proc == nil || !endpoint.Enabled || endpoint.BaseURL == "" || endpoint.Model == "" {
+	if proc == nil || !endpoint.Enabled || endpoint.BaseURL == "" || endpoint.Model == "" || (p.SpeechModel != "" && endpoint.SpeechModel == "") {
 		if proc != nil {
 			s.discardProcess(proc)
 		}
@@ -616,13 +623,17 @@ func (s *worker) startup(ctx context.Context) error {
 		s.mu.Lock()
 		ready := s.configuration.Enabled && s.configuration.AutoStart
 		installed := false
+		speechInstalled := s.configuration.SpeechModel == ""
 		for _, m := range s.status.Models {
 			if m.ID == s.configuration.Model && m.Installed {
 				installed = true
 			}
+			if m.ID == s.configuration.SpeechModel && m.Installed {
+				speechInstalled = true
+			}
 		}
 		s.mu.Unlock()
-		if ready && installed {
+		if ready && installed && speechInstalled {
 			return s.startProcess(ctx)
 		}
 		return nil

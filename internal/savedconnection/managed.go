@@ -52,7 +52,7 @@ func QualifyProjection(v config.Settings, p Purpose, id string) config.Settings 
 		v.PostProcessing.Preset = config.PostProcessingPreset(c.ModelProfile)
 		v.PostProcessing.CompatibilityProfile = c.CompatibilityProfile
 	case Speech:
-		v.TextToSpeech.Model = i.Model
+		v.TextToSpeech.Model = i.ModelForRole(compatibility.Speech)
 		v.TextToSpeech.ModelProfile = c.ModelProfile
 		v.TextToSpeech.CompatibilityProfile = c.CompatibilityProfile
 		v.TextToSpeech.AuthenticationMode = config.AuthenticationModeNone

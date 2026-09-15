@@ -9,6 +9,7 @@ import {
   type RuntimeMetadataSource,
 } from "$lib/utils/managedConnectionMetadata";
 import { connectionInputKey } from "$lib/utils/connectionInputs";
+import { connectionModelsForPurpose } from "$lib/utils/connectionModels";
 import type { Edit } from "$bindings/modelsettings";
 import {
   Action,
@@ -1019,10 +1020,14 @@ export class SettingsEditor {
         this.applied &&
         key === this.#metadataInputKey(this.applied, Purpose.Voice)
       ) {
-        this.voiceConnection = result;
+        this.voiceConnection = connectionModelsForPurpose(
+          result,
+          Purpose.Voice,
+          settings.voiceTranscription.model,
+        );
         this.#testedInputs[Purpose.Voice] = key;
         this.#voiceTestID = key;
-        return result;
+        return this.voiceConnection;
       }
     } catch (cause) {
       if (revision === this.#voiceConnectionRevision)
@@ -1192,7 +1197,11 @@ export class SettingsEditor {
           });
       if (revision === this.#sttConnectionRevision) {
         this.#testedInputs[Purpose.Transcription] = inputKey;
-        this.connection = result;
+        this.connection = connectionModelsForPurpose(
+          result,
+          Purpose.Transcription,
+          settings.model,
+        );
         this.sttConnectionStale = false;
       }
     } catch (cause) {
@@ -1237,7 +1246,11 @@ export class SettingsEditor {
           });
       if (revision === this.#processingConnectionRevision) {
         this.#testedInputs[Purpose.Cleanup] = inputKey;
-        this.processingConnection = result;
+        this.processingConnection = connectionModelsForPurpose(
+          result,
+          Purpose.Cleanup,
+          settings.postProcessing.model,
+        );
         this.processingConnectionStale = false;
       }
     } catch (cause) {
@@ -1282,7 +1295,11 @@ export class SettingsEditor {
           });
       if (revision === this.#ttsConnectionRevision) {
         this.#testedInputs[Purpose.Speech] = inputKey;
-        this.ttsConnection = result;
+        this.ttsConnection = connectionModelsForPurpose(
+          result,
+          Purpose.Speech,
+          settings.textToSpeech.model,
+        );
         this.ttsConnectionStale = false;
       }
     } catch (cause) {

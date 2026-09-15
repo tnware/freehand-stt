@@ -34,8 +34,8 @@ optional Windows or macOS managed runtime; models and runtime binaries are not b
 
 `internal/managedruntime.Manager` owns the runtime inventory and independent
 per-instance workers. Provider adapters own installation, metadata catalogs,
-model acquisition, and process launch for NeMo, llama.cpp cleanup, and whisper.cpp
-completed transcription. The manager
+model acquisition, and process launch for NeMo transcription and speech,
+llama.cpp cleanup, and whisper.cpp completed transcription. The manager
 exposes a small instance-targeted Wails boundary and
 bounded status events, not upstream flags. Official versioned archives are
 checksum-verified before extraction is published. Model downloads use NeMo's
@@ -44,6 +44,23 @@ pinned catalog revisions with size and SHA-256 verification. Listing the catalog
 never loads models. Each provider is bounded to one installation and one process
 tree, including retired workers. Existing duplicate entries remain explicitly
 repairable without ID, Connection, or model rewrites. Different providers can run concurrently.
+
+NeMo's instance has a required transcription `Model` and an optional
+`SpeechModel`; these resolve separate task contracts in one process. MagpieTTS
+v2602 acquisition verifies the pinned generator GGUF, NanoCodec decoder, and ten
+tokenizer members as a complete bundle. A partial or damaged bundle cannot be
+marked installed or launched. The fixed launcher supplies both engine configurations,
+and readiness checks require the expected transcription and speech identities
+before publishing role-specific endpoints. Start, Stop, Restart, cancellation,
+and process ownership remain shared. There is no second ASR slot or arbitrary
+YAML/flag editor.
+
+The optional speech selection persists with runtime preferences through the
+same storage transaction. Built-in Connections advertise speech only while a
+qualified speech model is selected. Removing that selection requires first
+deselecting its speech Connection; validation prevents a silent fallback.
+Removing the role clears its remembered model options through the existing
+Connection-use ownership, while downloaded files and transcription remain.
 
 NeMo and GGML archive installers share the bounded download and checksum
 verification path. Each installer still owns its staging directory, extraction,
@@ -75,6 +92,8 @@ the binary label is not an inference-offload measurement.
 Acquisition events contain only bounded operation IDs, phases, counters, and
 terminal outcomes. GGML reports bytes written; NeMo observes metadata for the
 selected model's exact owned partial/final paths while its own manager runs.
+Magpie progress aggregates its model, decoder, and tokenizer bundle; extraction
+and final checksums must complete before the catalog marks it installed.
 Neither raw child diagnostics nor paths enter renderer progress. Full transfer
 does not imply successful verification, and request admission does not imply
 operation success.
@@ -116,11 +135,14 @@ speech controls preserve voice, speed, and qualified language/style options;
 cleanup preserves its instruction and generation controls. These surfaces do not
 register providers or imply additional roles: NeMo qualifies transcription and
 Nemotron realtime, whisper.cpp qualifies completed transcription, and llama.cpp
-qualifies S1-mini cleanup. None of these managed adapters qualifies TTS.
+qualifies S1-mini cleanup. NeMo also qualifies MagpieTTS v2602 speech with its
+independent model selection. Catalog sections group these choices by task
+capability, retaining Whisper family and variant grouping within transcription.
 
 The adapter probes `/ready` and `/v1/models` at the server origin, but publishes
 `http://127.0.0.1:<port>/v1` as the speech API base. Completed microphone/file
-clients append `audio/transcriptions`; the realtime client appends `realtime`.
+clients append `audio/transcriptions`; the NeMo realtime client appends
+`audio/transcriptions/realtime`, and speech appends `audio/speech`.
 Keep this distinction at the adapter boundary, not in shared client URL handling.
 
 llama.cpp likewise publishes `/v1` for the cleanup client, with S1-mini reasoning
@@ -264,7 +286,17 @@ access does not erase private memory. The tail may survive process exit for
 inspection; Clear, the next start attempt, runtime removal, and shutdown release
 it. Viewer actions never start, stop, restart, or orphan a process. llama.cpp
 uses normal non-debug `--log-verbosity 3 --log-colors on` output in the existing
-private capture.
+private capture. NeMo uses `--access-log --log-format json` to emit structured
+HTTP request records alongside its plain startup output. Global `--json` stays
+off so normal loading diagnostics remain available. Structured access records
+have an `http.request` event, request ID, method, path, status, and remote address;
+they are private child output, never application telemetry.
+
+**Highlight logs** derives bounded display-only SGR colors from recognizable
+severity, status, and JSON tokens, preserving upstream ANSI and the original
+search/copy text. Fragmented records, renderer resets, stream changes, and hidden
+viewers retain the existing bounds and generation fences. JSON values are never
+decoded into terminal controls or interpreted as actions.
 The pinned logger defaults to no disk sink; file/prompt logging flags and
 inherited logging/config overrides remain excluded. Normal logs may contain
 sensitive content; whisper verbosity is not enabled.
@@ -315,12 +347,21 @@ and SQLite after feature shutdown through Wails `PostShutdown`.
 ### NeMo metadata and model preferences
 
 NeMo connection checks retain bounded `/v1/models` IDs, capability labels, and
-device strings. Transcription choices exclude explicitly incompatible capabilities;
+device strings. Saved-Connection diagnostics retain the combined inventory;
+per-task checks and model pickers select their own capability.
+Transcription choices exclude explicitly incompatible capabilities;
 missing capability metadata stays unknown. An optional, two-second `/health`
 probe beside the configured `/v1` prefix supplies the runtime version without
 changing origin or overriding a custom health path. Failure of this optional
 probe does not invalidate a successful model inventory. Metadata never chooses
 model profiles or triggers inference.
+
+NeMo speech voice discovery reads only the selected `speech` row in `/v1/models`,
+including bounded `voices` and `languages`. It never falls back to another model
+or a general voice endpoint. Language metadata intersects the explicit Magpie
+profile; optional Japanese/Chinese frontends can narrow the offered languages.
+An unknown or absent speech row is a metadata failure, not permission to probe
+models by running synthesis.
 
 `compatibility.NeMoOptions` is a value-only snapshot shared by completed and
 realtime transports. `config` owns active controls, `modelsettings` owns the
@@ -1674,7 +1715,19 @@ the same transaction. `settings.TextToSpeechPreview` accepts the same options as
 the ordinary request and validates before reading credentials. Previews remain
 unsaved; running jobs retain their immutable settings and credential snapshot.
 The speech adapter explicitly requests buffered WAV from Kokoro-FastAPI and
-vLLM-Omni. Qwen CustomVoice never submits reference audio or uploaded-voice tasks.
+vLLM-Omni, and NeMo. Qwen CustomVoice never submits reference audio or
+uploaded-voice tasks.
+
+MagpieTTS Multilingual 357M is qualified against NeMo v0.1.0 and the v2602
+checkpoint. Its profile owns five speaker presets and nine language choices;
+the server can further restrict languages to compiled frontends. Empty language
+means server default, never automatic detection. Validation rejects unsupported
+language, style, and speed before HTTP. Requests retain model/input/voice,
+`response_format: "wav"`, and fixed `speed: 1`, adding `language` only when set.
+No reference audio, voice cloning, sample-rate override, or streaming synthesis
+is exposed. Voice metadata stays transient; active and remembered language/voice
+options use the same settings transaction and immutable request snapshot as
+other speech profiles.
 
 The settings sidebar filters the global General, Shortcuts, Overlay, and Vocabulary
 sections with presentation-only search terms. Workflow options, Connections, and

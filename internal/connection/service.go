@@ -435,7 +435,7 @@ func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestR
 	defer func() { key = "" }()
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
-	metadata := s.client.TestMetadata(ctx, request.BaseURL, "", key, request.Model, nil)
+	metadata := s.client.TestProfileMetadata(ctx, request.CompatibilityProfile, compatibility.Speech, request.BaseURL, "", key, request.Model, nil)
 	result.Reachable = metadata.Reachable
 	result.Probe = ConnectionProbe(metadata.Probe)
 	result.RequestedURL = metadata.RequestedURL
@@ -444,6 +444,8 @@ func (s *Service) TestTextToSpeechConnection(request TextToSpeechConnectionTestR
 	result.ErrorKind = ConnectionErrorKind(metadata.ErrorKind)
 	result.ModelPresence = ModelPresence(metadata.ModelPresence)
 	result.ModelIDs = metadata.ModelIDs
+	result.Models = metadata.Models
+	result.ServerVersion = metadata.ServerVersion
 	operationErr = ctx.Err()
 	return result
 }
@@ -529,7 +531,7 @@ func (s *Service) TestSavedConnection(id string) (result ConnectionResult) {
 	}
 	ctx, cancel := s.operationContext(15 * time.Second)
 	defer cancel()
-	metadata := s.client.TestProfileMetadata(ctx, c.Details.CompatibilityProfile, compatibility.Transcription, c.Details.BaseURL, health, key, "", c.Details.Headers)
+	metadata := s.client.TestProfileMetadata(ctx, c.Details.CompatibilityProfile, "", c.Details.BaseURL, health, key, "", c.Details.Headers)
 	operationErr = ctx.Err()
 	result.Reachable = metadata.Reachable
 	result.Probe = ConnectionProbe(metadata.Probe)

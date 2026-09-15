@@ -31,6 +31,7 @@ type ModelSource struct {
 	Filename          string                 `json:"filename"`
 	SHA256            string                 `json:"sha256"`
 	URL               string                 `json:"url,omitempty"`
+	Companions        []*ModelSource         `json:"companions,omitempty"`
 }
 
 func (s modelSpec) source(method ModelAcquisitionMethod) *ModelSource {

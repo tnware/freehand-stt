@@ -26,7 +26,7 @@ overwriting the document.
 | `llama-cpp`   | Post-processing           | Shared non-streaming text chat adapter; prompt preset remains independent                              |
 | `whisper-cpp` | STT                       | Native `/inference`, server-loaded model, `/health`, completed JSON                                    |
 | `vllm`        | STT, realtime, post-processing | Completed JSON, dedicated file-stream decoder, qualified Qwen3-ASR/Voxtral realtime, text cleanup |
-| `nemo-speech-v1` | STT, realtime           | Completed multipart and the NeMo-Speech.cpp v0.1.0 WebSocket contract; explicit model qualification |
+| `nemo-speech-v1` | STT, realtime, TTS | Completed multipart, the NeMo-Speech.cpp v0.1.0 WebSocket contract, and buffered MagpieTTS WAV; explicit model qualification |
 | `kokoro-fastapi` | TTS                     | Buffered PCM16 WAV with `stream: false` and voice metadata discovery |
 | `vllm-omni`   | TTS                       | Buffered WAV, voice discovery, and qualified Qwen3-TTS language/style fields |
 
@@ -186,7 +186,7 @@ may impose a lower limit.
 
 ## Text to speech
 
-On-demand speech uses an independent `POST /audio/speech` capability profile and requests PCM16 WAV for native playback. Model, voice, options, and request budget are independent of transcription and cleanup. Selecting the same saved connection deliberately shares its endpoint, authentication, plaintext-HTTP policy, and credential. The Generic compatible baseline defines no portable voice-list endpoint. Speaches, Kokoro-FastAPI, and vLLM-Omni add qualified metadata discovery. Manual voice IDs remain valid where the selected model profile permits them; Qwen3-TTS CustomVoice restricts selection to its qualified preset voices.
+On-demand speech uses an independent `POST /audio/speech` capability profile and requests PCM16 WAV for native playback. Model, voice, options, and request budget are independent of transcription and cleanup. Selecting the same saved connection deliberately shares its endpoint, authentication, plaintext-HTTP policy, and credential. The Generic compatible baseline defines no portable voice-list endpoint. Speaches, Kokoro-FastAPI, vLLM-Omni, and NeMo add qualified metadata discovery. Manual voice IDs remain valid where the selected model profile permits them; Qwen3-TTS CustomVoice restricts selection to its qualified preset voices.
 
 Example self-hosted values:
 
@@ -318,6 +318,8 @@ Only profiles advertising voice discovery make requests. vLLM-Omni reads
 string entries. Speaches first reads `GET /models` for the selected model's
 `voices`; when absent, it falls back to `GET /audio/voices` and identifies that
 list as server-wide. An empty model list is not replaced with unrelated voices.
+NeMo reads only the selected `speech` row in `GET /models`, retaining its bounded
+voice IDs and qualified languages; it does not fall back to `/audio/voices`.
 All paths are relative to the configured base URL, preserving reverse-proxy prefixes.
 
 Metadata uses a 15-second operation budget, a 1 MiB response limit, at most 500
@@ -330,6 +332,12 @@ voice uses the existing per-model setting; absence from a list does not block it
 
 Kokoro-FastAPI's speech request uses the existing model/input/voice/speed/WAV
 fields plus `stream: false`.
+NeMo's MagpieTTS profile uses model/input/voice, `response_format: "wav"`, fixed
+`speed: 1`, and an optional `language`. Empty language uses the server default.
+The v2602 profile admits en, es, de, fr, it, vi, hi, zh, and ja language codes or
+their qualified locales; available frontends can narrow the UI choices. It
+rejects style instructions and other speeds. The server selects its one loaded
+TTS engine; the model field does not load or switch a model.
 Generic and Speaches keep their existing request shape. vLLM-Omni also explicitly
 requests buffered speech; the Qwen3-TTS CustomVoice profile adds `task_type`,
 language, and optional style instructions under its

@@ -40,6 +40,47 @@ function fixture() {
 
 describe("shared metadata lifecycle", () => {
   it.each(roles)(
+    "filters a shared server inventory for %s without mutating catalog diagnostics",
+    async (purpose) => {
+      const { editor, probe, snapshot } = fixture();
+      snapshot.textToSpeech.enabled = true;
+      editor.applySettingsSnapshot(snapshot);
+      const inventory = {
+        ...connectionResult,
+        modelIDs: ["asr", "tts", "chat", "legacy", "other"],
+        models: [
+          { id: "asr", capability: "transcription", device: "cuda" },
+          { id: "tts", capability: "speech", device: "cuda" },
+          { id: "chat", capability: "chat", device: "cpu" },
+          { id: "legacy", capability: "", device: "" },
+          { id: "other", capability: "unknown", device: "" },
+        ],
+      };
+      probe.mockImplementation(() => CancellablePromise.resolve(inventory));
+      await editor.testAppliedConnection(purpose);
+      const expected =
+        purpose === Purpose.Speech
+          ? "tts"
+          : purpose === Purpose.Cleanup
+            ? "chat"
+            : "asr";
+      expect(editor.connectionMetadataResult(purpose)?.modelIDs).toEqual([
+        expected,
+        "legacy",
+      ]);
+      expect(inventory.modelIDs).toEqual([
+        "asr",
+        "tts",
+        "chat",
+        "legacy",
+        "other",
+      ]);
+      expect(editor.connectionMetadataResult(purpose)?.models).toEqual(
+        inventory.models,
+      );
+    },
+  );
+  it.each(roles)(
     "waits for the selected runtime and retries once after restart for %s",
     async (role) => {
       const services = serviceWithStatus(() =>

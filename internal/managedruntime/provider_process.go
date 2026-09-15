@@ -17,6 +17,10 @@ type providerProcess struct {
 }
 
 func (p *providerProcess) start(ctx context.Context, a runtimeAdapter, model string) (*ownedProcess, Endpoint, error) {
+	return p.startModels(ctx, a, model, "")
+}
+
+func (p *providerProcess) startModels(ctx context.Context, a runtimeAdapter, model, speechModel string) (*ownedProcess, Endpoint, error) {
 	if !p.mu.TryLock() {
 		return nil, Endpoint{}, errProviderRunning
 	}
@@ -29,7 +33,18 @@ func (p *providerProcess) start(ctx context.Context, a runtimeAdapter, model str
 			return nil, Endpoint{}, errProviderRunning
 		}
 	}
-	proc, endpoint, err := a.Start(ctx, model)
+	var proc *ownedProcess
+	var endpoint Endpoint
+	var err error
+	if speechModel == "" {
+		proc, endpoint, err = a.Start(ctx, model)
+	} else if combined, ok := a.(interface {
+		StartModels(context.Context, string, string) (*ownedProcess, Endpoint, error)
+	}); ok {
+		proc, endpoint, err = combined.StartModels(ctx, model, speechModel)
+	} else {
+		return nil, Endpoint{}, errors.New("This runtime cannot load a separate speech model.")
+	}
 	p.process = proc
 	return proc, endpoint, err
 }

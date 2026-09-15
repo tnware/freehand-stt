@@ -39,7 +39,11 @@
   }
   const choices = $derived(
     restricted
-      ? languages.map((l) => ({ value: l.code, label: l.label, code: l.code }))
+      ? languages.map((l) => ({
+          value: l.code || "__default",
+          label: l.label,
+          code: l.code,
+        }))
       : [
           { value: "__default", label: "Server default", code: "" },
           { value: "auto", label: "Automatic detection", code: "auto" },

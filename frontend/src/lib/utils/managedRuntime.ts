@@ -1,4 +1,30 @@
-import type { Model, Status } from "$bindings/managedruntime";
+import type { Instance, Model, Status } from "$bindings/managedruntime";
+import { Role } from "$bindings/compatibility";
+
+export function isSpeechRuntimeModel(model: Model): boolean {
+  return !!model.contracts?.some((contract) => contract.role === Role.Speech);
+}
+
+export function runtimeModelSelection(
+  instance: Instance,
+  model: Model,
+): Instance {
+  return isSpeechRuntimeModel(model)
+    ? { ...instance, speechModel: model.id }
+    : { ...instance, model: model.id };
+}
+
+export function runtimeModelsDownloaded(
+  instance: Instance,
+  models: readonly Model[],
+): boolean {
+  return (
+    !!instance.model &&
+    [instance.model, instance.speechModel]
+      .filter(Boolean)
+      .every((id) => models.some((model) => model.id === id && model.installed))
+  );
+}
 
 export function backendLabel(backend: string): string {
   if (backend === "cpu") return "CPU";

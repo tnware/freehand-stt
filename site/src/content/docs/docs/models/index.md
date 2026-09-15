@@ -27,7 +27,7 @@ that is the model your server is running, then choose **Save**.
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Voice / Audio file | Generic; [Nemotron](./nemotron/), [Parakeet](./parakeet/), [Qwen3-ASR](./qwen3-asr/), [Cohere Transcribe](./cohere-transcribe/), [Voxtral Mini Realtime](./voxtral-realtime/) | Each profile shows the recognition controls supported by its backend. Nemotron, Qwen3-ASR, and Voxtral enable optional realtime for Voice. |
 | Cleanup            | Generic; [S1-mini by Superwhisper](./s1-mini/)                                                                                                                                | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                            |
-| Text to speech     | Generic; [Qwen3-TTS](./qwen3-tts/) on vLLM-Omni                                                                                                                               | WAV speech with a voice ID and speed. Qwen3-TTS adds preset voices, language, and style instructions.                                      |
+| Text to speech     | Generic; [Qwen3-TTS](./qwen3-tts/) on vLLM-Omni; [MagpieTTS](./magpie-tts/) on NeMo                                                                                                                               | WAV speech with backend-supported controls. MagpieTTS adds voices and language; Qwen3-TTS also supports style instructions.                                      |
 
 If a backend offers only Generic, Freehand uses it without a profile selector.
 
@@ -55,13 +55,15 @@ recordings. Audio-file transcription has its own selection.
 - [Parakeet TDT v3](./parakeet/): completed transcription with automatic language detection.
 - [Cohere Transcribe](./cohere-transcribe/): completed recordings and streamed file results with a selected language.
 - [Voxtral Mini Realtime](./voxtral-realtime/): live or completed transcription with automatic language detection.
+- [MagpieTTS Multilingual 357M](./magpie-tts/): local or remote speech with preset voices and language selection.
 - [Qwen3-TTS](./qwen3-tts/): text to speech with preset voices, languages, and style instructions.
 
 ## Remember settings for each model
 
 The model ID picker below applies to manual Connections. For a managed
-Connection, choose a downloaded model in the runtime controls; every task using
-that runtime shares its selected model.
+Connection, choose a downloaded model in the runtime controls. Voice and audio
+files share its transcription model; NeMo can also load a separate MagpieTTS
+model for speech generation.
 
 Voice, Audio file, Cleanup, and Text to speech use the same searchable **Model**
 picker in their options and first-run setup controls. **Saved** identifies remembered options,

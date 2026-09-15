@@ -3,10 +3,12 @@
 export const modelProfiles = [
   {
     id: "s1-mini",
+    task: "Transcript cleanup",
     name: "S1-mini",
     family: "Superwhisper · Transcript cleanup",
     icon: "s1-mini",
-    summary: "Format English transcripts with the style and structure you want.",
+    summary:
+      "Format English transcripts with the style and structure you want.",
     guide: "/docs/models/s1-mini/",
     backends: [
       { name: "llama.cpp", guide: "/docs/backends/llama-cpp/" },
@@ -24,12 +26,16 @@ export const modelProfiles = [
   },
   {
     id: "nemotron-3.5-streaming",
+    task: "Transcription",
     name: "Nemotron 3.5 ASR",
     family: "NVIDIA · Streaming 0.6B",
     icon: "nemotron-3.5-streaming",
-    summary: "Dictate live or transcribe recordings with your language and terminology.",
+    summary:
+      "Dictate live or transcribe recordings with your language and terminology.",
     guide: "/docs/models/nemotron/",
-    backends: [{ name: "NeMo-Speech.cpp", guide: "/docs/backends/nemo-speech/" }],
+    backends: [
+      { name: "NeMo-Speech.cpp", guide: "/docs/backends/nemo-speech/" },
+    ],
     controls: [
       { name: "Language", detail: "Automatic or 32 locales" },
       { name: "Vocabulary", detail: "Shared terms and strength" },
@@ -41,10 +47,12 @@ export const modelProfiles = [
   },
   {
     id: "qwen3-asr",
+    task: "Transcription",
     name: "Qwen3-ASR",
     family: "Qwen · Speech recognition",
     icon: "qwen3-asr",
-    summary: "Use context for completed audio, or follow your dictation as live text.",
+    summary:
+      "Use context for completed audio, or follow your dictation as live text.",
     guide: "/docs/models/qwen3-asr/",
     backends: [{ name: "vLLM", guide: "/docs/backends/vllm/" }],
     controls: [
@@ -58,10 +66,12 @@ export const modelProfiles = [
   },
   {
     id: "parakeet-tdt-v3",
+    task: "Transcription",
     name: "Parakeet TDT v3",
     family: "NVIDIA · Multilingual recognition",
     icon: "parakeet-tdt-v3",
-    summary: "Transcribe recordings with automatic language detection and punctuation.",
+    summary:
+      "Transcribe recordings with automatic language detection and punctuation.",
     guide: "/docs/models/parakeet/",
     backends: [
       {
@@ -84,15 +94,17 @@ export const modelProfiles = [
       },
     ],
     inApp:
-      "Choose Parakeet TDT v3 in Voice or Audio-file transcription for completed recordings. Language and punctuation are automatic; recognition hints and live mode are unavailable.",
+      "Choose Parakeet TDT v3 in Voice or Audio-file transcription for completed recordings. Language detection is automatic; NeMo transcription controls cover punctuation and optional server formatting. Recognition hints and live mode are unavailable.",
     note: "This profile covers the TDT v3 checkpoint on NeMo-Speech.cpp.",
   },
   {
     id: "cohere-transcribe",
+    task: "Transcription",
     name: "Cohere Transcribe",
     family: "Cohere · Speech recognition",
     icon: "cohere-transcribe",
-    summary: "Transcribe completed audio with an explicit choice of fourteen languages.",
+    summary:
+      "Transcribe completed audio with an explicit choice of fourteen languages.",
     guide: "/docs/models/cohere-transcribe/",
     backends: [
       {
@@ -120,10 +132,12 @@ export const modelProfiles = [
   },
   {
     id: "voxtral-realtime",
+    task: "Transcription",
     name: "Voxtral Mini Realtime",
     family: "Mistral · Streaming recognition",
     icon: "voxtral-realtime",
-    summary: "Follow your dictation in the results pane and single-row overlay captions.",
+    summary:
+      "Follow your dictation in the results pane and single-row overlay captions.",
     guide: "/docs/models/voxtral-realtime/",
     backends: [
       {
@@ -150,11 +164,34 @@ export const modelProfiles = [
     note: "Uses the Voxtral Mini 4B Realtime checkpoint. Audio files retain their own selection.",
   },
   {
+    id: "magpie-tts-multilingual-357m",
+    task: "Text to speech",
+    name: "MagpieTTS Multilingual 357M",
+    family: "NVIDIA · v2602 speech generation",
+    icon: "magpie-tts-multilingual-357m",
+    summary:
+      "Generate speech with preset voices alongside your local transcription model.",
+    guide: "/docs/models/magpie-tts/",
+    backends: [
+      { name: "NeMo-Speech.cpp", guide: "/docs/backends/nemo-speech/" },
+    ],
+    controls: [
+      { name: "Voice", detail: "Five preset speakers" },
+      { name: "Language", detail: "Up to nine, depending on the server" },
+      { name: "Local runtime", detail: "Shares NeMo with transcription" },
+    ],
+    inApp:
+      "Get and select MagpieTTS in NeMo's catalog, then choose NeMo in Text to speech. Refresh voices reads the loaded speech model's metadata.",
+    note: "Uses the v2602 checkpoint at normal speed. Japanese and Chinese require the corresponding server language frontends.",
+  },
+  {
     id: "qwen3-tts-customvoice",
+    task: "Text to speech",
     name: "Qwen3-TTS",
     family: "Qwen · 1.7B CustomVoice",
     icon: "qwen3-tts-customvoice",
-    summary: "Choose a preset speaker and describe how you want the words spoken.",
+    summary:
+      "Choose a preset speaker and describe how you want the words spoken.",
     guide: "/docs/models/qwen3-tts/",
     backends: [
       {
