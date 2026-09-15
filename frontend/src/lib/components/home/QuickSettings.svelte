@@ -100,11 +100,7 @@
     onEnterCleanup?: () => void;
     sttMetadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     processingMetadataStatus?:
-      | "idle"
-      | "loading"
-      | "ready"
-      | "empty"
-      | "failed";
+      "idle" | "loading" | "ready" | "empty" | "failed";
     onTestConnection: () => Promise<void>;
     onTestProcessingConnection: () => Promise<void>;
     onOpenServerSettings: () => void;
@@ -450,8 +446,7 @@
           >
             <Select.Trigger
               id="quick-processing-profile"
-              size="sm"
-              class="h-9 w-full min-w-0 bg-well"
+              class="w-full min-w-0 bg-well"
             >
               <span class="min-w-0 flex-1 truncate text-left text-[13px]">
                 {processingProfileName(

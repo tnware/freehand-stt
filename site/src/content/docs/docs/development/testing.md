@@ -1230,7 +1230,10 @@ clearing the draft without releasing audio, and explicit replacement with the ne
 submitted text. Ctrl+Enter cannot start a second generation while one is running.
 History expansion fixtures exercise real mouse-wheel events over the list at 560px
 and 1156px, scrolling in both directions, same-entry updates preserving the reading
-position, and newest-entry arrival returning the single viewport to the top.
+position, and newest-entry arrival returning the compact list viewport to the top.
+In the full History pane, check sidebar-list scrolling independently of the selected
+reader and run details, and verify the compact sidebar overlay leaves the main
+area usable after selection.
 
 Transcript playback fixtures at 560px and 1000px verify a single row no taller than
 48px, keyboard seeking, pause/resume and Stop visibility, keyboard access to
@@ -1346,7 +1349,9 @@ unsaved draft, clickable switch labels, collapsed Audio/Overlay tuning, keyboard
 slider changes, and draft preservation after navigation. A synthetic validation
 failure on speech padding must reopen its disclosure and focus the slider at
 both desktop and narrow widths. Minimal overlay surfaces must disable glow
-adjustment without resetting its value. Fixtures use no capture or inference.
+adjustment without resetting its value. Local runtime must appear neither in the
+Settings section list nor its search results; the activity-rail action must still
+open runtime management through the normal draft guard. Fixtures use no capture or inference.
 
 The workflow streamlining fixture checks all four workflow pages at 860px and
 520px: request controls start collapsed, edits survive collapsing and navigation,
@@ -1357,12 +1362,36 @@ responses; they do not contact inference servers.
 
 ### Workspace history and error presentation
 
-History expansion checks cover a fully readable newest result, single-line older
-previews, keyboard disclosure, new arrivals resetting manual expansion/comparison,
-cleanup updates preserving it, deleting the newest entry, clearing/repopulating,
-and a full unretained file result. These are shared list behaviors in Home and
-Settings. Native acceptance should confirm the same transitions after real
-recordings and cleanup completion.
+The full History pane must combine retention status, History settings, Clear history,
+search, source filters, and retained transcript previews in one sidebar. Exercise
+matches in final, raw, and processed text and file base names, including text absent
+from the displayed preview. Combine search with All, Voice, and Audio files filters;
+check no-match feedback and returning to the complete list. These controls browse
+only the existing in-memory entries and must not persist transcript text or trigger
+metadata discovery, inference, or file reads.
+
+Select an entry and verify its expanded reader, Copy, optional Listen, raw/cleaned
+comparison, and removal remain available beside the same run's full details.
+Neither selecting an entry nor browsing its details should call the native
+details-window bindings. Check selection after cleanup
+updates, new arrivals, deletion, eviction, disabling retention, and clearing the
+full history while a filter hides some entries. At widths below 700px, exercise
+the sidebar toggle, keyboard access, overlay dismissal, and selecting an entry
+without trapping or obscuring the reader. The reader/details split must change
+from side by side at 1100px and wider to stacked below that width; verify pointer
+and keyboard resizing. The list, reader, and details must scroll independently
+without an outer page scrollbar. At a 360px details-pane width, retain readable
+long identifiers, model names, timestamps, usage/cost/performance values, and
+every checkpoint field. Check component-scoped heading associations and the
+embedded 44px header, then verify the standalone details window from Recent and
+Settings still exposes the same fields and lifecycle.
+
+Compact Recent and Settings history lists retain their existing expansion checks:
+a fully readable newest result, single-line older previews, keyboard disclosure,
+new arrivals resetting manual expansion/comparison, cleanup updates preserving it,
+deleting the newest entry, clearing/repopulating, and a full unretained file result.
+Native acceptance should confirm the same transitions after real recordings and
+cleanup completion.
 
 Synthetic workspace checks exercise history action menus with keyboard opening,
 Escape focus restoration, deletion of the selected entry, and raw/cleaned copy.
@@ -1397,7 +1426,6 @@ CSS scale: content scrolls, Save remains fixed and visible, and the document has
 no extra vertical overflow. It also checks Voice uses the shared settings group.
 Native WebView/DPI acceptance remains separate from these browser fixtures.
 
-
 ## Workbench shell regression coverage
 
 Run `npm run test:browser` from `frontend`. The fixtures render the real shell,
@@ -1413,3 +1441,15 @@ port. `PLAYWRIGHT_REUSE_SERVER=1` explicitly reuses a running fixture server; CI
 always starts its own server. These are browser checks, not acceptance of native
 recording, insertion, permissions, or runtime inference. Run the native checklist
 on each supported OS and architecture before release.
+
+### Page-content consistency
+
+Review Voice, files, speech, readiness, History, Settings, Connections, and runtime
+details in both themes at normal and compact widths. Headers and the first content
+column should share the page gutter; related settings should read as divided rows.
+Compare fields, pickers, buttons, disclosures, and keyboard focus across pages.
+Check that transcript text retains its reading size, docked playback/output
+controls remain reachable, and notices do not obscure compact settings. Existing
+workspace, readiness, settings-layout, visual-hierarchy, speech-playback, runtime,
+and process-output browser suites exercise these surfaces with synthetic data.
+Repeat the native WebView review at supported DPI scales before release.

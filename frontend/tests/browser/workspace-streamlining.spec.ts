@@ -8,8 +8,25 @@ for (const width of [560, 1156]) {
       "/tests/browser/app/?view=workspace&theme=dark&history=review",
     );
     await page.getByRole("button", { name: "History", exact: true }).click();
-    const entries = page.locator(".history-entry");
-    const first = entries.first();
+    const sidebar = page.getByRole("complementary", {
+      name: "History browser",
+      exact: true,
+    });
+    const entries = sidebar.getByRole("button", {
+      name: /^View Voice transcript from /,
+    });
+    async function selectEntry(index: number) {
+      if (width < 700) {
+        await page
+          .getByRole("button", { name: "History sidebar", exact: true })
+          .click();
+      }
+      await entries.nth(index).click();
+    }
+    const first = page.getByRole("region", {
+      name: "Selected transcript",
+      exact: true,
+    });
     const footer = first.locator(".history-footer");
     await expect(
       first.getByRole("button", {
@@ -20,16 +37,11 @@ for (const width of [560, 1156]) {
     await expect(
       first.getByRole("button", { name: "Listen to transcript", exact: true }),
     ).toBeVisible();
-    const second = entries.nth(1);
-    await second
-      .getByRole("button", { name: /^Expand transcript from/ })
-      .click();
+    await selectEntry(1);
     await expect(
-      second.getByText("Cleanup could not finish", { exact: false }),
+      first.getByText("Cleanup could not finish", { exact: false }),
     ).toBeVisible();
-    await second
-      .getByRole("button", { name: /^Collapse transcript from/ })
-      .click();
+    await selectEntry(0);
     const metadata = await footer.locator(":scope > div").first().boundingBox();
     const actions = await footer.locator(".history-actions").boundingBox();
     expect(
@@ -49,6 +61,9 @@ for (const width of [560, 1156]) {
     await expect(
       first.getByRole("button", { name: "Raw transcript copied", exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Run information", exact: true }),
+    ).toContainText("speech/stt");
     const menu = first.getByRole("button", {
       name: "Transcript actions",
       exact: true,
@@ -60,7 +75,7 @@ for (const width of [560, 1156]) {
         name: "Transcription details",
         exact: true,
       }),
-    ).toBeEnabled();
+    ).toHaveCount(0);
     await expect(
       page.getByRole("menuitem", { name: "Remove from history", exact: true }),
     ).toBeInViewport();
@@ -73,7 +88,20 @@ for (const width of [560, 1156]) {
     await page
       .getByRole("menuitem", { name: "Remove from history", exact: true })
       .click();
+    await expect(
+      first.getByText("Cleanup could not finish", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      first.getByRole("button", { name: "Copy transcript", exact: true }),
+    ).toBeVisible();
+    if (width < 700) {
+      await page
+        .getByRole("button", { name: "History sidebar", exact: true })
+        .click();
+    }
     await expect(entries).toHaveCount(1);
+    await expect(entries.first()).toHaveAttribute("aria-current", "true");
+    if (width < 700) await entries.first().click();
     await page.screenshot({
       path: info.outputPath(`history-warning-${width}.png`),
     });

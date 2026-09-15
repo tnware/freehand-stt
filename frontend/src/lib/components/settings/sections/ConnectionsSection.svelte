@@ -237,12 +237,12 @@
           )?.id,
         );
     }}
-    class="flex min-h-0 flex-col gap-3.5"
+    class="flex min-h-0 flex-col gap-3"
   >
-    <div class="flex min-h-0 flex-col gap-3.5">
+    <div class="flex min-h-0 flex-col gap-3">
       {#snippet supportedUses()}
         {#if form}
-          <div class="space-y-3 px-5 py-4">
+          <div class="space-y-3 py-3">
             <h4 class="text-[13px] font-medium">Used for</h4>
             <p class="text-xs text-muted-foreground">
               Choose where this connection appears. Each workflow keeps its own
@@ -251,7 +251,7 @@
             {#each roles as role (role.id)}
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <label for={`connection-use-${role.id}`} class="text-sm"
+                  <label for={`connection-use-${role.id}`} class="text-[13px]"
                     >{role.label}</label
                   >
                   {#if !supports(role.id)}<p
@@ -351,7 +351,7 @@
               </Select.Root>
             {/snippet}
           </ValueRow>
-          <div class="space-y-2 px-5 py-3">
+          <div class="space-y-2 py-3">
             <p class="text-xs text-muted-foreground">
               {instance
                 ? `Selected model: ${instance.model}. Stopping this runtime keeps the connection selected; it never falls back to a server.`
@@ -472,19 +472,19 @@
           {/if}
         {/if}
         <details class="border-t border-hairline" open={!form.uses.length}>
-          <summary class="cursor-pointer px-5 py-3 text-sm font-medium"
+          <summary class="cursor-pointer py-3 text-[13px] font-medium"
             >Available in {form.uses.length}
             {form.uses.length === 1 ? "workflow" : "workflows"}</summary
           >
           {@render supportedUses()}
         </details>
-        {#if !form.creating}<p class="px-5 py-3 text-xs text-muted-foreground">
+        {#if !form.creating}<p class="py-3 text-xs text-muted-foreground">
             Changing the target or backend resets this connection’s model
             choices.
           </p>{/if}
       </SettingsCard>
       {#if chooseWorkflow && form.creating}
-        <div class="flex flex-wrap items-center gap-3 px-1">
+        <div class="flex flex-wrap items-center gap-3">
           <label for="connection-start-workflow" class="text-xs font-medium"
             >After saving</label
           >
@@ -501,7 +501,7 @@
                   : "Save for later"}</Select.Trigger
               >
               <Select.Content>
-                {#each roles.filter( (role) => supports(role.id), ) as role (role.id)}<Select.Item
+                {#each roles.filter( (role) => supports(role.id) ) as role (role.id)}<Select.Item
                     value={role.id}>Set up {role.label}</Select.Item
                   >{/each}
                 <Select.Separator /><Select.Item value="save-only"
@@ -513,11 +513,11 @@
         </div>
       {/if}
       {#if !managed && (form.uses.includes(Purpose.Transcription) || form.uses.includes(Purpose.Voice))}
-        <details class="border-t border-hairline py-4">
-          <summary class="cursor-pointer text-sm font-medium"
+        <details class="border-t border-hairline py-3">
+          <summary class="cursor-pointer text-[13px] font-medium"
             >Transcription connection options</summary
           >
-          <div class="mt-4 space-y-4">
+          <div class="mt-3 space-y-3">
             <div class="space-y-2">
               <label for="connection-health" class="text-xs font-medium"
                 >Custom health path</label
@@ -535,7 +535,7 @@
             <div class="space-y-2">
               <p class="text-xs font-medium">Custom transcription headers</p>
               {#each Object.entries(form.details.headers ?? {}) as [key, value] (key)}<div
-                  class="flex gap-2"
+                  class="flex items-center gap-2"
                 >
                   <ValueInput
                     aria-label="Header name"
@@ -574,7 +574,7 @@
         </details>
       {/if}
     </div>
-    {#if error}<p role="alert" class="shrink-0 text-sm text-destructive">
+    {#if error}<p role="alert" class="shrink-0 text-[13px] text-destructive">
         {error}
       </p>{/if}
     {#if !externalActions}

@@ -13,6 +13,8 @@
   import type { SettingsEditor } from "$lib/stores/editor.svelte";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Switch } from "$lib/components/ui/switch";
+  import { Input } from "$lib/components/ui/input";
+  import { Textarea } from "$lib/components/ui/textarea";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
 
@@ -131,12 +133,13 @@
   }
 </script>
 
-<div class={draft ? "flex flex-col gap-5" : "space-y-4"}>
+<div class={draft ? "flex flex-col gap-3" : "space-y-4"}>
   {#if !draft}
-    {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
+    {#if !setup}<h3 class="text-[13px] font-semibold">Transcription</h3>{/if}
     <div class="space-y-1.5">
-      <label for={controlID("voice-connection")} class="text-sm font-semibold"
-        >Connection</label
+      <label
+        for={controlID("voice-connection")}
+        class="text-[13px] font-semibold">Connection</label
       >
       <div class="flex gap-2">
         <ConnectionSelect
@@ -179,7 +182,7 @@
       title="Transcription options"
       description="Language, realtime, and recognition hints"
     >
-      <div class="space-y-4 p-4">{@render optionalControls()}</div>
+      <div class="space-y-4 py-3">{@render optionalControls()}</div>
     </SettingsDisclosure>
   {:else if draft}{@render finishingControls()}{:else}{@render optionalControls()}{/if}
   {#if !draft}<QuickSaveStatus
@@ -233,7 +236,7 @@
 {#snippet recognitionControls()}
   {#if profileNotice}<p
       class={draft
-        ? "px-5 py-3 text-xs text-muted-foreground"
+        ? "py-3 text-xs text-muted-foreground"
         : "text-xs text-muted-foreground"}
       role="status"
     >
@@ -242,12 +245,13 @@
   {#if profile?.capabilities.realtime}
     <div
       class={draft
-        ? "flex items-center justify-between gap-4 px-5 py-3.5"
+        ? "flex items-center justify-between gap-4 py-3"
         : "flex items-center justify-between gap-3 border-t border-hairline pt-3"}
     >
       <div>
-        <label for={controlID("voice-realtime")} class="text-sm font-semibold"
-          >Realtime transcription</label
+        <label
+          for={controlID("voice-realtime")}
+          class="text-[13px] font-semibold">Realtime transcription</label
         >
         <p class="mt-1 text-xs text-muted-foreground">
           Show words as you speak, using this connection and model.
@@ -265,7 +269,7 @@
   {#if cfg.realtime && cfg.modelProfile === ID.Qwen3ASR}
     <p
       class={draft
-        ? "px-5 py-3.5 text-xs leading-relaxed text-muted-foreground"
+        ? "py-3 text-xs leading-relaxed text-muted-foreground"
         : "text-xs leading-relaxed text-muted-foreground"}
     >
       Qwen realtime uses automatic language detection. Language, context,
@@ -273,8 +277,8 @@
     </p>
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
-    <div class={draft ? "space-y-2 px-5 py-3.5" : "space-y-1.5"}>
-      <label for={controlID("voice-language")} class="text-sm font-semibold"
+    <div class={draft ? "space-y-2 py-3" : "space-y-1.5"}>
+      <label for={controlID("voice-language")} class="text-[13px] font-semibold"
         >Spoken language</label
       >
       <LanguagePicker
@@ -289,14 +293,13 @@
     </div>
   {/if}
   {#if !cfg.realtime && profile?.capabilities.transcriptionPrompt}
-    <div class={draft ? "space-y-2 px-5 py-3.5" : "space-y-1.5"}>
-      <label for={controlID("voice-prompt")} class="text-sm font-semibold"
+    <div class={draft ? "space-y-2 py-3" : "space-y-1.5"}>
+      <label for={controlID("voice-prompt")} class="text-[13px] font-semibold"
         >Context hint</label
-      ><textarea
+      ><Textarea
         id={controlID("voice-prompt")}
-        rows="2"
-        maxlength="8192"
-        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        rows={2}
+        maxlength={8192}
         disabled={busy}
         value={cfg.transcriptionOptions.prompt}
         onchange={(event) =>
@@ -305,7 +308,8 @@
               ...cfg.transcriptionOptions,
               prompt: event.currentTarget.value,
             },
-          })}></textarea>
+          })}
+      />
     </div>
   {/if}
 {/snippet}
@@ -317,14 +321,14 @@
       title="Request settings"
       description="Timeout and supported temperature controls"
     >
-      <div class="space-y-4 px-5 py-3.5">{@render requestControls()}</div>
+      <div class="space-y-4 py-3">{@render requestControls()}</div>
     </SettingsDisclosure>
   {:else}
     {@render requestControls()}
   {/if}
   {#if cfg.realtime}
     <div class="flex items-center justify-between gap-3">
-      <label for={controlID("voice-captions")} class="text-sm font-semibold"
+      <label for={controlID("voice-captions")} class="text-[13px] font-semibold"
         >Live overlay captions</label
       >
       <Switch
@@ -349,7 +353,7 @@
     <div class="flex items-center justify-between gap-3">
       <label
         for={controlID("voice-temperature-override")}
-        class="text-sm font-semibold">Override temperature</label
+        class="text-[13px] font-semibold">Override temperature</label
       ><Switch
         id={controlID("voice-temperature-override")}
         checked={cfg.transcriptionOptions.temperatureOverride}
@@ -363,13 +367,12 @@
           })}
       />
     </div>
-    {#if cfg.transcriptionOptions.temperatureOverride}<input
+    {#if cfg.transcriptionOptions.temperatureOverride}<Input
         aria-label="Temperature"
         type="number"
         min="0"
         max="1"
         step="0.1"
-        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
         disabled={busy}
         value={cfg.transcriptionOptions.temperature}
         onchange={(event) =>
@@ -383,15 +386,14 @@
   {/if}
   {#if draft && !cfg.realtime}
     <div class="space-y-1.5">
-      <label for={controlID("voice-timeout")} class="text-sm font-semibold"
+      <label for={controlID("voice-timeout")} class="text-[13px] font-semibold"
         >Recording request timeout (seconds)</label
-      ><input
+      ><Input
         id={controlID("voice-timeout")}
         type="number"
         min="10"
         max="3600"
         step="10"
-        class="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
         disabled={busy}
         value={cfg.timeoutSeconds}
         onchange={(event) =>

@@ -45,9 +45,9 @@
       class="w-fit cursor-pointer rounded-sm py-1 font-medium text-accent-text hover:underline focus-visible:outline-ring"
       >Model download details</summary
     >
-    {#if description}<p class="mt-2 leading-relaxed">{description}</p>{/if}
+    {#if description}<p class="mt-3 leading-relaxed">{description}</p>{/if}
     <dl
-      class="mt-2 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-lg border border-hairline bg-background p-3"
+      class="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 [&>dt]:text-muted-foreground"
     >
       <dt>Downloaded by</dt>
       <dd>{delegated ? "NeMo model manager" : "Freehand from Hugging Face"}</dd>

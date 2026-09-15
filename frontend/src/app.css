@@ -316,7 +316,7 @@
   --color-background: var(--background);
   /*
    * Three steps, not five. 4px is the badge, 6px is a control, and 8px is
-   * every panel above it; the larger aliases collapse onto the panel radius
+   * floating panels; the larger aliases collapse onto the panel radius
    * so one screen never shows four different corners.
    */
   --radius-sm: 0.25rem;
@@ -337,6 +337,8 @@
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
     margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
     --wails-resize: all;
   }
   html {
@@ -434,19 +436,21 @@ html.dark[data-material="mica"] #app {
 }
 
 /* Settings groups are hairline-bounded runs of rows, not raised cards, and
- * every row shares the same inset as the pane header above them. */
+ * labels align with the page gutter and section headings. */
 .settings-group > * {
-  padding-inline: 1rem;
+  padding-inline: 0;
 }
 
 /* Shared control geometry belongs to the application, across all windows. */
 [data-slot="input"],
+[data-slot="combobox-input"],
 [data-slot="textarea"],
 [data-slot="select-trigger"] {
-  border-radius: 0.5rem;
+  border-radius: 0.375rem;
   color: var(--foreground);
 }
 [data-slot="input"]:not(:focus-visible):not([aria-invalid="true"]),
+[data-slot="combobox-input"]:not(:focus-visible):not([aria-invalid="true"]),
 [data-slot="textarea"]:not(:focus-visible):not([aria-invalid="true"]),
 [data-slot="select-trigger"]:not(:focus-visible):not([aria-invalid="true"]) {
   border-color: color-mix(in srgb, var(--muted-foreground) 75%, var(--well));

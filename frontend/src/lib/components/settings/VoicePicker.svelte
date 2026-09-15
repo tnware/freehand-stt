@@ -38,7 +38,12 @@
   const voices = $derived(
     allowedVoices.length
       ? allowedVoices.map(
-          (id) => result?.voices?.find((v) => v.id === id) ?? { id, name: id, language: "" },
+          (id) =>
+            result?.voices?.find((v) => v.id === id) ?? {
+              id,
+              name: id,
+              language: "",
+            },
         )
       : result?.errorKind
         ? []
@@ -46,25 +51,37 @@
   );
   const matches = $derived(
     voices.filter((v) =>
-      `${v.id} ${v.name} ${v.language}`.toLowerCase().includes(query.trim().toLowerCase()),
+      `${v.id} ${v.name} ${v.language}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
     ),
   );
   const custom = $derived(
-    !allowedVoices.length && query.trim() && !voices.some((v) => v.id === query.trim())
+    !allowedVoices.length &&
+      query.trim() &&
+      !voices.some((v) => v.id === query.trim())
       ? query.trim()
       : "",
   );
   const choices = $derived([
-    ...matches.map((v) => ({ value: v.id, label: v.name || v.id, language: v.language })),
+    ...matches.map((v) => ({
+      value: v.id,
+      label: v.name || v.id,
+      language: v.language,
+    })),
     ...(custom ? [{ value: custom, label: custom, language: "" }] : []),
   ]);
   const errors: Record<string, string> = {
-    unsupported: "This backend has no qualified voice discovery. Enter a voice ID manually.",
+    unsupported:
+      "This backend has no qualified voice discovery. Enter a voice ID manually.",
     credential_missing: "Add an API key in Connections, then refresh voices.",
-    credential_unavailable: "Re-enter the saved connection’s API key, then refresh voices.",
+    credential_unavailable:
+      "Re-enter the saved connection’s API key, then refresh voices.",
     invalid_settings: "Check the selected connection and model settings.",
-    response: "The server returned an unexpected voice list. You can still enter a voice ID.",
-    response_too_large: "The server’s metadata exceeded the size limit. Enter a voice ID manually.",
+    response:
+      "The server returned an unexpected voice list. You can still enter a voice ID.",
+    response_too_large:
+      "The server’s metadata exceeded the size limit. Enter a voice ID manually.",
     timeout: "Voice discovery timed out. Check the server and try again.",
     tls: "Check the server’s TLS certificate and hostname.",
     dns: "The server name could not be resolved. Check your connection.",
@@ -132,6 +149,7 @@
   >
     <div class="relative">
       <Combobox.Input
+        data-slot="combobox-input"
         {id}
         aria-label="Choose voice"
         aria-describedby={`${id}-help`}
@@ -140,7 +158,7 @@
           : supported
             ? "Search or enter a voice ID…"
             : "Enter a voice ID…"}
-        class="h-9 w-full rounded-lg border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="h-8 w-full rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
         spellcheck={false}
         maxlength={200}
         oninput={(e) => {
@@ -163,7 +181,10 @@
           }
         }}
       >
-        {#snippet child({ props })}<input {...props} value={open ? query : value} />{/snippet}
+        {#snippet child({ props })}<input
+            {...props}
+            value={open ? query : value}
+          />{/snippet}
       </Combobox.Input>
       <Combobox.Trigger
         aria-label="Show voices"
@@ -186,15 +207,20 @@
             >
               <span class="min-w-0 flex-1 break-all"
                 ><span class="font-mono"
-                  >{custom === choice.value ? `Use “${choice.value}”` : choice.label}</span
+                  >{custom === choice.value
+                    ? `Use “${choice.value}”`
+                    : choice.label}</span
                 >{#if choice.label !== choice.value}<span
-                    class="mt-0.5 block text-xs text-muted-foreground">{choice.value}</span
+                    class="mt-0.5 block text-xs text-muted-foreground"
+                    >{choice.value}</span
                   >{/if}</span
               >
               {#if choice.language}<span class="text-xs text-muted-foreground"
                   >{choice.language}</span
                 >{/if}
-              {#if value === choice.value}<CheckIcon class="size-3.5 shrink-0" />{/if}
+              {#if value === choice.value}<CheckIcon
+                  class="size-3.5 shrink-0"
+                />{/if}
             </Combobox.Item>
           {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
               {allowedVoices.length
@@ -213,7 +239,8 @@
       ? "sr-only"
       : `text-xs leading-relaxed ${failure ? "text-warning" : "text-muted-foreground"}`}
   >
-    {#if allowedVoices.length}{voices.length} preset voices for this model profile. {failure
+    {#if allowedVoices.length}{voices.length} preset voices for this model profile.
+      {failure
         ? "Server voice refresh failed; the preset list remains available."
         : ""}
     {:else if failure}{failure}
@@ -221,7 +248,8 @@
       {result.scope === VoiceScope.VoiceScopeModel
         ? "voices advertised for this model."
         : "server voices; availability depends on the selected model."}
-      {result.truncated ? "List limited to 500 entries. " : ""}Custom voice IDs remain available.
+      {result.truncated ? "List limited to 500 entries. " : ""}Custom voice IDs
+      remain available.
     {:else}{supported
         ? "Choose a server voice or enter an ID."
         : "Enter a voice ID supported by your model."}{/if}

@@ -130,11 +130,9 @@
   aria-label="Speech composer"
 >
   <div
-    class="flex h-8 shrink-0 items-center gap-2 border-b border-hairline px-5"
+    class="flex h-11 shrink-0 items-center gap-2 border-b border-hairline px-5"
   >
-    <h2
-      class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-    >
+    <h2 class="font-display text-[15px] font-semibold tracking-tight">
       Compose
     </h2>
     <span
@@ -164,7 +162,7 @@
       aria-describedby="speech-character-count speech-compose-shortcut"
       aria-keyshortcuts="Control+Enter"
       onkeydown={composerKey}
-      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-8 focus-visible:ring-2 focus-visible:ring-inset"
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-[26px] focus-visible:ring-2 focus-visible:ring-inset"
       placeholder="Write or paste text to speak…"
     />
   </div>
@@ -250,10 +248,10 @@
         embedded
       />
     {:else}
-      <div class="flex items-center gap-3 px-4 py-3">
+      <div class="flex items-center gap-3 px-5 py-3">
         <Volume2Icon class="size-4 shrink-0 text-muted-foreground" />
         <div class="min-w-0 space-y-1">
-          <p class="text-sm font-medium">
+          <p class="text-[15px] font-medium">
             {configured
               ? "Ready when you are"
               : "Choose a connection and voice"}
@@ -261,7 +259,7 @@
           <p class="text-xs text-muted-foreground">
             {configured
               ? "Press Speak to generate audio. Playback and save controls appear here."
-              : "Open Speech settings above to get started. You can write your text now."}
+              : "Open Speech settings to get started. You can write your text now."}
           </p>
         </div>
       </div>

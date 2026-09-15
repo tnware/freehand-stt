@@ -51,7 +51,7 @@
     </div>
     {#if profiles.length === 1 && selected}
       <div
-        class="flex min-h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm"
+        class="flex min-h-8 items-center gap-2 rounded-md border border-input bg-well px-3 text-[13px]"
         {id}
       >
         <ProviderIcon profile={selected.id} size={18} />{selected.name}

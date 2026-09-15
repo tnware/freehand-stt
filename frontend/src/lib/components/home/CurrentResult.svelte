@@ -55,11 +55,9 @@
   aria-label="Current result"
 >
   <div
-    class="flex h-8 shrink-0 items-center gap-2 border-b border-hairline px-5"
+    class="flex h-11 shrink-0 items-center gap-2 border-b border-hairline px-5"
   >
-    <h2
-      class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-    >
+    <h2 class="font-display text-[15px] font-semibold tracking-tight">
       Transcript
     </h2>
     <span
@@ -131,7 +129,7 @@
       <div class="flex min-h-full flex-col">
         {#if message || recovery}
           <p
-            class="mx-4 mt-3 rounded-md border border-hairline bg-secondary px-3 py-2 text-[13px] leading-relaxed"
+            class="border-b border-hairline bg-layer-fill px-5 py-2 text-xs leading-relaxed"
             class:text-warning={recovery}
             class:text-destructive={failed && !recovery}
             role="status"
@@ -156,15 +154,15 @@
                   : undefined,
               }}
               label={live ? "Live transcript" : "Current transcript"}
-              class="whitespace-pre-wrap break-words text-[15px] leading-8"
+              class="whitespace-pre-wrap break-words text-[15px] leading-[26px]"
             />
           </div>
         {:else if !message}
           <div
-            class="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-4 text-center"
+            class="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-4 text-center"
           >
             <span
-              class="mb-3 grid size-12 place-items-center rounded-2xl bg-accent-wash text-accent-text"
+              class="mb-1 grid size-6 place-items-center text-muted-foreground"
               aria-hidden="true"
             >
               <svg
@@ -177,7 +175,7 @@
                 ><path d="M5 10v4M9 6v12M13 3v18M17 7v10M21 10v4" /></svg
               >
             </span>
-            <p class="font-display text-xl font-medium tracking-tight">
+            <p class="text-[15px] font-medium">
               {failed
                 ? "No transcript to show"
                 : working
@@ -186,9 +184,7 @@
                     ? "Turn an audio file into text"
                     : "Speak into the application you’re using"}
             </p>
-            <p
-              class="max-w-lg text-[13px] leading-relaxed text-muted-foreground"
-            >
+            <p class="max-w-lg text-xs leading-relaxed text-muted-foreground">
               {failed
                 ? mode === "file"
                   ? "Use Retry above, or choose another file."

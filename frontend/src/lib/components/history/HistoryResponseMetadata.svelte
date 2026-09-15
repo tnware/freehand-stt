@@ -84,26 +84,31 @@
   const hasIdentity = (details: HistoryResponseDetails): boolean =>
     Boolean(
       details.requestId ||
-        details.responseId ||
-        details.effectiveModel ||
-        details.provider ||
-        details.finishReason ||
-        details.serviceTier ||
-        details.systemFingerprint ||
+      details.responseId ||
+      details.effectiveModel ||
+      details.provider ||
+      details.finishReason ||
+      details.serviceTier ||
+      details.systemFingerprint ||
       details.detectedLanguages?.length,
     ) || details.createdAtUnix != null;
 
-  const usageVisible = $derived(response.serverAudioSeconds != null || hasUsage(usage));
+  const usageVisible = $derived(
+    response.serverAudioSeconds != null || hasUsage(usage),
+  );
   const identityVisible = $derived(hasIdentity(response));
   const performanceVisible = $derived(hasPerformance(performance));
 </script>
 
 {#snippet durationValue(value: number)}
   <span
-    class="inline-flex h-5 items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 font-mono text-[10.5px] leading-none font-medium tabular-nums text-foreground"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-medium tabular-nums text-foreground"
   >
-    <ClockIcon class="size-3 text-muted-foreground" aria-hidden="true" />
-    {duration(value)}
+    <ClockIcon
+      class="size-3 shrink-0 text-muted-foreground"
+      aria-hidden="true"
+    />
+    <span class="min-w-0 [overflow-wrap:anywhere]">{duration(value)}</span>
   </span>
 {/snippet}
 
@@ -117,10 +122,15 @@
 
 {#snippet tokenValue(value: number, suffix?: string)}
   <span
-    class="inline-flex h-5 items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 font-mono text-[10.5px] leading-none font-semibold tabular-nums text-foreground"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-semibold tabular-nums text-foreground"
   >
-    <HashIcon class="size-3 text-muted-foreground" aria-hidden="true" />
-    {value.toLocaleString()}
+    <HashIcon
+      class="size-3 shrink-0 text-muted-foreground"
+      aria-hidden="true"
+    />
+    <span class="min-w-0 [overflow-wrap:anywhere]"
+      >{value.toLocaleString()}</span
+    >
     {#if suffix}
       <span class="font-normal text-muted-foreground">{suffix}</span>
     {/if}
@@ -129,20 +139,25 @@
 
 {#snippet metricValue(value: number, suffix: string, digits = 2)}
   <span
-    class="inline-flex h-5 items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 font-mono text-[10.5px] leading-none font-medium tabular-nums text-foreground"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-medium tabular-nums text-foreground"
   >
-    <GaugeIcon class="size-3 text-muted-foreground" aria-hidden="true" />
-    {decimal(value, digits)}
+    <GaugeIcon
+      class="size-3 shrink-0 text-muted-foreground"
+      aria-hidden="true"
+    />
+    <span class="min-w-0 [overflow-wrap:anywhere]"
+      >{decimal(value, digits)}</span
+    >
     <span class="font-normal text-muted-foreground">{suffix}</span>
   </span>
 {/snippet}
 
 {#snippet costValue(value: number, suffix: string)}
   <span
-    class="inline-flex h-5 items-center gap-1.5 rounded-md border border-primary/20 bg-primary/8 px-2 font-mono text-[10.5px] leading-none font-medium tabular-nums text-primary"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-primary/20 bg-primary/8 px-2 py-0.5 font-mono text-[10.5px] leading-tight font-medium tabular-nums text-primary"
   >
-    <CoinsIcon class="size-3" aria-hidden="true" />
-    {reportedCost(value)}
+    <CoinsIcon class="size-3 shrink-0" aria-hidden="true" />
+    <span class="min-w-0 [overflow-wrap:anywhere]">{reportedCost(value)}</span>
     <span class="font-normal opacity-75">{suffix}</span>
   </span>
 {/snippet}
@@ -157,17 +172,22 @@
 
 {#snippet coverageValue(reported = 0, requests = 1)}
   {@const complete = reported >= requests}
-  <Badge variant="secondary" class={coverageClass(complete)}>
+  <Badge
+    variant="secondary"
+    class={`h-auto min-h-5 max-w-full whitespace-normal [overflow-wrap:anywhere] ${coverageClass(complete)}`}
+  >
     {#if complete}
       <CircleCheckIcon data-icon="inline-start" aria-hidden="true" />
     {:else}
       <TriangleAlertIcon data-icon="inline-start" aria-hidden="true" />
     {/if}
-    {reported.toLocaleString()} of {requests.toLocaleString()} requests
+    <span class="min-w-0"
+      >{reported.toLocaleString()} of {requests.toLocaleString()} requests</span
+    >
   </Badge>
 {/snippet}
 
-<div class="flex flex-col gap-3">
+<div class="response-metadata flex min-w-0 flex-col gap-3">
   <Separator />
 
   {#if usageVisible}
@@ -178,7 +198,9 @@
           {@render coverageValue(response.usageReportCount ?? 0, requests)}
         {/if}
       </div>
-      <dl class="grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]">
+      <dl
+        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]"
+      >
         {#if usage.type}
           <dt class="text-muted-foreground">Basis</dt>
           <dd class="text-right">{usage.type.replaceAll("_", " ")}</dd>
@@ -201,43 +223,63 @@
         {/if}
         {#if usage.audioInputTokens != null}
           <dt class="text-muted-foreground">Audio input tokens</dt>
-          <dd class="text-right">{@render tokenValue(usage.audioInputTokens)}</dd>
+          <dd class="text-right">
+            {@render tokenValue(usage.audioInputTokens)}
+          </dd>
         {/if}
         {#if usage.textInputTokens != null}
           <dt class="text-muted-foreground">Text input tokens</dt>
-          <dd class="text-right">{@render tokenValue(usage.textInputTokens)}</dd>
+          <dd class="text-right">
+            {@render tokenValue(usage.textInputTokens)}
+          </dd>
         {/if}
         {#if usage.cachedInputTokens != null}
           <dt class="text-muted-foreground">Cached input tokens</dt>
-          <dd class="text-right">{@render tokenValue(usage.cachedInputTokens)}</dd>
+          <dd class="text-right">
+            {@render tokenValue(usage.cachedInputTokens)}
+          </dd>
         {/if}
         {#if usage.cacheWriteTokens != null}
           <dt class="text-muted-foreground">Cache write tokens</dt>
-          <dd class="text-right">{@render tokenValue(usage.cacheWriteTokens)}</dd>
+          <dd class="text-right">
+            {@render tokenValue(usage.cacheWriteTokens)}
+          </dd>
         {/if}
         {#if usage.reasoningOutputTokens != null}
           <dt class="text-muted-foreground">Reasoning tokens</dt>
-          <dd class="text-right">{@render tokenValue(usage.reasoningOutputTokens)}</dd>
+          <dd class="text-right">
+            {@render tokenValue(usage.reasoningOutputTokens)}
+          </dd>
         {/if}
         {#if response.serverAudioSeconds != null}
           <dt class="text-muted-foreground">Audio duration</dt>
-          <dd class="text-right">{@render durationValue(response.serverAudioSeconds * 1000)}</dd>
+          <dd class="text-right">
+            {@render durationValue(response.serverAudioSeconds * 1000)}
+          </dd>
         {/if}
         {#if usage.audioSeconds != null}
           <dt class="text-muted-foreground">Billable audio</dt>
-          <dd class="text-right">{@render durationValue(usage.audioSeconds * 1000)}</dd>
+          <dd class="text-right">
+            {@render durationValue(usage.audioSeconds * 1000)}
+          </dd>
         {/if}
         {#if usage.reportedCost != null}
           <dt class="text-muted-foreground">Provider-reported cost</dt>
-          <dd class="text-right">{@render costValue(usage.reportedCost, "reported units")}</dd>
+          <dd class="text-right">
+            {@render costValue(usage.reportedCost, "reported units")}
+          </dd>
         {/if}
         {#if usage.upstreamCost != null}
           <dt class="text-muted-foreground">Upstream cost</dt>
-          <dd class="text-right">{@render costValue(usage.upstreamCost, "reported units")}</dd>
+          <dd class="text-right">
+            {@render costValue(usage.upstreamCost, "reported units")}
+          </dd>
         {/if}
         {#if response.costReportCount && requests > 1}
           <dt class="text-muted-foreground">Cost coverage</dt>
-          <dd class="text-right">{@render coverageValue(response.costReportCount, requests)}</dd>
+          <dd class="text-right">
+            {@render coverageValue(response.costReportCount, requests)}
+          </dd>
         {/if}
       </dl>
     </section>
@@ -249,14 +291,18 @@
     {/if}
     <section class="flex flex-col gap-2" aria-label="Request details">
       <h4 class="text-[11px] font-semibold text-foreground">Request details</h4>
-      <dl class="grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]">
+      <dl
+        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]"
+      >
         {#if requests > 1}
           <dt class="text-muted-foreground">Requests</dt>
           <dd class="text-right">{requests.toLocaleString()}</dd>
         {/if}
         {#if response.effectiveModel}
           <dt class="text-muted-foreground">Effective model</dt>
-          <dd class="text-right">{@render modelValue(response.effectiveModel)}</dd>
+          <dd class="text-right">
+            {@render modelValue(response.effectiveModel)}
+          </dd>
         {/if}
         {#if response.provider}
           <dt class="text-muted-foreground">Provider</dt>
@@ -264,7 +310,9 @@
         {/if}
         {#if response.finishReason}
           <dt class="text-muted-foreground">Finish reason</dt>
-          <dd class="text-right">{response.finishReason.replaceAll("_", " ")}</dd>
+          <dd class="text-right">
+            {response.finishReason.replaceAll("_", " ")}
+          </dd>
         {/if}
         {#if response.serviceTier}
           <dt class="text-muted-foreground">Service tier</dt>
@@ -272,7 +320,9 @@
         {/if}
         {#if response.createdAtUnix != null}
           <dt class="text-muted-foreground">Created</dt>
-          <dd class="text-right break-words">{responseDateTime(response.createdAtUnix)}</dd>
+          <dd class="text-right break-words">
+            {responseDateTime(response.createdAtUnix)}
+          </dd>
         {/if}
         {#if response.detectedLanguages?.length}
           <dt class="text-muted-foreground">Detected languages</dt>
@@ -280,15 +330,21 @@
         {/if}
         {#if response.requestId}
           <dt class="text-muted-foreground">Request ID</dt>
-          <dd class="text-right">{@render identifierValue(response.requestId)}</dd>
+          <dd class="text-right">
+            {@render identifierValue(response.requestId)}
+          </dd>
         {/if}
         {#if response.responseId}
           <dt class="text-muted-foreground">Response ID</dt>
-          <dd class="text-right">{@render identifierValue(response.responseId)}</dd>
+          <dd class="text-right">
+            {@render identifierValue(response.responseId)}
+          </dd>
         {/if}
         {#if response.systemFingerprint}
           <dt class="text-muted-foreground">System fingerprint</dt>
-          <dd class="text-right">{@render identifierValue(response.systemFingerprint)}</dd>
+          <dd class="text-right">
+            {@render identifierValue(response.systemFingerprint)}
+          </dd>
         {/if}
       </dl>
     </section>
@@ -298,49 +354,106 @@
     <Separator />
     <section class="flex flex-col gap-2" aria-label="Runtime performance">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <h4 class="text-[11px] font-semibold text-foreground">Runtime performance</h4>
+        <h4 class="text-[11px] font-semibold text-foreground">
+          Runtime performance
+        </h4>
         {#if response.performanceReportCount || requests > 1}
-          {@render coverageValue(response.performanceReportCount ?? 0, requests)}
+          {@render coverageValue(
+            response.performanceReportCount ?? 0,
+            requests,
+          )}
         {/if}
       </div>
-      <dl class="grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]">
+      <dl
+        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-[11.5px]"
+      >
         {#if performance.promptTokens != null}
           <dt class="text-muted-foreground">Prompt evaluated</dt>
-          <dd class="text-right">{@render tokenValue(performance.promptTokens, "tokens")}</dd>
+          <dd class="text-right">
+            {@render tokenValue(performance.promptTokens, "tokens")}
+          </dd>
         {/if}
         {#if performance.promptMilliseconds != null}
           <dt class="text-muted-foreground">Prompt time</dt>
-          <dd class="text-right">{@render durationValue(performance.promptMilliseconds)}</dd>
+          <dd class="text-right">
+            {@render durationValue(performance.promptMilliseconds)}
+          </dd>
         {/if}
         {#if performance.promptTokensPerSecond != null}
           <dt class="text-muted-foreground">Prompt speed</dt>
-          <dd class="text-right">{@render metricValue(performance.promptTokensPerSecond, "tok/s")}</dd>
+          <dd class="text-right">
+            {@render metricValue(performance.promptTokensPerSecond, "tok/s")}
+          </dd>
         {/if}
         {#if performance.promptMillisecondsPerToken != null}
           <dt class="text-muted-foreground">Prompt latency</dt>
-          <dd class="text-right">{@render metricValue(performance.promptMillisecondsPerToken, "ms/token")}</dd>
+          <dd class="text-right">
+            {@render metricValue(
+              performance.promptMillisecondsPerToken,
+              "ms/token",
+            )}
+          </dd>
         {/if}
         {#if performance.generatedTokens != null}
           <dt class="text-muted-foreground">Generated</dt>
-          <dd class="text-right">{@render tokenValue(performance.generatedTokens, "tokens")}</dd>
+          <dd class="text-right">
+            {@render tokenValue(performance.generatedTokens, "tokens")}
+          </dd>
         {/if}
         {#if performance.generationMilliseconds != null}
           <dt class="text-muted-foreground">Generation time</dt>
-          <dd class="text-right">{@render durationValue(performance.generationMilliseconds)}</dd>
+          <dd class="text-right">
+            {@render durationValue(performance.generationMilliseconds)}
+          </dd>
         {/if}
         {#if performance.generationTokensPerSecond != null}
           <dt class="text-muted-foreground">Generation speed</dt>
-          <dd class="text-right">{@render metricValue(performance.generationTokensPerSecond, "tok/s")}</dd>
+          <dd class="text-right">
+            {@render metricValue(
+              performance.generationTokensPerSecond,
+              "tok/s",
+            )}
+          </dd>
         {/if}
         {#if performance.generationMillisecondsPerToken != null}
           <dt class="text-muted-foreground">Generation latency</dt>
-          <dd class="text-right">{@render metricValue(performance.generationMillisecondsPerToken, "ms/token")}</dd>
+          <dd class="text-right">
+            {@render metricValue(
+              performance.generationMillisecondsPerToken,
+              "ms/token",
+            )}
+          </dd>
         {/if}
         {#if performance.cachedPromptTokens != null}
           <dt class="text-muted-foreground">Cached prompt</dt>
-          <dd class="text-right">{@render tokenValue(performance.cachedPromptTokens, "tokens")}</dd>
+          <dd class="text-right">
+            {@render tokenValue(performance.cachedPromptTokens, "tokens")}
+          </dd>
         {/if}
       </dl>
     </section>
   {/if}
 </div>
+
+<style>
+  .response-metadata {
+    container: response-metadata / inline-size;
+  }
+
+  .response-grid > dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  @container response-metadata (max-width: 380px) {
+    .response-grid {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0.125rem;
+    }
+
+    .response-grid > dd {
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }
+  }
+</style>

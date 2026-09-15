@@ -25,7 +25,7 @@
 </script>
 
 <div
-  class={compact ? "px-4 py-2" : "px-4 py-2.5"}
+  class={compact ? "py-2" : "py-3"}
   role="group"
   aria-labelledby={titleID}
   aria-describedby={description ? descriptionID : undefined}
@@ -44,7 +44,7 @@
       {#if description}
         <p
           id={descriptionID}
-          class="mt-0.5 text-[11.5px] leading-[1.45] text-muted-foreground"
+          class="mt-0.5 text-xs leading-relaxed text-muted-foreground"
         >
           {description}
         </p>

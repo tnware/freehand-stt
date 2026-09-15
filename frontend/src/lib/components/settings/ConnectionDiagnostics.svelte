@@ -54,7 +54,7 @@
       Previous results apply to the settings that were tested.
     </p>
   {:else if result.checks?.length}<dl
-      class="divide-y divide-hairline rounded-lg border border-hairline bg-subtle-fill px-3"
+      class="divide-y divide-hairline border-y border-hairline"
     >
       {#each result.checks as check (check.kind)}<div
           class="grid grid-cols-[18px_1fr] gap-x-2 py-2.5"
@@ -67,10 +67,10 @@
               class="mt-0.5 size-4 text-muted-foreground"
             />{/if}
           <div>
-            <dt class="text-xs font-semibold text-secondary-foreground">
+            <dt class="text-xs font-medium text-secondary-foreground">
               {labels[check.kind]}
             </dt>
-            <dd class="mt-0.5 text-sm">{check.summary}</dd>
+            <dd class="mt-0.5 text-[13px]">{check.summary}</dd>
             {#if check.detail && check.status !== CheckStatus.CheckPassed}<dd
                 class="mt-1 text-xs leading-relaxed text-muted-foreground"
               >

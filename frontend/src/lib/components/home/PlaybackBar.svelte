@@ -54,12 +54,17 @@
   const seek = new PlaybackSeek();
   const position = $derived(seek.position(status));
   const steps = $derived(playbackSteps(status.durationMilliseconds));
-  const sliderPosition = $derived(playbackSliderPosition(position, status.durationMilliseconds));
+  const sliderPosition = $derived(
+    playbackSliderPosition(position, status.durationMilliseconds),
+  );
   const generating = $derived(status.phase === TTSPhase.Generating);
   const failed = $derived(status.phase === TTSPhase.Failed);
   const percent = $derived(
     status.durationMilliseconds > 0
-      ? Math.min(100, (status.positionMilliseconds / status.durationMilliseconds) * 100)
+      ? Math.min(
+          100,
+          (status.positionMilliseconds / status.durationMilliseconds) * 100,
+        )
       : 0,
   );
   const label = $derived(
@@ -105,19 +110,26 @@
     {/key}
   {:else}
     <div class="flex h-4 items-center">
-      <Progress value={percent} max={100} class="h-1" aria-label="Speech playback progress" />
+      <Progress
+        value={percent}
+        max={100}
+        class="h-1"
+        aria-label="Speech playback progress"
+      />
     </div>
   {/if}
 {/snippet}
 
 <div
   class={cn(
-    "shrink-0 px-3 py-2",
-    embedded ? "bg-layer-fill" : "mb-3 rounded-2xl border border-hairline bg-card",
+    "shrink-0 bg-layer-fill px-5 py-2",
+    !embedded && "border-b border-hairline",
   )}
   aria-label="Speech playback"
 >
-  <span class="sr-only" role="status">{saving ? "Saving generated speech" : ""}</span>
+  <span class="sr-only" role="status"
+    >{saving ? "Saving generated speech" : ""}</span
+  >
   {#if !embedded}
     <div class="flex h-7 items-center gap-2" title={`${label} - ${phaseLabel}`}>
       <span class="sr-only" role="status">{label} - {phaseLabel}</span>
@@ -127,21 +139,29 @@
           aria-hidden="true"
         />
       {:else if status.canPause}
-        <TooltipButton size="icon-sm" label="Pause speech playback" onclick={onPause}
-          ><PauseIcon /></TooltipButton
+        <TooltipButton
+          size="icon-sm"
+          label="Pause speech playback"
+          onclick={onPause}><PauseIcon /></TooltipButton
         >
       {:else if status.canResume}
-        <TooltipButton size="icon-sm" label="Resume speech playback" onclick={onResume}
-          ><PlayIcon /></TooltipButton
+        <TooltipButton
+          size="icon-sm"
+          label="Resume speech playback"
+          onclick={onResume}><PlayIcon /></TooltipButton
         >
       {:else if status.canRestart}
-        <TooltipButton size="icon-sm" label="Restart speech playback" onclick={onRestart}
-          ><PlayIcon /></TooltipButton
+        <TooltipButton
+          size="icon-sm"
+          label="Restart speech playback"
+          onclick={onRestart}><PlayIcon /></TooltipButton
         >
       {/if}
       <div class="min-w-0 flex-1">
         {#if generating}
-          <p class="truncate text-xs text-muted-foreground">Creating audio...</p>
+          <p class="truncate text-xs text-muted-foreground">
+            Creating audio...
+          </p>
         {:else if failed}
           <p class="truncate text-xs text-destructive" role="alert">
             {status.message || "Speech could not be generated or played."}
@@ -159,13 +179,18 @@
           onAction={onOpenSettings}
         />
       {:else if !generating}
-        <span class="shrink-0 font-mono text-xs text-muted-foreground tabular-nums"
-          >{formatTime(position)} / {formatTime(status.durationMilliseconds)}</span
+        <span
+          class="shrink-0 font-mono text-xs text-muted-foreground tabular-nums"
+          >{formatTime(position)} / {formatTime(
+            status.durationMilliseconds,
+          )}</span
         >
       {/if}
       {#if status.canStop}
-        <TooltipButton size="icon-sm" label="Stop and release speech playback" onclick={onStop}
-          ><SquareIcon /></TooltipButton
+        <TooltipButton
+          size="icon-sm"
+          label="Stop and release speech playback"
+          onclick={onStop}><SquareIcon /></TooltipButton
         >
       {/if}
       {#if status.canRestart || status.canSave || saving || (status.canClear && !status.canStop)}
@@ -182,14 +207,19 @@
             {#if status.canRestart}<Menu.Item onclick={onRestart}
                 ><RotateCcwIcon />Restart speech playback</Menu.Item
               >{/if}
-            {#if status.canSave || saving}<Menu.Item disabled={saving} onSelect={onSave}
+            {#if status.canSave || saving}<Menu.Item
+                disabled={saving}
+                onSelect={onSave}
                 >{#if saving}<LoaderCircleIcon
                     class="animate-spin motion-reduce:animate-none"
-                  />Saving generated speech{:else}<DownloadIcon />Save generated speech{/if}</Menu.Item
+                  />Saving generated speech{:else}<DownloadIcon />Save generated
+                  speech{/if}</Menu.Item
               >{/if}
             {#if status.canClear && !status.canStop}
               {#if status.canRestart || status.canSave}<Menu.Separator />{/if}
-              <Menu.Item onclick={onClear}><Trash2Icon />Clear generated speech</Menu.Item>
+              <Menu.Item onclick={onClear}
+                ><Trash2Icon />Clear generated speech</Menu.Item
+              >
             {/if}
           </Menu.Content>
         </Menu.Root>
@@ -202,14 +232,16 @@
         aria-hidden="true"
       >
         {#if status.phase === TTSPhase.Generating}
-          <LoaderCircleIcon class="size-4 animate-spin motion-reduce:animate-none" />
+          <LoaderCircleIcon
+            class="size-4 animate-spin motion-reduce:animate-none"
+          />
         {:else}
           <Volume2Icon class="size-4" />
         {/if}
       </span>
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between gap-3 text-xs">
-          <span class="truncate text-sm font-medium" role="status"
+          <span class="truncate text-[13px] font-medium" role="status"
             >{label}<span class="text-xs font-normal text-muted-foreground"
               >&nbsp;· {phaseLabel}</span
             ></span
@@ -218,13 +250,16 @@
             <FeedbackDetails
               title="Speech could not be completed"
               label="Speech error details"
-              message={status.message || "Speech could not be generated or played."}
+              message={status.message ||
+                "Speech could not be generated or played."}
               actionLabel="Speech settings"
               onAction={onOpenSettings}
             />
           {:else if !generating}
             <span class="shrink-0 font-mono text-muted-foreground tabular-nums"
-              >{formatTime(position)} / {formatTime(status.durationMilliseconds)}</span
+              >{formatTime(position)} / {formatTime(
+                status.durationMilliseconds,
+              )}</span
             >
           {/if}
         </div>
@@ -288,7 +323,9 @@
           {status.message || "Speech could not be generated or played."}
         </p>
       {:else if generating}
-        <p class="h-4 text-xs text-muted-foreground">Audio will play when ready.</p>
+        <p class="h-4 text-xs text-muted-foreground">
+          Audio will play when ready.
+        </p>
       {:else}
         {@render timeline()}
       {/if}

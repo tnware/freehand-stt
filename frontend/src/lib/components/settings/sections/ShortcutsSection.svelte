@@ -162,7 +162,7 @@
 
   {#if !settings.holdAvailable}
     <p
-      class="rounded-lg border border-hairline px-4 py-2.5 text-[11.5px] leading-[1.5] text-muted-foreground"
+      class="border-t border-hairline py-3 text-xs leading-relaxed text-muted-foreground"
     >
       {settings.holdAvailabilityReason}
     </p>
@@ -191,7 +191,7 @@
         {permissions.error}
       </p>{/if}
     <p
-      class="rounded-lg border border-hairline px-4 py-2.5 text-[11.5px] leading-[1.5] text-muted-foreground"
+      class="border-t border-hairline py-3 text-xs leading-relaxed text-muted-foreground"
     >
       Toggle and Show Freehand use native global shortcuts without
       Accessibility. Recording a shortcut requires Accessibility and Input
@@ -204,7 +204,7 @@
 
   {#if externalAvailabilityDeferred}
     <p
-      class="rounded-lg border border-hairline px-4 py-2.5 text-[11.5px] leading-[1.5] text-muted-foreground"
+      class="border-t border-hairline py-3 text-xs leading-relaxed text-muted-foreground"
     >
       {#if native.mac}
         Freehand rejects unsupported, reserved, or duplicate chords. macOS

@@ -13,7 +13,10 @@
     TTSPhase,
     type TTSStatus,
   } from "$lib/state";
-  import { readDisclosurePreference, writeDisclosurePreference } from "$lib/utils/viewPreferences";
+  import {
+    readDisclosurePreference,
+    writeDisclosurePreference,
+  } from "$lib/utils/viewPreferences";
 
   let {
     playbackVisibleElsewhere = false,
@@ -51,7 +54,10 @@
     fileHistoryGeneration: number;
     onOpenSettings: () => void;
     onCopy: (id: number) => Promise<boolean>;
-    onCopyVersion: (id: number, version: HistoryTextVersion) => Promise<boolean>;
+    onCopyVersion: (
+      id: number,
+      version: HistoryTextVersion,
+    ) => Promise<boolean>;
     onDelete: (id: number) => Promise<boolean>;
     onCopyFile: () => Promise<boolean>;
     ttsEnabled?: boolean;
@@ -102,17 +108,29 @@
       return undefined;
     }
     let status = "preparing";
-    if (fileStatus.phase === FileTranscriptionPhase.FileTranscriptionUploading) {
+    if (
+      fileStatus.phase === FileTranscriptionPhase.FileTranscriptionUploading
+    ) {
       status = "uploading";
-    } else if (fileStatus.phase === FileTranscriptionPhase.FileTranscriptionStreaming) {
+    } else if (
+      fileStatus.phase === FileTranscriptionPhase.FileTranscriptionStreaming
+    ) {
       status = "streaming";
-    } else if (fileStatus.phase === FileTranscriptionPhase.FileTranscriptionProcessing) {
+    } else if (
+      fileStatus.phase === FileTranscriptionPhase.FileTranscriptionProcessing
+    ) {
       status = "processing";
-    } else if (fileStatus.phase === FileTranscriptionPhase.FileTranscriptionCancelling) {
+    } else if (
+      fileStatus.phase === FileTranscriptionPhase.FileTranscriptionCancelling
+    ) {
       status = "cancelling";
-    } else if (fileStatus.phase === FileTranscriptionPhase.FileTranscriptionFailed) {
+    } else if (
+      fileStatus.phase === FileTranscriptionPhase.FileTranscriptionFailed
+    ) {
       status = "partial result";
-    } else if (fileStatus.phase === FileTranscriptionPhase.FileTranscriptionCompleted) {
+    } else if (
+      fileStatus.phase === FileTranscriptionPhase.FileTranscriptionCompleted
+    ) {
       status = "audio file";
     }
     const text = fileStatus.transcript ?? "";
@@ -124,7 +142,8 @@
       characterCount: Array.from(text).length,
       working: fileWorking,
       canCopy: !fileWorking && fileStatus.canCopy,
-      failed: fileStatus.phase === FileTranscriptionPhase.FileTranscriptionFailed,
+      failed:
+        fileStatus.phase === FileTranscriptionPhase.FileTranscriptionFailed,
     };
   });
 
@@ -132,10 +151,16 @@
   // the body does not repeat it, and it is the one fact worth having while
   // the list is folded away.
   const summary = $derived.by(() => {
-    if (live?.working) return enabled ? `live · ${entries.length} kept` : "live · not retained";
-    if (live) return enabled ? `result · ${entries.length} kept` : "result · not retained";
+    if (live?.working)
+      return enabled ? `live · ${entries.length} kept` : "live · not retained";
+    if (live)
+      return enabled
+        ? `result · ${entries.length} kept`
+        : "result · not retained";
     if (!enabled) return "off";
-    return entries.length === 1 ? "1 kept · in memory" : `${entries.length} kept · in memory`;
+    return entries.length === 1
+      ? "1 kept · in memory"
+      : `${entries.length} kept · in memory`;
   });
   const showPlayback = $derived(
     !playbackVisibleElsewhere &&
@@ -160,7 +185,7 @@
   swapping a flex child in and out of the layout would jump.
 -->
 <section
-  class="history-card rounded-lg border border-hairline bg-layer-fill"
+  class="history-card rounded-sm border border-hairline bg-layer-fill"
   class:open
   class:bare={!collapsible}
   aria-label="Transcript history"
@@ -192,18 +217,22 @@
         onListenLive={onListenFile}
       />
     {:else}
-      <div class="flex h-full min-h-48 flex-col items-center justify-center gap-3 p-8 text-center">
-        <div class="grid size-9 place-items-center rounded-full bg-muted text-ink-quiet">
-          <HistoryIcon class="size-[17px]" />
+      <div
+        class="flex h-full min-h-48 flex-col items-center justify-center gap-3 px-5 py-4 text-center"
+      >
+        <div class="grid size-6 place-items-center text-muted-foreground">
+          <HistoryIcon class="size-6" />
         </div>
         <div class="max-w-sm">
-          <p class="text-[13px] font-medium">Nothing is being kept</p>
-          <p class="mt-1.5 text-[11.5px] leading-relaxed text-muted-foreground">
-            Keep recent transcripts until you quit. Current results and recovery are available with
-            history off.
+          <p class="text-[15px] font-medium">Nothing is being kept</p>
+          <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+            Keep recent transcripts until you quit. Current results and recovery
+            are available with history off.
           </p>
         </div>
-        <Button variant="outline" size="sm" onclick={onOpenSettings}>Turn history on</Button>
+        <Button variant="outline" size="sm" onclick={onOpenSettings}
+          >Turn history on</Button
+        >
       </div>
     {/if}
     {#if showPlayback}

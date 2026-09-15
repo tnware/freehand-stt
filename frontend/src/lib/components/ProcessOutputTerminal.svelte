@@ -212,15 +212,15 @@
   });
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col gap-3">
+<div class="flex min-h-0 flex-1 flex-col">
   <div
-    class="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-card-stroke bg-card p-2"
+    class="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-hairline px-5 py-1.5"
     role="group"
     aria-label="Output controls"
   >
     <div class="flex min-w-0 flex-1 basis-72 items-center gap-1.5">
       <Input
-        class="h-8 min-w-28 max-w-72 flex-1"
+        class="h-6 min-w-28 max-w-72 flex-1 text-xs"
         type="search"
         aria-label="Search retained output"
         placeholder="Search output"
@@ -237,21 +237,21 @@
       />
       <Button
         variant="outline"
-        size="sm"
+        size="xs"
         disabled={!enabled || !query}
         onclick={() => find(true)}>Previous</Button
       >
       <Button
         variant="outline"
-        size="sm"
+        size="xs"
         disabled={!enabled || !query}
         onclick={() => find()}>Next</Button
       >
     </div>
     <div class="flex flex-wrap items-center gap-1.5">
       <Button
-        variant={following ? "soft" : "outline"}
-        size="sm"
+        variant={following ? "soft" : "ghost"}
+        size="xs"
         disabled={!enabled}
         aria-pressed={following}
         onclick={() => {
@@ -260,15 +260,15 @@
         }}><ArrowDownToLineIcon class="size-3.5" />Follow</Button
       >
       <Button
-        variant="soft"
-        size="sm"
+        variant="ghost"
+        size="xs"
         disabled={!enabled || !selected}
         onclick={() => void copySelection()}
         ><CopyIcon class="size-3.5" />Copy selection</Button
       >
       <Button
-        variant="outline"
-        size="sm"
+        variant="ghost"
+        size="xs"
         disabled={!enabled || busy}
         onclick={onclear}>Clear</Button
       >
@@ -278,15 +278,13 @@
       role="status">{feedback}</span
     >
   </div>
-  <div
-    class="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-background"
-  >
+  <div class="relative min-h-0 flex-1 overflow-hidden bg-background">
     <div
       bind:this={viewport}
       role="region"
       aria-label="Read-only process output"
       aria-describedby={describedby}
-      class="output-terminal absolute inset-3 overflow-hidden"
+      class="output-terminal absolute inset-x-5 inset-y-3 overflow-hidden"
     ></div>
     {@render children?.()}
   </div>

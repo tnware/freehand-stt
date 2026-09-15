@@ -115,7 +115,7 @@
 </script>
 
 <div class="settings-group">
-  <div class="space-y-3 p-4">
+  <div class="space-y-3 py-3">
     <div class="flex items-center justify-between gap-3">
       <label for="vocabulary-terms" class="text-[13px] font-medium"
         >Names and phrases</label
@@ -130,7 +130,7 @@
     </p>
     <Textarea
       bind:ref={input}
-      class="field-sizing-fixed h-44 min-h-24 resize-y font-mono text-sm"
+      class="field-sizing-fixed h-44 min-h-24 resize-y font-mono text-[13px]"
       id="vocabulary-terms"
       bind:value={
         () => settings.vocabulary.terms, (terms) => onChange({ terms })
@@ -238,14 +238,16 @@
   </div>
 
   <div class="border-t border-hairline" aria-label="Vocabulary workflows">
-    <div class="px-4 pt-3 pb-1">
+    <div class="pt-3 pb-1">
       <h3 class="text-[13px] font-medium">Use vocabulary in</h3>
       <p class="mt-1 text-xs text-muted-foreground">
         Changes apply after saving.
       </p>
     </div>
     {#each uses as use (use.key)}
-      <div class="flex items-center gap-3 px-4 py-3">
+      <div
+        class="flex items-center gap-3 border-b border-hairline py-3 last:border-b-0"
+      >
         <ProviderIcon profile={use.backend} />
         <div class="min-w-0 flex-1">
           <label for={`vocabulary-${use.key}`} class="text-[13px] font-medium"
@@ -305,10 +307,11 @@
             (boost) => onChange({ boost: boost ?? 0 })
           }
           {disabled}
-          class="h-9 w-20 rounded-md border border-input bg-background px-3 text-sm"
+          data-slot="input"
+          class="h-8 w-20 rounded-md border border-input bg-well px-2.5 text-[13px] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
         />{/snippet}
     </SettingRow>
-    <p class="px-5 py-3 text-xs leading-relaxed text-muted-foreground">
+    <p class="py-3 text-xs leading-5 text-muted-foreground">
       Nemotron accepts up to 32 phrases, 128 UTF-8 bytes per phrase, and 2,048
       bytes total. Other models use their own supported hint format.
     </p>

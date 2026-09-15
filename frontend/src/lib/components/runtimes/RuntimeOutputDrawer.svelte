@@ -48,7 +48,7 @@
 <div class="relative flex min-h-0 flex-1 flex-col">
   {#if !instanceID}
     <p
-      class="flex h-full items-center justify-center px-4 text-center text-[12px] text-muted-foreground"
+      class="flex h-full items-center justify-center px-5 text-center text-[12px] text-muted-foreground"
     >
       Install a local runtime to inspect its output.
     </p>
@@ -67,13 +67,13 @@
       <!-- Output can include transcripts, prompts and file paths, so nothing
              streams until it is asked for. -->
       <div
-        class="absolute inset-0 z-10 flex flex-wrap items-center justify-between gap-3 overflow-y-auto bg-card px-4 py-3"
+        class="absolute inset-0 z-10 flex flex-wrap items-center justify-between gap-3 overflow-y-auto bg-background px-5 py-3"
       >
         <p
           id="runtime-output-consent"
           class="min-w-0 flex-1 basis-64 text-[12px] leading-relaxed text-secondary-foreground"
         >
-          <span class="block font-semibold text-foreground"
+          <span class="block text-[13px] font-semibold text-foreground"
             >Show sensitive output</span
           >
           Output may include transcripts, prompts and file paths.
@@ -89,7 +89,7 @@
   {/if}
   {#if output.error}
     <p
-      class="absolute inset-x-0 bottom-0 z-20 bg-card px-4 py-1 text-[11px] text-destructive"
+      class="absolute inset-x-0 bottom-0 z-20 bg-background px-5 py-1 text-xs text-destructive"
       role="alert"
     >
       {output.error}

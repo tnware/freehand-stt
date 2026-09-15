@@ -44,12 +44,10 @@
       class="w-fit cursor-pointer rounded-sm py-1 font-medium text-accent-text hover:underline focus-visible:outline-ring"
       >Binary download details</summary
     >
-    <div
-      class="mt-2 space-y-3 rounded-lg border border-hairline bg-background p-3"
-    >
+    <div class="mt-2 divide-y divide-hairline">
       {#each artifacts as artifact (`${artifact.os}/${artifact.architecture}/${artifact.backend}/${artifact.filename}`)}
-        <div class="min-w-0 space-y-1">
-          <p class="font-medium text-foreground">
+        <div class="min-w-0 space-y-1 py-3 first:pt-0 last:pb-0">
+          <p class="text-[13px] font-medium text-foreground">
             {backendLabel(artifact.backend)} · {artifact.os} / {artifact.architecture}
             · {modelSize(artifact.sizeBytes)}
           </p>

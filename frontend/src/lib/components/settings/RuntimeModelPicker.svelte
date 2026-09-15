@@ -158,11 +158,12 @@
     >
       <div class="relative">
         <Combobox.Input
+          data-slot="combobox-input"
           {id}
           aria-label="Choose model"
           aria-describedby={`${id}-help`}
           placeholder="Search or enter a model ID…"
-          class="h-9 w-full min-w-0 rounded-lg border border-input bg-background px-3 pr-9 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          class="h-8 w-full min-w-0 rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           spellcheck={false}
           onclick={() => {
             if (!open) {

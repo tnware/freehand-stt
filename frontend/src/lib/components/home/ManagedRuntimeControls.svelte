@@ -55,7 +55,7 @@
 <div class="space-y-3">
   {#if row}
     <div class="space-y-1.5">
-      <label for={`${uid}-model`} class="text-xs font-medium"
+      <label for={`${uid}-model`} class="text-[13px] font-medium"
         >Selected model</label
       >
       <Select.Root
@@ -81,7 +81,7 @@
       </Select.Root>
     </div>
   {/if}
-  <div class="space-y-3 rounded-lg border border-hairline bg-secondary/50 p-3">
+  <div class="space-y-3 border-t border-hairline py-3">
     <p
       class="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground"
       role="status"

@@ -132,10 +132,7 @@
           value={microphoneChoice}
           onValueChange={onChooseMicrophone}
         >
-          <Select.Trigger
-            id="microphone-select"
-            class="h-auto w-full border-0 bg-transparent p-0 text-[15px] shadow-none focus-visible:ring-0"
-          >
+          <Select.Trigger id="microphone-select" class="w-full">
             <span class="flex min-w-0 items-center gap-2">
               {#if missing}
                 <TriangleAlertIcon

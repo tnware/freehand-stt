@@ -184,7 +184,7 @@
 
 <div class="flex min-h-0 min-w-0 flex-1 flex-col">
   <div
-    class="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-hairline px-5 py-2"
+    class="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-hairline px-5 py-1.5"
   >
     <div class="flex min-w-0 items-center gap-2.5">
       <h3
@@ -255,14 +255,14 @@
           class="h-3 w-px shrink-0 bg-border"
           aria-hidden="true"
         ></span>{/if}
-      <span class="min-w-0 truncate font-mono text-[10px] text-ink-quiet"
+      <span class="min-w-0 truncate font-mono text-[11px] text-ink-quiet"
         >{fact}</span
       >
     {/each}
     <span class="flex-1"></span>
     <button
       type="button"
-      class="shrink-0 text-[11px] text-ink-quiet underline-offset-2 hover:text-accent-text hover:underline"
+      class="shrink-0 text-xs text-ink-quiet underline-offset-2 hover:text-accent-text hover:underline"
       onclick={onOpenConnections}>Open Connections</button
     >
   </div>
@@ -304,7 +304,7 @@
       </div>
     {/if}
     {#if !installed}
-      <div class="flex flex-col gap-3 py-4">
+      <div class="flex flex-col gap-3 py-3">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
             <p class="text-[13px] font-medium">
@@ -314,7 +314,7 @@
                   : "Not installed"
                 : "Unavailable on this machine"}
             </p>
-            <p class="mt-0.5 text-[11px] text-ink-quiet">
+            <p class="mt-0.5 text-xs text-ink-quiet">
               {entry.unavailableReason ||
                 "Install the runtime, then explicitly download a model."}
             </p>
@@ -333,18 +333,18 @@
                 : "Install"}</Button
           >
         </div>
-        {#if probing}<p class="text-[11px] text-ink-quiet" role="status">
+        {#if probing}<p class="text-xs text-ink-quiet" role="status">
             Checking host binary options · no files are downloaded
           </p>{/if}
         {#if recommendation}
           <section
-            class="rounded-lg border border-hairline p-3"
+            class="border-y border-hairline py-3"
             aria-label="Runtime binary recommendation"
           >
-            <p class="text-[12.5px] font-medium">
+            <p class="text-[13px] font-medium">
               Recommended: {backendLabel(recommendation.recommendedBackend)}
             </p>
-            <p class="mt-0.5 font-mono text-[10px] text-ink-quiet">
+            <p class="mt-0.5 font-mono text-[11px] text-ink-quiet">
               {recommendation.os} · {recommendation.architecture} · {recommendation.reason}
             </p>
             <div class="mt-2.5 flex flex-wrap gap-1.5">
@@ -369,7 +369,7 @@
                 >{/each}
             </div>
             <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <p class="text-[11px] text-ink-quiet">
+              <p class="text-xs text-ink-quiet">
                 Downloads on install · checksum pinned
               </p>
               <Button
@@ -398,9 +398,9 @@
             >
               <div class="flex items-center justify-between gap-3">
                 <span class="min-w-0"
-                  ><span class="block truncate text-[12.5px]">{model.name}</span
+                  ><span class="block truncate text-[13px]">{model.name}</span
                   ><span
-                    class="block truncate font-mono text-[10px] text-ink-quiet"
+                    class="block truncate font-mono text-[11px] text-ink-quiet"
                     >{model.id}</span
                   ></span
                 ><span class="shrink-0 text-[10px] text-ink-quiet"
@@ -432,7 +432,7 @@
           ><RefreshCwIcon class="size-3" />Refresh catalog</Button
         >
       </div>
-      <p class="pb-2 text-[11px] text-ink-quiet">
+      <p class="pb-2 text-xs text-ink-quiet">
         {running
           ? "Stop to download, change or remove models."
           : "Browsing is metadata-only. Only Get fetches model files."}
@@ -464,23 +464,23 @@
                   : ''}"
               >
                 <span class="min-w-0 flex-1 pl-2"
-                  ><span class="block truncate text-[12.5px] text-foreground"
+                  ><span class="block truncate text-[13px] text-foreground"
                     >{model.name}</span
                   ><span
-                    class="block truncate font-mono text-[10px] text-ink-quiet"
+                    class="block truncate font-mono text-[11px] text-ink-quiet"
                     >{model.id}</span
                   ></span
                 >
                 <span
-                  class="w-[70px] shrink-0 text-[11px] text-secondary-foreground"
+                  class="w-[70px] shrink-0 text-xs text-secondary-foreground"
                   >{task(model)}</span
                 ><span
-                  class="w-[70px] shrink-0 text-right font-mono text-[10px]"
+                  class="w-[70px] shrink-0 text-right font-mono text-[11px]"
                   title={modelSize(model.sizeBytes)}
                   >{model.sizeBytes ? modelSize(model.sizeBytes) : "—"}</span
                 >
                 <span
-                  class="w-[90px] shrink-0 pl-3 text-[11px] {loaded
+                  class="w-[90px] shrink-0 pl-3 text-xs {loaded
                     ? 'text-success'
                     : 'text-ink-quiet'}"
                   >{loaded
@@ -538,7 +538,7 @@
                 </span>
               </div>
               {#if downloading}<div
-                  class="space-y-1 px-2 py-2 text-[11px] text-secondary-foreground"
+                  class="space-y-1 px-2 py-2 text-xs text-secondary-foreground"
                   role="status"
                 >
                   {#if busy}{#if view.percent !== null}<progress
@@ -554,7 +554,7 @@
                     </p>{:else if view.completion}<p>{view.completion}</p>{/if}
                 </div>{/if}
               <details
-                class="border-b border-hairline px-2 py-1 text-[11px] text-ink-quiet"
+                class="border-b border-hairline px-2 py-1 text-xs text-ink-quiet"
               >
                 <summary
                   class="w-fit cursor-pointer py-1 focus-visible:outline-ring"
@@ -585,21 +585,21 @@
             class="size-3.5 text-muted-foreground {preferencesOpen
               ? 'rotate-90'
               : ''}"
-          /><span class="text-[12.5px] text-secondary-foreground"
+          /><span class="text-[13px] text-secondary-foreground"
             >Runtime preferences</span
           ></span
-        ><span class="truncate font-mono text-[10px] text-ink-quiet"
+        ><span class="truncate font-mono text-[11px] text-ink-quiet"
           >{instance.autoStart ? "starts with Freehand" : "manual start"}</span
         ></button
       >
       {#if preferencesOpen}
-        <div class="space-y-4 border-b border-hairline py-3">
+        <div class="space-y-3 border-b border-hairline py-3">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <label for={`${uid}-autostart`} class="text-[12.5px]"
+              <label for={`${uid}-autostart`} class="text-[13px]"
                 >Start when Freehand launches</label
               >
-              <p class="mt-1 text-[11px] text-ink-quiet">
+              <p class="mt-1 text-xs text-ink-quiet">
                 Uses the selected model. Does not download missing files.
               </p>
             </div>
@@ -611,13 +611,13 @@
                 act(() => runtime.saveInstance({ ...instance, autoStart }))}
             />
           </div>
-          <p class="break-all font-mono text-[10px] text-ink-quiet">
+          <p class="break-all font-mono text-[11px] text-ink-quiet">
             Active API model: {row?.activeModel || "None"}
           </p>
           {#if switchable && installed}<fieldset
               disabled={actionLocked || running}
             >
-              <legend class="mb-2 text-[12.5px]">Runtime binary</legend>
+              <legend class="mb-2 text-[13px]">Runtime binary</legend>
               <div class="flex flex-wrap gap-1.5">
                 {#each entry.backends ?? [] as backend (backend)}<Button
                     variant="outline"
@@ -633,11 +633,11 @@
                   >{/each}
               </div>
             </fieldset>
-            <p class="text-[11px] text-ink-quiet">
+            <p class="text-xs text-ink-quiet">
               Stop to change binary. Switching downloads the selected binary and
               keeps models and saved Connections.
             </p>{/if}
-          <p class="text-[11px] text-ink-quiet">
+          <p class="text-xs text-ink-quiet">
             Stopping or removing files keeps saved Connections selected. There
             is no automatic fallback.
           </p>
@@ -655,10 +655,10 @@
             class="size-3.5 text-muted-foreground {sourceOpen
               ? 'rotate-90'
               : ''}"
-          /><span class="text-[12.5px] text-secondary-foreground"
+          /><span class="text-[13px] text-secondary-foreground"
             >Binary download source</span
           ></span
-        ><span class="truncate font-mono text-[10px] text-ink-quiet"
+        ><span class="truncate font-mono text-[11px] text-ink-quiet"
           >official release · checksum pinned</span
         ></button
       >
@@ -680,10 +680,10 @@
             class="size-3.5 text-muted-foreground {manageOpen
               ? 'rotate-90'
               : ''}"
-          /><span class="text-[12.5px] text-secondary-foreground"
+          /><span class="text-[13px] text-secondary-foreground"
             >Manage runtime</span
           ></span
-        ><span class="font-mono text-[10px] text-ink-quiet"
+        ><span class="font-mono text-[11px] text-ink-quiet"
           >remove files · delete entry</span
         ></button
       >

@@ -83,7 +83,7 @@
   from, which model reads it, and what to press.
 -->
 <section
-  class="flex flex-col gap-2 rounded-lg border border-hairline bg-card px-3 py-2.5"
+  class="flex flex-col gap-2 border-b border-hairline bg-layer-fill px-5 py-2"
   aria-label="Audio file"
   data-state={status.phase}
 >
@@ -95,7 +95,7 @@
             class="block truncate text-[13px] font-medium"
             title={status.fileName}>{status.fileName || "Audio file"}</span
           >
-          <span class="block truncate font-mono text-[10px] text-ink-quiet">
+          <span class="block truncate font-mono text-[11px] text-ink-quiet">
             {formatBytes(size) || "size unknown"}{uploading
               ? ` · ${percent}% sent`
               : ""}
@@ -126,7 +126,7 @@
           {/if}
           Choose audio file
         </Button>
-        <span class="font-mono text-[10px] text-ink-quiet"
+        <span class="text-xs text-ink-quiet"
           >{blocked || "no microphone required"}</span
         >
       {/if}
@@ -217,7 +217,7 @@
   {/if}
 
   {#if status.streamingNotice}
-    <p class="text-[11px] leading-snug text-muted-foreground">
+    <p class="text-xs leading-relaxed text-muted-foreground">
       {status.streamingNotice}
     </p>
   {/if}

@@ -139,10 +139,11 @@
         />
       </span>{/if}
     <Combobox.Input
+      data-slot="combobox-input"
       {id}
       aria-label="Choose connection"
       placeholder={open ? "Search connections…" : "Choose or add a connection…"}
-      class={`w-full min-w-0 rounded-lg border border-input bg-background pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${compact ? "h-8 text-xs" : "h-9"} ${selected && !open ? "pl-9" : "pl-3"}`}
+      class={`w-full min-w-0 rounded-md border border-input bg-well pr-9 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${compact ? "h-7 text-xs" : "h-8"} ${selected && !open ? "pl-9" : "pl-3"}`}
       oninput={(event) => {
         query = event.currentTarget.value;
         open = true;

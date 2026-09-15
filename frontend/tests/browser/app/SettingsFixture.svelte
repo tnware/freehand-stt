@@ -22,6 +22,7 @@
   import { configurePickerFixture } from "./picker-data";
   import { controlledMetadata } from "./metadata-control";
   import { createRuntimeFixture } from "./runtime-fixture";
+  import { createHistoryFixture } from "./history-fixture";
   import { ProviderID } from "$bindings/managedruntime";
   import { State } from "$lib/state";
   import { CancellablePromise } from "@wailsio/runtime";
@@ -51,6 +52,10 @@
   let current = structuredClone(settings);
   if (params.has("runtime-ready") || params.has("setup-ready"))
     current.setupCompleted = true;
+  const historyFixture = params.has("history-workbench")
+    ? createHistoryFixture()
+    : null;
+  if (historyFixture) current.historyEnabled = true;
   if (new URLSearchParams(location.search).has("hold-degraded")) {
     current.holdShortcut = "F13";
     current.holdAvailable = false;
@@ -281,6 +286,7 @@
           params.has("work-busy") ? { ...idle, state: State.Recording } : idle,
         ),
       {
+        history: historyFixture?.service,
         input: {
           ListMicrophones: () =>
             CancellablePromise.resolve([
@@ -331,6 +337,15 @@
     runtime: runtimeFixture?.service,
   });
   session.editor.applySettingsSnapshot(structuredClone(current));
+  if (historyFixture) {
+    window.testHistory = {
+      failNextClear: historyFixture.failNextClear,
+      appendVoice: async () => {
+        historyFixture.appendVoice();
+        await session.history.refresh();
+      },
+    };
+  }
   runtimeFixture?.subscribe((status) => session.runtime.applyStatus(status));
   if (new URLSearchParams(location.search).has("workflows")) {
     session.editor.processingProfiles = structuredClone(processingProfiles);

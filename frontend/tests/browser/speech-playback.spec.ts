@@ -37,8 +37,8 @@ for (const theme of ["dark", "light"]) {
       const css = getComputedStyle(element);
       return {
         background: css.backgroundColor,
-        border: css.borderTopColor,
-        width: css.borderTopWidth,
+        border: css.borderBottomColor,
+        width: css.borderBottomWidth,
         radius: css.borderTopLeftRadius,
       };
     };
@@ -46,7 +46,7 @@ for (const theme of ["dark", "light"]) {
     expect(await bar.evaluate(surface)).toEqual(
       await capture.evaluate(surface),
     );
-    expect(parseFloat((await bar.evaluate(surface)).radius)).toBeGreaterThan(0);
+    expect(parseFloat((await bar.evaluate(surface)).radius)).toBe(0);
     await page.screenshot({
       path: info.outputPath(`transcript-playback-${theme}.png`),
     });
@@ -331,7 +331,12 @@ test("the full-width track follows irregular playback updates before and after s
   }
   const barBox = (await bar.boundingBox())!;
   const trackBox = (await track.boundingBox())!;
-  expect(trackBox.width).toBeGreaterThan(barBox.width - 30);
+  // The timeline spans the dock's content area inside the shared page gutter.
+  expect(trackBox.x - barBox.x).toBeCloseTo(20, 0);
+  expect(barBox.x + barBox.width - trackBox.x - trackBox.width).toBeCloseTo(
+    20,
+    0,
+  );
   expect((await fill.boundingBox())!.height).toBeGreaterThan(0);
   // Click the actual visible track, rather than the larger invisible hit area.
   await track.click({

@@ -87,7 +87,7 @@
 </script>
 
 <section
-  class="flex flex-col gap-2 rounded-lg border border-hairline bg-card px-3 py-2.5"
+  class="flex flex-col gap-2 border-b border-hairline bg-layer-fill px-5 py-2"
   aria-label="Voice capture"
 >
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -101,7 +101,7 @@
         {label}
       </p>
       <div
-        class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground"
+        class="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
       >
         {#if recording || captureClock.seconds > 0}<span
             class="font-mono tabular-nums"
@@ -172,7 +172,7 @@
         />
       </div>
       <span
-        class="max-w-[40%] truncate text-[10px] text-muted-foreground"
+        class="max-w-[40%] truncate text-xs text-muted-foreground"
         title={microphone}>{microphone}</span
       >
     </div>{/if}

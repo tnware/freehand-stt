@@ -36,6 +36,7 @@
     emptyTitle = "Nothing kept yet",
     emptyDescription = "The next finalized transcript will appear here.",
     scrollable = true,
+    reader = false,
     maxHeight,
     live,
     onCopy,
@@ -54,6 +55,8 @@
     emptyDescription?: string;
     /** Home owns an independent history scroller; settings scrolls as one page. */
     scrollable?: boolean;
+    /** A selected transcript stays expanded in the full History reader. */
+    reader?: boolean;
     maxHeight?: string;
     /** Ephemeral presentation of an active file run; retained history remains owned by Go. */
     live?: {
@@ -80,6 +83,7 @@
     onListen?: (id: number, version: HistoryTextVersion) => void;
     onListenLive?: () => void;
   } = $props();
+  const uid = $props.id();
 
   const preparing = $derived(
     ttsPending ??
@@ -262,12 +266,10 @@
 >
   {#if entries.length === 0 && !live}
     <div
-      class="flex min-h-40 flex-col items-center justify-center px-6 py-9 text-center"
+      class="flex min-h-40 flex-col items-center justify-center px-5 py-4 text-center"
     >
-      <p class="text-sm font-medium">{emptyTitle}</p>
-      <p
-        class="mt-1.5 max-w-md text-[12.5px] leading-relaxed text-muted-foreground"
-      >
+      <p class="text-[15px] font-medium">{emptyTitle}</p>
+      <p class="mt-1.5 max-w-md text-xs leading-relaxed text-muted-foreground">
         {emptyDescription}
       </p>
     </div>
@@ -275,13 +277,13 @@
     <div class="flex flex-col">
       {#if live}
         <article
-          class="bg-primary/5 px-4 pt-3.5 pb-2"
+          class="bg-primary/5 px-5 pt-3.5 pb-2"
           aria-label={live.working
             ? "Live audio file transcript"
             : "Audio file transcript result"}
         >
           <div
-            class="-mx-4 -mt-3.5 flex min-h-8 min-w-0 items-center justify-between gap-3 border-b border-hairline bg-layer-fill px-4 py-1"
+            class="-mx-5 -mt-3.5 flex min-h-11 min-w-0 items-center justify-between gap-3 border-b border-hairline bg-layer-fill px-5 py-1"
           >
             <div class="flex min-w-0 items-center gap-2">
               <span
@@ -316,10 +318,12 @@
             <TranscriptText
               content={{ key: `file:${live.generation}`, text: live.text }}
               label="Audio file transcript"
-              class="mt-2.5 min-h-5 w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+              class="mt-2.5 min-h-5 w-full max-w-[76ch] text-[15px] leading-[26px] break-words whitespace-pre-wrap"
             />
           {:else}
-            <p class="mt-2.5 min-h-5 text-sm leading-7 text-muted-foreground">
+            <p
+              class="mt-2.5 min-h-5 text-[15px] leading-[26px] text-muted-foreground"
+            >
               Transcript text will appear here as it arrives.
             </p>
           {/if}
@@ -371,18 +375,83 @@
       {/if}
 
       {#each entries as entry (entry.id)}
-        {@const isExpanded = expanded(entry.id)}
+        {@const isExpanded = reader || expanded(entry.id)}
         {@const hasCleaned = hasProcessedTranscript(entry)}
         {@const isComparing =
           isExpanded && hasCleaned && disclosure.comparing.includes(entry.id)}
         {@const finalVersion = hasCleaned
           ? HistoryTextVersion.HistoryTextProcessed
           : HistoryTextVersion.HistoryTextFinal}
+        {#snippet entryHeading()}
+          <span
+            class={cn(
+              "flex min-w-0 items-center gap-2",
+              isExpanded ? "flex-1 flex-wrap" : "shrink-0",
+            )}
+          >
+            <span
+              class={cn(
+                "size-2 shrink-0 rounded-full",
+                outcomeDot(entry.outcome),
+              )}
+            ></span>
+            {#if !reader && entry.id === newestID}<span
+                class="text-xs font-medium text-muted-foreground">Latest</span
+              >{/if}
+            <time
+              datetime={entry.completedAt}
+              title={completedDateTime(entry.completedAt)}
+              class="figure text-xs font-medium text-secondary-foreground"
+            >
+              {completedLabel(entry.completedAt)}
+            </time>
+            <Badge
+              variant={entry.outcome === HistoryOutcome.HistoryFailed
+                ? "destructive"
+                : "secondary"}
+              class={cn(
+                "text-[11px] tracking-normal normal-case",
+                outcomeBadgeClass(entry.outcome),
+              )}
+            >
+              {outcomeLabel(entry.outcome)}
+            </Badge>
+            {#if hasProcessing(entry)}
+              <Badge
+                variant="secondary"
+                class="text-[11px] tracking-normal text-accent-text normal-case"
+              >
+                {processingLabel(entry)}
+              </Badge>
+            {/if}
+          </span>
+          {#if !isExpanded}
+            <span
+              class="min-w-0 flex-[2] truncate text-[13px] text-secondary-foreground"
+              >{entry.text}</span
+            >
+            <span class="figure shrink-0 text-[11px] text-ink-quiet"
+              >{characterLabel(entry.characterCount)}</span
+            >
+          {/if}
+          {#if !reader}
+            <span
+              class="disclosure-affordance grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground"
+            >
+              <ChevronDownIcon
+                class={cn(
+                  "size-4 transition-transform duration-150 motion-reduce:transition-none",
+                  isExpanded && "rotate-180",
+                )}
+              />
+            </span>
+          {/if}
+        {/snippet}
         <article
           class={cn(
             "history-entry group border-b border-hairline transition-colors",
             isExpanded
-              ? "bg-subtle-fill px-4 pt-2.5 pb-2"
+              ? "bg-subtle-fill px-5 pt-2.5 pb-2"
               : entry.id === newestID
                 ? "bg-latest"
                 : "",
@@ -392,82 +461,29 @@
             class={cn(
               "history-row-header flex min-w-0 items-center",
               isExpanded
-                ? "-mx-4 -mt-3.5 min-h-8 w-[calc(100%+2rem)] sticky top-0 z-10 bg-subtle-fill"
+                ? "-mx-5 -mt-2.5 min-h-11 w-[calc(100%+2.5rem)] sticky top-0 z-10 bg-subtle-fill"
                 : "h-11 w-full",
             )}
           >
-            <button
-              type="button"
-              class="history-disclosure flex min-w-0 flex-1 items-center gap-2.5 px-5 py-1 text-left"
-              class:min-h-8={isExpanded}
-              aria-label={`${isExpanded ? "Collapse" : "Expand"} transcript from ${completedDateTime(entry.completedAt)}`}
-              aria-expanded={isExpanded}
-              aria-controls={`history-entry-${entry.id}-content`}
-              onclick={() => toggleExpanded(entry.id)}
-            >
-              <span
-                class={cn(
-                  "flex min-w-0 items-center gap-2",
-                  isExpanded ? "flex-1 flex-wrap" : "shrink-0",
-                )}
+            {#if reader}
+              <div
+                class="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-5 py-1"
               >
-                <span
-                  class={cn(
-                    "size-2 shrink-0 rounded-full",
-                    outcomeDot(entry.outcome),
-                  )}
-                ></span>
-                {#if entry.id === newestID}<span
-                    class="text-xs font-medium text-muted-foreground"
-                    >Latest</span
-                  >{/if}
-                <time
-                  datetime={entry.completedAt}
-                  title={completedDateTime(entry.completedAt)}
-                  class="figure text-xs font-medium text-secondary-foreground"
-                >
-                  {completedLabel(entry.completedAt)}
-                </time>
-                <Badge
-                  variant={entry.outcome === HistoryOutcome.HistoryFailed
-                    ? "destructive"
-                    : "secondary"}
-                  class={cn(
-                    "text-[11px] tracking-normal normal-case",
-                    outcomeBadgeClass(entry.outcome),
-                  )}
-                >
-                  {outcomeLabel(entry.outcome)}
-                </Badge>
-                {#if hasProcessing(entry)}
-                  <Badge
-                    variant="secondary"
-                    class="text-[11px] tracking-normal text-accent-text normal-case"
-                  >
-                    {processingLabel(entry)}
-                  </Badge>
-                {/if}
-              </span>
-              {#if !isExpanded}
-                <span
-                  class="min-w-0 flex-[2] truncate text-[12.5px] text-secondary-foreground"
-                  >{entry.text}</span
-                >
-                <span class="figure shrink-0 text-[11px] text-ink-quiet"
-                  >{characterLabel(entry.characterCount)}</span
-                >
-              {/if}
-              <span
-                class="disclosure-affordance grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground"
+                {@render entryHeading()}
+              </div>
+            {:else}
+              <button
+                type="button"
+                class="history-disclosure flex min-w-0 flex-1 items-center gap-2.5 px-5 py-1 text-left"
+                class:min-h-11={isExpanded}
+                aria-label={`${isExpanded ? "Collapse" : "Expand"} transcript from ${completedDateTime(entry.completedAt)}`}
+                aria-expanded={isExpanded}
+                aria-controls={`${uid}-history-entry-${entry.id}-content`}
+                onclick={() => toggleExpanded(entry.id)}
               >
-                <ChevronDownIcon
-                  class={cn(
-                    "size-4 transition-transform duration-150 motion-reduce:transition-none",
-                    isExpanded && "rotate-180",
-                  )}
-                />
-              </span>
-            </button>
+                {@render entryHeading()}
+              </button>
+            {/if}
             {#if hasCleaned}
               <Button
                 variant="ghost"
@@ -489,7 +505,7 @@
           </div>
 
           {#if isExpanded}
-            <div id={`history-entry-${entry.id}-content`}>
+            <div id={`${uid}-history-entry-${entry.id}-content`}>
               {#if isComparing}
                 {@const processedText = entry.processedText ?? entry.text}
                 {@const comparison = compareTranscriptText(
@@ -497,7 +513,7 @@
                   processedText,
                 )}
                 <div
-                  class="comparison-layout mt-3 overflow-hidden rounded-lg border border-hairline bg-background/35"
+                  class="comparison-layout mt-3 overflow-hidden rounded-sm border border-hairline bg-background/35"
                 >
                   <section
                     class="comparison-panel px-3 py-2.5"
@@ -542,7 +558,7 @@
                         parts: comparison.raw,
                       }}
                       label="Raw transcript text"
-                      class="w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                      class="w-full max-w-[76ch] text-[15px] leading-[26px] break-words whitespace-pre-wrap"
                     />
                   </section>
 
@@ -597,7 +613,7 @@
                         parts: comparison.processed,
                       }}
                       label="Cleaned transcript text"
-                      class="w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                      class="w-full max-w-[76ch] text-[15px] leading-[26px] break-words whitespace-pre-wrap"
                     />
                   </section>
                 </div>
@@ -605,7 +621,7 @@
                 <TranscriptText
                   content={{ key: String(entry.id), text: entry.text }}
                   label={`Transcript from ${completedDateTime(entry.completedAt)}`}
-                  class="mt-2.5 w-full max-w-[76ch] text-sm leading-7 break-words whitespace-pre-wrap"
+                  class="mt-2.5 w-full max-w-[76ch] text-[15px] leading-[26px] break-words whitespace-pre-wrap"
                 />
               {/if}
             </div>
@@ -697,14 +713,16 @@
                       align="end"
                       class="w-64 max-w-[calc(100vw-24px)]"
                     >
-                      <Menu.Item
-                        disabled={!detailsAvailable(entry)}
-                        onclick={() => void openDetails(entry)}
-                        class="gap-2.5 px-3 py-2"
-                      >
-                        <InfoIcon />Transcription details
-                      </Menu.Item>
-                      <Menu.Separator />
+                      {#if !reader}
+                        <Menu.Item
+                          disabled={!detailsAvailable(entry)}
+                          onclick={() => void openDetails(entry)}
+                          class="gap-2.5 px-3 py-2"
+                        >
+                          <InfoIcon />Transcription details
+                        </Menu.Item>
+                        <Menu.Separator />
+                      {/if}
                       <Menu.Item
                         variant="destructive"
                         onclick={() => void onDelete(entry.id)}
@@ -725,7 +743,7 @@
 </div>
 
 {#if detailsError}
-  <p role="alert" class="px-4 py-2 text-xs text-destructive">{detailsError}</p>
+  <p role="alert" class="px-5 py-2 text-xs text-destructive">{detailsError}</p>
 {/if}
 
 <style>

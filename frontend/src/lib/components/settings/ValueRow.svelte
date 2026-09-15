@@ -16,7 +16,7 @@
     id: string;
     label: string;
     hint?: string;
-    /** The editable value. Rendered borderless so it reads as a value. */
+    /** The editable value, using the shared field geometry. */
     control: Snippet;
     /** Optional status or action that directly affects this value. */
     action?: Snippet;
@@ -34,7 +34,7 @@
 </script>
 
 <div
-  class="grid gap-3 px-5 py-3.5 @min-[600px]:grid-cols-[minmax(0,1fr)_minmax(180px,1fr)] @min-[600px]:items-start @min-[600px]:gap-6"
+  class="grid gap-2 py-3 @min-[600px]:grid-cols-[minmax(0,1fr)_minmax(180px,1fr)] @min-[600px]:items-start @min-[600px]:gap-4"
   role="group"
   aria-labelledby={labelID}
   aria-describedby={hint ? hintID : undefined}
@@ -42,7 +42,10 @@
   <div class="min-w-0">
     <Label id={labelID} for={id} class="text-[13px] font-medium">{label}</Label>
     {#if hint}
-      <p id={hintID} class="mt-1 text-[11.5px] leading-[1.45] text-muted-foreground">
+      <p
+        id={hintID}
+        class="mt-0.5 text-xs leading-[1.45] text-muted-foreground"
+      >
         {hint}
       </p>
     {/if}

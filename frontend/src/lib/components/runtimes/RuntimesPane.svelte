@@ -102,7 +102,7 @@
         <button
           type="button"
           aria-pressed={on}
-          class="flex items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
+          class="relative flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
             ? 'bg-accent-wash'
             : ''}"
           onclick={() => {
@@ -110,8 +110,12 @@
             recoveryID = "";
           }}
         >
+          {#if on}<span
+              class="absolute inset-y-2 left-0 w-0.5 rounded-sm bg-primary"
+              aria-hidden="true"
+            ></span>{/if}
           <span
-            class="flex size-6 shrink-0 items-center justify-center rounded-md border border-hairline bg-background"
+            class="flex size-6 shrink-0 items-center justify-center rounded-sm bg-subtle-fill-hover"
           >
             <ProviderIcon profile={row.entry.id} size={14} />
           </span>
@@ -121,7 +125,7 @@
                 ? 'text-foreground'
                 : 'text-secondary-foreground'}">{row.entry.name}</span
             >
-            <span class="block truncate font-mono text-[10px] text-ink-quiet">
+            <span class="block truncate font-mono text-[11px] text-ink-quiet">
               {[
                 row.entry.id === "llama-cpp"
                   ? "cleanup"
@@ -166,7 +170,7 @@
         <!-- Freehand knows which backends this machine can actually run;
                it does not measure VRAM, so this states capability rather
                than inventing a hardware meter. -->
-        <p class="font-mono text-[10px] text-ink-quiet">
+        <p class="font-mono text-[11px] text-ink-quiet">
           {currentInstance?.status.backend
             ? backendLabel(currentInstance.status.backend)
             : "backend not selected"}
@@ -180,7 +184,7 @@
           {/each}
         </div>
         {#if current.entry.unavailableReason}
-          <p class="mt-2 text-[11px] leading-snug text-warning">
+          <p class="mt-2 text-xs leading-snug text-warning">
             {current.entry.unavailableReason}
           </p>
         {/if}

@@ -17,7 +17,9 @@ generate speech without setting up a microphone or recording shortcut.
 
 For initial setup, see [Get started](../../getting-started/).
 
-The rail also opens **Local runtime**, **History**, and **Settings**. Press
+The rail also opens **Local runtime**, **History**, and **Settings**. The Settings
+sidebar moves between configuration sections; use **Local runtime** on the rail
+to manage installed runtimes and models. Press
 **Ctrl+K** on Windows or **⌘K** on macOS, or select the command bar at the top,
 to find a task or settings page. The status bar keeps recording state and the
 active task's connection visible as you move between panes.
@@ -204,13 +206,28 @@ History is off by default, stays in memory, holds at most 20 entries and 2 MiB,
 and is cleared when Freehand exits. Copy anything you want to keep before quitting.
 :::
 
-Open **History** from the activity rail or choose **Recent** below a workflow.
-Select an older entry to expand it. The latest transcript opens automatically.
+Open **History** from the activity rail. Its sidebar combines history controls
+with the retained transcript list. Search transcript text or an audio file's
+name, and filter by **All**, **Voice**, or **Audio files**. Search includes the
+final, raw, and cleaned versions already in memory; it does not search files on
+disk or recover transcripts from earlier sessions.
 
-Retained entries keep **Listen** and **Copy** directly available. Open the
-ellipsis **Transcript actions** menu for **Transcription details** or **Remove
-from history**. **Compare** opens raw and cleaned text together, with separate
-copy controls. If cleanup fails, its explanation appears below the raw transcript.
+Select an entry to read its full transcript and **Transcription details** in the
+main area. Both show the selected run. Drag the divider to give either more room;
+details appear beside the transcript in wide windows and below it in narrower
+windows. At compact sizes, choose **Browse** to open the list over the main area,
+then choose a transcript. You can also browse **Recent** below a workflow, where the
+latest transcript opens automatically and older entries expand when selected.
+
+The sidebar shows whether retention is on, opens **History settings**, and offers
+**Clear history** to remove all retained entries. Filtering the list does not
+change what is retained.
+
+The selected transcript keeps **Listen** and **Copy** directly available. Open the
+ellipsis **Transcript actions** menu for **Remove from history**. **Compare** opens
+raw and cleaned text together, with separate copy controls. If cleanup fails, its
+explanation appears below the raw transcript. In Recent and Settings history
+lists, **Transcription details** in the action menu still opens its separate window.
 
 History never retains audio, credentials, full file paths, or destination
 details. Each copy action is explicit.

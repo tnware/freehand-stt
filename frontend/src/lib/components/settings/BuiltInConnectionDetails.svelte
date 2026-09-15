@@ -41,15 +41,13 @@
 </script>
 
 <SettingsCard>
-  <div class="space-y-4 p-4">
+  <div class="space-y-3 py-3">
     <div class="flex flex-wrap items-center gap-3">
-      <span
-        class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-hairline bg-background"
-      >
+      <span class="flex size-8 shrink-0 items-center justify-center">
         <ProviderIcon
           profile={instance?.provider ??
             connection.details.compatibilityProfile}
-          size={24}
+          size={20}
         />
       </span>
       <div class="min-w-0 flex-1">
@@ -69,11 +67,11 @@
         dot>{view.label}</StatusBadge
       >
     </div>
-    <div class="rounded-lg border border-hairline bg-background px-3 py-2.5">
+    <div class="border-y border-hairline py-3">
       <p class="text-xs font-medium text-secondary-foreground">
         Selected model
       </p>
-      <p class="mt-1 break-words text-sm font-semibold">
+      <p class="mt-1 break-words text-[13px] font-medium">
         {model?.name ?? instance?.model ?? "Unavailable"}
       </p>
       <p class="mt-1 text-xs text-secondary-foreground">
@@ -119,7 +117,7 @@
   </div>
 </SettingsCard>
 <SettingsCard>
-  <div class="space-y-3 p-4">
+  <div class="space-y-3 py-3">
     <h3 class="text-[13px] font-medium">Task settings</h3>
     <p class="text-xs leading-relaxed text-secondary-foreground">
       Choose this connection in each task. Language, recording mode, cleanup

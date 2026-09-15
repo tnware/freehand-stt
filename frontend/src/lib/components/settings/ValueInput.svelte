@@ -38,7 +38,7 @@
 <Input
   bind:value
   {type}
-  class={cn(mono && "font-mono text-sm tracking-[-0.01em]", className)}
+  class={cn(mono && "font-mono text-[13px] tracking-[-0.01em]", className)}
   {...rest}
   aria-invalid={issue ? true : rest["aria-invalid"]}
   aria-describedby={[

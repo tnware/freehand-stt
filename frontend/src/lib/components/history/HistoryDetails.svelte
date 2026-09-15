@@ -6,6 +6,7 @@
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import { Badge } from "$lib/components/ui/badge";
   import { Separator } from "$lib/components/ui/separator";
+  import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import {
     HistoryOutcome,
     HistoryProcessingStatus,
@@ -18,7 +19,9 @@
   import { processingProfileName } from "$lib/utils/processingProfiles";
   import HistoryResponseMetadata from "./HistoryResponseMetadata.svelte";
 
-  let { entry }: { entry: HistoryEntry } = $props();
+  let { entry, embedded = false }: { entry: HistoryEntry; embedded?: boolean } =
+    $props();
+  const uid = $props.id();
 
   const dateTime = (value?: string): string =>
     value
@@ -46,7 +49,9 @@
   };
 
   const sourceLabel = (source: HistorySource): string =>
-    source === HistorySource.HistorySourceAudioFile ? "Audio file" : "Voice dictation";
+    source === HistorySource.HistorySourceAudioFile
+      ? "Audio file"
+      : "Voice dictation";
 
   const insertionModeLabel = (value?: string): string => {
     if (value === InsertionMode.DirectInput) return "Direct input";
@@ -63,14 +68,20 @@
   };
 
   const processingLabel = (status: HistoryProcessingStatus): string => {
-    if (status === HistoryProcessingStatus.HistoryProcessingCompleted) return "Completed";
-    if (status === HistoryProcessingStatus.HistoryProcessingFailed) return "Raw fallback";
-    if (status === HistoryProcessingStatus.HistoryProcessingCancelled) return "Cancelled";
-    if (status === HistoryProcessingStatus.HistoryProcessingPending) return "Pending";
+    if (status === HistoryProcessingStatus.HistoryProcessingCompleted)
+      return "Completed";
+    if (status === HistoryProcessingStatus.HistoryProcessingFailed)
+      return "Raw fallback";
+    if (status === HistoryProcessingStatus.HistoryProcessingCancelled)
+      return "Cancelled";
+    if (status === HistoryProcessingStatus.HistoryProcessingPending)
+      return "Pending";
     return "Not requested";
   };
 
-  const badgeVariant = (outcome: HistoryOutcome): "default" | "secondary" | "destructive" => {
+  const badgeVariant = (
+    outcome: HistoryOutcome,
+  ): "default" | "secondary" | "destructive" => {
     if (outcome === HistoryOutcome.HistoryFailed) return "destructive";
     if (
       outcome === HistoryOutcome.HistoryCancelled ||
@@ -81,14 +92,21 @@
   };
 
   const outcomeBadgeClass = (outcome: HistoryOutcome): string => {
-    if (outcome === HistoryOutcome.HistoryInserted || outcome === HistoryOutcome.HistoryTranscribed)
+    if (
+      outcome === HistoryOutcome.HistoryInserted ||
+      outcome === HistoryOutcome.HistoryTranscribed
+    )
       return "bg-success/10 text-success";
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-primary/10 text-primary";
+    if (outcome === HistoryOutcome.HistoryCopyRequired)
+      return "bg-primary/10 text-primary";
     return "";
   };
 
-  const processingVariant = (status: HistoryProcessingStatus): "default" | "secondary" => {
-    if (status === HistoryProcessingStatus.HistoryProcessingFailed) return "secondary";
+  const processingVariant = (
+    status: HistoryProcessingStatus,
+  ): "default" | "secondary" => {
+    if (status === HistoryProcessingStatus.HistoryProcessingFailed)
+      return "secondary";
     if (
       status === HistoryProcessingStatus.HistoryProcessingCancelled ||
       status === HistoryProcessingStatus.HistoryProcessingNotRequested
@@ -117,10 +135,15 @@
 
 {#snippet durationValue(value?: number, suffix?: string)}
   <span
-    class="inline-flex h-5 items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 font-mono text-[10.5px] leading-none font-medium tabular-nums text-foreground"
+    class="inline-flex min-h-5 max-w-full items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-medium tabular-nums text-foreground"
   >
-    <ClockIcon class="size-3 text-muted-foreground" aria-hidden="true" />
-    {duration(value)}{suffix ? ` ${suffix}` : ""}
+    <ClockIcon
+      class="size-3 shrink-0 text-muted-foreground"
+      aria-hidden="true"
+    />
+    <span class="min-w-0 [overflow-wrap:anywhere]"
+      >{duration(value)}{suffix ? ` ${suffix}` : ""}</span
+    >
   </span>
 {/snippet}
 
@@ -150,7 +173,7 @@
 
 {#snippet statusValue(label: string, status: FieldStatus)}
   <span
-    class={`inline-flex h-5 items-center gap-1.5 rounded-full px-2 text-[10.5px] leading-none font-medium whitespace-nowrap ${fieldStatusClass(status)}`}
+    class={`inline-flex min-h-5 max-w-full items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] leading-tight font-medium [&>svg]:shrink-0 ${fieldStatusClass(status)}`}
   >
     {#if status === "positive"}
       <CircleCheckIcon class="size-3" aria-hidden="true" />
@@ -161,15 +184,17 @@
     {:else}
       <CircleXIcon class="size-3" aria-hidden="true" />
     {/if}
-    {label}
+    <span class="min-w-0 [overflow-wrap:anywhere]">{label}</span>
   </span>
 {/snippet}
 
 {#snippet characterValue(value?: number, suffix?: string)}
   <span
-    class="inline-flex h-5 items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 font-mono text-[10.5px] leading-none font-semibold tabular-nums text-foreground shadow-[inset_0_-1px_0_var(--hairline)]"
+    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 rounded-md border border-hairline bg-layer-fill px-2 py-0.5 font-mono text-[10.5px] leading-tight font-semibold tabular-nums text-foreground shadow-[inset_0_-1px_0_var(--hairline)]"
   >
-    {(value ?? 0).toLocaleString()}
+    <span class="min-w-0 [overflow-wrap:anywhere]"
+      >{(value ?? 0).toLocaleString()}</span
+    >
     {#if suffix}
       <span class="font-normal text-muted-foreground">{suffix}</span>
     {/if}
@@ -179,20 +204,31 @@
 {#if entry}
   {@const details = entry.details}
   {@const processing = details.processing}
-  <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-    <header class="shrink-0 border-b border-hairline bg-layer-fill px-5 py-3.5">
-      <div class="flex items-start justify-between gap-4">
-        <div class="min-w-0">
-          <h1 class="text-base font-semibold">Transcription details</h1>
-          <p class="mt-1 font-mono text-[10.5px] text-muted-foreground">
-            {sourceLabel(details.source)} · run #{entry.id.toLocaleString()}
-          </p>
+  <div
+    class="history-details flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+  >
+    {#if embedded}
+      <PaneHeader title="Transcription details" />
+    {:else}
+      <header
+        class="shrink-0 border-b border-hairline bg-layer-fill px-5 py-3.5"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <h1 class="text-base font-semibold">Transcription details</h1>
+            <p class="mt-1 font-mono text-[10.5px] text-muted-foreground">
+              {sourceLabel(details.source)} · run #{entry.id.toLocaleString()}
+            </p>
+          </div>
+          <Badge
+            variant={badgeVariant(entry.outcome)}
+            class={outcomeBadgeClass(entry.outcome)}
+          >
+            {outcomeLabel(entry.outcome)}
+          </Badge>
         </div>
-        <Badge variant={badgeVariant(entry.outcome)} class={outcomeBadgeClass(entry.outcome)}>
-          {outcomeLabel(entry.outcome)}
-        </Badge>
-      </div>
-    </header>
+      </header>
+    {/if}
 
     <!-- The overflow region needs keyboard focus for scrolling. -->
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -200,14 +236,39 @@
       tabindex="0"
       role="region"
       aria-label="Run information"
-      class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground/90 [&_dt]:my-0.5 [&_dt]:text-[12px]"
+      class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-5 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground/90 [&_dt]:my-0.5 [&_dt]:text-[12px]"
     >
-      <section class="flex flex-col gap-3" aria-labelledby="run-details-heading">
+      <section
+        class="flex min-w-0 flex-col gap-3"
+        aria-labelledby={`${uid}-run-details-heading`}
+      >
         <div class="flex items-center gap-2">
-          <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-          <h2 id="run-details-heading" class="text-[13px] font-semibold">Run</h2>
+          <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
+          ></span>
+          <svelte:element
+            this={embedded ? "h3" : "h2"}
+            id={`${uid}-run-details-heading`}
+            class="text-[13px] font-semibold">Run</svelte:element
+          >
         </div>
-        <dl class="grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]">
+        <dl
+          class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+        >
+          {#if embedded}
+            <dt class="text-muted-foreground">Source</dt>
+            <dd class="text-right">{sourceLabel(details.source)}</dd>
+            <dt class="text-muted-foreground">Run</dt>
+            <dd class="text-right">#{entry.id.toLocaleString()}</dd>
+            <dt class="text-muted-foreground">Delivery outcome</dt>
+            <dd class="text-right">
+              <Badge
+                variant={badgeVariant(entry.outcome)}
+                class={outcomeBadgeClass(entry.outcome)}
+              >
+                {outcomeLabel(entry.outcome)}
+              </Badge>
+            </dd>
+          {/if}
           <dt class="text-muted-foreground">Started</dt>
           <dd class="text-right break-words">{dateTime(details.startedAt)}</dd>
           <dt class="text-muted-foreground">Completed</dt>
@@ -219,7 +280,8 @@
             {@render durationValue(details.elapsedMilliseconds)}
           </dd>
           <dt class="text-muted-foreground">
-            {details.source === HistorySource.HistorySourceVoice && details.silenceTrimming
+            {details.source === HistorySource.HistorySourceVoice &&
+            details.silenceTrimming
               ? "Audio submitted"
               : "Audio length"}
           </dt>
@@ -228,7 +290,9 @@
           </dd>
           <dt class="text-muted-foreground">Characters delivered</dt>
           <dd class="text-right">
-            {@render characterValue(processing.deliveredCharacters ?? entry.characterCount)}
+            {@render characterValue(
+              processing.deliveredCharacters ?? entry.characterCount,
+            )}
           </dd>
           <dt class="text-muted-foreground">Delivery mode</dt>
           <dd class="text-right">
@@ -239,12 +303,22 @@
 
       <Separator />
 
-      <section class="flex flex-col gap-3" aria-labelledby="request-details-heading">
+      <section
+        class="flex min-w-0 flex-col gap-3"
+        aria-labelledby={`${uid}-request-details-heading`}
+      >
         <div class="flex items-center gap-2">
-          <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-          <h2 id="request-details-heading" class="text-[13px] font-semibold">Speech recognition</h2>
+          <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
+          ></span>
+          <svelte:element
+            this={embedded ? "h3" : "h2"}
+            id={`${uid}-request-details-heading`}
+            class="text-[13px] font-semibold">Speech recognition</svelte:element
+          >
         </div>
-        <dl class="grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]">
+        <dl
+          class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+        >
           <dt class="text-muted-foreground">Server</dt>
           <dd class="text-right">{@render endpointValue(details.server)}</dd>
           <dt class="text-muted-foreground">Route</dt>
@@ -294,19 +368,32 @@
           {/if}
         </dl>
         {#if details.transcription}
-          <HistoryResponseMetadata response={details.transcription} stage="transcription" />
+          <HistoryResponseMetadata
+            response={details.transcription}
+            stage="transcription"
+          />
         {/if}
       </section>
 
       <Separator />
 
       {#if details.source === HistorySource.HistorySourceAudioFile}
-        <section class="flex flex-col gap-3" aria-labelledby="source-details-heading">
+        <section
+          class="flex min-w-0 flex-col gap-3"
+          aria-labelledby={`${uid}-source-details-heading`}
+        >
           <div class="flex items-center gap-2">
-            <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-            <h2 id="source-details-heading" class="text-[13px] font-semibold">Audio file</h2>
+            <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
+            ></span>
+            <svelte:element
+              this={embedded ? "h3" : "h2"}
+              id={`${uid}-source-details-heading`}
+              class="text-[13px] font-semibold">Audio file</svelte:element
+            >
           </div>
-          <dl class="grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]">
+          <dl
+            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+          >
             <dt class="text-muted-foreground">Filename</dt>
             <dd class="text-right break-all">
               {details.fileName || "Not available"}
@@ -320,19 +407,31 @@
           </dl>
         </section>
       {:else}
-        <section class="flex flex-col gap-3" aria-labelledby="source-details-heading">
+        <section
+          class="flex min-w-0 flex-col gap-3"
+          aria-labelledby={`${uid}-source-details-heading`}
+        >
           <div class="flex items-center gap-2">
-            <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-            <h2 id="source-details-heading" class="text-[13px] font-semibold">Voice capture</h2>
+            <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
+            ></span>
+            <svelte:element
+              this={embedded ? "h3" : "h2"}
+              id={`${uid}-source-details-heading`}
+              class="text-[13px] font-semibold">Voice capture</svelte:element
+            >
           </div>
-          <dl class="grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]">
+          <dl
+            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+          >
             <dt class="text-muted-foreground">Microphone</dt>
             <dd class="text-right break-words">
               {details.microphone || "Not available"}
             </dd>
             <dt class="text-muted-foreground">Recording control</dt>
             <dd class="text-right">
-              {details.recordingMode === RecordingMode.RecordingHold ? "Hold to talk" : "Toggle"}
+              {details.recordingMode === RecordingMode.RecordingHold
+                ? "Hold to talk"
+                : "Toggle"}
             </dd>
             <dt class="text-muted-foreground">Recording length</dt>
             <dd class="text-right">
@@ -352,9 +451,14 @@
               </dd>
               <dt class="text-muted-foreground">Silence trimming</dt>
               {#if details.silenceTrimming}
-                <dd class="flex flex-wrap items-center justify-end gap-1.5 text-right">
+                <dd
+                  class="flex flex-wrap items-center justify-end gap-1.5 text-right"
+                >
                   {@render statusValue("On", "positive")}
-                  {@render durationValue(details.speechPaddingMilliseconds, "padding")}
+                  {@render durationValue(
+                    details.speechPaddingMilliseconds,
+                    "padding",
+                  )}
                 </dd>
               {:else}
                 <dd class="text-right">
@@ -364,13 +468,24 @@
               <dt class="text-muted-foreground">Automatic stop</dt>
               {#if details.autoStopEnabled && !details.autoStopActive}
                 <dd class="text-right">
-                  {@render statusValue("Inactive in hold mode", "informational")}
+                  {@render statusValue(
+                    "Inactive in hold mode",
+                    "informational",
+                  )}
                 </dd>
               {:else if details.autoStopEnabled}
-                <dd class="flex flex-wrap items-center justify-end gap-1.5 text-right">
+                <dd
+                  class="flex flex-wrap items-center justify-end gap-1.5 text-right"
+                >
                   {@render statusValue("On", "positive")}
-                  {@render durationValue(details.autoStopSilenceMilliseconds, "pause")}
-                  {@render durationValue(details.autoStopMinimumSpeechMilliseconds, "speech")}
+                  {@render durationValue(
+                    details.autoStopSilenceMilliseconds,
+                    "pause",
+                  )}
+                  {@render durationValue(
+                    details.autoStopMinimumSpeechMilliseconds,
+                    "speech",
+                  )}
                 </dd>
               {:else}
                 <dd class="text-right">
@@ -408,9 +523,10 @@
           </dl>
 
           {#if details.segments && details.segments.length > 0}
-            <div class="overflow-hidden rounded-lg border border-hairline">
+            <div class="min-w-0 rounded-sm border border-hairline">
               <div
-                class="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 bg-layer-fill px-3 py-2 font-mono text-[10px] text-muted-foreground"
+                class="checkpoint-heading grid grid-cols-[2.5rem_repeat(3,minmax(0,1fr))] gap-2 bg-layer-fill px-3 py-2 font-mono text-[10px] text-muted-foreground"
+                aria-hidden="true"
               >
                 <span>#</span>
                 <span>Audio</span>
@@ -418,16 +534,38 @@
                 <span class="text-right">Request</span>
               </div>
               {#each details.segments as segment (segment.number)}
-                <div
-                  class="grid grid-cols-[2.5rem_1fr_1fr_1fr] gap-2 border-t border-hairline px-3 py-2 text-[11px]"
+                <dl
+                  class="checkpoint-row grid grid-cols-[2.5rem_repeat(3,minmax(0,1fr))] gap-2 border-t border-hairline px-3 py-2 text-[11px]"
                 >
-                  <span>{segment.number}</span>
-                  <span>{@render durationValue(segment.audioMilliseconds)}</span>
-                  <span>{segment.boundary.replaceAll("_", " ")}</span>
-                  <span class="text-right"
-                    >{@render durationValue(segment.requestMilliseconds)}</span
-                  >
-                </div>
+                  <div class="min-w-0">
+                    <dt class="checkpoint-label text-muted-foreground">
+                      Checkpoint
+                    </dt>
+                    <dd>{segment.number}</dd>
+                  </div>
+                  <div class="min-w-0">
+                    <dt class="checkpoint-label text-muted-foreground">
+                      Audio
+                    </dt>
+                    <dd>{@render durationValue(segment.audioMilliseconds)}</dd>
+                  </div>
+                  <div class="min-w-0">
+                    <dt class="checkpoint-label text-muted-foreground">
+                      Boundary
+                    </dt>
+                    <dd class="[overflow-wrap:anywhere]">
+                      {segment.boundary.replaceAll("_", " ")}
+                    </dd>
+                  </div>
+                  <div class="checkpoint-request min-w-0 text-right">
+                    <dt class="checkpoint-label text-muted-foreground">
+                      Request
+                    </dt>
+                    <dd>
+                      {@render durationValue(segment.requestMilliseconds)}
+                    </dd>
+                  </div>
+                </dl>
               {/each}
             </div>
             {#if details.segmentsTruncated}
@@ -442,13 +580,21 @@
       {#if processing.requested}
         <Separator />
 
-        <section class="flex flex-col gap-3" aria-labelledby="processing-details-heading">
+        <section
+          class="flex min-w-0 flex-col gap-3"
+          aria-labelledby={`${uid}-processing-details-heading`}
+        >
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"></span>
-              <h2 id="processing-details-heading" class="text-[13px] font-semibold">
+              <span class="size-1.5 rounded-full bg-primary" aria-hidden="true"
+              ></span>
+              <svelte:element
+                this={embedded ? "h3" : "h2"}
+                id={`${uid}-processing-details-heading`}
+                class="text-[13px] font-semibold"
+              >
                 Post-processing
-              </h2>
+              </svelte:element>
             </div>
             <Badge
               variant={processingVariant(processing.status)}
@@ -457,7 +603,9 @@
               {processingLabel(processing.status)}
             </Badge>
           </div>
-          <dl class="grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]">
+          <dl
+            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[12.5px]"
+          >
             <dt class="text-muted-foreground">Server</dt>
             <dd class="text-right">
               {@render endpointValue(processing.server)}
@@ -479,10 +627,15 @@
               </dd>
             {/if}
             <dt class="text-muted-foreground">Characters</dt>
-            <dd class="flex flex-wrap items-center justify-end gap-1.5 text-right">
+            <dd
+              class="flex flex-wrap items-center justify-end gap-1.5 text-right"
+            >
               {@render characterValue(processing.rawCharacterCount, "raw")}
               {#if processing.processedCharacters !== undefined}
-                {@render characterValue(processing.processedCharacters, "processed")}
+                {@render characterValue(
+                  processing.processedCharacters,
+                  "processed",
+                )}
               {/if}
             </dd>
             {#if processing.styling}
@@ -497,10 +650,68 @@
             {/if}
           </dl>
           {#if processing.response}
-            <HistoryResponseMetadata response={processing.response} stage="processing" />
+            <HistoryResponseMetadata
+              response={processing.response}
+              stage="processing"
+            />
           {/if}
         </section>
       {/if}
     </div>
   </div>
 {/if}
+
+<style>
+  .history-details {
+    container: history-details / inline-size;
+  }
+
+  .details-grid > dd {
+    overflow-wrap: anywhere;
+  }
+
+  .checkpoint-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @container history-details (max-width: 420px) {
+    .details-grid {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0.125rem;
+    }
+
+    .details-grid > dd {
+      justify-content: flex-start;
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }
+
+    .checkpoint-heading {
+      display: none;
+    }
+
+    .checkpoint-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem 0.75rem;
+    }
+
+    .checkpoint-label {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+    }
+
+    .checkpoint-request {
+      text-align: left;
+    }
+  }
+</style>

@@ -3,6 +3,7 @@
   import { type Catalog, type Connection } from "$bindings/savedconnection";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import { Button } from "$lib/components/ui/button";
+  import { Input } from "$lib/components/ui/input";
   import {
     connectionTargetLabel,
     connectionProvider,
@@ -14,7 +15,7 @@
   import { runtimePresentation } from "$lib/utils/managedRuntime";
   import SearchIcon from "@lucide/svelte/icons/search";
   import PlusIcon from "@lucide/svelte/icons/plus";
-    let {
+  let {
     catalog,
     instances = [],
     selected = "",
@@ -41,7 +42,7 @@
 
 <div class="flex h-full min-h-0 flex-col">
   <div
-    class="flex shrink-0 flex-wrap items-center gap-2 border-b border-hairline p-3"
+    class="flex shrink-0 flex-wrap items-center gap-2 border-b border-hairline px-5 py-2"
   >
     <Button
       variant={creating ? "soft" : "default"}
@@ -54,18 +55,18 @@
     >
     <div class="relative min-w-40 flex-1">
       <SearchIcon
-        class="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground"
+        class="pointer-events-none absolute left-2.5 top-2 size-4 text-muted-foreground"
       />
-      <input
+      <Input
         aria-label="Search saved connections"
         placeholder="Search connections…"
         bind:value={query}
-        class="h-9 w-full rounded-md border border-input bg-background pl-8 pr-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="pl-8 pr-2"
       />
     </div>
   </div>
   <div
-    class="flex h-[26px] shrink-0 items-center px-4 text-[10px] font-semibold tracking-[0.07em] text-ink-quiet uppercase"
+    class="flex h-[26px] shrink-0 items-center px-5 text-[10px] font-semibold tracking-[0.07em] text-ink-quiet uppercase"
   >
     <span class="min-w-0 flex-1">Name</span>
     <span class="hidden w-[190px] shrink-0 min-[900px]:block">Endpoint</span>
@@ -97,7 +98,7 @@
         disabled={busy}
         aria-current={connection.id === selected ? "true" : undefined}
         onclick={() => onSelect(connection)}
-        class={`connection-row flex h-[52px] w-full items-center border-b border-hairline px-4 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50 ${connection.id === selected ? "bg-accent-wash" : "hover:bg-subtle-fill-hover"}`}
+        class={`connection-row flex h-[52px] w-full items-center border-b border-hairline px-5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50 ${connection.id === selected ? "bg-accent-wash" : "hover:bg-subtle-fill-hover"}`}
       >
         <span class="flex min-w-0 flex-1 items-center gap-2.5">
           <ProviderIcon
@@ -152,7 +153,7 @@
       </p>{/each}
   </nav>
   <p
-    class="shrink-0 border-t border-hairline px-4 py-2 text-xs text-muted-foreground"
+    class="shrink-0 border-t border-hairline px-5 py-2 text-xs text-muted-foreground"
   >
     {catalog.entries?.length ?? 0} connections
   </p>
@@ -162,5 +163,4 @@
   .connection-list-content {
     container-type: inline-size;
   }
-
 </style>

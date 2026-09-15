@@ -8,6 +8,7 @@
   import SearchIcon from "@lucide/svelte/icons/search";
   import XIcon from "@lucide/svelte/icons/x";
   import TooltipButton from "$lib/components/ui/button/TooltipButton.svelte";
+  import { Input } from "$lib/components/ui/input";
   import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
   import { cn } from "$lib/utils";
 
@@ -31,7 +32,12 @@
 
   const groups = SETTINGS_GROUPS;
   let query = $state("");
-  const matches = $derived(matchingSettingsSections(query));
+  // Runtime management belongs to the activity rail, outside Settings.
+  const matches = $derived(
+    matchingSettingsSections(query).filter(
+      (section) => section.id !== "local-runtime",
+    ),
+  );
   const tabStop = $derived(
     matches.some((section) => section.id === active) ? active : matches[0]?.id,
   );
@@ -122,16 +128,16 @@
     Use the arrow keys to move between settings sections. Press Home or End to
     jump to the first or last section.
   </p>
-  <div class="relative hidden shrink-0 px-1.5 pt-2 min-[760px]:block">
+  <div class="relative mx-1.5 mt-2 hidden shrink-0 min-[760px]:block">
     <SearchIcon
       class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
     />
-    <input
+    <Input
       aria-label="Find settings"
       placeholder="Find settings…"
       bind:value={query}
       onkeydown={searchKey}
-      class="h-9 w-full rounded-lg border border-input bg-background pl-9 pr-8 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      class="pl-8 pr-8"
     />
     {#if query}<TooltipButton
         label="Clear settings search"
@@ -194,20 +200,15 @@
 
   {#if onOpenChain}
     <div class="mt-auto hidden px-1.5 pt-4 min-[760px]:block">
-      <!-- These pages are the full form. The chain carries the same few
-           controls inline and saves them immediately, which is where most
-           visits actually want to go. -->
-      <div
-        class="rounded-lg border border-accent-edge bg-accent-wash p-2.5 text-[11.5px] leading-relaxed"
-      >
+      <div class="border-t border-hairline px-2 py-3 text-xs leading-relaxed">
         <p class="text-secondary-foreground">
-          Connection, model and cleanup are also on each workflow&#39;s chain,
-          where changes save as you make them.
+          Open connection, model and cleanup settings from each workflow’s
+          sidebar. Save and return applies your edits and resumes that workflow.
         </p>
         <button
           type="button"
           class="mt-1.5 text-accent-text underline-offset-2 hover:underline"
-          onclick={onOpenChain}>Open the Voice chain →</button
+          onclick={onOpenChain}>Return to workflow →</button
         >
       </div>
     </div>

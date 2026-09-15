@@ -262,11 +262,11 @@
 
 <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
   <SettingsNav
-  onOpenChain={onClose}
-  counts={{
-    connections: session.editor.draft?.savedConnections.entries?.length ?? 0,
-    vocabulary: vocabularyTermCount,
-  }}
+    onOpenChain={onClose}
+    counts={{
+      connections: session.editor.draft?.savedConnections.entries?.length ?? 0,
+      vocabulary: vocabularyTermCount,
+    }}
     {active}
     onSelect={selectSection}
     bind:navigationRef
@@ -285,7 +285,7 @@
       >
         <div
           bind:clientHeight={headingHeight}
-          class="sticky top-0 z-10 space-y-1.5 border-b border-hairline bg-background pb-4 pt-5"
+          class="sticky top-0 z-10 flex min-h-11 items-center border-b border-hairline bg-background py-2"
         >
           <h3
             id="settings-page-heading"
@@ -294,10 +294,10 @@
           >
             {section.label}
           </h3>
-          <p class="max-w-2xl text-[12px] leading-5 text-muted-foreground">
-            {section.blurb}
-          </p>
         </div>
+        <p class="max-w-2xl text-xs leading-5 text-muted-foreground">
+          {section.blurb}
+        </p>
         <h2
           id="settings-section-title"
           class="sr-only"
@@ -311,7 +311,7 @@
           />{/if}
         {#if session.editor.validationIssue}
           <div
-            class="flex flex-wrap items-center gap-2 border-l-2 border-destructive pl-3 text-sm"
+            class="flex flex-wrap items-center gap-2 border-l-2 border-destructive pl-3 text-[13px]"
           >
             <p
               id="settings-validation-message"
@@ -394,7 +394,7 @@
                  room for the model table and the process output drawer. One
                  screen, one implementation: this points at it rather than
                  rendering a second, smaller copy here. -->
-            <div class="rounded-lg border border-hairline p-4">
+            <div class="border-y border-hairline py-3">
               <p class="text-[13px] text-secondary-foreground">
                 Local runtimes have their own place, alongside the workflows on
                 the rail. Install and remove engines, pick models, and read
@@ -573,7 +573,7 @@
     </div>
 
     <div
-      class="flex min-h-14 shrink-0 flex-wrap items-center justify-end gap-2.5 border-t border-hairline px-5 py-2.5"
+      class="flex min-h-11 shrink-0 flex-wrap items-center justify-end gap-2 border-t border-hairline px-5 py-2"
     >
       {#if session.editor.draft}
         <span

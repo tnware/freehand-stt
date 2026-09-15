@@ -74,9 +74,9 @@ operation success.
 The runtime manager renders this same status at the setup action and the matching
 model's catalog row, including cancellation and terminal outcomes. Catalog rows
 retain their position instead of regrouping on installation state changes.
-Collapsed provider rows expose selected-model acquisition, start/stop, cancellation,
-and bounded status through the same runtime store and dirty-draft action guard.
-Expanding the chevron reveals setup and maintenance, not another lifecycle owner.
+The selected provider exposes acquisition, start/stop, cancellation, and bounded
+status through the same runtime store. The inventory sidebar selects its detail
+pane; entering runtime management from Settings resolves the current draft.
 Provider artwork comes from the shared local branding registry. Managed Connection
 icons resolve the referenced instance's provider, since durable managed details
 intentionally contain no manual API profile. Quick settings pass their runtime
@@ -392,27 +392,27 @@ these provider contracts with their endpoint and opaque credential reference.
 
 ## Authority map
 
-| Concern                                                                                           | Owner                                                                   |
-| ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Live dictation state machine                                                                      | `internal/dictation`                                                    |
-| Cross-feature start admission and recording preemption                                            | `internal/activity`                                                     |
-| Global shortcuts                                                                                  | Platform shortcut adapters                                              |
-| Audio capture and normalization                                                                   | Go audio service                                                        |
-| Endpoint requests and cancellation                                                                | Go provider-neutral inference client                                    |
-| Native stored-file grant and transcription job                                                    | `internal/filetranscription` + inference client                         |
-| Optional transcript post-processing                                                               | `internal/postprocess` request/outcome policy; feature-owned execution  |
-| API credentials                                                                                   | Windows Credential Manager / macOS Keychain adapters                    |
+| Concern                                                                                           | Owner                                                                  |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Live dictation state machine                                                                      | `internal/dictation`                                                   |
+| Cross-feature start admission and recording preemption                                            | `internal/activity`                                                    |
+| Global shortcuts                                                                                  | Platform shortcut adapters                                             |
+| Audio capture and normalization                                                                   | Go audio service                                                       |
+| Endpoint requests and cancellation                                                                | Go provider-neutral inference client                                   |
+| Native stored-file grant and transcription job                                                    | `internal/filetranscription` + inference client                        |
+| Optional transcript post-processing                                                               | `internal/postprocess` request/outcome policy; feature-owned execution |
+| API credentials                                                                                   | Windows Credential Manager / macOS Keychain adapters                   |
 | Original target and insertion                                                                     | Platform focus/input adapters                                          |
-| Optional transcript history                                                                       | `internal/history` memory store                                         |
+| Optional transcript history                                                                       | `internal/history` memory store                                        |
 | Optional authored-text/transcript synthesis, native playback, and explicit generated-audio export | `internal/tts` + inference speech capability + native playback adapter |
-| Optional passive status overlay                                                                   | Go overlay service + native Win32/Cocoa renderers              |
-| Native tray presentation/actions                                                                  | `internal/tray` consuming bounded domain snapshots                      |
-| Tray ownership, startup, single instance                                                          | Go/Wails platform lifecycle                                              |
-| Task, settings, and status rendering                                                              | Svelte through generated Wails bindings                                 |
-| Durable non-secret configuration                                                                  | Platform configuration directory + `freehand.db` (SQLite)                          |
-| Structured runtime diagnostics                                                                    | One Wails default logger hierarchy, injected by `internal/app`          |
-| Release identity and version                                                                      | `build/config.yml`, parsed by `internal/releaseinfo`                    |
-| Release discovery and staged executable updates                                                   | `internal/updates` + Wails updater GitHub provider                      |
+| Optional passive status overlay                                                                   | Go overlay service + native Win32/Cocoa renderers                      |
+| Native tray presentation/actions                                                                  | `internal/tray` consuming bounded domain snapshots                     |
+| Tray ownership, startup, single instance                                                          | Go/Wails platform lifecycle                                            |
+| Task, settings, and status rendering                                                              | Svelte through generated Wails bindings                                |
+| Durable non-secret configuration                                                                  | Platform configuration directory + `freehand.db` (SQLite)              |
+| Structured runtime diagnostics                                                                    | One Wails default logger hierarchy, injected by `internal/app`         |
+| Release identity and version                                                                      | `build/config.yml`, parsed by `internal/releaseinfo`                   |
+| Release discovery and staged executable updates                                                   | `internal/updates` + Wails updater GitHub provider                     |
 
 The frontend never receives a stored API key, raw audio, or selected filesystem path. A key being entered by the user exists only as a bounded, transient password-field draft until it is saved to the native credential store or the settings flow is left. Go opens the Wails native file picker and converts its result into a backend-only selection capability; the zero-argument renderer binding cannot nominate another path. Status events contain the opaque operation generation, base file name, byte progress, mode, and transcript text, never the full path or audio bytes.
 
@@ -479,7 +479,7 @@ The renderer sees small Wails services registered from the package that owns eac
 | Bound package       | Renderer responsibility                                                                                                                                                     | Backend authority                                                    |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | `settings`          | Renderer-safe snapshot and one atomic settings/credential/startup/shortcut save request                                                                                     | Settings transaction owner                                           |
-| `input`             | Microphone inventory, permission status, and native shortcut capture                                                                                                         | Audio and platform keyboard/permission adapters                       |
+| `input`             | Microphone inventory, permission status, and native shortcut capture                                                                                                        | Audio and platform keyboard/permission adapters                      |
 | `connection`        | Focused STT and post-processing health/model probes                                                                                                                         | Inference metadata capability                                        |
 | `dictation`         | Live commands and status snapshot                                                                                                                                           | Package-owned recorder                                               |
 | `history`           | Bounded history queries, copy, delete, and clear                                                                                                                            | Package-owned synchronized store                                     |
@@ -748,11 +748,19 @@ appearance updates, and the `ShellReady` handshake against component teardown.
   save-dialog guard, generation validation, PCM snapshot, and file-write ownership.
 - `HistoryState` owns history refresh/mutation ordering. Successful refresh
   acknowledges the completed file generation through an injected callback.
-  `HistoryList` owns only local disclosure/comparison state: the leading result
-  opens fully, older entries start collapsed, and a different leading result resets
-  manual expansion. Updates to the same entry preserve those choices. The shared
-  behavior applies to Home and Settings; an ephemeral file result takes the leading
-  position without changing retained history or persistence.
+  `HistoryPane` owns presentation-only search, source filtering, and selection for
+  its sidebar, expanded reader, and details split. It filters the existing bounded entries by
+  final/raw/processed text or file base name and by All, Voice, or Audio files;
+  it adds no storage, history acquisition, or inference operation. Sidebar controls
+  read applied retention settings and call the existing settings and clear actions.
+  `HistoryList` owns local disclosure/comparison state. In compact Home and Settings
+  lists, the leading result opens fully, older entries start collapsed, and a
+  different leading result resets manual expansion. Updates to the same entry
+  preserve those choices. An ephemeral file result takes the compact list's leading
+  position without changing retained history or persistence. The full History pane
+  presents the selected retained entry expanded with transcript actions and passes
+  that same entry snapshot to embedded `HistoryDetails`. It does not invoke the
+  native details-selection service or make another details request.
 
 - `SessionMessages` owns shared presentation notices and their timers, not
   workflow state.
@@ -762,27 +770,33 @@ wire authority; feature dependencies use narrow types derived from those
 services rather than handwritten transport shapes. Feature owners do not import
 `Session` or acquire subscriptions during construction.
 
-Main and Settings each install `subscribeSessionEvents` before loading snapshots.
-Settings and its inline Connection Manager share one Session and draft owner.
-Accepted terminal transitions refresh history. Each renderer disposes its own
-subscriptions, timers, and credential drafts without stopping Go-owned recording,
-transcription, or playback. Settings hide clears configuration state and releases
-preview/capture resources; accepted backend snapshots synchronize both renderers
-while preserving unsaved draft conflicts.
+The main renderer installs `subscribeSessionEvents` before loading snapshots.
+The workspace, Settings pane, and inline Connections editor share one Session
+and draft owner. Accepted terminal transitions refresh history. Renderer teardown
+disposes subscriptions, timers, and credential drafts without stopping Go-owned
+recording, transcription, or playback. Leaving or hiding Settings releases
+preview/capture resources; backend snapshots preserve unsaved draft conflicts.
 
 The main workspace uses compact recording, file, and playback controls beside
 a task-settings sidebar. `WorkspaceSplit` owns a persisted, keyboard-resizable
 vertical split: the current result above a panel with Recent, Runtime output,
 and Diagnostics tabs. Collapsing the panel releases space to the result while
-retaining a visible restore action. History uses compact expandable rows.
+retaining a visible restore action. Recent history uses compact expandable rows;
+the History pane places filters and retained entries beside a selected reader and
+the selected run's full details.
 The title bar, activity rail, sidebar, and status bar share neutral surface roles;
 the status bar exposes capture state from every pane. The command palette routes
 through the same navigation and busy-state guards as the rail.
-Settings clusters use the shared `SettingsCard` component as one quiet surface
-per group, with row dividers and a consistent inset through `settings-group`.
-Connection summaries and disclosures follow the same spacing. Input borders,
-floating-menu surfaces, selection states, and focus rings remain explicit;
-decorative container frames do not own workflow or scrolling behavior.
+Page content follows the same workbench geometry as the shell: 44px headers,
+20px horizontal gutters, 15px page titles, 13px interface text, and 12px help text.
+Transcript and composer text use a separate 15px/26px reading rhythm. Recording,
+file, playback, and output controls sit in docked strips separated by hairlines.
+Settings clusters use `SettingsCard` and `SettingsDisclosure` for flat divided
+rows; `settings-group` aligns labels with the outer page gutter. Shared fields
+and pickers use 32px controls, actions use 28px controls, and compact toolbars
+use the smaller variants. Native control semantics, visible focus, input
+borders, and floating menu/dialog surfaces stay explicit. Page styling never
+owns workflow state, credentials, or scrolling behavior.
 The shared switch uses a pill track and an inset circular thumb, retaining
 Bits UI state, keyboard semantics, and visible focus indicators.
 
@@ -966,7 +980,9 @@ window. Details subscribes before fetching its selection, ignores superseded
 responses, and refreshes after history actions, settings changes, and workflow
 status events. Deleting, clearing, disabling, or evicting history makes details
 unavailable; closing clears its selection. Go does not retain a separate details
-snapshot or persist it.
+snapshot or persist it. This native details path remains available from Recent and
+Settings history lists. The full History pane embeds the same details component
+beside its reader and omits the redundant native-window action there.
 
 The native status overlay is enabled by default but has an independent persisted opt-out plus curated layout, work-area anchor, phase visibility, motion, surface, visualizer, proportional-size, opacity, edge-distance, and glow settings. `internal/overlay` owns that feature lifecycle: the settings transaction supplies applied configuration, dictation supplies authoritative status, and the package translates both into a narrow `platform.OverlayOptions`/`platform.OverlayStatus` contract. Enabling creates one native surface and bounded level tap; disabling releases its native surface, timers and graphics resources instead of retaining a hidden renderer. Windows additionally owns its HWND/message-loop thread; macOS dispatches AppKit work to the main thread. New settings default to Capsule/minimal/envelope/bottom-center. Existing saved appearance remains authoritative.
 
@@ -978,10 +994,18 @@ Home presents the selected task and current result first. Its sidebar exposes
 the active task's configuration, with a compact settings disclosure at narrow
 widths. Result and bottom panel fill the available height across empty, working,
 recovery, and completed states.
-`HistoryList` owns the single bounded history scroll viewport; its outer frame and
-drawer pass through the available height instead of creating a second scroll area.
+`HistoryList` owns the bounded transcript scroll viewport; its outer frame and
+drawer pass through the available height instead of nesting another scroll area.
 This keeps mouse-wheel input over transcript text and row controls in the visible
-scroller. Newest-entry arrival also resets that same viewport to the top.
+scroller. Newest-entry arrival in a compact list resets that viewport to the top.
+The full History pane gives its transcript-list sidebar an independent scroll
+area beside a resizable reader/details split. At viewport widths of at least
+1100px, transcript and details sit side by side; narrower widths stack details
+below the transcript. Each owns its scroll area. `HistoryDetails` uses an embedded
+44px header and component-scoped heading IDs. Container queries stack field labels
+and values and reflow checkpoints within narrow details panes without omitting
+metadata. Below 700px, an explicit sidebar toggle exposes the list over the main
+area; selecting an entry returns to the reading surface.
 Task-sidebar rows open the relevant settings page; direct switches use
 immediate-save controls. Microphone and delivery controls appear only for
 dictation. TTS shows its own connection and model/voice settings links.
@@ -1110,6 +1134,16 @@ Clipboard-paste mode is represented as a deferred policy boundary but cannot be 
 ## Optional transcript history
 
 History is an opt-in recovery surface for finalized transcripts, not durable storage or a notes workspace. `history.Store` owns an in-memory oldest-first ring capped at 20 entries and 2 MiB across transcript text and bounded run details. Reaching either limit evicts the oldest entries first. A single entry is never allowed to grow past the total byte budget.
+
+The History sidebar searches and filters only that retained ring. Final, raw,
+and processed text and file base names supply its text matches; source filters
+distinguish Voice and Audio file. Selection opens the existing read-only transcript
+reader with copy, optional Listen, raw/cleaned comparison, and removal alongside
+the same entry's full run details.
+Search, filters, and selection do not alter retention or create a persistent index.
+The sidebar's retention status, History settings shortcut, and Clear history action
+use the existing settings and history owners; Clear history applies to the full
+ring, including entries hidden by a filter.
 
 Each entry can retain finalized raw and processed text, processing status, completion time, Unicode character count, delivery outcome, selected delivery mode, and bounded request metadata such as source, endpoint host, route, model, response mode, audio duration, segment timing, and file base name/size. When an STT or post-processing response supplies additional metadata, history may also retain a fixed, bounded subset: request/response identity, effective model, provider, finish reason, service tier, system fingerprint, detected language, server-reported audio duration, standard token/duration usage, provider-reported cost values, and llama.cpp-style timing metrics. These fields are optional rather than synthesized. Cost has no assumed currency, and the client never estimates tokens, duration, or price from transcript text. For checkpointed dictation, additive values are aggregated and explicit report counts show whether usage, cost, and performance covered every request; per-request IDs are omitted from the aggregate.
 
@@ -1440,7 +1474,9 @@ The speech adapter explicitly requests buffered WAV from Kokoro-FastAPI and
 vLLM-Omni. Qwen CustomVoice never submits reference audio or uploaded-voice tasks.
 
 The settings sidebar filters the central section catalog with presentation-only
-search terms. Search and native `details` disclosures do not own settings values:
+search terms, excluding Local runtime from both its list and search results.
+Runtime management opens from the activity rail. Search and native `details`
+disclosures do not own settings values:
 the existing editor draft and save transaction remain authoritative. Audio and
 Overlay keep common controls visible and group fine tuning in `SettingsDisclosure`.
 Validation opens ancestor disclosures before focusing a rejected field. Shared

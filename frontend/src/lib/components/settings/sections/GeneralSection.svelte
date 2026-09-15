@@ -113,7 +113,7 @@
 
     <div class="@container/appearance" class:opacity-60={mica}>
       <RadioGroup.Root
-        class="grid-cols-1 gap-2 @min-[360px]/appearance:grid-cols-3"
+        class="grid-cols-1 gap-1 @min-[360px]/appearance:grid-cols-3"
         value={settings.appearanceMode}
         onValueChange={chooseAppearanceMode}
         disabled={mica}
@@ -123,18 +123,18 @@
           <Label
             for={`appearance-${mode.value}`}
             class={mica
-              ? "flex cursor-not-allowed items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-3 py-2.5 has-data-checked:border-primary/25 has-data-checked:bg-accent-wash"
-              : "flex cursor-pointer items-center gap-2.5 rounded-lg border border-transparent bg-transparent px-3 py-2.5 transition-colors has-data-checked:border-primary/25 has-data-checked:bg-accent-wash hover:bg-accent/55"}
+              ? "flex cursor-not-allowed items-center gap-2.5 bg-transparent px-2 py-2 has-data-checked:bg-accent-wash"
+              : "flex cursor-pointer items-center gap-2.5 bg-transparent px-2 py-2 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"}
           >
             <RadioGroup.Item
               id={`appearance-${mode.value}`}
               value={mode.value}
             />
             <span class="min-w-0">
-              <span class="block text-sm font-semibold text-foreground"
+              <span class="block text-[13px] font-medium text-foreground"
                 >{mode.label}</span
               >
-              <span class="block text-xs leading-relaxed text-muted-foreground">
+              <span class="block text-xs leading-5 text-muted-foreground">
                 {mode.description}
               </span>
             </span>
@@ -172,7 +172,7 @@
     description="Choose what Freehand does with a completed microphone transcript. Focus safety always applies."
   >
     <RadioGroup.Root
-      class="grid-cols-1 gap-2"
+      class="grid-cols-1 gap-1"
       orientation="vertical"
       value={deliveryMode}
       onValueChange={chooseDeliveryMode}
@@ -180,7 +180,7 @@
     >
       <Label
         for="delivery-direct-input"
-        class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent bg-transparent px-3 py-3 transition-colors has-data-checked:border-primary/25 has-data-checked:bg-accent-wash hover:bg-accent/55"
+        class="flex cursor-pointer items-start gap-3 bg-transparent px-2 py-2 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"
       >
         <RadioGroup.Item
           id="delivery-direct-input"
@@ -188,12 +188,10 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-sm font-semibold text-foreground"
+          <span class="block text-[13px] font-medium text-foreground"
             >Direct input</span
           >
-          <span
-            class="mt-0.5 block text-xs leading-relaxed text-muted-foreground"
-          >
+          <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">
             Type Unicode directly into the application that was focused when
             recording started. This is the default and does not touch the
             clipboard.
@@ -203,7 +201,7 @@
 
       <Label
         for="delivery-manual-copy"
-        class="flex cursor-pointer items-start gap-3 rounded-lg border border-transparent bg-transparent px-3 py-3 transition-colors has-data-checked:border-primary/25 has-data-checked:bg-accent-wash hover:bg-accent/55"
+        class="flex cursor-pointer items-start gap-3 bg-transparent px-2 py-2 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"
       >
         <RadioGroup.Item
           id="delivery-manual-copy"
@@ -211,12 +209,10 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-sm font-semibold text-foreground"
+          <span class="block text-[13px] font-medium text-foreground"
             >Manual copy</span
           >
-          <span
-            class="mt-0.5 block text-xs leading-relaxed text-muted-foreground"
-          >
+          <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">
             Keep every completed transcript in Freehand until you explicitly
             choose Copy transcript. Nothing is inserted or copied automatically.
           </span>

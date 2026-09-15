@@ -28,7 +28,7 @@
 </script>
 
 <div
-  class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline px-4 py-2.5"
+  class="flex flex-wrap items-center justify-between gap-3 border-t border-hairline py-3"
 >
   <div>
     <p class="text-[13px] font-medium">Shared vocabulary</p>

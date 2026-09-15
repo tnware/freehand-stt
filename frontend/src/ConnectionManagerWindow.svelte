@@ -284,7 +284,7 @@
   class="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent text-foreground"
 >
   <header
-    class="flex shrink-0 items-center justify-between gap-4 border-b border-hairline px-4 py-3"
+    class="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
   >
     <div class="flex min-w-0 items-center gap-3">
       {#if showingDetails}<Button
@@ -293,9 +293,11 @@
           disabled={busy}
           onclick={() => leave(false)}><ArrowLeftIcon />All connections</Button
         >{/if}
-      <div class="min-w-0">
-        <h1 class="truncate text-lg font-semibold">Connections</h1>
-        <p class="mt-0.5 text-xs text-secondary-foreground">
+      <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+        <h1 class="truncate font-display text-[15px] font-semibold">
+          Connections
+        </h1>
+        <p class="text-xs text-muted-foreground">
           Saved servers and built-in runtimes
         </p>
       </div>
@@ -304,13 +306,13 @@
       >Done</Button
     >
   </header>
-  {#if loading}<p class="p-5 text-sm text-muted-foreground">
+  {#if loading}<p class="px-5 py-3 text-[13px] text-muted-foreground">
       Loading connections…
     </p>
   {:else if visible && editor.applied}
     {#if !editor.connectionDraft && session.messages.error}<p
         role="alert"
-        class="px-4 py-2 text-sm text-destructive"
+        class="px-5 py-2 text-[13px] text-destructive"
       >
         {session.messages.error}
       </p>{/if}
@@ -333,9 +335,9 @@
           class="flex min-h-0 min-w-0 flex-1 flex-col"
         >
           <div
-            class="flex shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-3"
+            class="flex min-h-10 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
           >
-            <h2 class="truncate text-sm font-semibold">
+            <h2 class="truncate text-[13px] font-medium">
               {editor.connectionDraft?.creating
                 ? "New connection"
                 : (selected?.name ?? "Edit connection")}
@@ -359,7 +361,7 @@
                         selected.id}
                       <Menu.Item
                         onSelect={() => use(role.id)}
-                        class="gap-3 rounded-md px-3 py-2.5"
+                        class="gap-2 px-2 py-1.5 text-[13px]"
                       >
                         <Icon />
                         <span class="flex-1 whitespace-nowrap"
@@ -390,14 +392,14 @@
                       class="w-56 max-w-[calc(100vw-24px)] p-1.5"
                     >
                       <Menu.Item
-                        class="gap-3 rounded-md px-3 py-2.5"
+                        class="gap-2 px-2 py-1.5 text-[13px]"
                         disabled={(editor.applied.savedConnections.entries
                           ?.length ?? 0) >= 96}
                         onSelect={duplicate}><CopyIcon />Duplicate</Menu.Item
                       >
                       <Menu.Separator />
                       <Menu.Item
-                        class="gap-3 rounded-md px-3 py-2.5"
+                        class="gap-2 px-2 py-1.5 text-[13px]"
                         variant="destructive"
                         disabled={!!activeUses.length || editor.connectionDirty}
                         onSelect={() => {
@@ -422,7 +424,7 @@
               </div>{/if}
           </div>
           <main
-            class="connection-fields space-y-4 min-h-0 flex-1 overflow-y-auto overscroll-contain p-4"
+            class="connection-fields @container min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 py-3"
           >
             {#if selected?.builtIn}
               <BuiltInConnectionDetails
@@ -445,11 +447,9 @@
                 onBack={() => leave(false)}
                 onSaved={saved}
               />{/if}
-            {#if selected}<details
-                class="rounded-xl border border-hairline bg-card p-3"
-              >
+            {#if selected}<details class="border-t border-hairline pt-3">
                 <summary
-                  class="cursor-pointer rounded-sm text-xs font-medium text-accent-text focus-visible:outline-ring"
+                  class="cursor-pointer rounded-sm text-[13px] font-medium focus-visible:outline-ring"
                   >Connection check · {connectionStatusLabel(
                     editor.savedConnectionChecks[selected.id] ?? null,
                   )}</summary
@@ -480,7 +480,7 @@
               </details>{/if}
           </main>
           {#if !selected?.builtIn}<footer
-              class="shrink-0 border-t border-hairline bg-layer-fill px-4 py-3"
+              class="shrink-0 border-t border-hairline px-5 py-2"
             >
               <ConnectionSaveActions
                 {editor}
@@ -560,11 +560,6 @@
     flex: 0 1 auto;
     max-height: 46%;
     border-bottom: 1px solid var(--hairline);
-  }
-  .connection-fields :global([role="group"]) {
-    padding-top: 0.65rem;
-    padding-bottom: 0.65rem;
-    gap: 0.4rem;
   }
   @media (max-height: 620px) {
     /* Not enough height for both: the detail wins, as it did before. */

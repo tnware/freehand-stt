@@ -623,7 +623,7 @@
                   </ReadinessPanel>
                 {:else if !runtimeSettings?.historyEnabled}
                   <div
-                    class="flex shrink-0 items-center justify-between gap-3 border-t border-hairline px-4 py-2 text-xs text-muted-foreground"
+                    class="flex shrink-0 items-center justify-between gap-3 border-t border-hairline px-5 py-2 text-xs text-muted-foreground"
                   >
                     <span
                       >History is off. Current results remain available until
@@ -701,13 +701,6 @@
   }
   .transport-frame {
     flex-shrink: 0;
-    padding: 12px 20px 12px;
-  }
-  .transport-frame :global(.transport) {
-    overflow: hidden;
-    border: 1px solid var(--hairline);
-    border-radius: 0.5rem;
-    background: linear-gradient(115deg, var(--card), var(--layer-fill));
   }
   .workspace {
     position: relative;
@@ -733,7 +726,6 @@
     flex-direction: column;
     gap: 0;
     overflow: hidden;
-    border-top: 1px solid var(--hairline);
     background: transparent;
   }
   .history-sidebar {
@@ -753,12 +745,7 @@
     overflow: hidden;
   }
   .onboarding .task-main {
-    padding: 1.25rem;
-    gap: 1.25rem;
     overflow-y: auto;
-  }
-  .speech-workspace .body {
-    padding: 0;
   }
   .columns {
     display: flex;
@@ -772,12 +759,6 @@
       width: min(280px, 85%);
       background: var(--background);
       box-shadow: 8px 0 24px #0003;
-    }
-    .transport-frame {
-      padding: 0 0.75rem 0.75rem;
-    }
-    .body {
-      padding: 0 0.75rem 0.75rem;
     }
   }
   .settings-backdrop {

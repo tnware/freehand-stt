@@ -39,9 +39,13 @@
   );
   const selectedValue = $derived(
     value ||
-      (restricted && languages.some((language) => language.code === "auto") ? "auto" : "__default"),
+      (restricted && languages.some((language) => language.code === "auto")
+        ? "auto"
+        : "__default"),
   );
-  const known = $derived(choices.find((choice) => choice.value === selectedValue));
+  const known = $derived(
+    choices.find((choice) => choice.value === selectedValue),
+  );
   const customVisible = $derived(!restricted && (custom || !known));
   const selected = $derived(customVisible ? "__custom" : selectedValue);
   const selectedLabel = $derived(
@@ -53,7 +57,9 @@
     choices.filter(
       (choice) =>
         choice.value === "__custom" ||
-        `${choice.label} ${choice.code}`.toLowerCase().includes(query.toLowerCase().trim()),
+        `${choice.label} ${choice.code}`
+          .toLowerCase()
+          .includes(query.toLowerCase().trim()),
     ),
   );
 
@@ -82,8 +88,9 @@
   >
     <div class="relative">
       <Combobox.Input
+        data-slot="combobox-input"
         {id}
-        class="h-9 w-full rounded-lg border border-input bg-background px-3 pr-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        class="h-8 w-full rounded-md border border-input bg-well px-3 pr-9 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
         aria-describedby={`${id}-help`}
         placeholder="Search languages…"
         oninput={(event) => {
@@ -97,7 +104,8 @@
       </Combobox.Input>
       <Combobox.Trigger
         class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
-        aria-label="Show languages"><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
+        aria-label="Show languages"
+        ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
       >
     </div>
     <Combobox.Portal>
@@ -116,7 +124,9 @@
               class="flex cursor-default items-center justify-between gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
             >
               <span class="min-w-0 flex-1 break-words">{choice.label}</span>
-              {#if selected === choice.value}<CheckIcon class="size-3.5 shrink-0" />{/if}
+              {#if selected === choice.value}<CheckIcon
+                  class="size-3.5 shrink-0"
+                />{/if}
             </Combobox.Item>
           {:else}
             <p class="px-2 py-3 text-xs text-muted-foreground" role="status">
@@ -137,7 +147,9 @@
     </Combobox.Portal>
   </Combobox.Root>
   {#if customVisible}
-    <label class="text-xs text-muted-foreground" for={`${id}-custom`}>Custom language value</label>
+    <label class="text-xs text-muted-foreground" for={`${id}-custom`}
+      >Custom language value</label
+    >
     <ValueInput
       id={`${id}-custom`}
       bind:value
