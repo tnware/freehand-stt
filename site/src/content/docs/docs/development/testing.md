@@ -995,7 +995,8 @@ menus, dialogs, inputs, focused controls, disabled controls, and recording overl
 Confirm neutral charcoal surfaces and brand-blue accents in solid dark mode, readable muted text,
 and unchanged status colours. Compare light mode and dark Mica over both light
 and dark desktop backgrounds; the Mica result depends on Windows and wallpaper.
-Check native active/inactive title bars and startup background after relaunch.
+Check the workspace title bar, auxiliary native active/inactive captions, and
+startup background after relaunch.
 Browser material fixtures establish CSS composition, not native DWM acceptance.
 
 For model-profile acceptance, verify Generic is shown beneath the model in
@@ -1361,6 +1362,23 @@ and save validation reveals hidden request limits. Voice workflow validation
 also exposes its temperature and timeout controls. Speech preview stays beside
 voice selection. All workflow fixtures use synthetic profiles and service
 responses; they do not contact inference servers.
+
+### Main workspace title bar
+
+Browser fixtures verify the Windows File/View/Help menu actions, caption-button
+labels and binding calls, maximize/restore state updates, keyboard operation,
+and close-time draft decisions. macOS presentation fixtures verify reserved
+traffic-light space and the absence of duplicate renderer caption controls.
+Inspect drag-region CSS so command, menu, and layout controls remain outside
+Windows caption rectangles and opt out of inherited dragging on macOS.
+
+Run the [native title-bar checks](../../safety/native-test-checklist/#main-workspace-title-bar)
+on each platform. A passing browser suite or Windows executable compile cannot
+establish native hit testing, Snap Layouts, mixed-DPI dragging, macOS traffic-light
+positioning, fullscreen transitions, or close-to-hide event delivery. Record
+Windows interactive evidence separately from packaged macOS acceptance; macOS
+remains unverified until those checks run there. Recheck the framed About,
+Transcription details, and standalone Process output windows independently.
 
 ### Shared workspace layout
 

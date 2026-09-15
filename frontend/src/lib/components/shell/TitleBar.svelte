@@ -1,13 +1,15 @@
 <script lang="ts">
+  import { onMount, type Snippet } from "svelte";
+  import { System } from "@wailsio/runtime";
   import SearchIcon from "@lucide/svelte/icons/search";
   import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
   import PanelBottomIcon from "@lucide/svelte/icons/panel-bottom";
   import PanelRightIcon from "@lucide/svelte/icons/panel-right";
   import BrandMark from "$lib/components/shell/BrandMark.svelte";
+  import WindowControls from "$lib/components/shell/WindowControls.svelte";
   import * as Kbd from "$lib/components/ui/kbd";
 
   let {
-    paneLabel,
     onOpenCommands,
     commandHint = "Ctrl",
     primaryVisible = true,
@@ -19,8 +21,10 @@
     onTogglePrimary,
     onToggleBottom,
     onToggleSecondary,
+    platform,
+    onWindowError,
+    menu,
   }: {
-    paneLabel: string;
     onOpenCommands: () => void;
     /** The platform's command modifier, so macOS does not read "Ctrl". */
     commandHint?: string;
@@ -33,30 +37,49 @@
     onTogglePrimary?: () => void;
     onToggleBottom?: () => void;
     onToggleSecondary?: () => void;
+    platform?: string;
+    onWindowError?: (cause: unknown) => void;
+    menu?: Snippet;
   } = $props();
+
+  let nativePlatform = $state<string>();
+  const activePlatform = $derived(platform ?? nativePlatform);
+
+  onMount(() => {
+    function readPlatform() {
+      nativePlatform = System.IsMac()
+        ? "darwin"
+        : System.IsWindows()
+          ? "windows"
+          : undefined;
+    }
+    readPlatform();
+    window.addEventListener("wails:runtime-config-ready", readPlatform);
+    return () =>
+      window.removeEventListener("wails:runtime-config-ready", readPlatform);
+  });
 </script>
 
-<!--
-  Identity, the current place, and one way into everything. The mode tabs this
-  row used to carry are the activity rail, the shortcut and endpoint health are
-  the status bar, and settings is the foot of the rail — which takes the header
-  from 72px to 36px and gives the height back to the transcript.
--->
+<!-- Caption rectangles must not span any interactive descendants. -->
 <header
-  class="flex h-[34px] shrink-0 items-center gap-2.5 border-b border-hairline bg-well px-3"
+  class="title-bar border-b border-hairline bg-well"
+  class:windows={activePlatform === "windows"}
+  class:mac={activePlatform === "darwin"}
 >
-  <div class="flex min-w-0 flex-1 items-center gap-2.5">
+  <div class="title-identity">
     <BrandMark />
     <h1 class="font-display text-[13px] font-semibold tracking-tight">
       Freehand
     </h1>
-    <span class="h-3.5 w-px shrink-0 bg-border" aria-hidden="true"></span>
-    <p class="truncate text-xs text-muted-foreground">{paneLabel}</p>
   </div>
+  {#if menu && activePlatform === "windows"}
+    <div class="title-menu">{@render menu()}</div>
+  {/if}
+  <div class="title-drag-space" aria-hidden="true"></div>
 
   <button
     type="button"
-    class="hidden h-[22px] w-[352px] shrink-0 items-center gap-2 rounded-md border border-border bg-subtle-fill-hover px-2.5 text-left transition-colors hover:border-accent-edge hover:bg-accent-wash focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring min-[760px]:flex"
+    class="command-search h-[24px] items-center gap-2 rounded-sm border border-border bg-subtle-fill-hover px-2.5 text-left transition-colors hover:border-accent-edge hover:bg-accent-wash focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
     onclick={onOpenCommands}
   >
     <SearchIcon
@@ -72,10 +95,11 @@
     </Kbd.Group>
   </button>
 
-  <div class="flex min-w-0 flex-1 items-center justify-end gap-0.5">
+  <div class="title-drag-space" aria-hidden="true"></div>
+  <div class="title-actions flex shrink-0 items-center justify-end gap-0.5">
     <button
       type="button"
-      class="grid size-6 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-subtle-fill-hover hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring min-[760px]:hidden"
+      class="compact-search grid size-6 place-items-center rounded-sm text-muted-foreground transition-colors hover:bg-subtle-fill-hover hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       onclick={onOpenCommands}
       aria-label="Run a command"
       title="Run a command"
@@ -128,9 +152,83 @@
       >
     </div>
   </div>
+  {#if activePlatform === "windows"}
+    <WindowControls {onWindowError} />
+  {/if}
 </header>
 
 <style>
+  .title-bar {
+    --wails-draggable: no-drag;
+    display: flex;
+    height: 36px;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+  }
+
+  .title-bar.windows {
+    padding-right: 0;
+  }
+
+  .title-bar.mac {
+    height: 44px;
+    padding-left: 80px;
+  }
+
+  .title-identity {
+    display: flex;
+    height: 100%;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+  }
+
+  .title-identity h1 {
+    flex: none;
+  }
+
+  .title-drag-space {
+    height: 100%;
+    min-width: 8px;
+    flex: 1;
+  }
+
+  .windows .title-identity,
+  .windows .title-drag-space {
+    --wails-non-client-region: caption;
+  }
+
+  .windows .title-identity,
+  .windows .title-drag-space,
+  .mac .title-identity,
+  .mac .title-drag-space {
+    --wails-draggable: drag;
+  }
+
+  .title-menu {
+    --wails-draggable: no-drag;
+    flex: none;
+  }
+
+  .command-search {
+    display: none;
+    width: clamp(240px, 28vw, 352px);
+    flex: none;
+  }
+
+  @media (min-width: 960px) {
+    .command-search {
+      display: flex;
+    }
+
+    .compact-search {
+      display: none;
+    }
+  }
+
   .layout-toggle {
     display: grid;
     width: 24px;

@@ -1003,13 +1003,42 @@ Dark surfaces use a neutral charcoal ladder (`#121212`, `#1b1b1b`,
 white surfaces (`#f4f4f4`, `#ffffff`) with blue (`#326fe5`). Inputs use `#151515`
 in dark mode for a gentle recess. Archivo headings distinguish page and
 workspace titles; controls retain the native system typeface. The semantic CSS roles in `frontend/src/app.css`
-cover cards, inputs, popovers, dialogs, and navigation. Native dark captions and
-startup backgrounds in `internal/app/window.go` match the ground; overlay colour
+cover cards, inputs, popovers, dialogs, and navigation. The workspace title bar,
+auxiliary native captions, and startup backgrounds in `internal/app/window.go`
+match the ground; overlay colour
 constants in `internal/platform/overlay.go` match the panel and accent. Status
 colours keep their separate meanings. Dark Mica applies one translucent charcoal
-tint at `#app` plus translucent panels, while native captions remain under DWM
-control. Light-mode tokens remain independent.
+tint at `#app` plus translucent panels, while auxiliary native captions remain
+under DWM control. Light-mode tokens remain independent.
 Windows Mica is an explicit persisted opt-in applied when native windows are created, so changing it requires a process restart. The service reports the launch-time material separately from the editable preference; Svelte continues rendering the launch-time material until restart rather than making its surfaces translucent over solid native windows. Shell chrome uses the same material-aware layer roles, including the title/status bars, Settings navigation/action bar, and About action bar.
+
+Main has platform-specific title-bar presentation. On Windows,
+`mainWindowOptions` enables `Frameless`, `NonClientRegionSupport`, and
+`WebView2CompositionHosting`, retaining DWM shadow and corner decorations.
+The renderer supplies File/View/Help menus and minimize/maximize/close buttons
+beside the layout controls. Separate, non-overlapping
+`--wails-non-client-region` rectangles identify caption drag surfaces and each
+caption button. Wails maps them to native hit testing, including Windows 11
+Snap Layout hover over maximize, and forwards button input to the renderer's
+window actions. A caption rectangle must never contain ordinary menu, command,
+or layout controls: the runtime does not subtract a child's `none` region from
+its parent's rectangle. Selective `--wails-draggable` regions and ordinary button
+handlers retain basic interaction if composition hosting falls back.
+
+On macOS, Main keeps `Frameless: false` and uses `MacTitleBarHiddenInset` for
+full-size content with native traffic lights. The renderer reserves left-side
+space for those controls; macOS retains its existing application menu and native
+fullscreen behavior. `InvisibleTitleBarHeight` remains zero so native dragging
+does not intercept the whole interactive header. Only intended drag surfaces use
+`--wails-draggable: drag`; controls opt out. Wails handles macOS title-bar
+double-click according to the user's system preference. About, Transcription
+details, and standalone Process output retain their native frames.
+
+The workspace close control calls `Window.Close()`, entering the same native
+`WindowClosing` hook as Alt+F4 or the macOS red traffic light. The hook cancels
+destruction and requests the existing configuration draft decision; successful
+completion hides Main. It does not bypass the guard with `Window.Hide()` or
+change authoritative tray Quit and service shutdown.
 
 `internal/app` owns the cross-platform Wails windows: `main`, `about`,
 `transcription-details`, and the opaque `tray-popover` panel. Global Settings,

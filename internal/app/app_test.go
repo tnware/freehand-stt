@@ -71,13 +71,13 @@ func TestMainWindowLaunchVisibility(t *testing.T) {
 	}
 }
 
-func TestMainWindowUsesNativeChrome(t *testing.T) {
-	options := mainWindowOptions(false, true, false, config.AppearanceModeSystem, false)
+func TestMainWindowUsesCustomCaptionWithNativeWindowsDecorations(t *testing.T) {
+	options := mainWindowOptionsForPlatform("windows", false, true, false, config.AppearanceModeSystem, false)
 	if options.MinWidth != 560 {
 		t.Fatalf("main window minimum width = %d, want 560", options.MinWidth)
 	}
-	if options.Frameless {
-		t.Fatal("main window replaces the native frame")
+	if !options.Frameless || !options.Windows.NonClientRegionSupport || !options.Windows.WebView2CompositionHosting {
+		t.Fatal("main window does not enable native hit testing for its custom caption")
 	}
 	if options.Title != "Freehand" {
 		t.Fatalf("main window caption = %q, want Freehand", options.Title)

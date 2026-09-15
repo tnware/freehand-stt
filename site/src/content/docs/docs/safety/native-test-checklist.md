@@ -3,7 +3,7 @@ title: Native Windows acceptance checklist
 description: Interactive acceptance checks that must run on a real Windows desktop.
 ---
 
-Cross-compilation is not acceptance. Run these checks on a non-elevated Windows desktop with a disposable API credential and one explicitly selected STT route.
+Cross-compilation is not acceptance. Run these checks on a non-elevated Windows desktop with a disposable API credential and one explicitly selected STT route. Record browser results, Windows compilation, Windows interactive acceptance, and packaged macOS acceptance separately. Windows evidence does not establish macOS behavior.
 
 - Confirm one mark-only tray icon, one main window with Settings and Connections panes, plus reusable About and Transcription details windows. Switch Windows between light and dark modes and inspect the purpose-drawn tray family at 100%, 125%, 150%, and 200% scale; the waveform and caret must remain distinct without a miniature application tile. Confirm the executable, taskbar, Explorer, installer, uninstaller, Installed apps, and Start Menu retain the tiled application family. During microphone and stored-file workflows, confirm the tray tooltip and its disabled status/detail rows distinguish recording, VAD silence, checkpoints, transcription, cleanup, upload/streaming, cancellation, success, attention, and failure without displaying transcript text, file identity, model, endpoint, or raw errors. Show/Hide Freehand, Settings, About, active cancellation, available transcript copy, and authoritative Quit must remain state-correct. Repeated Settings actions must reveal the main window at General after resolving an active draft; About must focus/reuse its existing native window. A second launch must reveal the main window; left-click opens the compact dictation panel and right-click opens the native menu. Closing the main window first resolves any unsaved configuration draft, then hides the workspace. The native menu must not offer a recording-start action.
 - Confirm the credential persists in Windows Credential Manager and never appears in SQLite, legacy JSON, logs, process arguments, events, or returned renderer DTOs. Confirm the transient password draft clears after save and when settings are left or hidden.
@@ -21,7 +21,7 @@ Cross-compilation is not acceptance. Run these checks on a non-elevated Windows 
 - Use the page Settings cog to open Voice, Audio file, and Text to speech options beside the workflow. Select a connection and model, toggle cleanup, switch between Custom instruction and S1-mini, and exercise the trained S1-mini controls. Contextual Save must apply edits in place; failed saves must preserve the draft and leave backend-applied configuration unchanged. First-run setup controls still save valid changes immediately. Endpoint, authentication, and credential edits belong to the Connections rail page. In Cleanup options, verify custom-instruction validation/reset/persistence and the read-only S1 instruction/control-line preview. Confirm changed selections invalidate stale metadata, immediate actions cannot race or apply an unrelated draft, and leaving or closing configuration protects unsaved edits.
 - Confirm the test build creates exactly one passive native overlay and no overlay WebView. Across first show, repeated state updates, hide, and live appearance changes, record the foreground top-level HWND, focused child HWND, overlay HWND, thread ID, process ID, and process creation time before and after; the target identities and overlay HWND/thread must remain unchanged. Verify Notepad and one Chromium application retain the caret, the overlay is absent from Alt+Tab/taskbar, clicks pass through or are ignored, and placement stays within the active monitor work area at 100%/150%/200% DPI. Exercise minimum/default/maximum size, opacity, top-distance, and glow while idle and recording; confirm proportional scaling, bounded translucency, zero glow, correct work-area-relative placement, no entrance replay, and no extra level tap. Confirm the overlay moves distinctly through speech, stabilized silence, resumed speech, and toggle-recording countdown states, that the countdown rail shrinks to the coordinator deadline, and that hold-to-talk never shows a countdown. Turn **Settings → Overlay → Show status overlay** off and confirm the native surface and its thread/resources close immediately while dictation continues normally; turn it on while idle and while recording and confirm one surface returns with the saved appearance and current state. Repeated cycles must not leak windows, taps, GDI objects, or threads, and disabled startup must create no overlay resources. A genuine user focus change must still produce copy-required behavior. If any overlay action changes focus, disable the overlay; never weaken target validation or restore focus programmatically.
 - From **Settings → Overlay**, run the native preview through every curated layout, anchor, visibility, surface, visualizer, and motion policy. Draft changes must update the same surface without saving; discard/close must restore the applied configuration; preview must also work when the applied overlay is off and release the temporary surface afterward. Start dictation during preview and confirm immediate preemption. With taskbars on each screen edge and mixed DPI monitors, confirm each new recording selects the target monitor's work area once and does not chase later focus. Toggle Windows Animation Effects and a contrast theme while visible: decorative motion must follow the system, countdown time must remain live, and contrast must force an opaque system-colour surface with no glow. Inspect Detailed in every state and confirm it contains only fixed product/phase/instruction labels, a normalized shortcut, bounded elapsed time, and a bounded checkpoint count—never transcript, filename, endpoint/model, credential, prompt, provider error, or other user content.
-- Exercise the main workspace, its global Settings and contextual options, About, and Transcription details with only the keyboard. Settings navigation and contextual tabs must support Arrow/Home/End with a visible focus indicator. Alt+F4 and the native main-window close button must offer Save, Discard, or Keep editing for a dirty configuration draft. Keep editing and failed saves must retain it; a successful close-time Save commits before hiding the workspace, and Discard restores applied values. Hiding clears credential drafts. Reopening must load the newest Go-owned settings, and immediate setup actions must not mutate configuration while another editor owns an unsaved draft. About must reuse and focus one native window and close from either Alt+F4, native chrome, or its footer. Transcription details opens in its own reusable window without trapping focus in the main window. With Narrator, confirm phase changes and action results are announced once without reading transcript content unexpectedly. Toggle Windows **Animation Effects** while the native overlay is visible: decorative WebView and overlay motion must stop and resume without recreating the overlay, while the overlay's automatic-stop countdown continues to advance. Repeat in a Windows contrast theme and confirm every focused control has a visible focus indicator.
+- Exercise the main workspace, its global Settings and contextual options, About, and Transcription details with only the keyboard. Settings navigation and contextual tabs must support Arrow/Home/End with a visible focus indicator. Alt+F4 and the workspace Close button must offer Save, Discard, or Keep editing for a dirty configuration draft. Keep editing and failed saves must retain it; a successful close-time Save commits before hiding the workspace, and Discard restores applied values. Hiding clears credential drafts. Reopening must load the newest Go-owned settings, and immediate setup actions must not mutate configuration while another editor owns an unsaved draft. About must reuse and focus one native window and close from either Alt+F4, native chrome, or its footer. Transcription details opens in its own reusable window without trapping focus in the main window. With Narrator, confirm phase changes and action results are announced once without reading transcript content unexpectedly. Toggle Windows **Animation Effects** while the native overlay is visible: decorative WebView and overlay motion must stop and resume without recreating the overlay, while the overlay's automatic-stop countdown continues to advance. Repeat in a Windows contrast theme and confirm every focused control has a visible focus indicator.
 - While microphone or stored-audio work is active, save changed endpoint, model, authentication, and credential values. Confirm the save succeeds for the next operation while the active run keeps its complete start-of-run profile and never sends a new credential to the old endpoint.
 - Quit during microphone preparation, active recording, stored-file upload, transcription/cleanup, speech generation, playing/paused speech, and an open Save Audio dialog. Verify process exit and tray/hotkey removal. A dialog completing after Quit must not start an export, and late inference must not insert text, publish a result, or begin playback. With a deliberately slow export destination, Stop/Clear must remain responsive; an interrupted export may be partial. Record device teardown separately from service deadline errors: workflow wait budgets cover locks and cleanup, but do not prove that every OS call or Wails shutdown hook is interruptible. Use the opt-in native audio check documented in [testing](../../development/testing/#shutdown-and-cancellation-acceptance) before interactive review.
 - Confirm the WebView is denied microphone, camera, geolocation, notification, and clipboard-read permissions. A renderer binding call must not be able to select an arbitrary audio path that was not granted through the native picker.
@@ -39,6 +39,54 @@ Check that neutral black/white surfaces and the brand-blue accent extend to Sett
 the Connections page, native captions, and the passive overlay. Verify the local
 heading font loads without a network request, and that idle, recording,
 processing, copy recovery, and error states retain usable controls.
+
+## Main workspace title bar
+
+### Windows
+
+- Confirm one integrated workspace title bar, with the Freehand mark and
+  File/View/Help menus on the left and minimize, maximize/restore, and close
+  controls at the far right beside the layout buttons. About, Transcription
+  details, and standalone Process output must retain their native frames.
+- Drag only intended title-bar surfaces, double-click to maximize/restore,
+  drag down from maximized, and resize every edge and corner. Repeat on mixed-DPI
+  monitors at 100%, 125%, 150%, and 200%, including negative monitor coordinates
+  and taskbars on different edges. The content, cursor, and resize target must
+  stay aligned; restored bounds must remain usable.
+- On supported Windows 11/WebView2 installations, hover maximize to open native
+  Snap Layouts, choose a layout, and restore. Exercise Win+Arrow, caption
+  double-click, and taskbar restore; the maximize/restore glyph and accessible
+  name must follow actual native state. If composition hosting falls back,
+  verify ordinary caption buttons, dragging, and resizing still work; record
+  Snap availability separately.
+- Click and keyboard-activate File/View/Help, command search, and every layout
+  control. They must perform their action without starting a window drag.
+  Check hover, focus, pressed state, and contrast in light/dark and Mica modes.
+- Use Close, Alt+F4, and the caption system menu with clean settings and with
+  dirty global, contextual, and connection drafts. Save must commit before
+  hiding; Discard restores applied values; Keep editing and failed saves retain
+  the draft. Hiding clears credential drafts and output consent. Reopen from
+  the tray and a second launch. Quit must still exit and stop owned services.
+
+### macOS
+
+Run these checks separately in a packaged app on the supported macOS
+architectures; browser padding fixtures and a Windows build do not satisfy them.
+
+- Confirm native traffic lights remain at the left of the integrated title bar,
+  with enough reserved space that the mark, title, and controls never overlap
+  them. Check normal and compact sizes, Retina scaling, and light/dark modes.
+  The existing macOS application menu must remain available.
+- Move the window from intended drag surfaces and operate nearby command,
+  menu, and layout controls without accidental dragging. Check the system's
+  configured double-click action: zoom, minimize, or no action.
+- Use the green traffic light to enter and exit fullscreen, reveal the
+  auto-hidden toolbar, move between Spaces, and restore the normal window.
+  Verify traffic-light padding, controls, and content remain reachable through
+  each transition. Test red close with the same Save/Discard/Keep editing and
+  failed-save cases, then reopen through the Dock and menu-bar icon.
+- Recheck the native frames and close behavior of About, Transcription details,
+  and standalone Process output. Record these results independently of Windows.
 
 ## Managed local runtime
 

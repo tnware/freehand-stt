@@ -22,6 +22,10 @@ test("toggle can be cleared, saved unassigned, and explicitly replaced", async (
   let captures = 0;
   await page.route("**/wails/runtime", async (route) => {
     const request = route.request().postDataJSON();
+    if (request?.object === 6) {
+      await route.fallback();
+      return;
+    }
     if (request.args.methodID === cancelID) {
       await route.fulfill({ contentType: "application/json", body: "null" });
       return;
@@ -168,6 +172,10 @@ test("generated retry binding refreshes failure and preserves a dirty draft", as
   let attempts = 0;
   await page.route("**/wails/runtime", async (route) => {
     const request = route.request().postDataJSON();
+    if (request?.object === 6) {
+      await route.fallback();
+      return;
+    }
     expect(request.object).toBe(0);
     expect(request.method).toBe(0);
     expect(request.args.args).toEqual([]);

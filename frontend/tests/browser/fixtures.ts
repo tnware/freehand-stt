@@ -6,10 +6,99 @@ type Saves = {
   complete: (...args: Parameters<SaveControl["complete"]>) => Promise<void>;
 };
 
+type WindowMethod =
+  "IsMaximised" | "Minimise" | "ToggleMaximise" | "Close" | "Hide";
+
+declare global {
+  interface Window {
+    testWindow: {
+      calls: WindowMethod[];
+      maximised: boolean;
+      minimised: boolean;
+      pendingStateReads: number;
+      failNext: (method: WindowMethod) => void;
+      deferNextStateRead: () => void;
+      releaseStateRead: () => void;
+      emit: (name: string, maximised?: boolean) => void;
+      invoke: (method: number) => Promise<{ status: number; body: string }>;
+    };
+  }
+}
+
 export const test = base.extend<{ saves: Saves }>({
   page: async ({ page, baseURL }, use) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript(() => {
+      const methods: Record<number, WindowMethod> = {
+        2: "Close",
+        11: "Hide",
+        14: "IsMaximised",
+        17: "Minimise",
+        39: "ToggleMaximise",
+      };
+      const failures = new Set<WindowMethod>();
+      let deferRead = false;
+      let releaseRead: (() => void) | undefined;
+      const state: Window["testWindow"] = {
+        calls: [],
+        maximised: new URLSearchParams(location.search).has("window-maximised"),
+        minimised: false,
+        pendingStateReads: 0,
+        failNext: (method) => void failures.add(method),
+        deferNextStateRead: () => {
+          deferRead = true;
+        },
+        releaseStateRead: () => releaseRead?.(),
+        emit: (name, maximised) => {
+          if (maximised !== undefined) state.maximised = maximised;
+          (window as any)._wails?.dispatchWailsEvent({
+            name: name.startsWith("common:") ? name : `common:${name}`,
+            data: null,
+          });
+        },
+        invoke: async (id) => {
+          const method = methods[id];
+          state.calls.push(method);
+          if (failures.delete(method))
+            return {
+              status: 500,
+              body: JSON.stringify({
+                kind: "RuntimeError",
+                message: `Window ${method} failed in the fixture.`,
+              }),
+            };
+          let result: boolean | null = null;
+          if (method === "IsMaximised") {
+            // Capture the native answer before delaying its delivery, so a later
+            // event can invalidate this read rather than changing its answer.
+            result = state.maximised;
+            if (deferRead) {
+              deferRead = false;
+              state.pendingStateReads++;
+              await new Promise<void>((resolve) => {
+                releaseRead = resolve;
+              });
+              releaseRead = undefined;
+              state.pendingStateReads--;
+            }
+          } else if (method === "Minimise") {
+            state.minimised = true;
+          } else if (method === "ToggleMaximise") {
+            state.maximised = !state.maximised;
+            state.emit(state.maximised ? "WindowMaximise" : "WindowUnMaximise");
+          } else if (method === "Close") {
+            // Native Close requests the renderer's draft decision. Hide is a
+            // separate transport call, made only after that decision succeeds.
+            window.testConnectionWindows?.requestClose();
+          } else if (method === "Hide") {
+            await window.testConnectionWindows?.hide();
+          }
+          return { status: 200, body: JSON.stringify(result) };
+        },
+      };
+      window.testWindow = state;
+    });
     await page.route("**/*", (route) =>
       new URL(route.request().url()).origin === new URL(baseURL!).origin
         ? route.continue()
@@ -44,9 +133,12 @@ export const test = base.extend<{ saves: Saves }>({
     );
     await page.route("**/wails/runtime", async (route) => {
       const call = route.request().postDataJSON();
-      if (call?.object === 6 && call.method === 11) {
-        await page.evaluate(() => window.testConnectionWindows?.hide());
-        await route.fulfill({ contentType: "application/json", body: "null" });
+      if (call?.object === 6 && [2, 11, 14, 17, 39].includes(call.method)) {
+        const response = await page.evaluate(
+          (method) => window.testWindow.invoke(method),
+          call.method,
+        );
+        await route.fulfill({ contentType: "application/json", ...response });
       } else await route.continue();
     });
     await page.goto("/tests/browser/app/");

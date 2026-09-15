@@ -8,6 +8,9 @@
   import * as WindowingService from "$bindings/windowing/service";
   import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
   import TitleBar from "$lib/components/shell/TitleBar.svelte";
+  import TitleBarMenu, {
+    type TitleMenu,
+  } from "$lib/components/shell/TitleBarMenu.svelte";
   import WorkbenchFrame from "$lib/components/shell/WorkbenchFrame.svelte";
   import WorkbenchPanel from "$lib/components/shell/WorkbenchPanel.svelte";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
@@ -27,7 +30,6 @@
   } from "$lib/components/shell/CommandPalette.svelte";
   import {
     PANES,
-    paneByID,
     isWorkflowPane,
     workflowBlockedReason,
     type PaneID,
@@ -305,6 +307,103 @@
       keywords: section.blurb,
       run: () => openSettings(section.id),
     })),
+  ]);
+
+  const fileSelectionBlocked = $derived(
+    voiceActive ||
+      fileWorking ||
+      session.files.selectionBusy ||
+      [TTSPhase.Generating, TTSPhase.Playing, TTSPhase.Paused].includes(
+        session.speech.status.phase,
+      ),
+  );
+  function chooseAudioFileFromMenu() {
+    if (fileSelectionBlocked) return;
+    navigationGeneration++;
+    leaveSettings(() => {
+      if (fileSelectionBlocked) return;
+      auxPane = null;
+      inputMode = "file";
+      void session.files.chooseAudioFile();
+    });
+  }
+  const titleMenus = $derived<TitleMenu[]>([
+    {
+      id: "file",
+      label: "File",
+      groups: [
+        [
+          {
+            id: "file:open",
+            label: "Open audio file…",
+            disabled: fileSelectionBlocked,
+            run: chooseAudioFileFromMenu,
+          },
+        ],
+        [
+          {
+            id: "file:connections",
+            label: "Connections",
+            run: () => openSettings("connections"),
+          },
+          {
+            id: "file:settings",
+            label: "Settings",
+            run: () => openSettings("general"),
+          },
+        ],
+        [
+          {
+            id: "file:close",
+            label: "Close window",
+            shortcut: "Alt+F4",
+            run: () =>
+              void Window.Close().catch((cause) =>
+                session.messages.fail(cause),
+              ),
+          },
+        ],
+      ],
+    },
+    {
+      id: "view",
+      label: "View",
+      groups: [
+        [
+          {
+            id: "view:commands",
+            label: "Command palette…",
+            shortcut: "Ctrl+K",
+            run: () => {
+              commandsOpen = true;
+            },
+          },
+        ],
+        commands.filter((command) => command.group === "Go to"),
+        commands
+          .filter((command) => command.group === "Layout")
+          .map((command) => ({
+            ...command,
+            checked:
+              command.id === "layout:primary"
+                ? layout.primaryVisible && primaryAvailable
+                : command.id === "layout:bottom"
+                  ? bottomAvailable && layout.bottomVisible
+                  : secondaryShown,
+            shortcut:
+              command.id === "layout:primary"
+                ? "Ctrl+B"
+                : command.id === "layout:bottom"
+                  ? "Ctrl+J"
+                  : "Ctrl+Alt+B",
+          })),
+      ],
+    },
+    {
+      id: "help",
+      label: "Help",
+      groups: [[{ id: "help:about", label: "About Freehand", run: openAbout }]],
+    },
   ]);
 
   $effect(() => {
@@ -688,7 +787,8 @@
   class="fixed inset-0 flex flex-col overflow-hidden bg-transparent text-foreground"
 >
   <TitleBar
-    paneLabel={paneByID(activePane).label}
+    platform={session.editor.applied?.platform}
+    onWindowError={(cause) => session.messages.fail(cause)}
     commandHint={macOS ? "⌘" : "Ctrl"}
     onOpenCommands={() => (commandsOpen = true)}
     primaryVisible={layout.primaryVisible && primaryAvailable}
@@ -704,7 +804,9 @@
       : undefined}
     onToggleBottom={() => layout.toggleBottom()}
     onToggleSecondary={toggleSecondary}
-  />
+  >
+    {#snippet menu()}<TitleBarMenu menus={titleMenus} />{/snippet}
+  </TitleBar>
 
   <CommandPalette bind:open={commandsOpen} {commands} />
   {#if messages.length}<Notifications shell {messages} />{/if}

@@ -132,11 +132,31 @@ func baseWindowOptionsForPlatform(osName, name, title, url string, width, height
 }
 
 func mainWindowOptions(startupLaunch, showWindowOnLaunch, useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
-	return baseWindowOptions(
+	return mainWindowOptionsForPlatform(runtime.GOOS, startupLaunch, showWindowOnLaunch, useMica, appearanceMode, systemDark)
+}
+
+func mainWindowOptionsForPlatform(osName string, startupLaunch, showWindowOnLaunch, useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {
+	options := baseWindowOptionsForPlatform(
+		osName,
 		mainWindowName, "Freehand", mainWindowURL,
 		mainWindowWidth, mainWindowHeight, mainWindowMinWidth, mainWindowMinHeight,
 		windowStartsHidden(startupLaunch, showWindowOnLaunch), useMica, appearanceMode, systemDark,
 	)
+	switch osName {
+	case "windows":
+		options.Frameless = true
+		// Let Windows own hit testing for the custom caption buttons, including
+		// the maximize button's Snap Layouts flyout. Retain resize borders,
+		// rounded corners and the native shadow.
+		options.Windows.NonClientRegionSupport = true
+		options.Windows.WebView2CompositionHosting = true
+	case "darwin":
+		// Full-size content with native traffic lights. Frameless=true would
+		// remove those controls; a native invisible drag strip would intercept
+		// the command/menu buttons. The renderer supplies selective drag areas.
+		options.Mac.TitleBar = application.MacTitleBarHiddenInset
+	}
+	return options
 }
 
 func aboutWindowOptions(useMica bool, appearanceMode config.AppearanceMode, systemDark bool) application.WebviewWindowOptions {

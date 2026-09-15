@@ -40,7 +40,7 @@
   import HistoryPane from "$lib/components/history/HistoryPane.svelte";
   import TitleBar from "$lib/components/shell/TitleBar.svelte";
   import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
-  import { paneByID, type PaneID } from "$lib/panes";
+  import { type PaneID } from "$lib/panes";
   import { controlledSaves } from "./save-control";
 
   const layout = new WorkbenchLayout();
@@ -708,7 +708,6 @@
   class="flex h-screen flex-col overflow-hidden bg-background text-foreground"
 >
   <TitleBar
-    paneLabel={paneByID(activePane).label}
     onOpenCommands={noop}
     primaryVisible={layout.primaryVisible}
     bottomVisible={layout.bottomVisible}

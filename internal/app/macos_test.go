@@ -34,6 +34,25 @@ func TestMacShellUsesNativeAppearanceAndIgnoresMica(t *testing.T) {
 	}
 }
 
+func TestMacMainWindowKeepsNativeTrafficLightsWithFullSizeContent(t *testing.T) {
+	options := mainWindowOptionsForPlatform("darwin", false, true, true, config.AppearanceModeDark, false)
+	if options.Frameless || options.Mac.TitleBar != application.MacTitleBarHiddenInset {
+		t.Fatal("main workspace does not preserve the native inset traffic lights")
+	}
+	if options.Mac.InvisibleTitleBarHeight != 0 {
+		t.Fatal("a native drag strip would intercept the workspace title-bar controls")
+	}
+	if options.DisableResize || options.Mac.TabbingMode != application.MacWindowTabbingModeDisallowed {
+		t.Fatal("main workspace lost its resizing or independent-window policy")
+	}
+	if options.Windows.NonClientRegionSupport || options.Windows.WebView2CompositionHosting {
+		t.Fatal("Windows custom caption settings leaked into the macOS window")
+	}
+	if options.BackgroundType != application.BackgroundTypeSolid || options.Mac.Appearance != application.NSAppearanceNameDarkAqua {
+		t.Fatal("macOS full-size content lost its native appearance or ignored Mica policy")
+	}
+}
+
 func TestDockReopenRevealsOnlyMainWindow(t *testing.T) {
 	event := &application.ApplicationEvent{}
 	calls := 0
