@@ -7,14 +7,14 @@ for (const width of [560, 1000]) {
     }, info) => {
       await page.setViewportSize({ width, height: 740 });
       await page.goto("/tests/browser/app/?view=workspace&playback&save-pending&theme=dark");
-      await page.getByRole("tab", { name: "Text to speech", exact: true }).click();
+      await page.getByRole("button", { name: "Text to speech", exact: true }).click();
       const draft = page.getByRole("textbox", { name: "Text to speak", exact: true });
       await draft.fill("Synthetic audio for save controls.");
       await draft.press("Control+Enter");
       await page.getByRole("button", { name: "Finish generation", exact: true }).click();
       if (compact) {
         await page.getByRole("button", { name: "Show transcript playback", exact: true }).click();
-        await page.getByRole("tab", { name: "Voice", exact: true }).click();
+        await page.getByRole("button", { name: "Voice transcription", exact: true }).click();
       }
       const bar = page.locator('[aria-label="Speech playback"]');
       const height = (await bar.boundingBox())!.height;

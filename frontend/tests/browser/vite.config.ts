@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../../", import.meta.url));
 export default defineConfig({
   root,
+  // Separate fixture servers must not invalidate each other's dependency cache.
+  cacheDir: `node_modules/.vite-browser-${process.env.PLAYWRIGHT_PORT || "9346"}`,
   plugins: [tailwindcss(), svelte()],
   resolve: {
     alias: {

@@ -6,7 +6,7 @@ const roles = [
     purpose: Purpose.Transcription,
     section: "server",
     tab: "Audio file",
-    panel: "Transcription settings",
+    panel: "Model",
     quickID: "quick-stt-model",
     settingsID: "model",
   },
@@ -14,7 +14,7 @@ const roles = [
     purpose: Purpose.Cleanup,
     section: "processing",
     tab: "Audio file",
-    panel: "Cleanup settings",
+    panel: "Cleanup",
     quickID: "quick-processing-model",
     settingsID: "cleanup-model",
   },
@@ -22,7 +22,7 @@ const roles = [
     purpose: Purpose.Speech,
     section: "speech",
     tab: "Text to speech",
-    panel: "Speech settings",
+    panel: "Model",
     quickID: "quick-speech-model",
     settingsID: "tts-model",
   },
@@ -39,16 +39,18 @@ for (const surface of ["quick", "settings", "readiness"] as const) {
         `/tests/browser/app/?workflows&pickers&metadata-control${main ? "&main" : ""}${surface === "readiness" ? "&metadata-readiness" : ""}`,
       );
       if (main) {
-        await page.getByRole("tab", { name: role.tab, exact: true }).click();
+        await page.getByRole("button", { name: role.tab, exact: true }).click();
         if (surface === "readiness")
           await page.getByText("Connection and model", { exact: true }).click();
         if (surface === "quick")
           await page
-            .getByRole("button", { name: role.panel, exact: true })
+            .getByRole("button", { name: new RegExp(`^${role.panel} `) })
             .click();
       } else
         await page.locator(`[data-settings-section="${role.section}"]`).click();
-      const picker = page.locator(`#${main ? role.quickID : role.settingsID}`);
+      const picker = page.locator(
+        `#${surface === "readiness" ? role.quickID : role.settingsID}`,
+      );
       await picker.click();
       await expect(
         page.getByText("Loading model list…", { exact: true }),

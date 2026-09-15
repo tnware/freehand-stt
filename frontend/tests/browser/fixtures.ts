@@ -15,8 +15,10 @@ export const test = base.extend<{ saves: Saves }>({
         ? route.continue()
         : route.abort(),
     );
-    await page.route("**/bindings/**/internal/windowing/service.*", route => route.fulfill({
-      contentType: "application/javascript", body: `
+    await page.route("**/bindings/**/internal/windowing/service.*", (route) =>
+      route.fulfill({
+        contentType: "application/javascript",
+        body: `
       const bridge = () => window.testConnectionWindows;
       export const OpenConnectionManager = request => bridge().open(request);
       export const OpenTaskConnection = (request, origin) => bridge().open(request, origin);
@@ -27,17 +29,30 @@ export const test = base.extend<{ saves: Saves }>({
       export const HideSettings = () => bridge().hide();
       export const OpenSettings = section => bridge().openSettings(section);
       export const OpenTaskSettings = (section, origin) => bridge().openSettings(section, origin);
-      export const ShellReady = async () => {};
+      export const ShellReady = async () => bridge().ready((name, data = null) => window._wails.dispatchWailsEvent({ name, data }));
       export const AboutVisible = async () => false;
       export const OpenAbout = async () => {};
       export const HideAbout = async () => {};
       `,
-    }));
-    await page.route("**/bindings/**/internal/buildinfo/service.*", route => route.fulfill({
-      contentType: "application/javascript", body: `export const Current = async () => ({version: "fixture"});`,
-    }));
+      }),
+    );
+    await page.route("**/bindings/**/internal/buildinfo/service.*", (route) =>
+      route.fulfill({
+        contentType: "application/javascript",
+        body: `export const Current = async () => ({version: "fixture"});`,
+      }),
+    );
+    await page.route("**/wails/runtime", async (route) => {
+      const call = route.request().postDataJSON();
+      if (call?.object === 6 && call.method === 11) {
+        await page.evaluate(() => window.testConnectionWindows?.hide());
+        await route.fulfill({ contentType: "application/json", body: "null" });
+      } else await route.continue();
+    });
     await page.goto("/tests/browser/app/");
-    await expect(page.locator("#saved-connection-stt")).toHaveValue("Original server");
+    await expect(page.locator("#saved-connection-stt")).toHaveValue(
+      "Original server",
+    );
     await use(page);
     expect(errors, "uncaught browser errors").toEqual([]);
   },
@@ -45,14 +60,20 @@ export const test = base.extend<{ saves: Saves }>({
     let last = 0;
     await use({
       waitForStart: async () => {
-        last = await page.evaluate((after) => window.testSaves.waitForStart(after), last);
+        last = await page.evaluate(
+          (after) => window.testSaves.waitForStart(after),
+          last,
+        );
         return last;
       },
       complete: async (id, outcome) => {
-        await page.evaluate(({ id, outcome }) => window.testSaves.complete(id, outcome), {
-          id,
-          outcome,
-        });
+        await page.evaluate(
+          ({ id, outcome }) => window.testSaves.complete(id, outcome),
+          {
+            id,
+            outcome,
+          },
+        );
       },
     });
   },

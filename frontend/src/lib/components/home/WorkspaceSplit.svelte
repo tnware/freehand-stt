@@ -1,9 +1,8 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
+  import { tick, type Snippet } from "svelte";
   import { MediaQuery } from "svelte/reactivity";
   import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
   import * as Resizable from "$lib/components/ui/resizable";
-  import { Button } from "$lib/components/ui/button";
 
   let {
     result,
@@ -13,99 +12,112 @@
     hasHistory,
     historyCount,
     working,
-    outputAvailable = false,
   }: {
     result: Snippet;
     history: Snippet;
-    /** Runtime output. */
     output?: Snippet;
-    /** Endpoint diagnostics for the active workflow. */
     diagnostics?: Snippet;
     hasHistory: boolean;
     historyCount: number;
     working: boolean;
-    outputAvailable?: boolean;
   } = $props();
 
-  type Tab = "recent" | "output" | "diagnostics";
-  let tab = $state<Tab>("recent");
-  const active = $derived(tab);
-
-  // The chain already owns the full width above this, so history sits under
-  // the transcript rather than beside it: a side pane would squeeze the one
-  // column that actually holds prose.
-  const roomy = new MediaQuery("(min-height: 560px)");
+  const uid = $props.id();
+  const panelID = `${uid}-panel`;
+  let tab = $state("recent");
+  let compactTab = $state("result");
   let collapsed = $state(false);
-  let selectedView = $state<"result" | "history">("result");
-  const visibleView = $derived(working ? "result" : selectedView);
-  const stacked = $derived(roomy.current);
+  let workspace = $state<HTMLDivElement>();
+  async function setCollapsed(value: boolean) {
+    const focused = document.activeElement;
+    const restore = !!focused && workspace?.contains(focused);
+    const wasTab = focused?.getAttribute("role") === "tab";
+    collapsed = value;
+    await tick();
+    if (!restore || collapsed !== value) return;
+    workspace
+      ?.querySelector<HTMLButtonElement>(
+        wasTab
+          ? '[role="tab"][aria-selected="true"]'
+          : `button[aria-label="${value ? "Show panel" : "Hide panel"}"]`,
+      )
+      ?.focus();
+  }
+  const roomy = new MediaQuery("(min-height: 560px)");
+  const tabs = $derived([
+    { id: "recent", label: hasHistory ? `Recent · ${historyCount}` : "Recent" },
+    ...(output ? [{ id: "output", label: "Runtime output" }] : []),
+    ...(diagnostics ? [{ id: "diagnostics", label: "Diagnostics" }] : []),
+  ]);
+  // A new capture returns the compact view to its transcript. The user can
+  // still inspect diagnostics after that initial transition.
+  $effect(() => {
+    if (working) compactTab = "result";
+  });
 </script>
 
-{#if stacked}
-  <Resizable.PaneGroup
-    direction="vertical"
-    autoSaveId="freehand-workspace-v2"
-    keyboardResizeBy={2}
-  >
-    <Resizable.Pane id="current-result-pane" defaultSize={70} minSize={35}>
-      {@render result()}
-    </Resizable.Pane>
-    {#if !collapsed}
-      <Resizable.Handle aria-label="Resize transcript and history" />
-    {/if}
-    <Resizable.Pane
-      id="recent-history-pane"
-      defaultSize={collapsed ? 0 : 30}
-      minSize={collapsed ? 0 : 18}
+{#snippet panelContent(selected: string)}
+  {#if selected === "output" && output}{@render output()}
+  {:else if selected === "diagnostics" && diagnostics}{@render diagnostics()}
+  {:else}{@render history()}{/if}
+{/snippet}
+
+<div bind:this={workspace} class="flex min-h-0 flex-1 flex-col">
+  {#if roomy.current && !collapsed}
+    <Resizable.PaneGroup
+      direction="vertical"
+      autoSaveId="freehand-workspace-v2"
+      keyboardResizeBy={2}
     >
-      <div class="flex h-full min-h-0 flex-col">
-        <PanelTabs
-          tabs={[
-            { id: "recent", label: hasHistory ? `Recent · ${historyCount}` : "Recent" },
-            { id: "output", label: "Runtime output" },
-            { id: "diagnostics", label: "Diagnostics" },
-          ]}
-          bind:active={tab}
-          bind:collapsed
-        />
-        {#if !collapsed}
-          <div class="flex min-h-0 flex-1 flex-col">
-            {#if active === "output" && output}
-              {@render output()}
-            {:else if active === "diagnostics" && diagnostics}
-              {@render diagnostics()}
-            {:else}
-              {@render history()}
-            {/if}
+      <Resizable.Pane id="current-result-pane" defaultSize={70} minSize={35}
+        >{@render result()}</Resizable.Pane
+      >
+      <Resizable.Handle aria-label="Resize transcript and panel" />
+      <Resizable.Pane id="recent-history-pane" defaultSize={30} minSize={18}>
+        <div class="flex h-full min-h-0 flex-col">
+          <PanelTabs
+            {tabs}
+            bind:active={tab}
+            bind:collapsed={() => collapsed, setCollapsed}
+            {panelID}
+          />
+          <div
+            id={panelID}
+            role="tabpanel"
+            aria-label={tabs.find((item) => item.id === tab)?.label}
+            class="flex min-h-0 flex-1 flex-col"
+          >
+            {@render panelContent(tab)}
           </div>
-        {/if}
-      </div>
-    </Resizable.Pane>
-  </Resizable.PaneGroup>
-{:else}
-  {#if hasHistory}
+        </div>
+      </Resizable.Pane>
+    </Resizable.PaneGroup>
+  {:else if roomy.current}
+    <div class="flex min-h-0 flex-1 flex-col">{@render result()}</div>
+    <PanelTabs
+      {tabs}
+      bind:active={tab}
+      bind:collapsed={() => collapsed, setCollapsed}
+    />
+  {:else}
+    <PanelTabs
+      tabs={[{ id: "result", label: "Transcript" }, ...tabs]}
+      bind:active={compactTab}
+      collapsible={false}
+      {panelID}
+      label="Workspace view"
+    />
     <div
-      class="flex shrink-0 gap-1 px-3 py-2"
-      role="group"
-      aria-label="Workspace view"
+      id={panelID}
+      role="tabpanel"
+      aria-label={compactTab === "result"
+        ? "Transcript"
+        : tabs.find((item) => item.id === compactTab)?.label}
+      class="flex min-h-0 flex-1 flex-col"
     >
-      <Button
-        variant={visibleView === "result" ? "secondary" : "ghost"}
-        size="sm"
-        aria-pressed={visibleView === "result"}
-        onclick={() => (selectedView = "result")}>Transcript</Button
-      >
-      <Button
-        variant={visibleView === "history" ? "secondary" : "ghost"}
-        size="sm"
-        aria-pressed={visibleView === "history"}
-        disabled={working}
-        onclick={() => (selectedView = "history")}
-        >Recent · {historyCount}</Button
-      >
+      {#if compactTab === "result"}{@render result()}{:else}{@render panelContent(
+          compactTab,
+        )}{/if}
     </div>
   {/if}
-  <div class="flex min-h-0 flex-1 flex-col">
-    {#if hasHistory && visibleView === "history"}{@render history()}{:else}{@render result()}{/if}
-  </div>
-{/if}
+</div>

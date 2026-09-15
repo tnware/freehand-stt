@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
-  import { Clipboard } from "@wailsio/runtime";
+  import { onDestroy, onMount } from "svelte";
+  import { Clipboard, Events } from "@wailsio/runtime";
   import * as Manager from "$bindings/managedruntime/manager";
   import { Button } from "$lib/components/ui/button";
   import ProcessOutputTerminal from "$lib/components/ProcessOutputTerminal.svelte";
@@ -8,11 +8,9 @@
 
   let {
     instanceID = "",
-    running = false,
   }: {
     /** The instance whose output to stream; empty releases the reader. */
     instanceID?: string;
-    running?: boolean;
   } = $props();
 
   const output = new ProcessOutputState(Manager);
@@ -21,7 +19,7 @@
   // The reader is per instance and bounded to memory, so it follows the
   // selection and is released as soon as this drawer goes away.
   $effect(() => {
-    const id = running ? instanceID : "";
+    const id = instanceID;
     if (output.instanceID !== id) void output.select(id);
   });
   $effect(() => {
@@ -30,14 +28,29 @@
     return () => clearInterval(timer);
   });
   onDestroy(() => output.dispose());
+  onMount(() => {
+    const clear = () => {
+      following = true;
+      void output.select(instanceID);
+    };
+    const off = Events.On("shell:hidden", clear);
+    const visibilityChanged = () => {
+      if (document.hidden) clear();
+    };
+    document.addEventListener("visibilitychange", visibilityChanged);
+    return () => {
+      off();
+      document.removeEventListener("visibilitychange", visibilityChanged);
+    };
+  });
 </script>
 
-<div class="relative min-h-0 flex-1">
-  {#if !running || !instanceID}
+<div class="relative flex min-h-0 flex-1 flex-col">
+  {#if !instanceID}
     <p
       class="flex h-full items-center justify-center px-4 text-center text-[12px] text-muted-foreground"
     >
-      Output is available while a local runtime is running.
+      Install a local runtime to inspect its output.
     </p>
   {:else}
     <ProcessOutputTerminal
@@ -49,34 +62,36 @@
       onclear={() => void output.clear()}
       oncopy={Clipboard.SetText}
       describedby={!output.accepted ? "runtime-output-consent" : undefined}
-    >
-      {#if !output.accepted}
-        <!-- Output can include transcripts, prompts and file paths, so nothing
+    />
+    {#if !output.accepted}
+      <!-- Output can include transcripts, prompts and file paths, so nothing
              streams until it is asked for. -->
-        <div
-          class="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-warning/25 bg-card px-4 py-3"
+      <div
+        class="absolute inset-0 z-10 flex flex-wrap items-center justify-between gap-3 overflow-y-auto bg-card px-4 py-3"
+      >
+        <p
+          id="runtime-output-consent"
+          class="min-w-0 flex-1 basis-64 text-[12px] leading-relaxed text-secondary-foreground"
         >
-          <p
-            id="runtime-output-consent"
-            class="text-[12px] leading-relaxed text-secondary-foreground"
+          <span class="block font-semibold text-foreground"
+            >Show sensitive output</span
           >
-            <span class="block font-semibold text-foreground"
-              >Show sensitive output</span
-            >
-            Output may include transcripts, prompts and file paths.
-          </p>
-          <Button
-            size="xs"
-            class="shrink-0"
-            disabled={output.busy}
-            onclick={() => void output.show()}>Show output</Button
-          >
-        </div>
-      {/if}
-    </ProcessOutputTerminal>
+          Output may include transcripts, prompts and file paths.
+        </p>
+        <Button
+          size="xs"
+          class="shrink-0"
+          disabled={output.busy}
+          onclick={() => void output.show()}>Show output</Button
+        >
+      </div>
+    {/if}
   {/if}
   {#if output.error}
-    <p class="absolute inset-x-0 bottom-0 px-4 py-1 text-[11px] text-destructive" role="alert">
+    <p
+      class="absolute inset-x-0 bottom-0 z-20 bg-card px-4 py-1 text-[11px] text-destructive"
+      role="alert"
+    >
       {output.error}
     </p>
   {/if}

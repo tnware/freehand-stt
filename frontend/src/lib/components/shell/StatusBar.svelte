@@ -7,6 +7,8 @@
   import ShortcutKeys from "$lib/components/common/ShortcutKeys.svelte";
   import { Button } from "$lib/components/ui/button";
   import { elapsedSeconds, State, type Status } from "$lib/state";
+  import { Purpose } from "$bindings/savedconnection";
+  import { isCopyRequired } from "$lib/utils/status";
   import type {
     TaskConnectionDetails,
     TaskConnectionStatus,
@@ -67,19 +69,21 @@
    * Settings or Text to speech never hides whether the recorder is live.
    */
   const capture = $derived.by(() => {
+    if (isCopyRequired(dictation))
+      return { label: "Copy required", live: false, tone: "warn" };
     switch (dictation.state) {
       case State.Recording:
-        return { label: `Recording ${clock}`, live: true, tone: "record" };
+        return { label: "Recording", live: true, tone: "record" };
       case State.Transcribing:
         return { label: "Transcribing", live: true, tone: "busy" };
       case State.PostProcessing:
         return { label: "Cleaning up", live: true, tone: "busy" };
       case State.Ready:
-        return { label: "Copy required", live: false, tone: "warn" };
+        return { label: "Checking insertion target", live: true, tone: "busy" };
       case State.Cancelling:
         return { label: "Cancelling", live: true, tone: "busy" };
       case State.Failed:
-        return { label: "Recording failed", live: false, tone: "bad" };
+        return { label: "Dictation failed", live: false, tone: "bad" };
       default:
         return { label: "Ready", live: false, tone: "idle" };
     }
@@ -92,13 +96,12 @@
   class="status-bar flex h-6 shrink-0 items-center justify-between gap-2 border-t px-3 text-[11px] leading-none"
   data-tone={capture.tone}
 >
-  <div class="flex min-w-0 items-center gap-2.5">
+  <div class="flex min-w-0 flex-1 items-center gap-2.5">
     <span
       class="flex shrink-0 items-center gap-2 rounded-sm px-1.5 py-1 {capture.tone ===
       'record'
         ? 'bg-record-wash text-record-text'
         : ''}"
-      role="status"
     >
       <span
         class="size-2 shrink-0 rounded-full {capture.tone === 'record'
@@ -112,7 +115,12 @@
                 : 'border border-muted-foreground'}"
         aria-hidden="true"
       ></span>
-      <span class="figure font-medium">{capture.label}</span>
+      <span class="figure font-medium" role="status">{capture.label}</span>
+      {#if dictation.state === State.Recording}
+        <span class="figure font-medium" aria-label={`Recording time ${clock}`}
+          >{clock}</span
+        >
+      {/if}
       {#if !capture.live && toggleShortcut}
         <span class="hidden min-[760px]:inline">
           <ShortcutKeys value={toggleShortcut} label="Recording shortcut" />
@@ -145,7 +153,7 @@
         align="start"
         role="dialog"
         aria-label="Active connection"
-        class="w-[440px]"
+        class="w-[440px] max-w-[calc(100vw-24px)]"
       >
         {#key `${connectionDetails.purpose}:${connectionDetails.selected?.id ?? ""}`}
           <TaskConnectionPanel
@@ -162,20 +170,26 @@
     {#if connectionDetails.model}
       <span class="h-3 w-px shrink-0 bg-border" aria-hidden="true"></span>
       <span
-        class="hidden truncate font-mono text-[10px] text-ink-quiet min-[900px]:inline"
+        class="hidden max-w-48 truncate font-mono text-[10px] text-ink-quiet min-[900px]:inline"
         title={connectionDetails.model}>{connectionDetails.model}</span
       >
     {/if}
   </div>
 
   <div class="flex shrink-0 items-center gap-2.5">
-    <span class="hidden items-center gap-2.5 min-[960px]:flex">
-      <span class="sb">{cleanup ? `Cleanup ${cleanup}` : "No cleanup"}</span>
-      <span class="vr"></span>
-      <span class="sb">{delivery}</span>
-      <span class="vr"></span>
-      <span class="sb mono text-muted-foreground">{commandHint}</span>
-      <span class="vr"></span>
+    <span class="hidden items-center gap-2.5 min-[1100px]:flex">
+      {#if connectionDetails.purpose !== Purpose.Speech}
+        <span
+          class="max-w-40 truncate"
+          title={cleanup ? `Cleanup ${cleanup}` : "No cleanup"}
+          >{cleanup ? `Cleanup ${cleanup}` : "No cleanup"}</span
+        >
+        <span class="h-3 w-px bg-border" aria-hidden="true"></span>
+      {/if}
+      <span>{delivery}</span>
+      <span class="h-3 w-px bg-border" aria-hidden="true"></span>
+      <span class="font-mono text-muted-foreground">{commandHint}</span>
+      <span class="h-3 w-px bg-border" aria-hidden="true"></span>
     </span>
     {#if version}
       <span class="figure text-ink-quiet">{version}</span>

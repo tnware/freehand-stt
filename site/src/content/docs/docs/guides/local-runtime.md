@@ -70,11 +70,11 @@ index; NeMo's model manager handles the download.
 
 ## Set up local transcription
 
-1. Open **Settings → Local runtime**, under **Connections & vocabulary**.
+1. Open **Local runtime** from the activity rail on the left.
 2. Find **NeMo-Speech.cpp** in the runtime list and choose **Install**. Keep the
    recommended Nemotron 3.5 Streaming model. Installation does not download it.
-3. The row opens its setup controls. Progress and cancellation stay in that area;
-   use the chevron beside the runtime to collapse or reopen its details.
+3. Select the runtime in the inventory sidebar to view its setup controls,
+   progress, and cancellation action.
 4. When installation finishes, the action changes to **Download**.
    Choose it to download Nemotron, or use the catalog below to choose an alternative.
    Browsing the catalog does not download or load any model.
@@ -97,10 +97,10 @@ in Voice keeps its connection and model selected and uses completed recording.
 
 ## Choose another model
 
-With details collapsed, each runtime row shows its status and selected model.
-Use **Download**, **Start**, **Stop**, or **Cancel** directly from that row; download
-progress and its result remain visible there. The chevron opens the full setup,
-model catalog, and runtime preferences. These actions never select a different
+Select a runtime in the inventory sidebar. Its detail pane shows state, setup
+actions, and a model table with download and selection controls. Open
+**Runtime preferences** for startup and binary options, or **Manage runtime**
+for removal and recovery actions. These actions never select a different
 Connection for your tasks.
 
 Choose a model from the runtime's catalog for the task you need.
@@ -152,7 +152,7 @@ pinned CPU and CUDA 12.4 packages, not an upgrade to the latest upstream release
 Existing installations do not change automatically. Recommendations do not
 reserve GPU memory, stop other runtimes, or change as free GPU memory fluctuates.
 
-For llama.cpp or whisper.cpp, open its details using the chevron. If it is
+For llama.cpp or whisper.cpp, select it in the runtime sidebar. If it is
 running, choose **Stop**. Under **Runtime binary**, choose
 **NVIDIA GPU (CUDA)** and wait for installation to finish, then choose
 **Start**. Runtime management, quick settings, and Connection details

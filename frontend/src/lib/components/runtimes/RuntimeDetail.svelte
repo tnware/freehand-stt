@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
+  import { Role } from "$bindings/compatibility";
   import {
     ProviderID,
     type BinaryOptions,
@@ -10,12 +12,19 @@
   import DownloadIcon from "@lucide/svelte/icons/download";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
-  import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import { Button } from "$lib/components/ui/button";
+  import { Switch } from "$lib/components/ui/switch";
+  import * as Dialog from "$lib/components/ui/dialog";
+  import RuntimeDownloadSource from "$lib/components/settings/RuntimeDownloadSource.svelte";
+  import ModelDownloadSource from "$lib/components/settings/ModelDownloadSource.svelte";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
   import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
-  import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
+  import {
+    backendLabel,
+    modelSize,
+    runtimePresentation,
+  } from "$lib/utils/managedRuntime";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
 
   let {
@@ -33,17 +42,40 @@
     workBusy?: boolean;
     onOpenConnections: () => void;
   } = $props();
-
+  const uid = $props.id();
   const status = $derived(row?.status);
   const instance = $derived(row?.instance);
-  const view = $derived(runtimePresentation(status));
+  let now = $state(Date.now());
+  $effect(() => {
+    if (status?.state !== "starting") return;
+    const timer = setInterval(() => (now = Date.now()), 1000);
+    return () => clearInterval(timer);
+  });
+  const view = $derived(runtimePresentation(status, now));
   const running = $derived(status?.state === "running");
+  // Keep the catalog visible during acquisition or binary switching.
   const installed = $derived(
-    !!status && !["not_installed", "installing"].includes(status.state),
+    view.installed || (!!status?.backend && status.state !== "not_installed"),
   );
   const busy = $derived(!!instance && runtime.isBusy(instance.id));
-  const models = $derived(status?.models ?? entry.models ?? []);
-
+  const actionLocked = $derived(
+    locked ||
+      workBusy ||
+      busy ||
+      !entry.supported ||
+      status?.supported === false,
+  );
+  const models = $derived(
+    (status?.models?.length ? status.models : (entry.models ?? [])).filter(
+      (model) => entry.models?.some((qualified) => qualified.id === model.id),
+    ),
+  );
+  const selectedModel = $derived(
+    models.find((model) => model.id === instance?.model),
+  );
+  const problem = $derived(
+    runtime.errorFor(instance?.id ?? entry.id) || status?.error || "",
+  );
   let preferencesOpen = $state(false);
   let sourceOpen = $state(false);
   let manageOpen = $state(false);
@@ -52,11 +84,13 @@
   let probing = $state(false);
   let recommendation = $state<BinaryOptions | null>(null);
   let binaryChoice = $state("auto");
-  let confirming = $state<"files" | "instance" | null>(null);
-
-  const problem = $derived(
-    (instance && runtime.errorFor(instance.id)) || status?.error || "",
-  );
+  type Removal =
+    { kind: "files" } | { kind: "instance" } | { kind: "model"; model: Model };
+  let confirming = $state<Removal | null>(null);
+  let alive = true;
+  onDestroy(() => {
+    alive = false;
+  });
   const chosenBackend = $derived(
     binaryChoice === "auto"
       ? (recommendation?.recommendedBackend ?? "")
@@ -71,24 +105,30 @@
           option.available,
       ),
   );
-  // llama.cpp and whisper.cpp ship per-backend binaries, so they are probed
-  // before anything is fetched. Everything else installs directly.
   const switchable = $derived(
     entry.id === ProviderID.LlamaCPP || entry.id === ProviderID.WhisperCPP,
   );
+  const sourceBackend = $derived(
+    recommendation ? chosenBackend : (status?.backend ?? ""),
+  );
 
   function install(backend?: string) {
-    if (locked || runtime.busy || probing || !entry.supported) return;
+    if (actionLocked || runtime.busy || probing || !entry.models?.length)
+      return;
     if (switchable && !backend) {
       probing = true;
       recommendation = null;
       void runtime
         .binaryOptions(entry.id)
         .then((options) => {
-          recommendation = options;
-          binaryChoice = "auto";
+          if (alive) {
+            recommendation = options;
+            binaryChoice = "auto";
+          }
         })
-        .finally(() => (probing = false));
+        .finally(() => {
+          if (alive) probing = false;
+        });
       return;
     }
     void (async () => {
@@ -106,62 +146,50 @@
         };
         if (!(await runtime.saveInstance(target))) return;
       }
-      recommendation = null;
+      if (alive) recommendation = null;
       if (backend) await runtime.installBackend(target.id, backend);
       else await runtime.run(target.id, "Install");
     })();
   }
-
+  function act(action: () => Promise<unknown>) {
+    if (!actionLocked) void action();
+  }
   function confirmRemoval() {
-    if (!confirming || !instance || locked) return;
-    const kind = confirming;
+    if (!confirming || !instance || actionLocked || running) return;
+    const target = confirming,
+      id = instance.id;
     confirming = null;
     act(() =>
-      kind === "files"
-        ? runtime.run(instance.id, "Remove")
-        : runtime.deleteInstance(instance.id),
+      target.kind === "files"
+        ? runtime.run(id, "Remove")
+        : target.kind === "instance"
+          ? runtime.deleteInstance(id)
+          : runtime.removeModel(id, target.model.id),
     );
   }
-
-  function size(bytes: number): string {
-    if (!bytes) return "—";
-    const units = ["KB", "MB", "GB"];
-    let value = bytes / 1024;
-    let unit = 0;
-    while (value >= 1024 && unit < units.length - 1) {
-      value /= 1024;
-      unit += 1;
-    }
-    return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`;
+  function restart() {
+    if (!instance || actionLocked || !running) return;
+    const id = instance.id;
+    act(async () => {
+      if (await runtime.run(id, "Stop")) await runtime.run(id, "Start");
+    });
   }
-
   const task = (model: Model): string =>
-    model.realtime ? "Streaming" : "Batch";
-
-  function source(model: Model): string {
-    if (!model.source) return `${entry.name} model manager`;
-    return model.source.publisher || model.source.metadataOrigin || "Catalog";
-  }
-
-  function act(action: () => Promise<unknown>) {
-    void action();
-  }
-
-  // The binary actually pinned for this machine, so "checksum pinned" is a
-  // claim the panel can substantiate rather than a slogan.
-  const artifact = $derived(
-    (entry.source?.artifacts ?? []).find(
-      (item) => !status?.backend || item.backend === status.backend,
-    ) ?? entry.source?.artifacts?.[0],
-  );
+    model.contracts?.some((contract) => contract.role === Role.PostProcessing)
+      ? "Cleanup"
+      : model.realtime
+        ? "Streaming"
+        : "Batch";
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="flex min-h-0 min-w-0 flex-1 flex-col">
   <div
-    class="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5"
+    class="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-hairline px-5 py-2"
   >
     <div class="flex min-w-0 items-center gap-2.5">
-      <h3 class="truncate font-display text-[15px] font-semibold tracking-tight">
+      <h3
+        class="truncate font-display text-[15px] font-semibold tracking-tight"
+      >
         {entry.name}
       </h3>
       <StatusBadge
@@ -169,408 +197,519 @@
           ? "success"
           : status?.state === "error"
             ? "danger"
-            : status?.state === "starting"
+            : busy
               ? "accent"
               : "neutral"}
-        dot>{view.label}</StatusBadge
+        dot
+        >{status
+          ? view.label
+          : entry.supported
+            ? "Not installed"
+            : "Unavailable"}</StatusBadge
       >
     </div>
     <div class="flex shrink-0 items-center gap-1.5">
-      {#if installed}
+      {#if busy && instance}
         <Button
           variant="outline"
           size="xs"
-          disabled={locked || busy || !running}
-          onclick={() =>
-            act(async () => {
-              await runtime.run(instance!.id, "Stop");
-              await runtime.run(instance!.id, "Start");
-            })}>Restart</Button
+          aria-label="Cancel operation"
+          disabled={runtime.pendingFor(instance.id) === "Cancelling"}
+          onclick={() => void runtime.cancel(instance.id)}>Cancel</Button
         >
-        <Button
-          variant="outline"
-          size="xs"
-          disabled={locked || busy}
-          onclick={() =>
-            act(() => runtime.run(instance!.id, running ? "Stop" : "Start"))}
-          >{running ? "Stop" : "Start"}</Button
-        >
+      {:else if installed && instance}
+        {#if running}<Button
+            variant="outline"
+            size="xs"
+            disabled={actionLocked}
+            onclick={restart}>Restart</Button
+          >{/if}
+        {#if !running && !selectedModel?.installed}
+          <Button
+            variant="outline"
+            size="xs"
+            aria-label="Download selected model"
+            disabled={actionLocked || !selectedModel}
+            onclick={() =>
+              act(() => runtime.downloadModel(instance.id, instance.model))}
+            ><DownloadIcon class="size-3" />Get model</Button
+          >
+        {:else}
+          <Button
+            variant="outline"
+            size="xs"
+            disabled={actionLocked}
+            onclick={() =>
+              act(() => runtime.run(instance.id, running ? "Stop" : "Start"))}
+            >{running ? "Stop" : "Start"}</Button
+          >
+        {/if}
       {/if}
     </div>
   </div>
-
-  <!-- The literals a runtime is actually identified by. Freehand does not
-       report a pid or a port to the renderer, so this states what it knows. -->
   <div
-    class="flex h-[38px] shrink-0 items-center gap-3 overflow-x-auto border-b border-hairline px-5"
+    class="flex min-h-[38px] shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline px-5 py-2"
   >
-    {#each [status?.version || entry.version, status?.backend ? backendLabel(status.backend) : "", status?.selectedModel] as fact, index (index)}
-      {#if fact}
-        {#if index > 0}
-          <span class="h-3 w-px shrink-0 bg-border" aria-hidden="true"></span>
-        {/if}
-        <span class="shrink-0 font-mono text-[10px] text-ink-quiet">{fact}</span>
-      {/if}
+    {#each [status?.version || entry.version, status?.backend ? backendLabel(status.backend) : "", status?.selectedModel].filter(Boolean) as fact, index (index)}
+      {#if index > 0}<span
+          class="h-3 w-px shrink-0 bg-border"
+          aria-hidden="true"
+        ></span>{/if}
+      <span class="min-w-0 truncate font-mono text-[10px] text-ink-quiet"
+        >{fact}</span
+      >
     {/each}
     <span class="flex-1"></span>
     <button
       type="button"
       class="shrink-0 text-[11px] text-ink-quiet underline-offset-2 hover:text-accent-text hover:underline"
-      onclick={onOpenConnections}
-      >Appears to your chains as a built-in Connection</button
+      onclick={onOpenConnections}>Open Connections</button
     >
   </div>
-
   <div class="min-h-0 flex-1 overflow-y-auto px-5">
+    {#if busy || view.completion || problem}
+      <div
+        class="space-y-1.5 border-b border-hairline py-3"
+        role="status"
+        aria-label="Runtime operation"
+      >
+        {#if busy}
+          <p class="text-[12px] text-secondary-foreground">
+            {view.startup || view.activity}{view.operationModel
+              ? ` · ${view.operationModel}`
+              : ""}{view.transferred ? ` · ${view.transferred}` : ""}
+          </p>
+          {#if view.percent !== null}<progress
+              class="h-1.5 w-full accent-primary"
+              max="100"
+              value={view.percent}
+              aria-label="Runtime operation progress"
+            ></progress>{/if}
+        {:else if view.completion}<p
+            class="text-[12px] text-secondary-foreground"
+          >
+            {view.operationModel
+              ? `${view.operationModel}: `
+              : ""}{view.completion}
+          </p>{/if}
+        {#if problem}<p class="text-[12px] text-destructive" role="alert">
+            {problem}
+          </p>{/if}
+        {#if instance && runtime.canRetry(instance.id) && !busy}<Button
+            variant="outline"
+            size="xs"
+            disabled={actionLocked}
+            onclick={() => act(() => runtime.retry(instance.id))}>Retry</Button
+          >{/if}
+      </div>
+    {/if}
     {#if !installed}
-      <!-- Nothing is fetched until a binary is chosen and install is pressed:
-           probing reads host capability only. -->
       <div class="flex flex-col gap-3 py-4">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
             <p class="text-[13px] font-medium">
-              {entry.supported ? "Not installed" : "Unavailable on this machine"}
+              {entry.supported
+                ? busy
+                  ? "Installation in progress"
+                  : "Not installed"
+                : "Unavailable on this machine"}
             </p>
-            <p class="mt-0.5 font-mono text-[10px] text-ink-quiet">
+            <p class="mt-0.5 text-[11px] text-ink-quiet">
               {entry.unavailableReason ||
-                (switchable
-                  ? "per-backend binaries · choose one to install"
-                  : "installs the pinned official release")}
+                "Install the runtime, then explicitly download a model."}
             </p>
           </div>
           <Button
             size="xs"
-            disabled={locked || probing || runtime.busy || !entry.supported}
+            disabled={actionLocked ||
+              probing ||
+              runtime.busy ||
+              !entry.models?.length}
             onclick={() => install()}
+            ><DownloadIcon class="size-3" />{probing
+              ? "Checking…"
+              : recommendation
+                ? "Re-check"
+                : "Install"}</Button
           >
-            <DownloadIcon class="size-3" />
-            {probing ? "Checking…" : recommendation ? "Re-check" : "Install"}
-          </Button>
         </div>
-
-        {#if probing}
-          <p class="font-mono text-[10px] text-ink-quiet" role="status">
+        {#if probing}<p class="text-[11px] text-ink-quiet" role="status">
             Checking host binary options · no files are downloaded
-          </p>
-        {/if}
-
+          </p>{/if}
         {#if recommendation}
-          <div class="rounded-lg border border-hairline p-3">
+          <section
+            class="rounded-lg border border-hairline p-3"
+            aria-label="Runtime binary recommendation"
+          >
             <p class="text-[12.5px] font-medium">
               Recommended: {backendLabel(recommendation.recommendedBackend)}
             </p>
             <p class="mt-0.5 font-mono text-[10px] text-ink-quiet">
-              {recommendation.os} · {recommendation.architecture}{recommendation.reason
-                ? ` · ${recommendation.reason}`
-                : ""}
+              {recommendation.os} · {recommendation.architecture} · {recommendation.reason}
             </p>
             <div class="mt-2.5 flex flex-wrap gap-1.5">
-              {#each [{ backend: "auto", label: "Auto", supported: true, available: true, reason: "Use the recommended binary" }, ...(recommendation.options ?? [])] as option (option.backend)}
-                <button
-                  type="button"
-                  class="h-6 rounded-md border px-2 text-[11px] transition-colors disabled:opacity-40 {binaryChoice ===
-                  option.backend
-                    ? 'border-accent-edge bg-accent-wash text-accent-text'
-                    : 'border-border text-secondary-foreground hover:bg-subtle-fill-hover'}"
+              <Button
+                variant="outline"
+                size="xs"
+                aria-pressed={binaryChoice === "auto"}
+                disabled={actionLocked}
+                onclick={() => (binaryChoice = "auto")}
+                >Auto (recommended)</Button
+              >
+              {#each recommendation.options ?? [] as option (option.backend)}<Button
+                  variant="outline"
+                  size="xs"
                   aria-pressed={binaryChoice === option.backend}
-                  disabled={!option.supported || !option.available}
+                  disabled={actionLocked ||
+                    !option.supported ||
+                    !option.available}
                   title={option.reason}
                   onclick={() => (binaryChoice = option.backend)}
-                  >{option.backend === "auto"
-                    ? "Auto"
-                    : backendLabel(option.backend)}</button
-                >
-              {/each}
+                  >{backendLabel(option.backend)}</Button
+                >{/each}
             </div>
-            <div class="mt-3 flex items-center justify-between gap-3">
-              <p class="font-mono text-[10px] text-ink-quiet">
-                downloads on install · checksum pinned
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p class="text-[11px] text-ink-quiet">
+                Downloads on install · checksum pinned
               </p>
               <Button
                 size="xs"
-                disabled={locked || runtime.busy || !choiceAvailable}
+                disabled={actionLocked || runtime.busy || !choiceAvailable}
                 onclick={() => install(chosenBackend)}
                 >Download and install</Button
+              ><Button
+                variant="ghost"
+                size="xs"
+                onclick={() => (recommendation = null)}>Not now</Button
               >
             </div>
-          </div>
+          </section>
         {/if}
-
-        {#if entry.models?.length}
-          <div class="mt-1">
-            <p
-              class="mb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+        <section aria-label="Available models">
+          <p
+            class="mb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+          >
+            Models it can run
+          </p>
+          {#each entry.models ?? [] as model (model.id)}
+            <article
+              class="border-b border-hairline py-2"
+              aria-label={model.name}
             >
-              Models it can run
-            </p>
-            {#each entry.models as model (model.id)}
-              <div class="flex h-11 items-center gap-3 border-b border-hairline">
-                <span class="min-w-0 flex-1">
-                  <span class="block truncate text-[12.5px]">{model.name}</span>
-                  <span class="block truncate font-mono text-[10px] text-ink-quiet"
+              <div class="flex items-center justify-between gap-3">
+                <span class="min-w-0"
+                  ><span class="block truncate text-[12.5px]">{model.name}</span
+                  ><span
+                    class="block truncate font-mono text-[10px] text-ink-quiet"
                     >{model.id}</span
-                  >
-                </span>
-                <span class="shrink-0 font-mono text-[10px] text-ink-quiet"
-                  >{size(model.sizeBytes)}</span
+                  ></span
+                ><span class="shrink-0 text-[10px] text-ink-quiet"
+                  >{model.recommended ? "Recommended" : task(model)}</span
                 >
-                {#if model.recommended}
-                  <span
-                    class="shrink-0 rounded-sm border border-accent-edge px-1.5 py-0.5 text-[10px] text-accent-text"
-                    >Recommended</span
-                  >
-                {/if}
               </div>
-            {/each}
-          </div>
-        {/if}
+              {#if model.source}<div class="mt-2">
+                  <ModelDownloadSource
+                    source={model.source}
+                    description={model.description}
+                  />
+                </div>{/if}
+            </article>
+          {/each}
+        </section>
       </div>
     {:else}
-    <div class="flex h-10 items-center justify-between gap-3">
-      <span
-        class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-        >Models</span
+      <div
+        class="flex min-h-10 flex-wrap items-center justify-between gap-2 py-2"
       >
-      <div class="flex items-center gap-2.5">
-        <span class="hidden text-[11px] text-ink-quiet min-[900px]:inline"
-          >Browsing is metadata-only. Only Get fetches files.</span
-        >
-        <Button
+        <span
+          class="text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+          >Models</span
+        ><Button
           variant="outline"
           size="xs"
-          disabled={locked || busy || !installed}
+          disabled={actionLocked}
           onclick={() => act(() => runtime.run(instance!.id, "RefreshCatalog"))}
+          ><RefreshCwIcon class="size-3" />Refresh catalog</Button
         >
-          <RefreshCwIcon class="size-3" />
-          Refresh catalog
-        </Button>
       </div>
-    </div>
-
-    <div
-      class="flex h-[26px] items-center border-b border-hairline text-[10px] font-semibold tracking-[0.07em] text-ink-quiet uppercase"
-    >
-      <span class="min-w-0 flex-1">Model</span>
-      <span class="w-[92px] shrink-0">Task</span>
-      <span class="w-[72px] shrink-0 text-right">Size</span>
-      <span class="hidden w-[150px] shrink-0 pl-6 min-[1000px]:block">Source</span>
-      <span class="w-[104px] shrink-0 pl-4">State</span>
-      <span class="w-[84px] shrink-0 text-right">Action</span>
-    </div>
-
-    {#each models as model (model.id)}
-      {@const selected = model.id === (instance?.model || status?.selectedModel)}
-      {@const loaded = selected && running}
-      <div
-        class="flex h-12 items-center border-b border-hairline {selected
-          ? 'bg-accent-wash'
-          : ''}"
-      >
-        <span class="min-w-0 flex-1 pl-2">
-          <span class="block truncate text-[12.5px] text-foreground"
-            >{model.name}</span
-          >
-          <span class="block truncate font-mono text-[10px] text-ink-quiet"
-            >{model.id}</span
-          >
-        </span>
-        <span class="w-[92px] shrink-0 text-[11.5px] text-secondary-foreground"
-          >{task(model)}</span
-        >
-        <span class="w-[72px] shrink-0 text-right font-mono text-[10px]"
-          >{size(model.sizeBytes)}</span
-        >
-        <span
-          class="hidden w-[150px] shrink-0 truncate pl-6 text-[11.5px] text-muted-foreground min-[1000px]:block"
-          >{source(model)}</span
-        >
-        <span
-          class="flex w-[104px] shrink-0 items-center gap-1.5 pl-4 text-[11.5px] {loaded
-            ? 'text-success'
-            : model.installed
-              ? 'text-muted-foreground'
-              : 'text-ink-quiet'}"
-        >
-          {#if loaded}
-            <span class="size-[7px] rounded-full bg-success" aria-hidden="true"
-            ></span>
-          {/if}
-          {loaded
-            ? "Loaded"
-            : selected
-              ? "Selected"
-              : model.installed
-                ? "Downloaded"
-                : "Not installed"}
-        </span>
-        <span class="flex w-[84px] shrink-0 items-center justify-end gap-1">
-          {#if !model.installed}
-            <Button
-              variant="outline"
-              size="xs"
-              disabled={locked || busy || !installed}
-              onclick={() => act(() => runtime.downloadModel(instance!.id, model.id))}
-            >
-              <DownloadIcon class="size-3" />
-              Get
-            </Button>
-          {:else if !selected}
-            <Button
-              variant="outline"
-              size="xs"
-              disabled={locked || busy}
-              onclick={() =>
-                act(() =>
-                  runtime.saveInstance({ ...instance!, model: model.id }),
-                )}>Select</Button
-            >
-          {:else}
-            <Button
-              variant="ghost"
-              size="xs"
-              class="size-6 p-0"
-              disabled={locked || busy}
-              aria-label={`Remove ${model.name} files`}
-              title="Remove downloaded files"
-              onclick={() => act(() => runtime.removeModel(instance!.id, model.id))}
-            >
-              <Trash2Icon class="size-3.5" />
-            </Button>
-          {/if}
-        </span>
-      </div>
-    {:else}
-      <p class="py-6 text-center text-[13px] text-muted-foreground">
-        {installed
-          ? "No models in this runtime's catalog yet."
-          : "Install this runtime to browse its models."}
+      <p class="pb-2 text-[11px] text-ink-quiet">
+        {running
+          ? "Stop to download, change or remove models."
+          : "Browsing is metadata-only. Only Get fetches model files."}
       </p>
-    {/each}
-
-    {#each [{ open: preferencesOpen, toggle: () => (preferencesOpen = !preferencesOpen), label: "Runtime preferences", value: `${status?.realtime ? "streaming" : "batch"} · ${status?.backend ? backendLabel(status.backend) : "backend unset"}` }, { open: sourceOpen, toggle: () => (sourceOpen = !sourceOpen), label: "Binary download source", value: artifact ? `official release · ${artifact.backend} · checksum pinned` : "official release" }] as disclosure (disclosure.label)}
+      <div class="overflow-x-auto" role="region" aria-label="Model catalog">
+        <div class="min-w-[520px]">
+          <div
+            class="flex h-[26px] items-center border-b border-hairline text-[10px] font-semibold tracking-[0.07em] text-ink-quiet uppercase"
+          >
+            <span class="min-w-0 flex-1">Model</span><span
+              class="w-[70px] shrink-0">Task</span
+            ><span class="w-[70px] shrink-0 text-right">Size</span><span
+              class="w-[90px] shrink-0 pl-3">State</span
+            ><span class="w-[120px] shrink-0 text-right">Action</span>
+          </div>
+          {#each models as model (model.id)}
+            {@const selected = model.id === instance?.model}
+            {@const loaded = selected && running}
+            {@const modelSource =
+              entry.models?.find((qualified) => qualified.id === model.id)
+                ?.source ?? model.source}
+            {@const downloading =
+              status?.operation?.kind === "download" &&
+              status.operation.model === model.id}
+            <article aria-label={model.name}>
+              <div
+                class="flex min-h-12 items-center border-b border-hairline {selected
+                  ? 'bg-accent-wash'
+                  : ''}"
+              >
+                <span class="min-w-0 flex-1 pl-2"
+                  ><span class="block truncate text-[12.5px] text-foreground"
+                    >{model.name}</span
+                  ><span
+                    class="block truncate font-mono text-[10px] text-ink-quiet"
+                    >{model.id}</span
+                  ></span
+                >
+                <span
+                  class="w-[70px] shrink-0 text-[11px] text-secondary-foreground"
+                  >{task(model)}</span
+                ><span
+                  class="w-[70px] shrink-0 text-right font-mono text-[10px]"
+                  title={modelSize(model.sizeBytes)}
+                  >{model.sizeBytes ? modelSize(model.sizeBytes) : "—"}</span
+                >
+                <span
+                  class="w-[90px] shrink-0 pl-3 text-[11px] {loaded
+                    ? 'text-success'
+                    : 'text-ink-quiet'}"
+                  >{loaded
+                    ? "Loaded"
+                    : selected
+                      ? "Selected"
+                      : model.installed
+                        ? "Downloaded"
+                        : "Not installed"}</span
+                >
+                <span
+                  class="flex w-[120px] shrink-0 items-center justify-end gap-1"
+                >
+                  {#if downloading && busy}<Button
+                      variant="outline"
+                      size="xs"
+                      disabled={runtime.pendingFor(instance!.id) ===
+                        "Cancelling"}
+                      onclick={() => void runtime.cancel(instance!.id)}
+                      >Cancel</Button
+                    >
+                  {:else}
+                    {#if !model.installed}<Button
+                        variant="outline"
+                        size="xs"
+                        disabled={actionLocked || running}
+                        onclick={() =>
+                          act(() =>
+                            runtime.downloadModel(instance!.id, model.id),
+                          )}><DownloadIcon class="size-3" />Get</Button
+                      >{/if}
+                    {#if !selected}<Button
+                        variant="outline"
+                        size="xs"
+                        disabled={actionLocked || running}
+                        onclick={() =>
+                          act(() =>
+                            runtime.saveInstance({
+                              ...instance!,
+                              model: model.id,
+                            }),
+                          )}>Select</Button
+                      >{/if}
+                    {#if model.installed}<Button
+                        variant="ghost"
+                        size="xs"
+                        class="size-6 p-0"
+                        disabled={actionLocked || running}
+                        aria-label={`Delete ${model.name}`}
+                        title="Remove downloaded files"
+                        onclick={() => (confirming = { kind: "model", model })}
+                        ><Trash2Icon class="size-3.5" /></Button
+                      >{/if}
+                  {/if}
+                </span>
+              </div>
+              {#if downloading}<div
+                  class="space-y-1 px-2 py-2 text-[11px] text-secondary-foreground"
+                  role="status"
+                >
+                  {#if busy}{#if view.percent !== null}<progress
+                        class="h-1.5 w-full accent-primary"
+                        max="100"
+                        value={view.percent}
+                        aria-label={`${model.name} download progress`}
+                      ></progress>{/if}
+                    <p>
+                      {view.activity}{view.transferred
+                        ? ` · ${view.transferred}`
+                        : ""}
+                    </p>{:else if view.completion}<p>{view.completion}</p>{/if}
+                </div>{/if}
+              <details
+                class="border-b border-hairline px-2 py-1 text-[11px] text-ink-quiet"
+              >
+                <summary
+                  class="w-fit cursor-pointer py-1 focus-visible:outline-ring"
+                  >Model source and details</summary
+                >
+                <div class="py-2">
+                  {#if modelSource}<ModelDownloadSource
+                      source={modelSource}
+                      description={model.description}
+                    />{:else}<p>{model.description}</p>{/if}
+                </div>
+              </details>
+            </article>
+          {:else}<p class="py-6 text-center text-[13px] text-muted-foreground">
+              No qualified models in this runtime's catalog yet.
+            </p>{/each}
+        </div>
+      </div>
+    {/if}
+    {#if instance}
       <button
         type="button"
-        class="flex h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
-        aria-expanded={disclosure.open}
-        onclick={disclosure.toggle}
-      >
-        <span class="flex items-center gap-2">
-          <ChevronRightIcon
-            class="size-3.5 text-muted-foreground transition-transform {disclosure.open
+        class="flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        aria-expanded={preferencesOpen}
+        onclick={() => (preferencesOpen = !preferencesOpen)}
+        ><span class="flex items-center gap-2"
+          ><ChevronRightIcon
+            class="size-3.5 text-muted-foreground {preferencesOpen
               ? 'rotate-90'
               : ''}"
-            aria-hidden="true"
-          />
-          <span class="text-[12.5px] text-secondary-foreground"
-            >{disclosure.label}</span
-          >
-        </span>
-        <span class="truncate font-mono text-[10px] text-ink-quiet"
-          >{disclosure.value}</span
-        >
-      </button>
-      {#if disclosure.open && disclosure.label === "Binary download source" && entry.source}
-        <dl
-          class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 border-b border-hairline py-2.5 pl-7 font-mono text-[10px]"
-        >
-          {#each [["Repository", entry.source.repositoryURL], ["Release", entry.source.releaseURL], ["File", artifact?.filename ?? ""], ["Checksum", artifact?.sha256 ?? ""]] as pair (pair[0])}
-            {#if pair[1]}
-              <dt class="text-ink-quiet">{pair[0]}</dt>
-              <dd class="truncate text-secondary-foreground">{pair[1]}</dd>
-            {/if}
-          {/each}
-        </dl>
-      {/if}
-    {/each}
-
-    <button
-      type="button"
-      class="flex h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
-      aria-expanded={manageOpen}
-      onclick={() => (manageOpen = !manageOpen)}
-    >
-      <span class="flex items-center gap-2">
-        <ChevronRightIcon
-          class="size-3.5 text-muted-foreground transition-transform {manageOpen
-            ? 'rotate-90'
-            : ''}"
-          aria-hidden="true"
-        />
-        <span class="text-[12.5px] text-secondary-foreground"
-          >Manage runtime</span
-        >
-      </span>
-      <span class="font-mono text-[10px] text-ink-quiet"
-        >repair · remove · retry</span
+          /><span class="text-[12.5px] text-secondary-foreground"
+            >Runtime preferences</span
+          ></span
+        ><span class="truncate font-mono text-[10px] text-ink-quiet"
+          >{instance.autoStart ? "starts with Freehand" : "manual start"}</span
+        ></button
       >
-    </button>
-    {#if manageOpen}
-      <div class="flex flex-col gap-2 border-b border-hairline py-3">
-        {#if problem}
-          <p
-            class="flex items-start gap-1.5 text-[11.5px] leading-snug text-destructive"
-            role="alert"
-          >
-            <TriangleAlertIcon class="mt-0.5 size-3.5 shrink-0" />
-            {problem}
+      {#if preferencesOpen}
+        <div class="space-y-4 border-b border-hairline py-3">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <label for={`${uid}-autostart`} class="text-[12.5px]"
+                >Start when Freehand launches</label
+              >
+              <p class="mt-1 text-[11px] text-ink-quiet">
+                Uses the selected model. Does not download missing files.
+              </p>
+            </div>
+            <Switch
+              id={`${uid}-autostart`}
+              checked={instance.autoStart}
+              disabled={actionLocked}
+              onCheckedChange={(autoStart) =>
+                act(() => runtime.saveInstance({ ...instance, autoStart }))}
+            />
+          </div>
+          <p class="break-all font-mono text-[10px] text-ink-quiet">
+            Active API model: {row?.activeModel || "None"}
           </p>
-        {/if}
-        <div class="flex flex-wrap items-center gap-1.5">
-          {#if instance && runtime.canRetry(instance.id) && !busy}
-            <Button
-              variant="outline"
-              size="xs"
-              disabled={locked}
-              onclick={() => act(() => runtime.retry(instance.id))}>Retry</Button
+          {#if switchable && installed}<fieldset
+              disabled={actionLocked || running}
             >
-          {/if}
+              <legend class="mb-2 text-[12.5px]">Runtime binary</legend>
+              <div class="flex flex-wrap gap-1.5">
+                {#each entry.backends ?? [] as backend (backend)}<Button
+                    variant="outline"
+                    size="xs"
+                    aria-pressed={status?.backend === backend}
+                    disabled={actionLocked ||
+                      running ||
+                      status?.backend === backend}
+                    onclick={() => {
+                      if (!running)
+                        act(() => runtime.installBackend(instance.id, backend));
+                    }}>{backendLabel(backend)}</Button
+                  >{/each}
+              </div>
+            </fieldset>
+            <p class="text-[11px] text-ink-quiet">
+              Stop to change binary. Switching downloads the selected binary and
+              keeps models and saved Connections.
+            </p>{/if}
+          <p class="text-[11px] text-ink-quiet">
+            Stopping or removing files keeps saved Connections selected. There
+            is no automatic fallback.
+          </p>
+        </div>
+      {/if}
+    {/if}
+    {#if entry.source}
+      <button
+        type="button"
+        class="flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        aria-expanded={sourceOpen}
+        onclick={() => (sourceOpen = !sourceOpen)}
+        ><span class="flex items-center gap-2"
+          ><ChevronRightIcon
+            class="size-3.5 text-muted-foreground {sourceOpen
+              ? 'rotate-90'
+              : ''}"
+          /><span class="text-[12.5px] text-secondary-foreground"
+            >Binary download source</span
+          ></span
+        ><span class="truncate font-mono text-[10px] text-ink-quiet"
+          >official release · checksum pinned</span
+        ></button
+      >
+      {#if sourceOpen}<div class="border-b border-hairline py-3">
+          <RuntimeDownloadSource
+            source={entry.source}
+            backend={sourceBackend}
+          />
+        </div>{/if}
+    {/if}
+    {#if instance}
+      <button
+        type="button"
+        class="flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        aria-expanded={manageOpen}
+        onclick={() => (manageOpen = !manageOpen)}
+        ><span class="flex items-center gap-2"
+          ><ChevronRightIcon
+            class="size-3.5 text-muted-foreground {manageOpen
+              ? 'rotate-90'
+              : ''}"
+          /><span class="text-[12.5px] text-secondary-foreground"
+            >Manage runtime</span
+          ></span
+        ><span class="font-mono text-[10px] text-ink-quiet"
+          >remove files · delete entry</span
+        ></button
+      >
+      {#if manageOpen}<div
+          class="flex flex-wrap gap-1.5 border-b border-hairline py-3"
+        >
           <Button
             variant="outline"
             size="xs"
-            disabled={locked || busy || running}
-            onclick={() => (confirming = "files")}
-          >
-            <Trash2Icon class="size-3" />
-            Remove downloaded files
-          </Button>
-          <Button
+            disabled={actionLocked || running || !installed}
+            onclick={() => (confirming = { kind: "files" })}
+            ><Trash2Icon class="size-3" />Remove downloaded files</Button
+          ><Button
             variant="outline"
             size="xs"
             class="text-destructive"
-            disabled={locked || busy || running}
-            onclick={() => (confirming = "instance")}>Delete runtime</Button
+            disabled={actionLocked || running}
+            onclick={() => (confirming = { kind: "instance" })}
+            >Delete runtime</Button
           >
-        </div>
-        {#if confirming}
-          <!-- Removal is explicit and says exactly what it takes with it. -->
-          <div
-            class="rounded-lg border border-warning/30 bg-warning/[0.08] p-3"
-            role="alertdialog"
-            aria-label="Confirm removal"
-          >
-            <p class="text-[12px] leading-snug text-secondary-foreground">
-              {confirming === "files"
-                ? "Stops this runtime and deletes its binary and downloaded models. The instance and its saved Connections stay, so it can be repaired."
-                : "Deletes this runtime instance. Saved Connections that point at it will need a new target."}
-            </p>
-            <div class="mt-2.5 flex gap-1.5">
-              <Button size="xs" onclick={confirmRemoval}>
-                {confirming === "files" ? "Remove files" : "Delete"}
-              </Button>
-              <Button variant="ghost" size="xs" onclick={() => (confirming = null)}
-                >Cancel</Button
-              >
-            </div>
-          </div>
-        {/if}
-      </div>
-    {/if}
+        </div>{/if}
     {/if}
   </div>
-
   <div
     class="flex shrink-0 flex-col border-t border-hairline"
-    class:h-44={!panelCollapsed}
+    class:h-56={!panelCollapsed}
   >
     <PanelTabs
       tabs={[{ id: "output", label: "Runtime output" }]}
@@ -578,8 +717,41 @@
       bind:collapsed={panelCollapsed}
       note="memory only · not written to disk"
     />
-    {#if !panelCollapsed}
-      <RuntimeOutputDrawer instanceID={instance?.id ?? ""} {running} />
-    {/if}
+    {#if !panelCollapsed}<RuntimeOutputDrawer
+        instanceID={instance?.id ?? ""}
+      />{/if}
   </div>
 </div>
+<Dialog.Root
+  open={confirming !== null}
+  onOpenChange={(open) => {
+    if (!open) confirming = null;
+  }}
+>
+  <Dialog.Content showCloseButton={false}>
+    <Dialog.Header
+      ><Dialog.Title
+        >{confirming?.kind === "model"
+          ? `Delete model: ${confirming.model.name}?`
+          : confirming?.kind === "files"
+            ? `Remove runtime files: ${instance?.name}?`
+            : `Delete runtime instance: ${instance?.name}?`}</Dialog.Title
+      ><Dialog.Description
+        >{confirming?.kind === "model"
+          ? "Deletes this downloaded model. If selected, this Connection becomes unavailable until you download it again or select another model."
+          : confirming?.kind === "files"
+            ? "Deletes this runtime's binary and downloaded models. The instance and its saved Connections remain for repair. Other installations are untouched."
+            : "Remove or reassign every Connection referencing this instance first. Deleting its entry does not delete downloaded files; remove runtime files separately if wanted."}</Dialog.Description
+      ></Dialog.Header
+    >
+    <Dialog.Footer
+      ><Button variant="outline" onclick={() => (confirming = null)}
+        >Keep</Button
+      ><Button
+        variant="destructive"
+        disabled={actionLocked || running}
+        onclick={confirmRemoval}>Confirm removal</Button
+      ></Dialog.Footer
+    >
+  </Dialog.Content>
+</Dialog.Root>

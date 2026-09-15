@@ -73,10 +73,13 @@
   function teardown() {
     stopOverlayPreview();
     session.editor.clearCredentialDraft();
-    void shortcutCapture
-      .cancel()
-      .catch((cause) => session.messages.fail(cause))
-      .finally(() => shortcutCapture.reset());
+    // Invalidate the old capture immediately. A late cancellation reply must
+    // not reset a new capture started after navigating back to Shortcuts.
+    const cancelling = shortcutCapture.cancel();
+    shortcutCapture.reset();
+    void cancelling.catch((cause) => {
+      if (alive) session.messages.fail(cause);
+    });
   }
   export function acceptRequest(request: SettingsRequest) {
     const blocked =
@@ -105,14 +108,16 @@
     guard(action);
   }
   export function openConnection(request: ConnectionManagerRequest) {
-    if (manager) return;
     guard(() => {
       teardown();
+      navigation.connection = null;
       navigation.openConnection(request);
     });
   }
   export function selectSection(section: SettingsSectionID) {
-    if (manager)
+    if (section === "local-runtime") requestClose(onOpenRuntimes);
+    else if (pending || afterConnection || session.editor.saving) return;
+    else if (manager)
       guard(() => {
         navigation.connection = null;
         navigation.openSettings(section);

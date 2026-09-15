@@ -38,7 +38,6 @@ export function installConnectionWindows(
   general = false,
 ) {
   let dispatch: Dispatch | undefined;
-  let frame: HTMLIFrameElement | undefined;
   const empty = (): SettingsRequest => ({ section: "", origin: "" });
   const emitMain: Dispatch = (name, data = null) => {
     (window as any)._wails.dispatchWailsEvent({ name, data: wire(data) });
@@ -48,19 +47,6 @@ export function installConnectionWindows(
     // Native publishes the latest request; the renderer owns draft guards.
     bridge.requestState = { pending: true, request: wire(request) };
     bridge.visible = true;
-    if (integrated && !frame) {
-      frame = document.createElement("iframe");
-      frame.dataset.window = "settings";
-      frame.title = "Settings";
-      frame.style.cssText =
-        "position:fixed;inset:0;width:100%;height:100%;border:0;z-index:1000;background:white";
-      const url = new URL(location.href);
-      url.searchParams.set("settings-frame", "1");
-      frame.src = url.href;
-      document.body.append(frame);
-    }
-    if (frame) frame.hidden = false;
-    dispatch?.("settings:visibility", true);
     dispatch?.("settings:open");
   };
   window.testConnectionWindows = {
@@ -87,6 +73,8 @@ export function installConnectionWindows(
     },
     ready: async (callback) => {
       dispatch = callback;
+      if (window.testConnectionWindows.requestState.pending)
+        dispatch("settings:open");
     },
     open: async (connection, origin = "") =>
       reveal({ section: "connections", origin, connection: wire(connection) }),
@@ -96,14 +84,12 @@ export function installConnectionWindows(
         pending: false,
         request: empty(),
       };
-      dispatch?.("settings:visibility", false);
-      if (frame) frame.hidden = true;
+      dispatch?.("shell:hidden");
     },
     finish: async (origin) => {
-      await window.testConnectionWindows.hide();
-      if (integrated && origin) emitMain("workspace:select-task", origin);
+      if (origin) emitMain("workspace:select-task", origin);
     },
-    requestClose: () => dispatch?.("settings:close-requested"),
+    requestClose: () => dispatch?.("shell:close-requested"),
     openSettings: async (section, origin = "") => reveal({ section, origin }),
   };
 }

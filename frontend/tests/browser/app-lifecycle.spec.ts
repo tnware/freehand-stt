@@ -42,14 +42,14 @@ for (const finishBeforeUnmount of [false, true]) {
             .sort(),
         ),
       )
-      .toEqual(["about", "build", "settings"]);
+      .toEqual(["about", "build"]);
     if (finishBeforeUnmount) {
       await app.evaluate((app) => app.finishLoad());
       await expect
         .poll(() =>
           page.evaluate(() => (window as any).lifecycleRequests.length),
         )
-        .toBe(4);
+        .toBe(3);
     }
     await app.evaluate((app) => app.unmount());
     await page.evaluate(() => {

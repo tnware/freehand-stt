@@ -7,7 +7,7 @@ test("deferred general reveal close cannot resume a hidden task", async ({
   );
   await expect(page.locator('[data-settings-section="speech"]')).toBeVisible();
   await page.evaluate(() => window.testConnectionWindows.hide());
-  await expect(page.locator('[data-window="settings"]')).toHaveCount(0);
+  await expect(page.locator('[data-pane="settings"]')).toHaveCount(0);
   await page.evaluate(() => {
     const bridge = window.testConnectionWindows;
     const take = bridge.take;
@@ -29,11 +29,11 @@ test("deferred general reveal close cannot resume a hidden task", async ({
     .poll(() => page.evaluate(() => !!(window as any).releaseTake))
     .toBe(true);
   await requestNativeClose(page);
-  expect(await page.evaluate(() => (window as any).finishedOrigins)).toEqual([
-    "",
-  ]);
+  expect(await page.evaluate(() => (window as any).finishedOrigins)).toEqual(
+    [],
+  );
   await page.evaluate(() => (window as any).releaseTake());
-  await expect(page.locator('[data-window="settings"]')).toHaveCount(0);
+  await expect(page.locator('[data-pane="settings"]')).toHaveCount(0);
 });
 
 for (const target of ["task", "general", "edit"] as const) {
@@ -90,7 +90,7 @@ test("cancelled close cannot survive a successful connection save", async ({
   );
 });
 
-test("blank first run uses one retained Settings renderer and returns to Voice", async ({
+test("blank first run uses the Settings pane and returns to Voice", async ({
   page,
   saves,
 }) => {
@@ -98,19 +98,15 @@ test("blank first run uses one retained Settings renderer and returns to Voice",
   await page
     .getByRole("button", { name: "Configure transcription", exact: true })
     .click();
-  const settings = page.frameLocator('iframe[data-window="settings"]');
-  await expect(page.locator("iframe")).toHaveCount(1);
-  await expect(page.locator("[data-settings-section]")).toHaveCount(0);
-  await expect(
-    settings.getByRole("tab", { name: "Voice", exact: true }),
-  ).toHaveCount(0);
+  const settings = page.locator('[data-pane="settings"]');
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await expect(settings).toBeVisible();
   await expect(settings.getByRole("tablist")).toHaveCount(0);
   await settings
     .getByRole("button", { name: "Show connections", exact: true })
     .click();
-  const frame = page.frames().find((frame) => frame !== page.mainFrame())!;
-  const document = await frame.evaluateHandle(() => window.document);
-  await settings
+  const document = await page.evaluateHandle(() => window.document);
+  await page
     .getByRole("button", { name: "Add connection…", exact: true })
     .click();
   await settings.locator("#connection-name").fill("First server");
@@ -121,51 +117,47 @@ test("blank first run uses one retained Settings renderer and returns to Voice",
     .getByRole("button", { name: "Save and return", exact: true })
     .click();
   await saves.complete(await saves.waitForStart(), "success");
-  await expect(page.locator('iframe[data-window="settings"]')).toBeVisible();
+  await expect(settings).toBeVisible();
   await settings
     .getByRole("combobox", { name: "Choose model", exact: true })
     .click();
-  await settings.getByRole("option", { name: /speech\/stt/ }).click();
+  await page.getByRole("option", { name: /speech\/stt/ }).click();
   await settings
     .getByRole("button", { name: "Save and return", exact: true })
     .click();
   await saves.complete(await saves.waitForStart(), "success");
-  await expect(page.locator('iframe[data-window="settings"]')).toBeHidden();
+  await expect(settings).toBeHidden();
   await page.getByRole("button", { name: "Finish setup", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "success");
   await expect(
     page.getByRole("region", { name: "First-run setup" }),
   ).toBeHidden();
   await expect(
-    page.getByRole("tab", { name: "Voice", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
-  await page
-    .getByRole("button", { name: "Open Settings", exact: true })
-    .click();
-  await expect(page.locator('iframe[data-window="settings"]')).toBeVisible();
-  await expect(page.locator("iframe")).toHaveCount(1);
+    page.getByRole("button", { name: "Voice transcription", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(settings).toBeVisible();
+  await expect(page.locator("iframe")).toHaveCount(0);
   expect(
     await document.evaluate((original) => original === window.document),
   ).toBe(true);
 });
 
-test("general Save stays open without workflow header; task Save and return hides", async ({
+test("general Save stays in Settings; task Save and return resumes its workflow", async ({
   page,
   saves,
 }) => {
   await page.goto("/tests/browser/app/?general");
-  await expect(page.getByRole("tablist")).toHaveCount(0);
-  await expect(
-    page.getByRole("tab", { name: "Text to speech", exact: true }),
-  ).toHaveCount(0);
+  await expect(page.locator('[data-pane="settings"]')).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Workspace" })).toHaveCount(
+    1,
+  );
   await page.locator("summary", { hasText: "Request settings" }).click();
   await page.locator("#file-transcription-timeout").fill("75");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "success");
   await expect(page.locator("#file-transcription-timeout")).toHaveValue("75");
-  expect(await page.evaluate(() => window.testConnectionWindows.visible)).toBe(
-    true,
-  );
+  await expect(page.locator('[data-pane="settings"]')).toBeVisible();
   await page.evaluate(() => window.testConnectionWindows.hide());
   await page.evaluate(() =>
     window.testConnectionWindows.openSettings("server", "file"),
@@ -176,9 +168,10 @@ test("general Save stays open without workflow header; task Save and return hide
     .getByRole("button", { name: "Save and return", exact: true })
     .click();
   await saves.complete(await saves.waitForStart(), "success");
-  await expect
-    .poll(() => page.evaluate(() => window.testConnectionWindows.visible))
-    .toBe(false);
+  await expect(page.locator('[data-pane="settings"]')).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Audio file", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
 });
 
 test("main task remains mounted while Settings owns a guarded draft", async ({
@@ -186,31 +179,31 @@ test("main task remains mounted while Settings owns a guarded draft", async ({
   saves,
 }) => {
   await page.goto("/tests/browser/app/?main&workflows");
-  await page.getByRole("tab", { name: "Text to speech", exact: true }).click();
-  // The boundary models a task configuration request, not navigation in Main.
+  await page
+    .getByRole("button", { name: "Text to speech", exact: true })
+    .click();
+  // Native requests use the same settings pane and preserve task origin.
   await page.evaluate(() =>
     window.testConnectionWindows.openSettings("server", "tts"),
   );
-  const settings = page.frameLocator('iframe[data-window="settings"]');
+  const settings = page.locator('[data-pane="settings"]');
   await expect(
-    page.getByRole("tab", { name: "Text to speech", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.getByRole("button", { name: "Settings", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
   await expect(settings.getByRole("tablist")).toHaveCount(0);
   await settings.locator("summary", { hasText: "Request settings" }).click();
   await settings.locator("#file-transcription-timeout").fill("75");
   await requestNativeClose(page);
   await expect(
-    settings.getByRole("dialog", { name: "Save changes?", exact: true }),
+    page.getByRole("dialog", { name: "Save changes?", exact: true }),
   ).toBeVisible();
-  await settings
-    .getByRole("button", { name: "Keep editing", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Keep editing", exact: true }).click();
   await settings
     .getByRole("button", { name: "Save and return", exact: true })
     .click();
   await saves.complete(await saves.waitForStart(), "success");
-  await expect(page.locator('iframe[data-window="settings"]')).toBeHidden();
+  await expect(settings).toBeHidden();
   await expect(
-    page.getByRole("tab", { name: "Text to speech", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.getByRole("button", { name: "Text to speech", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
 });

@@ -14,7 +14,7 @@ Cross-compilation is not acceptance. Run these checks on a non-elevated Windows 
 - Exercise cancellation and shutdown during capture and HTTP, an oversized/malformed response, a failed endpoint, an elevated target (UIPI), and clipboard contention.
 - Exercise local VAD in every supported mode and with VAD disabled. Verify the silence indicator debounce, trimmed and untrimmed boundaries, speech padding, auto-stop waiting/armed/countdown/cancelled-by-speech behavior, manual stop during a countdown, silence splitting disabled, pause-aware checkpoints, hard segment limits, and final partial segments. Checkpoint text must remain ordered, the final insertion must contain every completed segment exactly once, and cancellation must zero/discard unfinished audio.
 - Choose each supported stored-audio type through the Go-owned native picker; exercise picker cancellation, completed and streamed responses, buffered SSE, unsupported-stream fallback, upload-limit failure, cancellation, explicit copy, raw/processed history, Unicode/long paths, removable and network-backed files, and mutual exclusion with microphone recording. After selection, test disappearance, replacement, size/modification changes, and a direct symbolic link; each unsafe change must require reselection without upload. The full path and audio bytes must never enter renderer state, binding arguments, events, or logs.
-- Enable post-processing with a separately configured endpoint and credential. Confirm the settings window and native overlay move from Transcribing to a visually distinct Post-processing phase only when processing is enabled. Confirm successful cleanup, empty output, timeout, HTTP failure, and credential failure; every failure must preserve and deliver the raw transcript and record visible `fallback_raw` history state.
+- Enable post-processing with a separately configured endpoint and credential. Confirm the workspace and native overlay move from Transcribing to a visually distinct Post-processing phase only when processing is enabled. Confirm successful cleanup, empty output, timeout, HTTP failure, and credential failure; every failure must preserve and deliver the raw transcript and record visible `fallback_raw` history state.
 - Confirm history retains nothing while disabled. Enable it, complete enough inserted and copy-required Unicode dictations to overflow the visible history area, verify the newest-first outcome/time/character metadata and independent scrolling, explicitly copy an entry, remove one entry without disturbing the others, then confirm Clear history, disabling history, and quit/relaunch each leave no entries. Exercise oversized processed output and confirm the raw transcript remains with visible memory-limit fallback details; an oversized raw result must not be retained. No history action may focus another application or copy automatically.
 - Confirm startup enable/disable writes only the app-owned HKCU Run value and survives sign-out/sign-in. A `--startup` launch must remain resident with all application windows hidden; a normal direct or second ordinary launch must reveal the main window.
 - In Windows light and dark modes, confirm the main, Settings, About, and Transcription details windows are opaque and legible by default. Enable Mica, save, and confirm the running windows do not change material and show a restart requirement; after tray Quit and relaunch, confirm Mica reaches the main header/status strip, the Settings navigation/action bar, and the About content/action bar without reducing control contrast. Disable it and repeat back to the opaque default. On systems without Mica, confirm any opted-in Wails fallback remains legible and opt-out remains fully opaque.
@@ -196,15 +196,16 @@ tests and a successful executable build do not replace these interactive checks.
   or finalization: no partial insertion/history, no replay, bounded shutdown.
 - Turn captions off and turn live mode off separately. Ordinary overlay layouts
   and the saved completed-transcription VAD/checkpoint behavior return.
-- Open Add/Edit from Settings and quick controls: each reveals Connections inside
-  the same Settings window, never a separate Connection Manager window. Repeated
-  opens and minimize/restore must preserve an unfinished draft. Native close and
-  Escape protect unsaved edits; hide/save clears credential input. Save and return
-  from task setup resumes the originating task only after success. General Save
-  stays in Settings. Committed changes update Main; conflicting stale edits are rejected.
+- Open Add/Edit from Settings and task controls: each reveals Connections in
+  the main Settings pane. Repeated requests preserve an unfinished draft.
+  Rail, palette, Done, runtime links, native close, and Escape protect unsaved
+  edits. Hide/save clears credential input; hide also clears runtime-output
+  consent and stops shortcut capture and overlay preview. Save and return
+  resumes the originating task only after success. General Save stays in
+  Settings. Conflicting stale edits are rejected.
 
 ## Flat workspace and settings surfaces
 
 - At 560 × 560 and normal desktop sizes, check Voice, Audio file, and Text to speech in light and dark appearance. Recording, playback, toolbars, and footer actions must remain visible without horizontal overflow.
-- With history enabled, resize the adjoining panes by pointer and keyboard. In compact mode switch Result/History and scroll each transcript with the mouse wheel; open quick settings and confirm they do not move the content.
+- Resize the vertical transcript/panel split by pointer and keyboard, collapse and restore it, and navigate Recent/Runtime output/Diagnostics with Arrow/Home/End keys. In short windows switch Transcript/Recent and scroll each transcript with the mouse wheel; open Task settings in narrow windows and confirm all controls remain reachable.
 - In Settings, including its Connections editor, verify groups align with headings, disclosures reveal all their controls, and long pages still scroll to the final option. Selected rows, input boundaries, and keyboard focus must remain distinguishable in both themes and Windows contrast mode.

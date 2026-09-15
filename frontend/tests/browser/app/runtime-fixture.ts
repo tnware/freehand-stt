@@ -231,6 +231,7 @@ export function createRuntimeFixture(
   preferences();
   const calls: string[] = [];
   const downloading = new Map<string, string>();
+  let failStop = false;
   let operationID = 0;
   let publish: (row: InstanceStatus) => void = () => {};
   const get = (id: string) => {
@@ -308,6 +309,10 @@ export function createRuntimeFixture(
     },
     Stop: async ({ instanceID }) => {
       calls.push(`Stop:${instanceID}`);
+      if (failStop) {
+        failStop = false;
+        throw new Error("Fixture stop failure");
+      }
       change(instanceID, { state: "stopped", phase: "", progress: -1 });
     },
     Cancel: async ({ instanceID }) => {
@@ -374,6 +379,32 @@ export function createRuntimeFixture(
   const control = {
     calls,
     change,
+    failNextStop: () => {
+      failStop = true;
+    },
+    addDuplicate: (id: string) => {
+      const duplicate = structuredClone(rows[0]);
+      duplicate.instance.id = id;
+      duplicate.instance.name = "Duplicate speech";
+      duplicate.status.state = "stopped";
+      duplicate.activeModel = "";
+      rows.push(duplicate);
+      preferences();
+      publish(structuredClone(duplicate));
+    },
+    addSecondProvider: () => {
+      const provider = structuredClone(providers[0]);
+      provider.id = ProviderID.WhisperCPP;
+      provider.name = "Second speech provider";
+      providers.push(provider);
+      const row = structuredClone(rows[0]);
+      row.instance.id = "other-speech";
+      row.instance.provider = provider.id;
+      row.instance.name = provider.name;
+      rows.push(row);
+      preferences();
+      publish(structuredClone(row));
+    },
     snapshot: () => structuredClone(rows),
     finishDownload: (instanceID: string) => {
       const model = downloading.get(instanceID);

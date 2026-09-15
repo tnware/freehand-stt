@@ -1,6 +1,6 @@
 <script lang="ts">
   import { windowMaterial } from "$lib/platform";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { Events, Window } from "@wailsio/runtime";
   import type { ConnectionManagerRequest } from "$bindings/windowing";
   import { ModeWatcher, setMode } from "mode-watcher";
@@ -16,7 +16,13 @@
   import CommandPalette, {
     type Command,
   } from "$lib/components/shell/CommandPalette.svelte";
-  import { PANES, paneByID, type PaneID } from "$lib/panes";
+  import {
+    PANES,
+    paneByID,
+    isWorkflowPane,
+    workflowBlockedReason,
+    type PaneID,
+  } from "$lib/panes";
   import { SETTINGS_SECTIONS } from "$lib/navigation";
   import { canToggleRecording, isRecording } from "$lib/utils/status";
   import { ShellNavigation } from "$lib/shell-navigation.svelte";
@@ -41,6 +47,9 @@
   /** Non-workflow places. Null means a workflow chain is on screen. */
   let auxPane = $state<"runtimes" | "history" | "settings" | null>(null);
   let aboutOpen = $state(false);
+  let configuration = $state<SettingsPane>();
+  let alive = true;
+  let navigationGeneration = 0;
   let inputMode = $state("voice");
   // The status strip carries the same release identity About shows, read from
   // the one build-info source rather than restated here.
@@ -60,26 +69,36 @@
     return () => clearInterval(timer);
   });
 
-  // Runtimes is its own place on the rail but resolves to the settings pane's
-  // runtime section, so there is one implementation of that screen, not two.
   const activePane = $derived<PaneID>(
     auxPane === null ? (inputMode as PaneID) : auxPane,
   );
   const settingsOpen = $derived(auxPane === "settings");
 
   function selectPane(id: PaneID) {
+    if (workflowBlockedReason(id, voiceActive, fileWorking)) return;
+    navigationGeneration++;
     if (id === "settings") return openSettings("general");
-    if (id === "runtimes" || id === "history") {
-      auxPane = id;
-      return;
-    }
-    auxPane = null;
-    inputMode = id;
+    leaveSettings(() => {
+      if (isWorkflowPane(id)) {
+        auxPane = null;
+        inputMode = id;
+      } else auxPane = id;
+    });
+  }
+
+  function leaveSettings(action: () => void) {
+    const finish = () => {
+      navigation.done();
+      action();
+    };
+    if (settingsOpen && configuration) configuration.requestClose(finish);
+    else finish();
   }
 
   const fileWorking = $derived(
-    session.files.status.phase ===
-      FileTranscriptionPhase.FileTranscriptionUploading ||
+    session.files.starting ||
+      session.files.status.phase ===
+        FileTranscriptionPhase.FileTranscriptionUploading ||
       session.files.status.phase ===
         FileTranscriptionPhase.FileTranscriptionProcessing ||
       session.files.status.phase ===
@@ -104,6 +123,7 @@
       label: pane.label,
       icon: pane.icon,
       keywords: "open show switch pane",
+      disabled: !!workflowBlockedReason(pane.id, voiceActive, fileWorking),
       run: () => selectPane(pane.id),
     })),
     {
@@ -133,7 +153,12 @@
         : "Turn cleanup on",
       keywords: "post processing tidy rewrite s1-mini",
       detail: session.editor.applied?.postProcessing.model ?? "",
-      disabled: !session.editor.applied,
+      disabled:
+        !session.editor.applied ||
+        settingsOpen ||
+        session.editor.saving ||
+        session.editor.quickSettingsPending.length > 0 ||
+        !!session.editor.applied.configuration.recoveryRequired,
       run: () =>
         void session.editor.updateQuickSettings(
           {
@@ -154,11 +179,12 @@
     })),
   ]);
 
-
   $effect(() => {
     document.documentElement.dataset.material = windowMaterial(
       session.editor.applied,
     );
+    const mode = activeAppearanceMode(session.editor.applied);
+    untrack(() => setMode(mode));
   });
 
   // A bounded metadata-only probe makes readiness real rather than requiring
@@ -195,9 +221,6 @@
   });
 
   onMount(() => {
-    let alive = true;
-    setMode("system");
-
     const offSession = subscribeSessionEvents(
       session,
       Events.On,
@@ -222,36 +245,45 @@
     });
     // The tray's Settings entry is now main-window navigation, carrying the
     // section it asked for.
-    const offSettings = Events.On(
-      "settings:open",
-      (event: { data: string }) => {
-        openSettings((event.data || "general") as SettingsSectionID);
-      },
-    );
+    const offSettings = Events.On("settings:open", () => {
+      void takeSettingsRequest();
+    });
     const offTask = Events.On(
       "workspace:select-task",
       (event: { data: string }) => {
-        if (["voice", "file", "tts"].includes(event.data)) {
-          auxPane = null;
-          inputMode = event.data;
-        }
+        if (isWorkflowPane(event.data)) selectPane(event.data);
       },
     );
     // One accelerator, owned by the renderer: the palette is a window surface,
     // not a global shortcut competing with dictation.
     function commandKey(event: KeyboardEvent) {
       if (event.key !== "k" && event.key !== "K") return;
-      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (
+        (macOS
+          ? !event.metaKey || event.ctrlKey
+          : !event.ctrlKey || event.metaKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.repeat ||
+        event.isComposing
+      )
+        return;
       event.preventDefault();
       commandsOpen = !commandsOpen;
     }
     window.addEventListener("keydown", commandKey);
 
     const offClose = Events.On("shell:close-requested", () => {
-      void Window.Hide().catch((cause) => {
-        if (alive) session.messages.fail(cause);
+      navigationGeneration++;
+      leaveSettings(() => {
+        void Window.Hide()
+          .then(hidden)
+          .catch((cause) => {
+            if (alive) session.messages.fail(cause);
+          });
       });
     });
+    const offHidden = Events.On("shell:hidden", hidden);
     const offAboutVisibility = Events.On(
       "about:visibility",
       (event: { data: boolean }) => {
@@ -273,13 +305,18 @@
       .catch((cause) => {
         if (alive) session.messages.reportFailure(String(cause));
       });
-    void session.load().finally(() => {
-      if (!alive) return;
-      setMode(activeAppearanceMode(session.editor.applied));
-      void WindowingService.ShellReady().catch((cause) => {
+    void session
+      .load()
+      .catch((cause) => {
         if (alive) session.messages.fail(cause);
+      })
+      .then(() => {
+        if (!alive) return;
+        setMode(activeAppearanceMode(session.editor.applied));
+        void WindowingService.ShellReady().catch((cause) => {
+          if (alive) session.messages.fail(cause);
+        });
       });
-    });
     return () => {
       alive = false;
       offSession();
@@ -288,31 +325,74 @@
       offSecondInstance();
       offSettings();
       offTask();
-      window.removeEventListener('keydown', commandKey);
+      window.removeEventListener("keydown", commandKey);
       offClose();
+      offHidden();
       offAboutVisibility();
       session.editor.clearCredentialDraft();
     };
   });
 
   function openSettings(sectionID: SettingsSectionID = "general") {
+    navigationGeneration++;
     if (sectionID === "local-runtime") {
-      auxPane = "runtimes";
+      selectPane("runtimes");
+      return;
+    }
+    if (settingsOpen && configuration) {
+      configuration.selectSection(sectionID);
       return;
     }
     navigation.openSettings(sectionID, inputMode);
     auxPane = "settings";
   }
   function openConnection(request: ConnectionManagerRequest) {
+    navigationGeneration++;
+    if (settingsOpen && configuration) {
+      configuration.openConnection(request);
+      return;
+    }
     navigation.openConnection(request, inputMode);
     auxPane = "settings";
   }
   /** Leaving configuration returns to the workflow that opened it. */
   function closeSettings() {
+    navigationGeneration++;
     const origin = navigation.origin;
     navigation.done();
     auxPane = null;
-    if (origin && ["voice", "file", "tts"].includes(origin)) inputMode = origin;
+    if (isWorkflowPane(origin)) inputMode = origin;
+  }
+
+  function hidden() {
+    if (!alive) return;
+    navigationGeneration++;
+    commandsOpen = false;
+    if (settingsOpen) closeSettings();
+    session.editor.discardSettingsDraft();
+    session.editor.cancelConnectionEdit();
+    session.editor.clearCredentialDraft();
+  }
+
+  async function takeSettingsRequest() {
+    const generation = navigationGeneration;
+    try {
+      const state = await WindowingService.TakeSettingsRequest();
+      if (!alive || generation !== navigationGeneration || !state.pending)
+        return;
+      const accepted =
+        settingsOpen && configuration
+          ? configuration.acceptRequest(state.request)
+          : navigation.acceptRequest(state.request, false);
+      if (!accepted) return;
+      navigationGeneration++;
+      if (state.request.section === "local-runtime") {
+        navigation.done();
+        auxPane = "runtimes";
+      } else auxPane = "settings";
+    } catch (cause) {
+      if (alive) session.messages.fail(cause);
+    }
   }
 
   function openAbout() {
@@ -353,6 +433,7 @@
       <HomeScreen
         {session}
         {now}
+        active={auxPane === null}
         bind:inputMode
         onOpenHistorySettings={() => openSettings("history")}
         onOpenServerSettings={() => openSettings("server")}
@@ -380,10 +461,14 @@
       />
     {:else if auxPane !== null}
       <SettingsPane
+        bind:this={configuration}
         {session}
         {navigation}
         onReturn={closeSettings}
-        onOpenRuntimes={() => (auxPane = "runtimes")}
+        onOpenRuntimes={() => {
+          navigation.done();
+          auxPane = "runtimes";
+        }}
       />
     {/if}
   </div>

@@ -137,19 +137,19 @@ func New(opts Options) (*App, error) {
 	}
 
 	a := &App{
-		opts:           opts,
-		storage:        store,
-		settings:       settings,
-		mainWindow:     &windowController{},
-		trayPopover:    &windowController{},
-		shell:          &shellNavigation{},
-		aboutWindow:    &windowController{},
-		detailsWindow:  &windowController{},
-		outputWindow:   &windowController{},
-		windowState:    windowState,
-		mainPlacement:  mainPlacement,
-		logger:         logger,
-		wailsLog:       rootLogger.With("component", "wails"),
+		opts:          opts,
+		storage:       store,
+		settings:      settings,
+		mainWindow:    &windowController{},
+		trayPopover:   &windowController{},
+		shell:         &shellNavigation{},
+		aboutWindow:   &windowController{},
+		detailsWindow: &windowController{},
+		outputWindow:  &windowController{},
+		windowState:   windowState,
+		mainPlacement: mainPlacement,
+		logger:        logger,
+		wailsLog:      rootLogger.With("component", "wails"),
 	}
 
 	// The hold hook is referenced by the service before it exists, so

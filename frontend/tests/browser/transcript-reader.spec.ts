@@ -1,7 +1,8 @@
 import { test, expect } from "./fixtures";
 import type { Locator, Page } from "@playwright/test";
 
-const selected = (page: Page) => page.evaluate(() => getSelection()?.toString() ?? "");
+const selected = (page: Page) =>
+  page.evaluate(() => getSelection()?.toString() ?? "");
 async function selectExcerpt(text: Locator) {
   await text.focus();
   return text.evaluate((node) => {
@@ -26,12 +27,16 @@ for (const width of [560, 1156]) {
       name: "Live transcript",
       exact: true,
     });
-    const scroll = page.getByRole("region", { name: "Current result" }).locator(".overflow-y-auto");
+    const scroll = page
+      .getByRole("region", { name: "Current result" })
+      .locator(".overflow-y-auto");
     await text.focus();
     await text.press("Home");
     await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBe(0);
     await text.press("PageDown");
-    await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBeGreaterThan(100);
+    await expect
+      .poll(() => scroll.evaluate((node) => node.scrollTop))
+      .toBeGreaterThan(100);
     await text.press("Home");
     await text.press("Control+a");
     expect(await selected(page)).toBe(await text.textContent());
@@ -44,20 +49,26 @@ for (const width of [560, 1156]) {
       .evaluate((node: HTMLButtonElement) => node.click());
     await expect(text).toHaveText(before!);
     expect(await selected(page)).toBe(excerpt);
-    await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBe(top);
+    await expect
+      .poll(() => scroll.evaluate((node) => node.scrollTop))
+      .toBe(top);
     // Observe the browser's actual copy event without replacing the user's OS clipboard.
     await page.evaluate(() =>
       document.addEventListener(
         "copy",
         (event) => {
-          document.documentElement.dataset.copiedExcerpt = getSelection()?.toString();
+          document.documentElement.dataset.copiedExcerpt =
+            getSelection()?.toString();
           event.preventDefault();
         },
         { once: true },
       ),
     );
     await text.press("ControlOrMeta+c");
-    await expect(page.locator("html")).toHaveAttribute("data-copied-excerpt", excerpt);
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-copied-excerpt",
+      excerpt,
+    );
     await page
       .getByRole("button", { name: "Finalize", exact: true })
       .evaluate((node: HTMLButtonElement) => node.click());
@@ -69,14 +80,24 @@ for (const width of [560, 1156]) {
     expect(await selected(page)).toBe(excerpt);
     await page.evaluate(() => getSelection()?.removeAllRanges());
     await expect(final).toContainText("Line 40:");
-    await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBe(top);
+    await expect
+      .poll(() => scroll.evaluate((node) => node.scrollTop))
+      .toBe(top);
     await final.press("End");
     await expect
-      .poll(() => scroll.evaluate((node) => node.scrollHeight - node.clientHeight - node.scrollTop))
+      .poll(() =>
+        scroll.evaluate(
+          (node) => node.scrollHeight - node.clientHeight - node.scrollTop,
+        ),
+      )
       .toBeLessThan(2);
     await final.press("PageUp");
     await expect
-      .poll(() => scroll.evaluate((node) => node.scrollHeight - node.clientHeight - node.scrollTop))
+      .poll(() =>
+        scroll.evaluate(
+          (node) => node.scrollHeight - node.clientHeight - node.scrollTop,
+        ),
+      )
       .toBeGreaterThan(100);
     await final.press("Control+a");
     await page
@@ -91,17 +112,22 @@ for (const width of [560, 1156]) {
   }) => {
     await page.setViewportSize({ width, height: 560 });
     await page.goto("/tests/browser/app/?view=workspace&history=expansion");
-    if (width < 900) await page.getByRole("button", { name: "History · 2", exact: true }).click();
     const row = page.locator(".history-entry").first();
     const text = row.getByRole("textbox");
     await text.focus();
     await text.press("Control+a");
     const original = await text.textContent();
     expect(await selected(page)).toBe(original);
-    const scroll = page.locator(".history-area .overflow-y-auto");
+    const scroll = page
+      .getByRole("complementary", { name: "Recent history" })
+      .locator(".overflow-y-auto");
     await text.press("End");
     await expect
-      .poll(() => scroll.evaluate((node) => node.scrollHeight - node.clientHeight - node.scrollTop))
+      .poll(() =>
+        scroll.evaluate(
+          (node) => node.scrollHeight - node.clientHeight - node.scrollTop,
+        ),
+      )
       .toBeLessThan(2);
     await text.press("Home");
     await expect.poll(() => scroll.evaluate((node) => node.scrollTop)).toBe(0);

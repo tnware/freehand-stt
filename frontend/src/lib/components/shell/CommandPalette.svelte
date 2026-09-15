@@ -25,23 +25,32 @@
   let query = $state("");
   let index = $state(0);
   let input = $state<HTMLInputElement | null>(null);
+  let results = $state<HTMLDivElement | null>(null);
 
   const matches = $derived.by(() => {
     const needle = query.trim().toLowerCase();
     const usable = commands.filter((command) => !command.disabled);
-    if (!needle) return usable.slice(0, 12);
-    return usable
-      .filter((command) =>
-        `${command.label} ${command.group} ${command.keywords ?? ""}`
-          .toLowerCase()
-          .includes(needle),
-      )
-      .slice(0, 12);
+    if (!needle) return usable;
+    return usable.filter((command) =>
+      `${command.label} ${command.group} ${command.keywords ?? ""}`
+        .toLowerCase()
+        .includes(needle),
+    );
   });
 
   $effect(() => {
     matches.length;
     index = 0;
+  });
+
+  $effect(() => {
+    const selected = matches[index]?.id;
+    if (open && selected)
+      void tick().then(() => {
+        results
+          ?.querySelector('[aria-selected="true"]')
+          ?.scrollIntoView({ block: "nearest" });
+      });
   });
 
   $effect(() => {
@@ -52,7 +61,7 @@
   });
 
   function choose(command: Command | undefined) {
-    if (!command) return;
+    if (!command || command.disabled) return;
     open = false;
     command.run();
   }
@@ -63,7 +72,9 @@
       index = matches.length ? (index + 1) % matches.length : 0;
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      index = matches.length ? (index - 1 + matches.length) % matches.length : 0;
+      index = matches.length
+        ? (index - 1 + matches.length) % matches.length
+        : 0;
     } else if (event.key === "Enter") {
       event.preventDefault();
       choose(matches[index]);
@@ -86,9 +97,7 @@
       </Dialog.Description>
     </Dialog.Header>
 
-    <div
-      class="flex h-10 items-center gap-2.5 border-b border-hairline px-3.5"
-    >
+    <div class="flex h-10 items-center gap-2.5 border-b border-hairline px-3.5">
       <SearchIcon class="size-4 shrink-0 text-muted-foreground" />
       <input
         bind:this={input}
@@ -97,13 +106,25 @@
         class="h-full min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-ink-quiet"
         placeholder="Run a command or search settings"
         aria-label="Command"
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
+        aria-activedescendant={matches[index]
+          ? `command-${matches[index].id}`
+          : undefined}
         aria-controls="command-results"
         autocomplete="off"
         spellcheck="false"
       />
     </div>
 
-    <div id="command-results" class="max-h-[320px] overflow-y-auto p-1.5" role="listbox">
+    <div
+      bind:this={results}
+      id="command-results"
+      aria-label="Commands"
+      class="max-h-[320px] overflow-y-auto p-1.5"
+      role="listbox"
+    >
       {#each matches as command, position (command.id)}
         {#if position === 0 || matches[position - 1].group !== command.group}
           <p
@@ -115,6 +136,8 @@
         <button
           type="button"
           role="option"
+          id={`command-${command.id}`}
+          tabindex="-1"
           aria-selected={position === index}
           class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors {position ===
           index
@@ -128,7 +151,9 @@
           {:else}
             <span class="size-4 shrink-0"></span>
           {/if}
-          <span class="min-w-0 flex-1 truncate text-[13px]">{command.label}</span>
+          <span class="min-w-0 flex-1 truncate text-[13px]"
+            >{command.label}</span
+          >
           {#if command.detail}
             <span class="shrink-0 truncate text-[11px] text-ink-quiet"
               >{command.detail}</span

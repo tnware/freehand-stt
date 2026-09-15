@@ -67,7 +67,7 @@ test("runtime connections have read-only details and navigate to their owners", 
     .getByRole("button", { name: "Manage runtime", exact: true })
     .click();
   await expect(
-    page.locator('[data-settings-section="local-runtime"]'),
+    page.getByRole("button", { name: "Local runtime", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await expect(
     page.locator('[aria-label="Runtime inventory"] img'),
@@ -130,22 +130,18 @@ for (const theme of ["dark", "light"] as const) {
     await page
       .getByRole("button", { name: "Manage runtime", exact: true })
       .click();
-    const inventory = page.locator('[aria-label="Runtime inventory"]');
-    await expect(inventory.getByText("Running", { exact: true })).toBeVisible();
+    await expect(page.getByText("Running", { exact: true })).toBeVisible();
     await expect(
-      inventory.getByRole("button", { name: "Stop", exact: true }),
+      page.getByRole("button", { name: "Stop", exact: true }),
     ).toBeInViewport();
     await expect(
-      inventory.getByRole("button", { name: "View output", exact: true }),
+      page.getByRole("button", { name: "Show output", exact: true }),
     ).toBeInViewport();
     await page.screenshot({
       path: testInfo.outputPath(`runtime-list-${theme}.png`),
       fullPage: true,
     });
-    const manage = inventory.getByRole("button", {
-      name: "Manage",
-      exact: true,
-    });
+    const manage = page.getByRole("button", { name: /^Manage runtime/ });
     await manage.click();
     await expect(manage).toHaveAttribute("aria-expanded", "true");
     await expect(

@@ -3,6 +3,7 @@
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import XIcon from "@lucide/svelte/icons/x";
   import { Button } from "$lib/components/ui/button";
+  import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import {
     FileTranscriptionPhase,
     type FileTranscriptionStatus,
@@ -15,14 +16,13 @@
     cancelling = false,
     clearing = false,
     blocked = "",
-    streamingEnabled,
     resettingStreaming = false,
-    onStreamingChange,
     onChoose,
     onStart,
     onCancel,
     onClear,
     onTryStreamingAgain,
+    onOpenSettings,
   }: {
     status: FileTranscriptionStatus;
     choosing?: boolean;
@@ -30,14 +30,13 @@
     cancelling?: boolean;
     clearing?: boolean;
     blocked?: string;
-    streamingEnabled: boolean;
     resettingStreaming?: boolean;
-    onStreamingChange: (enabled: boolean) => void;
     onChoose: () => void;
     onStart: () => void;
     onCancel: () => void;
     onClear: () => void;
     onTryStreamingAgain: () => void;
+    onOpenSettings: () => void;
   } = $props();
 
   const hasFile = $derived(
@@ -52,7 +51,13 @@
       status.phase === FileTranscriptionPhase.FileTranscriptionStreaming ||
       status.phase === FileTranscriptionPhase.FileTranscriptionCancelling,
   );
-  const busy = $derived(choosing || starting || clearing);
+  const busy = $derived(choosing || starting || clearing || resettingStreaming);
+  const failed = $derived(
+    status.phase === FileTranscriptionPhase.FileTranscriptionFailed,
+  );
+  const completed = $derived(
+    status.phase === FileTranscriptionPhase.FileTranscriptionCompleted,
+  );
   const uploaded = $derived(status.bytesUploaded ?? 0);
   const size = $derived(status.fileSize ?? 0);
   const percent = $derived(
@@ -80,6 +85,7 @@
 <section
   class="flex flex-col gap-2 rounded-lg border border-hairline bg-card px-3 py-2.5"
   aria-label="Audio file"
+  data-state={status.phase}
 >
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
     <div class="flex min-w-[13rem] flex-[2] items-center gap-2.5">
@@ -101,7 +107,7 @@
             class="grid size-6 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-subtle-fill-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-40"
             onclick={onClear}
             disabled={busy}
-            aria-label="Remove this file"
+            aria-label="Clear selected audio file"
             title="Remove this file"><XIcon class="size-3" /></button
           >
         {/if}
@@ -124,28 +130,75 @@
           >{blocked || "no microphone required"}</span
         >
       {/if}
+      {#if hasFile}
+        <Button
+          variant="outline"
+          size="sm"
+          onclick={onChoose}
+          disabled={busy || working || !!blocked}
+          aria-label="Change audio file"
+          ><FolderOpenIcon class="size-3.5" />Change</Button
+        >
+      {/if}
     </div>
 
     <div class="flex shrink-0 items-center gap-2">
-      {#if status.streamingUnavailable && !working}
+      {#if status.streamingUnavailable && !status.streamingProfileUnavailable && !working}
         <Button
           variant="outline"
           size="xs"
           onclick={onTryStreamingAgain}
-          disabled={resettingStreaming}>Try streaming again</Button
+          disabled={busy || !!blocked}>Try streaming</Button
         >
       {/if}
       {#if working}
-        <Button size="sm" variant="outline" onclick={onCancel} disabled={cancelling}>
-          {cancelling ? "Cancelling" : "Cancel"}
+        <Button
+          size="sm"
+          variant="outline"
+          onclick={onCancel}
+          disabled={cancelling || !status.canCancel}
+        >
+          {cancelling ||
+          status.phase === FileTranscriptionPhase.FileTranscriptionCancelling
+            ? "Cancelling…"
+            : "Cancel"}
         </Button>
-      {:else if hasFile && status.canStart}
-        <Button size="sm" onclick={onStart} disabled={starting}>
-          {starting ? "Starting" : "Transcribe"}
+      {:else if hasFile}
+        <Button
+          size="sm"
+          onclick={onStart}
+          disabled={busy || !status.canStart || !!blocked}
+        >
+          {starting
+            ? "Starting…"
+            : failed
+              ? "Retry"
+              : completed
+                ? "Again"
+                : "Transcribe"}
         </Button>
       {/if}
     </div>
   </div>
+
+  {#if failed}
+    <div
+      class="flex items-center justify-between gap-2 text-xs text-destructive"
+      role="status"
+    >
+      <span>Transcription failed</span><FeedbackDetails
+        title="Transcription failed"
+        label="File transcription error details"
+        message={status.message || "The endpoint did not return a transcript."}
+        actionLabel="Transcription settings"
+        onAction={onOpenSettings}
+      />
+    </div>
+  {:else if status.message || blocked}
+    <p class="text-xs text-muted-foreground" role="status">
+      {blocked || status.message}
+    </p>
+  {/if}
 
   {#if uploading}
     <div

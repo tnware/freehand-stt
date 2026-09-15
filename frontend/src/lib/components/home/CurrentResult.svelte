@@ -1,7 +1,7 @@
 <script lang="ts">
   import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import { followTranscript } from "$lib/utils/transcriptScroll";
-  import { onDestroy, type Snippet } from "svelte";
+  import { onDestroy } from "svelte";
   import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
   import { Button } from "$lib/components/ui/button";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
@@ -22,12 +22,10 @@
     onListen,
     listenBusy = false,
     listenDisabled = false,
-    quickSettings,
   }: {
     live?: boolean;
     liveFinal?: string;
     livePartial?: string;
-    quickSettings?: Snippet;
     resultKey: string;
     mode: "voice" | "file";
     text: string;

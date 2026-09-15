@@ -35,6 +35,10 @@
     runtime?: ManagedRuntimeState;
     onManageRuntime?: () => void;
   } = $props();
+  const uid = $props.id();
+  // The workspace remains mounted while Settings is open. Draft controls keep
+  // their validation IDs; quick/setup controls need their own label targets.
+  const controlID = (id: string) => (draft ? id : `${uid}-${id}`);
   const cfg = $derived(settings.voiceTranscription);
   const instanceID = $derived(cfg.managedInstanceID ?? "");
   const managed = $derived(!!instanceID);
@@ -131,12 +135,12 @@
   {#if !draft}
     {#if !setup}<h3 class="text-sm font-semibold">Transcription</h3>{/if}
     <div class="space-y-1.5">
-      <label for="voice-connection" class="text-sm font-semibold"
+      <label for={controlID("voice-connection")} class="text-sm font-semibold"
         >Connection</label
       >
       <div class="flex gap-2">
         <ConnectionSelect
-          id="voice-connection"
+          id={controlID("voice-connection")}
           catalog={settings.savedConnections}
           runtimeInstances={runtime?.instances}
           purpose={Purpose.Voice}
@@ -188,7 +192,7 @@
 
 {#snippet modelControls()}
   <RuntimeModelPicker
-    id="voice-model"
+    id={controlID("voice-model")}
     value={cfg.model}
     compact={!draft}
     immediate={!draft}
@@ -212,7 +216,7 @@
       : undefined}
   />
   <ModelProfilePicker
-    id="voice-profile"
+    id={controlID("voice-profile")}
     value={cfg.modelProfile}
     profiles={settings.modelProfiles.voiceTranscription ?? []}
     disabled={busy}
@@ -242,7 +246,7 @@
         : "flex items-center justify-between gap-3 border-t border-hairline pt-3"}
     >
       <div>
-        <label for="voice-realtime" class="text-sm font-semibold"
+        <label for={controlID("voice-realtime")} class="text-sm font-semibold"
           >Realtime transcription</label
         >
         <p class="mt-1 text-xs text-muted-foreground">
@@ -250,7 +254,7 @@
         </p>
       </div>
       <Switch
-        id="voice-realtime"
+        id={controlID("voice-realtime")}
         checked={cfg.realtime}
         disabled={busy ||
           (!managed && !cfg.realtime && (!connectionID || !cfg.model))}
@@ -270,11 +274,11 @@
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
     <div class={draft ? "space-y-2 px-5 py-3.5" : "space-y-1.5"}>
-      <label for="voice-language" class="text-sm font-semibold"
+      <label for={controlID("voice-language")} class="text-sm font-semibold"
         >Spoken language</label
       >
       <LanguagePicker
-        id="voice-language"
+        id={controlID("voice-language")}
         restricted={!!profile.languages?.length}
         languages={profile.languages?.length
           ? profile.languages
@@ -286,10 +290,10 @@
   {/if}
   {#if !cfg.realtime && profile?.capabilities.transcriptionPrompt}
     <div class={draft ? "space-y-2 px-5 py-3.5" : "space-y-1.5"}>
-      <label for="voice-prompt" class="text-sm font-semibold"
+      <label for={controlID("voice-prompt")} class="text-sm font-semibold"
         >Context hint</label
       ><textarea
-        id="voice-prompt"
+        id={controlID("voice-prompt")}
         rows="2"
         maxlength="8192"
         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -320,11 +324,11 @@
   {/if}
   {#if cfg.realtime}
     <div class="flex items-center justify-between gap-3">
-      <label for="voice-captions" class="text-sm font-semibold"
+      <label for={controlID("voice-captions")} class="text-sm font-semibold"
         >Live overlay captions</label
       >
       <Switch
-        id="voice-captions"
+        id={controlID("voice-captions")}
         checked={cfg.captions}
         disabled={busy}
         onCheckedChange={(captions) => update({ captions })}
@@ -343,10 +347,11 @@
 {#snippet requestControls()}
   {#if !cfg.realtime && profile?.capabilities.transcriptionTemperature}
     <div class="flex items-center justify-between gap-3">
-      <label for="voice-temperature-override" class="text-sm font-semibold"
-        >Override temperature</label
+      <label
+        for={controlID("voice-temperature-override")}
+        class="text-sm font-semibold">Override temperature</label
       ><Switch
-        id="voice-temperature-override"
+        id={controlID("voice-temperature-override")}
         checked={cfg.transcriptionOptions.temperatureOverride}
         disabled={busy}
         onCheckedChange={(temperatureOverride) =>
@@ -378,10 +383,10 @@
   {/if}
   {#if draft && !cfg.realtime}
     <div class="space-y-1.5">
-      <label for="voice-timeout" class="text-sm font-semibold"
+      <label for={controlID("voice-timeout")} class="text-sm font-semibold"
         >Recording request timeout (seconds)</label
       ><input
-        id="voice-timeout"
+        id={controlID("voice-timeout")}
         type="number"
         min="10"
         max="3600"

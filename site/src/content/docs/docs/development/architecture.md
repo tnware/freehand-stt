@@ -312,19 +312,18 @@ layer removes fragmented structured Qwen headers; it never deduplicates speech.
 Only an explicit final text field after local stop is deliverable. A mixed
 language result is reported as multilingual so English-only cleanup falls back.
 
-One dedicated Settings window contains both settings pages and the inline
-Connection Manager. Main retains the task workspace. Each WebView owns a Session;
-the transactional Go settings service synchronizes committed snapshots, never
-credential drafts. Settings navigation retains accepted task origin and return
-section; an ignored reveal cannot replace an active draft or its completion intent.
-`internal/windowing` validates sections, origins, and connection requests.
-`SettingsReady` gates pending configuration requests after subscriptions and
-loading; Main's `ShellReady` gates task-return events. Close intent is independent
-of queued navigation. General Save applies without closing; task Save and return
-closes Settings and reveals the originating task only after success. Native
-Settings close resolves Save, Discard, or Keep editing. Failure retains the draft
-and error. Hiding Settings clears transient credentials and stops shortcut capture
-and overlay preview, not Go-owned jobs. No separate connection window exists.
+The main window owns one Session and one activity rail for Voice, audio files,
+speech, local runtimes, history, and Settings. Settings includes the inline
+Connections editor. `ShellNavigation` retains accepted task origin and return
+section; all exits from configuration resolve the active draft before changing
+panes. An ignored reveal cannot replace the draft or its completion intent.
+`internal/windowing` validates sections, origins, and connection requests;
+`ShellReady` gates native navigation until renderer subscriptions and initial
+loading complete. General Save applies in place; task Save and return resumes
+the originating workflow only after success. Native close resolves Save,
+Discard, or Keep editing before hiding the workspace. Failure retains the draft
+and error. Hiding clears transient credentials, shortcut capture, overlay
+preview, and sensitive runtime output. Go-owned jobs keep their own lifetimes.
 
 ## Durable settings storage
 
@@ -771,13 +770,14 @@ transcription, or playback. Settings hide clears configuration state and release
 preview/capture resources; accepted backend snapshots synchronize both renderers
 while preserving unsaved draft conflicts.
 
-The main workspace uses continuous recording and playback rows above adjoining
-result and history panes. Voice groups its record control, clock, and status
-next to a centered waveform; actions share the control row and the strip keeps
-a fixed height across idle, recording, processing, and recovery states.
-`WorkspaceSplit` keeps its persisted, keyboard-resizable
-divider and compact Result/History view switch. The result uses a rounded `card` surface, while history stays on the canvas
-with compact entry surfaces. Both sit below an inset transport panel.
+The main workspace uses compact recording, file, and playback controls beside
+a task-settings sidebar. `WorkspaceSplit` owns a persisted, keyboard-resizable
+vertical split: the current result above a panel with Recent, Runtime output,
+and Diagnostics tabs. Collapsing the panel releases space to the result while
+retaining a visible restore action. History uses compact expandable rows.
+The title bar, activity rail, sidebar, and status bar share neutral surface roles;
+the status bar exposes capture state from every pane. The command palette routes
+through the same navigation and busy-state guards as the rail.
 Settings clusters use the shared `SettingsCard` component as one quiet surface
 per group, with row dividers and a consistent inset through `settings-group`.
 Connection summaries and disclosures follow the same spacing. Input borders,
@@ -799,8 +799,8 @@ capture feedback only when present, and keep allowed-key rules in a keyboard
 accessible disclosure associated with the recording control. Shared visual
 primitives do not own credentials, runtime lifecycles, or saved values.
 
-Task-local connection creation opens the inline Connections editor in the reusable
-Settings window, preserving the originating task for Save and return. Home's
+Task-local connection creation opens the inline Connections editor in the
+Settings pane, preserving the originating task for Save and return. Home's
 first-run Voice panel reuses quick connection/model controls. Connection changes
 use their own save action; model/task drafts apply with Save. Switching, adding,
 or editing a connection with a dirty runtime draft requires Save and continue,
@@ -946,9 +946,27 @@ constants in `internal/platform/overlay.go` match the panel and accent. Status
 colours keep their separate meanings. Dark Mica applies one translucent charcoal
 tint at `#app` plus translucent panels, while native captions remain under DWM
 control. Light-mode tokens remain independent.
-Windows Mica is an explicit persisted opt-in applied when all four native windows are created, so changing it requires a process restart. The service reports the launch-time material separately from the editable preference; Svelte continues rendering the launch-time material until restart rather than making its surfaces translucent over solid native windows. Shell chrome uses the same material-aware layer roles, including the main header/status strip, Settings navigation/action bar, and About action bar.
+Windows Mica is an explicit persisted opt-in applied when native windows are created, so changing it requires a process restart. The service reports the launch-time material separately from the editable preference; Svelte continues rendering the launch-time material until restart rather than making its surfaces translucent over solid native windows. Shell chrome uses the same material-aware layer roles, including the title/status bars, Settings navigation/action bar, and About action bar.
 
-`internal/app` owns the cross-platform Wails windows: `main`, `settings`, `about`, `transcription-details`, and the opaque `tray-popover` panel. Settings is one reusable native configuration window; its Connections page never opens another window. Main and Settings have independent renderer Sessions synchronized by the transactional settings service. Windows are created from Wails' `ApplicationStarted` event after screen initialization. `internal/windowstate` persists only main-window normal bounds relative to its display work area, independently of product settings. Saved display matching, work-area clamping, and missing-display fallback remain native responsibilities. Settings, About, and transcription details retain owner-relative centering and no persisted auxiliary placement. Settings installs listeners before its readiness handshake, retains guarded drafts on repeated reveals, and clears transient editor state on hide. General saves stay in preferences; task completion closes Settings and explicitly restores the originating Main task. About uses `internal/windowing`; `internal/history.Service` validates completed entry IDs and owns the selected ID while `internal/app` owns the details handle. About and Transcription details have no editable state and hide immediately from either their native close action or footer. Opening another history entry updates and focuses the same details window. Details subscribes before fetching its selection, ignores superseded responses, and refreshes after history actions, settings changes, and workflow status events. Deleting, clearing, disabling, or evicting history makes details unavailable; closing the window clears its selection. No details snapshot is retained separately by Go or persisted.
+`internal/app` owns the cross-platform Wails windows: `main`, `about`,
+`transcription-details`, and the opaque `tray-popover` panel. Settings and its
+Connections editor are panes in Main's Session. Windows are created from Wails'
+`ApplicationStarted` event after screen initialization. `internal/windowstate`
+persists only main-window normal bounds relative to its display work area.
+Display matching, work-area clamping, and missing-display fallback remain native
+responsibilities. About and transcription details retain owner-relative centering
+without persisted auxiliary placement. Main installs navigation listeners before
+its readiness handshake, protects drafts on repeated reveals, and clears
+transient editor state on hide. About uses `internal/windowing`;
+`internal/history.Service` validates completed entry IDs and owns the selected ID
+while `internal/app` owns the details handle. About and Transcription details
+have no editable state and hide immediately from their native close action or
+footer. Opening another history entry updates and focuses the same details
+window. Details subscribes before fetching its selection, ignores superseded
+responses, and refreshes after history actions, settings changes, and workflow
+status events. Deleting, clearing, disabling, or evicting history makes details
+unavailable; closing clears its selection. Go does not retain a separate details
+snapshot or persist it.
 
 The native status overlay is enabled by default but has an independent persisted opt-out plus curated layout, work-area anchor, phase visibility, motion, surface, visualizer, proportional-size, opacity, edge-distance, and glow settings. `internal/overlay` owns that feature lifecycle: the settings transaction supplies applied configuration, dictation supplies authoritative status, and the package translates both into a narrow `platform.OverlayOptions`/`platform.OverlayStatus` contract. Enabling creates one native surface and bounded level tap; disabling releases its native surface, timers and graphics resources instead of retaining a hidden renderer. Windows additionally owns its HWND/message-loop thread; macOS dispatches AppKit work to the main thread. New settings default to Capsule/minimal/envelope/bottom-center. Existing saved appearance remains authoritative.
 
@@ -956,21 +974,22 @@ The Win32 renderer queues all changes onto its locked message-loop thread, uses 
 
 Settings can request a presentation-only native preview through a narrow Wails binding. Draft presentation changes update the same renderer, real dictation preempts preview, Settings close stops it, and the applied saved configuration is restored. Preview can temporarily create a surface while the applied feature is disabled, but stopping it destroys that surface. Overlay creation remains a degraded optional capability: native failure is logged without failing dictation or rolling back the saved preference.
 
-Home presents the selected task and current result first. The workspace keeps a readable width and uses a wider two-column layout when
-recent history is enabled: current work and controls on the left, history on the
-right. Narrow windows switch between Result and History views. Both panes fill the
-available height across empty, working, recovery, and completed states.
+Home presents the selected task and current result first. Its sidebar exposes
+the active task's configuration, with a compact settings disclosure at narrow
+widths. Result and bottom panel fill the available height across empty, working,
+recovery, and completed states.
 `HistoryList` owns the single bounded history scroll viewport; its outer frame and
 drawer pass through the available height instead of creating a second scroll area.
 This keeps mouse-wheel input over transcript text and row controls in the visible
 scroller. Newest-entry arrival also resets that same viewport to the top.
-Result-toolbar popovers retain immediate-save STT and cleanup controls; microphone and delivery controls
-appear only for dictation. TTS shows its own connection and model/voice settings link.
+Task-sidebar rows open the relevant settings page; direct switches use
+immediate-save controls. Microphone and delivery controls appear only for
+dictation. TTS shows its own connection and model/voice settings links.
 Each quick update starts from backend-confirmed settings, restores only engine options
 when a model changes, and calls the same transactional owner without credential mutation.
 Main quick controls remain disabled while Settings owns the editable configuration.
-The header groups input modes in a segmented selector with a raised selected
-surface and accent text. Selection and keyboard focus remain separate states.
+The activity rail identifies the active pane with an accent marker and
+`aria-current`. Selection and keyboard focus remain separate states.
 Open quick-setting triggers use the shared accent wash and text roles; a hairline
 separates them from result actions. History dates, counts, and status badges use
 the interface typeface, with tabular figures for changing numeric metadata.
@@ -1064,7 +1083,7 @@ Speaches segments. Incomplete typed streams and read/server failures return
 accepted partial text alongside an error. The file service marks it failed,
 skips cleanup, and permits explicit copy and bounded opt-in history retention.
 
-Stored-audio transcription is a separate service-owned cancellable job so it can continue while the settings window is hidden. It consumes only the Go-owned native selection, revalidates its identity and metadata, and streams multipart bytes from the opened file. Go accumulates progressive transcript text once and emits typed generation/revision deltas across the Wails bridge; it does not republish the complete growing string for every chunk. Main and Settings renderers reject stale or duplicate revisions, request the authoritative snapshot after a gap, and reconcile once with the terminal full result. Upload progress remains throttled and full snapshots are reserved for real phase boundaries or explicit recovery. If the fixed 8 MiB stored-file transcript ceiling is reached, the service stops accepting deltas, publishes an explicit partial-result state, and preserves already accepted text for manual copying rather than silently truncating it. The job is mutually exclusive with microphone dictation. Completed stored-file text is never auto-inserted because no safe target was captured when recording began; it can be explicitly copied and, when enabled, retained in the same bounded history.
+Stored-audio transcription is a separate service-owned cancellable job so it can continue while the workspace is hidden. It consumes only the Go-owned native selection, revalidates its identity and metadata, and streams multipart bytes from the opened file. Go accumulates progressive transcript text once and emits typed generation/revision deltas across the Wails bridge; it does not republish the complete growing string for every chunk. Renderer stores reject stale or duplicate revisions, request the authoritative snapshot after a gap, and reconcile once with the terminal full result. Upload progress remains throttled and full snapshots are reserved for real phase boundaries or explicit recovery. If the fixed 8 MiB stored-file transcript ceiling is reached, the service stops accepting deltas, publishes an explicit partial-result state, and preserves already accepted text for manual copying rather than silently truncating it. The job is mutually exclusive with microphone dictation. Completed stored-file text is never auto-inserted because no safe target was captured when recording began; it can be explicitly copied and, when enabled, retained in the same bounded history.
 
 Both interactive WebViews explicitly deny microphone, camera, geolocation, notification, and clipboard-read permission requests. Native Go owns microphone capture and clipboard writes, file drop remains disabled, and Wails simple renderer event emission remains disabled.
 
@@ -1454,10 +1473,10 @@ use the shared blue accent while retaining their keyboard focus indicators.
 
 Quick-setting and feedback popovers use the shared floating-surface slot. History
 actions use 32px targets, while comparison labels distinguish plain-language
-labels from monospace model IDs. The application status bar is 28px high with 24px controls and retains a visible open state.
+labels from monospace model IDs. The application status bar is 24px high and retains a visible open state.
 
-The Settings window is fixed to its WebView viewport. Navigation and content own
+The Settings pane fills the workspace viewport. Navigation and content own
 independent scrolling; the document body has no viewport-height minimum in this
-window, preventing an outer scrollbar under zoom. Voice draft settings group
+pane, preventing an outer scrollbar under zoom. Voice draft settings group
 model, profile, language and recognition controls in the shared settings card;
 quick settings continue to use the compact presentation and immediate saves.

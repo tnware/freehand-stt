@@ -5,9 +5,9 @@ description: Voice dictation, stored audio, transcript history, cleanup, and spe
 
 import { Steps } from "@astrojs/starlight/components";
 
-Choose a task at the top of the window:
+Choose a task from the activity rail on the left:
 
-- **Voice** dictates into another application.
+- **Voice transcription** dictates into another application.
 - **Audio file** transcribes a recording you select.
 - **Text to speech** generates audio from text you enter. You can also listen to
   completed transcripts when text to speech is enabled.
@@ -16,6 +16,11 @@ Each task has its own connection and model settings. You can transcribe files or
 generate speech without setting up a microphone or recording shortcut.
 
 For initial setup, see [Get started](../../getting-started/).
+
+The rail also opens **Local runtime**, **History**, and **Settings**. Press
+**Ctrl+K** on Windows or **⌘K** on macOS, or select the command bar at the top,
+to find a task or settings page. The status bar keeps recording state and the
+active task's connection visible as you move between panes.
 
 ## Check the active connection
 
@@ -154,23 +159,19 @@ the dictation result; delayed updates from an earlier attempt cannot replace the
 newer dictation. Clear or replace an audio file to remove its result.
 You do not need history to copy a transcript after failed insertion.
 
-In the **Current result** toolbar, the microphone icon opens audio controls;
-the **Transcription** and **Cleanup**
-provider buttons open connection, model, and processing options. In Voice, the delivery
-icon opens direct-input and history controls. Audio file shows only its transcription
-and cleanup controls. These changes apply immediately.
+The task sidebar shows its connection, model, and relevant language, cleanup,
+vocabulary, or speech options. Select a row to open its settings. Direct switches
+apply immediately; edits in Settings apply when you save. Voice also shows
+delivery and overlay settings. At compact widths, open **Task settings** to reach
+the same controls.
 
-Each popover links to its full Settings page. Press Escape to close it and return
-to its toolbar button. In Text to speech, the **Speech** button opens
-connection, model, voice, and supported speaking-speed controls. These changes apply
-immediately to the next generation; **All speech settings** opens the full page.
-
-With history enabled, wider windows show result and history side by side. Drag
-the divider to change their widths, or focus it with Tab and use the arrow keys.
-Freehand remembers the split.
+The panel below the result has **Recent**, **Runtime output**, and **Diagnostics**
+tabs. Drag the divider to change the panel height, or focus it with Tab and use
+the arrow keys. Freehand remembers the split. **Hide panel** gives the result
+more space; **Show panel** restores it. Runtime output requires your consent and
+is read-only. History remains optional.
 Live text follows new words until you scroll back to read earlier text. Choose
-**Jump to latest**, or scroll to the bottom, to resume following. Narrow windows use **Result** and
-**History** view buttons to give each view the full width.
+**Jump to latest**, or scroll to the bottom, to resume following.
 
 Focus a transcript and use **Ctrl+A** to select its text, then **Ctrl+C** to copy.
 Selecting a smaller portion copies only that portion. This also works in expanded
@@ -203,6 +204,7 @@ History is off by default, stays in memory, holds at most 20 entries and 2 MiB,
 and is cleared when Freehand exits. Copy anything you want to keep before quitting.
 :::
 
+Open **History** from the activity rail or choose **Recent** below a workflow.
 Select an older entry to expand it. The latest transcript opens automatically.
 
 Retained entries keep **Listen** and **Copy** directly available. Open the
@@ -215,14 +217,14 @@ details. Each copy action is explicit.
 
 ## Finding and adjusting settings
 
-Open Settings from the tray or from a task's quick settings. Choose **Save** to
+Open **Settings** from the activity rail, tray, command palette, or task sidebar. Choose **Save** to
 apply edits, or **Save and return** when setting up a task to apply them and return
-to it. **Done** closes Settings; if you have unsaved edits, choose **Save**,
+to it. **Done** returns to your task; if you have unsaved edits, choose **Save**,
 **Discard**, or **Keep editing**. If saving fails, correct the indicated field and
 try again. While saving, the confirmation stays open until the save finishes;
 Escape and clicks outside it do not dismiss it.
 
-In a full-width Settings window, **Find settings** filters the sidebar by page
+In Settings, **Find settings** filters the sidebar by page
 name or terms such as “padding,” “glow,” and “hotkey.” Enter opens the first match;
 Escape clears the filter.
 
@@ -254,10 +256,11 @@ to generate audio from your own text or listen to transcripts.
 
 <Steps>
 
-1. **Open Text to speech**, then open **Speech** in the composer header to select
-   a saved connection or **Add connection…**, then choose the model and voice directly.
+1. **Open Text to speech**, then select **Connection** or **Model** in its sidebar
+   to open Speech settings. Select a saved connection or **Add connection…**, then
+   choose the model and voice.
    **Refresh models** and supported **Refresh voices** read metadata without generating
-   audio; manual IDs work too. For initial setup, open **All speech settings**, choose
+   audio; manual IDs work too. For initial setup, choose
    the model profile, turn on **Enable text to speech**, and save your changes.
 2. **Return to Text to speech** and enter the text you want to hear. Your unsent text
    survives switching tasks or visiting Settings, and is cleared when the window
@@ -344,8 +347,8 @@ The right-click menu can show or hide Freehand, open Settings or About, cancel
 active work, copy an available recovery transcript, and quit.
 
 :::note[Quit from the tray]
-Choose **Quit** from the tray menu to exit Freehand. Closing the main or
-Settings window only hides it; Freehand continues running. Quit cancels active
+Choose **Quit** from the tray menu to exit Freehand. Closing the window hides
+Freehand after resolving any unsaved settings; Freehand continues running. Quit cancels active
 transcription and speech work. If you are saving generated audio, let the save
 finish before quitting; an interrupted export can leave a partial WAV file.
 :::

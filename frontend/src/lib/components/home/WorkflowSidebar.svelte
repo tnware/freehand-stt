@@ -7,6 +7,7 @@
   import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
   import type { Session } from "$lib/stores/session.svelte";
   import { Purpose } from "$bindings/savedconnection";
+  import { FileTranscriptionPhase, State } from "$lib/state";
 
   let {
     session,
@@ -15,6 +16,7 @@
     instanceID = "",
     onOpenConnection,
     onOpenModel,
+    onOpenOptions,
     onOpenCleanup,
     onOpenVocabulary,
     onOpenDelivery,
@@ -29,6 +31,7 @@
     instanceID?: string;
     onOpenConnection: () => void;
     onOpenModel: () => void;
+    onOpenOptions: () => void;
     onOpenCleanup: () => void;
     onOpenVocabulary: () => void;
     onOpenDelivery: () => void;
@@ -67,11 +70,56 @@
   );
   const local = $derived(runtimePresentation(runtime?.status));
   const running = $derived(runtime?.status.state === "running");
+  const operating = $derived(session.runtime.isBusy(instanceID));
+  const selectedModel = $derived(
+    runtime?.status.models?.find((item) => item.id === runtime.instance.model),
+  );
+  const voiceProfile = $derived(
+    instanceID
+      ? (selectedModel?.behavior ??
+          settings?.modelProfiles.voiceTranscription?.find(
+            (item) => item.id === settings.voiceTranscription.modelProfile,
+          ))
+      : settings?.modelProfiles.voiceTranscription?.find(
+          (item) => item.id === settings.voiceTranscription.modelProfile,
+        ),
+  );
+  const voiceBackend = $derived(
+    settings?.compatibilityProfiles.transcription?.find(
+      (item) => item.id === settings.voiceTranscription.compatibilityProfile,
+    ),
+  );
+  const realtimeSupported = $derived(
+    !!voiceProfile?.capabilities.realtime &&
+      !!voiceBackend?.capabilities.realtime,
+  );
+  const fileWorking = $derived(
+    [
+      FileTranscriptionPhase.FileTranscriptionUploading,
+      FileTranscriptionPhase.FileTranscriptionProcessing,
+      FileTranscriptionPhase.FileTranscriptionStreaming,
+      FileTranscriptionPhase.FileTranscriptionCancelling,
+    ].includes(session.files.status.phase),
+  );
+  const runtimeLocked = $derived(
+    disabled ||
+      session.runtime.loading ||
+      !runtime?.status.supported ||
+      (session.dictation.status.state !== State.Idle &&
+        session.dictation.status.state !== State.Failed) ||
+      session.files.starting ||
+      fileWorking,
+  );
   const terms = $derived(
     (settings?.vocabulary.terms ?? "")
-      .split(/[\n,]/)
+      .split(/\r?\n/)
       .map((term) => term.trim())
       .filter(Boolean).length,
+  );
+  const vocabularyEnabled = $derived(
+    workflow === "voice"
+      ? settings?.vocabulary.voice
+      : settings?.vocabulary.files,
   );
   const model = $derived(
     instanceID
@@ -80,6 +128,13 @@
   );
 
   function toggleRealtime(next: boolean) {
+    if (
+      disabled ||
+      operating ||
+      session.editor.isQuickSettingsPending("voice-transcription") ||
+      (next && !realtimeSupported)
+    )
+      return;
     void session.editor.updateQuickSettings(
       { voiceTranscription: { realtime: next } },
       "voice-transcription",
@@ -93,7 +148,7 @@
   will happen when I run this" without going anywhere.
 -->
 <aside
-  class="flex w-[252px] shrink-0 flex-col border-r border-hairline bg-layer-fill"
+  class="workflow-settings flex w-[252px] shrink-0 flex-col border-r border-hairline bg-layer-fill"
   aria-label={`${title} settings`}
 >
   <SidebarHeader {title} />
@@ -102,13 +157,17 @@
     <button type="button" class="srow" onclick={onOpenConnection} {disabled}>
       <span class="sk">Connection</span>
       <span class="sv"
-        >{connection?.name || "Not selected"}<ChevronRightIcon
+        >{instanceID
+          ? runtime?.instance.name || "Local runtime"
+          : connection?.name || "Not selected"}<ChevronRightIcon
           class="size-3 shrink-0 text-muted-foreground"
         /></span
       >
     </button>
     {#if endpoint?.baseURL}
-      <p class="-mt-0.5 truncate px-2.5 pb-1 font-mono text-[10px] text-ink-quiet">
+      <p
+        class="-mt-0.5 truncate px-2.5 pb-1 font-mono text-[10px] text-ink-quiet"
+      >
         {endpointHost(endpoint.baseURL)}
       </p>
     {/if}
@@ -119,16 +178,16 @@
     </button>
 
     {#if workflow === "tts"}
-      <button type="button" class="srow" onclick={onOpenModel} {disabled}>
+      <button type="button" class="srow" onclick={onOpenOptions} {disabled}>
         <span class="sk">Voice</span>
         <span class="sv">{speech?.voice || "Default"}</span>
       </button>
-      <button type="button" class="srow" onclick={onOpenModel} {disabled}>
+      <button type="button" class="srow" onclick={onOpenOptions} {disabled}>
         <span class="sk">Speed</span>
         <span class="sv">{(speech?.speed ?? 1).toFixed(2)}×</span>
       </button>
     {:else}
-      <button type="button" class="srow" onclick={onOpenModel} {disabled}>
+      <button type="button" class="srow" onclick={onOpenOptions} {disabled}>
         <span class="sk">Language</span>
         <span class="sv"
           >{(workflow === "voice"
@@ -137,25 +196,34 @@
         >
       </button>
 
-      {#if workflow === "voice"}
+      {#if workflow === "voice" && (realtimeSupported || settings?.voiceTranscription.realtime)}
         <div class="srow">
           <span class="sk">Live dictation</span>
           <Switch
             checked={!!settings?.voiceTranscription.realtime}
             onCheckedChange={toggleRealtime}
             disabled={disabled ||
-              session.editor.isQuickSettingsPending("voice-transcription")}
+              operating ||
+              session.editor.isQuickSettingsPending("voice-transcription") ||
+              (!settings?.voiceTranscription.realtime &&
+                (!realtimeSupported ||
+                  (!instanceID && (!connection || !endpoint?.model))))}
             aria-label="Live dictation"
             class="scale-[0.8]"
           />
         </div>
-      {:else}
+      {:else if workflow === "file"}
         <div class="srow">
           <span class="sk">Stream results</span>
           <Switch
+            id="file-stream-toggle"
             checked={session.files.streamingEnabled}
-            onCheckedChange={(next) => (session.files.streamingPreferred = next)}
-            disabled={disabled || session.files.resettingStreaming}
+            onCheckedChange={(next) =>
+              (session.files.streamingPreferred = next)}
+            disabled={disabled ||
+              session.files.selectionBusy ||
+              fileWorking ||
+              session.files.status.streamingUnavailable}
             aria-label="Stream partial results"
             class="scale-[0.8]"
           />
@@ -165,9 +233,7 @@
       <button type="button" class="srow" onclick={onOpenCleanup} {disabled}>
         <span class="sk">Cleanup</span>
         <span class="sv"
-          >{cleanup?.enabled
-            ? cleanup.model || "On"
-            : "Off"}<ChevronRightIcon
+          >{cleanup?.enabled ? cleanup.model || "On" : "Off"}<ChevronRightIcon
             class="size-3 shrink-0 text-muted-foreground"
           /></span
         >
@@ -176,7 +242,9 @@
       <button type="button" class="srow" onclick={onOpenVocabulary} {disabled}>
         <span class="sk">Vocabulary</span>
         <span class="sv text-muted-foreground"
-          >{terms} {terms === 1 ? "term" : "terms"}</span
+          >{vocabularyEnabled
+            ? `${terms} ${terms === 1 ? "term" : "terms"} · supported models`
+            : "Off for this workflow"}</span
         >
       </button>
     {/if}
@@ -200,15 +268,13 @@
       </button>
       <button type="button" class="srow" onclick={onOpenOverlay} {disabled}>
         <span class="sk">Overlay</span>
-        <span class="sv"
-          >{settings?.overlayEnabled ? "Single-row caption" : "Off"}</span
-        >
+        <span class="sv">{settings?.overlayEnabled ? "On" : "Off"}</span>
       </button>
     {:else}
       <div class="srow">
         <span class="sk">Result</span>
         <span class="sv"
-          >{workflow === "tts" ? "Play or save" : "Copy or save"}</span
+          >{workflow === "tts" ? "Play or save" : "Explicit copy"}</span
         >
       </div>
       <p class="px-2.5 pt-0.5 pb-1 text-[11px] leading-snug text-ink-quiet">
@@ -242,14 +308,26 @@
               >{runtime?.instance.name || "Local runtime"}</span
             >
           </span>
-          <Button
-            variant="outline"
-            size="xs"
-            disabled={disabled || session.runtime.isBusy(instanceID)}
-            onclick={() =>
-              void session.runtime.run(instanceID, running ? "Stop" : "Start")}
-            >{running ? "Stop" : "Start"}</Button
-          >
+          {#if operating}
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={disabled ||
+                session.runtime.pendingFor(instanceID) === "Cancelling"}
+              onclick={() => void session.runtime.cancel(instanceID)}
+              >Cancel</Button
+            >
+          {:else}<Button
+              variant="outline"
+              size="xs"
+              disabled={runtimeLocked ||
+                (!running && (!local.installed || !selectedModel?.installed))}
+              onclick={() =>
+                void session.runtime.run(
+                  instanceID,
+                  running ? "Stop" : "Start",
+                )}>{running ? "Stop" : "Start"}</Button
+            >{/if}
         </div>
         <p class="mt-1.5 truncate font-mono text-[10px] text-ink-quiet">
           {[
@@ -278,7 +356,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    height: 28px;
+    min-height: 28px;
+    flex-shrink: 0;
     padding: 0 0.5rem 0 0.625rem;
     border-radius: 5px;
     text-align: left;
@@ -309,5 +388,19 @@
     color: var(--secondary-foreground);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  @media (max-width: 699px) {
+    .workflow-settings {
+      width: 180px;
+    }
+    .srow {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 2px;
+      padding-block: 5px;
+    }
+    .srow :global(.sv) {
+      max-width: 100%;
+    }
   }
 </style>

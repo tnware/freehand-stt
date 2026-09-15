@@ -5,11 +5,14 @@ for (const provider of ["llama-cpp", "whisper-cpp", "nemo-speech-cpp"]) {
     page,
   }) => {
     await page.goto(`/tests/browser/app/?runtime&runtime-provider=${provider}`);
-    await page.locator('[data-settings-section="local-runtime"]').click();
+    await page
+      .getByRole("button", { name: "Local runtime", exact: true })
+      .click();
     const upstream =
       provider === "nemo-speech-cpp"
         ? "NVIDIA/NeMo-Speech.cpp"
         : `ggml-org/${provider === "llama-cpp" ? "llama.cpp" : "whisper.cpp"}`;
+    await page.getByRole("button", { name: /^Binary download source/ }).click();
     await expect(
       page.getByRole("link", { name: upstream, exact: true }),
     ).toHaveAttribute("href", `https://github.com/${upstream}`);
@@ -17,7 +20,6 @@ for (const provider of ["llama-cpp", "whisper-cpp", "nemo-speech-cpp"]) {
     await expect(
       page.getByText("fixture-cpu.zip", { exact: true }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Manage", exact: true }).click();
     const models = page.getByRole("region", { name: "Available models" });
     if (provider === "nemo-speech-cpp") {
       await expect(
@@ -45,11 +47,14 @@ test("binary preview details follow the explicit backend choice without download
   page,
 }) => {
   await page.goto("/tests/browser/app/?runtime&runtime-provider=llama-cpp");
-  await page.locator('[data-settings-section="local-runtime"]').click();
+  await page
+    .getByRole("button", { name: "Local runtime", exact: true })
+    .click();
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Download and install", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: /^Binary download source/ }).click();
   await page.getByText("Binary download details", { exact: true }).click();
   await expect(
     page.getByText("fixture-cuda.zip", { exact: true }),

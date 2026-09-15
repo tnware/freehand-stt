@@ -1,49 +1,17 @@
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
 
-test("quick runtime controls expose startup elapsed, output and cancel", async ({
-  page,
-}) => {
-  await page.goto("/tests/browser/app/?main&runtime&runtime-ready");
-  await page.evaluate(() =>
-    window.testRuntime.change("nemo-default", {
-      state: "starting",
-      phase: "start",
-      startupProgress: {
-        phase: "loading_warming",
-        startedAt: Date.now() - 5000,
-      },
-    }),
-  );
-  await page
-    .getByRole("button", { name: "Transcription settings", exact: true })
-    .click();
-  const panel = page.getByRole("dialog", { name: "Transcription settings" });
-  await expect(
-    panel
-      .getByRole("status")
-      .filter({ hasText: "Loading and warming up selected model" }),
-  ).toContainText("in this stage");
-  await panel.getByRole("button", { name: "View output", exact: true }).click();
-  await panel.getByRole("button", { name: "Cancel", exact: true }).click();
-  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
-    "OpenProcessOutput:nemo-default",
-    "Cancel:nemo-default",
-  ]);
-});
+const openRuntimes = (page: Page) =>
+  page.getByRole("button", { name: "Local runtime", exact: true }).click();
+const preferences = (page: Page) =>
+  page.getByRole("button", { name: /^Runtime preferences/ });
 
 async function installRuntime(page: Page) {
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Download selected model", exact: true }),
   ).toBeVisible();
-  return page.evaluate(() => {
-    const call = window.testRuntime.calls.find((c) =>
-      c.startsWith("SetInstance:"),
-    );
-    if (!call) throw new Error("Instance was not saved");
-    return call.slice("SetInstance:".length);
-  });
+  return page.evaluate(() => window.testRuntime.snapshot()[0].instance.id);
 }
 
 for (const backend of ["cuda", "cpu"]) {
@@ -51,7 +19,7 @@ for (const backend of ["cuda", "cpu"]) {
     page,
   }) => {
     await page.goto("/tests/browser/app/?runtime&runtime-provider=whisper-cpp");
-    await page.locator('[data-settings-section="local-runtime"]').click();
+    await openRuntimes(page);
     await page.getByRole("button", { name: "Install", exact: true }).click();
     await expect(
       page.getByText("Recommended: NVIDIA GPU (CUDA)", { exact: true }),
@@ -78,7 +46,7 @@ for (const backend of ["cuda", "cpu"]) {
   });
 }
 
-test("startup stage is visible collapsed and expanded with output and cancellation", async ({
+test("startup stage, elapsed time and cancellation remain visible", async ({
   page,
 }) => {
   await page.goto(
@@ -91,39 +59,34 @@ test("startup stage is visible collapsed and expanded with output and cancellati
       startupProgress: { phase: "warming_up", startedAt: Date.now() - 5000 },
     }),
   );
-  await page.locator('[data-settings-section="local-runtime"]').click();
+  await openRuntimes(page);
   await expect(
     page.getByText(/Warming up selected model · \d+s in this stage/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "View output", exact: true }).click();
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
   await expect(
-    page.getByText(/Warming up selected model · \d+s in this stage/),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Show output", exact: true }),
+  ).toBeEnabled();
   await page
     .getByRole("button", { name: "Cancel operation", exact: true })
     .click();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
-    "OpenProcessOutput:whisper-cpp-default",
     "Cancel:whisper-cpp-default",
   ]);
 });
 
 for (const provider of ["llama-cpp", "whisper-cpp"]) {
-  test(`${provider} switches CPU to CUDA and back without replacing its selected model`, async ({
+  test(`${provider} switches CPU and CUDA while retaining models and Connections`, async ({
     page,
-  }, testInfo) => {
-    await page.emulateMedia({ colorScheme: "dark" });
+  }) => {
     await page.goto(
-      `/tests/browser/app/?runtime&runtime-ready&runtime-provider=${provider}&theme=dark`,
+      `/tests/browser/app/?runtime&runtime-ready&runtime-provider=${provider}`,
     );
-    await page.locator('[data-settings-section="local-runtime"]').click();
+    await openRuntimes(page);
     const before = await page.evaluate(() => window.testRuntime.snapshot()[0]);
     const connections = await page.evaluate(
       () => window.testConnectionWindows.settings().savedConnections,
     );
-    const manage = page.getByRole("button", { name: "Manage", exact: true });
-    await manage.click();
+    await preferences(page).click();
     const cpu = page.getByRole("button", { name: "CPU", exact: true });
     const cuda = page.getByRole("button", {
       name: "NVIDIA GPU (CUDA)",
@@ -132,33 +95,17 @@ for (const provider of ["llama-cpp", "whisper-cpp"]) {
     await expect(cpu).toHaveAttribute("aria-pressed", "true");
     await expect(cpu).toBeDisabled();
     await expect(cuda).toBeDisabled();
-    await expect(
-      page.getByRole("button", { name: "Stop", exact: true }),
-    ).toBeInViewport();
-    if (provider === "llama-cpp") {
-      await page.screenshot({
-        path: testInfo.outputPath("expanded-running-llama.png"),
-        fullPage: true,
-      });
-    }
     await page.getByRole("button", { name: "Stop", exact: true }).click();
-    await expect(cuda).toBeEnabled();
     await cuda.click();
     await expect(cuda).toHaveAttribute("aria-pressed", "true");
-    await expect(cpu).toHaveAttribute("aria-pressed", "false");
-    await manage.click();
-    await expect(page.getByText(/NVIDIA GPU \(CUDA\) binary/)).toBeVisible();
-    await manage.click();
     await page.getByRole("button", { name: "Start", exact: true }).click();
     await expect(cpu).toBeDisabled();
     await expect(cuda).toBeDisabled();
     await page.getByRole("button", { name: "Stop", exact: true }).click();
     await cpu.click();
     await expect(cpu).toHaveAttribute("aria-pressed", "true");
-    await expect(cuda).toHaveAttribute("aria-pressed", "false");
     const after = await page.evaluate(() => window.testRuntime.snapshot()[0]);
     expect(after.instance).toEqual(before.instance);
-    expect(after.status.selectedModel).toBe(before.status.selectedModel);
     expect(after.status.models).toEqual(before.status.models);
     expect(after.status.backend).toBe("cpu");
     expect(
@@ -166,19 +113,6 @@ for (const provider of ["llama-cpp", "whisper-cpp"]) {
         () => window.testConnectionWindows.settings().savedConnections,
       ),
     ).toEqual(connections);
-    const selectedModel = page.getByRole("article", {
-      name: before.status.models![0].name,
-      exact: true,
-    });
-    await expect(
-      selectedModel.getByText("Selected", { exact: true }),
-    ).toHaveCount(1);
-    await expect(
-      selectedModel.getByRole("button", {
-        name: "Delete " + before.status.models![0].name,
-        exact: true,
-      }),
-    ).toBeEnabled();
     expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
       `Stop:${before.instance.id}`,
       `InstallBackend:${before.instance.id}:cuda`,
@@ -186,51 +120,38 @@ for (const provider of ["llama-cpp", "whisper-cpp"]) {
       `Stop:${before.instance.id}`,
       `InstallBackend:${before.instance.id}:cpu`,
     ]);
+    if (provider === "llama-cpp")
+      await expect(
+        page
+          .getByRole("article", { name: "S1-mini", exact: true })
+          .getByText("Cleanup", { exact: true }),
+      ).toBeVisible();
   });
 }
 
-test("binary switching respects ongoing runtime work and unsaved settings", async ({
+test("preferences expose autostart without starting or downloading", async ({
   page,
 }) => {
-  await page.goto(
-    "/tests/browser/app/?runtime&runtime-ready&runtime-provider=whisper-cpp",
-  );
-  await page.evaluate(() =>
-    window.testRuntime.change("whisper-cpp-default", {
-      state: "installing",
-      phase: "install",
-    }),
-  );
-  await page.locator('[data-settings-section="local-runtime"]').click();
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
-  const cuda = page.getByRole("button", {
-    name: "NVIDIA GPU (CUDA)",
-    exact: true,
-  });
-  await expect(cuda).toBeDisabled();
-  await page.evaluate(() =>
-    window.testRuntime.change("whisper-cpp-default", {
-      state: "stopped",
-      phase: "",
-    }),
-  );
-  await expect(cuda).toBeEnabled();
-  await page.locator('[data-settings-section="audio"]').click();
-  await page.locator("#max-duration").fill("90");
-  await page.locator('[data-settings-section="local-runtime"]').click();
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
-  await cuda.click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "Save settings before continuing?",
-  );
-  await page.getByRole("button", { name: "Keep editing", exact: true }).click();
-  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+  await page.goto("/tests/browser/app/?runtime&runtime-ready");
+  await openRuntimes(page);
+  await preferences(page).click();
+  await page
+    .getByRole("switch", { name: "Start when Freehand launches" })
+    .click();
+  await expect(
+    page.getByRole("switch", { name: "Start when Freehand launches" }),
+  ).toBeChecked();
   expect(
-    await page.evaluate(() => window.testRuntime.snapshot()[0].status.backend),
-  ).toBe("cpu");
+    await page.evaluate(
+      () => window.testRuntime.snapshot()[0].instance.autoStart,
+    ),
+  ).toBe(true);
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "SetInstance:nemo-default",
+  ]);
 });
 
-test("active dictation blocks a stopped runtime's binary switch", async ({
+test("runtime mutations are disabled during active dictation", async ({
   page,
 }) => {
   await page.goto(
@@ -239,62 +160,31 @@ test("active dictation blocks a stopped runtime's binary switch", async ({
   await page.evaluate(() =>
     window.testRuntime.change("llama-cpp-default", { state: "stopped" }),
   );
-  await page.locator('[data-settings-section="local-runtime"]').click();
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
+  await openRuntimes(page);
+  await preferences(page).click();
   await expect(
     page.getByRole("button", { name: "NVIDIA GPU (CUDA)", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Start", exact: true }),
   ).toBeDisabled();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });
 
-test("collapsed runtime controls can stop, download and restart without opening details", async ({
-  page,
-}) => {
-  await page.goto("/tests/browser/app/?runtime");
-  await page.locator('[data-settings-section="local-runtime"]').click();
-  const id = await installRuntime(page);
-  const toggle = page.getByRole("button", { name: "Manage", exact: true });
-  await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await page
-    .getByRole("button", { name: "Download selected model", exact: true })
-    .click();
-  await expect(
-    page.getByRole("progressbar", { name: "Runtime download progress" }),
-  ).toBeInViewport();
-  await page
-    .getByRole("button", { name: "Cancel operation", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Download selected model", exact: true })
-    .click();
-  await page.evaluate((id) => window.testRuntime.finishDownload(id), id);
-  await page.getByRole("button", { name: "Start", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Stop", exact: true }),
-  ).toBeEnabled();
-  await page.getByRole("button", { name: "Stop", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Start", exact: true }),
-  ).toBeEnabled();
-  await expect(toggle).toHaveAttribute("aria-expanded", "false");
-});
-
-test("catalog downloads keep progress, cancellation and completion at the model", async ({
+test("catalog download progress, cancellation and completion stay at the model", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 900, height: 640 });
   await page.goto("/tests/browser/app/?runtime");
-  await page.locator('[data-settings-section="local-runtime"]').click();
+  await openRuntimes(page);
   const id = await installRuntime(page);
   const model = page.getByRole("article", {
     name: "Parakeet TDT v3",
     exact: true,
   });
-  await model.scrollIntoViewIfNeeded();
-  await model.getByRole("button", { name: "Download", exact: true }).click();
+  await model.getByRole("button", { name: "Get", exact: true }).click();
   const progress = model.getByRole("progressbar");
-  await expect(progress).toBeInViewport();
+  await expect(progress).toBeVisible();
   await page.evaluate(
     (id) =>
       window.testRuntime.change(id, {
@@ -307,32 +197,29 @@ test("catalog downloads keep progress, cancellation and completion at the model"
     id,
   );
   await expect(progress).toHaveAttribute("value", "50");
-  const cancel = model.getByRole("button", { name: "Cancel", exact: true });
-  await expect(cancel).toBeInViewport();
-  await cancel.click();
+  await model.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(model.getByRole("status")).toContainText("cancelled");
-  await model.getByRole("button", { name: "Download", exact: true }).click();
+  await model.getByRole("button", { name: "Get", exact: true }).click();
   await page.evaluate((id) => window.testRuntime.finishDownload(id), id);
   await expect(model.getByRole("status")).toContainText(
     "downloaded and verified",
   );
-  await expect(model.getByRole("status")).toBeInViewport();
 });
 
 for (const viewport of [
   { width: 1280, height: 720 },
   { width: 900, height: 640 },
 ]) {
-  test(`setup advances in place without scrolling at ${viewport.width}x${viewport.height}`, async ({
+  test(`explicit setup stages remain reachable at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
     await page.goto("/tests/browser/app/?runtime");
-    await page.locator('[data-settings-section="local-runtime"]').click();
+    await openRuntimes(page);
     await expect(
       page.getByRole("button", { name: "Install", exact: true }),
     ).toBeInViewport();
-    const instanceID = await installRuntime(page);
+    const id = await installRuntime(page);
     const download = page.getByRole("button", {
       name: "Download selected model",
       exact: true,
@@ -342,41 +229,17 @@ for (const viewport of [
       page.getByRole("button", { name: "Start", exact: true }),
     ).toHaveCount(0);
     await download.click();
-    await expect(
-      page.getByRole("progressbar", { name: "Runtime operation progress" }),
-    ).toBeInViewport();
-    const cancel = page.getByRole("button", {
-      name: "Cancel operation",
-      exact: true,
-    });
-    await expect(cancel).toBeInViewport();
     const progress = page.getByRole("progressbar", {
       name: "Runtime operation progress",
-    });
-    for (const bytes of [250_000_000, 750_000_000]) {
-      await page.evaluate(
-        ({ id, bytes }) =>
-          window.testRuntime.change(id, {
-            acquisition: {
-              phase: "downloading",
-              bytes,
-              totalBytes: 1_000_000_000,
-            },
-          }),
-        { id: instanceID, bytes },
-      );
-      await expect(progress).toHaveAttribute(
-        "value",
-        String(bytes / 10_000_000),
-      );
-    }
-    await cancel.click();
-    const setup = page.getByRole("region", {
-      name: "Runtime setup",
       exact: true,
     });
-    await expect(setup.getByText(/Operation cancelled\./)).toBeInViewport();
-    await expect(download).toBeInViewport();
+    await expect(progress).toBeInViewport();
+    await page
+      .getByRole("button", { name: "Cancel operation", exact: true })
+      .click();
+    await expect(
+      page.getByRole("status", { name: "Runtime operation", exact: true }),
+    ).toContainText("Operation cancelled.");
     await download.click();
     await page.evaluate(
       (id) =>
@@ -387,29 +250,17 @@ for (const viewport of [
             totalBytes: 1_000_000_000,
           },
         }),
-      instanceID,
+      id,
     );
     await expect(progress).toHaveCount(0);
-    await expect(page.getByText(/Model downloaded and verified\./)).toHaveCount(
-      0,
-    );
     await expect(
       page.getByRole("button", { name: "Start", exact: true }),
     ).toHaveCount(0);
-    await page.evaluate(
-      (id) => window.testRuntime.finishDownload(id),
-      instanceID,
-    );
-    await expect(
-      setup.getByText(/Model downloaded and verified\./),
-    ).toBeInViewport();
+    await page.evaluate((id) => window.testRuntime.finishDownload(id), id);
     expect(await page.evaluate(() => window.testRuntime.calls)).not.toContain(
-      `Start:${instanceID}`,
+      `Start:${id}`,
     );
-    const start = page.getByRole("button", {
-      name: "Start",
-      exact: true,
-    });
+    const start = page.getByRole("button", { name: "Start", exact: true });
     await expect(start).toBeInViewport();
     await start.click();
     await expect(
@@ -418,63 +269,45 @@ for (const viewport of [
   });
 }
 
-test("local runtime is discoverable and browsing never downloads", async ({
+test("browsing the inventory and catalog never downloads or starts models", async ({
   page,
 }) => {
   await page.goto("/tests/browser/app/?runtime");
-  await page.locator('[data-settings-section="local-runtime"]').click();
-  await expect(
-    page.getByRole("heading", { name: "Managed runtimes", exact: true }),
-  ).toBeVisible();
+  await openRuntimes(page);
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
   await installRuntime(page);
-  await expect(
-    page.getByRole("region", { name: "Model catalog" }),
-  ).toBeVisible();
   await page
     .getByRole("button", { name: "Refresh catalog", exact: true })
     .click();
   expect(
     await page.evaluate(() =>
-      window.testRuntime.calls.some(
-        (call) =>
-          call.startsWith("DownloadModel:") || call.startsWith("Start:"),
+      window.testRuntime.calls.some((call) =>
+        /^(DownloadModel|Start):/.test(call),
       ),
     ),
   ).toBe(false);
 });
 
-test("unsaved drafts guard immediate runtime operations", async ({ page }) => {
+test("leaving edited settings for runtime operations resolves the draft first", async ({
+  page,
+}) => {
   await page.goto("/tests/browser/app/?runtime&runtime-ready");
   await page.locator('[data-settings-section="audio"]').click();
   await page.locator("#max-duration").fill("90");
-  await page.locator('[data-settings-section="local-runtime"]').click();
-  await page.getByRole("button", { name: "Manage", exact: true }).click();
-  await page.getByRole("button", { name: "Stop", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "Save settings before continuing?",
-  );
+  await openRuntimes(page);
+  await expect(page.getByRole("dialog")).toContainText("Save changes?");
   await page.getByRole("button", { name: "Keep editing", exact: true }).click();
-  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
-  await page.locator('[data-settings-section="audio"]').click();
   await expect(page.locator("#max-duration")).toHaveValue("90");
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });
 
-test("unsupported hosts never offer an enabled Windows runtime", async ({
+test("unsupported hosts never offer an enabled runtime installation", async ({
   page,
 }) => {
   await page.goto("/tests/browser/app/?runtime&platform=darwin");
-  await page.locator('[data-settings-section="local-runtime"]').click();
+  await openRuntimes(page);
   await expect(
-    page.getByText("Unavailable on this platform", {
-      exact: false,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", {
-      name: "Install",
-      exact: true,
-    }),
+    page.getByRole("button", { name: "Install", exact: true }),
   ).toBeDisabled();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });
@@ -485,7 +318,7 @@ test("macOS llama installation and switching use Metal without CUDA", async ({
   await page.goto(
     "/tests/browser/app/?runtime&runtime-provider=llama-cpp&runtime-macos",
   );
-  await page.locator('[data-settings-section="local-runtime"]').click();
+  await openRuntimes(page);
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(
     page.getByText("Recommended: Apple GPU (Metal)", { exact: true }),
@@ -496,6 +329,7 @@ test("macOS llama installation and switching use Metal without CUDA", async ({
   await page
     .getByRole("button", { name: "Download and install", exact: true })
     .click();
+  await preferences(page).click();
   await expect(
     page.getByRole("button", { name: "Apple GPU (Metal)", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -509,4 +343,159 @@ test("macOS llama installation and switching use Metal without CUDA", async ({
     "InstallBackend:llama-cpp:metal",
     "InstallBackend:llama-cpp:cpu",
   ]);
+});
+
+test("all downloaded models require fresh confirmation before deletion", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?runtime&runtime-ready");
+  await openRuntimes(page);
+  const selected = page.getByRole("article", {
+    name: "Nemotron 3.5 Streaming",
+    exact: true,
+  });
+  const other = page.getByRole("article", {
+    name: "Parakeet TDT v3",
+    exact: true,
+  });
+  await expect(
+    selected.getByRole("button", {
+      name: "Delete Nemotron 3.5 Streaming",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await expect(
+    other.getByRole("button", { name: "Select", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await other
+    .getByRole("button", { name: "Delete Parakeet TDT v3", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Deletes this downloaded model",
+  );
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "Stop:nemo-default",
+  ]);
+  await page.getByRole("button", { name: "Keep", exact: true }).click();
+  await selected
+    .getByRole("button", { name: "Delete Nemotron 3.5 Streaming", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm removal", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Download selected model", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "Stop:nemo-default",
+    "RemoveModel:nemo-default:nemotron-3.5",
+  ]);
+});
+
+test("failed installations remain repairable and show their error immediately", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?runtime&runtime-ready");
+  await page.evaluate(() =>
+    window.testRuntime.change("nemo-default", {
+      state: "error",
+      backend: "",
+      error: "Runtime installation failed.",
+    }),
+  );
+  await openRuntimes(page);
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Runtime installation failed." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Install", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Start", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("restart does not start again when stopping failed", async ({ page }) => {
+  await page.goto("/tests/browser/app/?runtime&runtime-ready");
+  await openRuntimes(page);
+  await page.evaluate(() => window.testRuntime.failNextStop());
+  await page.getByRole("button", { name: "Restart", exact: true }).click();
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "The runtime operation did not finish." }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "Stop:nemo-default",
+  ]);
+});
+
+test("stopping the initial runtime keeps its selection when another provider is running", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?runtime&runtime-ready");
+  await page.evaluate(() => window.testRuntime.addSecondProvider());
+  await openRuntimes(page);
+  await page
+    .getByRole("button", { name: "Refresh inventory", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Start", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "NeMo-Speech.cpp", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "Stop:nemo-default",
+  ]);
+  expect(
+    await page.evaluate(
+      () =>
+        window.testRuntime
+          .snapshot()
+          .find((row) => row.instance.id === "other-speech")?.status.state,
+    ),
+  ).toBe("running");
+});
+
+test("duplicate runtime recovery preserves identity and resets pending removal", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?runtime&runtime-ready");
+  await page.evaluate(() => window.testRuntime.addDuplicate("nemo-extra"));
+  await openRuntimes(page);
+  await expect(
+    page.getByText(/Multiple saved installations need review/),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Duplicate speech · nemo-extra", exact: true })
+    .click();
+  await page.getByRole("button", { name: /^Manage runtime/ }).click();
+  await page
+    .getByRole("button", { name: "Delete runtime", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("Duplicate speech");
+  await page.getByRole("button", { name: "Keep", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Delete runtime", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm removal", exact: true })
+    .click();
+  await expect(
+    page.getByText(/Multiple saved installations need review/),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Stop", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "DeleteInstance:nemo-extra",
+  ]);
+  expect(
+    await page.evaluate(() =>
+      window.testRuntime.snapshot().map((row) => row.instance.id),
+    ),
+  ).toEqual(["nemo-default"]);
 });

@@ -39,7 +39,7 @@
     connectionResult,
   } from "$lib/stores/session-fixtures-data";
   import App from "../../../src/App.svelte";
-    import { controlledSaves } from "./save-control";
+  import { controlledSaves } from "./save-control";
   import { installConnectionWindows, wire } from "./connection-window-bridge";
   const params = new URLSearchParams(location.search);
   const child = params.has("settings-frame");
@@ -49,7 +49,8 @@
   import { shortcutCapture } from "$lib/stores/shortcutCapture.svelte";
   import { ShortcutAction } from "$bindings/hotkey";
   let current = structuredClone(settings);
-  if (params.has("runtime-ready")) current.setupCompleted = true;
+  if (params.has("runtime-ready") || params.has("setup-ready"))
+    current.setupCompleted = true;
   if (new URLSearchParams(location.search).has("hold-degraded")) {
     current.holdShortcut = "F13";
     current.holdAvailable = false;

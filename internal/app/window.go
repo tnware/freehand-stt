@@ -366,7 +366,7 @@ func (a *App) newMainWindow() {
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		a.persistMainWindowPlacement(window)
 		event.Cancel()
-		window.Hide()
+		a.requestShellClose()
 	})
 	window.OnWindowEvent(events.Common.WindowLostFocus, func(*application.WindowEvent) {
 		a.persistMainWindowPlacement(window)
@@ -376,6 +376,7 @@ func (a *App) newMainWindow() {
 	})
 	window.OnWindowEvent(events.Common.WindowHide, func(*application.WindowEvent) {
 		a.tray.SetMainWindowVisible(false)
+		window.EmitEvent("shell:hidden")
 	})
 	window.OnWindowEvent(events.Common.WindowMinimise, func(*application.WindowEvent) {
 		a.tray.SetMainWindowVisible(false)

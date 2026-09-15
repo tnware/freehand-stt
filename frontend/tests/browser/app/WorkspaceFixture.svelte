@@ -28,6 +28,7 @@
     serviceWithStatus,
   } from "$lib/stores/session-fixtures-data";
   import HomeScreen from "$lib/components/home/HomeScreen.svelte";
+  import HistoryPane from "$lib/components/history/HistoryPane.svelte";
   import TitleBar from "$lib/components/shell/TitleBar.svelte";
   import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
   import { paneByID, type PaneID } from "$lib/panes";
@@ -40,8 +41,7 @@
   let finishListen: ((success: boolean) => void) | undefined;
   const saveScenario = new URLSearchParams(location.search).has("save-pending");
   let finishAudioSave:
-    | ((outcome: "saved" | "cancelled" | "failed") => void)
-    | undefined;
+    ((outcome: "saved" | "cancelled" | "failed") => void) | undefined;
   const playbackScenario = new URLSearchParams(location.search).has("playback");
   const fileStreamingScenario = new URLSearchParams(location.search).has(
     "file-streaming",
@@ -213,6 +213,33 @@
   });
   const session: Session = new Session(
     serviceWithStatus(() => CancellablePromise.resolve(idle), {
+      dictation: {
+        StartRecording: (mode) => {
+          session.dictation.applyStatus({
+            ...idle,
+            generation: session.dictation.status.generation + 1,
+            state: State.Recording,
+            recordingMode: mode,
+            startedAt: new Date().toISOString(),
+            canCancel: true,
+          });
+          return CancellablePromise.resolve();
+        },
+        StopRecording: () => {
+          session.dictation.applyStatus({
+            ...session.dictation.status,
+            state: State.Transcribing,
+          });
+          return CancellablePromise.resolve();
+        },
+        Cancel: () => {
+          session.dictation.applyStatus({
+            ...idle,
+            generation: session.dictation.status.generation,
+          });
+          return CancellablePromise.resolve();
+        },
+      },
       connection: {
         TestSavedConnection: () => {
           connectionChecks++;
@@ -609,6 +636,7 @@
   window.testSaves = saves.control;
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
+  let activePane = $state<PaneID>("voice");
   const noop = () => {};
   const footerStatus = $derived(
     taskConnectionStatus(inputMode, session.editor, Date.now()),
@@ -626,55 +654,66 @@
 <div
   class="flex h-screen flex-col overflow-hidden bg-background text-foreground"
 >
-  <TitleBar
-    paneLabel={paneByID(inputMode as PaneID).label}
-    onOpenCommands={noop}
-  />
+  <TitleBar paneLabel={paneByID(activePane).label} onOpenCommands={noop} />
   <div class="flex min-h-0 flex-1">
     <ActivityRail
-      pane={inputMode as PaneID}
+      pane={activePane}
+      voiceActive={session.dictation.status.state !== State.Idle &&
+        session.dictation.status.state !== State.Failed}
+      fileWorking={session.files.starting || session.files.status.canCancel}
       onSelect={(id) => {
-        if (id !== "settings") inputMode = id;
+        if (id === "history") activePane = id;
+        else if (id === "voice" || id === "file" || id === "tts") {
+          activePane = id;
+          inputMode = id;
+        }
       }}
     />
     <div class="flex min-w-0 flex-1 flex-col">
-  <HomeScreen
-    {session}
-    {now}
-    bind:inputMode
-    onOpenHistorySettings={noop}
-    onOpenServerSettings={() =>
-      (openedSettings = "File transcription settings")}
-    onOpenProcessingSettings={noop}
-    onOpenAudioSettings={() => (openedSettings = "Audio settings")}
-    onOpenShortcutSettings={() => (openedSettings = "Shortcut settings")}
-    onOpenSpeechSettings={() => (openedSettings = "Speech settings")}
-    onOpenGeneralSettings={noop}
-    onOpenSettingsSection={(section) =>
-      (openedSettings = `${section} settings`)}
-    onOpenConnection={(request) =>
-      (openedSettings = `Edit ${request.id || "connections"} for ${request.purpose}`)}
-  />
+      {#if activePane === "history"}
+        <HistoryPane
+          {session}
+          onOpenHistorySettings={() => (openedSettings = "History settings")}
+        />
+      {:else}
+        <HomeScreen
+          {session}
+          {now}
+          bind:inputMode
+          onOpenHistorySettings={noop}
+          onOpenServerSettings={() =>
+            (openedSettings = "File transcription settings")}
+          onOpenProcessingSettings={noop}
+          onOpenAudioSettings={() => (openedSettings = "Audio settings")}
+          onOpenShortcutSettings={() => (openedSettings = "Shortcut settings")}
+          onOpenSpeechSettings={() => (openedSettings = "Speech settings")}
+          onOpenGeneralSettings={noop}
+          onOpenSettingsSection={(section) =>
+            (openedSettings = `${section} settings`)}
+          onOpenConnection={(request) =>
+            (openedSettings = `Edit ${request.id || "connections"} for ${request.purpose}`)}
+        />
+      {/if}
     </div>
   </div>
-  {#if diagnosticsScenario}
-    <StatusBar
-      dictation={session.dictation.status}
-      {now}
-      connectionState={footerStatus}
-      connectionDetails={footerConnection}
-      onCheck={() =>
-        session.editor.testAppliedConnection(footerConnection.purpose)}
-      onEdit={() =>
-        (openedSettings = `Edit ${footerConnection.selected?.id || "connections"} for ${footerConnection.purpose}`)}
-      onSettings={() => (openedSettings = "Speech settings")}
-      onAbout={noop}
-      version="Review"
-    />
-    {#if openedSettings}<p class="sr-only" role="status">
-        {openedSettings}
-      </p>{/if}
-  {:else}
+  <StatusBar
+    dictation={session.dictation.status}
+    {now}
+    connectionState={footerStatus}
+    connectionDetails={footerConnection}
+    onCheck={() =>
+      session.editor.testAppliedConnection(footerConnection.purpose)}
+    onEdit={() =>
+      (openedSettings = `Edit ${footerConnection.selected?.id || "connections"} for ${footerConnection.purpose}`)}
+    onSettings={() => (openedSettings = "Speech settings")}
+    onAbout={noop}
+    version="Review"
+    toggleShortcut={session.editor.applied?.toggleShortcut ?? ""}
+  />
+  {#if openedSettings}<p class="sr-only" role="status">
+      {openedSettings}
+    </p>{/if}
+  {#if !diagnosticsScenario}
     <footer
       class="flex h-9 shrink-0 items-center border-t border-hairline bg-layer-fill px-4 text-xs text-muted-foreground"
     >
