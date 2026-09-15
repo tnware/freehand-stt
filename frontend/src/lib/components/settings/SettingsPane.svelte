@@ -24,6 +24,7 @@
     session,
     navigation,
     onReturn,
+    onCloseSidebar,
     onOpenRuntimes = onReturn,
     inspector = false,
     visible = true,
@@ -36,6 +37,7 @@
     session: Session;
     navigation: ShellNavigation;
     onReturn: () => void;
+    onCloseSidebar?: () => void;
     onOpenRuntimes?: () => void;
     inspector?: boolean;
     visible?: boolean;
@@ -241,6 +243,7 @@
       bind:session
       bind:active={navigation.active}
       {inspector}
+      {onCloseSidebar}
       {visible}
       {sections}
       {onRevealSection}

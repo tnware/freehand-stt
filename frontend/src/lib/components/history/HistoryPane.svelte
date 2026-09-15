@@ -1,6 +1,7 @@
 <script lang="ts">
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import HistoryIcon from "@lucide/svelte/icons/history";
+  import PanelRightOpenIcon from "@lucide/svelte/icons/panel-right-open";
   import Notifications from "$lib/components/shell/Notifications.svelte";
   import type { Message } from "$lib/utils/messages";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
@@ -21,7 +22,14 @@
   let {
     session,
     onOpenHistorySettings,
-  }: { session: Session; onOpenHistorySettings: () => void } = $props();
+    onOpenDetails,
+    detailsVisible,
+  }: {
+    session: Session;
+    onOpenHistorySettings: () => void;
+    onOpenDetails?: () => void;
+    detailsVisible?: boolean;
+  } = $props();
 
   const layout = getWorkbenchLayout();
   let query = $state("");
@@ -34,6 +42,9 @@
   const entries = $derived(filterHistoryEntries(retained, query, source));
   const selected = $derived(selectedHistoryEntry(entries, selectedID));
   const filtered = $derived(Boolean(query.trim()) || source !== "all");
+  const detailsShown = $derived(
+    detailsVisible ?? layout?.secondaryVisible ?? false,
+  );
 
   const voiceActive = $derived(
     session.dictation.status.state !== State.Idle &&
@@ -89,10 +100,22 @@
   $effect(() => {
     if (!layout) return;
     layout.details = details;
+    // Start each History visit with details available on wide windows. Closing
+    // them during this visit remains respected as the selected transcript changes.
+    layout.secondaryOpen = true;
     return () => {
       if (layout.details === details) layout.details = undefined;
     };
   });
+
+  function openDetails() {
+    if (onOpenDetails) onOpenDetails();
+    else if (layout) {
+      layout.compactPrimaryOpen = false;
+      layout.secondaryOpen = true;
+      layout.compactSecondaryOpen = !layout.secondaryAvailable.current;
+    }
+  }
 
   function choose(id: number) {
     selectedID = id;
@@ -159,7 +182,24 @@
       summary={enabled
         ? `${entries.length} of ${retained.length} transcripts · in memory`
         : "retention is turned off"}
-    />
+    >
+      {#snippet actions()}
+        {#if layout}
+          <Button
+            variant={detailsShown ? "soft" : "ghost"}
+            size="sm"
+            aria-label="Show transcript details"
+            aria-expanded={detailsShown}
+            aria-controls="workbench-secondary-sidebar"
+            onclick={openDetails}
+            ><PanelRightOpenIcon
+              class="size-4"
+              aria-hidden="true"
+            />Details</Button
+          >
+        {/if}
+      {/snippet}
+    </PaneHeader>
 
     <section
       class="flex min-h-0 min-w-0 flex-1 flex-col"

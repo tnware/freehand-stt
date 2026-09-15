@@ -1414,7 +1414,11 @@ tab when room returns. Contextual options
 and History details occupy only the secondary sidebar: auto-hide them below 1100px and open them on
 demand as a right-side overlay through the title-bar toggle. Check Escape and
 backdrop dismissal; never stack details below the transcript, and restore the
-wide-window preference on widening. Check both thin
+wide-window preference on widening. History opens details on each visit at
+1100px or wider, even if they were closed on an earlier visit. Closing must remain
+respected through selection and history updates within the visit. Its page-header
+Details button opens the selected run's details at all widths; narrower windows
+must start with details hidden. Check both thin
 dividers' larger pointer targets, drag limits, keyboard arrows, Home/End limits,
 separator names, orientation, and focus indicators.
 
@@ -1424,7 +1428,13 @@ Vocabulary; Text to speech has Speech; History has
 Details and History settings. Editing keeps the main content visible. Switching
 pages closes contextual options, and the right toggle opens the current workflow's
 options or History details. Test Save, Discard, and Keep editing on navigation and
-close, including a failed or pending save. Global Settings must not duplicate
+close, including a failed or pending save. Every contextual sidebar must expose
+one reachable X in its existing header, including when section tabs scroll.
+Check keyboard activation and focus return to the title-bar toggle, and verify
+the X and History's page-header Details action use the same draft guard.
+`right-sidebar-controls.spec.ts` covers these controls and History's responsive
+opening policy alongside the existing layout and configuration fixtures.
+Global Settings must not duplicate
 workflow or connection sections; Connections opens from its own rail action.
 Shared Vocabulary and Overlay options must identify their scope, stay beside the
 workflow when opened locally, and reflect the same saved values in global Settings.

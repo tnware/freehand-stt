@@ -8,6 +8,8 @@
   import * as WindowingService from "$bindings/windowing/service";
   import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
   import TitleBar from "$lib/components/shell/TitleBar.svelte";
+  import XIcon from "@lucide/svelte/icons/x";
+  import { Button } from "$lib/components/ui/button";
   import TitleBarMenu, {
     type TitleMenu,
   } from "$lib/components/shell/TitleBarMenu.svelte";
@@ -696,6 +698,7 @@
   function dismissSecondary() {
     if (inspectorOpen) closeInspector(true);
     else {
+      if (layout.secondaryAvailable.current) layout.secondaryOpen = false;
       layout.compactSecondaryOpen = false;
       void tick().then(() =>
         document
@@ -708,11 +711,17 @@
   }
   function showHistoryDetails() {
     navigationGeneration++;
+    const generation = navigationGeneration;
     const finish = () => {
       inspectorOpen = false;
       navigation.done();
+      layout.compactPrimaryOpen = false;
       layout.secondaryOpen = true;
       layout.compactSecondaryOpen = !layout.secondaryAvailable.current;
+      void tick().then(() => {
+        if (generation === navigationGeneration && auxPane === "history")
+          document.getElementById("workbench-secondary-sidebar")?.focus();
+      });
     };
     if (inspectorOpen && configuration) configuration.requestClose(finish);
     else finish();
@@ -830,7 +839,7 @@
       {#snippet secondaryContent()}
         {#if auxPane === "history"}
           <div
-            class="flex min-h-9 shrink-0 gap-1 border-b border-hairline px-3 py-1"
+            class="flex min-h-9 shrink-0 items-center gap-1 border-b border-hairline pl-3 pr-2 py-1"
             role="group"
             aria-label="History sidebar view"
           >
@@ -844,6 +853,17 @@
               aria-pressed={inspectorOpen}
               onclick={() => openSettings("history")}>History settings</button
             >
+            <span class="flex-1"></span>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              class="shrink-0"
+              aria-label="Close secondary sidebar"
+              title="Close sidebar"
+              disabled={inspectorOpen && session.editor.saving}
+              onclick={dismissSecondary}
+              ><XIcon class="size-4" aria-hidden="true" /></Button
+            >
           </div>
         {/if}
         {#if inspectorOpen}
@@ -852,6 +872,9 @@
             {session}
             {navigation}
             inspector
+            onCloseSidebar={auxPane === "history"
+              ? undefined
+              : dismissSecondary}
             visible={inspectorVisible}
             sections={configurationSections}
             onReturn={() => closeInspector()}
@@ -904,6 +927,8 @@
           <HistoryPane
             {session}
             onOpenHistorySettings={() => openSettings("history")}
+            onOpenDetails={showHistoryDetails}
+            detailsVisible={!inspectorOpen && secondaryShown}
           />
         {:else if auxPane !== null}
           <SettingsPane

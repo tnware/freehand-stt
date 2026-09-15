@@ -812,7 +812,12 @@ exposes Transcription, Cleanup, and Vocabulary;
 Text to speech exposes Speech. History offers the selected run's `HistoryDetails`
 and History settings. The main editor stays mounted while those options are edited.
 Changing pages closes contextual options, and the right toggle opens the current
-workflow's options or History details. Below 1100px viewport width, the sidebar
+workflow's options or History details. Each sidebar header exposes an X routed
+through `App`'s existing draft-resolution guard. History initializes wide-window
+details visibility on each visit, respects explicit closure during that visit,
+and offers a Details action in its page header. That action also resolves a
+pending History settings draft before replacing it with details.
+Below 1100px viewport width, the sidebar
 starts hidden and opens as an explicit right-side overlay. Escape/backdrop
 dismissal follows the same draft-resolution guard as navigation. It never moves
 below the reader. Responsive hiding

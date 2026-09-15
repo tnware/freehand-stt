@@ -134,7 +134,7 @@ test("the bottom panel keeps its selected tab while switching areas and after re
   await expect(diagnostics).toHaveAttribute("aria-selected", "true");
 });
 
-test("History details stay on the right and restore the user preference after narrowing", async ({
+test("History details reopen on each visit and restore the visit preference after narrowing", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 820 });
@@ -153,8 +153,7 @@ test("History details stay on the right and restore the user preference after na
   await expect(control(page, "secondary sidebar")).toBeEnabled();
   await expect(secondary(page)).toBeHidden();
   await navigate(page, "History");
-  await expect(secondary(page)).toBeHidden();
-  await show(page, "secondary sidebar");
+  await expect(secondary(page)).toBeVisible();
   await page.setViewportSize({ width: 1000, height: 820 });
   await expect(control(page, "secondary sidebar")).toBeEnabled();
   await expect(control(page, "secondary sidebar")).toHaveAttribute(

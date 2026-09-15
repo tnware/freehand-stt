@@ -12,6 +12,7 @@
   import SavedConnectionPicker from "$lib/components/settings/SavedConnectionPicker.svelte";
   import { Purpose } from "$bindings/savedconnection";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import XIcon from "@lucide/svelte/icons/x";
   import { Button } from "$lib/components/ui/button";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import Notifications from "$lib/components/shell/Notifications.svelte";
@@ -41,6 +42,7 @@
     onRevealSection,
     navigationRef = $bindable(null),
     onClose,
+    onCloseSidebar,
     onOpenRuntimes = onClose,
     onSaved = () => {},
     saveReturnsToTask = false,
@@ -65,6 +67,7 @@
     onRevealSection?: (section: SettingsSectionID) => void;
     navigationRef?: HTMLElement | null;
     onClose: () => void;
+    onCloseSidebar?: () => void;
     /** Leaves configuration for the runtime pane on the rail. */
     onOpenRuntimes?: () => void;
     onSaved?: () => void;
@@ -378,12 +381,12 @@
       <nav
         bind:this={navigationRef}
         aria-label="Context settings"
-        class="shrink-0 border-b border-hairline px-3"
+        class="flex min-w-0 shrink-0 items-center gap-1 border-b border-hairline pl-3 pr-2"
       >
         <div
           role="tablist"
           aria-label="Context settings"
-          class="flex min-w-0 overflow-x-auto"
+          class="flex min-w-0 flex-1 overflow-x-auto"
         >
           {#each inspectorSections as item, index (item.id)}
             <button
@@ -406,6 +409,18 @@
             >
           {/each}
         </div>
+        {#if onCloseSidebar}
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            class="shrink-0"
+            aria-label="Close secondary sidebar"
+            title="Close sidebar"
+            disabled={session.editor.saving}
+            onclick={onCloseSidebar}
+            ><XIcon class="size-4" aria-hidden="true" /></Button
+          >
+        {/if}
       </nav>
     {/if}
     <div
@@ -429,9 +444,25 @@
             class="content-section-icon flex items-center justify-center [&>svg]:size-4"
             aria-hidden="true"><section.icon /></span
           >
-          <h3 id="settings-page-heading" tabindex="-1" class="content-title">
+          <h3
+            id="settings-page-heading"
+            tabindex="-1"
+            class="content-title min-w-0 flex-1 break-words"
+          >
             {sectionTitle}
           </h3>
+          {#if inspector && inspectorSections.length <= 1 && onCloseSidebar}
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              class="shrink-0"
+              aria-label="Close secondary sidebar"
+              title="Close sidebar"
+              disabled={session.editor.saving}
+              onclick={onCloseSidebar}
+              ><XIcon class="size-4" aria-hidden="true" /></Button
+            >
+          {/if}
         </div>
         <p class="content-meta max-w-2xl">
           {sectionBlurb}
