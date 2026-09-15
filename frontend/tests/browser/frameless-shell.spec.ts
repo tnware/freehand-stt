@@ -117,11 +117,11 @@ for (const width of [1280, 560]) {
       ),
     }));
     expect(geometry.height).toBe(44);
-    expect(geometry.paddingLeft).toBe("80px");
-    expect(geometry.identityLeft).toBeGreaterThanOrEqual(80);
+    expect(geometry.paddingLeft).toBe("96px");
+    expect(geometry.identityLeft).toBeGreaterThanOrEqual(96);
     expect(geometry.dragRegions.every((value) => value === "drag")).toBe(true);
     for (const item of geometry.interactive.filter((item) => item.visible)) {
-      expect(item.left).toBeGreaterThanOrEqual(80);
+      expect(item.left).toBeGreaterThanOrEqual(96);
       expect(item.draggable).toBe("no-drag");
       expect(item.region).not.toBe("caption");
     }

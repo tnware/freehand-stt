@@ -174,7 +174,8 @@
 
   .title-bar.mac {
     height: 44px;
-    padding-left: 80px;
+    /* Leave breathing room between the native green button and the mark. */
+    padding-left: 96px;
   }
 
   .title-identity {

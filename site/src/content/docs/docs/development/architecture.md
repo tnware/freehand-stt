@@ -1025,9 +1025,12 @@ or layout controls: the runtime does not subtract a child's `none` region from
 its parent's rectangle. Selective `--wails-draggable` regions and ordinary button
 handlers retain basic interaction if composition hosting falls back.
 
-On macOS, Main keeps `Frameless: false` and uses `MacTitleBarHiddenInset` for
-full-size content with native traffic lights. The renderer reserves left-side
-space for those controls; macOS retains its existing application menu and native
+On macOS, Main keeps `Frameless: false` and uses `MacTitleBarHiddenInset` with
+`MacToolbarStyleUnifiedCompact` for full-size content with native traffic lights.
+The renderer keeps a 44px header and reserves 96px on the left for those controls
+and a gap before the Freehand mark. AppKit owns the button positions; toolbar
+style selects native spacing without manually moving the buttons.
+macOS retains its existing application menu and native
 fullscreen behavior. `InvisibleTitleBarHeight` remains zero so native dragging
 does not intercept the whole interactive header. Only intended drag surfaces use
 `--wails-draggable: drag`; controls opt out. Wails handles macOS title-bar

@@ -155,6 +155,9 @@ func mainWindowOptionsForPlatform(osName string, startupLaunch, showWindowOnLaun
 		// remove those controls; a native invisible drag strip would intercept
 		// the command/menu buttons. The renderer supplies selective drag areas.
 		options.Mac.TitleBar = application.MacTitleBarHiddenInset
+		// Match the compact workspace header instead of letting AppKit choose
+		// a taller toolbar with lower traffic-light placement.
+		options.Mac.TitleBar.ToolbarStyle = application.MacToolbarStyleUnifiedCompact
 	}
 	return options
 }

@@ -74,8 +74,10 @@ Run these checks separately in a packaged app on the supported macOS
 architectures; browser padding fixtures and a Windows build do not satisfy them.
 
 - Confirm native traffic lights remain at the left of the integrated title bar,
-  with enough reserved space that the mark, title, and controls never overlap
-  them. Check normal and compact sizes, Retina scaling, and light/dark modes.
+  vertically aligned within the existing 44px header when using the compact
+  native toolbar. Confirm a visible gap before the Freehand mark, and that the
+  mark, title, and controls never overlap the buttons. Check normal and compact
+  sizes, Retina scaling, and light/dark modes.
   The existing macOS application menu must remain available.
 - Move the window from intended drag surfaces and operate nearby command,
   menu, and layout controls without accidental dragging. Check the system's

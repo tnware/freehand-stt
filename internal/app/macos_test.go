@@ -36,7 +36,9 @@ func TestMacShellUsesNativeAppearanceAndIgnoresMica(t *testing.T) {
 
 func TestMacMainWindowKeepsNativeTrafficLightsWithFullSizeContent(t *testing.T) {
 	options := mainWindowOptionsForPlatform("darwin", false, true, true, config.AppearanceModeDark, false)
-	if options.Frameless || options.Mac.TitleBar != application.MacTitleBarHiddenInset {
+	expectedTitleBar := application.MacTitleBarHiddenInset
+	expectedTitleBar.ToolbarStyle = application.MacToolbarStyleUnifiedCompact
+	if options.Frameless || options.Mac.TitleBar != expectedTitleBar {
 		t.Fatal("main workspace does not preserve the native inset traffic lights")
 	}
 	if options.Mac.InvisibleTitleBarHeight != 0 {
