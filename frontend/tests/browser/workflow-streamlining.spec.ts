@@ -127,7 +127,10 @@ test("connection attention stays visible with diagnostics collapsed", async ({
 }) => {
   await page.goto("/tests/browser/app/?workflows&attention");
   await openSection(page, "server");
-  await page.getByRole("button", { name: "Refresh models" }).click();
+  await page
+    .locator('[data-pane="configuration"]')
+    .getByRole("button", { name: "Refresh models" })
+    .click();
   await expect(requestSettings(page).locator("summary")).toContainText(
     "Connection needs attention",
   );

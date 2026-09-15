@@ -10,7 +10,7 @@
   import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
   import { Badge } from "$lib/components/ui/badge";
   import { Separator } from "$lib/components/ui/separator";
-  import PaneHeader from "$lib/components/home/PaneHeader.svelte";
+  import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import {
     HistoryOutcome,
     HistoryProcessingStatus,
@@ -208,11 +208,9 @@
     class="history-details flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
   >
     {#if embedded}
-      <PaneHeader title="Transcription details" />
+      <SidebarHeader title="Transcription details" heading />
     {:else}
-      <header
-        class="shrink-0 border-b border-hairline bg-layer-fill px-5 py-3.5"
-      >
+      <header class="shrink-0 border-b border-hairline bg-layer-fill px-3 py-3">
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
             <h1 class="content-title">Transcription details</h1>
@@ -236,7 +234,7 @@
       tabindex="0"
       role="region"
       aria-label="Run information"
-      class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-5 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground [&_dt]:my-0.5 [&_dt]:text-[12px]"
+      class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-3 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground [&_dt]:my-0.5 [&_dt]:text-[12px]"
     >
       <section
         class="content-summary flex min-w-0 flex-col gap-3"

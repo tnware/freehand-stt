@@ -9,14 +9,14 @@
 </script>
 
 <!--
-  One group surface holds related settings; rows share the same inset and
-  dividers, while individual inputs retain their interactive boundaries.
+  Settings use ruled groups on the editor surface. Controls keep their own
+  boundaries, and every group shares the editor's content inset.
 -->
 <div
-  class="settings-group min-w-0 rounded-sm border border-hairline bg-well px-3 [&>*+*]:border-t [&>*+*]:border-hairline"
+  class="settings-group min-w-0 border-b border-hairline [&>*+*]:border-t [&>*+*]:border-hairline"
 >
   {#if title}
-    <div class="flex items-center gap-2 py-3">
+    <div class="flex min-h-[34px] items-center gap-2 py-1.5">
       {#if icon}<span
           class="content-section-icon flex items-center justify-center [&>svg]:size-4"
           aria-hidden="true">{@render icon()}</span

@@ -266,7 +266,7 @@
 >
   {#if entries.length === 0 && !live}
     <div
-      class="flex min-h-40 flex-col items-center justify-center px-5 py-4 text-center"
+      class="flex min-h-40 flex-col items-center justify-center px-3 py-4 text-center"
     >
       <p class="content-title">{emptyTitle}</p>
       <p class="content-meta mt-1.5 max-w-md">
@@ -277,13 +277,13 @@
     <div class="flex flex-col">
       {#if live}
         <article
-          class="bg-primary/5 px-5 pt-3.5 pb-2"
+          class="bg-primary/5 px-3 pt-3.5 pb-2"
           aria-label={live.working
             ? "Live audio file transcript"
             : "Audio file transcript result"}
         >
           <div
-            class="-mx-5 -mt-3.5 flex min-h-11 min-w-0 items-center justify-between gap-3 border-b border-hairline bg-layer-fill px-5 py-1"
+            class="-mx-3 -mt-3.5 flex min-h-[34px] min-w-0 items-center justify-between gap-3 border-b border-hairline bg-layer-fill px-3 py-1"
           >
             <div class="flex min-w-0 items-center gap-2">
               <span
@@ -450,7 +450,9 @@
           class={cn(
             "history-entry group border-b border-hairline transition-colors",
             isExpanded
-              ? "bg-subtle-fill px-5 pt-2.5 pb-2"
+              ? reader
+                ? "bg-background px-3 pt-2.5 pb-2"
+                : "bg-subtle-fill px-3 pt-2.5 pb-2"
               : entry.id === newestID
                 ? "bg-latest"
                 : "",
@@ -460,21 +462,20 @@
             class={cn(
               "history-row-header flex min-w-0 items-center",
               isExpanded
-                ? "-mx-5 -mt-2.5 min-h-11 w-[calc(100%+2.5rem)] sticky top-0 z-10 bg-subtle-fill"
-                : "h-11 w-full",
+                ? "-mx-3 -mt-2.5 min-h-[34px] w-[calc(100%+1.5rem)] sticky top-0 z-10 bg-subtle-fill"
+                : "h-[34px] w-full",
             )}
           >
             {#if reader}
               <div
-                class="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 px-5 py-1"
+                class="flex min-h-[34px] min-w-0 flex-1 items-center gap-2.5 px-3 py-1"
               >
                 {@render entryHeading()}
               </div>
             {:else}
               <button
                 type="button"
-                class="history-disclosure flex min-w-0 flex-1 items-center gap-2.5 px-5 py-1 text-left"
-                class:min-h-11={isExpanded}
+                class="history-disclosure flex min-h-[34px] min-w-0 flex-1 items-center gap-2.5 px-3 py-1 text-left"
                 aria-label={`${isExpanded ? "Collapse" : "Expand"} transcript from ${completedDateTime(entry.completedAt)}`}
                 aria-expanded={isExpanded}
                 aria-controls={`${uid}-history-entry-${entry.id}-content`}
@@ -512,7 +513,7 @@
                   processedText,
                 )}
                 <div
-                  class="comparison-layout mt-3 overflow-hidden rounded-sm border border-hairline bg-background/35"
+                  class="comparison-layout mt-3 overflow-hidden border-y border-hairline bg-background"
                 >
                   <section
                     class="comparison-panel px-3 py-2.5"
@@ -734,7 +735,7 @@
 </div>
 
 {#if detailsError}
-  <p role="alert" class="px-5 py-2 text-xs text-destructive">{detailsError}</p>
+  <p role="alert" class="px-3 py-2 text-xs text-destructive">{detailsError}</p>
 {/if}
 
 <style>

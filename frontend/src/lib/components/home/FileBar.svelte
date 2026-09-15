@@ -26,6 +26,7 @@
     onTryStreamingAgain,
     onOpenSettings,
     optionsDisabled = false,
+    showSettings = true,
   }: {
     status: FileTranscriptionStatus;
     choosing?: boolean;
@@ -41,6 +42,7 @@
     onTryStreamingAgain: () => void;
     onOpenSettings: () => void;
     optionsDisabled?: boolean;
+    showSettings?: boolean;
   } = $props();
 
   const hasFile = $derived(
@@ -82,20 +84,18 @@
 </script>
 
 <!--
-  A file has no microphone, no live stream and no insertion target, so it does
-  not need four stages standing on screen. One row states where the audio comes
-  from, which model reads it, and what to press.
+  File selection and request actions remain together above the transcript.
 -->
 <section
-  class="@container flex flex-col gap-2 border-b border-hairline bg-layer-fill px-5 py-2"
+  class="@container flex flex-col gap-2 border-b border-hairline bg-layer-fill px-3 py-2"
   aria-label="Audio file"
   data-state={status.phase}
 >
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-    <div class="flex min-w-[13rem] flex-[2] items-center gap-2.5">
+    <div class="flex min-w-0 basis-56 flex-[2] flex-wrap items-center gap-2">
       {#if hasFile}
         <FileAudioIcon class="content-section-icon" aria-hidden="true" />
-        <span class="min-w-0 flex-1">
+        <span class="min-w-0 basis-24 flex-1">
           <span class="content-value block truncate" title={status.fileName}
             >{status.fileName || "Audio file"}</span
           >
@@ -108,7 +108,7 @@
         {#if !working}
           <button
             type="button"
-            class="grid size-6 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-subtle-fill-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-40"
+            class="grid size-6 shrink-0 place-items-center rounded-sm text-muted-foreground transition-colors hover:bg-subtle-fill-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-40"
             onclick={onClear}
             disabled={busy}
             aria-label="Clear selected audio file"
@@ -124,7 +124,9 @@
           title={blocked || "Choose an audio file"}
         >
           {#if choosing}
-            <LoaderCircleIcon class="size-3.5 animate-spin" />
+            <LoaderCircleIcon
+              class="size-3.5 animate-spin motion-reduce:animate-none"
+            />
           {:else}
             <FolderOpenIcon class="size-3.5" />
           {/if}
@@ -145,11 +147,11 @@
     </div>
 
     <div class="flex shrink-0 items-center gap-2">
-      <WorkflowSettingsButton
-        label="Audio file settings"
-        disabled={optionsDisabled}
-        onclick={onOpenSettings}
-      />
+      {#if showSettings}<WorkflowSettingsButton
+          label="Audio file settings"
+          disabled={optionsDisabled}
+          onclick={onOpenSettings}
+        />{/if}
       {#if status.streamingUnavailable && !status.streamingProfileUnavailable && !working}
         <Button
           variant="outline"
@@ -181,7 +183,7 @@
             : failed
               ? "Retry"
               : completed
-                ? "Again"
+                ? "Transcribe again"
                 : "Transcribe"}
         </Button>
       {/if}

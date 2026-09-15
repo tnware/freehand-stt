@@ -4,7 +4,7 @@
 
   let {
     label,
-    /** Right-aligned line of facts, in mono. */
+    /** Quiet summary of the panel's current contents. */
     summary = "",
     open = false,
     /** id of the region this header expands. */
@@ -32,22 +32,29 @@
 </script>
 
 <!--
-  The one panel header on the main screen. The label is the same mono caption
-  the rack modules use, so a panel that collapses and a module that does not
-  still read as the same kind of thing.
+  A leading chevron and label form one disclosure target. Independent actions
+  stay at the trailing edge without adding a second tab stop for collapsing.
 -->
-<div class="flex h-[34px] w-full shrink-0 items-center border-b border-hairline pr-1.5 pl-3">
+<div class="workbench-header w-full gap-1 pr-1.5">
   <button
     type="button"
-    class="head-trigger flex h-full min-w-0 flex-1 items-center gap-3 pr-2 text-left"
+    class="head-trigger -ml-1 flex h-full min-w-0 flex-1 items-center gap-2 pr-2 pl-1 text-left transition-colors hover:bg-subtle-fill-hover"
     class:fade={fadeWhenOpen}
     aria-expanded={open}
     aria-controls={controls}
     onclick={onToggle}
   >
+    <ChevronRightIcon
+      class="size-3.5 shrink-0 text-muted-foreground transition-transform duration-150 {open
+        ? 'rotate-90'
+        : ''}"
+      aria-hidden="true"
+    />
     <span class="caption shrink-0">{label}</span>
     {#if summaryContent || summary}
-      <span class="summary figure min-w-0 flex-1 truncate text-[10px] text-ink-quiet">
+      <span
+        class="summary figure min-w-0 flex-1 truncate text-[11px] text-ink-quiet"
+      >
         {#if summaryContent}
           {@render summaryContent()}
         {:else}
@@ -57,23 +64,10 @@
     {/if}
   </button>
   {@render actions?.()}
-  <button
-    type="button"
-    class="chevron-trigger flex size-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-subtle-fill-hover hover:text-foreground"
-    aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
-    aria-expanded={open}
-    aria-controls={controls}
-    onclick={onToggle}
-  >
-    <ChevronRightIcon
-      class="size-[14px] transition-transform duration-200 {open ? 'rotate-90' : ''}"
-    />
-  </button>
 </div>
 
 <style>
-  .head-trigger:focus-visible,
-  .chevron-trigger:focus-visible {
+  .head-trigger:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
   }

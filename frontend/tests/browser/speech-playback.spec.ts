@@ -19,7 +19,7 @@ test("speech setup guidance belongs to the editable composer", async ({
   });
   await expect(text).toBeEditable();
   await expect(text).toHaveAccessibleDescription(
-    /Choose a connection, model, and voice in speech options/,
+    /Choose a connection, model, and voice in speech settings/,
   );
   await text.fill("Keep this draft while configuring speech.");
   await expect(

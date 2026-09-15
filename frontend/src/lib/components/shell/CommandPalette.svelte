@@ -127,9 +127,7 @@
     >
       {#each matches as command, position (command.id)}
         {#if position === 0 || matches[position - 1].group !== command.group}
-          <p
-            class="px-2.5 pt-2 pb-1 text-[10px] font-semibold tracking-[0.08em] text-ink-quiet uppercase"
-          >
+          <p class="content-kicker px-2.5 pt-2 pb-1">
             {command.group}
           </p>
         {/if}
@@ -155,7 +153,7 @@
             >{command.label}</span
           >
           {#if command.detail}
-            <span class="shrink-0 truncate text-[11px] text-ink-quiet"
+            <span class="max-w-[40%] truncate text-[11px] text-ink-quiet"
               >{command.detail}</span
             >
           {/if}

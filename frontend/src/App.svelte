@@ -851,17 +851,19 @@
       {#snippet secondaryContent()}
         {#if auxPane === "history"}
           <div
-            class="flex min-h-9 shrink-0 items-center gap-1 border-b border-hairline pl-3 pr-2 py-1"
+            class="workbench-header gap-0 pl-0 pr-2"
             role="group"
             aria-label="History sidebar view"
           >
             <button
-              class="rounded-sm px-2 text-xs hover:bg-accent-wash"
+              type="button"
+              class="workbench-tab"
               aria-pressed={!inspectorOpen}
               onclick={showHistoryDetails}>Details</button
             >
             <button
-              class="rounded-sm px-2 text-xs hover:bg-accent-wash"
+              type="button"
+              class="workbench-tab"
               aria-pressed={inspectorOpen}
               onclick={() => openSettings("history")}>History settings</button
             >

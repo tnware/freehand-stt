@@ -13,6 +13,7 @@
   import { cn } from "$lib/utils";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import SidebarContribution from "$lib/components/shell/SidebarContribution.svelte";
+  import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
 
   let {
     active,
@@ -84,14 +85,14 @@
   // The selected row uses the same accent wash as workspace navigation.
   const itemClass = (id: SettingsSectionID) =>
     cn(
-      "flex min-h-9 w-full items-center gap-2.5 rounded-lg text-[13px] transition-colors",
+      "flex min-h-8 w-full items-center gap-2 border-l-2 text-[13px] transition-colors",
       workbench
-        ? "justify-start px-3"
-        : "justify-center px-0 min-[760px]:justify-start min-[760px]:px-3",
-      "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+        ? "justify-start pl-2.5 pr-3"
+        : "justify-center px-0 min-[760px]:justify-start min-[760px]:pl-2.5 min-[760px]:pr-3",
+      "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
       id === active
-        ? "bg-accent-wash font-semibold text-accent-text ring-1 ring-inset ring-primary/20"
-        : "text-secondary-foreground hover:bg-subtle-fill-hover hover:text-foreground active:bg-subtle-fill-pressed",
+        ? "border-primary bg-accent-wash font-medium text-foreground"
+        : "border-transparent text-secondary-foreground hover:bg-subtle-fill-hover hover:text-foreground active:bg-subtle-fill-pressed",
     );
 
   function moveSelection(event: KeyboardEvent, current: SettingsSectionID) {
@@ -135,21 +136,17 @@
     aria-label="Settings sections"
     class="flex min-h-0 shrink-0 flex-col gap-3 overflow-y-auto overscroll-contain border-r border-hairline bg-layer-fill pt-0 pb-4 {workbench
       ? 'h-full w-full px-0'
-      : 'w-14 px-2 min-[760px]:w-[252px] min-[760px]:px-0'}"
+      : 'w-14 px-0 min-[760px]:w-[252px]'}"
   >
-    <p
-      class="h-[33px] shrink-0 items-center border-b border-hairline pl-3.5 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase {workbench
-        ? 'flex'
-        : 'hidden min-[760px]:flex'}"
-    >
-      Settings
-    </p>
+    <div class="shrink-0 {workbench ? 'block' : 'hidden min-[760px]:block'}">
+      <SidebarHeader title="Settings" />
+    </div>
     <p id="settings-nav-help" class="sr-only">
       Use the arrow keys to move between settings sections. Press Home or End to
       jump to the first or last section.
     </p>
     <div
-      class="relative mx-1.5 mt-2 shrink-0 {workbench
+      class="relative mx-3 shrink-0 {workbench
         ? 'block'
         : 'hidden min-[760px]:block'}"
     >
@@ -180,9 +177,9 @@
         (section) => section.group === group,
       )}
       {#if groupSections.length}
-        <div class="flex shrink-0 flex-col gap-0.5 px-1.5">
+        <div class="flex shrink-0 flex-col">
           <p
-            class="px-2.5 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase {workbench
+            class="content-kicker px-3 pb-1 {workbench
               ? 'block'
               : 'hidden min-[760px]:block'}"
           >

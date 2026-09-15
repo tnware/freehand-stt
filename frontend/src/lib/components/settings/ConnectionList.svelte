@@ -44,7 +44,7 @@
 </script>
 
 <div
-  class="flex h-full min-h-0 flex-col {sidebar
+  class="@container/connections flex h-full min-h-0 min-w-0 flex-col {sidebar
     ? 'border-r border-hairline'
     : ''}"
 >
@@ -80,14 +80,22 @@
           onAdd();
         }}><PlusIcon />Add connection</Button
       >{/if}
-    <div class="relative min-w-40 flex-1">
+    <div class="relative min-w-0 flex-1">
       <SearchIcon
-        class="pointer-events-none absolute left-2.5 top-2 size-4 text-muted-foreground"
+        class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
       />
       <Input
         aria-label="Search saved connections"
         placeholder="Search connections…"
         bind:value={query}
+        onkeydown={(event) => {
+          if (event.key === "Escape" && query) {
+            event.preventDefault();
+            event.stopPropagation();
+            query = "";
+          }
+        }}
         class="pl-8 pr-2"
       />
     </div>
@@ -96,14 +104,20 @@
       class="flex h-[26px] shrink-0 items-center px-5 text-[10px] font-semibold tracking-[0.07em] text-ink-quiet uppercase"
     >
       <span class="min-w-0 flex-1">Name</span>
-      <span class="hidden w-[190px] shrink-0 min-[900px]:block">Endpoint</span>
-      <span class="hidden w-[130px] shrink-0 min-[1060px]:block">Provider</span>
-      <span class="hidden w-[140px] shrink-0 min-[780px]:block">Used by</span>
+      <span class="hidden w-[190px] shrink-0 @min-[810px]/connections:block"
+        >Endpoint</span
+      >
+      <span class="hidden w-[130px] shrink-0 @min-[980px]/connections:block"
+        >Provider</span
+      >
+      <span class="hidden w-[140px] shrink-0 @min-[620px]/connections:block"
+        >Used by</span
+      >
       <span class="w-[104px] shrink-0">State</span>
     </div>{/if}
   <nav
     aria-label="Saved connections"
-    class="connection-list-content min-h-0 flex-1 overflow-y-auto overscroll-contain"
+    class="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain"
   >
     {#each entries as connection (connection.id)}
       {@const active = connectionWorkflows.filter(
@@ -125,7 +139,7 @@
         disabled={busy}
         aria-current={connection.id === selected ? "true" : undefined}
         onclick={() => onSelect(connection)}
-        class={`connection-row flex w-full border-b border-hairline text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50 ${sidebar ? "min-h-[68px] flex-col items-stretch gap-1 px-3 py-2" : "h-[52px] items-center px-5"} ${connection.id === selected ? "bg-accent-wash" : "hover:bg-subtle-fill-hover"}`}
+        class={`connection-row flex w-full border-b border-l-2 border-b-hairline text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50 ${sidebar ? "min-h-[60px] flex-col items-stretch gap-0.5 pl-2.5 pr-3 py-1.5" : "min-h-[52px] items-center pl-[18px] pr-5"} ${connection.id === selected ? "border-l-primary bg-accent-wash" : "border-l-transparent hover:bg-subtle-fill-hover"}`}
       >
         <span class="flex min-w-0 flex-1 items-center gap-2.5">
           <ProviderIcon
@@ -146,19 +160,19 @@
         <span
           class="shrink-0 truncate font-mono text-[10px] text-secondary-foreground {sidebar
             ? 'pl-[26px]'
-            : 'hidden w-[190px] min-[900px]:block'}"
+            : 'hidden w-[190px] @min-[810px]/connections:block'}"
           title={endpoint}>{endpoint}</span
         >
         <span
           class="hidden w-[130px] shrink-0 truncate text-[11.5px] text-muted-foreground {sidebar
             ? ''
-            : 'min-[1060px]:block'}"
+            : '@min-[980px]/connections:block'}"
           title={metadata}>{metadata}</span
         >
         <span
           class="hidden w-[140px] shrink-0 truncate text-[11.5px] {sidebar
             ? ''
-            : 'min-[780px]:block'} {usedBy
+            : '@min-[620px]/connections:block'} {usedBy
             ? 'text-secondary-foreground'
             : 'text-ink-quiet'}"
           title={usedBy || "Not in use"}>{usedBy || "Not in use"}</span
@@ -199,23 +213,33 @@
           {/if}
         </span>
       </button>
-    {:else}<p class="px-4 py-6 text-center text-[13px] text-muted-foreground">
-        {query
-          ? "No matching connections."
-          : "Add a server connection or set up a local runtime. Its built-in connection appears automatically."}
-      </p>{/each}
+    {:else}
+      <div class="space-y-3 px-3 py-4">
+        <p class="content-meta" role="status">
+          {query
+            ? "No matching connections."
+            : "Add a server connection or set up a local runtime. Its built-in connection appears automatically."}
+        </p>
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={busy}
+          onclick={() => {
+            if (query) query = "";
+            else onAdd();
+          }}>{query ? "Clear search" : "Add connection"}</Button
+        >
+      </div>
+    {/each}
   </nav>
   <p
     class="shrink-0 border-t border-hairline py-2 text-xs text-muted-foreground {sidebar
       ? 'px-3'
       : 'px-5'}"
+    role="status"
   >
-    {catalog.entries?.length ?? 0} connections
+    {#if query}{entries.length} of
+    {/if}{catalog.entries?.length ?? 0}
+    {catalog.entries?.length === 1 ? "connection" : "connections"}
   </p>
 </div>
-
-<style>
-  .connection-list-content {
-    container-type: inline-size;
-  }
-</style>

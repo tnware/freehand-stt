@@ -315,12 +315,11 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   /*
-   * Three steps, not five. 4px is the badge, 6px is a control, and 8px is
-   * floating panels; the larger aliases collapse onto the panel radius
-   * so one screen never shows four different corners.
+   * Workspace regions meet at square edges. Controls and badges use 4px;
+   * floating surfaces use 8px. Larger aliases share the floating radius.
    */
   --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
+  --radius-md: 0.25rem;
   --radius-lg: 0.5rem;
   --radius-xl: 0.5rem;
   --radius-2xl: 0.5rem;
@@ -350,7 +349,9 @@
     background: var(--background);
   }
   button,
-  input {
+  input,
+  select,
+  textarea {
     font: inherit;
   }
   ::selection {
@@ -438,12 +439,65 @@ html.dark[data-material="mica"] #app {
 /* Content hierarchy is shared by every workbench area. Surfaces group related
  * facts; accent colours remain reserved for actions, selection and status. */
 @layer components {
+  .workbench-header,
+  .workbench-toolbar {
+    display: flex;
+    min-width: 0;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    padding-inline: 12px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .workbench-header {
+    height: 34px;
+  }
+  .workbench-toolbar {
+    min-height: 28px;
+  }
+  .workbench-tab {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    height: 100%;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 12px;
+    border-radius: 0;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      color 100ms,
+      background-color 100ms;
+  }
+  .workbench-tab:is([aria-selected="true"], [aria-pressed="true"]) {
+    color: var(--foreground);
+  }
+  .workbench-tab:is([aria-selected="true"], [aria-pressed="true"])::after {
+    content: "";
+    position: absolute;
+    inset-inline: 12px;
+    bottom: 0;
+    height: 1px;
+    background: var(--accent-text);
+  }
+  .workbench-tab:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--subtle-fill-hover);
+    color: var(--foreground);
+  }
+  .workbench-tab:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
   .content-title {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-size: 16px;
     font-weight: 600;
     line-height: 1.35;
-    letter-spacing: -0.015em;
+    letter-spacing: 0;
     color: var(--foreground);
   }
   .content-section-title {
@@ -453,10 +507,10 @@ html.dark[data-material="mica"] #app {
     color: var(--foreground);
   }
   .content-kicker {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1.5;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--muted-foreground);
   }
@@ -509,7 +563,7 @@ html.dark[data-material="mica"] #app {
 [data-slot="combobox-input"],
 [data-slot="textarea"],
 [data-slot="select-trigger"] {
-  border-radius: 0.375rem;
+  border-radius: var(--radius-md);
   color: var(--foreground);
 }
 [data-slot="input"]:not(:focus-visible):not([aria-invalid="true"]),
@@ -534,7 +588,7 @@ html.dark[data-material="mica"] #app {
 [data-slot="dropdown-menu-checkbox-item"],
 [data-slot="dropdown-menu-radio-item"] {
   min-height: 1.75rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-md);
 }
 
 /* Selected options share the navigation accent without changing focus rings. */
@@ -550,6 +604,7 @@ html.dark[data-material="mica"] #app {
 @media (forced-colors: active) {
   [aria-current="page"],
   [aria-pressed="true"],
+  .workbench-tab[aria-selected="true"],
   [data-slot="toggle-group-item"][data-state="on"] {
     outline: 2px solid Highlight;
     outline-offset: -2px;

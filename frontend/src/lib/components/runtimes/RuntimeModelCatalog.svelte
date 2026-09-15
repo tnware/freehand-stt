@@ -413,4 +413,31 @@
       text-align: right;
     }
   }
+  @container (max-width: 400px) {
+    .model-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      row-gap: 4px;
+      padding-block: 6px;
+    }
+    .model-identity {
+      grid-column: 1 / -1;
+    }
+    .model-actions {
+      grid-column: 2;
+      grid-row: 2 / 4;
+      max-width: 104px;
+      flex-wrap: wrap;
+    }
+    .model-size {
+      grid-column: 1;
+      grid-row: 2;
+      flex-wrap: wrap;
+    }
+    .model-status {
+      grid-column: 1;
+      grid-row: 3;
+      padding-left: 22px;
+      text-align: left;
+    }
+  }
 </style>

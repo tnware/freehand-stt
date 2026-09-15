@@ -16,6 +16,7 @@
     readiness,
     serverControls,
     task = "voice",
+    embedded = false,
     testing = false,
     completing = false,
     saving = false,
@@ -27,6 +28,7 @@
     readiness: Readiness;
     serverControls?: Snippet;
     task?: "voice" | "file";
+    embedded?: boolean;
     testing?: boolean;
     completing?: boolean;
     saving?: boolean;
@@ -62,6 +64,13 @@
         }[action.step]
       : "Connection needs attention",
   );
+  const title = $derived(
+    readiness.initialSetup
+      ? task === "file"
+        ? "Set up audio-file transcription"
+        : "Set up voice transcription"
+      : recoveryTitle,
+  );
   function proceed() {
     if (busy) return;
     if (action.kind === "complete") onComplete();
@@ -74,23 +83,26 @@
   class="readiness min-h-0 flex-1 overflow-y-auto"
   aria-label={readiness.initialSetup ? "First-run setup" : "Task recovery"}
 >
-  <PaneHeader
-    icon={ListChecksIcon}
-    title={readiness.initialSetup
-      ? "Set up voice transcription"
-      : recoveryTitle}
-    summary={readiness.initialSetup
-      ? "Welcome to Freehand"
-      : task === "file"
-        ? "Audio-file transcription"
-        : "Voice transcription"}
-  />
-  <div class="mx-auto flex w-full max-w-[960px] flex-col gap-4 px-5 py-4">
-    <p class="content-meta max-w-[65ch]">
-      {readiness.initialSetup
-        ? "Choose a connection and model, then check that you’re ready to record."
-        : "Review what needs attention below. Other tasks are still available from the activity rail."}
-    </p>
+  {#if !embedded}<PaneHeader
+      icon={ListChecksIcon}
+      {title}
+      summary={readiness.initialSetup
+        ? "Welcome to Freehand"
+        : task === "file"
+          ? "Audio-file transcription"
+          : "Voice transcription"}
+    />{/if}
+  <div class="flex w-full max-w-[960px] flex-col gap-4 px-3 py-4">
+    <div class="space-y-1">
+      {#if embedded}<h2 class="content-section-title">{title}</h2>{/if}
+      <p class="content-meta max-w-[65ch]">
+        {readiness.initialSetup
+          ? task === "file"
+            ? "Choose a connection and model, then check that you’re ready to transcribe a file."
+            : "Choose a connection and model, then check that you’re ready to record."
+          : "Review what needs attention below. Other tasks are still available from the activity rail."}
+      </p>
+    </div>
 
     <div
       class:initial={readiness.initialSetup}
@@ -101,15 +113,18 @@
           <div class="space-y-3 py-3">
             <h3 class="content-section-title" aria-live="polite">
               {readiness.canComplete
-                ? "Ready to record"
+                ? task === "file"
+                  ? "Ready to transcribe"
+                  : "Ready to record"
                 : readiness.initialSetup
                   ? "Next step"
                   : "Needs attention"}
             </h3>
             {#if readiness.canComplete}
               <p class="content-meta">
-                Your connection check passed, and your microphone and shortcut
-                are ready.
+                {task === "file"
+                  ? "Your connection check passed. Choose an audio file to begin."
+                  : "Your connection check passed, and your microphone and shortcut are ready."}
               </p>
             {:else}
               <div class="space-y-4">

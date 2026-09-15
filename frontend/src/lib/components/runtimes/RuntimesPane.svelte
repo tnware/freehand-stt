@@ -1,6 +1,8 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import CpuIcon from "@lucide/svelte/icons/cpu";
+  import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import SidebarContribution from "$lib/components/shell/SidebarContribution.svelte";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
@@ -100,7 +102,7 @@
   in configuration. The sidebar is the inventory and what this machine can
   actually run; the body is whichever runtime you picked.
 -->
-<div class="flex min-h-0 flex-1">
+<div class="flex min-h-0 min-w-0 flex-1">
   <SidebarContribution id="runtimes">
     <div
       class="flex min-h-0 shrink-0 flex-col overflow-y-auto border-r border-hairline bg-layer-fill {workbench
@@ -117,13 +119,15 @@
             aria-label="Refresh inventory"
             title="Refresh inventory"
             onclick={() => void runtime.load()}
-            ><RefreshCwIcon class="size-3.5" /></Button
+            ><RefreshCwIcon
+              class="size-3.5 {runtime.loading ? 'animate-spin' : ''}"
+            /></Button
           >
         {/snippet}
       </SidebarHeader>
 
       <div
-        class="flex flex-col gap-0.5 p-1.5"
+        class="flex flex-col py-1.5"
         role="group"
         aria-label="Runtime inventory"
       >
@@ -135,9 +139,9 @@
             aria-describedby={row.problem
               ? `${uid}-${row.entry.id}-error`
               : undefined}
-            class="relative flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
-              ? 'bg-accent-wash'
-              : ''}"
+            class="flex min-h-11 items-center gap-2.5 border-l-2 pl-2.5 pr-3 py-1.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
+              ? 'border-primary bg-accent-wash'
+              : 'border-transparent'}"
             onclick={() => {
               selected = row.entry.id;
               recoveryID = "";
@@ -145,10 +149,6 @@
                 workbench.closePrimary();
             }}
           >
-            {#if on}<span
-                class="absolute inset-y-2 left-0 w-0.5 rounded-sm bg-primary"
-                aria-hidden="true"
-              ></span>{/if}
             <span
               class="flex size-6 shrink-0 items-center justify-center rounded-sm bg-subtle-fill-hover"
             >
@@ -205,7 +205,7 @@
             </p>{/if}
         {/each}
         {#if !rows.length}
-          <p class="px-2 py-3 text-xs text-muted-foreground">
+          <p class="px-3 py-3 text-xs text-muted-foreground" role="status">
             {runtime.loading
               ? "Reading the inventory…"
               : "No managed runtimes are available for this platform."}
@@ -213,18 +213,17 @@
         {/if}
       </div>
       {#if runtime.error}
-        <p class="px-3 py-3 text-[12px] text-destructive" role="alert">
+        <p
+          class="break-words px-3 py-3 text-[12px] text-destructive"
+          role="alert"
+        >
           {runtime.error}
         </p>
       {/if}
 
       {#if current?.entry}
         <div class="mt-2 border-t border-hairline px-3 pt-3 pb-4">
-          <p
-            class="mb-2 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-          >
-            This machine
-          </p>
+          <p class="content-kicker mb-2">This machine</p>
           <!-- Freehand knows which backends this machine can actually run;
                it does not measure VRAM, so this states capability rather
                than inventing a hardware meter. -->
@@ -253,35 +252,37 @@
 
   {#if current}
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-      {#if providerRows.length > 1}
-        <div
-          class="space-y-2 border-b border-warning/30 bg-warning/10 px-5 py-3"
-        >
-          <p class="text-[12px] text-secondary-foreground" role="status">
-            Multiple saved installations need review. Reassign their Connections
-            and remove unwanted files before deleting duplicate entries. Nothing
-            is removed automatically.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            {#each providerRows as duplicate (duplicate.instance.id)}
-              <Button
-                variant="outline"
-                size="xs"
-                aria-pressed={currentInstance?.instance.id ===
-                  duplicate.instance.id}
-                onclick={() => {
-                  recoveryID = duplicate.instance.id;
-                  if (
-                    workbench?.compact.current &&
-                    workbench.compactPrimaryOpen
-                  )
-                    workbench.closePrimary();
-                }}>{duplicate.instance.name} · {duplicate.instance.id}</Button
-              >
-            {/each}
+      {#snippet recoveryNotice()}
+        {#if providerRows.length > 1}
+          <div
+            class="space-y-2 border-b border-warning/30 bg-warning/10 px-3 py-3"
+          >
+            <p class="text-[12px] text-secondary-foreground" role="status">
+              Multiple saved installations need review. Reassign their
+              Connections and remove unwanted files before deleting duplicate
+              entries. Nothing is removed automatically.
+            </p>
+            <div class="flex flex-wrap gap-1.5">
+              {#each providerRows as duplicate (duplicate.instance.id)}
+                <Button
+                  variant="outline"
+                  size="xs"
+                  aria-pressed={currentInstance?.instance.id ===
+                    duplicate.instance.id}
+                  onclick={() => {
+                    recoveryID = duplicate.instance.id;
+                    if (
+                      workbench?.compact.current &&
+                      workbench.compactPrimaryOpen
+                    )
+                      workbench.closePrimary();
+                  }}>{duplicate.instance.name} · {duplicate.instance.id}</Button
+                >
+              {/each}
+            </div>
           </div>
-        </div>
-      {/if}
+        {/if}
+      {/snippet}
       {#key `${current.entry.id}/${currentInstance?.instance.id ?? ""}`}
         <RuntimeDetail
           {runtime}
@@ -290,14 +291,44 @@
           locked={workBusy || session.editor.saving || runtime.loading}
           {workBusy}
           {onOpenConnections}
+          notice={recoveryNotice}
         />
       {/key}
     </div>
   {:else}
-    <div class="flex min-w-0 flex-1 items-center justify-center px-5">
-      <p class="text-[13px] text-muted-foreground">
-        No managed runtime is available for this platform.
-      </p>
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+      <PaneHeader title="Runtimes" icon={CpuIcon} />
+      <div
+        class="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto p-5"
+      >
+        <div class="max-w-sm space-y-3">
+          <p class="content-section-title" role="status">
+            {runtime.loading
+              ? "Reading runtime inventory…"
+              : runtime.error
+                ? "Runtime inventory unavailable"
+                : "No managed runtimes available"}
+          </p>
+          <p class="content-meta">
+            {runtime.loading
+              ? "Checking installations and supported runtimes on this machine."
+              : runtime.error
+                ? "Refresh the inventory to try again."
+                : "This platform has no managed runtimes. Configure your speech server in Connections."}
+          </p>
+          {#if !runtime.loading}
+            <Button
+              variant="outline"
+              size="xs"
+              onclick={runtime.error
+                ? () => void runtime.load()
+                : onOpenConnections}
+            >
+              {runtime.error ? "Refresh inventory" : "Open Connections"}
+            </Button>
+          {/if}
+        </div>
+      </div>
     </div>
   {/if}
 </div>

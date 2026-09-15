@@ -50,6 +50,7 @@
     onClear,
     onOpenSettings,
     optionsDisabled = false,
+    showSettings = true,
   }: {
     text?: string;
     quickSettings?: Snippet;
@@ -69,6 +70,7 @@
     onClear: () => void;
     onOpenSettings: () => void;
     optionsDisabled?: boolean;
+    showSettings?: boolean;
   } = $props();
 
   const uid = $props.id();
@@ -135,9 +137,7 @@
   class="@container flex min-h-0 flex-1 flex-col overflow-hidden"
   aria-label="Speech composer"
 >
-  <div
-    class="flex h-11 shrink-0 items-center gap-2 border-b border-hairline px-5"
-  >
+  <div class="workbench-toolbar flex-wrap gap-y-1 py-1">
     <SquarePenIcon class="content-section-icon" aria-hidden="true" />
     <h2 class="content-title">Compose</h2>
     <span
@@ -157,23 +157,23 @@
     {#if quickSettings}
       <div class="min-w-0 shrink-0">{@render quickSettings()}</div>
     {/if}
-    <WorkflowSettingsButton
-      label="Text to speech settings"
-      disabled={optionsDisabled}
-      onclick={onOpenSettings}
-    />
+    {#if showSettings}<WorkflowSettingsButton
+        label="Text to speech settings"
+        disabled={optionsDisabled}
+        onclick={onOpenSettings}
+      />{/if}
   </div>
   <div class="flex min-h-24 flex-1 flex-col overflow-y-auto">
     {#if !configured}
       <div
-        class="mx-5 mt-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-l-2 border-accent-edge bg-accent-wash px-3 py-2.5"
+        class="mx-3 mt-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-l-2 border-accent-edge bg-accent-wash px-3 py-2.5"
       >
         <p
           id={setupGuidanceID}
           class="min-w-0 flex-1 text-xs leading-relaxed text-accent-text"
         >
-          Choose a connection, model, and voice in speech options. You can write
-          your text now.
+          Choose a connection, model, and voice in speech settings. You can
+          write your text now.
         </p>
         <Button
           variant="outline"
@@ -191,7 +191,7 @@
       aria-describedby={`speech-character-count speech-compose-shortcut${!configured ? ` ${setupGuidanceID}` : ""}`}
       aria-keyshortcuts="Control+Enter"
       onkeydown={composerKey}
-      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-[26px] text-foreground focus-visible:ring-2 focus-visible:ring-inset"
+      class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-3 py-3.5 text-[15px] leading-[26px] text-foreground focus-visible:ring-2 focus-visible:ring-inset"
       placeholder="Write or paste text to speak…"
     />
   </div>
@@ -201,7 +201,7 @@
     the current audio.
   </p>
   <div
-    class="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-hairline px-5 py-2"
+    class="flex min-h-9 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-hairline px-3 py-1"
   >
     <span
       id="speech-character-count"
@@ -227,7 +227,7 @@
       >
       <Button
         size="sm"
-        class="w-32 @sm:w-40"
+        class="min-w-24"
         disabled={!canSpeak}
         title="Generate this text and replace the current audio"
         onclick={() => onSpeak(text)}
@@ -250,7 +250,7 @@
   </div>
   {#if configured || showPlayback}
     <div
-      class="flex h-24 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-layer-fill"
+      class="flex min-h-20 max-h-32 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-layer-fill"
       aria-label="Generated audio"
     >
       {#if showPlayback}
@@ -269,7 +269,7 @@
           embedded
         />
       {:else}
-        <div class="flex items-center gap-3 px-5 py-3">
+        <div class="flex items-center gap-3 px-3 py-3">
           <Volume2Icon class="content-section-icon" aria-hidden="true" />
           <div class="min-w-0 space-y-1">
             <p class="content-section-title">Ready when you are</p>

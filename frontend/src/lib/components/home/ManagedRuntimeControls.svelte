@@ -238,7 +238,7 @@
   >
     {#if operating || (!row && runtime.loading)}
       <LoaderCircleIcon
-        class="mt-0.5 size-3.5 shrink-0 animate-spin text-accent-text"
+        class="mt-0.5 size-3.5 shrink-0 animate-spin text-accent-text motion-reduce:animate-none"
         aria-hidden="true"
       />
     {:else}<span
@@ -261,10 +261,7 @@
 
 <style>
   .runtime-sidebar {
-    border: 1px solid var(--hairline);
-    border-left: 2px solid var(--accent-edge);
-    border-radius: var(--radius-sm);
-    background: var(--subtle-fill-hover);
-    padding: 0.5rem;
+    border-left: 1px solid var(--hairline);
+    padding: 0.125rem 0 0.125rem 0.5rem;
   }
 </style>

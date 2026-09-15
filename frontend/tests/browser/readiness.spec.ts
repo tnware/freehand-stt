@@ -149,34 +149,44 @@ test("microphone recovery is focused, dismissible, and does not block files", as
   );
 });
 
-test("connection recovery keeps its editor collapsed and returns after retry", async ({
+test("connection recovery keeps the transcript available and retries in the capture strip", async ({
   page,
 }, info) => {
   await page.goto(
     "/tests/browser/app/?view=workspace&setup=connection&pickers&theme=dark",
   );
+  const capture = page.getByRole("region", {
+    name: "Voice capture",
+    exact: true,
+  });
+  const status = capture.getByRole("status", {
+    name: "Voice capture status",
+    exact: true,
+  });
+  const result = page.getByRole("region", {
+    name: "Current result",
+    exact: true,
+  });
+  const record = capture.getByRole("button", {
+    name: "Start recording",
+    exact: true,
+  });
+  await expect(status).toHaveText("Connection check failed");
+  await expect(result).toBeVisible();
+  await expect(record).toBeEnabled();
   await expect(
-    page.getByRole("heading", { name: "Connection needs attention" }),
-  ).toBeVisible();
-  const recovery = page.getByRole("region", {
-    name: "Task recovery",
-    exact: true,
-  });
-  const model = recovery.getByRole("combobox", {
-    name: "Choose model",
-    exact: true,
-  });
-  await expect(model).not.toBeVisible();
+    page.getByRole("region", { name: "Task recovery", exact: true }),
+  ).toHaveCount(0);
   await page.screenshot({ path: info.outputPath("connection-recovery.png") });
-  await page
-    .locator("summary")
-    .filter({ hasText: "Connection and model" })
+  await capture
+    .getByRole("button", { name: "Check connection", exact: true })
     .click();
-  await expect(model).toBeVisible();
-  await page.getByRole("button", { name: "Check again", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Task recovery" })).toHaveCount(
-    0,
-  );
+  await expect(status).toHaveText("Ready to dictate");
+  await expect(
+    capture.getByText("Server reachable", { exact: true }),
+  ).toBeVisible();
+  await expect(result).toBeVisible();
+  await expect(record).toBeEnabled();
 });
 
 test("device discovery cannot advance first run", async ({ page }) => {

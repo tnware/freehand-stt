@@ -37,16 +37,14 @@
 
 <div class="space-y-4">
   <div class="space-y-1">
-    <h2 class="text-base font-semibold">{details.task}</h2>
-    <p class="text-xs text-muted-foreground">Active connection</p>
+    <h2 class="content-title">{details.task}</h2>
+    <p class="content-meta">Active connection</p>
   </div>
   {#if details.selected}
-    <div
-      class="flex items-start gap-3 rounded-lg border border-card-stroke bg-card p-3"
-    >
+    <div class="content-summary flex items-start gap-3">
       <ProviderIcon profile={details.selected.details.compatibilityProfile} />
       <div class="min-w-0 space-y-1">
-        <p class="break-words text-sm font-medium">{details.selected.name}</p>
+        <p class="content-value break-words">{details.selected.name}</p>
         <p class="break-all text-xs text-muted-foreground">{details.host}</p>
         {#if details.model}<p
             class="break-all font-mono text-xs text-secondary-foreground"
@@ -56,7 +54,7 @@
       </div>
     </div>
   {/if}
-  <div class="space-y-2 text-sm" role="status" aria-live="polite">
+  <div class="space-y-2 text-[13px]" role="status" aria-live="polite">
     {#if details.loading}<p>Loading connection settings…</p>
     {:else if !details.enabled}<StatusBadge>Text to speech is off.</StatusBadge>
       <p class="text-xs text-muted-foreground">

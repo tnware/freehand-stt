@@ -95,7 +95,7 @@
     <button
       type="button"
       role="tab"
-      class="runtime-tab"
+      class="workbench-tab runtime-tab"
       aria-label={tab.name}
       aria-describedby={`${uid}-${index}-state`}
       aria-selected={selected === tab.id}
@@ -132,8 +132,6 @@
   }
 
   .runtime-tab {
-    position: relative;
-    display: flex;
     height: 28px;
     max-width: 240px;
     flex: none;
@@ -141,9 +139,6 @@
     gap: 7px;
     padding: 0 12px;
     border-right: 1px solid var(--hairline);
-    color: var(--muted-foreground);
-    font-size: 12px;
-    white-space: nowrap;
   }
 
   .runtime-name {
@@ -152,27 +147,11 @@
   }
 
   .runtime-tab[aria-selected="true"] {
-    color: var(--foreground);
     background: var(--background);
   }
 
   .runtime-tab[aria-selected="true"]::after {
-    position: absolute;
     inset-inline: 0;
-    bottom: 0;
-    height: 1px;
-    background: var(--accent-text);
-    content: "";
-  }
-
-  .runtime-tab:hover:not([aria-disabled="true"]) {
-    color: var(--foreground);
-    background: var(--subtle-fill-hover);
-  }
-
-  .runtime-tab:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: -2px;
   }
 
   .runtime-tab[aria-disabled="true"] {

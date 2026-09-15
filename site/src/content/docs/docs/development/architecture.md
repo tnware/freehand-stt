@@ -712,11 +712,11 @@ dialog owns presentation and blocks Escape/outside dismissal while saving.
 Confirmed settings adoption invalidates metadata once through `SettingsEditor`,
 including credential changes that are invisible to the renderer.
 
-`LocalRuntimeSection` owns provider selection, installation choices, action
-guards, and removal confirmations. `LocalRuntimeDetails` renders setup and
-preferences, and `LocalRuntimeModelCatalog` renders the qualified model list.
-Both use the existing runtime store and parent action guard; component mounting
-does not acquire models or start processes.
+`RuntimesPane` owns provider and installation selection. `RuntimeDetail` owns
+installation choices, action guards, and removal confirmations;
+`RuntimeModelCatalog` renders the qualified model list. These components use
+the existing runtime store and action guards; component mounting does not
+acquire models or start processes.
 
 Each WebView composes its own `Session` from feature owners under
 `frontend/src/lib/stores`. `Session` owns construction, initial loading order,
@@ -876,16 +876,29 @@ Catalog data and model acquisition remain Go-owned and revision/checksum pinned.
 The title bar, activity rail, sidebar, and status bar share neutral surface roles;
 the status bar exposes capture state from every pane. The command palette routes
 through the same navigation and busy-state guards as the rail.
-Page content follows the same workbench geometry as the shell: 44px headers,
-20px horizontal gutters, 16px page titles, 13px interface text, and 12px help text.
+Every main editor page uses `PaneHeader`: a fixed 44px row with a 12px inset,
+16px icon, and 16px interface-font title. Workflow, loading, readiness, connection,
+runtime recovery, and Settings states retain that first divider and title baseline.
+Transport state, selected-connection details, runtime metadata, and recovery notices
+belong below it. Settings may keep this header sticky while its content scrolls.
+Interface text is 13px and help text is 12px. Reader and toolbar gutters use 12px;
+full-page settings forms retain a 20px content inset.
+Sidebar headers use the shared 34px `workbench-header` role; docked controls use
+the 28px minimum `workbench-toolbar` role. Toolbars and page actions can wrap when
+their own pane narrows. `workbench-tab` provides the same selected underline,
+hover, and inset keyboard focus for bottom-panel tabs, runtime output targets,
+and History sidebar views. Navigation lists use full-width rows and an edge
+selection marker. Page and section headings use the interface typeface.
 Shared `content-*` roles in `app.css` distinguish page titles, section headings,
 field values, technical metadata, and compact uppercase labels. Small semantic
 icons identify sections; neutral summary surfaces group key facts. Brand and
 status accents retain their action, selection, and state meanings.
 Transcript and composer text use a separate 15px/26px reading rhythm. Recording,
 file, playback, and output controls sit in docked strips separated by hairlines.
-Settings clusters use `SettingsCard` and `SettingsDisclosure` for divided rows
-on faint neutral surfaces; the group owns a consistent 12px inner inset. Shared fields
+Settings clusters use `SettingsCard` and `SettingsDisclosure` for flat groups
+separated by rules. `WorkflowSection` supplies the matching collapsible quick-control
+group, with one leading disclosure action. Field groups and catalogs respond to
+their container width, including a narrow sidebar inside a wide window. Shared fields
 and pickers use 32px controls, actions use 28px controls, and compact toolbars
 use the smaller variants. Native control semantics, visible focus, input
 borders, and floating menu/dialog surfaces stay explicit. Page styling never
@@ -1182,7 +1195,11 @@ scroll padding follows its measured height so validation targets remain exposed.
 Current results and playback controls stay accessible independently of recent history.
 Optional history is a secondary disclosure. These disclosures do not alter retention.
 
-Every input mode and every dictation state shares one `TransportShell`: a fixed 116px control cell, an elastic stage, and a 236px readout cell spanning the window under the header. Because that geometry never changes, starting a recording, switching input modes, or failing a request never moves anything else on screen. `TransportBar`, `AudioFileTranscription`, and `TextToSpeech` supply the three cells; the shell owns the progress rail, which is indeterminate for endpoint work that reports no progress and determinate only for the file-upload leg, whose length is known.
+`HomeScreen` composes task-specific `VoiceBar`, `FileBar`, and `TextToSpeech`
+controls beside the shared result reader. Their docked actions remain available
+while content scrolls and wrap within narrow editor panes. `WorkbenchFrame`
+owns the surrounding sidebars and bottom panel; each feature retains its own
+capture, upload, playback, and progress state.
 
 The post-processing package owns a small renderer-visible profile catalog so names, descriptions, editability, and fixed protocol instructions stay aligned with request construction. Model IDs are never used to infer behavior. The custom profile persists a bounded user system instruction in the ordinary settings database, while its API key remains in the native credential store. The S1-mini profile keeps its exact system instruction in code and persists only its trained styling, structure, and context selections. Switching profiles preserves inactive profile values rather than destructively rewriting them.
 

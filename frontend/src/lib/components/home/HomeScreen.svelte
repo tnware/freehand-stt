@@ -1,5 +1,9 @@
 <script lang="ts">
   import { setContext } from "svelte";
+  import MicIcon from "@lucide/svelte/icons/mic";
+  import FileAudioIcon from "@lucide/svelte/icons/file-audio";
+  import Volume2Icon from "@lucide/svelte/icons/volume-2";
+  import PaneHeader from "./PaneHeader.svelte";
   import { MediaQuery } from "svelte/reactivity";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import SidebarContribution from "$lib/components/shell/SidebarContribution.svelte";
@@ -278,8 +282,6 @@
 
 <main
   class="home"
-  class:with-history={hasHistory}
-  class:speech-workspace={inputMode === "tts"}
   class:onboarding={showReadiness}
   aria-label="Freehand workspace"
 >
@@ -336,28 +338,35 @@
       </SidebarContribution>
     {/if}
     <div class="body">
-      {#if readiness?.initialSetup && session.editor.draft && (inputMode === "voice" || inputMode === "file")}
-        <header
-          class="@container flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
-        >
-          <h2 class="content-title min-w-0 truncate">
-            {paneTitle}
-          </h2>
+      <PaneHeader
+        title={paneTitle}
+        icon={inputMode === "file"
+          ? FileAudioIcon
+          : inputMode === "tts"
+            ? Volume2Icon
+            : MicIcon}
+      >
+        {#snippet actions()}
           <WorkflowSettingsButton
             label={inputMode === "file"
               ? "Audio file settings"
-              : "Voice settings"}
-            disabled={session.editor.saving}
+              : inputMode === "tts"
+                ? "Text to speech settings"
+                : "Voice settings"}
+            disabled={!session.editor.draft || session.editor.saving}
             onclick={() =>
               inputMode === "file"
                 ? onOpenServerSettings()
-                : onOpenSettingsSection("voice-transcription")}
+                : inputMode === "tts"
+                  ? onOpenSpeechSettings()
+                  : onOpenSettingsSection("voice-transcription")}
           />
-        </header>
-      {/if}
+        {/snippet}
+      </PaneHeader>
       {#if inputMode === "voice" && session.editor.draft && !readiness?.initialSetup}
         <div class="transport-frame">
           <VoiceBar
+            showSettings={false}
             status={session.dictation.status}
             {now}
             busy={fileWorking}
@@ -383,6 +392,7 @@
       {#if inputMode === "file" && session.editor.draft && !readiness?.initialSetup}
         <div class="transport-frame">
           <FileBar
+            showSettings={false}
             status={session.files.status}
             choosing={session.files.choosing}
             starting={session.files.starting}
@@ -423,6 +433,7 @@
       {/if}
       {#if inputMode === "tts" && session.editor.draft}
         <TextToSpeech
+          showSettings={false}
           bind:text={session.speech.draft}
           settings={runtimeSettings?.textToSpeech ??
             session.editor.draft.textToSpeech}
@@ -561,6 +572,7 @@
               {#if session.editor.draft}
                 {#if showReadiness && readiness}
                   <ReadinessPanel
+                    embedded
                     {readiness}
                     task={inputMode === "file" ? "file" : "voice"}
                     saving={session.editor.saving ||
@@ -666,9 +678,9 @@
                   </ReadinessPanel>
                 {:else if !runtimeSettings?.historyEnabled}
                   <div
-                    class="flex shrink-0 items-center justify-between gap-3 border-t border-hairline px-5 py-2 text-xs text-muted-foreground"
+                    class="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-hairline px-3 py-1 text-xs text-muted-foreground"
                   >
-                    <span
+                    <span class="min-w-0 basis-64 flex-1"
                       >History is off. Current results remain available until
                       you clear them or start again.</span
                     >
@@ -680,9 +692,21 @@
                   </div>
                 {/if}
               {:else}
-                <div class="columns">
-                  <Skeleton class="h-full w-[372px] shrink-0 rounded-lg" />
-                  <Skeleton class="h-full flex-1 rounded-lg" />
+                <div
+                  class="flex min-h-0 flex-1 flex-col"
+                  role="status"
+                  aria-label="Loading workspace"
+                  aria-busy="true"
+                >
+                  <div
+                    class="flex max-w-xl flex-col gap-3 px-3 py-4"
+                    aria-hidden="true"
+                  >
+                    <Skeleton class="h-3 w-3/4 rounded-sm" />
+                    <Skeleton class="h-3 w-full rounded-sm" />
+                    <Skeleton class="h-3 w-1/2 rounded-sm" />
+                  </div>
+                  <span class="sr-only">Loading workspace…</span>
                 </div>
               {/if}
             </div>
@@ -789,10 +813,6 @@
   }
   .onboarding .task-main {
     overflow-y: auto;
-  }
-  .columns {
-    display: flex;
-    gap: 0.875rem;
   }
   .workflow-sidebar-shell {
     display: flex;

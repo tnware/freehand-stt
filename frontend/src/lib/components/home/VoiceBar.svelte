@@ -37,6 +37,7 @@
     onOpenSettings,
     onOpenOptions,
     optionsDisabled = false,
+    showSettings = true,
   }: {
     status: Status;
     now: number;
@@ -51,6 +52,7 @@
     onOpenSettings: () => void;
     onOpenOptions: () => void;
     optionsDisabled?: boolean;
+    showSettings?: boolean;
   } = $props();
 
   let pending = $state(false);
@@ -102,11 +104,11 @@
 </script>
 
 <section
-  class="@container flex flex-col gap-2 border-b border-hairline bg-layer-fill px-5 py-2"
+  class="@container flex flex-col gap-2 border-b border-hairline bg-layer-fill px-3 py-2"
   aria-label="Voice capture"
 >
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-    <div class="min-w-0 flex-1">
+    <div class="min-w-0 basis-56 flex-1">
       <p
         class="content-section-title flex items-center gap-2"
         class:text-destructive={failed}
@@ -165,11 +167,11 @@
       </div>
     </div>
     <div class="flex shrink-0 items-center gap-2">
-      <WorkflowSettingsButton
-        label="Voice settings"
-        disabled={optionsDisabled}
-        onclick={onOpenOptions}
-      />
+      {#if showSettings}<WorkflowSettingsButton
+          label="Voice settings"
+          disabled={optionsDisabled}
+          onclick={onOpenOptions}
+        />{/if}
       {#if failed}<FeedbackDetails
           title={label}
           label="Dictation error details"

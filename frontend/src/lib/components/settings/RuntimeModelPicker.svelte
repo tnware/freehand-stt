@@ -121,7 +121,7 @@
       {#if onForget && savedModels.includes(value) && !serverLoaded}<Menu.Root
           ><Menu.Trigger
             aria-label="Model actions"
-            class="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex size-7 items-center justify-center rounded-sm text-muted-foreground hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
             disabled={locked}><EllipsisIcon class="size-4" /></Menu.Trigger
           ><Menu.Content align="end" class="w-60 max-w-[calc(100vw-24px)]"
             ><Menu.Item onclick={onForget} class="gap-2.5 px-3 py-2.5">

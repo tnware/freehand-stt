@@ -13,7 +13,10 @@ test.beforeEach(async ({ page }) => {
 test("the response preference survives tab changes and unsupported connections", async ({
   page,
 }) => {
-  const toggle = page.locator("#file-stream-toggle");
+  const toggle = page.getByRole("switch", {
+    name: "Stream partial results",
+    exact: true,
+  });
   await expect(toggle).toBeChecked();
   await toggle.click();
   await page
@@ -50,7 +53,10 @@ test("the response preference survives tab changes and unsupported connections",
 test("Try streaming selects text updates for the next explicit request", async ({
   page,
 }) => {
-  const toggle = page.locator("#file-stream-toggle");
+  const toggle = page.getByRole("switch", {
+    name: "Stream partial results",
+    exact: true,
+  });
   await toggle.click();
   await page
     .getByRole("button", { name: "Streaming rejected", exact: true })
@@ -82,7 +88,9 @@ test("an unsupported connection submits completed mode without losing the prefer
   await page
     .getByRole("button", { name: "Streaming supported", exact: true })
     .click();
-  await expect(page.locator("#file-stream-toggle")).toBeChecked();
+  await expect(
+    page.getByRole("switch", { name: "Stream partial results", exact: true }),
+  ).toBeChecked();
 });
 
 test("file start responds immediately, blocks conflicting actions, and recovers after rejection", async ({
@@ -108,7 +116,9 @@ test("file start responds immediately, blocks conflicting actions, and recovers 
       exact: true,
     }),
   ).toBeDisabled();
-  await expect(page.locator("#file-stream-toggle")).toBeDisabled();
+  await expect(
+    page.getByRole("switch", { name: "Stream partial results", exact: true }),
+  ).toBeDisabled();
   await page
     .getByRole("button", { name: "Reject file start", exact: true })
     .click();

@@ -194,9 +194,7 @@
           {/if}
         </div>
       {:else}
-        <div
-          class="flex shrink-0 flex-wrap items-center gap-2 border-b border-hairline px-5 py-1.5"
-        >
+        <div class="workbench-toolbar flex-wrap py-1.5">
           <label for={`${uid}-workflow`} class="text-xs text-muted-foreground"
             >Workflow</label
           >
@@ -239,11 +237,9 @@
                 : "Check connection"}
           </Button>
         </div>
-        <div
-          class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-3"
-        >
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
           {#if settingsOpen}<p class="mb-3 text-xs text-muted-foreground">
-              Leave Settings to check the saved connection.
+              Finish configuring this workflow to check the saved connection.
             </p>{/if}
           {#if diagnosticResult}
             <ConnectionDiagnostics
@@ -254,7 +250,7 @@
           {:else}
             <p class="text-[13px] text-muted-foreground" role="status">
               {!hasConnection
-                ? "Choose a connection for this workflow in Settings."
+                ? "Choose a connection in this workflow's configuration sidebar."
                 : diagnosticBusy
                   ? "Checking the saved connection…"
                   : diagnosticStatus === "failed"

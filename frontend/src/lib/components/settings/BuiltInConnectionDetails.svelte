@@ -12,7 +12,7 @@
   import { Button } from "$lib/components/ui/button";
   import WorkflowIcon from "@lucide/svelte/icons/workflow";
   import ShieldCheckIcon from "@lucide/svelte/icons/shield-check";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
   let {
     connection,
@@ -41,7 +41,7 @@
   );
 </script>
 
-<div class="content-summary space-y-3">
+<div class="min-w-0 space-y-3 py-3">
   <div class="flex flex-wrap items-center gap-3">
     <div class="min-w-0 flex-1">
       <p class="content-kicker">Built-in connection</p>
@@ -70,21 +70,23 @@
   </dl>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="content-meta">Local endpoint · No connection credentials</p>
-    <Button variant="soft" disabled={busy} onclick={onManageRuntime}
-      >Manage runtime</Button
+    <Button
+      variant="outline"
+      size="xs"
+      disabled={busy}
+      onclick={onManageRuntime}>Manage runtime</Button
     >
   </div>
 </div>
 <details class="group/ownership border-t border-hairline">
   <summary
-    class="content-disclosure flex cursor-pointer list-none items-center gap-2 rounded-sm py-3 [&::-webkit-details-marker]:hidden"
-    ><ShieldCheckIcon class="content-section-icon" aria-hidden="true" />
-    <span class="min-w-0 flex-1">Connection ownership &amp; safety</span>
-    <ChevronDownIcon
-      class="content-section-icon transition-transform group-open/ownership:rotate-180 motion-reduce:transition-none"
+    class="content-disclosure flex min-h-[38px] cursor-pointer list-none items-center gap-2 py-2 [&::-webkit-details-marker]:hidden"
+    ><ChevronRightIcon
+      class="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/ownership:rotate-90 motion-reduce:transition-none"
       aria-hidden="true"
-    /></summary
-  >
+    /><ShieldCheckIcon class="content-section-icon" aria-hidden="true" />
+    <span class="min-w-0 flex-1">Connection ownership &amp; safety</span>
+  </summary>
   <div class="content-meta space-y-3 pb-3">
     <p>
       Available automatically from this local runtime. Its name, transport,
@@ -118,7 +120,7 @@
     {#each uses as role (role.id)}
       <Button
         variant="outline"
-        size="sm"
+        size="xs"
         disabled={busy}
         onclick={() => onWorkflow(role.id)}>{role.label} settings</Button
       >

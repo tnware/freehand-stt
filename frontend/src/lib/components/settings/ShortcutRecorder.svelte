@@ -58,15 +58,15 @@
 
 <div
   class={capturing
-    ? "bg-accent-wash px-4 py-2.5 transition-colors"
-    : "px-4 py-2.5 transition-colors"}
+    ? "@container/shortcut bg-accent-wash px-4 py-2.5 transition-colors"
+    : "@container/shortcut px-4 py-2.5 transition-colors"}
   aria-busy={capturing}
   role="group"
   aria-labelledby={`${id}-title`}
   aria-describedby={`${id}-description`}
 >
   <div
-    class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+    class="flex flex-col gap-2 @min-[560px]/shortcut:flex-row @min-[560px]/shortcut:items-center @min-[560px]/shortcut:justify-between"
   >
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2">
@@ -84,7 +84,7 @@
         {description}
       </p>
     </div>
-    <div class="flex shrink-0 flex-wrap items-center gap-2">
+    <div class="flex min-w-0 max-w-full shrink-0 flex-wrap items-center gap-2">
       <div {id} class="mr-1" aria-live="polite">
         <ShortcutKeys
           {platform}

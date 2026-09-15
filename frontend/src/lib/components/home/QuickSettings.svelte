@@ -12,7 +12,7 @@
   import CheckIcon from "@lucide/svelte/icons/check";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
-  import RackModule from "$lib/components/home/RackModule.svelte";
+  import WorkflowSection from "./WorkflowSection.svelte";
   import QuickControls from "$lib/components/home/QuickControls.svelte";
   import S1MiniControls from "$lib/components/settings/S1MiniControls.svelte";
   import * as Select from "$lib/components/ui/select";
@@ -249,7 +249,7 @@
   {/if}
 
   {#if showTranscription}
-    <RackModule
+    <WorkflowSection
       {sidebar}
       {embedded}
       label="Transcription"
@@ -373,11 +373,11 @@
           failed={failedField}
         />
       </div>
-    </RackModule>
+    </WorkflowSection>
   {/if}
 
   {#if showCleanup}
-    <RackModule
+    <WorkflowSection
       {sidebar}
       {embedded}
       label={sidebar ? "Cleanup · shared" : "Cleanup"}
@@ -581,14 +581,14 @@
           failed={failedField}
         />
       </div>
-    </RackModule>
+    </WorkflowSection>
   {/if}
 </fieldset>
 
 <style>
   /*
    * Label and value sit on their own line above the control, so every control
-   * in the rack starts at one left edge and every reading ends at one right
+   * in the section starts at one left edge and every reading ends at one right
    * edge. Inline labels could not: "Endpoint" and "Profile" are different
    * widths, which gave the controls two left edges, and a long model name in a
    * select had nowhere to go but over the reading beside it.

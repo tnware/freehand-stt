@@ -4,6 +4,7 @@
   import { saveConnectionAndContinue } from "$lib/shell-navigation.svelte";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import SidebarContribution from "$lib/components/shell/SidebarContribution.svelte";
+  import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import { Action, Purpose, type Connection } from "$bindings/savedconnection";
   import {
     connectionSection,
@@ -319,27 +320,22 @@
 <div
   class="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent text-foreground"
 >
-  <header
-    class="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
-  >
-    <div class="flex min-w-0 items-center gap-3">
+  <PaneHeader title="Connections" icon={ServerIcon}>
+    {#snippet actions()}
       {#if showingDetails && !fullPage}<Button
           variant="ghost"
-          size="sm"
+          size="xs"
           disabled={busy}
           onclick={() => leave(false)}><ArrowLeftIcon />All connections</Button
         >{/if}
-      <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <h1 class="content-title truncate font-display">Connections</h1>
-        {#if !fullPage}<p class="content-meta">
-            Saved servers and built-in runtimes
-          </p>{/if}
-      </div>
-    </div>
-    <Button variant="outline" disabled={busy} onclick={() => leave(true)}
-      >Done</Button
-    >
-  </header>
+      <Button
+        variant="outline"
+        size="xs"
+        disabled={busy}
+        onclick={() => leave(true)}>Done</Button
+      >
+    {/snippet}
+  </PaneHeader>
   {#if loading}<p class="px-5 py-3 text-[13px] text-muted-foreground">
       Loading connections…
     </p>
@@ -383,9 +379,7 @@
             : "Connection editor"}
           class="flex min-h-0 min-w-0 flex-1 flex-col"
         >
-          <div
-            class="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
-          >
+          <div class="workbench-toolbar min-h-[34px] justify-between">
             <div class="flex min-w-0 items-center gap-2.5">
               <ProviderIcon
                 profile={selected?.builtIn
@@ -393,9 +387,9 @@
                     selected.details.compatibilityProfile)
                   : (editor.connectionDraft?.details.compatibilityProfile ??
                     selected?.details.compatibilityProfile)}
-                size={22}
+                size={16}
               />
-              <h2 class="content-title truncate">
+              <h2 class="content-section-title truncate">
                 {editor.connectionDraft?.creating
                   ? "New connection"
                   : (selected?.name ?? "Edit connection")}
@@ -406,8 +400,8 @@
                   ><Menu.Trigger disabled={busy}>
                     {#snippet child({ props })}<Button
                         {...props}
-                        size="sm"
-                        variant="soft">Use for…</Button
+                        size="xs"
+                        variant="ghost">Use for…</Button
                       >{/snippet}
                   </Menu.Trigger><Menu.Content
                     align="end"
@@ -441,7 +435,7 @@
                     ><Menu.Trigger disabled={busy}>
                       {#snippet child({ props })}<Button
                           {...props}
-                          size="icon-sm"
+                          size="icon-xs"
                           variant="ghost"
                           aria-label="Connection actions"
                           ><EllipsisIcon /></Button

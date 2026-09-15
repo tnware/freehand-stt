@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
+  import { onDestroy, type Snippet } from "svelte";
   import {
     ProviderID,
     type BinaryOptions,
@@ -22,6 +22,7 @@
   import * as Dialog from "$lib/components/ui/dialog";
   import RuntimeDownloadSource from "$lib/components/settings/RuntimeDownloadSource.svelte";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
+  import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
   import RuntimeModelCatalog from "./RuntimeModelCatalog.svelte";
   import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
@@ -36,6 +37,7 @@
     locked = false,
     workBusy = false,
     onOpenConnections,
+    notice,
   }: {
     runtime: ManagedRuntimeState;
     row: InstanceStatus | undefined;
@@ -43,6 +45,7 @@
     locked?: boolean;
     workBusy?: boolean;
     onOpenConnections: () => void;
+    notice?: Snippet;
   } = $props();
   const uid = $props.id();
   const layout = getWorkbenchLayout();
@@ -202,30 +205,8 @@
 </script>
 
 <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-  <div
-    class="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-hairline px-5 py-1.5"
-  >
-    <div class="flex min-w-0 flex-wrap items-center gap-2.5">
-      <h2 class="content-title truncate font-display tracking-tight">
-        {entry.name}
-      </h2>
-      <StatusBadge
-        tone={busy
-          ? "accent"
-          : problem
-            ? "danger"
-            : running
-              ? "success"
-              : "neutral"}
-        dot
-        >{status
-          ? view.label
-          : entry.supported
-            ? "Not installed"
-            : "Unavailable"}</StatusBadge
-      >
-    </div>
-    <div class="flex shrink-0 items-center gap-1.5">
+  <PaneHeader title={entry.name} icon={CpuIcon}>
+    {#snippet actions()}
       {#if busy && instance}
         <Button
           variant="outline"
@@ -262,11 +243,25 @@
           >
         {/if}
       {/if}
-    </div>
-  </div>
-  <div
-    class="flex min-h-[38px] shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline px-5 py-2"
-  >
+    {/snippet}
+  </PaneHeader>
+  {@render notice?.()}
+  <div class="workbench-toolbar flex-wrap gap-x-3 gap-y-1 py-1.5">
+    <StatusBadge
+      tone={busy
+        ? "accent"
+        : problem
+          ? "danger"
+          : running
+            ? "success"
+            : "neutral"}
+      dot
+      >{status
+        ? view.label
+        : entry.supported
+          ? "Not installed"
+          : "Unavailable"}</StatusBadge
+    >
     <dl class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
       {#each metadata as fact (fact.label)}
         <div
@@ -300,13 +295,11 @@
         onclick={() => layout.showOutput(instance.id)}>View output</Button
       >
     {/if}
-    <button
-      type="button"
-      class="shrink-0 text-xs text-ink-quiet underline-offset-2 hover:text-accent-text hover:underline"
-      onclick={onOpenConnections}>Open Connections</button
+    <Button variant="ghost" size="xs" onclick={onOpenConnections}
+      >Open Connections</Button
     >
   </div>
-  <div class="min-h-0 flex-1 overflow-y-auto px-5">
+  <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-3">
     {#if busy || view.completion || problem}
       <div
         class="space-y-1.5 border-b border-hairline py-3"
@@ -340,7 +333,10 @@
               ? `${view.operationModel}: `
               : ""}{view.completion}
           </p>{/if}
-        {#if problem}<p class="text-[12px] text-destructive" role="alert">
+        {#if problem}<p
+            class="break-words text-[12px] text-destructive"
+            role="alert"
+          >
             {problem}
           </p>{/if}
         {#if instance && runtime.canRetry(instance.id) && !busy}<Button
@@ -353,8 +349,8 @@
     {/if}
     {#if !installed}
       <div class="flex flex-col gap-3 border-b border-hairline py-3">
-        <div class="flex items-center justify-between gap-3">
-          <div class="min-w-0">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="min-w-0 flex-[1_1_12rem]">
             <p class="content-section-title">
               {entry.supported
                 ? busy

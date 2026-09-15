@@ -1,5 +1,6 @@
 <script lang="ts">
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
+  import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import HistoryIcon from "@lucide/svelte/icons/history";
   import PanelRightOpenIcon from "@lucide/svelte/icons/panel-right-open";
   import Notifications from "$lib/components/shell/Notifications.svelte";
@@ -148,9 +149,9 @@
     {#if selected}
       {#key selected.id}<HistoryDetails entry={selected} embedded />{/key}
     {:else}
-      <PaneHeader title="Transcription details" />
+      <SidebarHeader title="Transcription details" heading />
 
-      <p class="content-meta px-5 py-4">
+      <p class="content-meta px-3 py-4">
         Select a transcript to inspect its details.
       </p>
     {/if}
@@ -233,6 +234,10 @@
         <div
           class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-5 text-center"
         >
+          <HistoryIcon
+            class="mb-1 size-6 text-muted-foreground"
+            aria-hidden="true"
+          />
           <p class="content-title">
             {!enabled
               ? "History is turned off."

@@ -1526,7 +1526,7 @@ resizing. The list, reader, and details must scroll independently
 without an outer page scrollbar. At a 360px details-pane width, retain readable
 long identifiers, model names, timestamps, usage/cost/performance values, and
 every checkpoint field. Check component-scoped heading associations and the
-embedded 44px header, then verify the standalone details window from Recent
+embedded 34px sidebar header, then verify the standalone details window from Recent
 still exposes the same fields and lifecycle.
 
 Compact Recent history lists retain their existing expansion checks:
@@ -1590,7 +1590,18 @@ on each supported OS and architecture before release.
 Review Voice, files, speech, readiness, History, Settings, Connections, and runtime
 details in both themes at normal and compact widths. Headers and the first content
 column should share the page gutter; related settings should read as divided rows.
+`page-headers.spec.ts` compares the main page header's 44px height, top edge,
+title inset, and title baseline while navigating all seven rail destinations in
+both themes at 560px and 1280px. Keep one visible main header; workflow status,
+connection details, and runtime recovery notices belong below its fixed divider.
 Compare fields, pickers, buttons, disclosures, and keyboard focus across pages.
+Check the selected underline in bottom-panel, runtime-output, and History-view
+tabs, plus the edge marker in Settings, Connections, and runtime navigation.
+Resize individual panes while the window remains wide: Connection search results,
+VAD tuning, shortcut controls, and editor actions must adapt to their available
+width. Verify one keyboard stop per disclosure, reachable search-clear actions,
+and separate loading, unavailable, and empty states. Audio-file readiness must
+describe file transcription without microphone or shortcut prerequisites.
 Check that transcript text retains its reading size, docked playback/output
 controls remain reachable, and notices do not obscure compact settings. Existing
 workspace, readiness, settings-layout, visual-hierarchy, speech-playback, runtime,

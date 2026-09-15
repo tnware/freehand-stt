@@ -50,10 +50,12 @@
   is underlined rather than filled so the row reads as panel chrome, not a row
   of buttons.
 -->
-<div
-  class="flex h-7 shrink-0 items-center justify-between border-b border-hairline"
->
-  <div class="flex min-w-0 overflow-x-auto" role="tablist" aria-label={label}>
+<div class="workbench-toolbar h-7 justify-between gap-0 px-0">
+  <div
+    class="flex h-full min-w-0 overflow-x-auto"
+    role="tablist"
+    aria-label={label}
+  >
     {#each tabs as tab, index (tab.id)}
       <button
         type="button"
@@ -61,10 +63,7 @@
         aria-selected={active === tab.id}
         aria-controls={panelID}
         tabindex={active === tab.id ? 0 : -1}
-        class="panel-tab relative h-7 px-3 text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap uppercase transition-colors {active ===
-        tab.id
-          ? 'text-secondary-foreground'
-          : 'text-ink-quiet hover:text-secondary-foreground'}"
+        class="workbench-tab"
         onkeydown={(event) => navigate(event, index)}
         onclick={() => select(tab.id)}>{tab.label}</button
       >
@@ -72,8 +71,7 @@
   </div>
   <div class="flex shrink-0 items-center gap-2 pr-1.5">
     {#if note}
-      <span
-        class="hidden font-mono text-[10px] text-ink-quiet min-[900px]:inline"
+      <span class="hidden text-[11px] text-ink-quiet min-[900px]:inline"
         >{note}</span
       >
     {/if}
@@ -96,14 +94,3 @@
     {/if}
   </div>
 </div>
-
-<style>
-  .panel-tab[aria-selected="true"]::after {
-    content: "";
-    position: absolute;
-    inset-inline: 0.75rem;
-    bottom: 0;
-    height: 1px;
-    background: var(--muted-foreground);
-  }
-</style>

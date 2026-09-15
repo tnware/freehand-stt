@@ -7,7 +7,7 @@
     label,
     embedded = false,
     sidebar = false,
-    /** Tailwind background class for the state LED, or "" for no lamp. */
+    /** Tailwind background class for the status indicator, or an empty string. */
     dot = "",
     /** One right-aligned fact: latency, profile name, count. */
     meta = "",
@@ -43,22 +43,24 @@
 
   const metaClass = $derived(
     metaTone === "ok"
-      ? "bg-success/10 text-success"
+      ? "text-success"
       : metaTone === "warn"
-        ? "bg-warning/10 text-warning"
+        ? "text-warning"
         : metaTone === "bad"
-          ? "bg-destructive/10 text-destructive"
-          : "bg-secondary text-secondary-foreground",
+          ? "text-destructive"
+          : "text-muted-foreground",
   );
 </script>
 
 <!--
-  One rack module: a lamp, a name, one fact, and a door to the full settings.
-  The rack replaced a single collapsing panel of seven unlabelled icon toggles,
-  so every module here says what it is in words.
+  Workflow controls share a flat section header and one disclosure target.
 -->
-<section class="module-card shrink-0" class:framed={!embedded} class:sidebar>
-  <div class="flex items-center gap-2">
+<section
+  class="workflow-section shrink-0"
+  class:divided={!embedded}
+  class:sidebar
+>
+  <div class="flex min-h-7 min-w-0 items-center gap-1">
     {#if collapsible}
       <button
         type="button"
@@ -67,17 +69,25 @@
         aria-controls={controls}
         onclick={onToggle}
       >
+        <ChevronRightIcon
+          class="size-3.5 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none {open
+            ? 'rotate-90'
+            : ''}"
+          aria-hidden="true"
+        />
         {#if dot}
           <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"
           ></span>
         {/if}
         {@render icon?.()}
-        <h2 class="shrink-0 text-sm font-semibold">{label}</h2>
+        <h2 class="content-section-title min-w-0 truncate" title={label}>
+          {label}
+        </h2>
         <span class="flex-1"></span>
         {#if meta}
           <span
-            class="min-w-0 max-w-[58%] truncate rounded-md px-2 py-1 text-xs font-medium {metaClass}"
-            >{meta}</span
+            class="min-w-0 max-w-[48%] truncate text-xs {metaClass}"
+            title={meta}>{meta}</span
           >
         {/if}
       </button>
@@ -87,12 +97,14 @@
         ></span>
       {/if}
       {@render icon?.()}
-      <h2 class="text-sm font-semibold">{label}</h2>
+      <h2 class="content-section-title min-w-0 truncate" title={label}>
+        {label}
+      </h2>
       <span class="flex-1"></span>
       {#if meta}
         <span
-          class="min-w-0 max-w-[58%] truncate rounded-md px-2 py-1 text-xs font-medium {metaClass}"
-          >{meta}</span
+          class="min-w-0 max-w-[48%] truncate text-xs {metaClass}"
+          title={meta}>{meta}</span
         >
       {/if}
     {/if}
@@ -106,22 +118,6 @@
         onclick={onSettings}
       >
         <SlidersIcon class="size-[13px]" />
-      </button>
-    {/if}
-    {#if collapsible}
-      <button
-        type="button"
-        class="chevron"
-        aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
-        aria-expanded={open}
-        aria-controls={controls}
-        onclick={onToggle}
-      >
-        <ChevronRightIcon
-          class="size-[14px] transition-transform duration-200 {open
-            ? 'rotate-90'
-            : ''}"
-        />
       </button>
     {/if}
   </div>
@@ -144,25 +140,16 @@
   .sidebar .module-body {
     padding-top: 0.375rem;
   }
-  .sidebar .door {
-    width: 1.5rem;
-    height: 1.5rem;
-    background: transparent;
-    color: var(--muted-foreground);
+  .divided {
+    border-top: 1px solid var(--hairline);
+    padding-block: 0.5rem;
   }
-  .framed {
-    border: 1px solid var(--card-stroke);
-    border-radius: var(--radius-lg);
-    background: var(--card);
-    padding: 0.875rem;
-    margin-block: 0.5rem;
-  }
-  .module-card {
+  .workflow-section {
     display: flex;
+    min-width: 0;
     flex-direction: column;
   }
-  .module-trigger:focus-visible,
-  .chevron:focus-visible {
+  .module-trigger:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 1px;
   }
@@ -184,12 +171,11 @@
   .door {
     display: grid;
     place-items: center;
-    width: 2rem;
-    height: 2rem;
+    width: 1.5rem;
+    height: 1.5rem;
     flex-shrink: 0;
     border-radius: var(--radius-sm);
-    color: var(--accent-text);
-    background: var(--accent-wash);
+    color: var(--muted-foreground);
     transition:
       background-color 120ms ease,
       color 120ms ease;
@@ -201,22 +187,6 @@
   .door:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 1px;
-  }
-  .chevron {
-    display: grid;
-    place-items: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    flex-shrink: 0;
-    border-radius: var(--radius-sm);
-    color: var(--muted-foreground);
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
-  }
-  .chevron:hover {
-    background-color: var(--subtle-fill-hover);
-    color: var(--foreground);
   }
   @media (prefers-reduced-motion: reduce) {
     .drawer {

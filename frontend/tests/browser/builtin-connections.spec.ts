@@ -140,7 +140,11 @@ for (const theme of ["dark", "light"] as const) {
     await page
       .getByRole("button", { name: "Manage runtime", exact: true })
       .click();
-    await expect(page.getByText("Running", { exact: true })).toBeVisible();
+    await expect(
+      page
+        .locator(".workbench-columns > div")
+        .getByText("Running", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Stop", exact: true }),
     ).toBeInViewport();

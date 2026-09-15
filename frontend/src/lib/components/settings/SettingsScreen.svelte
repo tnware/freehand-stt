@@ -16,6 +16,7 @@
   import { Button } from "$lib/components/ui/button";
   import { Skeleton } from "$lib/components/ui/skeleton";
   import Notifications from "$lib/components/shell/Notifications.svelte";
+  import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import SettingsNav from "$lib/components/settings/SettingsNav.svelte";
   import VoiceTranscriptionSettings from "$lib/components/home/VoiceTranscriptionSettings.svelte";
   import AudioSection from "$lib/components/settings/sections/AudioSection.svelte";
@@ -389,12 +390,12 @@
       <nav
         bind:this={navigationRef}
         aria-label="Context settings"
-        class="flex min-w-0 shrink-0 items-center gap-1 border-b border-hairline pl-3 pr-2"
+        class="workbench-header min-w-0 gap-1 pl-0 pr-2"
       >
         <div
           role="tablist"
           aria-label="Context settings"
-          class="flex min-w-0 flex-1 overflow-x-auto"
+          class="flex h-full min-w-0 flex-1 overflow-x-auto"
         >
           {#each inspectorSections as item, index (item.id)}
             <button
@@ -410,7 +411,7 @@
                 ? 0
                 : -1}
               title={sectionLabel(item.id)}
-              class="shrink-0 border-b-2 border-transparent px-2 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring aria-selected:border-primary aria-selected:text-foreground"
+              class="workbench-tab shrink-0 px-2"
               onclick={() => selectSection(item.id)}
               onkeydown={(event) => void moveInspectorSection(event, index)}
               >{inspectorLabels[item.id] ?? item.label}</button
@@ -434,7 +435,9 @@
     <div
       bind:this={contentPane}
       style:scroll-padding-top={`${headingHeight + 16}px`}
-      class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6"
+      class="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 {inspector
+        ? 'px-3'
+        : 'px-5'}"
     >
       <section
         id={inspector ? inspectorPanelID : undefined}
@@ -444,34 +447,31 @@
         aria-labelledby="settings-section-title"
         class="@container flex w-full flex-col gap-3"
       >
-        <div
-          bind:clientHeight={headingHeight}
-          class="sticky top-0 z-10 flex min-h-11 items-center gap-2.5 border-b border-hairline bg-background py-2"
+        <PaneHeader
+          title={sectionTitle}
+          icon={section.icon}
+          headingID="settings-page-heading"
+          focusable
+          bind:height={headingHeight}
+          class="sticky top-0 z-10 bg-background {inspector
+            ? '-mx-3 h-[34px]'
+            : '-mx-5'}"
         >
-          <span
-            class="content-section-icon flex items-center justify-center [&>svg]:size-4"
-            aria-hidden="true"><section.icon /></span
-          >
-          <h3
-            id="settings-page-heading"
-            tabindex="-1"
-            class="content-title min-w-0 flex-1 break-words"
-          >
-            {sectionTitle}
-          </h3>
-          {#if inspector && inspectorSections.length <= 1 && onCloseSidebar}
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              class="shrink-0"
-              aria-label="Close secondary sidebar"
-              title="Close sidebar"
-              disabled={editingDisabled}
-              onclick={onCloseSidebar}
-              ><XIcon class="size-4" aria-hidden="true" /></Button
-            >
-          {/if}
-        </div>
+          {#snippet actions()}
+            {#if inspector && inspectorSections.length <= 1 && onCloseSidebar}
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                class="shrink-0"
+                aria-label="Close secondary sidebar"
+                title="Close sidebar"
+                disabled={editingDisabled}
+                onclick={onCloseSidebar}
+                ><XIcon class="size-4" aria-hidden="true" /></Button
+              >
+            {/if}
+          {/snippet}
+        </PaneHeader>
         <p class="content-meta max-w-2xl">
           {sectionBlurb}
         </p>
@@ -766,7 +766,9 @@
     </div>
 
     <div
-      class="flex min-h-11 shrink-0 flex-wrap items-center justify-end gap-2 border-t border-hairline px-5 py-2"
+      class="flex min-h-11 shrink-0 flex-wrap items-center justify-end gap-2 border-t border-hairline py-2 {inspector
+        ? 'px-3'
+        : 'px-5'}"
     >
       {#if session.editor.draft}
         <span

@@ -564,6 +564,10 @@
     if (setupScenario === "loading") session.editor.devicesBusy = true;
     if (setupScenario === "connection")
       void session.editor.testVoiceConnection();
+  } else if (!diagnosticsScenario && current.savedConnections.selected.voice) {
+    // This standalone fixture replaces App, which owns the initial Voice probe.
+    // Setup and diagnostics scenarios control when their first fake check runs.
+    void session.editor.testVoiceConnection();
   }
   if (new URLSearchParams(location.search).get("feedback") === "voice") {
     session.dictation.status = {

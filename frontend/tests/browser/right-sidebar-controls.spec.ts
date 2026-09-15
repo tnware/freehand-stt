@@ -224,10 +224,23 @@ test("History settings share one guarded close button with the details view", as
   await openApp(page, 560);
   await navigate(page, "History");
   await details(page).click();
-  await secondary(page)
-    .getByRole("group", { name: "History sidebar view", exact: true })
-    .getByRole("button", { name: "History settings", exact: true })
-    .click();
+  const views = secondary(page).getByRole("group", {
+    name: "History sidebar view",
+    exact: true,
+  });
+  const detailView = views.getByRole("button", {
+    name: "Details",
+    exact: true,
+  });
+  const settingsView = views.getByRole("button", {
+    name: "History settings",
+    exact: true,
+  });
+  await expect(detailView).toHaveAttribute("aria-pressed", "true");
+  await settingsView.focus();
+  await settingsView.press("Enter");
+  await expect(settingsView).toHaveAttribute("aria-pressed", "true");
+  await expect(detailView).toHaveAttribute("aria-pressed", "false");
   const retention = configuration(page).getByRole("switch", {
     name: "Keep transcript history",
     exact: true,
@@ -249,6 +262,7 @@ test("History settings share one guarded close button with the details view", as
   await expect(toggle(page)).toBeFocused();
   await details(page).click();
   await expect(configuration(page)).toHaveCount(0);
+  await expect(detailView).toHaveAttribute("aria-pressed", "true");
   await expect(information(page)).toContainText("fixture/voice-3");
   await expect(reader(page)).toContainText("Prepare the release checklist.");
 });
