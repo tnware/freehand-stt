@@ -53,6 +53,32 @@ expands the individual checks and HTTP status.
 Choose **Edit connection** to change the server details or **Choose connection**
 to select a server. Checks use the saved connection, not unsaved edits.
 
+## Check this computer’s resource use
+
+Select **CPU / RAM / GPU** in the status bar to see this computer’s CPU activity,
+used RAM, estimated available RAM, and graphics adapters. At narrow window widths, select the
+activity icon instead. Readings refresh about every two seconds while the
+workspace is visible and pause when it is hidden or minimized.
+
+The indicator turns amber at 90% CPU, RAM, GPU activity, or dedicated GPU memory
+use. Sustained high activity or little available memory can help explain slower
+local transcription or cleanup.
+Try closing other demanding apps or stopping an unused local runtime before
+retrying. A brief spike is normal while a model loads or processes a request.
+
+GPU activity in the status bar shows the busiest reported adapter. Open the
+readout to see each adapter’s activity and memory usage. Windows reports
+dedicated GPU memory and any system RAM used by the adapter. Apple Silicon
+reports GPU use of shared RAM when available; this is already part of system
+RAM, with no separate VRAM pool. Graphics-driver support varies, and unavailable
+metrics remain labeled rather than appearing as zero.
+
+Readings include all apps on this computer. They do not attribute usage to
+individual runtime processes or measure a remote inference server.
+Available RAM includes reclaimable memory and is an estimate; it can differ
+from Activity Monitor or Task Manager. **Measuring…** means CPU sampling is
+warming up; **Unavailable** means a metric could not be read.
+
 ## Voice dictation
 
 You need a usable microphone and a configured STT service. A recording shortcut

@@ -1585,6 +1585,33 @@ always starts its own server. These are browser checks, not acceptance of native
 recording, insertion, permissions, or runtime inference. Run the native checklist
 on each supported OS and architecture before release.
 
+### Host resource readout
+
+`go test ./internal/resources` covers CPU delta math, rate limiting, invalid and
+reset counters, fresh baselines after pauses, independent metric failures,
+recovery, and lifecycle cancellation. GPU tests cover per-engine aggregation,
+adapter identity normalization, and independent memory availability. The Windows
+native counter tests read CPU/RAM, WDDM activity, and adapter memory without
+starting processes or models. Frontend resource-state tests cover
+serialized polling, hide/resume races, stale-value expiry, failed reads, and
+disposal. `resources.spec.ts` covers the real status bar's stable width, keyboard
+popover behavior, high usage, unavailable/recovery states, compact layout, and
+stopping/restarting reads on native visibility events using synthetic counters,
+plus GPU activity, dedicated-memory saturation, and Apple unified-memory labels.
+
+For native acceptance, compare the readout with Task Manager on Windows and
+Activity Monitor on packaged Apple Silicon and Intel macOS. Expect sampling
+interval differences and a RAM estimate that includes reclaimable pages; do not
+equate it with macOS memory pressure. Verify idle CPU, normal user-authorized
+local runtime activity, repeated hide/minimize/restore, sleep/wake, and Quit.
+Compare GPU activity during an explicitly authorized workload with the relevant
+system monitor, including compute engines on Windows. Check dedicated VRAM and
+shared RAM separately, and verify Apple GPU memory is not added to system RAM or
+given an invented VRAM capacity. Missing driver statistics must show unavailable.
+Confirm CPU warms up after a long pause, no metric sticks on an old value, and
+runtime processes are unaffected by the resource popover. Native macOS execution
+and comparison remain required separately from Windows tests and compilation.
+
 ### Page-content consistency
 
 Review Voice, files, speech, readiness, History, Settings, Connections, and runtime

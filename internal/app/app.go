@@ -26,6 +26,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/platform"
 	"github.com/tnware/freehand-stt/internal/postprocess"
 	"github.com/tnware/freehand-stt/internal/releaseinfo"
+	"github.com/tnware/freehand-stt/internal/resources"
 	settingsservice "github.com/tnware/freehand-stt/internal/settings"
 	"github.com/tnware/freehand-stt/internal/shortcut"
 	"github.com/tnware/freehand-stt/internal/storage"
@@ -273,6 +274,7 @@ func New(opts Options) (*App, error) {
 	})
 	a.services = []application.Service{
 		application.NewService(a.buildInfo),
+		application.NewService(resources.NewService()),
 		application.NewService(a.history),
 		application.NewService(a.settingsService),
 		application.NewService(a.managedRuntime),

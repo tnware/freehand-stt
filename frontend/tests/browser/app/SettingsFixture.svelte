@@ -22,6 +22,7 @@
   import { configurePickerFixture } from "./picker-data";
   import { controlledMetadata } from "./metadata-control";
   import { createRuntimeFixture } from "./runtime-fixture";
+  import { createResourceFixture } from "./resource-fixture";
   import { createHistoryFixture } from "./history-fixture";
   import { ProviderID } from "$bindings/managedruntime";
   import { State, PostProcessingPreset } from "$lib/state";
@@ -329,6 +330,7 @@
     current.postProcessing.enabled = true;
   }
   const session = new Session({
+    resources: createResourceFixture(),
     ...serviceWithStatus(
       () =>
         CancellablePromise.resolve(

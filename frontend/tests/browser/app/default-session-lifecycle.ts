@@ -62,6 +62,7 @@ export async function mountDefaultSessionApp() {
     session.editor.applySettingsSnapshot(current);
   session.editor.refreshDevices = async () => {};
   session.history.refresh = async () => {};
+  session.resources.setVisible = () => {};
 
   let statusDeliveries = 0;
   const applyStatus = session.runtime.applyStatus.bind(session.runtime);

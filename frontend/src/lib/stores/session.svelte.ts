@@ -10,6 +10,8 @@ import * as HistoryService from "$bindings/history/service";
 import * as InputService from "$bindings/input/service";
 import * as SettingsService from "$bindings/settings/service";
 import * as TTSService from "$bindings/tts/service";
+import * as ResourcesService from "$bindings/resources/service";
+import { ResourceState, type ResourceService } from "./resources.svelte";
 import { SessionMessages } from "./messages.svelte";
 import { SettingsEditor, type SettingsEditorServices } from "./editor.svelte";
 import { DictationState, type DictationStateService } from "./dictation.svelte";
@@ -21,6 +23,7 @@ import { SpeechState, type SpeechStateService } from "./speech.svelte";
 import { HistoryState, type HistoryStateService } from "./history.svelte";
 
 export interface SessionServices extends SettingsEditorServices {
+  resources?: ResourceService;
   runtime?: RuntimeService;
   dictation: DictationStateService;
   files: FileTranscriptionStateService;
@@ -29,6 +32,7 @@ export interface SessionServices extends SettingsEditorServices {
 }
 
 const services: SessionServices = {
+  resources: ResourcesService,
   runtime: ManagedRuntimeService,
   settings: SettingsService,
   input: InputService,
@@ -41,6 +45,7 @@ const services: SessionServices = {
 
 /** Per-WebView composition. Feature state and commands live in their owners. */
 export class Session {
+  readonly resources: ResourceState;
   readonly messages = new SessionMessages();
   readonly runtime: ManagedRuntimeState;
   readonly editor: SettingsEditor;
@@ -51,6 +56,7 @@ export class Session {
   #disposed = false;
 
   constructor(bindings: SessionServices = services) {
+    this.resources = new ResourceState(bindings.resources);
     this.dictation = new DictationState(bindings.dictation, this.messages);
     this.files = new FileTranscriptionState(bindings.files, this.messages);
     this.speech = new SpeechState(bindings.speech, this.messages);
@@ -101,6 +107,7 @@ export class Session {
   dispose() {
     if (this.#disposed) return;
     this.#disposed = true;
+    this.resources.dispose();
     this.runtime.dispose();
     this.speech.draft = "";
     this.editor.dispose();

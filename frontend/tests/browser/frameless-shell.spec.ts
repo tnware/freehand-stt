@@ -10,7 +10,9 @@ const decision = (page: Page) =>
   page.getByRole("dialog", { name: "Save changes?", exact: true });
 const nativeActions = (page: Page) =>
   page.evaluate(() =>
-    window.testWindow.calls.filter((call) => call !== "IsMaximised"),
+    window.testWindow.calls.filter(
+      (call) => call !== "IsMaximised" && call !== "IsMinimised",
+    ),
   );
 
 for (const width of [1280, 560]) {
@@ -125,7 +127,7 @@ for (const width of [1280, 560]) {
       expect(item.draggable).toBe("no-drag");
       expect(item.region).not.toBe("caption");
     }
-    expect(await page.evaluate(() => window.testWindow.calls)).toEqual([]);
+    expect(await nativeActions(page)).toEqual([]);
     await page.screenshot({
       path: info.outputPath(`macos-caption-${width}.png`),
     });
@@ -232,6 +234,9 @@ test("window-state reads and native subscriptions stop when the shell is unmount
   await expect
     .poll(() => page.evaluate(() => window.testWindow.pendingStateReads))
     .toBe(1);
+  const readsBeforeUnmount = await page.evaluate(() => [
+    ...window.testWindow.calls,
+  ]);
   await app.evaluate((app) => app.unmount());
   const stateResponse = page.waitForResponse((response) => {
     if (!response.url().endsWith("/wails/runtime")) return false;
@@ -246,9 +251,9 @@ test("window-state reads and native subscriptions stop when the shell is unmount
     window.testWindow.emit("WindowDidResize");
     await new Promise(requestAnimationFrame);
   });
-  expect(await page.evaluate(() => window.testWindow.calls)).toEqual([
-    "IsMaximised",
-  ]);
+  expect(await page.evaluate(() => window.testWindow.calls)).toEqual(
+    readsBeforeUnmount,
+  );
   expect(await app.evaluate((app) => app.failures())).toBe(0);
   await expect(
     page.getByRole("group", { name: "Window controls" }),

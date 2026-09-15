@@ -981,6 +981,7 @@
   </div>
 
   <StatusBar
+    resources={session.resources}
     dictation={session.dictation.status}
     {now}
     toggleShortcut={(session.editor.applied ?? session.editor.draft)

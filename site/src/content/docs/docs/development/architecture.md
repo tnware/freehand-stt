@@ -1674,3 +1674,44 @@ independent scrolling; the document body has no viewport-height minimum in this
 pane, preventing an outer scrollbar under zoom. Voice's contextual Transcription options group
 model, profile, language and recognition controls in the shared settings card;
 first-run setup controls continue to use the compact presentation and immediate saves.
+
+### Host resource sampling
+
+`internal/resources.Service` owns the status bar's aggregate CPU and physical
+memory and GPU snapshots. `internal/app` registers it as a narrow read-only Wails boundary.
+It samples native counters on demand, serializes calls, caches for one second,
+and rejects reads outside its application lifecycle. There are no worker
+goroutines, subprocesses, model probes, process metadata reads, persisted
+metrics, or new permissions. Runtime supervision is independent of this reader.
+
+Windows uses `GetSystemTimes` and `GlobalMemoryStatusEx`; CPU is unavailable on
+machines with more than 64 logical processors because that timing API reports
+only the caller's processor group. macOS uses Mach host CPU/VM statistics and
+`hw.memsize`, releasing the host port on each read. Its available-memory estimate
+includes free and inactive pages; speculative pages are already counted as free.
+The RAM percentage is total minus estimated available memory, not macOS memory
+pressure. CPU uses counter deltas across cores, with a new baseline after failed
+reads, counter resets, or gaps longer than five seconds.
+
+Windows GPU sampling uses English PDH GPU Engine and GPU Adapter Memory
+counters with bounded buffers. Engine counters are aggregated across processes
+and the busiest engine represents each adapter; instance strings containing
+process IDs never leave Go. DXGI supplies adapter names and dedicated-memory
+capacity, without creating a graphics device; software adapters are excluded
+when identified. The PDH query is collected only on demand, rebuilt after a
+long pause, and closed at shutdown. macOS reads optional `IOAccelerator`
+`PerformanceStatistics` properties through IOKit, checking types and releasing
+every object. `Device Utilization %` supplies activity; Apple GPU
+`In use system memory` is labeled as unified RAM with no separate capacity.
+These driver properties are not a guaranteed macOS schema: missing fields stay
+unavailable. At most eight adapters cross the binding; no GPU contexts, private
+IOReport APIs, external utilities, or permission prompts are used. Process
+attribution and remote-host utilization remain outside this sampler.
+
+The session's `ResourceState` serializes two-second polling while the main
+workspace and document are visible and the window is not minimized. Visibility
+events, teardown, and session disposal stop polling and clear renderer snapshots;
+generation checks discard late responses. A stalled read expires displayed
+metrics after six seconds. The status bar reserves metric width, and its popover
+uses explicit measuring/unavailable states. Amber at 90% is a latest-sample usage
+hint, not a contention diagnosis or runtime admission rule.

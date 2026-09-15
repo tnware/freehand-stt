@@ -4,6 +4,8 @@
   import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
   import CircleHelpIcon from "@lucide/svelte/icons/circle-help";
   import TaskConnectionPanel from "./TaskConnectionPanel.svelte";
+  import ResourceStatus from "./ResourceStatus.svelte";
+  import type { ResourceState } from "$lib/stores/resources.svelte";
   import ShortcutKeys from "$lib/components/common/ShortcutKeys.svelte";
   import { Button } from "$lib/components/ui/button";
   import { elapsedSeconds, State, type Status } from "$lib/state";
@@ -16,6 +18,7 @@
 
   let {
     dictation,
+    resources,
     now,
     toggleShortcut = "",
     connectionState,
@@ -32,6 +35,7 @@
     onAbout,
   }: {
     dictation: Status;
+    resources?: ResourceState;
     now: number;
     toggleShortcut?: string;
     connectionState: TaskConnectionStatus;
@@ -177,7 +181,8 @@
   </div>
 
   <div class="flex shrink-0 items-center gap-2.5">
-    <span class="hidden items-center gap-2.5 min-[1100px]:flex">
+    {#if resources}<ResourceStatus {resources} />{/if}
+    <span class="hidden items-center gap-2.5 min-[1280px]:flex">
       {#if connectionDetails.purpose !== Purpose.Speech}
         <span
           class="max-w-40 truncate"
