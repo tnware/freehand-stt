@@ -24,7 +24,8 @@ to load it and expose the HTTP API.
 Connect that manual service in Freehand:
 
 1. Add a **NeMo-Speech.cpp** [connection](../../backends/nemo-speech/).
-2. Select that connection in **Voice transcription**, **Audio-file transcription**, or both.
+2. Open the **Settings** cog in Voice transcription or Audio file and select that connection
+   in **Transcription** options. Configure each workflow independently if you use both.
 3. Refresh models and select the loaded Parakeet model.
 4. Choose **Parakeet TDT v3** as the model profile, then save.
 

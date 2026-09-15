@@ -112,6 +112,6 @@ describe("home task presentation", () => {
         onOpenSettings: noop,
       },
     });
-    expect(body).toContain('aria-label="Text to speech settings"');
+    expect(body).toContain("Configure speech");
   });
 });

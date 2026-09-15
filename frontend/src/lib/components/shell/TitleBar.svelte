@@ -15,6 +15,7 @@
     secondaryVisible = false,
     secondaryAvailable = false,
     bottomAvailable = true,
+    bottomUnavailableReason = "Increase window height to show the bottom panel",
     onTogglePrimary,
     onToggleBottom,
     onToggleSecondary,
@@ -28,6 +29,7 @@
     secondaryVisible?: boolean;
     secondaryAvailable?: boolean;
     bottomAvailable?: boolean;
+    bottomUnavailableReason?: string;
     onTogglePrimary?: () => void;
     onToggleBottom?: () => void;
     onToggleSecondary?: () => void;
@@ -103,7 +105,7 @@
         aria-controls="workbench-bottom-panel"
         aria-pressed={bottomVisible}
         title={!bottomAvailable
-          ? "Increase window height to show the bottom panel"
+          ? bottomUnavailableReason
           : bottomVisible
             ? "Hide bottom panel"
             : "Show bottom panel"}

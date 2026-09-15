@@ -16,6 +16,7 @@
 
   let {
     active,
+    sections,
     counts = {},
     onSelect,
     onOpenChain,
@@ -23,6 +24,8 @@
     navigationRef = $bindable(null),
   }: {
     active: SettingsSectionID;
+    /** Restrict this navigation and its search to the supplied settings. */
+    sections?: SettingsSectionID[];
     /** Per-section tallies, shown as the design draws them. */
     counts?: Partial<Record<SettingsSectionID, number>>;
     onSelect: (id: SettingsSectionID) => void;
@@ -38,7 +41,9 @@
   // Runtime management belongs to the activity rail, outside Settings.
   const matches = $derived(
     matchingSettingsSections(query).filter(
-      (section) => section.id !== "local-runtime",
+      (section) =>
+        section.id !== "local-runtime" &&
+        (!sections || sections.includes(section.id)),
     ),
   );
   const tabStop = $derived(
@@ -114,6 +119,7 @@
               matches.length) %
             matches.length;
     const next = matches[nextIndex];
+    if (!next) return;
     if (next.id !== "connections") onSelect(next.id);
     queueMicrotask(() => {
       navigationRef
@@ -170,8 +176,10 @@
         No matching settings.
       </p>{/if}
     {#each groups as group (group)}
-      {@const sections = matches.filter((section) => section.group === group)}
-      {#if sections.length}
+      {@const groupSections = matches.filter(
+        (section) => section.group === group,
+      )}
+      {#if groupSections.length}
         <div class="flex shrink-0 flex-col gap-0.5 px-1.5">
           <p
             class="px-2.5 pb-1 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase {workbench
@@ -180,7 +188,7 @@
           >
             {GROUP_LABELS[group]}
           </p>
-          {#each sections as section (section.id)}
+          {#each groupSections as section (section.id)}
             <button
               type="button"
               class={itemClass(section.id)}
@@ -231,9 +239,8 @@
       >
         <div class="border-t border-hairline px-2 py-3 text-xs leading-relaxed">
           <p class="text-secondary-foreground">
-            Open connection, model and cleanup settings from each workflow’s
-            sidebar. Save and return applies your edits and resumes that
-            workflow.
+            Open task configuration from each workflow’s sidebar. Save applies
+            your changes; Done returns to your work.
           </p>
           <button
             type="button"

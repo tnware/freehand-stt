@@ -1,6 +1,6 @@
 <script lang="ts">
   import { windowMaterial } from "$lib/platform";
-  import { onMount, untrack } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import { Events, Window } from "@wailsio/runtime";
   import type { ConnectionManagerRequest } from "$bindings/windowing";
   import { ModeWatcher, setMode } from "mode-watcher";
@@ -31,8 +31,14 @@
     isWorkflowPane,
     workflowBlockedReason,
     type PaneID,
+    type WorkflowPane,
   } from "$lib/panes";
   import { SETTINGS_SECTIONS } from "$lib/navigation";
+  import {
+    GENERAL_SECTIONS,
+    WORKFLOW_SECTIONS,
+    configurationRealm,
+  } from "$lib/configuration-realms";
   import { canToggleRecording, isRecording } from "$lib/utils/status";
   import { ShellNavigation } from "$lib/shell-navigation.svelte";
   import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
@@ -70,7 +76,11 @@
     if (layoutRestored) layout.save();
   });
   /** Non-workflow places. Null means a workflow chain is on screen. */
-  let auxPane = $state<"runtimes" | "history" | "settings" | null>(null);
+  let auxPane = $state<
+    "connections" | "runtimes" | "history" | "settings" | null
+  >(null);
+  let inspectorOpen = $state(false);
+  let inspectorRealm = $state<PaneID>("voice");
   let aboutOpen = $state(false);
   let configuration = $state<SettingsPane>();
   let alive = true;
@@ -97,7 +107,37 @@
   const activePane = $derived<PaneID>(
     auxPane === null ? (inputMode as PaneID) : auxPane,
   );
-  const settingsOpen = $derived(auxPane === "settings");
+  const settingsOpen = $derived(
+    auxPane === "settings" || auxPane === "connections",
+  );
+  const configurationOpen = $derived(settingsOpen || inspectorOpen);
+  const configurationSections = $derived(
+    inspectorOpen
+      ? inspectorRealm === "history"
+        ? ["history" as const]
+        : WORKFLOW_SECTIONS[
+            isWorkflowPane(inspectorRealm) ? inspectorRealm : "voice"
+          ]
+      : auxPane === "connections"
+        ? ["connections" as const]
+        : GENERAL_SECTIONS,
+  );
+  const secondaryAvailable = $derived(
+    auxPane === null || auxPane === "history",
+  );
+  const inspectorVisible = $derived(
+    inspectorOpen &&
+      inspectorRealm === activePane &&
+      (layout.secondaryAvailable.current || layout.compactSecondaryOpen),
+  );
+  const secondaryShown = $derived(
+    inspectorOpen
+      ? inspectorVisible
+      : auxPane === "history" && layout.secondaryVisible,
+  );
+  const bottomAvailable = $derived(
+    auxPane !== "settings" && layout.bottomAvailable.current,
+  );
   const composerVisible = $derived(auxPane === null && inputMode === "tts");
   const primaryAvailable = $derived(
     Boolean(layout.sidebars[auxPane ?? "workflow"]),
@@ -139,6 +179,7 @@
     if (workflowBlockedReason(id, voiceActive, fileWorking)) return;
     navigationGeneration++;
     if (id === "settings") return openSettings("general");
+    if (id === "connections") return openSettings("connections");
     leaveSettings(() => {
       if (isWorkflowPane(id)) {
         auxPane = null;
@@ -149,10 +190,12 @@
 
   function leaveSettings(action: () => void) {
     const finish = () => {
+      inspectorOpen = false;
+      layout.compactSecondaryOpen = false;
       navigation.done();
       action();
     };
-    if (settingsOpen && configuration) configuration.requestClose(finish);
+    if (configurationOpen && configuration) configuration.requestClose(finish);
     else finish();
   }
 
@@ -191,7 +234,7 @@
       group: "Layout",
       label: "Toggle bottom panel",
       keywords: "panel show hide recent output diagnostics",
-      disabled: !layout.bottomAvailable.current,
+      disabled: !bottomAvailable,
       run: () => layout.toggleBottom(),
     },
     {
@@ -199,8 +242,8 @@
       group: "Layout",
       label: "Toggle secondary sidebar",
       keywords: "right sidebar history details show hide",
-      disabled: auxPane !== "history",
-      run: () => layout.toggleSecondary(),
+      disabled: !secondaryAvailable,
+      run: toggleSecondary,
     },
     ...PANES.map((pane) => ({
       id: `go:${pane.id}`,
@@ -240,7 +283,7 @@
       detail: session.editor.applied?.postProcessing.model ?? "",
       disabled:
         !session.editor.applied ||
-        settingsOpen ||
+        configurationOpen ||
         session.editor.saving ||
         session.editor.quickSettingsPending.length > 0 ||
         !!session.editor.applied.configuration.recoveryRequired,
@@ -342,7 +385,7 @@
     // Workspace shortcuts are local to this window; native dictation shortcuts
     // remain owned by Go.
     function commandKey(event: KeyboardEvent) {
-      if (shortcutCapture.capturing) return;
+      if (shortcutCapture.capturing || layout.notificationsPaused) return;
       const key = event.key.toLowerCase();
       if (!["k", "b", "j"].includes(key) || event.defaultPrevented) return;
       if (
@@ -355,13 +398,13 @@
       )
         return;
       if (event.altKey && key !== "b") return;
-      if (key === "j" && !layout.bottomAvailable.current) return;
+      if (key === "j" && !bottomAvailable) return;
       if (key === "b" && !event.altKey && !primaryAvailable) return;
-      if (key === "b" && event.altKey && auxPane !== "history") return;
+      if (key === "b" && event.altKey && !secondaryAvailable) return;
       event.preventDefault();
       if (key === "k") commandsOpen = !commandsOpen;
       else if (key === "j") layout.toggleBottom();
-      else if (event.altKey) layout.toggleSecondary();
+      else if (event.altKey) toggleSecondary();
       else layout.togglePrimary();
     }
     window.addEventListener("keydown", commandKey);
@@ -426,31 +469,162 @@
     };
   });
 
-  function openSettings(sectionID: SettingsSectionID = "general") {
+  function showSettings(
+    sectionID: SettingsSectionID,
+    preserveDraft = false,
+    realmOverride?: WorkflowPane,
+  ) {
+    const realm = realmOverride ?? configurationRealm(sectionID, inputMode);
+    if (workflowBlockedReason(realm, voiceActive, fileWorking)) return;
     navigationGeneration++;
-    if (sectionID === "local-runtime") {
-      selectPane("runtimes");
-      return;
+    const origin = navigation.origin || inputMode;
+    if (!preserveDraft) navigation.done();
+    navigation.openSettings(sectionID, realm === "settings" ? "" : origin);
+    inspectorOpen =
+      realm !== "settings" && realm !== "connections" && realm !== "runtimes";
+    inspectorRealm = realm;
+    layout.compactPrimaryOpen = false;
+    if (isWorkflowPane(realm)) {
+      inputMode = realm;
+      auxPane = null;
+    } else auxPane = realm;
+    if (inspectorOpen) {
+      const generation = navigationGeneration;
+      void tick().then(() => {
+        if (generation === navigationGeneration && inspectorOpen)
+          layout.compactSecondaryOpen = !layout.secondaryAvailable.current;
+      });
     }
-    if (settingsOpen && configuration) {
+    if (
+      preserveDraft &&
+      session.editor.validationIssue?.section === sectionID
+    ) {
+      const generation = navigationGeneration;
+      void tick().then(() => {
+        if (generation === navigationGeneration)
+          void configuration?.revealValidationIssue();
+      });
+    }
+  }
+  function openSettings(
+    sectionID: SettingsSectionID = "general",
+    realmOverride?: WorkflowPane,
+  ) {
+    navigationGeneration++;
+    const realm = realmOverride ?? configurationRealm(sectionID, inputMode);
+    if (workflowBlockedReason(realm, voiceActive, fileWorking)) return;
+    if (
+      configurationOpen &&
+      configuration &&
+      realm === activePane &&
+      configurationSections.includes(sectionID)
+    ) {
       configuration.selectSection(sectionID);
+      if (inspectorOpen) {
+        layout.compactPrimaryOpen = false;
+        layout.compactSecondaryOpen = !layout.secondaryAvailable.current;
+      }
       return;
     }
-    navigation.openSettings(sectionID, inputMode);
-    auxPane = "settings";
+    leaveSettings(() => showSettings(sectionID, false, realmOverride));
+  }
+  function openWorkflowSettings(sectionID: SettingsSectionID) {
+    const realm =
+      isWorkflowPane(inputMode) &&
+      WORKFLOW_SECTIONS[inputMode].includes(sectionID)
+        ? inputMode
+        : undefined;
+    openSettings(sectionID, realm);
+  }
+  function revealConfigurationSection(section: SettingsSectionID) {
+    const realm =
+      inspectorOpen &&
+      isWorkflowPane(inspectorRealm) &&
+      WORKFLOW_SECTIONS[inspectorRealm].includes(section)
+        ? inspectorRealm
+        : undefined;
+    showSettings(section, true, realm);
+  }
+  function showConnection(request: ConnectionManagerRequest) {
+    navigationGeneration++;
+    navigation.connection = null;
+    navigation.openConnection(request, inputMode);
+    inspectorOpen = false;
+    layout.compactPrimaryOpen = false;
+    layout.compactSecondaryOpen = false;
+    auxPane = "connections";
   }
   function openConnection(request: ConnectionManagerRequest) {
     navigationGeneration++;
-    if (settingsOpen && configuration) {
+    if (configurationOpen && configuration) {
       configuration.openConnection(request);
       return;
     }
-    navigation.openConnection(request, inputMode);
-    auxPane = "settings";
+    showConnection(request);
   }
-  /** Leaving configuration returns to the workflow that opened it. */
+  function closeInspector(hideHistory = false) {
+    navigationGeneration++;
+    const finish = () => {
+      inspectorOpen = false;
+      layout.compactSecondaryOpen = false;
+      if (hideHistory && auxPane === "history") layout.secondaryOpen = false;
+      navigation.done();
+      void tick().then(() =>
+        document
+          .querySelector<HTMLButtonElement>(
+            'button[aria-label="Toggle secondary sidebar"]',
+          )
+          ?.focus(),
+      );
+    };
+    if (inspectorOpen && configuration) configuration.requestClose(finish);
+    else finish();
+  }
+  function toggleSecondary() {
+    if (!secondaryAvailable) return;
+    if (inspectorOpen) {
+      if (inspectorVisible) closeInspector(true);
+      else {
+        layout.compactPrimaryOpen = false;
+        layout.compactSecondaryOpen = true;
+      }
+    } else if (auxPane === "history") layout.toggleSecondary();
+    else
+      openSettings(
+        WORKFLOW_SECTIONS[isWorkflowPane(inputMode) ? inputMode : "voice"][0],
+      );
+  }
+  function dismissSecondary() {
+    if (inspectorOpen) closeInspector(true);
+    else {
+      layout.compactSecondaryOpen = false;
+      void tick().then(() =>
+        document
+          .querySelector<HTMLButtonElement>(
+            'button[aria-label="Toggle secondary sidebar"]',
+          )
+          ?.focus(),
+      );
+    }
+  }
+  function showHistoryDetails() {
+    navigationGeneration++;
+    const finish = () => {
+      inspectorOpen = false;
+      navigation.done();
+      layout.secondaryOpen = true;
+      layout.compactSecondaryOpen = !layout.secondaryAvailable.current;
+    };
+    if (inspectorOpen && configuration) configuration.requestClose(finish);
+    else finish();
+  }
+  /** Explicit Done returns to the caller; inspectors close beside their workflow. */
   function closeSettings() {
     navigationGeneration++;
+    if (inspectorOpen) {
+      closeInspector();
+      return;
+    }
     const origin = navigation.origin;
     navigation.done();
     auxPane = null;
@@ -463,7 +637,13 @@
     commandsOpen = false;
     layout.compactPrimaryOpen = false;
     layout.compactSecondaryOpen = false;
-    if (settingsOpen) closeSettings();
+    if (configurationOpen) {
+      const origin = navigation.origin;
+      inspectorOpen = false;
+      navigation.done();
+      auxPane = null;
+      if (isWorkflowPane(origin)) inputMode = origin;
+    }
     session.editor.discardSettingsDraft();
     session.editor.cancelConnectionEdit();
     session.editor.clearCredentialDraft();
@@ -476,15 +656,17 @@
       if (!alive || generation !== navigationGeneration || !state.pending)
         return;
       const accepted =
-        settingsOpen && configuration
+        configurationOpen && configuration
           ? configuration.acceptRequest(state.request)
           : navigation.acceptRequest(state.request, false);
       if (!accepted) return;
       navigationGeneration++;
-      if (state.request.section === "local-runtime") {
-        navigation.done();
-        auxPane = "runtimes";
-      } else auxPane = "settings";
+      if (isWorkflowPane(state.request.origin))
+        inputMode = state.request.origin;
+      if (state.request.connection) {
+        inspectorOpen = false;
+        auxPane = "connections";
+      } else showSettings(state.request.section as SettingsSectionID, true);
     } catch (cause) {
       if (alive) session.messages.fail(cause);
     }
@@ -510,15 +692,18 @@
     commandHint={macOS ? "⌘" : "Ctrl"}
     onOpenCommands={() => (commandsOpen = true)}
     primaryVisible={layout.primaryVisible && primaryAvailable}
-    bottomVisible={layout.bottomVisible}
-    secondaryVisible={auxPane === "history" && layout.secondaryVisible}
-    secondaryAvailable={auxPane === "history"}
-    bottomAvailable={layout.bottomAvailable.current}
+    bottomVisible={bottomAvailable && layout.bottomVisible}
+    secondaryVisible={secondaryShown}
+    {secondaryAvailable}
+    {bottomAvailable}
+    bottomUnavailableReason={auxPane === "settings"
+      ? "The bottom panel is hidden in Settings"
+      : undefined}
     onTogglePrimary={primaryAvailable
       ? () => layout.togglePrimary()
       : undefined}
     onToggleBottom={() => layout.toggleBottom()}
-    onToggleSecondary={() => layout.toggleSecondary()}
+    onToggleSecondary={toggleSecondary}
   />
 
   <CommandPalette bind:open={commandsOpen} {commands} />
@@ -532,12 +717,54 @@
       onSelect={selectPane}
     />
 
-    <WorkbenchFrame {layout} area={auxPane ?? "workflow"}>
+    <WorkbenchFrame
+      {layout}
+      area={auxPane ?? "workflow"}
+      panelAvailable={auxPane !== "settings"}
+      {secondaryShown}
+      retainSecondary={inspectorOpen}
+      onDismissSecondary={dismissSecondary}
+    >
+      {#snippet secondaryContent()}
+        {#if auxPane === "history"}
+          <div
+            class="flex min-h-9 shrink-0 gap-1 border-b border-hairline px-3 py-1"
+            role="group"
+            aria-label="History sidebar view"
+          >
+            <button
+              class="rounded-sm px-2 text-xs hover:bg-accent-wash"
+              aria-pressed={!inspectorOpen}
+              onclick={showHistoryDetails}>Details</button
+            >
+            <button
+              class="rounded-sm px-2 text-xs hover:bg-accent-wash"
+              aria-pressed={inspectorOpen}
+              onclick={() => openSettings("history")}>History settings</button
+            >
+          </div>
+        {/if}
+        {#if inspectorOpen}
+          <SettingsPane
+            bind:this={configuration}
+            {session}
+            {navigation}
+            inspector
+            visible={inspectorVisible}
+            sections={configurationSections}
+            onReturn={() => closeInspector()}
+            onOpenRuntimes={() => selectPane("runtimes")}
+            onNavigateExternal={showSettings}
+            onConnectionNavigate={showConnection}
+            onRevealSection={revealConfigurationSection}
+          />
+        {:else if auxPane === "history" && layout.details}{@render layout.details()}{/if}
+      {/snippet}
       {#snippet panel()}
         <WorkbenchPanel
           {session}
           {inputMode}
-          {settingsOpen}
+          settingsOpen={configurationOpen}
           onOpenHistorySettings={() => openSettings("history")}
         />
       {/snippet}
@@ -558,9 +785,10 @@
             onOpenShortcutSettings={() => openSettings("shortcuts")}
             onOpenSpeechSettings={() => openSettings("speech")}
             onOpenGeneralSettings={() => openSettings("general")}
-            onOpenSettingsSection={openSettings}
+            onOpenDeliverySettings={() => openWorkflowSettings("general")}
+            onOpenSettingsSection={openWorkflowSettings}
             onOpenConnection={openConnection}
-            quickSettingsDisabled={settingsOpen}
+            quickSettingsDisabled={configurationOpen}
           />
         </div>
 
@@ -580,6 +808,11 @@
             bind:this={configuration}
             {session}
             {navigation}
+            sections={configurationSections}
+            workbenchPage={auxPane === "connections"}
+            onNavigateExternal={showSettings}
+            onConnectionNavigate={showConnection}
+            onRevealSection={revealConfigurationSection}
             onReturn={closeSettings}
             onOpenRuntimes={() => {
               navigation.done();

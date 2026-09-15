@@ -27,11 +27,12 @@ test("compact Settings activation closes the drawer while arrow navigation stays
     .getByRole("button", { name: "Settings", exact: true })
     .click();
   await openSidebar(page);
-  const audio = sidebar(page).locator('[data-settings-section="audio"]');
+  const audio = sidebar(page).locator('[data-settings-section="general"]');
   await audio.click();
   await expectClosed(page);
-  const duration = page.locator("#max-duration");
-  await duration.fill("150");
+  const launch = page.locator("#show-window-on-launch");
+  const original = await launch.getAttribute("aria-checked");
+  await launch.click();
 
   await openSidebar(page);
   await audio.focus();
@@ -47,11 +48,11 @@ test("compact Settings activation closes the drawer while arrow navigation stays
 
   await openSidebar(page);
   const search = sidebar(page).getByRole("textbox", { name: "Find settings" });
-  await search.fill("padding");
+  await search.fill("startup");
   await search.press("Enter");
   await expectClosed(page);
-  await expect(duration).toBeVisible();
-  await expect(duration).toHaveValue("150");
+  await expect(launch).toBeVisible();
+  await expect(launch).not.toHaveAttribute("aria-checked", original!);
 });
 
 test("compact runtime selection returns to the selected detail without starting or changing a runtime", async ({

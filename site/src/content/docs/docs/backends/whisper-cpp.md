@@ -154,12 +154,13 @@ for native builds, other accelerators, and optional format conversion.
 ## Connect
 
 1. Start `whisper-server` with the model you want to use.
-2. In **Settings → Connections**, create a named **whisper.cpp** connection. Enable **Voice transcription**, **Audio-file transcription**, or both under **Used for**.
+2. In **Connections**, create a named **whisper.cpp** connection. Enable **Voice transcription**, **Audio-file transcription**, or both under **Used for**.
 3. Set the Base URL to the server root, for example `http://127.0.0.1:8081`.
    Omit `/v1` and `/inference`. A reverse-proxy prefix can be included.
 4. Choose the authentication mode required by your deployment and permit HTTP
    only where appropriate. The native server may need a proxy for authentication.
-5. Choose **Save connection**, then select it in **Settings → Voice transcription** or **Audio-file transcription**.
+5. Choose **Save connection**, then open the **Settings** cog in Voice transcription or Audio file
+   and select it under **Transcription** options.
    Use **Check server** for metadata. The model field shows **Server-loaded model**;
    no client model ID is required or sent. Save your changes.
 

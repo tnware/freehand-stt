@@ -83,14 +83,14 @@ Installing an STT model alone does not provision voices or a TTS model.
 
 ## Configure Freehand
 
-Under **Settings → Connections**, create a **Speaches** connection and enable
+Under **Connections**, create a **Speaches** connection and enable
 **Voice transcription**, **Audio-file transcription**, or both under **Used for**.
 Enter the base URL including `/v1`, authentication, and HTTP permission.
-Choose **Save connection**, then select it in the corresponding transcription
-settings and choose an installed model. Save your changes.
+Choose **Save connection**, then open the **Settings** cog in Voice transcription
+or Audio file. Select it under **Transcription**, choose an installed model, and save your changes.
 
 For playback on the same server, edit that connection and enable **Text to speech**
-under **Used for**. Save it, then select the same entry in **Settings → Text to speech**,
+under **Used for**. Save it, then select the same entry in **Text to speech → Speech**,
 choose the installed TTS model and voice, and enable text to speech. Preview the
 voice and save your changes. Both features share the connection
 and key while retaining separate models and options. Create another connection
@@ -109,7 +109,7 @@ they do not install, load, or run models.
 | Streaming dialects       | Typed transcript delta/done events and legacy untyped text segments.                                |
 | Language hint            | Optional `language` request field; effect depends on the model.                                     |
 | Recognition context      | Optional `prompt`, at most 8,192 UTF-8 bytes.                                                       |
-| Shared vocabulary        | Sent as `hotwords`, at most 2,048 UTF-8 bytes; Speaches-specific field.                            |
+| Shared vocabulary        | Sent as `hotwords`, at most 2,048 UTF-8 bytes; Speaches-specific field.                             |
 | Decoding temperature     | Optional `temperature` from 0 to 1; explicit zero is supported.                                     |
 | Speech playback          | Voice ID, speed request, and buffered PCM16 WAV.                                                    |
 | Voice discovery          | Model-associated voices from `/v1/models`, with a labelled server-wide `/v1/audio/voices` fallback. |
@@ -126,7 +126,7 @@ PCM16 WAV before playing.
 
 ## Choose a voice
 
-In **Settings → Text to speech**, select the Speaches connection and TTS model,
+In **Text to speech → Speech**, select the Speaches connection and TTS model,
 then use **Refresh voices** beside the voice field. Search the list by ID, name,
 or language when the server supplies it. You can also type a custom voice ID.
 The voice selection is remembered for this connection and model.
@@ -157,8 +157,8 @@ Provider limits and Freehand's bounded-buffer limits still apply; consult the
 Whisper-family models support context hints, hotwords, and temperature through
 Speaches. These controls are available for completed and streaming transcription.
 
-For Voice, set **Context hint** in **Settings → Voice transcription**. For files,
-set context in **Audio-file transcription → Transcription controls**. Keep shared
+For Voice, set **Context hint** in **Voice transcription → Transcription**. For files,
+set context in **Audio file → Transcription → Transcription controls**. Keep shared
 terms in **Settings → Vocabulary**, and enable them for Voice, audio files, or
 both. Freehand sends those terms as `hotwords`.
 

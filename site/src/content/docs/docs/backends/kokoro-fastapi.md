@@ -9,17 +9,17 @@ WAV audio. It does not provide transcription or transcript cleanup.
 
 ## Connect an existing server
 
-1. Open **Settings → Connections**, create a connection, and select
+1. Open **Connections**, create a connection, and select
    **Kokoro-FastAPI** with **Text to speech** enabled.
 2. Enter the server's API base URL, including `/v1`. For the local Docker example
    below, use `http://127.0.0.1:8880/v1`. For a remote server, use its HTTPS URL
    and the authentication supplied by its administrator.
 3. For the local HTTP example, enable **Allow HTTP for this connection**, then
-   save. In **Settings → Text to speech**, select the connection and choose
+   save. In **Text to speech → Speech**, select the connection and choose
    the model ID advertised by your server, normally `kokoro`.
 4. Click **Refresh voices**, then search or choose a voice such as `af_heart`.
    Manual IDs remain available, including administrator-provided aliases.
-5. Enable text to speech and preview the voice. Choose **Save** or **Save and return** to apply your choices.
+5. Enable text to speech and preview the voice. Choose **Save** to apply your choices.
 
 The voice is remembered for the selected connection and model. Speaking speed
 stays the same when you switch models or connections. Refreshing models or voices

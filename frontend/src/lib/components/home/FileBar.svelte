@@ -4,6 +4,7 @@
   import XIcon from "@lucide/svelte/icons/x";
   import { Button } from "$lib/components/ui/button";
   import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
+  import WorkflowSettingsButton from "./WorkflowSettingsButton.svelte";
   import {
     FileTranscriptionPhase,
     type FileTranscriptionStatus,
@@ -23,6 +24,7 @@
     onClear,
     onTryStreamingAgain,
     onOpenSettings,
+    optionsDisabled = false,
   }: {
     status: FileTranscriptionStatus;
     choosing?: boolean;
@@ -37,6 +39,7 @@
     onClear: () => void;
     onTryStreamingAgain: () => void;
     onOpenSettings: () => void;
+    optionsDisabled?: boolean;
   } = $props();
 
   const hasFile = $derived(
@@ -83,7 +86,7 @@
   from, which model reads it, and what to press.
 -->
 <section
-  class="flex flex-col gap-2 border-b border-hairline bg-layer-fill px-5 py-2"
+  class="@container flex flex-col gap-2 border-b border-hairline bg-layer-fill px-5 py-2"
   aria-label="Audio file"
   data-state={status.phase}
 >
@@ -143,6 +146,11 @@
     </div>
 
     <div class="flex shrink-0 items-center gap-2">
+      <WorkflowSettingsButton
+        label="Audio file settings"
+        disabled={optionsDisabled}
+        onclick={onOpenSettings}
+      />
       {#if status.streamingUnavailable && !status.streamingProfileUnavailable && !working}
         <Button
           variant="outline"

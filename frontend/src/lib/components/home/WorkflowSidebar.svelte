@@ -23,6 +23,7 @@
     onOpenOverlay,
     onOpenRuntime,
     disabled = false,
+    editing = false,
   }: {
     session: Session;
     workflow: "voice" | "file" | "tts";
@@ -38,6 +39,7 @@
     onOpenOverlay: () => void;
     onOpenRuntime: () => void;
     disabled?: boolean;
+    editing?: boolean;
   } = $props();
 
   const settings = $derived(session.editor.applied ?? session.editor.draft);
@@ -103,6 +105,7 @@
   );
   const runtimeLocked = $derived(
     disabled ||
+      editing ||
       session.runtime.loading ||
       !runtime?.status.supported ||
       (session.dictation.status.state !== State.Idle &&
@@ -130,6 +133,7 @@
   function toggleRealtime(next: boolean) {
     if (
       disabled ||
+      editing ||
       operating ||
       session.editor.isQuickSettingsPending("voice-transcription") ||
       (next && !realtimeSupported)
@@ -203,6 +207,7 @@
             checked={!!settings?.voiceTranscription.realtime}
             onCheckedChange={toggleRealtime}
             disabled={disabled ||
+              editing ||
               operating ||
               session.editor.isQuickSettingsPending("voice-transcription") ||
               (!settings?.voiceTranscription.realtime &&
@@ -221,6 +226,7 @@
             onCheckedChange={(next) =>
               (session.files.streamingPreferred = next)}
             disabled={disabled ||
+              editing ||
               session.files.selectionBusy ||
               fileWorking ||
               session.files.status.streamingUnavailable}

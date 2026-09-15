@@ -3,6 +3,7 @@
   import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import ShortcutKeys from "$lib/components/common/ShortcutKeys.svelte";
   import Waveform from "./Waveform.svelte";
+  import WorkflowSettingsButton from "./WorkflowSettingsButton.svelte";
   import { levels } from "$lib/stores/levels.svelte";
   import { CaptureClock } from "$lib/utils/captureClock.svelte";
   import {
@@ -29,6 +30,8 @@
     onToggle,
     onCancel,
     onOpenSettings,
+    onOpenOptions,
+    optionsDisabled = false,
   }: {
     status: Status;
     now: number;
@@ -39,6 +42,8 @@
     onToggle: () => Promise<void>;
     onCancel: () => Promise<void>;
     onOpenSettings: () => void;
+    onOpenOptions: () => void;
+    optionsDisabled?: boolean;
   } = $props();
 
   let pending = $state(false);
@@ -87,7 +92,7 @@
 </script>
 
 <section
-  class="flex flex-col gap-2 border-b border-hairline bg-layer-fill px-5 py-2"
+  class="@container flex flex-col gap-2 border-b border-hairline bg-layer-fill px-5 py-2"
   aria-label="Voice capture"
 >
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -129,6 +134,11 @@
       </div>
     </div>
     <div class="flex shrink-0 items-center gap-2">
+      <WorkflowSettingsButton
+        label="Voice settings"
+        disabled={optionsDisabled}
+        onclick={onOpenOptions}
+      />
       {#if failed}<FeedbackDetails
           title={label}
           label="Dictation error details"

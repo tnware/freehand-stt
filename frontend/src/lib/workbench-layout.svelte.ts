@@ -1,7 +1,8 @@
 import { getContext, setContext, type Snippet } from "svelte";
 import { MediaQuery, SvelteSet } from "svelte/reactivity";
 
-export type SidebarID = "workflow" | "settings" | "history" | "runtimes";
+export type SidebarID =
+  "workflow" | "settings" | "history" | "runtimes" | "connections";
 export type WorkbenchTab = "recent" | "output" | "diagnostics";
 const key = Symbol("workbench-layout");
 const storageKey = "freehand-workbench-layout-v1";

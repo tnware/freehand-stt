@@ -5,6 +5,7 @@
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
+  import WorkflowSettingsButton from "./WorkflowSettingsButton.svelte";
   import { Button } from "$lib/components/ui/button";
   import { Textarea } from "$lib/components/ui/textarea";
   import {
@@ -47,6 +48,7 @@
     onSave,
     onClear,
     onOpenSettings,
+    optionsDisabled = false,
   }: {
     text?: string;
     quickSettings?: Snippet;
@@ -65,8 +67,11 @@
     onSave: () => void;
     onClear: () => void;
     onOpenSettings: () => void;
+    optionsDisabled?: boolean;
   } = $props();
 
+  const uid = $props.id();
+  const setupGuidanceID = `${uid}-speech-setup`;
   const characterCount = $derived(Array.from(text).length);
   const isOwnSession = $derived(status.source === TTSSource.SourceCompose);
   const working = $derived(
@@ -152,14 +157,38 @@
     {#if quickSettings}
       <div class="min-w-0 shrink-0">{@render quickSettings()}</div>
     {/if}
+    <WorkflowSettingsButton
+      label="Text to speech settings"
+      disabled={optionsDisabled}
+      onclick={onOpenSettings}
+    />
   </div>
   <div class="flex min-h-24 flex-1 flex-col overflow-y-auto">
+    {#if !configured}
+      <div
+        class="mx-5 mt-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-l-2 border-accent-edge bg-accent-wash px-3 py-2.5"
+      >
+        <p
+          id={setupGuidanceID}
+          class="min-w-0 flex-1 text-xs leading-relaxed text-accent-text"
+        >
+          Choose a connection, model, and voice in speech options. You can write
+          your text now.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          class="shrink-0 border-accent-edge bg-background text-accent-text"
+          onclick={onOpenSettings}><SettingsIcon />Configure speech</Button
+        >
+      </div>
+    {/if}
     <label for="speech-composer-text" class="sr-only">Text to speak</label>
     <Textarea
       id="speech-composer-text"
       bind:value={text}
       aria-invalid={characterCount > maximumCharacters}
-      aria-describedby="speech-character-count speech-compose-shortcut"
+      aria-describedby={`speech-character-count speech-compose-shortcut${!configured ? ` ${setupGuidanceID}` : ""}`}
       aria-keyshortcuts="Control+Enter"
       onkeydown={composerKey}
       class="field-sizing-fixed min-h-24 flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-3.5 text-[15px] leading-[26px] focus-visible:ring-2 focus-visible:ring-inset"
@@ -196,73 +225,61 @@
         disabled={!text}
         onclick={() => (text = "")}>Clear</Button
       >
-      {#if !configured}
-        <Button
-          variant="outline"
-          size="sm"
-          aria-label="Text to speech settings"
-          onclick={onOpenSettings}><SettingsIcon />Set up speech</Button
-        >
-      {:else}
-        <Button
-          size="sm"
-          class="w-32 @sm:w-40"
-          disabled={!canSpeak}
-          title="Generate this text and replace the current audio"
-          onclick={() => onSpeak(text)}
-        >
-          {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
-              class="animate-spin motion-reduce:animate-none"
-            />{:else}<Volume2Icon />{/if}
-          {working && status.phase === TTSPhase.Generating
-            ? "Generating…"
-            : failed
-              ? "Try again"
-              : "Speak"}
-          {#if !working}<kbd
-              aria-hidden="true"
-              class="ml-1 hidden text-[10px] opacity-70 @sm:inline"
-              >{shortcutVisual}</kbd
-            >{/if}
-        </Button>
-      {/if}
+      <Button
+        size="sm"
+        class="w-32 @sm:w-40"
+        disabled={!canSpeak}
+        title="Generate this text and replace the current audio"
+        onclick={() => onSpeak(text)}
+      >
+        {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
+            class="animate-spin motion-reduce:animate-none"
+          />{:else}<Volume2Icon />{/if}
+        {working && status.phase === TTSPhase.Generating
+          ? "Generating…"
+          : failed
+            ? "Try again"
+            : "Speak"}
+        {#if !working}<kbd
+            aria-hidden="true"
+            class="ml-1 hidden text-[10px] opacity-70 @sm:inline"
+            >{shortcutVisual}</kbd
+          >{/if}
+      </Button>
     </div>
   </div>
-  <div
-    class="flex h-24 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-layer-fill"
-    aria-label="Generated audio"
-  >
-    {#if showPlayback}
-      <PlaybackBar
-        {status}
-        {onPause}
-        {onResume}
-        {onRestart}
-        {onSeek}
-        {seeking}
-        {saving}
-        {onStop}
-        {onSave}
-        {onClear}
-        {onOpenSettings}
-        embedded
-      />
-    {:else}
-      <div class="flex items-center gap-3 px-5 py-3">
-        <Volume2Icon class="size-4 shrink-0 text-muted-foreground" />
-        <div class="min-w-0 space-y-1">
-          <p class="text-[15px] font-medium">
-            {configured
-              ? "Ready when you are"
-              : "Choose a connection and voice"}
-          </p>
-          <p class="text-xs text-muted-foreground">
-            {configured
-              ? "Press Speak to generate audio. Playback and save controls appear here."
-              : "Open Speech settings to get started. You can write your text now."}
-          </p>
+  {#if configured || showPlayback}
+    <div
+      class="flex h-24 shrink-0 flex-col justify-center overflow-y-auto border-t border-hairline bg-layer-fill"
+      aria-label="Generated audio"
+    >
+      {#if showPlayback}
+        <PlaybackBar
+          {status}
+          {onPause}
+          {onResume}
+          {onRestart}
+          {onSeek}
+          {seeking}
+          {saving}
+          {onStop}
+          {onSave}
+          {onClear}
+          {onOpenSettings}
+          embedded
+        />
+      {:else}
+        <div class="flex items-center gap-3 px-5 py-3">
+          <Volume2Icon class="size-4 shrink-0 text-muted-foreground" />
+          <div class="min-w-0 space-y-1">
+            <p class="text-[15px] font-medium">Ready when you are</p>
+            <p class="text-xs text-muted-foreground">
+              Press Speak to generate audio. Playback and save controls appear
+              here.
+            </p>
+          </div>
         </div>
-      </div>
-    {/if}
-  </div>
+      {/if}
+    </div>
+  {/if}
 </section>

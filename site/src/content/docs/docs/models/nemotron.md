@@ -14,8 +14,7 @@ when you select the built-in Connection; you enable live mode in Voice.
 ## What the profile adds
 
 For a manual Connection, choose **Nemotron 3.5 ASR streaming** beneath the model picker in
-**Settings → Voice transcription** or **Audio-file transcription**.
-Voice's **Transcription** quick settings offers the same profile selection.
+**Voice transcription → Transcription** or **Audio file → Transcription** options.
 
 | Setting                | Completed recordings and audio files        | Realtime microphone               |
 | ---------------------- | ------------------------------------------- | --------------------------------- |
@@ -35,10 +34,10 @@ Audio-file settings remain independent.
 For a manually configured NeMo service:
 
 1. Follow the [NeMo-Speech.cpp setup guide](../../backends/nemo-speech/#connect-freehand) to add the server connection.
-2. In the workflow's settings, select that connection and the loaded model ID.
+2. Open the workflow's **Settings** cog and **Transcription** options, then select that connection and the loaded model ID.
 3. Select **Nemotron 3.5 ASR streaming** as the model profile, then choose automatic detection or your spoken language.
 4. For live dictation, enable **Realtime transcription**. Enable **Live overlay captions** for the caption strip; the main Overlay preference must also be on.
-5. Choose **Save** or **Save and return**. Quick settings changes apply immediately.
+5. Choose **Save** in the options sidebar.
 
 ## Vocabulary and output
 

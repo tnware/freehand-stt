@@ -11,11 +11,11 @@ to be focused; manual-copy mode leaves the result ready to copy.
 
 ## Choose a model and backend
 
-| Model profile                                        | Backend                                        | Recognition controls in live mode                              |
-| ---------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
-| [Nemotron 3.5 ASR streaming](../../models/nemotron/) | [NeMo-Speech.cpp](../../backends/nemo-speech/) | Automatic or explicit language; shared vocabulary and strength |
-| [Qwen3-ASR](../../models/qwen3-asr/)                 | [vLLM](../../backends/vllm/)                   | Automatic language detection                                   |
-| [Voxtral Mini Realtime](../../models/voxtral-realtime/) | [vLLM](../../backends/vllm/) | Automatic language detection |
+| Model profile                                           | Backend                                        | Recognition controls in live mode                              |
+| ------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| [Nemotron 3.5 ASR streaming](../../models/nemotron/)    | [NeMo-Speech.cpp](../../backends/nemo-speech/) | Automatic or explicit language; shared vocabulary and strength |
+| [Qwen3-ASR](../../models/qwen3-asr/)                    | [vLLM](../../backends/vllm/)                   | Automatic language detection                                   |
+| [Voxtral Mini Realtime](../../models/voxtral-realtime/) | [vLLM](../../backends/vllm/)                   | Automatic language detection                                   |
 
 On Windows and macOS, the optional [managed local runtime](../local-runtime/) recommends Nemotron 3.5 with
 realtime enabled. Freehand installs and starts that runtime after your explicit
@@ -24,15 +24,15 @@ macOS; follow the model guide for its setup and supported version.
 
 ## Enable live mode
 
-1. Open Voice's **Transcription** quick settings, or **Settings → Voice transcription**.
+1. Open **Voice transcription**, select its **Settings** cog, and choose **Transcription** in the right options sidebar.
 2. Select your connection, the loaded model, and its model profile.
 3. Enable **Realtime transcription**, which appears for a compatible combination.
 4. Enable **Live overlay captions** if you want the caption strip. The main **Overlay** preference must also be enabled.
-5. In full Settings, choose **Save** or **Save and return**. Quick settings changes apply immediately.
+5. Choose **Save** to apply your edits; the options stay open beside the transcript.
 
 Language and vocabulary controls follow the selected model profile. Completed
 settings remain saved when a control is unavailable in realtime. Shared terms
-stay in **Settings → Vocabulary**.
+stay in **Settings → Vocabulary**, also available as **Vocabulary** in Voice's options.
 
 ## While recording
 

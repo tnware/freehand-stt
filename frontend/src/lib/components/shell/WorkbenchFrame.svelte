@@ -10,15 +10,28 @@
     area,
     children,
     panel,
+    panelAvailable = true,
+    secondaryContent,
+    secondaryShown,
+    retainSecondary = false,
+    onDismissSecondary,
   }: {
     layout: WorkbenchLayout;
     area: SidebarID;
     children: Snippet;
     panel: Snippet;
+    panelAvailable?: boolean;
+    secondaryContent?: Snippet;
+    secondaryShown?: boolean;
+    retainSecondary?: boolean;
+    onDismissSecondary?: () => void;
   } = $props();
+  const bottomVisible = $derived(panelAvailable && layout.bottomVisible);
   const sidebar = $derived(layout.sidebars[area]);
   const primaryVisible = $derived(layout.primaryVisible && Boolean(sidebar));
-  const rightVisible = $derived(area === "history" && layout.secondaryVisible);
+  const rightVisible = $derived(
+    secondaryShown ?? (area === "history" && layout.secondaryVisible),
+  );
   const rightOverlay = $derived(
     rightVisible && !layout.secondaryAvailable.current,
   );
@@ -66,7 +79,7 @@
     if (!primaryVisible && primary?.contains(document.activeElement))
       restoreFocus("Toggle primary sidebar");
     if (
-      !layout.bottomVisible &&
+      !bottomVisible &&
       (bottom?.contains(active) ||
         separator === "Resize editor and bottom panel")
     )
@@ -93,6 +106,10 @@
     restoreFocus("Toggle primary sidebar");
   }
   function closeSecondary() {
+    if (onDismissSecondary) {
+      onDismissSecondary();
+      return;
+    }
     layout.compactSecondaryOpen = false;
     restoreFocus("Toggle secondary sidebar");
   }
@@ -165,14 +182,14 @@
       bind:this={center}
       class="grid min-h-0 min-w-0 overflow-hidden"
       inert={rightOverlay}
-      style:grid-template-rows={layout.bottomVisible
+      style:grid-template-rows={bottomVisible
         ? `minmax(0, ${100 - layout.bottomSize}fr) 1px minmax(120px, ${layout.bottomSize}fr)`
         : "minmax(0, 1fr)"}
     >
       <div class="flex min-h-0 min-w-0 flex-col overflow-hidden">
         {@render children()}
       </div>
-      {#if layout.bottomVisible}
+      {#if bottomVisible}
         <LayoutDivider
           orientation="horizontal"
           label="Resize editor and bottom panel"
@@ -192,8 +209,8 @@
         </section>
       {/if}
     </div>
-    {#if rightVisible}
-      {#if !rightOverlay}
+    {#if rightVisible || retainSecondary}
+      {#if rightVisible && !rightOverlay}
         <LayoutDivider
           orientation="vertical"
           label="Resize editor and secondary sidebar"
@@ -211,8 +228,10 @@
         tabindex="-1"
         class="secondary-sidebar flex min-h-0 min-w-0 flex-col overflow-hidden bg-background outline-none"
         class:overlay={rightOverlay}
+        style:display={rightVisible ? "flex" : "none"}
       >
-        {#if layout.details}{@render layout.details()}{/if}
+        {#if secondaryContent}{@render secondaryContent()}
+        {:else if layout.details}{@render layout.details()}{/if}
       </aside>
     {/if}
   </div>

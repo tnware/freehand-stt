@@ -1,5 +1,38 @@
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
+
+test("speech setup guidance belongs to the editable composer", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 650, height: 740 });
+  await page.goto("/tests/browser/app/?main&setup-ready");
+  await page
+    .getByRole("button", { name: "Text to speech", exact: true })
+    .click();
+  const panel = page.getByRole("region", {
+    name: "Speech composer",
+    exact: true,
+  });
+  const text = panel.getByRole("textbox", {
+    name: "Text to speak",
+    exact: true,
+  });
+  await expect(text).toBeEditable();
+  await expect(text).toHaveAccessibleDescription(
+    /Choose a connection, model, and voice in speech options/,
+  );
+  await text.fill("Keep this draft while configuring speech.");
+  await expect(
+    panel.getByRole("button", { name: "Configure speech", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    panel.getByRole("button", { name: "Speak", exact: true }),
+  ).toBeDisabled();
+  await expect(panel.locator('[aria-label="Generated audio"]')).toHaveCount(0);
+  await text.press("Control+Enter");
+  await expect(text).toHaveValue("Keep this draft while configuring speech.");
+});
+
 async function composer(page: Page, theme = "dark") {
   await page.goto(`/tests/browser/app/?view=workspace&theme=${theme}&playback`);
   await page

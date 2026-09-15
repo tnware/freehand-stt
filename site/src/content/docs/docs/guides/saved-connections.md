@@ -7,7 +7,7 @@ A saved connection contains a server's address, backend profile, and
 authentication details. Voice, Audio file, Cleanup, and Text to speech each
 choose their own connection and can share the same server.
 
-Open **Settings → Connections** or **Manage connections…** in a task's connection
+Open **Connections** on the activity rail or **Manage connections…** in a task's connection
 picker. Search by name, backend, or address, then select an entry to edit it.
 
 ## Built-in local connections
@@ -28,7 +28,8 @@ remain intact. Built-in rows do not count against the manual connection limit.
 
 ## Add a connection while setting up a task
 
-1. Open the task's connection picker and choose **Add connection…**.
+1. Open the task's **Settings** cog, then **Transcription**, **Cleanup**, or **Speech**
+   in its right options sidebar. Open the connection picker and choose **Add connection…**.
 2. Enter a recognizable name, choose the server's **Backend**, and
    enter its base URL. The task you came from is already selected under supported uses.
 3. Configure authentication and explicitly allow HTTP if your trusted server uses it.
@@ -37,7 +38,7 @@ remain intact. Built-in rows do not count against the manual connection limit.
 4. Choose **Save and return** to save the connection and select it for the task.
 5. Choose a listed model or enter its exact ID; whisper.cpp uses the model already
    loaded by its server. Review the model profile and options, then choose
-   **Save and return** to resume the task.
+   **Save** in the options sidebar. Choose **Done** when you want to close it.
 
 If you cancel with unsaved edits, choose **Discard** to leave the active
 connection unchanged or **Keep editing** to continue. A failed save leaves your
@@ -47,7 +48,7 @@ For microphone and shortcut setup, see [Get started](../../getting-started/).
 
 ## Create a library entry without using it yet
 
-Open **Settings → Connections → Add connection**, enter the server details and supported
+Open **Connections → Add connection**, enter the server details and supported
 uses, set **After saving** to **Save for later**, then choose **Save connection**. This creates an inactive entry. Select it later
 from any task it supports. To configure it immediately instead, choose a workflow
 under **After saving** and use **Save and return**.
@@ -58,7 +59,7 @@ or supported use.
 
 ## What goes where?
 
-| Settings → Connections                | Feature settings pages                    |
+| Connections page                      | Workflow options sidebar                  |
 | ------------------------------------- | ----------------------------------------- |
 | Connection name and supported uses    | Active connection selection               |
 | Backend profile and base URL          | Model, model profile, and language        |
@@ -85,8 +86,8 @@ Voice and Audio file, not cleanup or speech generation.
 
 ## Switch, edit, duplicate, or delete
 
-- Choose an **Active connection** on a feature page to switch immediately.
-  Unsaved Settings edits must be saved or discarded before the switch; **Keep editing** cancels it.
+- Choose an **Active connection** in the task's options to switch immediately.
+  Unsaved configuration edits must be saved or discarded before the switch; **Keep editing** cancels it.
   Freehand restores that connection's last model and remembered options for the
   task. If none are saved, choose a model and configure it. Cleanup and text to
   speech need to be enabled again after selecting an unconfigured connection.
@@ -126,7 +127,7 @@ will work, or that your key has permission to run the selected model.
 
 Keys stay in Windows Credential Manager or macOS Keychain. The app never displays a stored key;
 leave its password field blank to keep it, enter a replacement, or explicitly
-remove it. Leaving settings clears any unsaved key from the form.
+remove it. Leaving the connection editor or hiding the workspace clears any unsaved key from the form.
 Duplicating a connection lets the copy use the same stored key; replacing the
 copy's key does not change the original. Deleting a connection does not remove
 a key still used by another saved connection. See
@@ -139,7 +140,7 @@ and [settings recovery](../troubleshooting/#saved-settings-need-attention).
 ### Discover speech voices
 
 Speaches, Kokoro-FastAPI, and vLLM-Omni connections offer **Refresh voices** in
-Text to speech settings. Search the voice field or type an ID. Speaches may identify
+**Text to speech → Speech** options. Search the voice field or type an ID. Speaches may identify
 voices for the selected model; server-wide lists are labelled accordingly.
 Refreshing voices neither changes the selected voice nor generates audio. Save
 your settings to remember the chosen voice for that connection and model.

@@ -1,3 +1,4 @@
+import { openSection } from "./context-navigation";
 import { readFileSync } from "node:fs";
 import { test, expect } from "./fixtures";
 
@@ -15,9 +16,16 @@ test("toggle can be cleared, saved unassigned, and explicitly replaced", async (
   const captureID = Number(
     bindings.match(/function CaptureShortcut\([^]*?ByID\((\d+)/)![1],
   );
+  const cancelID = Number(
+    bindings.match(/function CancelShortcutCapture\([^]*?ByID\((\d+)/)![1],
+  );
   let captures = 0;
   await page.route("**/wails/runtime", async (route) => {
     const request = route.request().postDataJSON();
+    if (request.args.methodID === cancelID) {
+      await route.fulfill({ contentType: "application/json", body: "null" });
+      return;
+    }
     expect(request.args.methodID).toBe(captureID);
     expect(request.args.args[0]).toMatchObject({
       action: "toggle",
@@ -34,7 +42,7 @@ test("toggle can be cleared, saved unassigned, and explicitly replaced", async (
     });
   });
   await page.goto("/tests/browser/app/?hold-degraded&general");
-  await page.locator('[data-settings-section="shortcuts"]').click();
+  await openSection(page, "shortcuts");
   const toggle = page.getByRole("group", {
     name: "Toggle recording",
     exact: true,
@@ -86,7 +94,7 @@ test("unavailable native capture still permits Clear and explicit hold retry", a
   saves,
 }) => {
   await page.goto("/tests/browser/app/?platform=darwin&hold-degraded");
-  await page.locator('[data-settings-section="shortcuts"]').click();
+  await openSection(page, "shortcuts");
   const hold = page.getByRole("group", { name: "Hold to talk", exact: true });
   await expect(
     hold.getByRole("button", { name: "Record", exact: true }),
@@ -120,9 +128,7 @@ test("unavailable native capture still permits Clear and explicit hold retry", a
   await expect(clear).toBeEnabled();
   await clear.click();
   await expect(hold.getByText("Not configured", { exact: true })).toBeVisible();
-  await page
-    .getByRole("button", { name: "Save and return", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   const save = await saves.waitForStart();
   await expect(retry).toBeDisabled();
   await saves.complete(save, "success");
@@ -147,6 +153,16 @@ test("generated retry binding refreshes failure and preserves a dirty draft", as
     );
   const retryID = methodID("RetryHoldShortcut");
   const snapshotID = methodID("GetSettings");
+  const inputBindings = readFileSync(
+    new URL(
+      "../../bindings/github.com/tnware/freehand-stt/internal/input/service.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const cancelID = Number(
+    inputBindings.match(/function CancelShortcutCapture\([^]*?ByID\((\d+)/)![1],
+  );
   const requests: number[] = [];
   let finish: (() => void) | undefined;
   let attempts = 0;
@@ -155,6 +171,10 @@ test("generated retry binding refreshes failure and preserves a dirty draft", as
     expect(request.object).toBe(0);
     expect(request.method).toBe(0);
     expect(request.args.args).toEqual([]);
+    if (request.args.methodID === cancelID) {
+      await route.fulfill({ contentType: "application/json", body: "null" });
+      return;
+    }
     requests.push(request.args.methodID);
     if (request.args.methodID === retryID) {
       attempts++;
@@ -190,7 +210,7 @@ test("generated retry binding refreshes failure and preserves a dirty draft", as
   await page.goto(
     "/tests/browser/app/?platform=darwin&hold-degraded&hold-binding",
   );
-  await page.locator('[data-settings-section="shortcuts"]').click();
+  await openSection(page, "shortcuts");
   const retry = page.getByRole("button", {
     name: "Retry hold-to-talk",
     exact: true,

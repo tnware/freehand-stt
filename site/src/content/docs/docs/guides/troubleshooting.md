@@ -25,17 +25,17 @@ Keychain denial requires the OS approval/recovery flow, not plaintext storage.
 screen and **Finish setup** are for dictation. You can switch to **Audio file**
 or **Text to speech** without finishing dictation setup.
 
-| Task | What must be ready |
-| --- | --- |
-| Voice | STT connection and model, authentication if required, microphone, and the initial metadata connection check; a recording shortcut is optional |
-| Audio file | STT connection and model, authentication if required, and a supported file; no microphone or recording shortcut |
-| Text to speech | Its own connection, model and voice ID, authentication if required, and **Enable text to speech**; no STT connection required |
+| Task           | What must be ready                                                                                                                            |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Voice          | STT connection and model, authentication if required, microphone, and the initial metadata connection check; a recording shortcut is optional |
+| Audio file     | STT connection and model, authentication if required, and a supported file; no microphone or recording shortcut                               |
+| Text to speech | Its own connection, model and voice ID, authentication if required, and **Enable text to speech**; no STT connection required                 |
 
 For **Voice**, open the unfinished readiness item, correct its settings, and
-choose **Save** (or **Save and return** when opened from a task).
+choose **Save** in the options sidebar.
 Return to **Voice**, select
 **Check connection** or **Check again**, then choose **Finish setup** once all dictation requirements
-are ready. Home quick controls apply immediately.
+are ready. First-run setup controls apply valid changes immediately.
 
 For transcription setup:
 
@@ -44,7 +44,7 @@ For transcription setup:
 - Enter the exact transcription model ID expected by the server. If model
   discovery is available, select an ID from the returned list. whisper.cpp
   uses its server-loaded model instead.
-- If the endpoint requires a key, open **Settings → Connections**, edit the
+- If the endpoint requires a key, open **Connections** on the activity rail, edit the
   selected connection, then choose **Authentication → API key** and enter it. Leave authentication at **None**
   only for an endpoint that does not require a key.
 - Enable insecure HTTP only when you intentionally use a trusted plaintext
@@ -63,12 +63,12 @@ On a feature page, **Refresh models** (or **Check server** for whisper.cpp) runs
 one metadata request and shows a **Connection check** panel. **Check again**
 repeats it explicitly. The panel distinguishes four things:
 
-| Check | What it establishes |
-| --- | --- |
-| Connection | Whether the configured metadata route returned a usable response. Failures include the next setting or server condition to check. |
-| Authentication | Whether that metadata request was accepted. A public health endpoint does not prove that the key works on inference routes. |
-| Selected model | Whether the requested ID appears in the model list. Health-only checks cannot identify models; whisper.cpp reports a server-loaded model. |
-| Configuration | Whether the selected model profile and options are supported by Freehand. Speech needs a voice ID; Generic S1-mini connections need reasoning disabled on the server. |
+| Check          | What it establishes                                                                                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connection     | Whether the configured metadata route returned a usable response. Failures include the next setting or server condition to check.                                     |
+| Authentication | Whether that metadata request was accepted. A public health endpoint does not prove that the key works on inference routes.                                           |
+| Selected model | Whether the requested ID appears in the model list. Health-only checks cannot identify models; whisper.cpp reports a server-loaded model.                             |
+| Configuration  | Whether the selected model profile and options are supported by Freehand. Speech needs a voice ID; Generic S1-mini connections need reasoning disabled on the server. |
 
 An unlisted model is a reason to review the ID, not proof that it cannot run: some
 servers accept aliases they do not advertise. A listed model may also be unsuitable
@@ -90,7 +90,7 @@ explicit transcription, cleanup, or speech workflow.
 
 If saving fails, correct the marked setting using its error message, then save
 again. Freehand keeps your other draft edits and leaves the applied settings
-unchanged. For example, **Settings → Audio → Maximum duration** shows the limit
+unchanged. For example, **Voice transcription → Audio → Maximum duration** shows the limit
 for the current recording mode: 1–262 seconds without splitting, or 1–3,600 seconds
 with splitting.
 
@@ -140,15 +140,15 @@ before returning to an older version.
 Match the visible failure to the table below, correct the cause, and retry.
 Check transcription, cleanup, and text-to-speech connections independently.
 
-| Result | What it usually means | What to check |
-| --- | --- | --- |
-| Invalid settings | Freehand rejected the configuration before networking | API prefix, required fields, and plaintext HTTP policy |
-| Connection failed | No usable HTTP response arrived | Server process, hostname, port, firewall, TLS, and reverse proxy |
-| Unauthorized or forbidden | The server or gateway rejected authentication | Authentication mode, current API key, and gateway policy |
-| Model not advertised | The model list does not include the configured ID | Check the ID or alias with your server; an unlisted alias may still work |
-| Request too large | The server or proxy rejected the upload | Proxy body limit, server upload limit, and selected file size |
-| Timed out | The capability's configured request budget expired | Request budget, server load, model warmup, and network path |
-| Route unsupported | The server is reachable but lacks that capability | Confirm the specific STT, chat, or TTS route |
+| Result                    | What it usually means                                 | What to check                                                            |
+| ------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------ |
+| Invalid settings          | Freehand rejected the configuration before networking | API prefix, required fields, and plaintext HTTP policy                   |
+| Connection failed         | No usable HTTP response arrived                       | Server process, hostname, port, firewall, TLS, and reverse proxy         |
+| Unauthorized or forbidden | The server or gateway rejected authentication         | Authentication mode, current API key, and gateway policy                 |
+| Model not advertised      | The model list does not include the configured ID     | Check the ID or alias with your server; an unlisted alias may still work |
+| Request too large         | The server or proxy rejected the upload               | Proxy body limit, server upload limit, and selected file size            |
+| Timed out                 | The capability's configured request budget expired    | Request budget, server load, model warmup, and network path              |
+| Route unsupported         | The server is reachable but lacks that capability     | Confirm the specific STT, chat, or TTS route                             |
 
 Freehand does not automatically retry an ordinary inference failure because a
 retry can duplicate work or billing. Correct the configuration or server
@@ -156,9 +156,9 @@ condition, then retry deliberately.
 
 ## Recording does not start
 
-**Check the microphone under Settings → Audio, then try your configured shortcut.**
+**Check the microphone under Voice transcription → Audio, then try your configured shortcut.**
 
-- Open **Settings → Audio** and confirm the intended microphone is available.
+- Open **Voice transcription → Audio** and confirm the intended microphone is available.
 - Re-select the device after unplugging, disabling, or replacing it.
 - Check the shortcut shown under **Settings → Shortcuts**. A conflicting global
   shortcut is rejected when settings are saved, leaving the previous working
@@ -199,7 +199,7 @@ configured delivery mode: manual copy never inserts automatically.
 
 ## Cleanup was skipped or failed
 
-**Use the raw transcript, then check Settings → Cleanup.** Confirm
+**Use the raw transcript, then check Cleanup in Voice's or Audio file's options.** Confirm
 cleanup is enabled and test its connection before another attempt.
 
 Transcript cleanup has its own endpoint, model, credentials, and timeout. Test
@@ -240,7 +240,7 @@ Automatic long-file segmentation is not currently provided.
 
 ## Speech playback produces no sound
 
-**Check the system output device and volume, then review Settings → Text to speech.**
+**Check the system output device and volume, then review Text to speech → Speech.**
 
 - Turn on **Enable text to speech**, save your settings, and confirm its
   endpoint implements `POST /v1/audio/speech`.

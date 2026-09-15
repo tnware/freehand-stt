@@ -1,25 +1,14 @@
 import { test, expect } from "./fixtures";
-async function selectSection(
-  page: import("@playwright/test").Page,
-  id: string,
-) {
-  const toggle = page.getByRole("button", {
-    name: "Toggle primary sidebar",
-    exact: true,
-  });
-  await expect(toggle).toBeVisible();
-  if ((await toggle.getAttribute("aria-pressed")) === "false")
-    await toggle.click();
-  await page.locator(`[data-settings-section="${id}"]`).click();
-}
+import { openSection } from "./context-navigation";
 const requestSettings = (page: import("@playwright/test").Page) =>
   page
     .locator("details")
     .filter({ has: page.locator("summary", { hasText: "Request settings" }) });
 
 for (const width of [860, 520]) {
-  test(`workflow request options preserve edits at ${width}px`, async ({
+  test(`workflow request options preserve edits and guard leaving their context at ${width}px`, async ({
     page,
+    saves,
   }, info) => {
     await page.setViewportSize({ width, height: 740 });
     await page.goto("/tests/browser/app/?workflows&theme=dark");
@@ -28,8 +17,9 @@ for (const width of [860, 520]) {
       ["voice-transcription", "voice-timeout", "150"],
       ["processing", "cleanup-timeout", "160"],
       ["speech", "tts-timeout", "170"],
-    ]) {
-      await selectSection(page, id);
+    ] as const) {
+      await openSection(page, id);
+      const inspector = page.locator('[data-pane="configuration"]');
       const request = requestSettings(page);
       await expect(page.locator(`#${control}`)).toBeHidden();
       if (id === "speech")
@@ -40,8 +30,45 @@ for (const width of [860, 520]) {
       await request.locator("summary").click();
       await page.locator(`#${control}`).fill(value);
       await request.locator("summary").click();
-      await selectSection(page, "general");
-      await selectSection(page, id);
+      if (id !== "speech") {
+        const ownTab =
+          id === "server"
+            ? "Audio-file transcription"
+            : id === "voice-transcription"
+              ? "Voice transcription"
+              : "Cleanup";
+        const otherTab =
+          id === "voice-transcription"
+            ? "Audio"
+            : id === "server"
+              ? "Cleanup"
+              : "Voice transcription";
+        await inspector
+          .getByRole("tab", { name: `${otherTab} settings`, exact: true })
+          .click();
+        await inspector
+          .getByRole("tab", { name: `${ownTab} settings`, exact: true })
+          .click();
+      }
+      await request.locator("summary").click();
+      await expect(page.locator(`#${control}`)).toHaveValue(value);
+      await request.locator("summary").click();
+      await openSection(page, "general");
+      const confirm = page.getByRole("dialog", {
+        name: "Save changes?",
+        exact: true,
+      });
+      await confirm
+        .getByRole("button", { name: "Keep editing", exact: true })
+        .click();
+      await expect(inspector).toBeVisible();
+      await request.locator("summary").click();
+      await expect(page.locator(`#${control}`)).toHaveValue(value);
+      await openSection(page, "general");
+      await confirm.getByRole("button", { name: "Save", exact: true }).click();
+      await saves.complete(await saves.waitForStart(), "success");
+      await expect(page.locator('[data-pane="settings"]')).toBeVisible();
+      await openSection(page, id);
       await request.locator("summary").click();
       await expect(page.locator(`#${control}`)).toHaveValue(value);
       expect(
@@ -58,13 +85,14 @@ test("save validation reveals a collapsed request limit", async ({
   saves,
 }) => {
   await page.goto("/tests/browser/app/?workflows");
+  await openSection(page, "server");
   await requestSettings(page).locator("summary").click();
   await page.locator("#file-transcription-timeout").fill("45");
   await requestSettings(page).locator("summary").click();
-  await selectSection(page, "general");
   await page
-    .getByRole("button", { name: "Save and return", exact: true })
+    .getByRole("tab", { name: "Cleanup settings", exact: true })
     .click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "invalid-file-timeout");
   await expect(page.locator("#file-transcription-timeout")).toBeFocused();
   await expect(page.locator("#file-transcription-timeout")).toHaveValue("45");
@@ -75,7 +103,7 @@ test("voice controls survive collapsing and workflow validation reveals them", a
   saves,
 }) => {
   await page.goto("/tests/browser/app/?workflows");
-  await selectSection(page, "voice-transcription");
+  await openSection(page, "voice-transcription");
   await expect(page.locator("#voice-prompt")).toBeVisible();
   await requestSettings(page).locator("summary").click();
   await page.locator("#voice-temperature-override").click();
@@ -83,10 +111,10 @@ test("voice controls survive collapsing and workflow validation reveals them", a
     .getByRole("spinbutton", { name: "Temperature", exact: true })
     .fill("0.4");
   await requestSettings(page).locator("summary").click();
-  await selectSection(page, "general");
   await page
-    .getByRole("button", { name: "Save and return", exact: true })
+    .getByRole("tab", { name: "Cleanup settings", exact: true })
     .click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "invalid-voice");
   await expect(
     page.getByRole("spinbutton", { name: "Temperature", exact: true }),
@@ -98,6 +126,7 @@ test("connection attention stays visible with diagnostics collapsed", async ({
   page,
 }) => {
   await page.goto("/tests/browser/app/?workflows&attention");
+  await openSection(page, "server");
   await page.getByRole("button", { name: "Refresh models" }).click();
   await expect(requestSettings(page).locator("summary")).toContainText(
     "Connection needs attention",

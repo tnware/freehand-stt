@@ -1,3 +1,4 @@
+import { openSection } from "./context-navigation";
 import { test, expect } from "./fixtures";
 import { Purpose } from "../../bindings/github.com/tnware/freehand-stt/internal/savedconnection/models";
 
@@ -26,7 +27,7 @@ const roles = [
     quickID: "quick-speech-model",
     settingsID: "tts-model",
   },
-];
+] as const;
 for (const surface of ["quick", "settings", "readiness"] as const) {
   for (const role of roles.filter(
     (role) => surface !== "readiness" || role.purpose === Purpose.Transcription,
@@ -46,8 +47,7 @@ for (const surface of ["quick", "settings", "readiness"] as const) {
           await page
             .getByRole("button", { name: new RegExp(`^${role.panel} `) })
             .click();
-      } else
-        await page.locator(`[data-settings-section="${role.section}"]`).click();
+      } else await openSection(page, role.section);
       const picker = page.locator(
         `#${surface === "readiness" ? role.quickID : role.settingsID}`,
       );

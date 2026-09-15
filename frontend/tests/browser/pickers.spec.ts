@@ -1,17 +1,6 @@
+import { openSection } from "./context-navigation";
 import { test, expect } from "./fixtures";
-async function selectSection(
-  page: import("@playwright/test").Page,
-  id: string,
-) {
-  const toggle = page.getByRole("button", {
-    name: "Toggle primary sidebar",
-    exact: true,
-  });
-  await expect(toggle).toBeVisible();
-  if ((await toggle.getAttribute("aria-pressed")) === "false")
-    await toggle.click();
-  await page.locator(`[data-settings-section="${id}"]`).click();
-}
+const selectSection = openSection;
 
 for (const width of [520, 860]) {
   test(`shared profile and language controls preserve drafts at ${width}px`, async ({
@@ -27,10 +16,12 @@ for (const width of [520, 860]) {
       (await language.boundingBox())!.height,
     );
     const original = await profile.boundingBox();
-    const help = page.getByRole("button", {
-      name: "About this model profile",
-      exact: true,
-    });
+    const help = page
+      .locator('[data-pane="configuration"]')
+      .getByRole("button", {
+        name: "About this model profile",
+        exact: true,
+      });
     await help.focus();
     await help.press("Enter");
     await expect(
@@ -61,7 +52,7 @@ for (const width of [520, 860]) {
     await page.keyboard.press("End");
     await page.keyboard.press("Enter");
     await expect(language).toHaveValue("Finnish");
-    await selectSection(page, "general");
+    await selectSection(page, "audio");
     await selectSection(page, "voice-transcription");
     await expect(profile).toContainText("Qwen3-ASR");
     await expect(language).toHaveValue("Finnish");
@@ -89,7 +80,7 @@ test("unlisted language search still offers custom server values", async ({
   await expect(
     page.getByText("Custom values are sent to the server unchanged."),
   ).toBeVisible();
-  await selectSection(page, "general");
+  await selectSection(page, "processing");
   await selectSection(page, "server");
   await expect(page.locator("#language-custom")).toHaveValue("custom-en");
 });
@@ -109,23 +100,21 @@ test("Voice sidebar opens shared profile controls and preserves failed settings 
     })
     .getByRole("button", { name: /^Model / })
     .click();
-  const settings = page.locator('[data-pane="settings"]');
+  const settings = page.locator('[data-pane="configuration"]');
   await settings.locator("#voice-profile").click();
   await page.getByRole("option", { name: /Qwen3-ASR/ }).click();
   await settings.locator("#voice-language").fill("fr");
   await page.getByRole("option", { name: "French", exact: true }).click();
-  await settings
-    .getByRole("button", { name: "Save and return", exact: true })
-    .click();
+  await settings.getByRole("button", { name: "Save", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "failure");
   await expect(settings).toBeVisible();
   await expect(settings.locator("#voice-profile")).toContainText("Qwen3-ASR");
   await expect(settings.locator("#voice-language")).toHaveValue("French");
   await expect(page.getByRole("alert")).toContainText("Fixture save failed");
-  await settings
-    .getByRole("button", { name: "Save and return", exact: true })
-    .click();
+  await settings.getByRole("button", { name: "Save", exact: true }).click();
   await saves.complete(await saves.waitForStart(), "success");
+  await expect(settings).toBeVisible();
+  await settings.getByRole("button", { name: "Done", exact: true }).click();
   await expect(settings).toBeHidden();
   await page
     .getByRole("complementary", {

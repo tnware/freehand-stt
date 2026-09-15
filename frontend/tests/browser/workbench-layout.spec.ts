@@ -102,6 +102,11 @@ test("the bottom panel keeps its selected tab while switching areas and after re
     "History",
   ]) {
     await navigate(page, area);
+    if (area === "Settings") {
+      await expect(bottom(page)).toHaveCount(0);
+      await expect(control(page, "bottom panel")).toBeDisabled();
+      continue;
+    }
     await expect(bottom(page)).toBeVisible();
     await expect(diagnostics).toHaveAttribute("aria-selected", "true");
     await expect(workflow).toContainText("Audio file");
@@ -144,7 +149,8 @@ test("History details stay on the right and restore the user preference after na
   await control(page, "secondary sidebar").click();
   await expect(secondary(page)).toBeHidden();
   await navigate(page, "Voice transcription");
-  await expect(control(page, "secondary sidebar")).toBeDisabled();
+  await expect(control(page, "secondary sidebar")).toBeEnabled();
+  await expect(secondary(page)).toBeHidden();
   await navigate(page, "History");
   await expect(secondary(page)).toBeHidden();
   await show(page, "secondary sidebar");
@@ -229,6 +235,11 @@ test("runtime output keeps its explicit target across workspace navigation", asy
     "History",
   ]) {
     await navigate(page, area);
+    if (area === "Settings") {
+      await expect(bottom(page)).toHaveCount(0);
+      await expect(control(page, "bottom panel")).toBeDisabled();
+      continue;
+    }
     await expect(output).toHaveAttribute("aria-selected", "true");
     await expect(runtime).toContainText("Second speech provider");
   }

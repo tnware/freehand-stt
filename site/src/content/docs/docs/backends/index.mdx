@@ -52,7 +52,7 @@ other models, custom runtime settings, or a server on another machine.
 | Kokoro-FastAPI            | [Docker CPU or GPU](./kokoro-fastapi/#run-kokoro-fastapi-with-docker)                                           | Speech playback with voice discovery       |
 | llama.cpp                 | [Native Windows server](./llama-cpp/#run-llamacpp-on-windows)                                                   | S1-mini or compatible custom cleanup       |
 | NeMo-Speech.cpp           | [Runtime installation](./nemo-speech/#run-the-server)                                                           | Completed and live transcription           |
-| vLLM-Omni                | [Qwen3-TTS serving guide](./vllm-omni/#run-the-server)                                                         | Text to speech with preset voices          |
+| vLLM-Omni                 | [Qwen3-TTS serving guide](./vllm-omni/#run-the-server)                                                          | Text to speech with preset voices          |
 | Generic OpenAI-compatible | [Connect an existing endpoint](./generic/)                                                                      | The operations implemented by your server  |
 
 These local examples use PowerShell and loopback ports. Docker recipes require
@@ -84,8 +84,9 @@ select their own connection. Tasks using the same managed runtime share its
 selected model and get the matching model profile automatically.
 
 For manual connections, manage endpoint, authentication, and backend profile in
-**Settings → Connections**. Choose models, model profiles, voices, and other
-model options in feature settings; Freehand remembers those options for each
+**Connections** on the activity rail. Use each workflow's **Settings** cog to open
+its right options sidebar for models, model profiles, voices, and other
+model options; Freehand remembers those options for each
 connection and model.
 
 ## Beyond the current contract

@@ -12,6 +12,7 @@
   import SpeechQuickSettings from "./SpeechQuickSettings.svelte";
   import WorkspaceSplit from "./WorkspaceSplit.svelte";
   import VoiceBar from "./VoiceBar.svelte";
+  import WorkflowSettingsButton from "./WorkflowSettingsButton.svelte";
   import RuntimeOutputDrawer from "$lib/components/runtimes/RuntimeOutputDrawer.svelte";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -48,6 +49,7 @@
     onOpenShortcutSettings,
     onOpenSpeechSettings,
     onOpenGeneralSettings,
+    onOpenDeliverySettings = onOpenGeneralSettings,
     onOpenSettingsSection,
     onOpenConnection,
     quickSettingsDisabled = false,
@@ -65,6 +67,7 @@
     onOpenShortcutSettings: () => void;
     onOpenSpeechSettings: () => void;
     onOpenGeneralSettings: () => void;
+    onOpenDeliverySettings?: () => void;
     /** Navigates the shell to a settings section; there is no second window. */
     onOpenSettingsSection: (section: SettingsSectionID) => void;
     onOpenConnection: (request: ConnectionManagerRequest) => void;
@@ -298,7 +301,8 @@
                 : "voice"}
             title={paneTitle}
             instanceID={managed ? instanceID : ""}
-            disabled={quickSettingsDisabled || session.editor.saving}
+            disabled={session.editor.saving}
+            editing={quickSettingsDisabled}
             onOpenConnection={() => onOpenSettingsSection(workflowSection)}
             onOpenModel={() =>
               managed && inputMode !== "tts"
@@ -308,7 +312,7 @@
             onOpenCleanup={onOpenProcessingSettings}
             onOpenVocabulary={() => onOpenSettingsSection("vocabulary")}
             onOpenDelivery={inputMode === "voice"
-              ? onOpenGeneralSettings
+              ? onOpenDeliverySettings
               : () => onOpenSettingsSection(workflowSection)}
             onOpenOverlay={() => onOpenSettingsSection("overlay")}
             onOpenRuntime={openLocalRuntime}
@@ -317,6 +321,25 @@
       </SidebarContribution>
     {/if}
     <div class="body">
+      {#if readiness?.initialSetup && session.editor.draft && (inputMode === "voice" || inputMode === "file")}
+        <header
+          class="@container flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
+        >
+          <h2 class="min-w-0 truncate font-display text-[15px] font-semibold">
+            {paneTitle}
+          </h2>
+          <WorkflowSettingsButton
+            label={inputMode === "file"
+              ? "Audio file settings"
+              : "Voice settings"}
+            disabled={session.editor.saving}
+            onclick={() =>
+              inputMode === "file"
+                ? onOpenServerSettings()
+                : onOpenSettingsSection("voice-transcription")}
+          />
+        </header>
+      {/if}
       {#if inputMode === "voice" && session.editor.draft && !readiness?.initialSetup}
         <div class="transport-frame">
           <VoiceBar
@@ -328,6 +351,8 @@
             toggleShortcut={runtimeSettings?.toggleShortcut ?? ""}
             onToggle={() => session.dictation.toggleRecording()}
             onCancel={() => session.dictation.cancel()}
+            onOpenOptions={() => onOpenSettingsSection("voice-transcription")}
+            optionsDisabled={session.editor.saving}
             onOpenSettings={() =>
               managed
                 ? openLocalRuntime()
@@ -352,6 +377,7 @@
             onCancel={() => session.files.cancelFileTranscription()}
             onClear={() => session.files.clearAudioFile()}
             onTryStreamingAgain={() => session.files.tryFileStreamingAgain()}
+            optionsDisabled={session.editor.saving}
             onOpenSettings={onOpenServerSettings}
           />
         </div>
@@ -395,6 +421,7 @@
           onSave={() => session.speech.saveTTSAudio()}
           onClear={() => session.speech.clearTTSAudio()}
           onOpenSettings={onOpenSpeechSettings}
+          optionsDisabled={session.editor.saving}
         >
           {#snippet quickSettings()}
             <SpeechQuickSettings
@@ -624,7 +651,7 @@
                           {onOpenServerSettings}
                           {onOpenProcessingSettings}
                           {onOpenAudioSettings}
-                          onOpenDeliverySettings={onOpenGeneralSettings}
+                          {onOpenDeliverySettings}
                         />
                       {/if}
                     {/snippet}

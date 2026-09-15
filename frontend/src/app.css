@@ -493,12 +493,11 @@ html.dark[data-material="mica"] #app {
   }
 }
 
-/* Settings is a pane inside the main window now, not a window of its own.
- * Only its navigation and content columns scroll; a viewport-height body would
- * add an outer scroller under zoom. */
-html:has([data-pane="settings"]) {
+/* Workbench columns own scrolling. A viewport-height body would add an outer
+ * scroller under zoom, including on contextual configuration pages. */
+html:has(.workbench-frame) {
   overflow: clip;
 }
-html:has([data-pane="settings"]) body {
+html:has(.workbench-frame) body {
   min-height: 0;
 }

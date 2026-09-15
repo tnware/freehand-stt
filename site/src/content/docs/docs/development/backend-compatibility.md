@@ -164,7 +164,7 @@ identity mapping in page frontmatter. Full third-party notices ship
 in About and [Provider icon credits](../../reference/provider-icons/).
 
 For changes, run the actual Svelte autofixer on edited components, frontend
-check/build, and the site build. Check selectors and quick settings in the app,
+check/build, and the site build. Check selectors and workflow options in the app,
 then backend cards, matrix, docs headings, and guide links on desktop/mobile
 and in both docs themes. Verify that icons load without external requests and
 that Generic/fallback icons do not imply a branded service or enabled support.

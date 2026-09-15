@@ -9,7 +9,8 @@ Your transcription connection and model stay separate.
 
 ## What the profile adds
 
-Selecting **S1-mini by Superwhisper** in **Settings → Cleanup** replaces the
+Selecting **S1-mini by Superwhisper** in **Cleanup** options for Voice transcription
+or Audio file replaces the
 custom instruction editor with the model's trained controls:
 
 | Control   | Choices                                  |
@@ -22,9 +23,9 @@ Freehand builds the fixed instruction and control line for you. Settings shows
 the effective prompt for review. Temperature stays at zero, and reasoning must
 be off. The optional output-token limit and timeout remain available.
 
-These controls also appear in the **Cleanup** quick settings popover. Quick
-changes apply immediately; full Settings edits apply when you choose **Save**
-or **Save and return**.
+Open the workflow's **Settings** cog to show **Cleanup** options on the right.
+Choose **Save** to apply your edits; closing or leaving unsaved options offers
+**Save**, **Discard**, or **Keep editing**.
 Switching models preserves your cleanup style, structure, and context choices.
 
 ## Choose a backend
@@ -39,9 +40,9 @@ For a service you manage separately:
 
 - **[llama.cpp](../../backends/llama-cpp/#run-llamacpp-on-windows)** provides a native Windows launch recipe. Freehand sends `reasoning_effort: "none"` for S1-mini; the server and model template must honor it. Keep `--reasoning off` in the launch command.
 - **[vLLM](../../backends/vllm/#start-s1-mini-cleanup)** provides a Docker launch recipe. Freehand sends `reasoning_effort: "none"` for S1-mini; use the qualified server version and a template that honors it.
-- **[Generic OpenAI-compatible](../../backends/generic/)** can connect an existing chat endpoint. Configure reasoning off on that server; Settings shows **Disable on server**.
+- **[Generic OpenAI-compatible](../../backends/generic/)** can connect an existing chat endpoint. Configure reasoning off on that server; the options show **Disable on server**.
 
-For these manual services, select the saved connection in **Settings → Cleanup**,
+For these manual services, select the saved connection in **Cleanup** options,
 enable cleanup, choose the model ID exposed by the server, and select
 **S1-mini by Superwhisper** as the model profile. Choose your output controls and save.
 

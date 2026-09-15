@@ -17,8 +17,9 @@ generate speech without setting up a microphone or recording shortcut.
 
 For initial setup, see [Get started](../../getting-started/).
 
-The rail also opens **Local runtime**, **History**, and **Settings**. The Settings
-sidebar moves between configuration sections; use **Local runtime** on the rail
+The rail also opens **Connections**, **Local runtime**, **History**, and **Settings**.
+Connections manages saved servers; Settings contains **General**, **Shortcuts**,
+**Overlay**, and **Vocabulary**. Use **Local runtime** on the rail
 to manage installed runtimes and models. Press
 **Ctrl+K** on Windows or **⌘K** on macOS, or select the command bar at the top,
 to find a task or settings page. The status bar keeps recording state and the
@@ -98,7 +99,8 @@ supported combinations.
 ### Long dictation and VAD
 
 Voice activity detection (VAD) identifies speech and silence on your computer.
-It is enabled by default. Under **Settings → Audio**, you can also enable:
+It is enabled by default. Open **Voice transcription → Audio** in the right
+options sidebar to enable:
 
 - **Trim silence** removes silence at the start and end of a recording.
 - **Stop after I finish speaking** ends a toggle recording after a pause.
@@ -162,39 +164,52 @@ newer dictation. Clear or replace an audio file to remove its result.
 You do not need history to copy a transcript after failed insertion.
 
 The task sidebar shows its connection, model, and relevant language, cleanup,
-vocabulary, or speech options. Select a row to open its settings. Direct switches
-apply immediately; edits in Settings apply when you save. Voice also shows
-delivery and overlay settings. Use the left sidebar button in the title bar to
+vocabulary, or speech options. Select a row to open the related options beside
+your current result. Voice offers **Transcription**, **Audio**, **Cleanup**,
+**Vocabulary**, **Overlay**, and **Delivery**. Audio file offers **Transcription**,
+**Cleanup**, and **Vocabulary**; Text to speech offers **Speech**.
+These edits apply when you save. Direct switches apply immediately. Use the left
+sidebar button in the title bar to
 reach these controls when the sidebar is hidden.
+
+Shared options identify their scope: Vocabulary and Overlay edit the same saved
+preferences available in Settings. Voice's Delivery options contain only microphone
+transcript delivery choices; startup and appearance remain in General settings.
 
 ### Workspace layout
 
 The title bar has three layout buttons: left sidebar, bottom panel, and right
-sidebar. Their visibility choices apply across the workspace.
+sidebar. Left-sidebar and bottom-panel visibility apply across the workspace;
+right-sidebar options belong to the current page.
 
 Use **Ctrl+B** for the left sidebar, **Ctrl+J** for the bottom panel, and
-**Ctrl+Alt+B** for History details. On macOS, use **⌘** in place of **Ctrl**.
+**Ctrl+Alt+B** for the current task's options or History details. On macOS, use
+**⌘** in place of **Ctrl**.
 
 - The **left sidebar** follows the area you open: task settings, Settings
-  sections, runtime inventory, or History. Below 700px wide it starts hidden;
+  sections, saved connections, runtime inventory, or History. Below 700px wide it starts hidden;
   its title-bar button opens it over the current page.
 - The **bottom panel** has **Recent**, **Runtime output**, and **Diagnostics**
   tabs. Its selected tab stays the same when you change pages or hide and restore
-  the panel. It hides automatically in windows shorter than 560px and returns to
-  your chosen visibility when there is room.
-- The **right sidebar** shows the selected History entry's **Transcription
-  details**. Below 1100px wide it starts hidden; its title-bar button opens the
-  details as an overlay on the right. Escape or the backdrop closes the overlay.
-  Widening restores your normal sidebar visibility choice.
+  the panel. Global Settings uses the full workspace height and hides this panel;
+  returning to another page restores your chosen visibility and tab. It also
+  hides automatically in windows shorter than 560px and returns to your chosen
+  visibility when there is room.
+- The **right sidebar** opens the current workflow's options. In History it offers
+  **Details** for the selected transcript and **History settings**. The main
+  transcript or composer stays in place while you edit. Changing pages closes
+  contextual options. Below 1100px wide, the sidebar opens as an overlay on the
+  right; Escape or the backdrop requests closure. Unsaved edits must be resolved
+  before leaving. Widening restores your normal sidebar visibility choice.
 
 Drag either thin divider to resize its region, or focus it with Tab and use the
 arrow keys. Home and End move to the permitted size limits. Freehand remembers
 layout visibility, sizes, and the bottom tab locally. These preferences do not
-store transcripts or runtime output.
+store drafts, credentials, transcripts, or runtime output.
 
 In **Runtime output**, choose the runtime you want to inspect. Changing pages
 does not change that selection. Output is read-only and requires **Show output**
-consent. Hiding the panel, changing its tab or runtime, or hiding the window ends
+consent. Hiding the panel, including opening global Settings, changing its tab or runtime, or hiding the window ends
 that consent and clears the viewer; showing it again requires consent again.
 History remains optional.
 
@@ -209,13 +224,13 @@ While text is selected, its displayed text stays still through incoming updates;
 clearing the selection shows the latest text. **Jump to latest** clears a result
 selection and resumes following. A new recording replaces the previous result.
 
-Edit server addresses and API keys under **Settings → Connections**. Choose the
+Edit server addresses and API keys on **Connections** in the activity rail. Choose the
 connection and model for each task in that task's settings. Changes do not affect
 requests already running.
 
 ## Transcript cleanup
 
-For either dictation or audio files, optional **Settings → Cleanup** can send the
+For either dictation or audio files, the optional **Cleanup** options can send the
 raw transcript to a separate chat service after speech recognition.
 
 - **Raw mode** leaves transcription untouched.
@@ -239,11 +254,12 @@ final, raw, and cleaned versions already in memory; it does not search files on
 disk or recover transcripts from earlier sessions.
 
 Select an entry to read its full transcript in the main area. The right sidebar
-shows that same run's **Transcription details**; use its title-bar button to show
-or hide it. Details remain on the right and open as an overlay below 1100px wide.
+offers **Details** for that run and **History settings** for retention; use its
+title-bar button to show or hide it. Details remain on the right and open as an
+overlay below 1100px wide.
 At compact sizes, use the left sidebar button to open the list over
 the main area, then choose a transcript. You can also browse **Recent** in the
-bottom panel from any page, where the latest transcript opens automatically and
+bottom panel in workflows, Connections, Local runtime, and History, where the latest transcript opens automatically and
 older entries expand when selected.
 
 The sidebar shows whether retention is on, opens **History settings**, and offers
@@ -253,26 +269,33 @@ change what is retained.
 The selected transcript keeps **Listen** and **Copy** directly available. Open the
 ellipsis **Transcript actions** menu for **Remove from history**. **Compare** opens
 raw and cleaned text together, with separate copy controls. If cleanup fails, its
-explanation appears below the raw transcript. In Recent and Settings history
-lists, **Transcription details** in the action menu still opens its separate window.
+explanation appears below the raw transcript. In Recent, **Transcription details**
+in the action menu still opens its separate window.
 
 History never retains audio, credentials, full file paths, or destination
 details. Each copy action is explicit.
 
 ## Finding and adjusting settings
 
-Open **Settings** from the activity rail, tray, command palette, or task sidebar. Choose **Save** to
-apply edits, or **Save and return** when setting up a task to apply them and return
-to it. **Done** returns to your task; if you have unsaved edits, choose **Save**,
-**Discard**, or **Keep editing**. If saving fails, correct the indicated field and
-try again. While saving, the confirmation stays open until the save finishes;
-Escape and clicks outside it do not dismiss it.
+Open **Settings** from the activity rail, tray, or command palette for **General**,
+**Shortcuts**, **Overlay**, and **Vocabulary**. Workflow configuration stays in the
+right options sidebar, and saved servers have their own **Connections** page.
+The **Settings** cog in each Voice, Audio file, or Text to speech page opens its
+options directly, including during first-run setup. The title-bar right-sidebar
+toggle offers the same access.
+Shared Vocabulary and Overlay controls can also open beside the workflow, so you
+can adjust them without leaving the current transcript.
+Choose **Save** to apply edits. Closing options or navigating away with unsaved
+edits offers **Save**, **Discard**, or **Keep editing**. A failed save retains the
+editable draft; correct the indicated field and retry. While saving, the
+confirmation stays open until the save finishes; Escape and clicks outside it
+do not dismiss it.
 
 In Settings, **Find settings** filters the sidebar by page
-name or terms such as “padding,” “glow,” and “hotkey.” Enter opens the first match;
+name or terms such as “glow” and “hotkey.” Enter opens the first match;
 Escape clears the filter.
 
-**Audio** keeps microphone selection, the recording limit, and the main silence
+Voice's **Audio** options keep microphone selection, the recording limit, and the main silence
 switches together. Open **Speech detection tuning** for sensitivity, padding,
 minimum speech, and segment timing. Enabled automatic stop keeps its pause
 control beside the switch.
@@ -300,13 +323,15 @@ to generate audio from your own text or listen to transcripts.
 
 <Steps>
 
-1. **Open Text to speech**, then select **Connection** or **Model** in its sidebar
-   to open Speech settings. Select a saved connection or **Add connection…**, then
+1. **Open Text to speech**, then choose **Configure speech** in the composer or
+   **Connection** or **Model** in its sidebar to open **Speech** options on the right.
+   Select a saved connection or **Add connection…**, then
    choose the model and voice.
    **Refresh models** and supported **Refresh voices** read metadata without generating
    audio; manual IDs work too. For initial setup, choose
    the model profile, turn on **Enable text to speech**, and save your changes.
-2. **Return to Text to speech** and enter the text you want to hear. Your unsent text
+2. **Enter the text you want to hear.** You can draft before setup is complete;
+   compact guidance beside **Configure speech** explains what to configure. Your unsent text
    survives switching tasks or visiting Settings, and is cleared when the window
    reloads or Freehand exits.
 3. **Choose Speak** or press **Ctrl+Enter** in the editor to generate and play the audio.

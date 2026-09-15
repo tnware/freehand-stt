@@ -1,3 +1,4 @@
+import { openSection } from "./context-navigation";
 import { test, expect } from "./fixtures";
 
 for (const width of [560, 1000]) {
@@ -136,9 +137,9 @@ test("a settings save failure has one owner while the decision dialog is open", 
   saves,
 }) => {
   await page.setViewportSize({ width: 860, height: 660 });
-  await page.locator('[data-settings-section="audio"]').click();
+  await openSection(page, "audio");
   await page.locator("#max-duration").fill("90");
-  await page.locator('[data-settings-section="connections"]').click();
+  await openSection(page, "connections");
   const decision = page.getByRole("dialog", {
     name: "Save changes?",
     exact: true,
@@ -158,7 +159,7 @@ test("a settings save failure has one owner while the decision dialog is open", 
     page.getByRole("complementary", { name: "Notifications" }),
   ).toBeVisible();
   const save = page.getByRole("button", {
-    name: "Save and return",
+    name: "Save",
     exact: true,
   });
   const before = await save.boundingBox();

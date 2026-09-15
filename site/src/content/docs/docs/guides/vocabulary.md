@@ -3,10 +3,12 @@ title: Vocabulary
 description: Share names and terminology across Voice and audio-file transcription.
 ---
 
-Open **Settings → Vocabulary**, or choose **Vocabulary** from the transcription controls. Enter one name or phrase per line. Spaces within phrases are preserved; blank lines and exact duplicates are ignored when sending hints.
+Open **Settings → Vocabulary**, or choose **Vocabulary** in the right options sidebar
+for Voice transcription or Audio file. Both edit the same shared vocabulary;
+the local controls identify which workflows are affected. Enter one name or phrase per line. Spaces within phrases are preserved; blank lines and exact duplicates are ignored when sending hints.
 
 Enable **Voice transcription**, **Audio-file transcription**, or both, then choose
-**Save** (or **Save and return** when opened from a task). The list and these choices stay saved when you change connections or
+**Save**. The list and these choices stay saved when you change connections or
 models. Voice uses the same list in completed and realtime mode where supported.
 Changes apply to the next recording or file job, not work already running.
 

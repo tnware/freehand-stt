@@ -1,10 +1,11 @@
+import { openSection } from "./context-navigation";
 import { test, expect } from "./fixtures";
 
 test("macOS general settings use login wording and ignore imported Mica", async ({
   page,
 }) => {
   await page.goto("/tests/browser/app/?platform=darwin");
-  await page.locator('[data-settings-section="general"]').click();
+  await openSection(page, "general");
   await expect(
     page.getByRole("switch", { name: "Start at login", exact: true }),
   ).toBeVisible();
@@ -23,7 +24,7 @@ test("macOS permissions show scoped recovery without blocking file or speech set
   page,
 }) => {
   await page.goto("/tests/browser/app/?platform=darwin");
-  await page.locator('[data-settings-section="general"]').click();
+  await openSection(page, "general");
   await expect(
     page.getByText("macOS permissions", { exact: true }),
   ).toBeVisible();
@@ -48,7 +49,7 @@ test("macOS permissions show scoped recovery without blocking file or speech set
 test("Windows general settings retain their native wording and Mica control", async ({
   page,
 }) => {
-  await page.locator('[data-settings-section="general"]').click();
+  await openSection(page, "general");
   await expect(
     page.getByRole("switch", { name: "Start with Windows", exact: true }),
   ).toBeVisible();

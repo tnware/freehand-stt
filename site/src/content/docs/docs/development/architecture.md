@@ -313,14 +313,17 @@ Only an explicit final text field after local stop is deliverable. A mixed
 language result is reported as multilingual so English-only cleanup falls back.
 
 The main window owns one Session and one activity rail for Voice, audio files,
-speech, local runtimes, history, and Settings. Settings includes the inline
-Connections editor. `ShellNavigation` retains accepted task origin and return
+speech, Connections, local runtimes, history, and global Settings. Workflow
+configuration renders in the contextual right inspector; Connections owns the
+shared server editor. `ShellNavigation` retains accepted task origin and return
 section; all exits from configuration resolve the active draft before changing
 panes. An ignored reveal cannot replace the draft or its completion intent.
 `internal/windowing` validates sections, origins, and connection requests;
 `ShellReady` gates native navigation until renderer subscriptions and initial
-loading complete. General Save applies in place; task Save and return resumes
-the originating workflow only after success. Native close resolves Save,
+loading complete. Global and contextual Save apply in place; closing or crossing
+configuration realms resolves the draft before completing navigation. Connections'
+explicit Save and return commits setup and resumes its workflow only after success.
+Native close resolves Save,
 Discard, or Keep editing before hiding the workspace. Failure retains the draft
 and error. Hiding clears transient credentials, shortcut capture, overlay
 preview, and sensitive runtime output. Go-owned jobs keep their own lifetimes.
@@ -341,9 +344,9 @@ Named connections represent reusable servers, with explicit supported uses and
 independent active selections for Voice transcription, audio-file transcription, cleanup, and playback. One ID
 can be selected by multiple features; their models and runtime options remain
 independent while URL, profile, authentication, and credential reference are shared. The shared connection editor owns endpoint/authentication/profile fields.
-Settings and workflow pickers open the same Connection Manager inside Settings: a compact
-searchable list, a persistent list beside the editor at desktop widths, and an
-explicit All connections route at every size. It owns library creation, editing,
+The Connections rail page and workflow pickers use the same connection editor.
+Its searchable list contributes to the shared primary sidebar; at compact widths
+the title-bar toggle exposes the list over the editor. It owns library creation, editing,
 duplication, deletion, and saved metadata tests. Its renderer guards list, row,
 workflow, and close navigation with save/discard/keep-editing handling; credential
 drafts remain in the Settings editor. Workflow pickers search the same catalog and retain
@@ -771,16 +774,17 @@ services rather than handwritten transport shapes. Feature owners do not import
 `Session` or acquire subscriptions during construction.
 
 The main renderer installs `subscribeSessionEvents` before loading snapshots.
-The workspace, Settings pane, and inline Connections editor share one Session
+The workspace, global Settings, contextual options, and Connections page share one Session
 and draft owner. Accepted terminal transitions refresh history. Renderer teardown
 disposes subscriptions, timers, and credential drafts without stopping Go-owned
-recording, transcription, or playback. Leaving or hiding Settings releases
+recording, transcription, or playback. Leaving or hiding configuration releases
 preview/capture resources; backend snapshots preserve unsaved draft conflicts.
 
 `App` provides one `WorkbenchLayout` context and composes `WorkbenchFrame` around
 the active page. Title-bar controls toggle the primary sidebar, bottom panel,
 and secondary sidebar. `SidebarContribution` registers the active area's content:
-workflow settings, Settings navigation, History browsing, or runtime inventory.
+workflow settings, global Settings navigation, Connections, History browsing,
+or runtime inventory.
 The primary sidebar follows the area while its wide-window visibility remains a
 workspace preference. Below 700px it uses a separately controlled compact overlay
 and starts hidden; page navigation closes that overlay. Standalone components
@@ -790,11 +794,20 @@ current result without a second bottom panel.
 
 `WorkbenchPanel` supplies Recent, Runtime output, and Diagnostics independently
 of page navigation. The selected tab survives page changes and user hiding.
-The bottom panel is unavailable below 560px viewport height without changing its
-saved visibility choice. History contributes the selected run's `HistoryDetails`
-to the secondary sidebar. In History below 1100px viewport width, it starts
-hidden and the title-bar toggle opens an explicit right-side overlay with
-Escape/backdrop dismissal. It never moves below the reader. Responsive hiding
+Global Settings suppresses bottom-panel rendering to give configuration the full
+vertical area. This page-level suppression does not mutate the selected tab or
+saved visibility preference; returning elsewhere restores both. The bottom panel
+is also unavailable below 560px viewport height without changing its saved
+visibility choice. The secondary sidebar is contextual: Voice exposes
+Transcription, Audio, Cleanup, Vocabulary, Overlay, and Delivery; Audio file
+exposes Transcription, Cleanup, and Vocabulary;
+Text to speech exposes Speech. History offers the selected run's `HistoryDetails`
+and History settings. The main editor stays mounted while those options are edited.
+Changing pages closes contextual options, and the right toggle opens the current
+workflow's options or History details. Below 1100px viewport width, the sidebar
+starts hidden and opens as an explicit right-side overlay. Escape/backdrop
+dismissal follows the same draft-resolution guard as navigation. It never moves
+below the reader. Responsive hiding
 preserves the wide-window visibility preference for restoration. Each visible
 region owns its scroll area. `LayoutDivider` draws a 1px hairline with a larger
 pointer target and supports bounded pointer and keyboard resizing, including
@@ -802,10 +815,12 @@ Home/End limits and orientation-aware arrow keys.
 
 `WorkbenchLayout` persists only visibility booleans, bounded bottom/right sizes,
 and the selected bottom tab in WebView local storage. Sidebar snippets, History
-search and selection, output runtime identity, consent, transcript text, and
-runtime output stay in memory. Runtime output has an explicit runtime selector
+search and selection, configuration drafts, credentials, output runtime identity,
+consent, transcript text, and runtime output never enter layout storage. Runtime
+output has an explicit runtime selector
 independent of navigation. Its reader is disposed when the bottom panel hides
-or changes tabs, and selecting another runtime creates a fresh consent boundary.
+or changes tabs, including suppression on the global Settings page, and selecting
+another runtime creates a fresh consent boundary.
 Window hiding also releases consent and buffered viewer output. Showing the
 region again never silently resumes sensitive reads. Recent history continues
 to use compact expandable rows.
@@ -838,8 +853,8 @@ capture feedback only when present, and keep allowed-key rules in a keyboard
 accessible disclosure associated with the recording control. Shared visual
 primitives do not own credentials, runtime lifecycles, or saved values.
 
-Task-local connection creation opens the inline Connections editor in the
-Settings pane, preserving the originating task for Save and return. Home's
+Task-local connection creation opens the Connections page from the activity rail,
+preserving the originating task and its configuration context. Home's
 first-run Voice panel reuses quick connection/model controls. Connection changes
 use their own save action; model/task drafts apply with Save. Switching, adding,
 or editing a connection with a dirty runtime draft requires Save and continue,
@@ -849,17 +864,27 @@ Bits UI closes them; `onOpenChange` is a notification, not a dismissal veto.
 The connection editor retains its draft during confirmation, and failed saves
 keep their error/retry prompt available.
 
-Library connection editor navigation is owned by `SettingsScreen`: it remembers the originating
-feature and returns there after Back or save. The editor compares non-credential fields
+Connections page navigation remembers the originating feature and returns there
+after task-local setup. The editor compares non-credential fields
 with its opening snapshot; credential presence/removal is checked separately without
 copying a password into that snapshot. Opening a form alone is not dirty, but still
 reserves the draft against external-window updates. The editor retains the latest non-secret external snapshot and adopts it after drafts are discarded, so cancelling task-local creation does not leave an obsolete selection. Navigation confirms before
-discarding changed connection fields and clears the transient key on exit. Settings
-groups separate workflows, shared connections/vocabulary, capture, and application
-preferences; visual and keyboard section order match.
+discarding changed connection fields and clears the transient key on exit.
+Global Settings exposes only General, Shortcuts, Overlay, and Vocabulary.
+Workflow options reuse `SettingsScreen` in inspector mode with a bounded section
+list. Shared sections identify their scope and edit the existing shared preferences:
+Vocabulary appears in Voice and files, and Overlay appears in Voice. Voice's local
+Delivery view reuses only microphone transcript delivery controls from General,
+excluding startup and appearance. Global General, Shortcuts, Overlay, and Vocabulary
+remain available independently. These presentations introduce no separate draft,
+save transaction, or persistent copy of shared settings.
+Closing an inspector or navigating away resolves Save, Discard, or Keep
+editing before changing its context; failed saves retain the draft and visible
+inspector. Local option tabs do not replace the workflow's main content.
 
 The content scroll offset resets on section/editor transitions and Settings
-re-entry without changing sidebar focus or draft ownership. Library connection
+re-entry without changing draft ownership. Wide navigation retains section focus;
+closing compact navigation returns focus to its title-bar toggle. Library connection
 actions live in the persistent footer, with the submit button associated with
 the connection form; task-originated setup reuses those actions in the same editor.
 Connection saves remain independent of runtime settings saves.
@@ -966,13 +991,13 @@ Durable settings contain ordinary STT, VAD, shortcut, window, appearance, histor
 
 `WorkbenchFrame` owns the main renderer's region geometry and `WorkbenchLayout`
 owns its presentation preferences, independently of Go-owned settings. Shared
-sidebar contributions navigate to task-specific settings; retained standalone
+sidebar contributions open task-specific options alongside the main content; retained standalone
 consumers may still use local splits and quick-setting popovers. Every edit
 passes through `SettingsEditor` and the existing coherent settings transaction;
 opening a control performs no inference request. Transcript and history
 scrolling do not resize the workspace.
 
-The main, Settings, About, and Transcription details windows use the opaque product palette by default.
+The main workspace, About, and Transcription details windows use the opaque product palette by default.
 Dark surfaces use a neutral charcoal ladder (`#121212`, `#1b1b1b`,
 `#242424`) with Freehand’s brand blue (`#4d8dff`). Light mode pairs neutral
 white surfaces (`#f4f4f4`, `#ffffff`) with blue (`#326fe5`). Inputs use `#151515`
@@ -987,8 +1012,8 @@ control. Light-mode tokens remain independent.
 Windows Mica is an explicit persisted opt-in applied when native windows are created, so changing it requires a process restart. The service reports the launch-time material separately from the editable preference; Svelte continues rendering the launch-time material until restart rather than making its surfaces translucent over solid native windows. Shell chrome uses the same material-aware layer roles, including the title/status bars, Settings navigation/action bar, and About action bar.
 
 `internal/app` owns the cross-platform Wails windows: `main`, `about`,
-`transcription-details`, and the opaque `tray-popover` panel. Settings and its
-Connections editor are panes in Main's Session. Windows are created from Wails'
+`transcription-details`, and the opaque `tray-popover` panel. Global Settings,
+Connections, and contextual configuration share Main's Session. Windows are created from Wails'
 `ApplicationStarted` event after screen initialization. `internal/windowstate`
 persists only main-window normal bounds relative to its display work area.
 Display matching, work-area clamping, and missing-display fallback remain native
@@ -1004,8 +1029,8 @@ window. Details subscribes before fetching its selection, ignores superseded
 responses, and refreshes after history actions, settings changes, and workflow
 status events. Deleting, clearing, disabling, or evicting history makes details
 unavailable; closing clears its selection. Go does not retain a separate details
-snapshot or persist it. This native details path remains available from Recent and
-Settings history lists. The full History pane contributes the same details
+snapshot or persist it. This native details path remains available from Recent.
+The full History pane contributes the same details
 component to the shell's right sidebar and omits the redundant native-window
 action there.
 
@@ -1032,12 +1057,13 @@ visibility preference. `HistoryDetails` uses an embedded
 and values and reflow checkpoints within narrow details panes without omitting
 metadata. Below 700px, the title-bar primary-sidebar toggle exposes the list over
 the main area; selecting an entry returns to the reading surface.
-Task-sidebar rows open the relevant settings page; direct switches use
+Task-sidebar rows open the relevant right-side options; direct switches use
 immediate-save controls. Microphone and delivery controls appear only for
 dictation. TTS shows its own connection and model/voice settings links.
 Each quick update starts from backend-confirmed settings, restores only engine options
 when a model changes, and calls the same transactional owner without credential mutation.
-Main quick controls remain disabled while Settings owns the editable configuration.
+Main quick controls remain disabled while global Settings or a contextual inspector
+owns the editable configuration.
 The activity rail identifies the active pane with an accent marker and
 `aria-current`. Selection and keyboard focus remain separate states.
 Open quick-setting triggers use the shared accent wash and text roles; a hairline
@@ -1063,8 +1089,9 @@ every confirmed settings adoption or credential-draft teardown invalidates the
 cache and in-flight revisions, including credential-only changes invisible to the
 renderer. No diagnostic result is persisted.
 
-Settings navigation groups workflows, shared connections/vocabulary, capture,
-and application preferences in the same visual and keyboard order. Navigation
+Global Settings navigation contains General, Shortcuts, Overlay, and Vocabulary
+in the same visual and keyboard order. Workflow sections live in the contextual
+inspector, and Connections has its own activity-rail page. Navigation
 and content scroll independently. The section heading stays visible; the content
 scroll padding follows its measured height so validation targets remain exposed.
 Current results and playback controls stay accessible independently of recent history.
@@ -1189,9 +1216,9 @@ service cannot guarantee completion of Wails' native window teardown; that
 requires packaged Windows and macOS acceptance.
 
 - Wails single-instance ownership uses encrypted second-instance messages and the stable product identifier parsed from `build/config.yml`, shared deliberately with packaging and updates.
-- First process owns hotkeys, tray, capture, the main window, and reusable Settings, About, and Transcription details windows.
+- First process owns hotkeys, tray, capture, the main workspace, and reusable About and Transcription details windows.
 - Second process asks the first to reveal the main window and exits.
-- Closing any native window hides that window; closing Settings first resolves or discards its renderer-owned draft.
+- Closing any native window hides that window; hiding the main workspace first resolves its active configuration draft.
 - Appearance changes that affect native window creation are saved transactionally but applied only after tray Quit and relaunch.
 - Tray Quit cancels active work, unregisters hooks/hotkeys, stops capture, and exits.
 - Tray Quit clears the optional in-memory transcript ring before process exit.
@@ -1404,15 +1431,18 @@ S1-mini controls.
 ## File and speech workspace presentation
 
 `HomeScreen` gives the speech composer the same flexible content area as transcript
-results. `SpeechQuickSettings` places connection selection and shared
-`SpeechModelControls` in its header. The full Speech settings section uses the
-same model/voice pickers and speed control. Quick saves use the editor’s serialized
-queue from its confirmed snapshot; full settings keep draft/save semantics.
-Voice discovery distinguishes applied quick settings from the full-page draft
+results. Speech options use the shared `SpeechModelControls` in the contextual
+inspector; retained standalone quick controls use the same model/voice pickers
+and speed control. Quick saves use the editor’s serialized queue from its confirmed
+snapshot; inspector settings keep draft/save semantics.
+Voice discovery distinguishes applied quick settings from the editable draft
 and rejects stale results. Model changes restore remembered voice/profile options
 while preserving task-owned speed. Speed commits on release rather than saving
-every intermediate slider value. `TextToSpeech` owns the draft editor
-and reserves a fixed playback area; `PlaybackBar` supports embedding in that area.
+every intermediate slider value. `TextToSpeech` owns the draft editor. Before
+configuration it shows compact setup guidance and a Configure speech action
+inside the composer, with an editable textarea and disabled Speak action. It
+does not reserve an empty audio strip for setup. Configured or active sessions
+retain the playback area; `PlaybackBar` supports embedding in that area.
 Its seek slider keeps a local preview during dragging and commits a generated
 request only for user input. Native progress is projected onto valid slider steps,
 including the exact audio endpoint, before rendering so slider normalization cannot
@@ -1499,9 +1529,9 @@ unsaved; running jobs retain their immutable settings and credential snapshot.
 The speech adapter explicitly requests buffered WAV from Kokoro-FastAPI and
 vLLM-Omni. Qwen CustomVoice never submits reference audio or uploaded-voice tasks.
 
-The settings sidebar filters the central section catalog with presentation-only
-search terms, excluding Local runtime from both its list and search results.
-Runtime management opens from the activity rail. Search and native `details`
+The settings sidebar filters the global General, Shortcuts, Overlay, and Vocabulary
+sections with presentation-only search terms. Workflow options, Connections, and
+runtime management remain in their own contexts. Search and native `details`
 disclosures do not own settings values:
 the existing editor draft and save transaction remain authoritative. Audio and
 Overlay keep common controls visible and group fine tuning in `SettingsDisclosure`.
@@ -1525,7 +1555,7 @@ Restrictions and unavailable states stay inline rather than depending on help.
 
 Shared button variants own the 8px control radius and medium label weight, including
 menu and tooltip triggers. Workspace quick settings align to the adjacent 32px
-actions with 16px icons. Settings navigation expands from an icon rail at 760px;
+actions with 16px icons. Settings navigation uses the shared primary-sidebar overlay below 700px;
 trailing row controls wrap when the content column needs more room.
 
 Speech uses the same toolbar geometry and picker surfaces as transcription. Its
@@ -1539,6 +1569,6 @@ labels from monospace model IDs. The application status bar is 24px high and ret
 
 The Settings pane fills the workspace viewport. Navigation and content own
 independent scrolling; the document body has no viewport-height minimum in this
-pane, preventing an outer scrollbar under zoom. Voice draft settings group
+pane, preventing an outer scrollbar under zoom. Voice's contextual Transcription options group
 model, profile, language and recognition controls in the shared settings card;
-quick settings continue to use the compact presentation and immediate saves.
+first-run setup controls continue to use the compact presentation and immediate saves.

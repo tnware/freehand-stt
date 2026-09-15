@@ -1,11 +1,15 @@
 import { test, expect, requestNativeClose } from "./connection-window-fixtures";
 import type { Page } from "@playwright/test";
+import { openSection } from "./context-navigation";
+const configuration = (page: Page) =>
+  page.locator('[data-pane="configuration"]');
 const editor = (page: Page) =>
   page.getByRole("region", { name: "Connection editor", exact: true });
 const prompt = (page: Page) =>
   page.getByRole("dialog", { name: "Save connection changes?", exact: true });
 async function add(page: Page) {
-  await page
+  await openSection(page, "server");
+  await configuration(page)
     .getByRole("button", { name: "Show connections", exact: true })
     .click();
   await page
@@ -172,9 +176,12 @@ test("dirty settings save before adding retains failure and retries without losi
   page,
   saves,
 }) => {
-  await page.locator("summary", { hasText: "Request settings" }).click();
+  await openSection(page, "server");
+  await configuration(page)
+    .locator("summary", { hasText: "Request settings" })
+    .click();
   await page.locator("#file-transcription-timeout").fill("75");
-  await page
+  await configuration(page)
     .getByRole("button", { name: "Show connections", exact: true })
     .click();
   await page

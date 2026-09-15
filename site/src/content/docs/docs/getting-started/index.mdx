@@ -3,7 +3,7 @@ title: Get started
 description: Install Freehand and start voice dictation, audio-file transcription, or optional text to speech.
 ---
 
-import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
+import { CardGrid, LinkCard, Steps } from "@astrojs/starlight/components";
 
 Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
 services you choose. Start with voice dictation, transcribe an audio file, or
@@ -26,11 +26,11 @@ service if your PC lacks the resources, or you want to keep them for other work.
 - For a manual service: its base URL, model ID (except whisper.cpp's server-loaded model), and API key
   when authentication is required.
 
-| Task | Additional requirements | Start here |
-| --- | --- | --- |
-| Voice dictation (default) | Speech-to-text service and a usable microphone; a recording shortcut is optional | [Run your first dictation](#run-your-first-dictation) |
-| Audio file transcription | Speech-to-text service and a supported audio file; no microphone or recording shortcut | [Transcribe a stored audio file](#transcribe-a-stored-audio-file) |
-| Text to speech (optional) | Speech synthesis service, model and voice ID, and text to speak; no transcription setup | [Generate speech](#generate-speech) |
+| Task                      | Additional requirements                                                                 | Start here                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Voice dictation (default) | Speech-to-text service and a usable microphone; a recording shortcut is optional        | [Run your first dictation](#run-your-first-dictation)             |
+| Audio file transcription  | Speech-to-text service and a supported audio file; no microphone or recording shortcut  | [Transcribe a stored audio file](#transcribe-a-stored-audio-file) |
+| Text to speech (optional) | Speech synthesis service, model and voice ID, and text to speak; no transcription setup | [Generate speech](#generate-speech)                               |
 
 :::caution[Download verification and signing]
 Choose the Windows installer/portable executable or the macOS ZIP matching your architecture. Download only from the official project and verify against `SHA256SUMS` from the same release. Windows assets are not Authenticode-signed; macOS apps are ad-hoc-signed, not Developer ID-signed or notarized. Older releases may lack macOS assets.
@@ -60,7 +60,9 @@ files use the runtime's selected model in completed mode. Optional local cleanup
 uses managed llama.cpp with S1-mini. Speech generation needs a manually configured
 service.
 
-To connect a manual service from your chosen task:
+To connect a manual service from your chosen task, use its **Settings** cog to
+open options on the right: **Transcription** for Voice or Audio file, or **Speech**
+for Text to speech. The first-run setup screen also offers connection selection.
 
 <Steps>
 
@@ -69,7 +71,7 @@ To connect a manual service from your chosen task:
    details. Choose **Save and return** to continue to model settings.
 2. **Choose a model.** Select a model listed by your server or enter its exact ID.
    With whisper.cpp, Freehand uses the model already loaded by the server.
-   Review the [model profile](../models/) and choose **Save and return**.
+   Review the [model profile](../models/) and choose **Save** in the options sidebar.
 
 </Steps>
 
@@ -84,7 +86,7 @@ then select it in each task.
 
 ## Choose the recording language
 
-Under **Settings → Voice transcription** or **Audio-file transcription**, search
+Under **Voice transcription → Transcription** or **Audio file → Transcription**, search
 the language picker by name or code, or choose
 **Server default** or **Automatic detection**. Your model must support the
 language. If you use S1-mini cleanup, its only supported language is English.
@@ -117,7 +119,7 @@ local and remote server setup, and connection checks.
 Leave **Cleanup** off for your first dictation or file transcription. Freehand
 delivers the speech model's transcript unchanged; no chat service is needed.
 
-Later, **Settings → Cleanup** can add an independently configured chat service
+Later, **Cleanup** options in Voice transcription or Audio file can add an independently configured chat service
 after STT. Choose [custom instructions](../guides/post-processing/#custom-instruction-processor)
 or the optional English-only [S1-mini profile](../guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp).
 If cleanup fails, times out, or returns empty output, Freehand falls back to the
@@ -132,7 +134,7 @@ recognition hints supported by your selected model profile.
 Follow **Next step** to check your microphone and recording shortcut. On macOS,
 also grant the requested [permissions](../guides/macos-setup/#native-permissions).
 **Ctrl+Shift+Space** is the default toggle shortcut. Save any settings edits
-with **Save and return**.
+with **Save**.
 
 If that shortcut conflicts with another application, record a different chord
 under **Settings → Shortcuts**, or choose **Clear** and save it unassigned.
@@ -188,9 +190,10 @@ connection, not a microphone, recording shortcut, or STT setup.
 
 <Steps>
 
-1. **Open Text to speech** and add or select its connection as above.
-2. **Open Speech → All speech settings**. Choose the model and voice ID, turn on
-   **Enable text to speech**, and choose **Save and return**.
+1. **Open Text to speech**, then choose **Configure speech** in the composer or
+   its **Settings** cog to open **Speech** options. Add or select its connection as above.
+2. **Choose the model and voice ID**, turn on
+   **Enable text to speech**, and choose **Save**.
 3. **Enter your text**, then choose **Speak** to generate and play audio.
 4. **Use the playback controls** to pause, resume, restart, stop, or explicitly
    **Save generated speech** to a file.
@@ -207,15 +210,15 @@ Local voice activity detection and the native status overlay are **on by
 default**. You can configure or disable either. Voice detection alone does not
 enable automatic stop, silence trimming, or checkpoints.
 
-| Feature | Initial setting |
-| --- | --- |
-| Local voice detection and status overlay | On |
-| Silence trimming, automatic stop, and pause-aware checkpoints | Off |
-| Transcript cleanup and memory-only history | Off |
-| Audio-file transcript | Shown when complete; text updates are optional |
-| Text-to-speech playback and Windows Mica material | Off |
-| Insert dictation into the original application | On, when the destination is still focused and safe |
-| Automatic update checks | On; configurable under **Settings → General** |
+| Feature                                                       | Initial setting                                    |
+| ------------------------------------------------------------- | -------------------------------------------------- |
+| Local voice detection and status overlay                      | On                                                 |
+| Silence trimming, automatic stop, and pause-aware checkpoints | Off                                                |
+| Transcript cleanup and memory-only history                    | Off                                                |
+| Audio-file transcript                                         | Shown when complete; text updates are optional     |
+| Text-to-speech playback and Windows Mica material             | Off                                                |
+| Insert dictation into the original application                | On, when the destination is still focused and safe |
+| Automatic update checks                                       | On; configurable under **Settings → General**      |
 
 ## Where to go next
 

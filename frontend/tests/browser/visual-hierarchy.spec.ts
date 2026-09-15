@@ -1,18 +1,7 @@
+import { openSection } from "./context-navigation";
 import { test, expect } from "./fixtures";
 
-async function selectSection(
-  page: import("@playwright/test").Page,
-  id: string,
-) {
-  const toggle = page.getByRole("button", {
-    name: "Toggle primary sidebar",
-    exact: true,
-  });
-  await expect(toggle).toBeVisible();
-  if ((await toggle.getAttribute("aria-pressed")) === "false")
-    await toggle.click();
-  await page.locator(`[data-settings-section="${id}"]`).click();
-}
+const selectSection = openSection;
 
 for (const theme of ["light", "dark"]) {
   for (const width of [860, 520]) {
@@ -43,7 +32,7 @@ for (const theme of ["light", "dark"]) {
         await expect(page.locator("html")).toHaveClass(/dark/);
       else await expect(page.locator("html")).not.toHaveClass(/dark/);
       const save = page.getByRole("button", {
-        name: "Save and return",
+        name: "Save",
         exact: true,
       });
       await expect(save).toBeEnabled();
@@ -90,7 +79,10 @@ for (const theme of ["light", "dark"]) {
           .toBeGreaterThanOrEqual(4.5);
       }
 
-      for (const section of ["server", "shortcuts"]) {
+      await page
+        .getByRole("button", { name: "Discard changes", exact: true })
+        .click();
+      for (const section of ["server", "shortcuts"] as const) {
         await selectSection(page, section);
         if (section === "shortcuts")
           await expect(

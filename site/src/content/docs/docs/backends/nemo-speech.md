@@ -24,10 +24,11 @@ It can run on the same PC or on another machine reachable from Freehand.
 
 ## Connect Freehand
 
-1. Open **Settings → Connections** and choose **Add connection**.
+1. Open **Connections** and choose **Add connection**.
 2. Choose **NeMo-Speech.cpp**, name the connection, and enable **Voice transcription**, **Audio-file transcription**, or both.
 3. Enter the HTTP API root, such as `http://127.0.0.1:8088/v1` for a local server on port 8088. Enable **Allow HTTP for this connection** when using HTTP on a trusted network; add authentication if required by the server.
-4. Save the connection, then select it in each workflow you want to use.
+4. Save the connection, then open the **Settings** cog in Voice transcription or Audio file
+   and select it in that workflow's **Transcription** options.
 5. Check the connection and select the model loaded on the server. Choose **Nemotron 3.5 ASR streaming** as the model profile for its language, vocabulary, and realtime controls.
 
 Connection checks read server metadata without invoking the model. Generic

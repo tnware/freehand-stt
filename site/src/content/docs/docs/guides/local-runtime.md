@@ -10,11 +10,11 @@ or API key. For live dictation, start with NeMo and its recommended Nemotron mod
 
 ## Choose a runtime and model
 
-| Runtime | Managed models and tasks | Supported computers |
-| --- | --- | --- |
-| NeMo-Speech.cpp | [Nemotron 3.5 Streaming](../../models/nemotron/) (recommended): live and completed transcription. [Parakeet TDT v3](../../models/parakeet/): completed transcription only. | Windows 11 x64; macOS 13+ on Apple Silicon or Intel |
-| whisper.cpp | Whisper Base (recommended), Small, or Medium: completed transcription only. | Windows 11 x64 only |
-| llama.cpp | [S1-mini by Superwhisper](../../models/s1-mini/) v1 Q4_K_M: English transcript cleanup only. | Windows 11 x64; macOS 13.3+ on Apple Silicon or Intel |
+| Runtime         | Managed models and tasks                                                                                                                                                   | Supported computers                                   |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| NeMo-Speech.cpp | [Nemotron 3.5 Streaming](../../models/nemotron/) (recommended): live and completed transcription. [Parakeet TDT v3](../../models/parakeet/): completed transcription only. | Windows 11 x64; macOS 13+ on Apple Silicon or Intel   |
+| whisper.cpp     | Whisper Base (recommended), Small, or Medium: completed transcription only.                                                                                                | Windows 11 x64 only                                   |
+| llama.cpp       | [S1-mini by Superwhisper](../../models/s1-mini/) v1 Q4_K_M: English transcript cleanup only.                                                                               | Windows 11 x64; macOS 13.3+ on Apple Silicon or Intel |
 
 Runtime binaries and models are **not bundled with Freehand**. Installation and
 model downloads are separate, explicit actions; browsing the catalog downloads
@@ -82,7 +82,7 @@ index; NeMo's model manager handles the download.
 6. In Voice's connection picker, select the built-in **NeMo-Speech.cpp** Connection.
    It appears automatically; no URL, API key, or additional connection setup is needed.
    Complete the microphone and recording setup.
-7. In Voice's transcription settings, enable **Realtime transcription** for the
+7. In **Voice transcription → Transcription** options, enable **Realtime transcription** for the
    recommended live-preview workflow. Captions and language remain Voice options.
 
 Start recording with the intended destination focused. The live preview can
@@ -155,7 +155,7 @@ reserve GPU memory, stop other runtimes, or change as free GPU memory fluctuates
 For llama.cpp or whisper.cpp, select it in the runtime sidebar. If it is
 running, choose **Stop**. Under **Runtime binary**, choose
 **NVIDIA GPU (CUDA)** and wait for installation to finish, then choose
-**Start**. Runtime management, quick settings, and Connection details
+**Start**. Runtime management, workflow options, and Connection details
 show the installed backend separately from the Connection name. Changing the
 backend does not rename custom Connections or alter task selections.
 
@@ -191,7 +191,7 @@ place with a completion, cancellation, or failure message. Successful downloads
 also show **Downloaded** beside their size.
 
 Downloads can be cancelled and retried. Stop active transcription before
-switching or removing the loaded model. In task quick settings, choose the
+switching or removing the loaded model. In the task's **Transcription** or **Cleanup** options, choose the
 **Connection** first, then choose one of that runtime's downloaded models under
 **Selected model**. The runtime shares its selected model with every task using
 it. **Manage runtime** opens installation, downloads, and runtime details.
@@ -216,9 +216,10 @@ is enabled; browsing models and connection checks remain metadata-only.
 If startup fails or takes too long, use **Cancel**, check resources, and retry.
 You can inspect recent process output while startup is still in progress:
 
-1. Choose **View output** in Local runtime or the task’s runtime quick controls.
-2. The separate **Process output** window opens with a blank viewer and disabled
-   output controls. Read its warning banner and choose **Show output** only if
+1. Choose **View output** in Local runtime or the task's runtime controls.
+2. The shared **Runtime output** bottom panel opens for that runtime with a blank
+   viewer and disabled output controls. You can select a different runtime explicitly
+   in the panel. Read its warning banner and choose **Show output** only if
    displaying it on your screen is safe.
 3. Use **Search** to find text, **Follow** to follow new output, or **Clear** to
    discard the captured output. Collection continues when Follow is off.
@@ -226,10 +227,12 @@ You can inspect recent process output while startup is still in progress:
    Copied text can remain there after the viewer closes.
 
 The read-only viewer supports colors and in-place progress updates when the
-runtime emits them. It does not accept commands or save log files. Closing it
-does not stop the runtime. Each opening requires consent again; closing or
-switching runtimes clears the displayed text and revokes access, but the private
-bounded tail remains until cleared, the next start attempt, runtime removal, or
+runtime emits them. It does not accept commands or save log files. Hiding it
+does not stop the runtime. The visible viewer and selected runtime stay available
+when you navigate between workflows, Connections, Local runtime, and History.
+Hiding the panel, changing its tab, opening global Settings, hiding the workspace,
+or switching runtimes clears displayed text and ends consent. Showing output again
+requires fresh consent, but the private bounded tail remains until cleared, the next start attempt, runtime removal, or
 Quit. Older output is discarded as the buffer fills. llama.cpp captures normal
 informational, warning, and error output without debug logging. This can still
 include prompts or other sensitive text. Output can be sparse or absent; an
@@ -250,7 +253,7 @@ Stopping a runtime does not change any task's selection. A local runtime failure
 does not automatically send audio to another server.
 
 The recording controls remain available while the runtime is stopped or starting.
-The recording area shows its current availability; use transcription quick settings
+The recording area shows its current availability; use **Transcription** options
 to start it. An attempt to record before it is ready reports the failure in Freehand
 and through the status overlay when error feedback is enabled. Start the runtime,
 wait for **Ready**, then try recording again. Previous results remain available to copy.

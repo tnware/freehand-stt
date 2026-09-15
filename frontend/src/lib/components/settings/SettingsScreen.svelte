@@ -1,6 +1,6 @@
 <script lang="ts">
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
-  import { SETTINGS_NAVIGATION } from "$lib/navigation";
+  import { SETTINGS_NAVIGATION, SETTINGS_SECTIONS } from "$lib/navigation";
   import VocabularySection from "./sections/VocabularySection.svelte";
   import { setContext, tick, untrack } from "svelte";
   import {
@@ -36,6 +36,9 @@
     session = $bindable(),
     visible = true,
     active = $bindable(),
+    inspector = false,
+    sections,
+    onRevealSection,
     navigationRef = $bindable(null),
     onClose,
     onOpenRuntimes = onClose,
@@ -55,6 +58,11 @@
     session: Session;
     visible?: boolean;
     active: SettingsSectionID;
+    /** Render contextual configuration within the secondary sidebar. */
+    inspector?: boolean;
+    sections?: SettingsSectionID[];
+    /** Reveal an out-of-scope validation target without discarding this draft. */
+    onRevealSection?: (section: SettingsSectionID) => void;
     navigationRef?: HTMLElement | null;
     onClose: () => void;
     /** Leaves configuration for the runtime pane on the rail. */
@@ -73,7 +81,43 @@
 
   /** Terms are separated by newlines or commas. */
   const SPLIT_TERMS = /[\r\n,]/;
+  const uid = $props.id();
+  const inspectorPanelID = `${uid}-inspector-content`;
+  const inspectorSections = $derived(
+    (sections ?? SETTINGS_SECTIONS.map((entry) => entry.id))
+      .filter((id) => id !== "local-runtime")
+      .map(sectionByID),
+  );
+  const inspectorLabels: Partial<Record<SettingsSectionID, string>> = {
+    "voice-transcription": "Transcription",
+    server: "Transcription",
+    speech: "Speech",
+    general: "Delivery",
+  };
+  function inspectorTabID(id: SettingsSectionID) {
+    return `${uid}-inspector-${id}`;
+  }
+  function sectionLabel(id: SettingsSectionID) {
+    return inspector && id === "general"
+      ? "Transcript delivery"
+      : sectionByID(id).label;
+  }
   const section = $derived(sectionByID(active));
+  const sectionTitle = $derived(sectionLabel(active));
+  const sectionBlurb = $derived(
+    inspector && active === "general"
+      ? "Choose how completed microphone transcripts reach your application."
+      : section.blurb,
+  );
+  const sharedNote = $derived(
+    !inspector
+      ? ""
+      : active === "processing" || active === "vocabulary"
+        ? "Changes apply to Voice and audio files."
+        : active === "overlay" || active === "general"
+          ? "These preferences are also available in Settings."
+          : "",
+  );
   const vocabularyTermCount = $derived(
     (session.editor.draft?.vocabulary.terms ?? "")
       .split(SPLIT_TERMS)
@@ -122,10 +166,15 @@
     },
   });
 
-  async function revealValidationIssue() {
+  export async function revealValidationIssue() {
     const issue = session.editor.validationIssue;
-    if (!issue || !visible || session.editor.connectionDraft) return;
+    if (!issue || session.editor.connectionDraft) return;
     pendingConnectionAction = null;
+    if (!visible || (sections && !sections.includes(issue.section))) {
+      onRevealSection?.(issue.section);
+      await tick();
+      if (!visible || session.editor.connectionDraft) return;
+    }
     active = issue.section;
     await tick();
     // Voice validation currently identifies the workflow, rather than an individual option.
@@ -167,8 +216,30 @@
     if (visible && contentKey)
       contentPane?.scrollTo({ top: 0, left: 0, behavior: "instant" });
   });
+  $effect(() => {
+    if (!inspector || !visible || !navigationRef) return;
+    const navigation = navigationRef;
+    const id = inspectorTabID(active);
+    let cancelled = false;
+    void tick().then(() => {
+      if (cancelled) return;
+      navigation
+        .querySelector<HTMLElement>(`#${CSS.escape(id)}`)
+        ?.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+          behavior: "instant",
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  });
 
   let pendingConnectionAction = $state<(() => void) | null>(null);
+  export function blocksNavigation(): boolean {
+    return pendingConnectionAction !== null;
+  }
   function withSavedSettings(action: () => void) {
     if (session.editor.saving) return;
     if (session.editor.runtimeDirty) pendingConnectionAction = action;
@@ -206,6 +277,10 @@
     });
   }
   function selectSection(id: SettingsSectionID) {
+    if (sections && !sections.includes(id)) {
+      onNavigate?.(id);
+      return;
+    }
     if (onNavigate) {
       onNavigate(id);
       return;
@@ -216,6 +291,29 @@
     }
     active = id;
     if (id === "audio") void session.editor.refreshDevices();
+  }
+  async function moveInspectorSection(event: KeyboardEvent, index: number) {
+    const count = inspectorSections.length;
+    if (
+      !count ||
+      !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+    )
+      return;
+    event.preventDefault();
+    const next =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? count - 1
+          : (index + (event.key === "ArrowRight" ? 1 : -1) + count) % count;
+    const target = inspectorSections[next].id;
+    selectSection(target);
+    await tick();
+    navigationRef
+      ?.querySelector<HTMLButtonElement>(
+        `#${CSS.escape(inspectorTabID(target))}`,
+      )
+      ?.focus();
   }
 
   async function saveSettings() {
@@ -261,25 +359,65 @@
 </script>
 
 <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-  <SettingsNav
-    onOpenChain={onClose}
-    counts={{
-      connections: session.editor.draft?.savedConnections.entries?.length ?? 0,
-      vocabulary: vocabularyTermCount,
-    }}
-    {active}
-    onSelect={selectSection}
-    bind:navigationRef
-    invalidSection={session.editor.validationIssue?.section}
-  />
+  {#if !inspector}<SettingsNav
+      onOpenChain={onClose}
+      counts={{
+        connections:
+          session.editor.draft?.savedConnections.entries?.length ?? 0,
+        vocabulary: vocabularyTermCount,
+      }}
+      {active}
+      {sections}
+      onSelect={selectSection}
+      bind:navigationRef
+      invalidSection={session.editor.validationIssue?.section}
+    />{/if}
 
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    {#if inspector && inspectorSections.length > 1}
+      <nav
+        bind:this={navigationRef}
+        aria-label="Context settings"
+        class="shrink-0 border-b border-hairline px-3"
+      >
+        <div
+          role="tablist"
+          aria-label="Context settings"
+          class="flex min-w-0 overflow-x-auto"
+        >
+          {#each inspectorSections as item, index (item.id)}
+            <button
+              id={inspectorTabID(item.id)}
+              type="button"
+              role="tab"
+              aria-label={`${sectionLabel(item.id)} settings`}
+              aria-selected={active === item.id}
+              aria-controls={inspectorPanelID}
+              tabindex={active === item.id ||
+              (!inspectorSections.some((entry) => entry.id === active) &&
+                index === 0)
+                ? 0
+                : -1}
+              title={sectionLabel(item.id)}
+              class="shrink-0 border-b-2 border-transparent px-2 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring aria-selected:border-primary aria-selected:text-foreground"
+              onclick={() => selectSection(item.id)}
+              onkeydown={(event) => void moveInspectorSection(event, index)}
+              >{inspectorLabels[item.id] ?? item.label}</button
+            >
+          {/each}
+        </div>
+      </nav>
+    {/if}
     <div
       bind:this={contentPane}
       style:scroll-padding-top={`${headingHeight + 16}px`}
       class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6"
     >
       <section
+        id={inspector ? inspectorPanelID : undefined}
+        role={inspector && inspectorSections.length > 1
+          ? "tabpanel"
+          : undefined}
         aria-labelledby="settings-section-title"
         class="@container flex w-full flex-col gap-3"
       >
@@ -292,19 +430,24 @@
             tabindex="-1"
             class="font-display text-[15px] font-semibold tracking-tight"
           >
-            {section.label}
+            {sectionTitle}
           </h3>
         </div>
         <p class="max-w-2xl text-xs leading-5 text-muted-foreground">
-          {section.blurb}
+          {sectionBlurb}
         </p>
+        {#if sharedNote}
+          <p class="text-xs leading-5 text-muted-foreground">
+            <span class="font-medium">Shared</span> · {sharedNote}
+          </p>
+        {/if}
         <h2
           id="settings-section-title"
           class="sr-only"
           aria-live="polite"
           aria-atomic="true"
         >
-          {section.label} settings
+          {sectionTitle} settings
         </h2>
         {#if messages.length && pendingConnectionAction === null && !decisionOpen}<Notifications
             {messages}
@@ -426,7 +569,10 @@
               disabled={session.editor.saving}
             />
           {:else if active === "general"}
-            <GeneralSection bind:settings={session.editor.draft} />
+            <GeneralSection
+              bind:settings={session.editor.draft}
+              deliveryOnly={inspector}
+            />
           {:else if active === "shortcuts"}
             <ShortcutsSection
               bind:settings={session.editor.draft}
@@ -577,7 +723,9 @@
     >
       {#if session.editor.draft}
         <span
-          class="figure mr-auto flex items-center gap-2 text-xs font-medium text-muted-foreground"
+          class="figure mr-auto flex items-center gap-2 text-xs font-medium text-muted-foreground {inspector
+            ? 'w-full'
+            : ''}"
           aria-live="polite"
           aria-atomic="true"
         >
@@ -614,7 +762,7 @@
             {/if}
             {session.editor.saving
               ? "Saving…"
-              : saveReturnsToTask
+              : saveReturnsToTask && !inspector
                 ? "Save and return"
                 : "Save"}
           </Button>{/if}

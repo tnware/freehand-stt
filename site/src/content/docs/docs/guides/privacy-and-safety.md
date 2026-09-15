@@ -12,16 +12,16 @@ that server's own privacy and retention policy still applies.
 
 ## What goes where?
 
-| Data | Destination | What Freehand keeps |
-| --- | --- | --- |
-| Microphone or selected-file audio | Your configured speech-to-text endpoint | Audio for the active request; released afterward. Existing source files are unchanged. |
-| Transcript sent for cleanup | Your separate cleanup endpoint, when enabled | Keeping both versions after successful cleanup requires enabled session history. Raw failure fallback does not require history. |
-| API keys | The configured capability endpoint when authentication is enabled | Saved keys in Windows Credential Manager or macOS Keychain. |
-| Transcript history | Memory on your computer | Off by default; at most 20 entries and 2 MiB, cleared on exit. |
-| Speech playback text and audio | Your playback endpoint receives text and returns audio | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit. |
-| Update checks | GitHub release service | Update metadata and any downloaded update; no recordings or transcripts are sent. |
-| Managed runtime installation (Windows/macOS, optional) | Official pinned NeMo, llama.cpp, or whisper.cpp releases and the selected model’s download host | Runtime binaries and selected model weights in Freehand's application-data directory, until removed. |
-| Managed process output | Private memory on this computer; shown only after sensitive-output consent | A bounded rolling tail, cleared explicitly or on the next start attempt, runtime removal, or exit. Closing the viewer revokes access but does not erase the private tail. |
+| Data                                                   | Destination                                                                                     | What Freehand keeps                                                                                                                                                       |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Microphone or selected-file audio                      | Your configured speech-to-text endpoint                                                         | Audio for the active request; released afterward. Existing source files are unchanged.                                                                                    |
+| Transcript sent for cleanup                            | Your separate cleanup endpoint, when enabled                                                    | Keeping both versions after successful cleanup requires enabled session history. Raw failure fallback does not require history.                                           |
+| API keys                                               | The configured capability endpoint when authentication is enabled                               | Saved keys in Windows Credential Manager or macOS Keychain.                                                                                                               |
+| Transcript history                                     | Memory on your computer                                                                         | Off by default; at most 20 entries and 2 MiB, cleared on exit.                                                                                                            |
+| Speech playback text and audio                         | Your playback endpoint receives text and returns audio                                          | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit.                                                      |
+| Update checks                                          | GitHub release service                                                                          | Update metadata and any downloaded update; no recordings or transcripts are sent.                                                                                         |
+| Managed runtime installation (Windows/macOS, optional) | Official pinned NeMo, llama.cpp, or whisper.cpp releases and the selected model’s download host | Runtime binaries and selected model weights in Freehand's application-data directory, until removed.                                                                      |
+| Managed process output                                 | Private memory on this computer; shown only after sensitive-output consent                      | A bounded rolling tail, cleared explicitly or on the next start attempt, runtime removal, or exit. Closing the viewer revokes access but does not erase the private tail. |
 
 ## Managed local recognition
 
@@ -202,13 +202,16 @@ other sensitive upstream text; Freehand does not promise complete redaction.
 Transcript history being off does not prevent such text appearing in process
 output. This private capture is not saved as a log file.
 
-The separate viewer requires **Show output** consent each time it opens or
-switches runtime. Avoid displaying it during screen sharing. It is read-only,
+The shared **Runtime output** panel requires **Show output** consent before reading
+its selected runtime. Consent lasts while that viewer remains visible, including
+navigation between workflows, Connections, Local runtime, and History. Avoid
+displaying it during screen sharing. It is read-only,
 with search, colors, and progress updates but no command input or file logging.
 **Copy selection** puts only the text you select on the clipboard when you ask;
 other applications may read it, and it can remain after closing the viewer.
-Closing/switching clears displayed text
-and revokes access without stopping the runtime or erasing its private tail.
+Hiding the panel, changing its tab or runtime, opening global Settings, or hiding
+the workspace clears displayed text and revokes access without stopping the runtime
+or erasing its private tail.
 **Clear**, the next start attempt, runtime removal, and Quit discard the tail.
 Pausing scrolling does not pause collection. Freehand does not forward this
 output to application logs, events, or crash reports. See

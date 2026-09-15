@@ -354,6 +354,11 @@ test("Settings navigation keeps runtime management on the activity rail", async 
   await browser(page)
     .getByRole("button", { name: "History settings", exact: true })
     .click();
+  await expect(page.locator('[data-pane="configuration"]')).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Workspace", exact: true })
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
   const navigation = page.getByRole("navigation", {
     name: "Settings sections",
     exact: true,
@@ -361,12 +366,13 @@ test("Settings navigation keeps runtime management on the activity rail", async 
   await expect(
     navigation.locator('[data-settings-section="local-runtime"]'),
   ).toHaveCount(0);
-  const connections = navigation.locator(
-    '[data-settings-section="connections"]',
-  );
+  await expect(
+    navigation.locator('[data-settings-section="connections"]'),
+  ).toHaveCount(0);
+  const general = navigation.locator('[data-settings-section="general"]');
   const vocabulary = navigation.locator('[data-settings-section="vocabulary"]');
-  await connections.focus();
-  await connections.press("ArrowDown");
+  await general.focus();
+  await general.press("ArrowDown");
   await expect(vocabulary).toBeFocused();
   await expect(vocabulary).toHaveAttribute("aria-current", "page");
   await expect(page.locator('[data-pane="settings"]')).toBeVisible();

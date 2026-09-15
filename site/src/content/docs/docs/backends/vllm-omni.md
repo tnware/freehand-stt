@@ -15,16 +15,16 @@ expose its HTTP API. Configure model loading and the GPU on that server.
 
 ## Connect Freehand
 
-1. Open **Settings → Connections → Add connection**.
+1. Open **Connections → Add connection**.
 2. Choose **vLLM-Omni**, select **Text to speech** under **Used for**, and enter the HTTP API root,
    such as `http://127.0.0.1:8091/v1` for a local service on port 8091.
 3. Configure authentication. If using HTTP on a trusted network, enable
    **Allow HTTP for this connection**, then save.
-4. In **Text to speech**, select the connection and model.
+4. Open **Text to speech** and its **Settings** cog, then select the connection and model in **Speech** options.
 5. Choose the [Qwen3-TTS model profile](../../models/qwen3-tts/) to use its preset
    speakers, ten languages, and voice-style instructions.
 6. Turn on **Enable text to speech**, choose a preset voice, and use **Preview**
-   to hear it. Choose **Save** (or **Save and return** when opened from a task).
+   to hear it. Choose **Save**.
 
 Connection checks use model metadata. **Refresh voices** reads `/v1/audio/voices`.
 Speech generation uses `POST /v1/audio/speech` with `response_format: "wav"` and

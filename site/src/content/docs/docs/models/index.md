@@ -16,16 +16,18 @@ need to enter a model ID or choose its profile manually.
 
 ## Choose a model profile
 
-For a manual Connection, open **Settings → Voice transcription**, **Audio-file transcription**, **Cleanup**, or **Text to speech**.
+For a manual Connection, use the workflow page's **Settings** cog to open its right
+options sidebar. Choose **Transcription** in Voice or Audio file, **Cleanup** in
+either transcription workflow, or **Speech** in Text to speech.
 Choose an active connection, choose or enter the model, and review **Model
 profile** directly beneath it. Choose a specialized profile only when you know
-that is the model your server is running, then choose **Save** or **Save and return**.
+that is the model your server is running, then choose **Save**.
 
-| Feature            | Available model profiles                                                               | Behavior                                                                                                                                                                                    |
-| ------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Feature            | Available model profiles                                                                                                                                                      | Behavior                                                                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Voice / Audio file | Generic; [Nemotron](./nemotron/), [Parakeet](./parakeet/), [Qwen3-ASR](./qwen3-asr/), [Cohere Transcribe](./cohere-transcribe/), [Voxtral Mini Realtime](./voxtral-realtime/) | Each profile shows the recognition controls supported by its backend. Nemotron, Qwen3-ASR, and Voxtral enable optional realtime for Voice. |
-| Cleanup            | Generic; [S1-mini by Superwhisper](./s1-mini/)                                         | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                                                                             |
-| Text to speech | Generic; [Qwen3-TTS](./qwen3-tts/) on vLLM-Omni | WAV speech with a voice ID and speed. Qwen3-TTS adds preset voices, language, and style instructions. |
+| Cleanup            | Generic; [S1-mini by Superwhisper](./s1-mini/)                                                                                                                                | Generic uses your cleanup instruction. S1-mini uses its fixed normalization prompt and trained output controls.                            |
+| Text to speech     | Generic; [Qwen3-TTS](./qwen3-tts/) on vLLM-Omni                                                                                                                               | WAV speech with a voice ID and speed. Qwen3-TTS adds preset voices, language, and style instructions.                                      |
 
 If a backend offers only Generic, Freehand uses it without a profile selector.
 
@@ -39,7 +41,7 @@ name, download a model, or run one to detect its capabilities. Manual whisper.cp
 connections use the model already loaded by the server; managed whisper.cpp
 loads the model you select in Local runtime.
 
-For a manual Connection, Voice's **Transcription** quick settings also let you choose a model profile.
+Voice's **Transcription** options keep completed and realtime configuration together.
 With NeMo-Speech.cpp/Nemotron, vLLM/Qwen3-ASR, or vLLM/Voxtral Mini Realtime,
 enable **Realtime transcription** for live results and optional overlay captions.
 Turning realtime off keeps the same connection and model for completed
@@ -62,26 +64,26 @@ Connection, choose a downloaded model in the runtime controls; every task using
 that runtime shares its selected model.
 
 Voice, Audio file, Cleanup, and Text to speech use the same searchable **Model**
-picker in quick controls and Settings. **Saved** identifies remembered options,
+picker in their options and first-run setup controls. **Saved** identifies remembered options,
 **Server** identifies an advertised model, and **Edited** identifies a model with
-draft options in this Settings session. An ID can have more than one label;
+draft options in this editing session. An ID can have more than one label;
 **Manual ID** means it came from neither the saved list nor current discovery.
 The selected model's profile appears below the picker. You can enter an exact ID
 without refreshing models; discovery never chooses a profile for you.
 
-Quick panels show **Saving…**, **Saved**, or a failed-save message beside their
-controls. A failed save keeps the previously applied settings active; retry the
-change to save it. In Settings, choose **Save** or **Save and return** to apply edits.
+Choose **Save** in the options sidebar to apply your edits together. A failed save
+keeps the previously applied settings active and preserves the draft for correction.
+First-run setup controls apply valid changes immediately and show their save status.
 
 Freehand remembers your choices separately for each **connection, feature, and
 model ID**. Choose a saved model from the searchable **Model** picker to restore those options
 without listing models on the server. A new model ID starts with Generic and
 Freehand's default model options; its name never selects a specialized profile.
 
-| Feature        | Remembered model options                                    |
-| -------------- | ----------------------------------------------------------- |
-| Transcription  | Model profile, prose context hint, and temperature override |
-| Cleanup        | Model profile, output limit, and reasoning override         |
+| Feature        | Remembered model options                                            |
+| -------------- | ------------------------------------------------------------------- |
+| Transcription  | Model profile, prose context hint, and temperature override         |
+| Cleanup        | Model profile, output limit, and reasoning override                 |
 | Text to speech | Model profile, voice, speech language, and voice-style instructions |
 
 Changing models or connections keeps your transcription language, custom cleanup
@@ -91,11 +93,11 @@ switch: selecting S1-mini does not change the transcription language, and it
 skips cleanup for known non-English input.
 
 Search or enter a model ID in the **Model** picker, select it, then review its options.
-**Save** or **Save and return** saves the current selection and all edited model options together.
-Switching models in Settings changes your draft; **Discard** restores the applied
+**Save** saves the current selection and all edited model options together.
+Switching models in options changes your draft; **Discard** restores the applied
 selection. You can switch freely: unsaved options stay in this editing session for each
 model, and returning to that model restores your edits. Discard clears all of
-these model drafts. Home-screen model controls apply and save
+these model drafts. First-run setup model controls apply and save
 immediately, including the restored options.
 
 Switching connections restores that connection's last selected model for the

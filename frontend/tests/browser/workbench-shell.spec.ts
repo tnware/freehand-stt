@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { openSection } from "./context-navigation";
 
 const rail = (page: import("@playwright/test").Page) =>
   page.getByRole("navigation", { name: "Workspace", exact: true });
@@ -6,7 +7,7 @@ const rail = (page: import("@playwright/test").Page) =>
 test("rail navigation resolves settings drafts before leaving and resets the task origin", async ({
   page,
 }) => {
-  await page.locator('[data-settings-section="general"]').click();
+  await openSection(page, "general");
   const launch = page.getByRole("switch", {
     name: "Show window when launched",
     exact: true,
@@ -102,7 +103,9 @@ test("command palette reaches every setting and protects active workflow navigat
   );
   await input.press("Enter");
   await expect(
-    page.getByRole("heading", { name: "History", exact: true }),
+    page
+      .locator('[data-pane="configuration"]')
+      .getByRole("heading", { name: "History", exact: true }),
   ).toBeVisible();
 });
 
@@ -125,5 +128,9 @@ test("a delayed native request cannot reopen settings after the window is hidden
     .toBe(true);
   await page.evaluate(() => window.testConnectionWindows.hide());
   await page.evaluate(() => (window as any).releaseSettingsRequest());
-  await expect(page.locator('[data-pane="settings"]')).toHaveCount(0);
+  await expect(
+    page.locator(
+      '[data-pane="settings"], [data-pane="configuration"], [data-pane="connections"]',
+    ),
+  ).toHaveCount(0);
 });

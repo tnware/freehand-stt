@@ -67,11 +67,11 @@ Invoke-RestMethod http://127.0.0.1:8052/health
 Invoke-RestMethod http://127.0.0.1:8052/v1/models
 ```
 
-In **Settings → Connections**, create a **vLLM** connection for
+In **Connections**, create a **vLLM** connection for
 **Voice transcription** with base URL **`http://127.0.0.1:8052/v1`**,
 authentication **None**, and **Allow HTTP for this connection** enabled.
 Save it, then select it in
-**Settings → Voice transcription** with model **`Qwen/Qwen3-ASR-0.6B`** and
+**Voice transcription → Transcription** with model **`Qwen/Qwen3-ASR-0.6B`** and
 the **Qwen3-ASR** model profile. Leave realtime off for this completed-audio
 recipe. Save, then try a short recording with automatic detection or English.
 
@@ -103,7 +103,7 @@ docker run --detach --name freehand-vllm-cleanup `
 
 Check `/health` and `/v1/models` at port **8053**. Create a **vLLM** connection
 for **Cleanup** with base URL **`http://127.0.0.1:8053/v1`**, authentication
-**None**, and **Allow HTTP for this connection** enabled. In **Settings → Cleanup**, select that
+**None**, and **Allow HTTP for this connection** enabled. In **Voice transcription → Cleanup**, select that
 connection, enable cleanup, and choose model **`superwhisper/s1-mini`** with
 the **S1-mini by Superwhisper** model profile. Save your changes. Freehand
 requests reasoning off for this profile. The 2,048-token context in this
@@ -122,7 +122,7 @@ volume remains.
 ## Connect
 
 Use a Base URL ending in `/v1`, such as `http://127.0.0.1:8000/v1`, and the
-model ID advertised by that server. In **Settings → Connections**, create an
+model ID advertised by that server. In **Connections**, create an
 entry with the **vLLM** profile and enable **Voice transcription**,
 **Audio-file transcription**, or **Cleanup** under **Used for**, according to
 the routes your deployment exposes. Set its URL,

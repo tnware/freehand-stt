@@ -21,13 +21,13 @@ test("speech settings retain a failed voice draft and return to the composer aft
     exact: true,
   });
   await sidebar.getByRole("button", { name: /^Voice / }).click();
-  const settings = page.locator('[data-pane="settings"]');
+  const settings = page.locator('[data-pane="configuration"]');
   const voice = settings.getByRole("combobox", {
     name: "Choose voice",
     exact: true,
   });
   const save = settings.getByRole("button", {
-    name: "Save and return",
+    name: "Save",
     exact: true,
   });
   await voice.fill("custom-voice");
@@ -43,6 +43,8 @@ test("speech settings retain a failed voice draft and return to the composer aft
   await expect(settings).toBeVisible();
   await save.click();
   await saves.complete(await saves.waitForStart(), "success");
+  await expect(settings).toBeVisible();
+  await settings.getByRole("button", { name: "Done", exact: true }).click();
   await expect(settings).toHaveCount(0);
   await expect(sidebar).toBeHidden();
   await page
@@ -113,7 +115,7 @@ test("failed speech model and speed edits can be discarded or saved without losi
     exact: true,
   });
   await sidebar.getByRole("button", { name: /^Model / }).click();
-  const settings = page.locator('[data-pane="settings"]');
+  const settings = page.locator('[data-pane="configuration"]');
   const model = settings.getByRole("combobox", {
     name: "Choose model",
     exact: true,
@@ -125,7 +127,7 @@ test("failed speech model and speed edits can be discarded or saved without losi
   });
   const before = Number(await slider.getAttribute("aria-valuenow"));
   const save = settings.getByRole("button", {
-    name: "Save and return",
+    name: "Save",
     exact: true,
   });
   await model.fill("speech/alternate");
@@ -156,6 +158,8 @@ test("failed speech model and speed edits can be discarded or saved without losi
   await slider.press("ArrowRight");
   await save.click();
   await saves.complete(await saves.waitForStart(), "success");
+  await expect(settings).toBeVisible();
+  await settings.getByRole("button", { name: "Done", exact: true }).click();
   await expect(settings).toHaveCount(0);
   await expect(sidebar.getByRole("button", { name: /^Model / })).toContainText(
     "speech/alternate",

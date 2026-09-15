@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import type { Session } from "$lib/stores/session.svelte";
   import { saveConnectionAndContinue } from "$lib/shell-navigation.svelte";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
+  import SidebarContribution from "$lib/components/shell/SidebarContribution.svelte";
   import { Action, Purpose, type Connection } from "$bindings/savedconnection";
   import {
     connectionSection,
@@ -31,6 +32,7 @@
   let {
     session,
     initialRequest,
+    workbenchPage = false,
     onReturn,
     onManageRuntime = () => {
       void WindowingService.OpenSettings("local-runtime").catch((cause) =>
@@ -41,11 +43,13 @@
   }: {
     session: Session;
     initialRequest: ConnectionManagerRequest;
+    workbenchPage?: boolean;
     onReturn: (purpose?: Purpose) => void;
     onManageRuntime?: () => void;
     onCancelClose?: () => void;
   } = $props();
   const layout = getWorkbenchLayout();
+  const fullPage = $derived(workbenchPage && !!layout);
   let request = $state<ConnectionManagerRequest | null>(null);
   let visible = $state(false);
   let loading = $state(false);
@@ -153,12 +157,17 @@
     });
   }
   function select(connection: Connection) {
-    if (connection.id === selectedID && editor.connectionDraft) return;
+    if (connection.id === selectedID && editor.connectionDraft) {
+      closeCatalog();
+      return;
+    }
     navigate(() => {
       request = null;
       selectedID = connection.id;
       activateFor = undefined;
       editor.beginConnection(connection);
+      if (connection.builtIn || editor.connectionDraft?.id === connection.id)
+        void closeCatalog();
     });
   }
   function add() {
@@ -167,7 +176,16 @@
       selectedID = "";
       activateFor = undefined;
       editor.beginConnection();
+      if (editor.connectionDraft?.creating) void closeCatalog();
     });
+  }
+  async function closeCatalog() {
+    if (!fullPage || !layout?.compact.current || !layout.compactPrimaryOpen)
+      return;
+    // Let a save/discard dialog release its focus before closing the drawer.
+    await tick();
+    if (fullPage && layout.compact.current && layout.compactPrimaryOpen)
+      layout.closePrimary();
   }
   function discard() {
     const action = pendingAction;
@@ -283,6 +301,8 @@
     if (
       event.key === "Escape" &&
       !event.defaultPrevented &&
+      !layout?.compactPrimaryOpen &&
+      !layout?.compactSecondaryOpen &&
       !discardOpen &&
       !deleteOpen
     ) {
@@ -299,7 +319,7 @@
     class="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-hairline px-5 py-2"
   >
     <div class="flex min-w-0 items-center gap-3">
-      {#if showingDetails}<Button
+      {#if showingDetails && !fullPage}<Button
           variant="ghost"
           size="sm"
           disabled={busy}
@@ -309,9 +329,9 @@
         <h1 class="truncate font-display text-[15px] font-semibold">
           Connections
         </h1>
-        <p class="text-xs text-muted-foreground">
-          Saved servers and built-in runtimes
-        </p>
+        {#if !fullPage}<p class="text-xs text-muted-foreground">
+            Saved servers and built-in runtimes
+          </p>{/if}
       </div>
     </div>
     <Button variant="outline" disabled={busy} onclick={() => leave(true)}
@@ -329,17 +349,32 @@
         {inlineError}
       </p>{/if}
     <div class="manager-body" class:editing={showingDetails}>
-      <aside class="connection-list bg-background">
-        <ConnectionList
-          catalog={editor.applied.savedConnections}
-          instances={session.runtime.instances}
-          selected={selectedID}
-          creating={editor.connectionDraft?.creating}
-          {busy}
-          onSelect={select}
-          onAdd={add}
-        />
-      </aside>
+      {#if fullPage}
+        <SidebarContribution id="connections">
+          <ConnectionList
+            catalog={editor.applied.savedConnections}
+            instances={session.runtime.instances}
+            selected={selectedID}
+            creating={editor.connectionDraft?.creating}
+            {busy}
+            sidebar
+            onSelect={select}
+            onAdd={add}
+          />
+        </SidebarContribution>
+      {:else}
+        <aside class="connection-list bg-background">
+          <ConnectionList
+            catalog={editor.applied.savedConnections}
+            instances={session.runtime.instances}
+            selected={selectedID}
+            creating={editor.connectionDraft?.creating}
+            {busy}
+            onSelect={select}
+            onAdd={add}
+          />
+        </aside>
+      {/if}
       {#if showingDetails}<section
           aria-label={selected?.builtIn
             ? "Connection details"
@@ -501,7 +536,25 @@
                 onBack={() => leave(false)}
               />
             </footer>{/if}
-        </section>{/if}
+        </section>
+      {:else if fullPage}
+        <section
+          aria-label="Connection details"
+          class="min-h-0 flex-1 overflow-y-auto px-5 py-5"
+        >
+          <h2 class="text-[13px] font-medium">Choose a connection</h2>
+          <p
+            class="mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground"
+          >
+            Select a saved server or built-in runtime from the sidebar to review
+            its settings, check its connection, or choose which workflows use
+            it.
+          </p>
+          <Button class="mt-4" variant="outline" disabled={busy} onclick={add}
+            >Create connection</Button
+          >
+        </section>
+      {/if}
     </div>
   {:else if inlineError}<div class="p-5">
       <p role="alert" class="text-sm text-destructive">

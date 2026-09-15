@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { Events } from "@wailsio/runtime";
   import * as OverlayService from "$bindings/overlay/service";
   import type { ShortcutCaptureProgress } from "$bindings/input";
@@ -25,21 +25,39 @@
     navigation,
     onReturn,
     onOpenRuntimes = onReturn,
+    inspector = false,
+    visible = true,
+    sections,
+    workbenchPage = false,
+    onNavigateExternal,
+    onConnectionNavigate,
+    onRevealSection,
   }: {
     session: Session;
     navigation: ShellNavigation;
     onReturn: () => void;
     onOpenRuntimes?: () => void;
+    inspector?: boolean;
+    visible?: boolean;
+    sections?: SettingsSectionID[];
+    workbenchPage?: boolean;
+    onNavigateExternal?: (section: SettingsSectionID) => void;
+    onConnectionNavigate?: (request: ConnectionManagerRequest) => void;
+    onRevealSection?: (section: SettingsSectionID) => void;
   } = $props();
   let manager = $state<ConnectionManagerWindow>();
+  let screen = $state<SettingsScreen>();
   let pending = $state<(() => void) | null>(null);
   let overlayPreviewing = $state(false);
   let revision = 0;
   let alive = true;
   let afterConnection = $state<(() => void) | null>(null);
   $effect(() => {
+    if (!visible && overlayPreviewing) stopOverlayPreview();
+  });
+  $effect(() => {
     const settings = session.editor.draft;
-    if (!overlayPreviewing || !settings) return;
+    if (!visible || !overlayPreviewing || !settings) return;
     const current = ++revision;
     void OverlayService.StartPreview({
       preferences: {
@@ -84,6 +102,7 @@
   export function acceptRequest(request: SettingsRequest) {
     const blocked =
       (manager?.blocksReentry() ?? false) ||
+      (screen?.blocksNavigation() ?? false) ||
       pending !== null ||
       afterConnection !== null ||
       session.editor.dirty ||
@@ -95,6 +114,7 @@
     return navigation.acceptRequest(request, false);
   }
   function guard(action: () => void) {
+    if (screen?.blocksNavigation()) return;
     if (!alive || pending || afterConnection || session.editor.saving) return;
     if (manager)
       acceptConnectionClose(session.editor, () => {
@@ -107,15 +127,24 @@
   export function requestClose(action = onReturn) {
     guard(action);
   }
+  export async function revealValidationIssue() {
+    if (alive) await screen?.revealValidationIssue();
+  }
   export function openConnection(request: ConnectionManagerRequest) {
     guard(() => {
       teardown();
+      if (onConnectionNavigate) {
+        onConnectionNavigate(request);
+        return;
+      }
       navigation.connection = null;
       navigation.openConnection(request);
     });
   }
   export function selectSection(section: SettingsSectionID) {
-    if (section === "local-runtime") requestClose(onOpenRuntimes);
+    if (sections && !sections.includes(section) && onNavigateExternal)
+      guard(() => onNavigateExternal(section));
+    else if (section === "local-runtime") requestClose(onOpenRuntimes);
     else if (pending || afterConnection || session.editor.saving) return;
     else if (manager)
       guard(() => {
@@ -133,7 +162,14 @@
     }
   }
   async function resolve(save: boolean) {
-    if (save && !(await session.editor.save())) return;
+    if (save && !(await session.editor.save())) {
+      if (alive && session.editor.validationIssue) {
+        pending = null;
+        await tick();
+        await revealValidationIssue();
+      }
+      return;
+    }
     if (!alive) return;
     if (save) shortcutCapture.markSaved();
     else session.editor.discardSettingsDraft();
@@ -146,7 +182,8 @@
     const next = afterConnection;
     afterConnection = null;
     navigation.returnFromConnection(purpose);
-    next?.();
+    if (next) next();
+    else if (onNavigateExternal) onNavigateExternal(navigation.active);
   }
   onMount(() => {
     const off = Events.On(
@@ -164,13 +201,25 @@
   });
 </script>
 
-<div data-pane="settings" class="flex min-h-0 flex-1 overflow-hidden">
+<div
+  data-pane={workbenchPage
+    ? "connections"
+    : inspector
+      ? "configuration"
+      : "settings"}
+  class="flex min-h-0 min-w-0 flex-1 overflow-hidden"
+>
   {#if navigation.active === "connections"}
-    <SettingsNav active="connections" onSelect={selectSection} />
+    {#if !workbenchPage}<SettingsNav
+        active="connections"
+        onSelect={selectSection}
+        {sections}
+      />{/if}
     {#key navigation.connection}
       <ConnectionManagerWindow
         bind:this={manager}
         {session}
+        {workbenchPage}
         onCancelClose={() => (afterConnection = null)}
         onManageRuntime={() => selectSection("local-runtime")}
         initialRequest={navigation.connection ?? {
@@ -188,15 +237,20 @@
     {/key}
   {:else}
     <SettingsScreen
+      bind:this={screen}
       bind:session
       bind:active={navigation.active}
+      {inspector}
+      {visible}
+      {sections}
+      {onRevealSection}
       onClose={() => requestClose()}
       onOpenRuntimes={() => requestClose(onOpenRuntimes)}
       decisionOpen={pending !== null}
       onNavigate={selectSection}
       onOpenConnection={openConnection}
       onSaved={() => {
-        if (alive && navigation.saveReturnsToTask) onReturn();
+        if (alive && !inspector && navigation.saveReturnsToTask) onReturn();
       }}
       saveReturnsToTask={navigation.saveReturnsToTask}
       {overlayPreviewing}

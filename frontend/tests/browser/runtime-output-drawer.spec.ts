@@ -109,7 +109,7 @@ test("global runtime output requires consent and clears on window or panel hide"
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });
 
-test("accepted visible output survives page navigation and resets when its tab changes", async ({
+test("accepted output survives page navigation and resets in Settings or when its tab changes", async ({
   page,
 }) => {
   await installOutputFixture(page);
@@ -127,7 +127,6 @@ test("accepted visible output survives page navigation and resets when its tab c
   await show.click();
   await expect(output).toContainText("Sensitive startup diagnostic");
   for (const area of [
-    "Settings",
     "Local runtime",
     "History",
     "Audio file",
@@ -145,8 +144,30 @@ test("accepted visible output survives page navigation and resets when its tab c
   expect(
     (await outputCalls(page)).filter((call) => call.startsWith("enable:")),
   ).toEqual(["enable:nemo-default"]);
-  await page.getByRole("tab", { name: "Diagnostics", exact: true }).click();
+  const workspace = page.getByRole("navigation", {
+    name: "Workspace",
+    exact: true,
+  });
+  await workspace
+    .getByRole("button", { name: "Settings", exact: true })
+    .click();
+  await expect(page.locator("#workbench-bottom-panel")).toHaveCount(0);
   await expect.poll(() => disableCalls(page)).toEqual(["disable:nemo-default"]);
+  await workspace
+    .getByRole("button", { name: "Voice transcription", exact: true })
+    .click();
+  await expect(outputTab).toHaveAttribute("aria-selected", "true");
+  await expect(show).toBeVisible();
+  await expect(output).toHaveText("");
+  await show.click();
+  await expect(output).toContainText("Sensitive startup diagnostic");
+  expect(
+    (await outputCalls(page)).filter((call) => call.startsWith("enable:")),
+  ).toEqual(["enable:nemo-default", "enable:nemo-default"]);
+  await page.getByRole("tab", { name: "Diagnostics", exact: true }).click();
+  await expect
+    .poll(() => disableCalls(page))
+    .toEqual(["disable:nemo-default", "disable:nemo-default"]);
   await outputTab.click();
   await expect(show).toBeVisible();
   await expect(output).toHaveText("");

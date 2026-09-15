@@ -3,19 +3,19 @@ title: Choose a transcription language
 description: Select input languages, understand automatic detection, and use English-only S1-mini cleanup safely.
 ---
 
-Open **Settings → Voice transcription** or **Settings → Audio-file transcription**
-and choose **Spoken language**. Search by language name or code, then choose
-**Save** (or **Save and return** when opened from a task). Voice and audio files keep independent language selections
+Open **Voice transcription** or **Audio file**, use the page's **Settings** cog,
+and choose **Transcription → Spoken language** in the right options sidebar.
+Search by language name or code, then choose **Save**. Voice and audio files keep independent language selections
 when you change models or connections. This setting requests transcription in
 the source language, not translation.
 
 ## Choose a mode
 
-| Choice | Behavior |
-| --- | --- |
-| Server default | Lets the server detect a language or use its configured default. |
-| Automatic detection | Asks the server to detect the language, where supported by the selected model. |
-| A named language | Sends its code, such as `en`, `es`, or `ja`. |
+| Choice              | Behavior                                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Server default      | Lets the server detect a language or use its configured default.                                                              |
+| Automatic detection | Asks the server to detect the language, where supported by the selected model.                                                |
+| A named language    | Sends its code, such as `en`, `es`, or `ja`.                                                                                  |
 | Custom server value | Preserves an explicit value required by a compatible server. Existing unlisted values appear here rather than being replaced. |
 
 The available choices depend on the model profile. The **Generic** list includes
@@ -42,12 +42,12 @@ Automatic detection behavior.
 
 ## Provider behavior
 
-| Backend with Generic model profile | Server default | Automatic detection | Named language |
-| --- | --- | --- | --- |
-| Generic OpenAI-compatible | Use the server's default | Rely on the server's detection behavior | Request the selected language |
-| Speaches | Use the server's default | Detect with a supported model, such as Whisper | Request the selected language |
-| whisper.cpp | Keep the server's configured language | Override the server default with automatic detection | Request the selected language |
-| vLLM | Use the server's default | Detect if the model supports it | Request the selected language |
+| Backend with Generic model profile | Server default                        | Automatic detection                                  | Named language                |
+| ---------------------------------- | ------------------------------------- | ---------------------------------------------------- | ----------------------------- |
+| Generic OpenAI-compatible          | Use the server's default              | Rely on the server's detection behavior              | Request the selected language |
+| Speaches                           | Use the server's default              | Detect with a supported model, such as Whisper       | Request the selected language |
+| whisper.cpp                        | Keep the server's configured language | Override the server default with automatic detection | Request the selected language |
+| vLLM                               | Use the server's default              | Detect if the model supports it                      | Request the selected language |
 
 For Generic, Speaches, and vLLM, Server default and Automatic detection send the
 same request. With whisper.cpp, choose Automatic detection if you want to

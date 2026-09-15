@@ -14,10 +14,12 @@ Save a server once, then choose it for any task it supports. See
 
 ## Start from your task
 
-Choose **Voice**, **Audio file**, or **Text to speech**, then **Add connection…** in its connection
-picker. Enter the server details and choose **Save and return**, then select a
-model. Save your model settings to return to the task. You can also add a server
-under **Settings → Connections**.
+Choose **Voice transcription**, **Audio file**, or **Text to speech**, then use the
+page's **Settings** cog to open its options on the right. Open **Transcription**
+for Voice or files, or **Speech** for text to speech, then choose **Add connection…**
+in its connection picker. Enter the server details and choose **Save and return**,
+then select a model and choose **Save** in the options sidebar. You can also add a
+server from **Connections** on the activity rail.
 
 - **Voice dictation** is the default task. It needs STT and a microphone;
   complete its readiness screen before recording. A recording shortcut is optional.
@@ -26,7 +28,7 @@ under **Settings → Connections**.
 - **Audio file** has its own speech-to-text connection and model. It does not
   require a microphone or recording shortcut.
 - **Text to speech** needs its own speech connection, model and voice ID, and
-  **Enable text to speech** under **Settings → Text to speech**. It needs no STT
+  **Enable text to speech** under **Text to speech → Speech**. It needs no STT
   connection and can be used before dictation setup.
 
 Optional **Cleanup** sends the transcript to a chat model for editing. Leave it
@@ -83,7 +85,7 @@ or browse the [backend guides](../../backends/).
 
 ## Choose a language
 
-Open **Settings → Voice transcription** or **Audio-file transcription** and
+Open **Voice transcription → Transcription** or **Audio file → Transcription** and
 search the language picker by name or code. **Server default** uses your server's
 language setting; **Automatic detection** asks it to identify the language.
 Choose a language your model supports, or use **Custom server value** if your
@@ -96,11 +98,11 @@ English-only cleanup behavior. Language selection does not request translation.
 
 Choose the server software under **Backend** when adding or editing a connection:
 
-| Connection                            | Available profiles                                     |
-| ------------------------------------- | ------------------------------------------------------ |
+| Connection                            | Available profiles                                                      |
+| ------------------------------------- | ----------------------------------------------------------------------- |
 | Speech to text (microphone and files) | Generic OpenAI-compatible, Speaches, whisper.cpp, vLLM, NeMo-Speech.cpp |
-| Cleanup (optional stage after STT)    | Generic OpenAI-compatible, llama.cpp, vLLM             |
-| Text to speech                        | Generic OpenAI-compatible, Speaches, Kokoro-FastAPI, vLLM-Omni |
+| Cleanup (optional stage after STT)    | Generic OpenAI-compatible, llama.cpp, vLLM                              |
+| Text to speech                        | Generic OpenAI-compatible, Speaches, Kokoro-FastAPI, vLLM-Omni          |
 
 Choose the profile matching your server. For another OpenAI-compatible service,
 use **Generic OpenAI-compatible** and check its [requirements](../../backends/generic/).
@@ -199,17 +201,17 @@ server. For connection or request failures, see [Troubleshooting](../troubleshoo
 
 ## Transcription controls
 
-Choose options separately under **Settings → Voice transcription** and
-**Audio-file transcription**. Voice shows context hints with its model options
+Choose options separately under **Voice transcription → Transcription** and
+**Audio file → Transcription**. Voice shows context hints with its model options
 and temperature under **Request settings**. Audio files group these under
 **Transcription controls**. Only options supported by the selected backend and
 model profile are available. Save before starting a new transcription.
 
-| Setting               | Use                                                                                                                                | Availability                                             |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Transcription context | Short subject matter or examples of expected wording. Leave blank if you do not need a hint. | Generic, Speaches, whisper.cpp, and vLLM; model and mode support varies. |
-| Vocabulary | Names and phrases to favor during recognition. Edit the shared list under **Settings → Vocabulary** and enable it for each task. | See [Vocabulary](../vocabulary/) for supported combinations and limits. |
-| Override temperature | Set a value from 0 to 1. Leave off to use the server default. Higher values can produce more variation. | Generic, Speaches, whisper.cpp, and vLLM; model and mode support varies. |
+| Setting               | Use                                                                                                                              | Availability                                                             |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Transcription context | Short subject matter or examples of expected wording. Leave blank if you do not need a hint.                                     | Generic, Speaches, whisper.cpp, and vLLM; model and mode support varies. |
+| Vocabulary            | Names and phrases to favor during recognition. Edit the shared list under **Settings → Vocabulary** and enable it for each task. | See [Vocabulary](../vocabulary/) for supported combinations and limits.  |
+| Override temperature  | Set a value from 0 to 1. Leave off to use the server default. Higher values can produce more variation.                          | Generic, Speaches, whisper.cpp, and vLLM; model and mode support varies. |
 
 Context and vocabulary help recognition; they do not guarantee spelling or edit
 words after transcription. Use [Cleanup](../post-processing/) for editing.

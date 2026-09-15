@@ -1,3 +1,4 @@
+import { openSection } from "./context-navigation";
 import { test, expect } from "./fixtures";
 import type { Page } from "@playwright/test";
 
@@ -293,7 +294,7 @@ test("leaving edited settings for runtime operations resolves the draft first", 
   page,
 }) => {
   await page.goto("/tests/browser/app/?runtime&runtime-ready");
-  await page.locator('[data-settings-section="audio"]').click();
+  await openSection(page, "audio");
   await page.locator("#max-duration").fill("90");
   await openRuntimes(page);
   await expect(page.getByRole("dialog")).toContainText("Save changes?");

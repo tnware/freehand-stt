@@ -1,11 +1,15 @@
 import { test, expect } from "./fixtures";
+import { openSection } from "./context-navigation";
 
 test("runtime connections have read-only details and navigate to their owners", async ({
   page,
 }) => {
   await page.goto("/tests/browser/app/?runtime&runtime-ready");
-  await page.locator('[data-settings-section="connections"]').click();
-  await page.getByRole("button", { name: /Local speech/ }).click();
+  await openSection(page, "connections");
+  await page
+    .getByRole("navigation", { name: "Saved connections" })
+    .getByRole("button", { name: /Local speech/ })
+    .click();
   const details = page.getByRole("region", {
     name: "Connection details",
     exact: true,
@@ -61,6 +65,7 @@ test("runtime connections have read-only details and navigate to their owners", 
     "Local speech",
   );
   await page
+    .locator('[data-pane="configuration"]')
     .getByRole("button", { name: "Connection details", exact: true })
     .click();
   await details
@@ -79,8 +84,11 @@ test("new manual connections never offer managed-target creation, while legacy a
   page,
 }) => {
   await page.goto("/tests/browser/app/?runtime&runtime-ready&legacy-runtime");
-  await page.locator('[data-settings-section="connections"]').click();
-  await page.getByRole("button", { name: /Local speech/ }).click();
+  await openSection(page, "connections");
+  await page
+    .getByRole("navigation", { name: "Saved connections" })
+    .getByRole("button", { name: /Local speech/ })
+    .click();
   await expect(page.locator("#connection-name")).toHaveValue("Local speech");
   await expect(page.locator("#connection-instance")).toBeVisible();
   await expect(page.locator("#connection-url")).toHaveCount(0);
@@ -102,7 +110,7 @@ for (const theme of ["dark", "light"] as const) {
     await page.setViewportSize({ width: 860, height: 1000 });
     await page.emulateMedia({ colorScheme: theme });
     await page.goto(`/tests/browser/app/?runtime&runtime-ready&theme=${theme}`);
-    await page.locator('[data-settings-section="connections"]').click();
+    await openSection(page, "connections");
     const connections = page.getByRole("navigation", {
       name: "Saved connections",
     });

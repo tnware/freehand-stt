@@ -10,7 +10,8 @@ through **vLLM-Omni v0.18.0**.
 ## Choose the model and voice
 
 Follow the [vLLM-Omni connection guide](../../backends/vllm-omni/), then open
-**Settings → Text to speech**. Select the connection, choose the served model,
+**Text to speech** and its **Settings** cog to show **Speech** options on the right.
+Select the connection, choose the served model,
 and select **Qwen3-TTS 1.7B CustomVoice** as the model profile. Turn on
 **Enable text to speech** and choose a preset voice.
 
@@ -28,9 +29,8 @@ server metadata without generating audio.
 
 Choose **Preview** to hear the current edits before saving. The preview uses
 your draft voice, model profile, language, style, speed, and timeout together.
-It does not save those edits. Choose **Save** (or **Save and return** when opened
-from a task) to apply them to the composer and explicit Listen actions.
-Speech quick settings also offer language and style.
+It does not save those edits. Choose **Save** to apply them to the composer and
+explicit Listen actions.
 
 Language and style are remembered with this model's voice settings. Switching
 models keeps speaking speed in place. Generated audio stays in memory until you

@@ -16,10 +16,10 @@ checks or explicit-copy setting; cancellation prevents automatic insertion.
 
 ## Choose a workflow
 
-| Choice                        | Configuration                                                                                             |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Leave transcription unchanged | Keep **Cleanup** off; no chat endpoint is needed.                                                         |
-| Use your own cleanup model    | Enable processing, select **Generic**, and supply a compatible chat endpoint and model.                   |
+| Choice                        | Configuration                                                                                                                                            |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Leave transcription unchanged | Keep **Cleanup** off; no chat endpoint is needed.                                                                                                        |
+| Use your own cleanup model    | Enable processing, select **Generic**, and supply a compatible chat endpoint and model.                                                                  |
 | Use S1-mini by Superwhisper   | Enable cleanup with [managed llama.cpp](../local-runtime/#local-cleanup-with-s1-mini), or select its dedicated profile on a manually configured service. |
 
 :::tip[Compare both versions]
@@ -36,7 +36,8 @@ Set up a connection for cleanup, then choose the model and instruction:
 
 <Steps>
 
-1. Open **Settings → Cleanup** and choose **Add connection…** in the connection picker.
+1. Open **Voice transcription** or **Audio file**, select its **Settings** cog,
+   and choose **Cleanup** in the right options sidebar. Choose **Add connection…** in the connection picker.
    Name the connection and choose its backend profile.
 2. Enter the processor's OpenAI-compatible base URL, normally ending in `/v1`.
 3. Enable **Allow HTTP for this connection** only for a trusted local or LAN server
@@ -46,7 +47,7 @@ Set up a connection for cleanup, then choose the model and instruction:
    the exact model ID. Refreshing reads metadata; it does not test cleanup quality.
 6. Choose **Generic** under **Model profile** and write the **Custom system instruction**.
    You can restore the recommended instruction if you need a starting point.
-7. Choose **Save** (or **Save and return** when opened from a task). Dictate a short example and review the result before
+7. Choose **Save**. Dictate a short example and review the result before
    using cleanup for longer text.
 
 </Steps>
@@ -73,7 +74,7 @@ For an existing Generic endpoint, disable reasoning on the server.
 
 ## Generation controls
 
-Open **Settings → Cleanup → Generation controls**. Save before starting a
+Open **Cleanup → Generation controls** in Voice's or Audio file's options. Save before starting a
 new recording or audio-file job; changes do not affect work already running,
 even if cleanup has not started yet.
 

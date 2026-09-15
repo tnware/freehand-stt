@@ -42,9 +42,9 @@ Invoke-RestMethod http://127.0.0.1:8080/health
 Invoke-RestMethod http://127.0.0.1:8080/v1/models
 ```
 
-In **Settings → Connections**, create a **llama.cpp** connection for **Cleanup**
+In **Connections**, create a **llama.cpp** connection for **Cleanup**
 with base URL **`http://127.0.0.1:8080/v1`**, authentication **None**, and
-**Allow HTTP for this connection** enabled. Save the connection. In **Settings → Cleanup**, select it, enable
+**Allow HTTP for this connection** enabled. Save the connection. In **Voice transcription → Cleanup**, select it, enable
 cleanup, and use **Refresh models** to select the served model. Choose
 **S1-mini by Superwhisper** as the model profile. It requires reasoning off.
 Save, then review cleanup of a short transcript.
@@ -64,9 +64,9 @@ explains raw fallback and the trained S1-mini controls.
 
 For a manually configured service:
 
-1. Create a **Cleanup** connection in **Settings → Connections**, using the **llama.cpp** profile.
+1. Create a **Cleanup** connection in **Connections**, using the **llama.cpp** profile.
 2. Name it and enter the chat API base URL, normally ending in `/v1`.
-3. Configure authentication and HTTP permission, then **Save connection**. In **Settings → Cleanup**, select that connection, enable cleanup, and list models or enter the served model ID.
+3. Configure authentication and HTTP permission, then **Save connection**. In **Voice transcription → Cleanup**, select that connection, enable cleanup, and list models or enter the served model ID.
 4. Choose **Model profile → Generic** for your own instruction, or **S1-mini by Superwhisper** for its built-in instruction.
 5. Save, then explicitly review cleanup of a short transcript.
 
@@ -102,13 +102,13 @@ See [protocol details](../../reference/protocol/) and the
 
 ## Cleanup generation controls
 
-In **Settings → Cleanup → Generation controls**:
+In **Voice transcription → Cleanup → Generation controls**:
 
-| Control                               | Request behavior                                                                                                        |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Limit output tokens                   | Sends `max_tokens` only when enabled, from 1 to 65,536. Off omits the field; a valid number is retained locally.        |
-| Disable reasoning, Generic            | Sends `reasoning_effort: "none"` when enabled. Off leaves reasoning to the server.                                      |
-| Disable reasoning, S1-mini            | Required and automatically sent on every cleanup request through this backend. It cannot be turned off for this model profile. |
+| Control                    | Request behavior                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Limit output tokens        | Sends `max_tokens` only when enabled, from 1 to 65,536. Off omits the field; a valid number is retained locally.               |
+| Disable reasoning, Generic | Sends `reasoning_effort: "none"` when enabled. Off leaves reasoning to the server.                                             |
+| Disable reasoning, S1-mini | Required and automatically sent on every cleanup request through this backend. It cannot be turned off for this model profile. |
 
 S1-mini always requests reasoning off through this backend. This does not change
 the optional reasoning setting saved for a Generic cleanup model.

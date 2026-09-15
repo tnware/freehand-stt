@@ -20,8 +20,8 @@ Serve the model with the runtime's audio dependencies installed:
 vllm serve CohereLabs/cohere-transcribe-03-2026
 ```
 
-In Freehand, add a **vLLM** connection, select its model in **Voice transcription**
-or **Audio-file transcription**, and choose **Cohere Transcribe** as the model
+In Freehand, add a **vLLM** connection. Open the **Settings** cog in Voice transcription
+or Audio file, select its model under **Transcription**, and choose **Cohere Transcribe** as the model
 profile, then save. If your server uses a custom alias, select that ID and choose
 the same model profile.
 
