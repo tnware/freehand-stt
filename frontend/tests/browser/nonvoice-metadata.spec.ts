@@ -7,7 +7,6 @@ const roles = [
     purpose: Purpose.Transcription,
     section: "server",
     tab: "Audio file",
-    panel: "Model",
     quickID: "quick-stt-model",
     settingsID: "model",
   },
@@ -15,7 +14,6 @@ const roles = [
     purpose: Purpose.Cleanup,
     section: "processing",
     tab: "Audio file",
-    panel: "Cleanup",
     quickID: "quick-processing-model",
     settingsID: "cleanup-model",
   },
@@ -23,8 +21,7 @@ const roles = [
     purpose: Purpose.Speech,
     section: "speech",
     tab: "Text to speech",
-    panel: "Model",
-    quickID: "quick-speech-model",
+    quickID: "speech-model",
     settingsID: "tts-model",
   },
 ] as const;
@@ -43,17 +40,24 @@ for (const surface of ["quick", "settings", "readiness"] as const) {
         await page.getByRole("button", { name: role.tab, exact: true }).click();
         if (surface === "readiness")
           await page.getByText("Connection and model", { exact: true }).click();
-        if (surface === "quick")
-          await page
-            .getByRole("button", { name: new RegExp(`^${role.panel} `) })
-            .click();
       } else await openSection(page, role.section);
-      const picker = page.locator(
-        `#${surface === "readiness" ? role.quickID : role.settingsID}`,
-      );
+      const picker =
+        surface === "settings"
+          ? page
+              .locator('[data-pane="configuration"]')
+              .locator(`#${role.settingsID}`)
+          : surface === "readiness"
+            ? page.locator(`#${role.quickID}`)
+            : page
+                .getByRole("complementary", {
+                  name: `${role.tab} settings`,
+                  exact: true,
+                })
+                .locator(`input[id$="${role.quickID}"]`);
+      const metadata = picker.locator("..").locator("..");
       await picker.click();
       await expect(
-        page.getByText("Loading model list…", { exact: true }),
+        metadata.getByText("Loading model list…", { exact: true }),
       ).toBeVisible();
       await expect(picker).toBeEnabled();
       await expect(picker).toHaveAttribute("aria-expanded", "true");
@@ -69,13 +73,13 @@ for (const surface of ["quick", "settings", "readiness"] as const) {
         role.purpose,
       );
       await expect(
-        page.getByText(/Could not load the model list/),
+        metadata.getByText(/Could not load the model list/),
       ).toBeVisible();
       await page.keyboard.press("Escape");
       await picker.click();
       await expect.poll(count).toBe(2);
       await expect(
-        page.getByText("Loading model list…", { exact: true }),
+        metadata.getByText("Loading model list…", { exact: true }),
       ).toBeVisible();
       await page.evaluate(
         (purpose) => window.testMetadata.complete(purpose, true),

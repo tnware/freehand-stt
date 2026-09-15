@@ -6,6 +6,7 @@
   let {
     label,
     embedded = false,
+    sidebar = false,
     /** Tailwind background class for the state LED, or "" for no lamp. */
     dot = "",
     /** One right-aligned fact: latency, profile name, count. */
@@ -22,6 +23,7 @@
   }: {
     label: string;
     embedded?: boolean;
+    sidebar?: boolean;
     dot?: string;
     meta?: string;
     metaTone?: "quiet" | "ok" | "warn" | "bad";
@@ -55,7 +57,7 @@
   The rack replaced a single collapsing panel of seven unlabelled icon toggles,
   so every module here says what it is in words.
 -->
-<section class="module-card shrink-0" class:framed={!embedded}>
+<section class="module-card shrink-0" class:framed={!embedded} class:sidebar>
   <div class="flex items-center gap-2">
     {#if collapsible}
       <button
@@ -136,6 +138,18 @@
 </section>
 
 <style>
+  .sidebar h2 {
+    font-size: 12px;
+  }
+  .sidebar .module-body {
+    padding-top: 0.375rem;
+  }
+  .sidebar .door {
+    width: 1.5rem;
+    height: 1.5rem;
+    background: transparent;
+    color: var(--muted-foreground);
+  }
   .framed {
     border: 1px solid var(--card-stroke);
     border-radius: var(--radius-lg);

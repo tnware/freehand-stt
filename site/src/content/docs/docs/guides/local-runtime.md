@@ -229,6 +229,15 @@ elapsed time rather than an estimated percentage. GPU startup includes warm-up;
 loading and warm-up may appear as one phase when the runtime cannot report them
 separately. Wait for **Running** before using the runtime.
 
+**Start** and **Stop** show their pending action immediately. The runtime page
+and workflow sidebar then follow the reported state, including startup stages,
+completion, and errors. Each selected local connection has these controls directly
+below its picker, including a local Cleanup connection when cleanup is off.
+Use **Cancel** during an operation. Stop the runtime before choosing a different
+downloaded model. **Manage runtime** opens that exact runtime for downloads and
+installation options; **View output** opens its bottom-panel output tab.
+You can change pages while an operation continues.
+
 Warm-up uses only the selected installed model. For CUDA whisper.cpp, Freehand
 sends one second of synthetic silence to the local runtime after it is ready
 and discards the response. It never records your microphone, warms other catalog
@@ -269,7 +278,9 @@ output during screen sharing.
 ## Stop, disable, or remove
 
 Stopping releases the running server; starting it again reloads the selected
-model. **Start when Freehand launches**, under **Runtime preferences**, enables
+model. **Restart** waits for the server to stop before loading that model again;
+failed or cancelled stopping prevents the new launch.
+**Start when Freehand launches**, under **Runtime preferences**, enables
 startup for an installed runtime without downloading missing files.
 Quitting Freehand stops the processes it owns, including active downloads.
 
@@ -278,11 +289,10 @@ connection picker. Manual connections retain their URLs, models, and API keys.
 Stopping a runtime does not change any task's selection. A local runtime failure
 does not automatically send audio to another server.
 
-The recording controls remain available while the runtime is stopped or starting.
-The recording area shows its current availability; use **Transcription** options
-to start it. An attempt to record before it is ready reports the failure in Freehand
-and through the status overlay when error feedback is enabled. Start the runtime,
-wait for **Ready**, then try recording again. Previous results remain available to copy.
+The Voice recording header shows runtime availability and startup progress.
+**Record** becomes available when the selected runtime is running. Start a stopped
+runtime from the workflow sidebar or **Local runtime**. Previous results remain
+available to copy, and an existing recording keeps its Stop and Cancel controls.
 
 **Remove runtime files**, under **Runtime preferences**, deletes that runtime's
 managed binaries and model data after

@@ -115,6 +115,16 @@
     auxPane === "settings" || auxPane === "connections",
   );
   const configurationOpen = $derived(settingsOpen || inspectorOpen);
+  const configurationEditing = $derived(
+    settingsOpen ||
+      (inspectorOpen &&
+        (session.editor.dirty ||
+          session.editor.saving ||
+          session.editor.quickSettingsPending.length > 0 ||
+          session.editor.connectionDraft !== null ||
+          shortcutCapture.capturing ||
+          layout.notificationsPaused)),
+  );
   const configurationSections = $derived(
     inspectorOpen
       ? inspectorRealm === "history"
@@ -287,7 +297,7 @@
       detail: session.editor.applied?.postProcessing.model ?? "",
       disabled:
         !session.editor.applied ||
-        configurationOpen ||
+        configurationEditing ||
         session.editor.saving ||
         session.editor.quickSettingsPending.length > 0 ||
         !!session.editor.applied.configuration.recoveryRequired,
@@ -557,7 +567,9 @@
     return () => {
       alive = false;
       offSession();
-      session.dispose();
+      // The default session belongs to this WebView, not a component mount.
+      // Svelte HMR remounts App while retaining its imported session module.
+      if (session !== defaultSession) session.dispose();
       offLevel();
       offSecondInstance();
       offSettings();
@@ -889,7 +901,7 @@
         <WorkbenchPanel
           {session}
           {inputMode}
-          settingsOpen={configurationOpen}
+          settingsOpen={configurationEditing}
           onOpenHistorySettings={() => openSettings("history")}
         />
       {/snippet}
@@ -913,7 +925,7 @@
             onOpenDeliverySettings={() => openWorkflowSettings("general")}
             onOpenSettingsSection={openWorkflowSettings}
             onOpenConnection={openConnection}
-            quickSettingsDisabled={configurationOpen}
+            quickSettingsDisabled={configurationEditing}
           />
         </div>
 

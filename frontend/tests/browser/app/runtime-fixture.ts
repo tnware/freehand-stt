@@ -60,6 +60,7 @@ export function createRuntimeFixture(
   preferencesChanged: (instances: Instance[]) => void,
   ready = true,
   providerID = ProviderID.NeMoSpeechCPP,
+  instanceName = "Local speech",
 ) {
   const macOS = new URLSearchParams(location.search).has("runtime-macos");
   const backends = macOS ? ["cpu", "metal"] : ["cpu", "cuda"];
@@ -207,7 +208,7 @@ export function createRuntimeFixture(
     ? [
         initial({
           id: ggml ? `${providerID}-default` : "nemo-default",
-          name: "Local speech",
+          name: instanceName,
           provider: providers[0].id,
           model: models[0].id,
           autoStart: false,
@@ -226,12 +227,37 @@ export function createRuntimeFixture(
         models: models.map((m) => ({ ...m, installed: true })),
       },
     };
+  if (ready && new URLSearchParams(location.search).has("runtime-starting")) {
+    rows[0].activeModel = "";
+    rows[0].status = {
+      ...rows[0].status,
+      state: "starting",
+      phase: "startup",
+      operation: {
+        id: 1,
+        kind: "startup",
+        model: "",
+        outcome: "running",
+        error: "",
+      },
+      startupProgress: {
+        phase: "loading_warming",
+        startedAt: Date.now() - 3000,
+      },
+    };
+  }
   const preferences = () =>
     preferencesChanged(structuredClone(rows.map((r) => r.instance)));
   preferences();
   const calls: string[] = [];
   const downloading = new Map<string, string>();
   let failStop = false;
+  let failCancel = false;
+  let holdLifecycle = false;
+  const lifecycle = new Map<
+    string,
+    { kind: "start" | "stop" | "restart"; acknowledge: () => void }
+  >();
   let operationID = 0;
   let publish: (row: InstanceStatus) => void = () => {};
   const get = (id: string) => {
@@ -244,6 +270,37 @@ export function createRuntimeFixture(
     row.status = { ...row.status, ...patch };
     row.activeModel = row.status.state === "running" ? row.instance.model : "";
     publish(structuredClone(row));
+  };
+  const runLifecycle = (id: string, kind: "start" | "stop" | "restart") => {
+    if (!holdLifecycle) {
+      change(id, {
+        state: kind === "stop" ? "stopped" : "running",
+        phase: "",
+        progress: -1,
+      });
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      lifecycle.set(id, {
+        kind,
+        acknowledge: () => {
+          change(id, {
+            state: kind === "start" ? "starting" : "stopping",
+            phase: kind,
+            progress: -1,
+            error: "",
+            operation: {
+              id: ++operationID,
+              kind,
+              model: "",
+              outcome: "running",
+              error: "",
+            },
+          });
+          resolve();
+        },
+      });
+    });
   };
   const service: ManagedRuntimeService = {
     GetInstances: async () => structuredClone(rows),
@@ -305,7 +362,7 @@ export function createRuntimeFixture(
     },
     Start: async ({ instanceID }) => {
       calls.push(`Start:${instanceID}`);
-      change(instanceID, { state: "running", phase: "", progress: -1 });
+      await runLifecycle(instanceID, "start");
     },
     Stop: async ({ instanceID }) => {
       calls.push(`Stop:${instanceID}`);
@@ -313,10 +370,23 @@ export function createRuntimeFixture(
         failStop = false;
         throw new Error("Fixture stop failure");
       }
-      change(instanceID, { state: "stopped", phase: "", progress: -1 });
+      await runLifecycle(instanceID, "stop");
+    },
+    Restart: async ({ instanceID }) => {
+      calls.push(`Restart:${instanceID}`);
+      if (failStop) {
+        failStop = false;
+        throw new Error("Fixture stop failure");
+      }
+      await runLifecycle(instanceID, "restart");
     },
     Cancel: async ({ instanceID }) => {
       calls.push(`Cancel:${instanceID}`);
+      if (failCancel) {
+        failCancel = false;
+        throw new Error("Fixture cancellation failure");
+      }
+      lifecycle.delete(instanceID);
       downloading.delete(instanceID);
       change(instanceID, {
         state: "installed",
@@ -377,6 +447,38 @@ export function createRuntimeFixture(
     },
   };
   const control = {
+    holdLifecycle: () => {
+      holdLifecycle = true;
+    },
+    acknowledgeLifecycle: (id: string) => {
+      const operation = lifecycle.get(id);
+      if (!operation) throw new Error("No pending fixture lifecycle operation");
+      operation.acknowledge();
+    },
+    finishLifecycle: (
+      id: string,
+      outcome: "succeeded" | "failed" = "succeeded",
+    ) => {
+      const operation = lifecycle.get(id);
+      if (!operation) throw new Error("No pending fixture lifecycle operation");
+      const error =
+        outcome === "failed"
+          ? "Runtime could not start. Check setup and try again."
+          : "";
+      change(id, {
+        state:
+          outcome === "failed"
+            ? "error"
+            : operation.kind === "stop"
+              ? "stopped"
+              : "running",
+        phase: "",
+        startupProgress: undefined,
+        error,
+        operation: { ...get(id).status.operation, outcome, error },
+      });
+      lifecycle.delete(id);
+    },
     calls,
     change,
     useWhisperVariantCatalog: () => {
@@ -455,6 +557,9 @@ export function createRuntimeFixture(
     },
     failNextStop: () => {
       failStop = true;
+    },
+    failNextCancel: () => {
+      failCancel = true;
     },
     addDuplicate: (id: string) => {
       const duplicate = structuredClone(rows[0]);

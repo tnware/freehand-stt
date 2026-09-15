@@ -21,6 +21,7 @@ export type ManagedRuntimeService = {
       | "Remove"
       | "Start"
       | "Stop"
+      | "Restart"
       | "Cancel"
       | "RefreshCatalog"
       | "DownloadModel"
@@ -35,7 +36,8 @@ export type ManagedRuntimeService = {
     >[0],
   ) => Promise<void>;
 };
-type Operation = "Install" | "Remove" | "Start" | "Stop" | "RefreshCatalog";
+type Operation =
+  "Install" | "Remove" | "Start" | "Stop" | "Restart" | "RefreshCatalog";
 
 export class ManagedRuntimeState {
   instances = $state<InstanceStatus[]>([]);
@@ -205,6 +207,9 @@ export class ManagedRuntimeState {
     return this.#perform(id, operation, () =>
       this.service![operation]({ instanceID: id }),
     );
+  }
+  restart(id: string) {
+    return this.run(id, "Restart");
   }
   installBackend(id: string, backend: BackendRequest["backend"]) {
     return this.#perform(id, "Switch runtime binary", () =>

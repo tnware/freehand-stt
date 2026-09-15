@@ -1,42 +1,48 @@
 <script lang="ts">
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import { Button } from "$lib/components/ui/button";
-  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import * as Select from "$lib/components/ui/select";
   import PlayIcon from "@lucide/svelte/icons/play";
   import SquareIcon from "@lucide/svelte/icons/square";
-  import SettingsIcon from "@lucide/svelte/icons/settings-2";
+  import CpuIcon from "@lucide/svelte/icons/cpu";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
 
   let {
     runtime,
     instanceID,
     disabled = false,
+    workBusy = false,
+    sidebar = false,
     onManage,
   }: {
     runtime: ManagedRuntimeState;
     instanceID: string;
     disabled?: boolean;
+    workBusy?: boolean;
+    sidebar?: boolean;
     onManage: () => void;
   } = $props();
   const uid = $props.id();
+  const layout = getWorkbenchLayout();
   let now = $state(Date.now());
   $effect(() => {
-    const timer = setInterval(() => {
-      now = Date.now();
-    }, 1000);
+    if (status?.state !== "starting") return;
+    const timer = setInterval(() => (now = Date.now()), 1000);
     return () => clearInterval(timer);
   });
   const row = $derived(runtime.statusFor(instanceID));
   const status = $derived(row?.status);
-  const view = $derived(runtimePresentation(status, now));
+  const pending = $derived(runtime.pendingFor(instanceID));
+  const view = $derived(runtimePresentation(status, now, pending));
   const provider = $derived(
     runtime.providers.find((p) => p.id === row?.instance.provider),
   );
   const operating = $derived(runtime.isBusy(instanceID));
+  const running = $derived(status?.state === "running");
   const locked = $derived(
-    disabled || operating || runtime.loading || !status?.supported,
+    disabled || workBusy || operating || runtime.loading || !status?.supported,
   );
   const models = $derived(
     (status?.models ?? []).filter(
@@ -48,30 +54,139 @@
   );
   const choices = $derived(models.map((m) => ({ value: m.id, label: m.name })));
   const problem = $derived(
-    runtime.errorFor(instanceID) || runtime.error || status?.error || "",
+    runtime.errorFor(instanceID) || view.error || (!row ? runtime.error : ""),
   );
+  const label = $derived(
+    !row && runtime.loading ? "Checking runtime" : view.label,
+  );
+  const needsSetup = $derived(
+    !!row && !operating && (!view.installed || !selected?.installed),
+  );
+  const modelLocked = $derived(locked || running || !models.length);
+
+  function manage() {
+    if (layout) layout.runtimeInstanceID = instanceID;
+    onManage();
+  }
+  function output() {
+    if (layout) {
+      if (!layout.bottomAvailable.current) return;
+      layout.showOutput(instanceID);
+      layout.closePrimary();
+    } else void runtime.openOutput(instanceID);
+  }
+  function chooseModel(model: string) {
+    if (
+      !row ||
+      modelLocked ||
+      model === row.instance.model ||
+      !models.some((m) => m.id === model)
+    )
+      return;
+    void runtime.saveInstance({ ...row.instance, model });
+  }
+  function command() {
+    if (locked || (!running && (!view.installed || !selected?.installed)))
+      return;
+    void runtime.run(instanceID, running ? "Stop" : "Start");
+  }
+  function cancel() {
+    if (!disabled && operating && pending !== "Cancelling")
+      void runtime.cancel(instanceID);
+  }
 </script>
 
-<div class="space-y-3">
+<div
+  class={sidebar ? "flex min-w-0 flex-col gap-1.5" : "min-w-0 space-y-2.5"}
+  class:runtime-sidebar={sidebar}
+  role="group"
+  aria-label={`Local runtime ${row?.instance.name || instanceID}`}
+>
+  <div class="flex items-center justify-between gap-2">
+    {#if sidebar}
+      <div class="flex min-w-0 items-start gap-1.5">
+        <span
+          class="text-[11px] leading-relaxed text-muted-foreground"
+          title="Local runtime">Local</span
+        >
+        {@render runtimeStatus()}
+      </div>
+    {:else}<span
+        class="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground"
+      >
+        <CpuIcon class="size-3.5 shrink-0" aria-hidden="true" />Local runtime
+      </span>{/if}
+    {#if operating}
+      <Button
+        variant="outline"
+        size="xs"
+        disabled={disabled || pending === "Cancelling"}
+        onclick={cancel}>Cancel</Button
+      >
+    {:else if needsSetup}
+      <Button variant="soft" size="xs" onclick={manage}>Set up runtime</Button>
+    {:else}
+      <Button
+        variant={running ? "outline" : "soft"}
+        size="xs"
+        disabled={locked ||
+          (!running && (!view.installed || !selected?.installed))}
+        title={workBusy
+          ? "Finish the current task before changing this runtime."
+          : undefined}
+        onclick={command}
+      >
+        {#if running}<SquareIcon class="size-3" />Stop{:else}<PlayIcon
+            class="size-3"
+          />Start{/if}
+      </Button>
+    {/if}
+  </div>
+  {#if !sidebar}{@render runtimeStatus()}{/if}
+  {#if view.startup}<p
+      class="text-[11px] leading-relaxed text-muted-foreground"
+    >
+      {view.startup}
+    </p>{/if}
+  {#if view.transferred}<p class="font-mono text-[11px] text-muted-foreground">
+      {view.transferred}
+    </p>{/if}
+  {#if !operating && view.completion && !problem && status?.operation?.outcome === "cancelled"}<p
+      class="text-xs text-muted-foreground"
+    >
+      {view.completion}
+    </p>{/if}
+  {#if problem}<p
+      class="break-words text-xs leading-relaxed text-destructive"
+      role="alert"
+    >
+      {problem}
+    </p>{/if}
+
   {#if row}
-    <div class="space-y-1.5">
-      <label for={`${uid}-model`} class="text-[13px] font-medium"
+    <div class={sidebar ? "min-w-0" : "space-y-1.5"}>
+      <label
+        for={`${uid}-model`}
+        class={sidebar ? "sr-only" : "text-xs font-medium"}
         >Selected model</label
       >
       <Select.Root
         type="single"
-        value={row.instance.model}
+        bind:value={() => row.instance.model, chooseModel}
         items={choices}
-        disabled={locked || !models.length}
-        onValueChange={(model) => {
-          if (!locked && models.some((m) => m.id === model))
-            void runtime.saveInstance({ ...row.instance, model });
-        }}
+        disabled={modelLocked}
       >
-        <Select.Trigger id={`${uid}-model`} class="w-full"
-          ><span class="truncate">{selected?.name ?? row.instance.model}</span
-          ></Select.Trigger
+        <Select.Trigger
+          id={`${uid}-model`}
+          class="h-7 w-full min-w-0 text-xs"
+          title={running
+            ? "Stop the runtime to select another downloaded model."
+            : undefined}
         >
+          <span class="min-w-0 truncate"
+            >{selected?.name || row.instance.model || "Choose a model"}</span
+          >
+        </Select.Trigger>
         <Select.Content
           >{#each models as model (model.id)}<Select.Item
               value={model.id}
@@ -79,84 +194,77 @@
             >{/each}</Select.Content
         >
       </Select.Root>
+      {#if running && models.length > 1}<p
+          class="mt-1 text-[11px] leading-relaxed text-muted-foreground"
+        >
+          Stop to change the loaded model.
+        </p>{/if}
     </div>
+    {#if view.backend || status?.version}<p
+        class="break-words text-[11px] text-muted-foreground"
+      >
+        {[view.backend, status?.version].filter(Boolean).join(" · ")}
+      </p>{/if}
   {/if}
-  <div class="space-y-3 border-t border-hairline py-3">
-    <p
-      class="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground"
-      role="status"
+  <div
+    class={sidebar
+      ? "flex flex-wrap items-center gap-x-3 gap-y-1"
+      : "flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-hairline pt-2"}
+  >
+    <Button
+      variant="link"
+      size="xs"
+      class="h-auto min-h-5 p-0 text-[11px]"
+      onclick={manage}>Manage runtime</Button
     >
-      {#if operating}<LoaderCircleIcon
-          class="size-3 shrink-0 animate-spin"
-        />{/if}
-      <StatusBadge
-        tone={problem
-          ? "danger"
-          : operating
-            ? "accent"
-            : view.ready
-              ? "success"
-              : "neutral"}
-      >
-        {runtime.pendingFor(instanceID) || view.label}
-      </StatusBadge>
-      {#if view.backend}<span>{view.backend}</span>{/if}
-      {#if view.startup}<span class="w-full leading-relaxed"
-          >{view.startup}</span
-        >{/if}
-    </p>
-    <div class="flex flex-wrap items-center gap-2">
-      <Button
-        variant="outline"
-        size="icon-sm"
-        aria-label="Manage runtime"
-        title="Manage runtime"
-        onclick={onManage}><SettingsIcon class="size-4" /></Button
-      >
-      {#if row}<Button
-          variant="outline"
-          size="sm"
-          onclick={() => void runtime.openOutput(instanceID)}
-          >View output</Button
-        >{/if}
-      {#if operating}
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled || runtime.pendingFor(instanceID) === "Cancelling"}
-          onclick={() => void runtime.cancel(instanceID)}>Cancel</Button
-        >
-      {:else if status?.state === "running"}
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={locked}
-          onclick={() => void runtime.run(instanceID, "Stop")}
-          ><SquareIcon class="size-3.5" />Stop</Button
-        >
-      {:else}
-        <Button
-          variant="soft"
-          size="sm"
-          disabled={locked || !view.installed || !selected?.installed}
-          onclick={() => void runtime.run(instanceID, "Start")}
-          ><PlayIcon class="size-3.5" />Start</Button
-        >
-      {/if}
-    </div>
+    {#if row}<Button
+        variant="link"
+        size="xs"
+        class="h-auto min-h-5 p-0 text-[11px]"
+        disabled={!!layout && !layout.bottomAvailable.current}
+        title={layout && !layout.bottomAvailable.current
+          ? "Make the window taller to show runtime output."
+          : undefined}
+        onclick={output}>View output</Button
+      >{/if}
   </div>
-
-  {#if !view.installed || !selected?.installed}<Button
-      variant="soft"
-      size="sm"
-      class="w-full"
-      onclick={onManage}>Set up runtime</Button
-    >{/if}
-  {#if problem}<p class="text-xs text-destructive" role="alert">
-      {problem}
-    </p>{/if}
-  {#if row && !view.ready}<p class="text-xs text-muted-foreground">
-      This connection stays selected while unavailable. No automatic server
-      fallback.
-    </p>{/if}
 </div>
+
+{#snippet runtimeStatus()}
+  <p
+    class="flex min-w-0 items-start gap-1.5 text-xs leading-relaxed"
+    role="status"
+    aria-label="Local runtime status"
+  >
+    {#if operating || (!row && runtime.loading)}
+      <LoaderCircleIcon
+        class="mt-0.5 size-3.5 shrink-0 animate-spin text-accent-text"
+        aria-hidden="true"
+      />
+    {:else}<span
+        class="mt-1.5 size-1.5 shrink-0 rounded-full {problem
+          ? 'bg-destructive'
+          : view.ready
+            ? 'bg-success'
+            : 'bg-meter-rest'}"
+        aria-hidden="true"
+      ></span>{/if}
+    <span
+      class="min-w-0 break-words font-medium {problem
+        ? 'text-destructive'
+        : view.ready && !operating
+          ? 'text-success'
+          : 'text-secondary-foreground'}">{label}</span
+    >
+  </p>
+{/snippet}
+
+<style>
+  .runtime-sidebar {
+    border: 1px solid var(--hairline);
+    border-left: 2px solid var(--accent-edge);
+    border-radius: var(--radius-sm);
+    background: var(--subtle-fill-hover);
+    padding: 0.5rem;
+  }
+</style>

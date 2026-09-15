@@ -24,12 +24,22 @@ test("file and speech retain controls and the speech draft", async ({
   await expect(
     page.getByRole("button", { name: "Speak", exact: true }),
   ).toBeInViewport();
-  await page
-    .getByRole("button", { name: "Speech settings", exact: true })
-    .click();
+  const quick = page.getByRole("complementary", {
+    name: "Text to speech settings",
+    exact: true,
+  });
   await expect(
-    page.getByRole("dialog", { name: "Speech settings", exact: true }),
+    quick.getByRole("combobox", { name: "Choose connection", exact: true }),
   ).toBeInViewport();
+  await expect(
+    quick.getByRole("combobox", { name: "Choose model", exact: true }),
+  ).toBeInViewport();
+  const voice = quick.getByRole("combobox", {
+    name: "Choose voice",
+    exact: true,
+  });
+  await quick.getByRole("button", { name: "Show voices", exact: true }).click();
+  await expect(voice).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Escape");
   await page.screenshot({
     path: info.outputPath("speech-workspace-light.png"),
@@ -67,7 +77,20 @@ for (const width of [560, 900, 1156]) {
     const sidebar = page.getByRole("complementary", {
       name: "Voice transcription settings",
     });
-    await sidebar.getByRole("button", { name: /^Connection/ }).click();
+    const connection = sidebar.locator('input[id$="-voice-connection"]');
+    await connection
+      .locator("..")
+      .getByRole("button", { name: "Show connections", exact: true })
+      .click();
+    await expect(
+      page.getByRole("option", {
+        name: /^Example transcription server/,
+      }),
+    ).toBeInViewport();
+    await page.keyboard.press("Escape");
+    await sidebar
+      .getByRole("button", { name: "More transcription options", exact: true })
+      .click();
     await expect(
       page
         .getByRole("status")

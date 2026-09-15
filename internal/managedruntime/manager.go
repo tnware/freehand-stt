@@ -441,8 +441,11 @@ func (m *Manager) install(id string, install func(*worker) error) error {
 func (m *Manager) RefreshCatalog(r InstanceRequest) error {
 	return m.operation(r.InstanceID, (*worker).RefreshCatalog)
 }
-func (m *Manager) Start(r InstanceRequest) error  { return m.operation(r.InstanceID, (*worker).Start) }
-func (m *Manager) Stop(r InstanceRequest) error   { return m.operation(r.InstanceID, (*worker).Stop) }
+func (m *Manager) Start(r InstanceRequest) error { return m.operation(r.InstanceID, (*worker).Start) }
+func (m *Manager) Stop(r InstanceRequest) error  { return m.operation(r.InstanceID, (*worker).Stop) }
+func (m *Manager) Restart(r InstanceRequest) error {
+	return m.operation(r.InstanceID, (*worker).Restart)
+}
 func (m *Manager) Cancel(r InstanceRequest) error { return m.operation(r.InstanceID, (*worker).Cancel) }
 func (m *Manager) Remove(r InstanceRequest) error { return m.operation(r.InstanceID, (*worker).Remove) }
 func (m *Manager) DownloadModel(r ModelRequest) error {

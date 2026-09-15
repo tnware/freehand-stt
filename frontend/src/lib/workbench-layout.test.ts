@@ -15,6 +15,7 @@ describe("workbench layout preferences", () => {
           bottomSize: 400,
           secondarySize: -100,
           outputInstanceID: "untrusted-runtime",
+          runtimeInstanceID: "untrusted-manage-target",
           diagnosticWorkflow: "file",
         }),
     });
@@ -26,6 +27,7 @@ describe("workbench layout preferences", () => {
     expect(layout.bottomSize).toBe(55);
     expect(layout.secondarySize).toBe(30);
     expect(layout.outputInstanceID).toBe("");
+    expect(layout.runtimeInstanceID).toBe("");
     expect(layout.diagnosticWorkflow).toBe("voice");
   });
 
@@ -34,6 +36,7 @@ describe("workbench layout preferences", () => {
     vi.stubGlobal("localStorage", { setItem });
     const layout = new WorkbenchLayout();
     layout.outputInstanceID = "private-runtime";
+    layout.runtimeInstanceID = "private-manage-target";
     layout.tab = "output";
     layout.claimNotifications("modal");
     layout.claimNotifications("error");

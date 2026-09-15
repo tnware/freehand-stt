@@ -3,6 +3,7 @@
   import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
   import VocabularyLink from "../settings/VocabularyLink.svelte";
   import RuntimeModelPicker from "../settings/RuntimeModelPicker.svelte";
+  import LanguagePicker from "../settings/LanguagePicker.svelte";
   import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import { rememberedModels } from "$lib/utils/modelSettings";
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
@@ -39,10 +40,12 @@
 
   let {
     runtime,
+    runtimeWorkBusy = false,
     onManageRuntime = () => {},
     showCapture = true,
     showTranscription = true,
     embedded = false,
+    sidebar = false,
     showCleanup = true,
     onAddConnection,
     settings,
@@ -73,10 +76,12 @@
   }: {
     /** Applied settings: every edit in this rack is persisted immediately. */
     runtime?: ManagedRuntimeState;
+    runtimeWorkBusy?: boolean;
     onManageRuntime?: () => void;
     showCapture?: boolean;
     showTranscription?: boolean;
     embedded?: boolean;
+    sidebar?: boolean;
     showCleanup?: boolean;
     onAddConnection?: (purpose: Purpose) => void;
     settings: Settings;
@@ -109,6 +114,26 @@
     onOpenDeliverySettings: () => void;
     disabled?: boolean;
   } = $props();
+  const uid = $props.id();
+  const controlID = (id: string) => (sidebar ? `${uid}-${id}` : id);
+  const fileRuntime = $derived(
+    runtime?.statusFor(settings.managedInstanceID ?? ""),
+  );
+  const fileModel = $derived(
+    fileRuntime?.status.models?.find(
+      (model) => model.id === fileRuntime.instance.model,
+    ),
+  );
+  const fileProfile = $derived(
+    fileModel?.behavior ??
+      settings.modelProfiles.transcription?.find(
+        (profile) => profile.id === settings.modelProfile,
+      ),
+  );
+  const fileLanguageSupported = $derived(
+    !!fileProfile?.capabilities.languageHint ||
+      !!fileProfile?.languages?.length,
+  );
 
   let sttOpen = $state(readDisclosurePreference("quick-stt", true));
   let cleanupOpen = $state(readDisclosurePreference("quick-cleanup", true));
@@ -225,33 +250,40 @@
 
   {#if showTranscription}
     <RackModule
+      {sidebar}
       {embedded}
       label="Transcription"
-      dot={healthDot(connection, true, sttHealthStale)}
-      meta={embedded || sttOpen
-        ? latency(connection, true, sttHealthStale)
-        : collapsedConnectionSummary(
-            serverLoadedModel ? "Server-loaded model" : settings.model,
-            connection,
-            true,
-            sttHealthStale,
-          )}
+      dot={sidebar ? "" : healthDot(connection, true, sttHealthStale)}
+      meta={sidebar
+        ? ""
+        : embedded || sttOpen
+          ? latency(connection, true, sttHealthStale)
+          : collapsedConnectionSummary(
+              serverLoadedModel ? "Server-loaded model" : settings.model,
+              connection,
+              true,
+              sttHealthStale,
+            )}
       metaTone={latencyTone(connection, true, sttHealthStale)}
       onSettings={onOpenServerSettings}
       settingsLabel="Open transcription settings"
       open={embedded ? undefined : sttOpen}
-      controls="quick-stt-details"
+      controls={controlID("quick-stt-details")}
       onToggle={toggleSTT}
     >
-      {#snippet icon()}<ProviderIcon
-          profile={settings.compatibilityProfile}
-          size={20}
-        />{/snippet}
-      <div class="flex min-w-0 flex-col gap-3">
+      {#snippet icon()}{#if !sidebar}<ProviderIcon
+            profile={settings.compatibilityProfile}
+            size={20}
+          />{/if}{/snippet}
+      <div
+        class={sidebar
+          ? "flex min-w-0 flex-col gap-2"
+          : "flex min-w-0 flex-col gap-3"}
+      >
         {#snippet sttEndpointMeta()}{/snippet}
         {#snippet sttEndpointControl()}
           <ConnectionSelect
-            id="quick-stt-endpoint"
+            id={controlID("quick-stt-endpoint")}
             catalog={settings.savedConnections}
             runtimeInstances={runtime?.instances}
             purpose={Purpose.Transcription}
@@ -265,21 +297,24 @@
         {/snippet}
         {@render field(
           "Connection",
-          "quick-stt-endpoint",
+          controlID("quick-stt-endpoint"),
           sttEndpointMeta,
           sttEndpointControl,
         )}
 
         {#if settings.managedInstanceID}
           {#if runtime}<ManagedRuntimeControls
+              {sidebar}
+              workBusy={runtimeWorkBusy}
               {runtime}
               instanceID={settings.managedInstanceID}
-              {disabled}
+              disabled={disabled || pending.length > 0}
               onManage={onManageRuntime}
             />{/if}
-          <VocabularyLink {settings} />
+          {#if !sidebar}<VocabularyLink {settings} />{/if}
         {:else}<RuntimeModelPicker
-            id="quick-stt-model"
+            {sidebar}
+            id={controlID("quick-stt-model")}
             value={settings.model}
             compact
             immediate
@@ -301,8 +336,38 @@
             onDiscover={onTestConnection}
           />
         {/if}
+        {#if sidebar}
+          <div class="space-y-1.5">
+            <label
+              for={controlID("quick-file-language")}
+              class="text-xs font-medium">Language</label
+            >
+            <LanguagePicker
+              id={controlID("quick-file-language")}
+              immediate
+              bind:value={
+                () => settings.language ?? "",
+                (language) => {
+                  if (!disabled && !pending.length && fileLanguageSupported)
+                    void onUpdate({ language }, "stt-language");
+                }
+              }
+              restricted={!!fileProfile?.languages?.length}
+              languages={fileProfile?.languages?.length
+                ? fileProfile.languages
+                : (settings.transcriptionLanguages ?? [])}
+              disabled={disabled ||
+                pending.length > 0 ||
+                !fileLanguageSupported}
+              unavailableReason={!fileLanguageSupported
+                ? "This model chooses the language automatically."
+                : ""}
+            />
+          </div>
+        {/if}
         <QuickSaveStatus
-          fields={["stt-model"]}
+          quiet={sidebar}
+          fields={["stt-model", "stt-language"]}
           {pending}
           saved={savedField}
           failed={failedField}
@@ -313,25 +378,30 @@
 
   {#if showCleanup}
     <RackModule
+      {sidebar}
       {embedded}
-      label="Cleanup"
-      dot={healthDot(
-        processingConnection,
-        processingEnabled,
-        processingHealthStale,
-      )}
-      meta={embedded || cleanupOpen
-        ? latency(
-            processingConnection,
-            processingEnabled,
-            processingHealthStale,
-          )
-        : collapsedConnectionSummary(
-            settings.postProcessing.model,
+      label={sidebar ? "Cleanup · shared" : "Cleanup"}
+      dot={sidebar
+        ? ""
+        : healthDot(
             processingConnection,
             processingEnabled,
             processingHealthStale,
           )}
+      meta={sidebar
+        ? ""
+        : embedded || cleanupOpen
+          ? latency(
+              processingConnection,
+              processingEnabled,
+              processingHealthStale,
+            )
+          : collapsedConnectionSummary(
+              settings.postProcessing.model,
+              processingConnection,
+              processingEnabled,
+              processingHealthStale,
+            )}
       metaTone={latencyTone(
         processingConnection,
         processingEnabled,
@@ -340,13 +410,13 @@
       onSettings={onOpenProcessingSettings}
       settingsLabel="Open cleanup settings"
       open={embedded ? undefined : cleanupOpen}
-      controls="quick-cleanup-details"
+      controls={controlID("quick-cleanup-details")}
       onToggle={toggleCleanup}
     >
-      {#snippet icon()}<ProviderIcon
-          profile={settings.postProcessing.compatibilityProfile}
-          size={20}
-        />{/snippet}
+      {#snippet icon()}{#if !sidebar}<ProviderIcon
+            profile={settings.postProcessing.compatibilityProfile}
+            size={20}
+          />{/if}{/snippet}
       {#snippet actions()}
         <span class="flex shrink-0 items-center gap-1.5">
           {#if isPending("processing-enabled")}
@@ -358,25 +428,33 @@
             <CheckIcon class="size-3 text-success" aria-label="Saved" />
           {/if}
           <Switch
-            id="quick-post-processing-enabled"
+            id={controlID("quick-post-processing-enabled")}
             size="sm"
-            checked={processingEnabled}
-            disabled={isPending("processing-enabled")}
-            onCheckedChange={(enabled) =>
-              void onUpdate(
-                { postProcessing: { enabled } },
-                "processing-enabled",
-              )}
+            disabled={disabled || pending.length > 0}
+            bind:checked={
+              () => processingEnabled,
+              (enabled) => {
+                if (!disabled && !pending.length)
+                  void onUpdate(
+                    { postProcessing: { enabled } },
+                    "processing-enabled",
+                  );
+              }
+            }
             aria-label="Post-process transcripts"
           />
         </span>
       {/snippet}
 
-      <div class="flex min-w-0 flex-col gap-2.5">
+      <div
+        class={sidebar
+          ? "flex min-w-0 flex-col gap-2"
+          : "flex min-w-0 flex-col gap-2.5"}
+      >
         {#snippet cleanupEndpointMeta()}{/snippet}
         {#snippet cleanupEndpointControl()}
           <ConnectionSelect
-            id="quick-processing-endpoint"
+            id={controlID("quick-processing-endpoint")}
             catalog={settings.savedConnections}
             runtimeInstances={runtime?.instances}
             purpose={Purpose.Cleanup}
@@ -390,20 +468,23 @@
         {/snippet}
         {@render field(
           "Connection",
-          "quick-processing-endpoint",
+          controlID("quick-processing-endpoint"),
           cleanupEndpointMeta,
           cleanupEndpointControl,
         )}
 
         {#if settings.postProcessing.managedInstanceID}
           {#if runtime}<ManagedRuntimeControls
+              {sidebar}
+              workBusy={runtimeWorkBusy}
               {runtime}
               instanceID={settings.postProcessing.managedInstanceID}
-              {disabled}
+              disabled={disabled || pending.length > 0}
               onManage={onManageRuntime}
             />{/if}
         {:else}<RuntimeModelPicker
-            id="quick-processing-model"
+            {sidebar}
+            id={controlID("quick-processing-model")}
             value={settings.postProcessing.model}
             compact
             immediate
@@ -445,7 +526,7 @@
             onValueChange={chooseProcessingProfile}
           >
             <Select.Trigger
-              id="quick-processing-profile"
+              id={controlID("quick-processing-profile")}
               class="w-full min-w-0 bg-well"
             >
               <span class="min-w-0 flex-1 truncate text-left text-[13px]">
@@ -467,19 +548,19 @@
             </Select.Content>
           </Select.Root>
         {/snippet}
-        {#if !settings.postProcessing.managedInstanceID}{@render field(
+        {#if !sidebar && !settings.postProcessing.managedInstanceID}{@render field(
             "Model profile",
-            "quick-processing-profile",
+            controlID("quick-processing-profile"),
             profileMeta,
             profileControl,
           )}{/if}
 
-        {#if settings.postProcessing.preset === PostProcessingPreset.PostProcessingPresetS1Mini && selectedProcessingProfile}
+        {#if !sidebar && settings.postProcessing.preset === PostProcessingPreset.PostProcessingPresetS1Mini && selectedProcessingProfile}
           <div class="min-w-0 border-t border-hairline pt-2.5">
             <S1MiniControls
               processor={settings.postProcessing}
               profile={selectedProcessingProfile}
-              idPrefix="quick-s1-mini"
+              idPrefix={controlID("quick-s1-mini")}
               disabled={isPending("processing-controls") || !processingEnabled}
               compact
               onChange={(patch) =>
@@ -488,6 +569,7 @@
           </div>
         {/if}
         <QuickSaveStatus
+          quiet={sidebar}
           fields={[
             "processing-model",
             "processing-profile",

@@ -1,5 +1,6 @@
 <script lang="ts">
   import MicIcon from "@lucide/svelte/icons/mic";
+  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { Button } from "$lib/components/ui/button";
   import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import ShortcutKeys from "$lib/components/common/ShortcutKeys.svelte";
@@ -7,6 +8,7 @@
   import WorkflowSettingsButton from "./WorkflowSettingsButton.svelte";
   import { levels } from "$lib/stores/levels.svelte";
   import { CaptureClock } from "$lib/utils/captureClock.svelte";
+  import type { VoiceCaptureAvailability } from "$lib/utils/voiceCaptureAvailability";
   import {
     canToggleRecording,
     isCopyRequired,
@@ -25,7 +27,9 @@
     status,
     now,
     busy = false,
-    availability = "",
+    availability,
+    onCheckConnection,
+    connectionCheckDisabled = false,
     microphone = "System default",
     toggleShortcut = "",
     onToggle,
@@ -37,7 +41,9 @@
     status: Status;
     now: number;
     busy?: boolean;
-    availability?: string;
+    availability?: VoiceCaptureAvailability;
+    onCheckConnection?: () => Promise<void>;
+    connectionCheckDisabled?: boolean;
     microphone?: string;
     toggleShortcut?: string;
     onToggle: () => Promise<void>;
@@ -51,6 +57,9 @@
   const recording = $derived(status.state === State.Recording);
   const failed = $derived(isFailure(status));
   const recovery = $derived(isCopyRequired(status));
+  const inactive = $derived(
+    status.state === State.Idle || status.state === State.Failed,
+  );
   const captureClock = new CaptureClock();
   $effect(() => captureClock.update(status, now));
   const clock = $derived(
@@ -70,7 +79,7 @@
       return status.startRejected
         ? "Recording could not start"
         : "Dictation could not be completed";
-    return availability || "Ready to dictate";
+    return availability?.label || "Ready to dictate";
   });
   const checkpoint = $derived(
     status.segmentNumber &&
@@ -101,10 +110,18 @@
       <p
         class="content-section-title flex items-center gap-2"
         class:text-destructive={failed}
-        class:text-warning={recovery}
+        class:text-warning={recovery || (inactive && availability?.attention)}
         role="status"
+        aria-label="Voice capture status"
       >
-        <MicIcon class="content-section-icon" aria-hidden="true" />
+        {#if inactive && availability?.busy}
+          <LoaderCircleIcon
+            class="content-section-icon animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+        {:else}
+          <MicIcon class="content-section-icon" aria-hidden="true" />
+        {/if}
         {label}
       </p>
       <div class="content-meta mt-1 flex flex-wrap items-center gap-2">
@@ -120,17 +137,31 @@
               ? "Waiting for speech"
               : "Listening"}</span
           >
-        {:else if status.state === State.Idle && !availability && toggleShortcut}
-          <ShortcutKeys
-            value={toggleShortcut}
-            label="Toggle recording shortcut"
-          />
-          <span>to record from your application</span>
-        {:else if availability}<button
-            type="button"
-            class="text-accent-text hover:underline"
-            onclick={onOpenSettings}>Open transcription settings</button
-          >{/if}
+        {:else if inactive}
+          {#if (failed || recovery) && availability?.label}<span
+              >{availability.label}</span
+            >{/if}
+          {#if availability?.detail}<span class="min-w-0 break-words"
+              >{availability.detail}</span
+            >{/if}
+          {#if !availability?.blocked && toggleShortcut}
+            <ShortcutKeys
+              value={toggleShortcut}
+              label="Toggle recording shortcut"
+            />
+            <span>to record from your application</span>
+          {/if}
+          {#if availability?.action === "check" && onCheckConnection}<button
+              type="button"
+              class="text-accent-text hover:underline disabled:opacity-50"
+              disabled={connectionCheckDisabled || availability.busy}
+              onclick={onCheckConnection}>Check connection</button
+            >{:else if availability?.action === "runtime"}<button
+              type="button"
+              class="text-accent-text hover:underline"
+              onclick={onOpenSettings}>Manage runtime</button
+            >{/if}
+        {/if}
       </div>
     </div>
     <div class="flex shrink-0 items-center gap-2">
@@ -161,7 +192,10 @@
         <Button
           size="sm"
           disabled={pending ||
-            !canToggleRecording(status, !recording && (busy || !!availability))}
+            !canToggleRecording(
+              status,
+              !recording && (busy || !!availability?.blocked),
+            )}
           onclick={() => run(onToggle)}
           aria-label={recording ? "Stop recording" : "Start recording"}
           >{recording

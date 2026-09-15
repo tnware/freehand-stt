@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { Combobox } from "bits-ui";
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import CheckIcon from "@lucide/svelte/icons/check";
@@ -11,6 +12,7 @@
     languages,
     restricted = false,
     disabled = false,
+    immediate = false,
     unavailableReason = "",
   }: {
     id: string;
@@ -18,11 +20,23 @@
     languages: Option[];
     restricted?: boolean;
     disabled?: boolean;
+    /** Commit a custom value on blur or Enter instead of on every keystroke. */
+    immediate?: boolean;
     unavailableReason?: string;
   } = $props();
   let query = $state("");
   let open = $state(false);
   let custom = $state(false);
+  let customDraft = $state<string | null>(null);
+  $effect(() => {
+    void value;
+    untrack(() => (customDraft = null));
+  });
+  function commitCustom() {
+    if (!immediate || disabled || customDraft === null || customDraft === value)
+      return;
+    value = customDraft;
+  }
   const choices = $derived(
     restricted
       ? languages.map((l) => ({ value: l.code, label: l.label, code: l.code }))
@@ -64,6 +78,7 @@
   );
 
   function choose(next: string) {
+    if (disabled) return;
     const choice = choices.find((item) => item.value === next);
     if (!choice) return;
     custom = next === "__custom";
@@ -75,11 +90,10 @@
 <div class="flex flex-col gap-2">
   <Combobox.Root
     type="single"
-    value={selected}
+    bind:value={() => selected, choose}
     inputValue={open ? query : selectedLabel}
     bind:open
     items={choices}
-    onValueChange={choose}
     onOpenChange={(isOpen) => {
       if (!isOpen) query = "";
     }}
@@ -152,7 +166,20 @@
     >
     <ValueInput
       id={`${id}-custom`}
-      bind:value
+      bind:value={
+        () => (immediate ? (customDraft ?? value) : value),
+        (next) => {
+          if (immediate) customDraft = String(next ?? "");
+          else value = String(next ?? "");
+        }
+      }
+      onchange={commitCustom}
+      onkeydown={(event) => {
+        if (immediate && event.key === "Enter") {
+          event.preventDefault();
+          commitCustom();
+        }
+      }}
       maxlength={32}
       {disabled}
       placeholder="Server-specific language code"

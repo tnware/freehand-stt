@@ -11,6 +11,7 @@
   import BoxIcon from "@lucide/svelte/icons/box";
   import CpuIcon from "@lucide/svelte/icons/cpu";
   import DownloadIcon from "@lucide/svelte/icons/download";
+  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import PackageIcon from "@lucide/svelte/icons/package";
   import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
   import TagIcon from "@lucide/svelte/icons/tag";
@@ -53,7 +54,8 @@
     const timer = setInterval(() => (now = Date.now()), 1000);
     return () => clearInterval(timer);
   });
-  const view = $derived(runtimePresentation(status, now));
+  const pending = $derived(runtime.pendingFor(instance?.id ?? entry.id));
+  const view = $derived(runtimePresentation(status, now, pending));
   const running = $derived(status?.state === "running");
   // Keep the catalog visible during acquisition or binary switching.
   const installed = $derived(
@@ -99,7 +101,7 @@
     ].filter((fact) => fact.value),
   );
   const problem = $derived(
-    runtime.errorFor(instance?.id ?? entry.id) || status?.error || "",
+    runtime.errorFor(instance?.id ?? entry.id) || view.error,
   );
   let preferencesOpen = $state(false);
   let sourceOpen = $state(false);
@@ -195,9 +197,7 @@
   function restart() {
     if (!instance || actionLocked || !running) return;
     const id = instance.id;
-    act(async () => {
-      if (await runtime.run(id, "Stop")) await runtime.run(id, "Start");
-    });
+    act(() => runtime.restart(id));
   }
 </script>
 
@@ -205,17 +205,17 @@
   <div
     class="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-hairline px-5 py-1.5"
   >
-    <div class="flex min-w-0 items-center gap-2.5">
+    <div class="flex min-w-0 flex-wrap items-center gap-2.5">
       <h2 class="content-title truncate font-display tracking-tight">
         {entry.name}
       </h2>
       <StatusBadge
-        tone={running
-          ? "success"
-          : status?.state === "error"
+        tone={busy
+          ? "accent"
+          : problem
             ? "danger"
-            : busy
-              ? "accent"
+            : running
+              ? "success"
               : "neutral"}
         dot
         >{status
@@ -231,7 +231,7 @@
           variant="outline"
           size="xs"
           aria-label="Cancel operation"
-          disabled={runtime.pendingFor(instance.id) === "Cancelling"}
+          disabled={pending === "Cancelling"}
           onclick={() => void runtime.cancel(instance.id)}>Cancel</Button
         >
       {:else if installed && instance}
@@ -314,10 +314,18 @@
         aria-label="Runtime operation"
       >
         {#if busy}
-          <p class="text-[12px] text-secondary-foreground">
-            {view.startup || view.activity}{view.operationModel
-              ? ` · ${view.operationModel}`
-              : ""}{view.transferred ? ` · ${view.transferred}` : ""}
+          <p
+            class="flex items-start gap-2 text-[12px] text-secondary-foreground"
+          >
+            <LoaderCircleIcon
+              class="mt-0.5 size-3.5 shrink-0 animate-spin"
+              aria-hidden="true"
+            />
+            <span class="min-w-0 break-words"
+              >{view.startup || view.activity}{view.operationModel
+                ? ` · ${view.operationModel}`
+                : ""}{view.transferred ? ` · ${view.transferred}` : ""}</span
+            >
           </p>
           {#if view.percent !== null}<progress
               class="h-1.5 w-full accent-primary"
@@ -325,7 +333,7 @@
               value={view.percent}
               aria-label="Runtime operation progress"
             ></progress>{/if}
-        {:else if view.completion}<p
+        {:else if view.completion && !problem}<p
             class="text-[12px] text-secondary-foreground"
           >
             {view.operationModel

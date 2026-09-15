@@ -65,6 +65,7 @@ function boundary(
     Remove: async () => {},
     Start: async () => {},
     Stop: async () => {},
+    Restart: async () => {},
     Cancel: async () => {},
     RefreshCatalog: async () => {},
     DownloadModel: async () => {},
@@ -73,6 +74,41 @@ function boundary(
   };
 }
 describe("managed runtime inventory", () => {
+  it("keeps pending commands separate from backend state until acknowledgement", async () => {
+    const acknowledgement = Promise.withResolvers<void>();
+    const Start = vi.fn(() => acknowledgement.promise);
+    const runtime = new ManagedRuntimeState(boundary({ Start }));
+    await runtime.load();
+    const starting = runtime.run("one", "Start");
+    expect(runtime.pendingFor("one")).toBe("Start");
+    expect(runtime.statusFor("one")?.status.state).toBe("installed");
+    expect(await runtime.run("one", "Start")).toBe(false);
+    acknowledgement.resolve();
+    await starting;
+    expect(runtime.pendingFor("one")).toBe("");
+    runtime.applyStatus({
+      ...row("one"),
+      status: { ...row("one").status, state: "starting", phase: "start" },
+    });
+    expect(runtime.isBusy("one")).toBe(true);
+    runtime.applyStatus({
+      ...row("one"),
+      status: { ...row("one").status, state: "running" },
+    });
+    expect(runtime.isBusy("one")).toBe(false);
+    expect(Start).toHaveBeenCalledOnce();
+  });
+  it("requests one backend-owned restart instead of racing Stop admission with Start", async () => {
+    const Restart = vi.fn(async () => {});
+    const Start = vi.fn(async () => {});
+    const Stop = vi.fn(async () => {});
+    const runtime = new ManagedRuntimeState(boundary({ Restart, Start, Stop }));
+    await runtime.load();
+    expect(await runtime.restart("one")).toBe(true);
+    expect(Restart).toHaveBeenCalledExactlyOnceWith({ instanceID: "one" });
+    expect(Start).not.toHaveBeenCalled();
+    expect(Stop).not.toHaveBeenCalled();
+  });
   it("allows output while startup is busy and settings are dirty without runtime mutations", async () => {
     const OpenProcessOutput = vi.fn(async () => {});
     const runtime = new ManagedRuntimeState(

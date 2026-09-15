@@ -471,7 +471,7 @@ test("restart does not start again when stopping failed", async ({ page }) => {
       .filter({ hasText: "The runtime operation did not finish." }),
   ).toBeVisible();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
-    "Stop:nemo-default",
+    "Restart:nemo-default",
   ]);
 });
 

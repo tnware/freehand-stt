@@ -13,14 +13,13 @@ test("speech settings retain a failed voice draft and return to the composer aft
   await page
     .getByRole("textbox", { name: "Text to speak", exact: true })
     .fill("Keep this draft.");
-  await page
-    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
-    .click();
   const sidebar = page.getByRole("complementary", {
     name: "Text to speech settings",
     exact: true,
   });
-  await sidebar.getByRole("button", { name: /^Voice / }).click();
+  await page
+    .getByRole("button", { name: "Text to speech settings", exact: true })
+    .click();
   const settings = page.locator('[data-pane="configuration"]');
   const voice = settings.getByRole("combobox", {
     name: "Choose voice",
@@ -50,9 +49,9 @@ test("speech settings retain a failed voice draft and return to the composer aft
   await page
     .getByRole("button", { name: "Toggle primary sidebar", exact: true })
     .click();
-  await expect(sidebar.getByRole("button", { name: /^Voice / })).toContainText(
-    "custom-voice",
-  );
+  await expect(
+    sidebar.getByRole("combobox", { name: "Choose voice", exact: true }),
+  ).toHaveValue("custom-voice");
   await page
     .getByRole("button", { name: "Dismiss primary sidebar", exact: true })
     .click();
@@ -114,7 +113,9 @@ test("failed speech model and speed edits can be discarded or saved without losi
     name: "Text to speech settings",
     exact: true,
   });
-  await sidebar.getByRole("button", { name: /^Model / }).click();
+  await page
+    .getByRole("button", { name: "Text to speech settings", exact: true })
+    .click();
   const settings = page.locator('[data-pane="configuration"]');
   const model = settings.getByRole("combobox", {
     name: "Choose model",
@@ -144,14 +145,16 @@ test("failed speech model and speed edits can be discarded or saved without losi
     .getByRole("button", { name: "Discard", exact: true })
     .click();
   await expect(settings).toHaveCount(0);
-  await expect(sidebar.getByRole("button", { name: /^Model / })).toContainText(
-    originalModel,
-  );
-  await expect(sidebar.getByRole("button", { name: /^Speed / })).toContainText(
-    `${before.toFixed(2)}×`,
-  );
+  await expect(
+    sidebar.getByRole("combobox", { name: "Choose model", exact: true }),
+  ).toHaveValue(originalModel);
+  await expect(
+    sidebar.getByRole("slider", { name: "Speech playback speed", exact: true }),
+  ).toHaveAttribute("aria-valuenow", String(before));
   await expect(composer).toHaveValue("Keep the model-change draft.");
-  await sidebar.getByRole("button", { name: /^Model / }).click();
+  await page
+    .getByRole("button", { name: "Text to speech settings", exact: true })
+    .click();
   await model.fill("speech/alternate");
   await model.press("Enter");
   await slider.focus();
@@ -161,11 +164,11 @@ test("failed speech model and speed edits can be discarded or saved without losi
   await expect(settings).toBeVisible();
   await settings.getByRole("button", { name: "Done", exact: true }).click();
   await expect(settings).toHaveCount(0);
-  await expect(sidebar.getByRole("button", { name: /^Model / })).toContainText(
-    "speech/alternate",
-  );
-  await expect(sidebar.getByRole("button", { name: /^Speed / })).toContainText(
-    `${(before + 0.05).toFixed(2)}×`,
-  );
+  await expect(
+    sidebar.getByRole("combobox", { name: "Choose model", exact: true }),
+  ).toHaveValue("speech/alternate");
+  await expect(
+    sidebar.getByRole("slider", { name: "Speech playback speed", exact: true }),
+  ).toHaveAttribute("aria-valuenow", String(before + 0.05));
   await expect(composer).toHaveValue("Keep the model-change draft.");
 });

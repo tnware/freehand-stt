@@ -22,6 +22,8 @@ export class WorkbenchLayout {
   bottomSize = $state(30);
   secondarySize = $state(40);
   outputInstanceID = $state("");
+  /** An explicit Manage action, consumed when the runtime inventory opens. */
+  runtimeInstanceID = $state("");
   diagnosticWorkflow = $state<"voice" | "file">("voice");
   sidebars = $state<Partial<Record<SidebarID, Snippet>>>({});
   details = $state<Snippet>();

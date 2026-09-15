@@ -20,10 +20,7 @@ for (const task of ["Voice transcription", "Audio file"]) {
     );
     await expect(panel).toContainText("NVIDIA GPU (CUDA)");
     await expect(
-      panel.getByRole("button", {
-        name: "Model Nemotron 3.5 Streaming",
-        exact: true,
-      }),
+      panel.getByText("Nemotron 3.5 Streaming", { exact: true }),
     ).toBeVisible();
     await panel.getByRole("button", { name: "Start", exact: true }).click();
     await expect(
@@ -50,18 +47,21 @@ test("managed Voice exposes live mode and links to its full controls", async ({
     panel.getByRole("button", { name: "Start", exact: true }),
   ).toBeEnabled();
   await panel.getByRole("button", { name: "Start", exact: true }).click();
-  await panel.getByRole("button", { name: /^Language/ }).click();
+  await panel
+    .getByRole("button", { name: "More transcription options", exact: true })
+    .click();
+  const inspector = page.locator('[data-pane="configuration"]');
   await expect(
-    page.getByRole("switch", { name: "Realtime transcription" }),
+    inspector.getByRole("switch", { name: "Realtime transcription" }),
   ).toBeChecked();
   await expect(
-    page.getByRole("switch", { name: "Live overlay captions" }),
+    inspector.getByRole("switch", { name: "Live overlay captions" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Spoken language", { exact: true }),
+    inspector.getByText("Spoken language", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Shared vocabulary", { exact: true }),
+    inspector.getByText("Shared vocabulary", { exact: true }),
   ).toBeVisible();
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
     "Stop:nemo-default",

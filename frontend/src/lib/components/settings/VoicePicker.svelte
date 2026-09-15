@@ -130,11 +130,10 @@
   <Combobox.Root
     {disabled}
     type="single"
-    {value}
+    bind:value={() => value, (next) => void choose(next)}
     inputValue={open ? query : value}
     bind:open
     items={choices}
-    onValueChange={choose}
     onOpenChange={(next) => {
       if (!next) {
         if (edited && !allowedVoices.length) {

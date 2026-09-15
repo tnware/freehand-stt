@@ -203,7 +203,15 @@ Use **Ctrl+B** for the left sidebar, **Ctrl+J** for the bottom panel, and
 **Ctrl+Alt+B** for the current task's options or History details. On macOS, use
 **⌘** in place of **Ctrl**.
 
-- The **left sidebar** follows the area you open: task settings, Settings
+- The **left sidebar** provides quick controls for the current workflow: connection,
+  model, language, live dictation, cleanup, or speech voice and speed. These
+  changes save immediately. Cleanup is shared by Voice and audio files. A selected
+  local connection shows its runtime status and controls directly below the picker,
+  including when cleanup is off. Use **Start**, **Stop**, or **Cancel** beside its
+  status, and select a downloaded model from the picker below while stopped.
+  Progress and errors appear in the same block. **View output** opens that
+  runtime in the bottom panel; **Manage runtime** opens its inventory entry.
+  Other areas show Settings
   sections, saved connections, runtime inventory, or History. Below 700px wide it starts hidden;
   its title-bar button opens it over the current page.
 - The **bottom panel** has **Recent**, **Runtime output**, and **Diagnostics**
@@ -214,8 +222,11 @@ Use **Ctrl+B** for the left sidebar, **Ctrl+J** for the bottom panel, and
   visibility when there is room.
 - The **right sidebar** opens the current workflow's options. In History it offers
   **Details** for the selected transcript and **History settings**. The main
-  transcript or composer stays in place while you edit. Changing pages closes
-  contextual options. Use the **X** in the sidebar's header to close it.
+  transcript or composer stays in place while you edit. Use the page's settings
+  cog for detailed workflow options such as microphone tuning, model behavior,
+  vocabulary, or delivery. These edits use **Save** and **Discard**; quick controls
+  pause while you have unsaved changes. Workflow configuration stays closed until
+  you open it. Changing pages closes contextual options. Use the **X** in the sidebar's header to close it.
   Below 1100px wide, the sidebar opens as an overlay on the
   right; Escape or the backdrop requests closure. Unsaved edits must be resolved
   before leaving. Widening restores your normal sidebar visibility choice.

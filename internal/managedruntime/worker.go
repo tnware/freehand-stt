@@ -222,7 +222,7 @@ func (s *worker) runOperation(phase, state string, guard bool, model string, wor
 		// initial notification, without advertising a terminal-but-busy state.
 		s.publicationMu.Lock()
 		s.mu.Lock()
-		keep := (phase == "start" || phase == "startup") && err == nil && s.process != nil
+		keep := (phase == "start" || phase == "startup" || phase == "restart") && err == nil && s.process != nil
 		if !keep {
 			cancel()
 		}
@@ -431,6 +431,10 @@ func (s *worker) Remove() error {
 }
 func (s *worker) startProcess(ctx context.Context) error {
 	s.mu.Lock()
+	if s.closed || ctx.Err() != nil {
+		s.mu.Unlock()
+		return context.Canceled
+	}
 	p := s.configuration
 	generation := s.generation
 	running := s.process != nil
@@ -449,6 +453,22 @@ func (s *worker) startProcess(ctx context.Context) error {
 	}
 	if !p.Enabled || !installed {
 		return errNotReady
+	}
+	// Auto-start first inspects the installation, which reports "installed".
+	// Publish the launch transition before adapters report readiness progress.
+	s.mu.Lock()
+	if s.closed || ctx.Err() != nil || generation != s.generation {
+		s.mu.Unlock()
+		return context.Canceled
+	}
+	entering := s.status.State != "starting"
+	s.status.State = "starting"
+	s.mu.Unlock()
+	if entering {
+		s.notify()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	ctx = s.observeStartup(ctx)
 	proc, endpoint, err := s.providerProcess.start(ctx, s.adapter, p.Model)
@@ -548,6 +568,14 @@ func (s *worker) stopProcess(ctx context.Context) error {
 	return nil
 }
 func (s *worker) Stop() error { return s.run("stop", "stopping", true, s.stopProcess) }
+func (s *worker) Restart() error {
+	return s.run("restart", "stopping", true, func(ctx context.Context) error {
+		if err := s.stopProcess(ctx); err != nil {
+			return err
+		}
+		return s.startProcess(ctx)
+	})
+}
 func (s *worker) Cancel() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

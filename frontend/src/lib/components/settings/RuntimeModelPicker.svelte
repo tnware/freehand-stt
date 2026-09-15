@@ -23,6 +23,7 @@
     onChoose,
     onForget,
     compact = false,
+    sidebar = false,
     immediate = false,
     disabled = false,
     profileName = "",
@@ -43,6 +44,7 @@
     profileName?: string;
     showProfileName?: boolean;
     compact?: boolean;
+    sidebar?: boolean;
     immediate?: boolean;
     onForget?: () => void;
   } = $props();
@@ -103,13 +105,18 @@
     </div>
     <div class="flex items-center gap-1">
       <Button
-        variant="soft"
+        variant={sidebar ? "ghost" : "soft"}
         size="sm"
+        class={sidebar ? "size-6 p-0" : ""}
+        aria-label={serverLoaded ? "Check server" : "Refresh models"}
+        title={serverLoaded ? "Check server" : "Refresh models"}
         disabled={locked || busy}
         onclick={onDiscover}
         ><RefreshCwIcon
           class={busy ? "size-3.5 animate-spin" : "size-3.5"}
-        />{serverLoaded ? "Check server" : "Refresh models"}</Button
+        />{#if !sidebar}{serverLoaded
+            ? "Check server"
+            : "Refresh models"}{/if}</Button
       >
       {#if onForget && savedModels.includes(value) && !serverLoaded}<Menu.Root
           ><Menu.Trigger
@@ -144,11 +151,10 @@
     </p>
   {:else}<Combobox.Root
       type="single"
-      {value}
+      bind:value={() => value, (next) => void choose(next)}
       inputValue={open ? query : value}
       bind:open
       items={choices}
-      onValueChange={choose}
       onOpenChange={(next) => {
         if (next) onEnter?.();
         else query = "";
@@ -233,7 +239,7 @@
         </Combobox.Content></Combobox.Portal
       >
     </Combobox.Root>{/if}
-  {#if (showProfileName && profileName) || (value && !serverLoaded)}
+  {#if !sidebar && ((showProfileName && profileName) || (value && !serverLoaded))}
     <p
       class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
     >

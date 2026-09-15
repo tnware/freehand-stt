@@ -14,6 +14,7 @@ export type QuickSettingsPatch = Partial<
     | "autoInsert"
     | "historyEnabled"
     | "overlayEnabled"
+    | "language"
   >
 > & {
   voiceTranscription?: Partial<Settings["voiceTranscription"]>;
@@ -91,6 +92,7 @@ export function quickSettingsDraft(
   )
     throw new Error("Reload settings before selecting a model.");
   if (patch.microphoneID !== undefined) next.microphoneID = patch.microphoneID;
+  if (patch.language !== undefined) next.language = patch.language;
   if (patch.vadEnabled !== undefined) next.vadEnabled = patch.vadEnabled;
   if (patch.silenceTrimming !== undefined)
     next.silenceTrimming = patch.silenceTrimming;

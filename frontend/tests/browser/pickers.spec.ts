@@ -48,7 +48,10 @@ for (const width of [520, 860]) {
       page.getByText("No matching language in this model profile."),
     ).toBeVisible();
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Show languages" }).click();
+    await page
+      .locator('[data-pane="configuration"]')
+      .getByRole("button", { name: "Show languages" })
+      .click();
     await page.keyboard.press("End");
     await page.keyboard.press("Enter");
     await expect(language).toHaveValue("Finnish");
@@ -85,7 +88,7 @@ test("unlisted language search still offers custom server values", async ({
   await expect(page.locator("#language-custom")).toHaveValue("custom-en");
 });
 
-test("Voice sidebar opens shared profile controls and preserves failed settings saves", async ({
+test("Voice settings cog opens shared profile controls and preserves failed settings saves", async ({
   page,
   saves,
 }) => {
@@ -94,11 +97,7 @@ test("Voice sidebar opens shared profile controls and preserves failed settings 
     "/tests/browser/app/?main&workflows&pickers&setup-ready&theme=dark",
   );
   await page
-    .getByRole("complementary", {
-      name: "Voice transcription settings",
-      exact: true,
-    })
-    .getByRole("button", { name: /^Model / })
+    .getByRole("button", { name: "Voice settings", exact: true })
     .click();
   const settings = page.locator('[data-pane="configuration"]');
   await settings.locator("#voice-profile").click();
@@ -117,11 +116,7 @@ test("Voice sidebar opens shared profile controls and preserves failed settings 
   await settings.getByRole("button", { name: "Done", exact: true }).click();
   await expect(settings).toBeHidden();
   await page
-    .getByRole("complementary", {
-      name: "Voice transcription settings",
-      exact: true,
-    })
-    .getByRole("button", { name: /^Model / })
+    .getByRole("button", { name: "Voice settings", exact: true })
     .click();
   await expect(settings.locator("#voice-profile")).toContainText("Qwen3-ASR");
   await expect(settings.locator("#voice-language")).toHaveValue("French");

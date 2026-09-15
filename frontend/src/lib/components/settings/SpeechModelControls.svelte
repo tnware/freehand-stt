@@ -15,6 +15,7 @@
   let {
     settings,
     runtime,
+    runtimeWorkBusy = false,
     onManageRuntime = () => {},
     models = [],
     draftModels = [],
@@ -24,6 +25,7 @@
     voicesBusy = false,
     compact = false,
     immediate = false,
+    showAdvanced = true,
     onEnter,
     metadataStatus = "idle",
     onChooseModel,
@@ -38,6 +40,7 @@
   }: {
     settings: Settings;
     runtime?: ManagedRuntimeState;
+    runtimeWorkBusy?: boolean;
     onManageRuntime?: () => void;
     models?: string[];
     draftModels?: string[];
@@ -49,6 +52,7 @@
     voicesBusy?: boolean;
     compact?: boolean;
     immediate?: boolean;
+    showAdvanced?: boolean;
     onChooseModel: (model: string) => boolean | Promise<boolean>;
     onForgetModel?: () => void;
     onDiscoverModels: () => void;
@@ -61,6 +65,9 @@
     modelDetails?: Snippet;
     voiceActions?: Snippet;
   } = $props();
+  const uid = $props.id();
+  const controlID = (name: string) =>
+    compact ? `${uid}-speech-${name}` : `tts-${name}`;
   const speech = $derived(settings.textToSpeech);
   const profile = $derived(
     settings.modelProfiles.speech?.find(
@@ -72,6 +79,8 @@
 {#if speech.managedInstanceID}
   {#if runtime}
     <ManagedRuntimeControls
+      sidebar={compact && !showAdvanced}
+      workBusy={runtimeWorkBusy}
       {runtime}
       instanceID={speech.managedInstanceID}
       disabled={busy}
@@ -80,8 +89,9 @@
   {/if}
 {:else}
   <RuntimeModelPicker
+    sidebar={compact && !showAdvanced}
     showProfileName={!modelDetails}
-    id={compact ? "quick-speech-model" : "tts-model"}
+    id={controlID("model")}
     value={speech.model}
     profileName={profile?.name ?? speech.modelProfile}
     {models}
@@ -91,16 +101,24 @@
     savedModels={rememberedModels(settings, Purpose.Speech).map((e) => e.model)}
     disabled={busy}
     busy={modelsBusy}
-    {onEnter}
+    onEnter={() => {
+      if (!busy) onEnter?.();
+    }}
     {metadataStatus}
-    onChoose={onChooseModel}
-    onForget={onForgetModel}
-    onDiscover={onDiscoverModels}
+    onChoose={(model) => (busy ? false : onChooseModel(model))}
+    onForget={onForgetModel
+      ? () => {
+          if (!busy) onForgetModel?.();
+        }
+      : undefined}
+    onDiscover={() => {
+      if (!busy && !modelsBusy) onDiscoverModels();
+    }}
   />
   {@render modelDetails?.()}
 {/if}
 <VoicePicker
-  id={compact ? "quick-speech-voice" : "tts-voice"}
+  id={controlID("voice")}
   value={speech.voice}
   supported={!!profile?.capabilities.voiceDiscovery}
   result={voices}
@@ -109,35 +127,36 @@
   disabled={busy}
   {compact}
   actions={voiceActions}
-  onChoose={onVoice}
-  onDiscover={onDiscoverVoices}
+  onChoose={(voice) => (busy ? false : onVoice(voice))}
+  onDiscover={() => {
+    if (!busy && !voicesBusy) onDiscoverVoices();
+  }}
 />
 <SpeechSpeedControl
-  id={compact ? "quick-speech-speed" : "tts-speed"}
+  id={controlID("speed")}
   value={speech.speed}
   supported={!!profile?.capabilities.speechSpeed}
   disabled={busy}
   {compact}
-  onChange={onSpeed}
+  onChange={(speed) => (busy ? false : onSpeed(speed))}
 />
 
-{#if profile?.capabilities.speechLanguage || profile?.capabilities.speechInstructions}
+{#if showAdvanced && (profile?.capabilities.speechLanguage || profile?.capabilities.speechInstructions)}
   <div class={compact ? "space-y-4" : "space-y-4 p-5"}>
     {#if profile.capabilities.speechLanguage}
       <div class="space-y-1.5">
-        <label
-          for={compact ? "quick-speech-language" : "tts-language"}
-          class="text-[13px] font-medium">Speech language</label
+        <label for={controlID("language")} class="text-[13px] font-medium"
+          >Speech language</label
         >
         <LanguagePicker
-          id={compact ? "quick-speech-language" : "tts-language"}
+          id={controlID("language")}
           languages={profile.languages ?? []}
           restricted
           disabled={busy}
           bind:value={
             () => speech.options.language || "auto",
             (language) => {
-              void onOptions({ ...speech.options, language });
+              if (!busy) void onOptions({ ...speech.options, language });
             }
           }
         />
@@ -145,12 +164,11 @@
     {/if}
     {#if profile.capabilities.speechInstructions}
       <div class="space-y-1.5">
-        <label
-          for={compact ? "quick-speech-instructions" : "tts-instructions"}
-          class="text-[13px] font-medium">Voice style</label
+        <label for={controlID("instructions")} class="text-[13px] font-medium"
+          >Voice style</label
         >
         <textarea
-          id={compact ? "quick-speech-instructions" : "tts-instructions"}
+          id={controlID("instructions")}
           rows="3"
           maxlength="500"
           class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -158,20 +176,19 @@
           disabled={busy}
           value={speech.options.instructions}
           oninput={(event) => {
-            if (!immediate)
+            if (!busy && !immediate)
               void onOptions({
                 ...speech.options,
                 instructions: event.currentTarget.value,
               });
           }}
           onchange={(event) => {
-            if (immediate)
+            if (!busy && immediate)
               void onOptions({
                 ...speech.options,
                 instructions: event.currentTarget.value,
               });
-          }}
-        ></textarea>
+          }}></textarea>
         <p class="text-xs leading-relaxed text-muted-foreground">
           Describe tone, emotion, or delivery. Leave empty for the selected
           voice’s usual style.

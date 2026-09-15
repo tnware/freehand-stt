@@ -75,6 +75,7 @@ export type QuickSettingsField =
   | "history-enabled"
   | "overlay-enabled"
   | "stt-model"
+  | "stt-language"
   | "processing-enabled"
   | "processing-model"
   | "processing-profile"

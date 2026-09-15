@@ -9,7 +9,6 @@
   import { Purpose } from "$bindings/savedconnection";
   import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
   import CurrentResult from "$lib/components/home/CurrentResult.svelte";
-  import SpeechQuickSettings from "./SpeechQuickSettings.svelte";
   import WorkspaceSplit from "./WorkspaceSplit.svelte";
   import VoiceBar from "./VoiceBar.svelte";
   import WorkflowSettingsButton from "./WorkflowSettingsButton.svelte";
@@ -30,6 +29,11 @@
   import { isFailure, statusMessage } from "$lib/utils/status";
   import { appReadiness, readinessVisible } from "$lib/utils/readiness";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
+  import { taskConnectionDetails } from "$lib/utils/connection";
+  import {
+    managedVoiceAvailability,
+    manualVoiceAvailability,
+  } from "$lib/utils/voiceCaptureAvailability";
   import {
     FileTranscriptionPhase,
     State,
@@ -124,10 +128,24 @@
   const localModel = $derived(
     local.selected?.name || runtime?.instance.model || "Local speech",
   );
+  const voiceConnection = $derived(
+    taskConnectionDetails("voice", session.editor),
+  );
   const recordingAvailability = $derived(
-    managed && (!local.ready || session.runtime.isBusy(instanceID))
-      ? `Local speech: ${session.runtime.isBusy(instanceID) ? "Updating" : local.label}`
-      : "",
+    managed
+      ? managedVoiceAvailability(runtime?.status, now, {
+          pending: session.runtime.pendingFor(instanceID),
+          busy: session.runtime.isBusy(instanceID),
+          checking:
+            session.runtime.loading || !session.runtime.providers.length,
+          error:
+            session.runtime.errorFor(instanceID) ||
+            (!runtime ? session.runtime.error : ""),
+        })
+      : manualVoiceAvailability(
+          voiceConnection,
+          session.editor.voiceConnectionChecked,
+        ),
   );
   function openLocalRuntime() {
     onOpenSettingsSection("local-runtime");
@@ -156,13 +174,15 @@
       inputMode !== "tts" &&
       readiness &&
       readinessVisible(readiness, dismissedRecoveryKey) &&
-      // Runtime lifecycle is recoverable in quick settings. Keep that surface
-      // mounted when stopping/switching models instead of navigating away.
+      // Lifecycle and metadata availability belong in the capture strip. Keep
+      // the transcript mounted while these recoverable checks change state.
       !(
-        managed &&
         !readiness.initialSetup &&
         readiness.steps.every(
-          (step) => !step.blocking || step.settingsSection === "local-runtime",
+          (step) =>
+            !step.blocking ||
+            (managed && step.settingsSection === "local-runtime") ||
+            (inputMode === "voice" && !managed && step.id === "connection"),
         )
       ) &&
       !voiceActive &&
@@ -300,14 +320,9 @@
                 ? "tts"
                 : "voice"}
             title={paneTitle}
-            instanceID={managed ? instanceID : ""}
             disabled={session.editor.saving}
             editing={quickSettingsDisabled}
-            onOpenConnection={() => onOpenSettingsSection(workflowSection)}
-            onOpenModel={() =>
-              managed && inputMode !== "tts"
-                ? openLocalRuntime()
-                : onOpenSettingsSection(workflowSection)}
+            onAddConnection={addConnection}
             onOpenOptions={() => onOpenSettingsSection(workflowSection)}
             onOpenCleanup={onOpenProcessingSettings}
             onOpenVocabulary={() => onOpenSettingsSection("vocabulary")}
@@ -347,6 +362,11 @@
             {now}
             busy={fileWorking}
             availability={recordingAvailability}
+            onCheckConnection={() =>
+              session.editor.testAppliedConnection(Purpose.Voice)}
+            connectionCheckDisabled={session.editor.saving ||
+              !!session.editor.quickSettingsPending.length ||
+              !!runtimeSettings?.configuration.recoveryRequired}
             microphone={microphoneLabel}
             toggleShortcut={runtimeSettings?.toggleShortcut ?? ""}
             onToggle={() => session.dictation.toggleRecording()}
@@ -422,19 +442,7 @@
           onClear={() => session.speech.clearTTSAudio()}
           onOpenSettings={onOpenSpeechSettings}
           optionsDisabled={session.editor.saving}
-        >
-          {#snippet quickSettings()}
-            <SpeechQuickSettings
-              settings={runtimeSettings!}
-              runtime={session.runtime}
-              onManageRuntime={openLocalRuntime}
-              editor={session.editor}
-              disabled={quickSettingsDisabled || session.editor.saving}
-              onAddConnection={addConnection}
-              onOpenSettings={onOpenSpeechSettings}
-            />
-          {/snippet}
-        </TextToSpeech>
+        ></TextToSpeech>
       {:else}
         <WorkspaceSplit
           {hasHistory}

@@ -21,6 +21,181 @@ const status: Status = {
   models: [],
 };
 describe("local runtime presentation", () => {
+  it("does not report readiness from initial inspection unless autostart actually reaches running", () => {
+    const inspecting = {
+      ...status,
+      state: "installed",
+      backend: "cpu",
+      phase: "startup",
+      operation: {
+        id: 1,
+        kind: "startup",
+        model: "",
+        outcome: "running",
+        error: "",
+      },
+    };
+    expect(runtimePresentation(inspecting)).toMatchObject({
+      label: "Checking runtime",
+      activity: "Checking runtime",
+      ready: false,
+      completion: "",
+    });
+    const inspected = {
+      ...inspecting,
+      phase: "",
+      operation: { ...inspecting.operation, outcome: "succeeded" },
+    };
+    expect(runtimePresentation(inspected)).toMatchObject({
+      label: "Installed",
+      ready: false,
+      completion: "",
+    });
+    expect(
+      runtimePresentation({ ...inspecting, state: "starting" }),
+    ).toMatchObject({
+      label: "Starting runtime",
+      ready: false,
+      completion: "",
+    });
+    expect(
+      runtimePresentation({ ...inspected, state: "running" }),
+    ).toMatchObject({
+      label: "Running",
+      ready: true,
+      completion: "Runtime ready.",
+    });
+  });
+  it("describes binding admission without reusing an old outcome, progress, or optimistic readiness", () => {
+    const completed = {
+      ...status,
+      state: "installed",
+      backend: "cpu",
+      progress: 1,
+      operation: {
+        id: 1,
+        kind: "download",
+        model: "old-model",
+        outcome: "succeeded",
+        error: "",
+      },
+    };
+    expect(runtimePresentation(completed, 1000, "Start")).toMatchObject({
+      label: "Starting runtime",
+      activity: "Starting runtime",
+      startup: "",
+      ready: false,
+      completion: "",
+      operationModel: "",
+      transferred: "",
+      percent: null,
+    });
+    expect(
+      runtimePresentation({ ...completed, state: "running" }, 1000, "Stop"),
+    ).toMatchObject({
+      label: "Stopping runtime",
+      activity: "Stopping runtime",
+      completion: "",
+      percent: null,
+    });
+    expect(
+      runtimePresentation({ ...completed, state: "running" }, 1000, "Restart"),
+    ).toMatchObject({
+      label: "Restarting runtime",
+      completion: "",
+    });
+  });
+  it("replaces pending startup text with backend stages while keeping cancellation explicit", () => {
+    const starting = {
+      ...status,
+      state: "starting",
+      phase: "start",
+      operation: {
+        id: 2,
+        kind: "start",
+        model: "",
+        outcome: "running",
+        error: "",
+      },
+      startupProgress: { phase: "warming_up", startedAt: 1000 },
+    };
+    expect(runtimePresentation(starting, 6500, "Start")).toMatchObject({
+      label: "Warming up selected model",
+      startup: "Warming up selected model · 5s in this stage",
+      percent: null,
+      completion: "",
+    });
+    expect(runtimePresentation(starting, 6500, "Cancelling")).toMatchObject({
+      label: "Cancelling operation",
+      activity: "Cancelling operation",
+      startup: "",
+      percent: null,
+      completion: "",
+    });
+  });
+  it("shows native restart stopping and startup stages before its terminal outcome", () => {
+    const restarting = {
+      ...status,
+      state: "stopping",
+      phase: "restart",
+      operation: {
+        id: 3,
+        kind: "restart",
+        model: "",
+        outcome: "running",
+        error: "",
+      },
+    };
+    expect(runtimePresentation(restarting, 1000, "Restart").label).toBe(
+      "Stopping runtime",
+    );
+    expect(
+      runtimePresentation(
+        {
+          ...restarting,
+          state: "starting",
+          startupProgress: { phase: "launching", startedAt: 1000 },
+        },
+        1500,
+      ).label,
+    ).toBe("Launching runtime");
+    expect(
+      runtimePresentation({
+        ...restarting,
+        state: "running",
+        phase: "",
+        operation: { ...restarting.operation, outcome: "succeeded" },
+      }),
+    ).toMatchObject({
+      label: "Running",
+      ready: true,
+      completion: "Runtime restarted.",
+    });
+  });
+  it("exposes backend failure text after work and suppresses the stale error during retry admission", () => {
+    const failed = {
+      ...status,
+      state: "error",
+      operation: {
+        id: 4,
+        kind: "start",
+        model: "",
+        outcome: "failed",
+        error: "Selected model could not start.",
+      },
+    };
+    expect(runtimePresentation(failed)).toMatchObject({
+      label: "Needs attention",
+      error: "Selected model could not start.",
+      completion: "Selected model could not start.",
+    });
+    expect(runtimePresentation(failed, 1000, "Start")).toMatchObject({
+      label: "Starting runtime",
+      error: "",
+      completion: "",
+      ready: false,
+    });
+  });
   it("reports elapsed time for the current startup stage, never a percentage", () => {
     const starting = {
       ...status,

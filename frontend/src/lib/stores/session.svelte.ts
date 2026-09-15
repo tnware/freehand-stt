@@ -62,9 +62,14 @@ export class Session {
     );
     this.runtime = new ManagedRuntimeState(
       bindings.runtime,
+      // Metadata probes do not change settings or own a runtime process. Keep
+      // mutation locks explicit so a slow probe cannot reject Start or Stop.
       () =>
         !this.editor.dirty &&
-        !this.editor.busy &&
+        !this.editor.saving &&
+        !this.editor.setupCompleting &&
+        !this.editor.configurationRetrying &&
+        !this.editor.configurationResetting &&
         !this.editor.quickSettingsPending.length,
       () => this.editor.load(),
     );
@@ -104,3 +109,18 @@ export class Session {
 }
 
 export const session = new Session();
+
+// Component HMR may replace App without replacing this shared module. Keep the
+// default session usable until the WebView leaves or this module is replaced.
+if (typeof window !== "undefined") {
+  const dispose = () => {
+    window.removeEventListener("pagehide", pageHide);
+    session.dispose();
+  };
+  const pageHide = (event: PageTransitionEvent) => {
+    // A cached page resumes with the same renderer state on Back/Forward.
+    if (!event.persisted) dispose();
+  };
+  window.addEventListener("pagehide", pageHide);
+  import.meta.hot?.dispose(dispose);
+}

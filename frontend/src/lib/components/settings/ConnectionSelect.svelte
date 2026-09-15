@@ -118,11 +118,10 @@
 
 <Combobox.Root
   type="single"
-  value={selected?.id ?? "none"}
+  bind:value={() => selected?.id ?? "none", (next) => void select(next)}
   inputValue={open ? query : (selected?.name ?? "")}
   bind:open
   items={choices}
-  onValueChange={select}
   allowDeselect={false}
   onOpenChange={(next) => {
     if (!next) query = "";

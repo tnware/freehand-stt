@@ -17,15 +17,19 @@
   import { Textarea } from "$lib/components/ui/textarea";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
   let {
     editor,
-    settings,
+    settings: suppliedSettings,
     disabled,
-    draft = false,
-    setup = false,
+    draft: draftMode = false,
+    setup: setupMode = false,
+    sidebar = false,
+    onOpenAdvanced,
     onAddConnection,
     runtime,
+    runtimeWorkBusy = false,
     onManageRuntime = () => {},
   }: {
     editor: SettingsEditor;
@@ -33,11 +37,20 @@
     disabled: boolean;
     draft?: boolean;
     setup?: boolean;
+    /** Flat applied controls for the workflow sidebar; advanced options remain in the inspector. */
+    sidebar?: boolean;
+    onOpenAdvanced?: () => void;
     onAddConnection: (purpose: Purpose) => void;
     runtime?: ManagedRuntimeState;
+    runtimeWorkBusy?: boolean;
     onManageRuntime?: () => void;
   } = $props();
   const uid = $props.id();
+  const draft = $derived(draftMode && !sidebar);
+  const setup = $derived(setupMode && !sidebar);
+  const settings = $derived(
+    sidebar ? (editor.applied ?? suppliedSettings) : suppliedSettings,
+  );
   // The workspace remains mounted while Settings is open. Draft controls keep
   // their validation IDs; quick/setup controls need their own label targets.
   const controlID = (id: string) => (draft ? id : `${uid}-${id}`);
@@ -97,6 +110,11 @@
   );
   const busy = $derived(
     disabled ||
+      (sidebar &&
+        (!editor.applied ||
+          editor.dirty ||
+          editor.quickSettingsPending.length > 0 ||
+          settings.configuration.recoveryRequired)) ||
       (managed && runtime?.isBusy(instanceID)) ||
       editor.saving ||
       editor.isQuickSettingsPending("voice-transcription"),
@@ -105,7 +123,11 @@
   const availableModels = $derived(
     editor.currentVoiceConnection?.modelIDs ?? [],
   );
+  const realtimeAvailable = $derived(
+    !!profile?.capabilities.realtime && !!backend?.capabilities.realtime,
+  );
   function chooseModel(model: string) {
+    if (busy || managed) return false;
     return draft
       ? editor.chooseModel(Purpose.Voice, model)
       : editor.updateQuickSettings(
@@ -114,6 +136,7 @@
         );
   }
   function update(patch: Partial<Settings["voiceTranscription"]>) {
+    if (busy) return;
     if (draft) {
       if (patch.model !== undefined)
         editor.chooseModel(Purpose.Voice, patch.model);
@@ -128,14 +151,23 @@
     void editor.testAppliedConnection(Purpose.Voice);
   }
   function setRealtime(realtime: boolean) {
-    if (busy) return;
+    if (busy || (sidebar && realtime && !realtimeAvailable)) return;
     update({ realtime });
   }
 </script>
 
-<div class={draft ? "flex flex-col gap-3" : "space-y-4"}>
+<div
+  class={draft
+    ? "flex flex-col gap-3"
+    : sidebar
+      ? "flex min-w-0 flex-col gap-2"
+      : "space-y-4"}
+  class:voice-sidebar={sidebar}
+>
   {#if !draft}
-    {#if !setup}<h3 class="text-[13px] font-semibold">Transcription</h3>{/if}
+    {#if !setup && !sidebar}<h3 class="text-[13px] font-semibold">
+        Transcription
+      </h3>{/if}
     <div class="space-y-1.5">
       <label
         for={controlID("voice-connection")}
@@ -147,14 +179,20 @@
           catalog={settings.savedConnections}
           runtimeInstances={runtime?.instances}
           purpose={Purpose.Voice}
+          compact={sidebar}
           disabled={busy || testing}
-          onChange={(change) => editor.changeConnection(change)}
+          onChange={(change) =>
+            busy || testing
+              ? Promise.resolve(false)
+              : editor.changeConnection(change)}
           onAdd={() => onAddConnection(Purpose.Voice)}
         />
       </div>
     </div>
     {#if managed && runtime}
       <ManagedRuntimeControls
+        {sidebar}
+        workBusy={runtimeWorkBusy}
         {instanceID}
         {runtime}
         disabled={disabled ||
@@ -167,6 +205,8 @@
   {#if draft}
     <SettingsCard>
       {#if managed && runtime}<ManagedRuntimeControls
+          {sidebar}
+          workBusy={runtimeWorkBusy}
           {runtime}
           {instanceID}
           {disabled}
@@ -184,8 +224,20 @@
     >
       <div class="space-y-4 py-3">{@render optionalControls()}</div>
     </SettingsDisclosure>
+  {:else if sidebar}
+    {@render recognitionControls()}
+    {#if onOpenAdvanced}<button
+        type="button"
+        class="flex min-h-7 w-full items-center justify-between gap-2 border-t border-hairline pt-1 text-left text-xs text-secondary-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onclick={onOpenAdvanced}
+        >More transcription options<ChevronRightIcon
+          class="size-3 shrink-0"
+          aria-hidden="true"
+        /></button
+      >{/if}
   {:else if draft}{@render finishingControls()}{:else}{@render optionalControls()}{/if}
   {#if !draft}<QuickSaveStatus
+      quiet={sidebar}
       fields={["voice-transcription"]}
       pending={editor.quickSettingsPending}
       saved={editor.quickSettingsSaved}
@@ -195,6 +247,7 @@
 
 {#snippet modelControls()}
   <RuntimeModelPicker
+    {sidebar}
     id={controlID("voice-model")}
     value={cfg.model}
     compact={!draft}
@@ -218,14 +271,14 @@
         }
       : undefined}
   />
-  <ModelProfilePicker
-    id={controlID("voice-profile")}
-    value={cfg.modelProfile}
-    profiles={settings.modelProfiles.voiceTranscription ?? []}
-    disabled={busy}
-    compact={!draft}
-    onChange={chooseProfile}
-  />
+  {#if !sidebar}<ModelProfilePicker
+      id={controlID("voice-profile")}
+      value={cfg.modelProfile}
+      profiles={settings.modelProfiles.voiceTranscription ?? []}
+      disabled={busy}
+      compact={!draft}
+      onChange={chooseProfile}
+    />{/if}
 {/snippet}
 
 {#snippet optionalControls()}
@@ -242,27 +295,30 @@
     >
       {profileNotice}
     </p>{/if}
-  {#if profile?.capabilities.realtime}
+  {#if sidebar ? realtimeAvailable || cfg.realtime : profile?.capabilities.realtime}
     <div
       class={draft
         ? "flex items-center justify-between gap-4 py-3"
-        : "flex items-center justify-between gap-3 border-t border-hairline pt-3"}
+        : sidebar
+          ? "flex min-h-7 items-center justify-between gap-3"
+          : "flex items-center justify-between gap-3 border-t border-hairline pt-3"}
     >
       <div>
         <label
           for={controlID("voice-realtime")}
-          class="text-[13px] font-semibold">Realtime transcription</label
+          class="text-[13px] font-semibold"
+          >{sidebar ? "Live dictation" : "Realtime transcription"}</label
         >
-        <p class="mt-1 text-xs text-muted-foreground">
-          Show words as you speak, using this connection and model.
-        </p>
+        {#if !sidebar}<p class="mt-1 text-xs text-muted-foreground">
+            Show words as you speak, using this connection and model.
+          </p>{/if}
       </div>
       <Switch
         id={controlID("voice-realtime")}
-        checked={cfg.realtime}
+        bind:checked={() => cfg.realtime, setRealtime}
         disabled={busy ||
+          (sidebar && !cfg.realtime && !realtimeAvailable) ||
           (!managed && !cfg.realtime && (!connectionID || !cfg.model))}
-        onCheckedChange={setRealtime}
       />
     </div>
   {/if}
@@ -272,8 +328,9 @@
         ? "py-3 text-xs leading-relaxed text-muted-foreground"
         : "text-xs leading-relaxed text-muted-foreground"}
     >
-      Qwen realtime uses automatic language detection. Language, context,
-      vocabulary, and temperature hints apply only with realtime off.
+      {#if sidebar}Language is detected automatically in live dictation.
+      {:else}Qwen realtime uses automatic language detection. Language, context,
+        vocabulary, and temperature hints apply only with realtime off.{/if}
     </p>
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
@@ -283,6 +340,7 @@
       >
       <LanguagePicker
         id={controlID("voice-language")}
+        immediate={!draft}
         restricted={!!profile.languages?.length}
         languages={profile.languages?.length
           ? profile.languages
@@ -292,7 +350,7 @@
       />
     </div>
   {/if}
-  {#if !cfg.realtime && profile?.capabilities.transcriptionPrompt}
+  {#if !sidebar && !cfg.realtime && profile?.capabilities.transcriptionPrompt}
     <div class={draft ? "space-y-2 py-3" : "space-y-1.5"}>
       <label for={controlID("voice-prompt")} class="text-[13px] font-semibold"
         >Context hint</label

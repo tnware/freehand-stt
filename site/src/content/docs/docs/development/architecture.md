@@ -207,6 +207,13 @@ The manager consumes that immutable status/active-model snapshot rather than
 rereading mutable worker state. Seeing a completed operation must not itself
 cause an immediate follow-up action to fail as still busy.
 
+Start, Stop, and Restart bindings acknowledge admission; status events report
+progress and completion. Restart owns stop and relaunch as one worker operation,
+waits for the old process exit, and never relaunches after failed stopping,
+cancellation, or shutdown. Auto-start publishes the same `starting` transition
+before adapter launch. The renderer displays pending requests immediately, then
+uses backend lifecycle stages and outcomes without optimistic running state.
+
 ### Explicit process-output observation
 
 Each worker privately captures a rolling stdout/stderr tail by default, bounded
@@ -715,6 +722,10 @@ Each WebView composes its own `Session` from feature owners under
 `frontend/src/lib/stores`. `Session` owns construction, initial loading order,
 aggregate busy presentation, and presentation teardown; it is not a second
 command facade or a container for feature state.
+The default main-window Session belongs to the WebView module, so a development
+hot replacement of `App` unsubscribes the old view and clears credential drafts
+without disposing that shared Session. Actual page unload or Session module
+replacement disposes it; a BFCache page suspension preserves it for restoration.
 Disposal is terminal: `Session` stops scheduling subsequent initialization steps
 and suppresses late initialization failures. Already-started operations retain
 their feature owners. The app mount separately guards metadata replies,
@@ -817,6 +828,22 @@ through `App`'s existing draft-resolution guard. History initializes wide-window
 details visibility on each visit, respects explicit closure during that visit,
 and offers a Details action in its page header. That action also resolves a
 pending History settings draft before replacing it with details.
+Voice, Audio file, and Text to speech keep their detailed options explicit.
+Their primary sidebar reuses immediate connection/model/language and speech
+controls against the applied snapshot. Cleanup quick controls are shared by
+Voice and files; managed model selection remains runtime-owned. Quick saves use
+the existing serialized settings transaction, and scoped control IDs keep the
+primary controls independent from the contextual draft editor.
+`ManagedRuntimeControls` follows each local connection in the primary sidebar,
+including shared cleanup independently of its enabled switch. The same component
+owns runtime status presentation and explicit lifecycle/model commands in detailed
+options; it never starts a process on mount. Active workflow and draft locks remain
+separate from the runtime's own pending state so cancellation stays reachable.
+Metadata-only connection probes do not block runtime commands. Runtime management
+links queue an ephemeral exact-instance selection for the inventory through the
+existing guarded navigation; output links use the shared bottom panel.
+Opening clean contextual options does not lock runtime commands or quick controls;
+active edits and transactions retain their existing mutation guards.
 Below 1100px viewport width, the sidebar
 starts hidden and opens as an explicit right-side overlay. Escape/backdrop
 dismissal follows the same draft-resolution guard as navigation. It never moves

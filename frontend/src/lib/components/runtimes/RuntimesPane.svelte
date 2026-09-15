@@ -1,5 +1,6 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import SidebarContribution from "$lib/components/shell/SidebarContribution.svelte";
   import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
@@ -19,6 +20,7 @@
     workBusy?: boolean;
   } = $props();
   const workbench = getWorkbenchLayout();
+  const uid = $props.id();
 
   const runtime = $derived(session.runtime);
   let selected = $state("");
@@ -29,10 +31,18 @@
       const instance = runtime.instances.find(
         (item) => item.instance.provider === entry.id,
       );
+      const id = instance?.instance.id ?? entry.id;
+      const view = runtimePresentation(
+        instance?.status,
+        undefined,
+        runtime.pendingFor(id),
+      );
       return {
         entry,
         instance,
-        view: runtimePresentation(instance?.status),
+        view,
+        operating: runtime.isBusy(id),
+        problem: runtime.errorFor(id) || view.error,
       };
     }),
   );
@@ -48,6 +58,20 @@
   // Retain that selection: stopping one provider must not move the user to
   // another provider that happens to still be running.
   $effect(() => {
+    const requestedID = workbench?.runtimeInstanceID;
+    if (requestedID) {
+      if (runtime.loading) return;
+      const requested = runtime.statusFor(requestedID);
+      workbench.runtimeInstanceID = "";
+      if (
+        requested &&
+        rows.some((row) => row.entry.id === requested.instance.provider)
+      ) {
+        selected = requested.instance.provider;
+        recoveryID = requestedID;
+        return;
+      }
+    }
     if (selected !== active) selected = active;
   });
   const current = $derived(rows.find((row) => row.entry.id === active));
@@ -108,6 +132,9 @@
           <button
             type="button"
             aria-pressed={on}
+            aria-describedby={row.problem
+              ? `${uid}-${row.entry.id}-error`
+              : undefined}
             class="relative flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
               ? 'bg-accent-wash'
               : ''}"
@@ -145,14 +172,37 @@
                   .filter(Boolean)
                   .join(" · ") || row.view.label}
               </span>
+              <span
+                class="mt-0.5 flex items-start gap-1.5 text-xs leading-relaxed text-secondary-foreground"
+              >
+                {#if row.operating}<LoaderCircleIcon
+                    class="mt-0.5 size-3 shrink-0 animate-spin"
+                    aria-hidden="true"
+                  />{/if}
+                <span class="min-w-0 break-words"
+                  >{row.instance
+                    ? row.view.label
+                    : row.entry.supported
+                      ? "Not installed"
+                      : "Unavailable"}</span
+                >
+              </span>
             </span>
             <span
-              class="size-[7px] shrink-0 rounded-full {tone(
-                row.instance?.status.state,
-              )}"
+              class="size-[7px] shrink-0 rounded-full {row.operating
+                ? 'bg-primary'
+                : row.problem
+                  ? 'bg-destructive'
+                  : tone(row.instance?.status.state)}"
               aria-hidden="true"
             ></span>
           </button>
+          {#if row.problem}<p
+              id={`${uid}-${row.entry.id}-error`}
+              class="break-words px-2.5 pb-2 text-xs leading-relaxed text-destructive"
+            >
+              {row.problem}
+            </p>{/if}
         {/each}
         {#if !rows.length}
           <p class="px-2 py-3 text-xs text-muted-foreground">

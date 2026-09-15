@@ -24,7 +24,7 @@
   import { createRuntimeFixture } from "./runtime-fixture";
   import { createHistoryFixture } from "./history-fixture";
   import { ProviderID } from "$bindings/managedruntime";
-  import { State } from "$lib/state";
+  import { State, PostProcessingPreset } from "$lib/state";
   import { CancellablePromise } from "@wailsio/runtime";
   import { Action, Purpose } from "$bindings/savedconnection";
   import { CheckKind, CheckStatus } from "$bindings/connection";
@@ -43,6 +43,7 @@
   import { controlledSaves } from "./save-control";
   import { installConnectionWindows, wire } from "./connection-window-bridge";
   const params = new URLSearchParams(location.search);
+  const managedCleanup = params.has("managed-cleanup");
   const child = params.has("settings-frame");
   const integrated = !child && (params.has("blank") || params.has("main"));
   if (child) window.testConnectionWindows = window.parent.testConnectionWindows;
@@ -202,21 +203,66 @@
     return structuredClone(current);
   });
   if (child) current = wire(window.testConnectionWindows.settings());
-  const runtimeFixture = params.has("runtime")
-    ? createRuntimeFixture(
-        current.platform !== "darwin",
-        (p) => {
-          current = { ...current, managedRuntimes: p };
-        },
-        params.has("runtime-ready"),
-        params.get("runtime-provider") === "llama-cpp"
-          ? ProviderID.LlamaCPP
-          : params.get("runtime-provider") === "whisper-cpp"
-            ? ProviderID.WhisperCPP
-            : ProviderID.NeMoSpeechCPP,
-      )
-    : null;
+  const runtimeFixture =
+    params.has("runtime") || managedCleanup
+      ? createRuntimeFixture(
+          current.platform !== "darwin",
+          (p) => {
+            current = { ...current, managedRuntimes: p };
+          },
+          params.has("runtime-ready") || managedCleanup,
+          managedCleanup || params.get("runtime-provider") === "llama-cpp"
+            ? ProviderID.LlamaCPP
+            : params.get("runtime-provider") === "whisper-cpp"
+              ? ProviderID.WhisperCPP
+              : ProviderID.NeMoSpeechCPP,
+          managedCleanup ? "Local cleanup" : "Local speech",
+        )
+      : null;
   if (runtimeFixture) window.testRuntime = runtimeFixture.control;
+  if (managedCleanup && runtimeFixture) {
+    const instance = runtimeFixture.control.snapshot()[0].instance;
+    const remote = current.savedConnections.entries!.find(
+      (entry) => entry.id === "original",
+    )!;
+    remote.details.baseURL = "https://speech.example.test/v1";
+    current.baseURL = remote.details.baseURL;
+    current.voiceTranscription.baseURL = remote.details.baseURL;
+    current.savedConnections.entries!.push({
+      id: "local-cleanup",
+      name: instance.name,
+      builtIn: true,
+      uses: [Purpose.Cleanup],
+      hasCredential: false,
+      details: {
+        managedInstanceID: instance.id,
+        compatibilityProfile: BackendID.$zero,
+        baseURL: "",
+        allowInsecureHTTP: false,
+        authenticationMode: AuthenticationMode.AuthenticationModeNone,
+        healthPath: "",
+        headers: {},
+      },
+    });
+    current.savedConnections.selected = {
+      ...current.savedConnections.selected,
+      [Purpose.Cleanup]: "local-cleanup",
+    };
+    current.postProcessing = {
+      ...current.postProcessing,
+      enabled: false,
+      managedInstanceID: instance.id,
+      model: instance.model,
+      preset: PostProcessingPreset.PostProcessingPresetS1Mini,
+      compatibilityProfile: BackendID.LlamaCPP,
+      baseURL: "",
+      allowInsecureHTTP: false,
+    };
+    current.modelProfiles.postProcessing =
+      runtimeFixture.providers[0].models?.flatMap((model) =>
+        model.behavior ? [model.behavior] : [],
+      ) ?? [];
+  }
   if (
     runtimeFixture &&
     current.managedRuntimes?.length &&
@@ -271,7 +317,10 @@
       [Purpose.Transcription]: "local-speech",
     };
   }
-  const metadata = params.has("metadata-control") ? controlledMetadata() : null;
+  const metadata =
+    params.has("metadata-control") || params.has("voice-metadata-control")
+      ? controlledMetadata()
+      : null;
   if (metadata) {
     window.testMetadata = metadata.control;
     current.setupCompleted = true;
@@ -294,6 +343,10 @@
             ]),
         },
         connection: {
+          TestSavedConnection: () =>
+            params.has("voice-metadata-control") && metadata
+              ? metadata.request(Purpose.Voice)
+              : CancellablePromise.resolve(connectionResult),
           TestConnection: () =>
             metadata?.request(Purpose.Transcription) ??
             CancellablePromise.resolve(
@@ -336,7 +389,10 @@
     ),
     runtime: runtimeFixture?.service,
   });
-  session.editor.applySettingsSnapshot(structuredClone(current));
+  // Model a cold startup for the delayed Voice probe: preloading here would
+  // start a check before App's initial load adopts the same settings again.
+  if (!params.has("voice-metadata-control"))
+    session.editor.applySettingsSnapshot(structuredClone(current));
   if (historyFixture) {
     window.testHistory = {
       failNextClear: historyFixture.failNextClear,
