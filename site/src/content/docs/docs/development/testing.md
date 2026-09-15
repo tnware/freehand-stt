@@ -221,7 +221,7 @@ startup, rendering, clipboard, and selected-model inference observations:
   Browser tests inspect sources before installation without mutation calls,
   distinguish NeMo's model manager from direct downloads, and follow explicit
   CPU/CUDA preview choices without fetching files.
-- llama.cpp normal-output tests retain consent-gated memory-only capture, reject
+- llama.cpp normal-output tests retain bounded private memory-only capture, reject
   environment/config logging overrides, and qualify the exact pinned CPU binary
   with a model-free upstream warning through the owned launcher. This does not
   establish native viewer behavior or GPU inference acceptance.
@@ -244,27 +244,29 @@ startup, rendering, clipboard, and selected-model inference observations:
   terminal notification while preserving terminal-before-next-start event order.
 - Output checks cover 256 KiB/1,024-chunk/4 KiB-per-chunk limits, cursor deltas and
   truncation, interleaved streams, split UTF-8 and terminal controls, generation
-  fencing, opt-in reads, revocation without private-tail erasure, explicit Clear,
+  fencing, reader admission, revocation without private-tail erasure, explicit Clear,
   next-start/remove/shutdown cleanup, and the separate bounded parser prefix.
 - Use split and malformed controls to verify the display allowlist: bounded SGR
   colors/styles and erase-line progress may pass; OSC clipboard/link/title,
   DCS/APC/PM/SOS, queries, input modes, and alternate-screen controls may not.
   Check per-stream decoder isolation, bounded terminal scrollback/write queues,
-  eviction/reset propagation, and stale writes after close or revoked consent.
+  eviction/reset propagation, and stale writes after close or revoked access.
   Explicit Copy selection must copy only selected rendered text through the native
   boundary, never read the clipboard or react to upstream escape sequences.
-- Windowing and frontend state tests must cover viewer reuse, consent per opening or
-  runtime switch, bounded non-overlapping polling, late-read rejection, visible
+- Windowing and frontend state tests must cover immediate reads for visible embedded
+  runtime tabs, standalone consent per opening or runtime switch, viewer reuse,
+  bounded non-overlapping polling, late-read rejection, visible
   state clearing, and no process lifecycle calls from viewer actions. Browser
   fixtures must cover recommendation before installation, explicit acceptance,
   phase/elapsed display without fake percentages, **View output** during startup
-  from management and quick controls, warning/consent, read-only terminal rendering,
+  from management and quick controls, direct embedded display, standalone consent,
+  read-only terminal rendering,
   colors and carriage-return progress, local search, resize, selection/copy admission,
   follow/pause scrolling, Clear, close/reopen, and sparse upstream output. Use bounded
   synthetic output; viewer interactions must never send input or change process lifetime.
 
-`process-output.spec.ts` checks both themes at wide and narrow widths, stable
-consent geometry, terminal content fitting its viewport, and actual clicks on
+`process-output.spec.ts` checks the standalone viewer in both themes at wide and
+narrow widths, stable consent geometry, terminal content fitting its viewport, and actual clicks on
 search and Follow controls. Searching forward and backward to the same match
 must leave Copy enabled when the terminal still has a selection.
 
@@ -835,7 +837,7 @@ list is an acceptance procedure, not a claim that the checks have passed:
 30. From each workflow sidebar, open the corresponding right-side options to select saved connections and discovered models, and switch between **Custom instruction** and **S1-mini by Superwhisper** under Cleanup. Edit endpoint/authentication details only on the Connections page. Confirm contextual edits remain drafts until **Save** succeeds and the main workflow remains visible. A failed save must retain the editable draft, preserve the prior applied configuration, and report an actionable error. Discard must restore the applied values. In Cleanup settings, edit the custom instruction, exercise empty and multibyte-over-limit validation, restore the recommended instruction, save, restart, and confirm it persisted. Switch to S1-mini and confirm the custom editor disappears, the exact built-in instruction is read-only, and the effective control line changes with every styling step plus both structure and context radio choices. Switch back and confirm the custom instruction was preserved. Committed connection changes must invalidate stale metadata. Model pickers may perform bounded first-entry discovery; deliberate re-entry or explicit refresh may retry, but ordinary effects must not loop after failure.
 31. Run the development app from a terminal and exercise recording start/stop/cancel, one VAD checkpoint, post-processing fallback, stored-file selection/transcription/cancel, both connection tests, settings save, and tray Quit. Confirm lifecycle records have stable components/correlation fields, use `duration_ms`, and produce one terminal outcome per start. Search the output for the real test credential, transcript phrases, model IDs, selected file name/path, endpoint path/query, custom headers, and target-window identity; none may appear. Confirm a failed title-bar action is visible in the app rather than only the WebView console.
 32. In **Settings → Overlay**, preview all four layouts, six anchors, three surfaces, four recording visualizers, three visibility policies, and both motion policies before saving. Confirm the real native surface cycles through speech, silence, countdown, transcription, post-processing, delivery, copy-required, and failure; draft controls update the same HWND; closing/discarding restores applied settings; and starting a real dictation preempts preview. Turn the saved overlay off and confirm preview can temporarily create it but Stop/Settings close destroys it. For real dictation, confirm the target monitor is captured at recording start, placement stays inside that monitor's work area at 100%/150%/200% DPI and with taskbars on every edge, and focus changes do not move it mid-operation. Exercise minimum/default/maximum size, opacity, edge distance, and glow without entrance replay, extra taps, or GDI/thread leaks. Windows Animation Effects off and Reduced must stop decorative motion while the countdown remains live; a Windows contrast theme must force a readable opaque system palette. Detailed must show only fixed labels, the normalized shortcut, bounded elapsed time, and checkpoint count—never transcript, filename, provider, endpoint/model, prompt, credential, or raw error content. Across all cases verify unchanged focus/caret/target identity, click-through behavior, no taskbar/Alt+Tab entry, bounded shutdown, and ordinary dictation/insertion behavior.
-33. Navigate the activity rail, command palette, Settings pane and Connections editor, native About and Transcription details windows, and remaining dialogs using only the keyboard. Verify Tab/Shift+Tab, Enter, Space, Escape, Alt+F4, rail focus, panel Arrow/Home/End navigation, and Ctrl+K (⌘K on macOS). Every Settings entry point must resolve to the requested section in Main. Dirty exits through the rail, palette, runtime links, native task requests, Done, and close offer Save, Discard, or Keep editing; failed saves retain the draft. Hide and reopen: no credential draft or sensitive runtime output survives, and shortcut capture/overlay preview stops. Connection creation's Save and return resumes the originating workflow. Contextual Save applies in place; Done closes the options. About and Transcription details reuse their own windows and hide from native close or footer. With Narrator, state changes are announced without repeated timer or transcript readings. Repeat with Windows Animation Effects disabled and in a contrast theme; countdowns continue while decorative motion stops and keyboard focus remains visible.
+33. Navigate the activity rail, command palette, Settings pane and Connections editor, native About and Transcription details windows, and remaining dialogs using only the keyboard. Verify Tab/Shift+Tab, Enter, Space, Escape, Alt+F4, rail focus, panel Arrow/Home/End navigation, and Ctrl+K (⌘K on macOS). Every Settings entry point must resolve to the requested section in Main. Dirty exits through the rail, palette, runtime links, native task requests, Done, and close offer Save, Discard, or Keep editing; failed saves retain the draft. Hiding clears credential drafts and displayed runtime output, disables output reads, and stops shortcut capture/overlay preview. Reopening a visible Runtime output tab begins fresh reads for its retained target. Connection creation's Save and return resumes the originating workflow. Contextual Save applies in place; Done closes the options. About and Transcription details reuse their own windows and hide from native close or footer. With Narrator, state changes are announced without repeated timer or transcript readings. Repeat with Windows Animation Effects disabled and in a contrast theme; countdowns continue while decorative motion stops and keyboard focus remains visible.
 34. Open About in a development build and a packaged build. Confirm its compact metadata matches `build/config.yml`, the executable's Details tab, and Installed apps; only the development build shows **Development**. Run `wails3 task common:check:release-info`, deliberately make one generated Windows version field stale, and confirm the check and package build fail until `wails3 task common:update:build-assets` repairs it.
 35. Move and resize the main window on a non-primary display. Open Settings and confirm it stays inside the main workspace. Open About and Transcription details, and confirm each hidden auxiliary window opens centered over the main window without leaving that display's usable work area. Move an already-open auxiliary window and invoke it again; confirm it is focused without jumping. Hide and reopen it; confirm it returns relative to the main window rather than retaining independent placement. Choose tray Quit, relaunch, and confirm only the main window restores its normal size and screen-relative position. Then disconnect the saved display and relaunch; confirm the main window is fully visible and centered on the primary work area.
 36. In direct-input mode, compare short, long, multiline, and non-ASCII transcripts in Notepad, a Chromium text field, VS Code or another editor, a terminal, and an Office-style rich-text target. Ordinary text should appear in one immediate update; long text should complete without visible fixed-delay stepping, truncation, or broken surrogate pairs. Change focus during a long insertion and confirm delivery stops before the next dispatch rather than redirecting its remainder. Confirm the terminal records only UTF-16 unit count, batch count, duration, strategy, and bounded failure stage—never text or target identity.
@@ -1420,13 +1422,18 @@ creating a second settings copy in layout storage.
 Unconfigured speech must keep its draft editable beside compact Configure speech
 guidance, with Speak disabled until configured.
 
-Select a Runtime output target, accept sensitive-output consent, and switch
-pages: navigation must not choose another runtime. Entering global Settings must
-release the reader because the panel is hidden there; returning retains the
-runtime target and requires fresh consent. Hiding the bottom panel,
-changing tabs or runtime targets, and hiding the window must end consent, clear
-viewer output, and fence late reads. Returning requires fresh consent. Removing
-the selected runtime must not silently pick another. Diagnostics checks use the
+Open Runtime output and verify the initial target is a running runtime, or the
+first installed runtime if none is running. Output must appear directly without
+a Show output step. Select another runtime's tab by pointer and keyboard, then
+switch pages: navigation must not choose another runtime. Entering global Settings
+must release the reader because the panel is hidden there; returning retains the
+runtime target and resumes direct reads. Hiding the bottom panel, changing panel
+tabs or runtime targets, hiding the workspace or document, and teardown must
+disable retrieval, clear viewer output, and fence late reads. No reader may enable
+while hidden. Reopening starts fresh reads for the retained target, whose private
+tail may still be available. Removing the selected runtime must not silently pick
+another. The standalone Process output window still requires Show output on each
+opening or runtime switch. Diagnostics checks use the
 explicitly selected workflow's saved connection and remain metadata-only.
 Browser fixtures establish renderer behavior; native window-hide events,
 clipboard behavior, and runtime process lifecycles require separate OS acceptance.

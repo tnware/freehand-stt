@@ -9,6 +9,7 @@
   import { Button } from "$lib/components/ui/button";
   import * as Select from "$lib/components/ui/select";
   import PanelTabs from "./PanelTabs.svelte";
+  import RuntimeOutputTabs from "./RuntimeOutputTabs.svelte";
 
   let {
     session,
@@ -25,6 +26,7 @@
   const layout = getWorkbenchLayout();
   const uid = $props.id();
   const panelID = `${uid}-content`;
+  const outputPanelID = `${uid}-runtime-output`;
   const settings = $derived(session.editor.applied);
   const tabs = $derived([
     {
@@ -165,55 +167,32 @@
           playbackVisibleElsewhere
         />
       {:else if layout.tab === "output"}
+        <RuntimeOutputTabs
+          {instances}
+          selected={layout.outputInstanceID}
+          panelID={outputPanelID}
+          onSelect={selectRuntime}
+        />
         <div
-          class="flex shrink-0 flex-wrap items-center gap-2 border-b border-hairline px-5 py-1.5"
+          id={outputPanelID}
+          role="tabpanel"
+          aria-label={outputRow?.instance.name ?? "Runtime output selection"}
+          class="flex min-h-0 min-w-0 flex-1 flex-col"
         >
-          <label for={`${uid}-runtime`} class="text-xs text-muted-foreground"
-            >Runtime</label
-          >
-          <Select.Root
-            type="single"
-            value={layout.outputInstanceID}
-            onValueChange={selectRuntime}
-          >
-            <Select.Trigger
-              id={`${uid}-runtime`}
-              size="sm"
-              class="max-w-full min-w-0 w-64"
-              disabled={!instances.length}
+          {#if outputRow}
+            {#key outputRow.instance.id}<RuntimeOutputDrawer
+                instanceID={outputRow.instance.id}
+              />{/key}
+          {:else}
+            <p
+              class="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-5 py-3 text-center text-xs text-muted-foreground"
             >
-              <span class="truncate"
-                >{outputRow?.instance.name ??
-                  (layout.outputInstanceID
-                    ? "Selected runtime unavailable"
-                    : "No runtime installed")}</span
-              >
-            </Select.Trigger>
-            <Select.Content>
-              {#each instances as row (row.instance.id)}
-                <Select.Item value={row.instance.id} label={row.instance.name}
-                  >{row.instance.name}</Select.Item
-                >
-              {/each}
-            </Select.Content>
-          </Select.Root>
-          <span class="text-xs text-muted-foreground"
-            >Memory only · read-only</span
-          >
+              {layout.outputInstanceID
+                ? "The selected runtime is no longer available. Choose another runtime to inspect its output."
+                : "Install a local runtime to inspect its output."}
+            </p>
+          {/if}
         </div>
-        {#if outputRow}
-          {#key outputRow.instance.id}<RuntimeOutputDrawer
-              instanceID={outputRow.instance.id}
-            />{/key}
-        {:else}
-          <p
-            class="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-5 py-3 text-center text-xs text-muted-foreground"
-          >
-            {layout.outputInstanceID
-              ? "The selected runtime is no longer available. Choose another runtime to inspect its output."
-              : "Install a local runtime to inspect its output."}
-          </p>
-        {/if}
       {:else}
         <div
           class="flex shrink-0 flex-wrap items-center gap-2 border-b border-hairline px-5 py-1.5"

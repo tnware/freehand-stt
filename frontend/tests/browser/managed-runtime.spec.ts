@@ -1,5 +1,6 @@
 import { openSection } from "./context-navigation";
 import { test, expect } from "./fixtures";
+import { installOutputFixture } from "./runtime-output-fixtures";
 import type { Page } from "@playwright/test";
 
 const openRuntimes = (page: Page) =>
@@ -50,6 +51,7 @@ for (const backend of ["cuda", "cpu"]) {
 test("startup stage, elapsed time and cancellation remain visible", async ({
   page,
 }) => {
+  await installOutputFixture(page);
   await page.goto(
     "/tests/browser/app/?runtime&runtime-ready&runtime-provider=whisper-cpp",
   );
@@ -66,8 +68,8 @@ test("startup stage, elapsed time and cancellation remain visible", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "View output", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Show output", exact: true }),
-  ).toBeEnabled();
+    page.getByRole("region", { name: "Read-only process output", exact: true }),
+  ).toContainText("whisper-cpp-default");
   await page
     .getByRole("button", { name: "Cancel operation", exact: true })
     .click();

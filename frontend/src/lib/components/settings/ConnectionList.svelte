@@ -43,7 +43,11 @@
   );
 </script>
 
-<div class="flex h-full min-h-0 flex-col">
+<div
+  class="flex h-full min-h-0 flex-col {sidebar
+    ? 'border-r border-hairline'
+    : ''}"
+>
   {#if sidebar}
     <SidebarHeader title="Connections">
       {#snippet actions()}

@@ -7,7 +7,12 @@ type Saves = {
 };
 
 type WindowMethod =
-  "IsMaximised" | "Minimise" | "ToggleMaximise" | "Close" | "Hide";
+  | "IsMaximised"
+  | "IsMinimised"
+  | "Minimise"
+  | "ToggleMaximise"
+  | "Close"
+  | "Hide";
 
 declare global {
   interface Window {
@@ -15,10 +20,15 @@ declare global {
       calls: WindowMethod[];
       maximised: boolean;
       minimised: boolean;
+      shown: boolean;
       pendingStateReads: number;
+      pendingVisibilityReads: number;
       failNext: (method: WindowMethod) => void;
       deferNextStateRead: () => void;
       releaseStateRead: () => void;
+      deferNextVisibilityRead: () => void;
+      releaseVisibilityRead: () => void;
+      readVisibility: () => Promise<boolean>;
       emit: (name: string, maximised?: boolean) => void;
       invoke: (method: number) => Promise<{ status: number; body: string }>;
     };
@@ -34,24 +44,54 @@ export const test = base.extend<{ saves: Saves }>({
         2: "Close",
         11: "Hide",
         14: "IsMaximised",
+        15: "IsMinimised",
         17: "Minimise",
         39: "ToggleMaximise",
       };
       const failures = new Set<WindowMethod>();
       let deferRead = false;
       let releaseRead: (() => void) | undefined;
+      let deferVisibility = false;
+      let releaseVisibility: (() => void) | undefined;
       const state: Window["testWindow"] = {
         calls: [],
         maximised: new URLSearchParams(location.search).has("window-maximised"),
         minimised: false,
+        shown: true,
         pendingStateReads: 0,
+        pendingVisibilityReads: 0,
         failNext: (method) => void failures.add(method),
         deferNextStateRead: () => {
           deferRead = true;
         },
         releaseStateRead: () => releaseRead?.(),
+        deferNextVisibilityRead: () => {
+          deferVisibility = true;
+        },
+        releaseVisibilityRead: () => releaseVisibility?.(),
+        readVisibility: async () => {
+          const shown = state.shown;
+          if (deferVisibility) {
+            deferVisibility = false;
+            state.pendingVisibilityReads++;
+            await new Promise<void>((resolve) => {
+              releaseVisibility = resolve;
+            });
+            releaseVisibility = undefined;
+            state.pendingVisibilityReads--;
+          }
+          return shown;
+        },
         emit: (name, maximised) => {
           if (maximised !== undefined) state.maximised = maximised;
+          const event = name.replace(/^common:/, "");
+          if (
+            ["WindowShow", "WindowRestore", "WindowUnMinimise"].includes(event)
+          ) {
+            state.shown = true;
+            state.minimised = false;
+          } else if (event === "WindowHide") state.shown = false;
+          else if (event === "WindowMinimise") state.minimised = true;
           (window as any)._wails?.dispatchWailsEvent({
             name: name.startsWith("common:") ? name : `common:${name}`,
             data: null,
@@ -82,8 +122,11 @@ export const test = base.extend<{ saves: Saves }>({
               releaseRead = undefined;
               state.pendingStateReads--;
             }
+          } else if (method === "IsMinimised") {
+            result = state.minimised;
           } else if (method === "Minimise") {
             state.minimised = true;
+            state.emit("WindowMinimise");
           } else if (method === "ToggleMaximise") {
             state.maximised = !state.maximised;
             state.emit(state.maximised ? "WindowMaximise" : "WindowUnMaximise");
@@ -92,6 +135,7 @@ export const test = base.extend<{ saves: Saves }>({
             // separate transport call, made only after that decision succeeds.
             window.testConnectionWindows?.requestClose();
           } else if (method === "Hide") {
+            state.shown = false;
             await window.testConnectionWindows?.hide();
           }
           return { status: 200, body: JSON.stringify(result) };
@@ -113,7 +157,7 @@ export const test = base.extend<{ saves: Saves }>({
       export const OpenTaskConnection = (request, origin) => bridge().open(request, origin);
       export const TakeSettingsRequest = async () => bridge().take();
       export const SettingsReady = async () => bridge().ready((name, data = null) => window._wails.dispatchWailsEvent({ name, data }));
-      export const SettingsVisible = async () => bridge().visible;
+      export const SettingsVisible = async () => new URLSearchParams(location.search).has('main') ? window.testWindow.readVisibility() : bridge().visible;
       export const FinishSettings = origin => bridge().finish(origin);
       export const HideSettings = () => bridge().hide();
       export const OpenSettings = section => bridge().openSettings(section);
@@ -133,7 +177,7 @@ export const test = base.extend<{ saves: Saves }>({
     );
     await page.route("**/wails/runtime", async (route) => {
       const call = route.request().postDataJSON();
-      if (call?.object === 6 && [2, 11, 14, 17, 39].includes(call.method)) {
+      if (call?.object === 6 && [2, 11, 14, 15, 17, 39].includes(call.method)) {
         const response = await page.evaluate(
           (method) => window.testWindow.invoke(method),
           call.method,

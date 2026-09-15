@@ -82,7 +82,7 @@ test("short windows hide the bottom panel and restore its selected tab", async (
   ).toBeHidden();
   await page.setViewportSize({ width: 900, height: 740 });
   await expect(
-    page.getByRole("tabpanel", { name: "Runtime output" }),
+    page.getByRole("tabpanel", { name: "Runtime output", exact: true }),
   ).toBeVisible();
 });
 

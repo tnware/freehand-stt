@@ -103,8 +103,10 @@ Classify errors with `diagnostics.ErrorKind`; do not attach `err`, `err.Error()`
 
 ## Managed process output
 
-The **Process output** viewer displays bounded child output only after explicit
-sensitive-output consent. It is separate from application logs. Arbitrary upstream output
+Embedded **Runtime output** tabs display bounded child output immediately when
+opened. The standalone **Process output** window requires explicit **Show output**
+consent for each opening or runtime switch. Both are separate from application
+logs. Arbitrary upstream output
 may include prompts, transcripts, paths, and other sensitive content; terminal
 control filtering is not comprehensive redaction.
 
@@ -115,10 +117,13 @@ The tail is generation-fenced and may remain after child exit. Clear, the next
 start attempt, runtime removal, and shutdown release it. Disabling viewer access
 revokes reads but does not erase this private capture.
 
-Require sensitive-output consent per viewer opening or runtime switch. Use only
-bounded cursor-delta binding reads while authorized, never raw output events.
-Clear visible frontend data and revoke access on close/switch; fence late reads
-and bound renderer accumulation. Read-only xterm.js rendering accepts only
+For embedded tabs, enable bounded cursor-delta binding reads only while the
+selected viewer is mounted and the panel, workspace, and document are visible.
+Hide, panel-tab or runtime switching, global Settings, and teardown clear visible
+frontend data and disable access. Reopening resumes directly for the selected
+runtime. The standalone window retains its per-opening and per-runtime consent
+step. Fence late reads and bound renderer accumulation for both viewers; never
+publish raw output events. Read-only xterm.js rendering accepts only
 backend-filtered SGR colors/styles, carriage return, backspace, and CSI K
 line-erasure controls for progress updates. Never interpret HTML or enable output-triggered clipboard, links,
 window titles, or process input. Follow affects scrolling only; Clear and window

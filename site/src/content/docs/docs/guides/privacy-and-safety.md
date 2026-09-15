@@ -21,7 +21,7 @@ that server's own privacy and retention policy still applies.
 | Speech playback text and audio                         | Your playback endpoint receives text and returns audio                                          | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit.                                                      |
 | Update checks                                          | GitHub release service                                                                          | Update metadata and any downloaded update; no recordings or transcripts are sent.                                                                                         |
 | Managed runtime installation (Windows/macOS, optional) | Official pinned NeMo, llama.cpp, or whisper.cpp releases and the selected model’s download host | Runtime binaries and selected model weights in Freehand's application-data directory, until removed.                                                                      |
-| Managed process output                                 | Private memory on this computer; shown only after sensitive-output consent                      | A bounded rolling tail, cleared explicitly or on the next start attempt, runtime removal, or exit. Closing the viewer revokes access but does not erase the private tail. |
+| Managed process output                                 | Private memory on this computer; displayed immediately in an open Runtime output tab            | A bounded rolling tail, cleared explicitly or on the next start attempt, runtime removal, or exit. Closing the viewer revokes access but does not erase the private tail. |
 
 ## Managed local recognition
 
@@ -202,16 +202,19 @@ other sensitive upstream text; Freehand does not promise complete redaction.
 Transcript history being off does not prevent such text appearing in process
 output. This private capture is not saved as a log file.
 
-The shared **Runtime output** panel requires **Show output** consent before reading
-its selected runtime. Consent lasts while that viewer remains visible, including
-navigation between workflows, Connections, Local runtime, and History. Avoid
-displaying it during screen sharing. It is read-only,
+The shared **Runtime output** panel displays output immediately when you open its
+tab or select another runtime's tab. The selected runtime stays the same as you
+navigate between workflows, Connections, Local runtime, and History. Opening it
+can therefore expose sensitive upstream text during screen sharing. The standalone
+**Process output** window requires **Show output** on each opening or runtime
+switch. Both viewers are read-only,
 with search, colors, and progress updates but no command input or file logging.
 **Copy selection** puts only the text you select on the clipboard when you ask;
 other applications may read it, and it can remain after closing the viewer.
 Hiding the panel, changing its tab or runtime, opening global Settings, or hiding
 the workspace clears displayed text and revokes access without stopping the runtime
-or erasing its private tail.
+or erasing its private tail. Reopening the embedded tab directly reads the selected
+runtime's available output again; the standalone window waits for Show output.
 **Clear**, the next start attempt, runtime removal, and Quit discard the tail.
 Pausing scrolling does not pause collection. Freehand does not forward this
 output to application logs, events, or crash reports. See

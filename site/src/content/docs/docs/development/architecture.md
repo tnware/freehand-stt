@@ -215,11 +215,19 @@ for existing diagnostic parsers; it is not the viewer source. Strict command
 metadata capture remains distinct from both, so tail truncation cannot validate
 an incomplete catalog. Process-generation fencing rejects stale callbacks.
 
-`internal/windowing` owns one reusable **Process output** window, opened from
-runtime management or quick controls even during startup. It observes rather
-than owns the runtime. Each opening or runtime switch requires sensitive-output
-consent before enabling reads. Cursor-based, bounded request/response deltas are
-polled without overlap; no output is published in events, application logs,
+The workspace's **Runtime output** panel displays the selected runtime's output
+immediately when its tab opens, including during startup. Runtime management and
+workflow controls reveal that shared panel. The mounted reader enables access
+only while the panel, workspace, and document are visible. Hiding the panel,
+switching panel tabs or runtime targets, entering global Settings, hiding the
+workspace, or unmounting clears renderer output and disables reads. Reopening
+the visible viewer enables fresh reads directly.
+
+`internal/windowing` also owns one reusable standalone **Process output** window.
+That window requires sensitive-output consent on each opening or runtime switch
+before enabling reads. Both viewers observe the runtime without owning it.
+Cursor-based, bounded request/response deltas are polled without overlap; no
+output is published in events, application logs,
 bridge tracing, crash reports, or files. Frontend accumulation is also bounded.
 A read-only xterm.js surface displays bounded UTF-8 text, newline, tab, carriage
 return, backspace, validated bounded SGR colors/styles, and erase-line progress
@@ -229,15 +237,15 @@ bounded and independent per stream, including fragmented or malformed controls.
 Filtering is not sensitive-content redaction. The viewer has no process-input,
 link, title, or escape-triggered clipboard handlers; terminal-generated responses
 never reach child stdin. Fit/search addons and search terms are viewer-local.
-Terminal scrollback and write queues are bounded; reset, eviction, and consent
-changes discard stale rendered state and pending writes. Follow controls
+Terminal scrollback and write queues are bounded; reset, eviction, and reader
+access changes discard stale rendered state and pending writes. Follow controls
 scrolling; Clear drops the tail.
 Explicit Copy selection sends only selected rendered text to the native clipboard,
 without reading clipboard contents, automatic copy, Copy-all, export, or shell input.
 Copied text can outlive the viewer and be visible to other applications. Teardown
 disposes terminal, addon, and resize resources.
 
-Closing/switching clears visible renderer data and revokes retrieval. Disabling
+Closing a viewer or switching its runtime clears visible renderer data and revokes retrieval. Disabling
 access does not erase private memory. The tail may survive process exit for
 inspection; Clear, the next start attempt, runtime removal, and shutdown release
 it. Viewer actions never start, stop, restart, or orphan a process. llama.cpp
@@ -816,13 +824,17 @@ Home/End limits and orientation-aware arrow keys.
 `WorkbenchLayout` persists only visibility booleans, bounded bottom/right sizes,
 and the selected bottom tab in WebView local storage. Sidebar snippets, History
 search and selection, configuration drafts, credentials, output runtime identity,
-consent, transcript text, and runtime output never enter layout storage. Runtime
-output has an explicit runtime selector
-independent of navigation. Its reader is disposed when the bottom panel hides
-or changes tabs, including suppression on the global Settings page, and selecting
-another runtime creates a fresh consent boundary.
-Window hiding also releases consent and buffered viewer output. Showing the
-region again never silently resumes sensitive reads. Recent history continues
+standalone-viewer consent, transcript text, and runtime output never enter layout
+storage. Runtime output uses explicit runtime tabs independent of page navigation.
+The initial target is a running runtime, or the first installed runtime if none
+is running; later page changes preserve that target. Removing the selected
+runtime leaves it unavailable until another target is selected. Its reader is
+disposed when the bottom panel hides or changes tabs, including suppression on
+the global Settings page. Selecting another runtime releases the previous reader
+and displays the new target immediately. Window or document hiding disables reads
+and clears buffered viewer output. Showing the region again resumes direct reads
+for the retained target; pending reads from a previous viewing cannot repopulate it.
+Recent history continues
 to use compact expandable rows.
 The title bar, activity rail, sidebar, and status bar share neutral surface roles;
 the status bar exposes capture state from every pane. The command palette routes

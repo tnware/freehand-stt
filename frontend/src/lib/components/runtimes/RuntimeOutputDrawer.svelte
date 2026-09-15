@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { onDestroy, onMount } from "svelte";
-  import { Clipboard, Events } from "@wailsio/runtime";
+  import { onDestroy, onMount, untrack } from "svelte";
+  import { Clipboard, Events, Window } from "@wailsio/runtime";
   import * as Manager from "$bindings/managedruntime/manager";
+  import { SettingsVisible } from "$bindings/windowing/service";
   import { Button } from "$lib/components/ui/button";
   import ProcessOutputTerminal from "$lib/components/ProcessOutputTerminal.svelte";
   import { ProcessOutputState } from "$lib/stores/process-output.svelte";
@@ -9,46 +10,108 @@
   let {
     instanceID = "",
   }: {
-    /** The instance whose output to stream; empty releases the reader. */
+    /** The instance to inspect while this output tab is visible. */
     instanceID?: string;
   } = $props();
 
   const output = new ProcessOutputState(Manager);
   let following = $state(true);
+  let mounted = false;
+  let shellVisible = $state(false);
+  let visibilityError = $state("");
+  let readVisibility: () => Promise<void> = async () => {};
 
-  // The reader is per instance and bounded to memory, so it follows the
-  // selection and is released as soon as this drawer goes away.
+  // Selection and visibility are the only automatic reader triggers. A failed
+  // enable waits for an explicit retry instead of repeatedly reopening.
   $effect(() => {
-    const id = instanceID;
-    if (output.instanceID !== id) void output.select(id);
+    const id = shellVisible ? instanceID : "";
+    untrack(() => {
+      output.visible = shellVisible;
+      // Runtime status refreshes can invalidate the prop without changing its
+      // target. Keep the active reader and scroll position in that case.
+      if (output.instanceID === id) return;
+      following = true;
+      void output.open(id);
+    });
   });
   $effect(() => {
-    if (!output.accepted) return;
+    if (!output.accepted || !shellVisible) return;
     const timer = setInterval(() => void output.poll(), 1000);
     return () => clearInterval(timer);
   });
   onDestroy(() => output.dispose());
   onMount(() => {
-    const clear = () => {
+    mounted = true;
+    let alive = true;
+    let revision = 0;
+    const hidden = () => {
+      revision++;
+      shellVisible = false;
+      output.visible = false;
       following = true;
-      void output.select(instanceID);
+      void output.open("");
     };
-    const off = Events.On("shell:hidden", clear);
+    readVisibility = async () => {
+      const request = ++revision;
+      if (document.hidden) {
+        hidden();
+        return;
+      }
+      try {
+        // SettingsVisible is the existing main-window visibility binding;
+        // minimization is separately excluded from its reusable-window state.
+        const [shown, minimized] = await Promise.all([
+          SettingsVisible(),
+          Window.IsMinimised(),
+        ]);
+        if (!alive || request !== revision) return;
+        visibilityError = "";
+        shellVisible = shown && !minimized && !document.hidden;
+      } catch {
+        if (!alive || request !== revision) return;
+        hidden();
+        visibilityError = "Could not open runtime output.";
+      }
+    };
     const visibilityChanged = () => {
-      if (document.hidden) clear();
+      if (document.hidden) hidden();
+      else void readVisibility();
     };
+    const subscriptions = [
+      Events.On("shell:hidden", hidden),
+      Events.On(Events.Types.Common.WindowHide, hidden),
+      Events.On(Events.Types.Common.WindowMinimise, hidden),
+      ...[
+        Events.Types.Common.WindowShow,
+        Events.Types.Common.WindowRestore,
+        Events.Types.Common.WindowUnMinimise,
+        Events.Types.Common.WindowFocus,
+      ].map((event) => Events.On(event, () => void readVisibility())),
+    ];
     document.addEventListener("visibilitychange", visibilityChanged);
+    void readVisibility();
     return () => {
-      off();
+      mounted = false;
+      alive = false;
+      revision++;
+      readVisibility = async () => {};
+      for (const off of subscriptions) off();
       document.removeEventListener("visibilitychange", visibilityChanged);
     };
   });
+
+  async function retry() {
+    if (!mounted || document.hidden) return;
+    const wasVisible = shellVisible;
+    await readVisibility();
+    if (mounted && wasVisible && shellVisible) void output.open(instanceID);
+  }
 </script>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
   {#if !instanceID}
     <p
-      class="flex h-full items-center justify-center px-5 text-center text-[12px] text-muted-foreground"
+      class="flex h-full items-center justify-center px-3 text-center text-xs text-muted-foreground"
     >
       Install a local runtime to inspect its output.
     </p>
@@ -61,38 +124,34 @@
       bind:following
       onclear={() => void output.clear()}
       oncopy={Clipboard.SetText}
-      describedby={!output.accepted ? "runtime-output-consent" : undefined}
-    />
-    {#if !output.accepted}
-      <!-- Output can include transcripts, prompts and file paths, so nothing
-             streams until it is asked for. -->
-      <div
-        class="absolute inset-0 z-10 flex flex-wrap items-center justify-between gap-3 overflow-y-auto bg-background px-5 py-3"
-      >
+    >
+      {#if !visibilityError && !output.error && !output.chunks.length}
         <p
-          id="runtime-output-consent"
-          class="min-w-0 flex-1 basis-64 text-[12px] leading-relaxed text-secondary-foreground"
+          class="pointer-events-none absolute inset-x-3 top-3 text-xs text-muted-foreground"
+          role="status"
         >
-          <span class="block text-[13px] font-semibold text-foreground"
-            >Show sensitive output</span
-          >
-          Output may include transcripts, prompts and file paths.
+          {output.busy
+            ? "Opening output…"
+            : output.accepted
+              ? "Waiting for runtime output…"
+              : ""}
+        </p>
+      {/if}
+    </ProcessOutputTerminal>
+    {#if visibilityError || output.error}
+      <div
+        class="flex shrink-0 items-center gap-2 border-t border-hairline px-3 py-1.5"
+      >
+        <p class="min-w-0 flex-1 text-xs text-destructive" role="alert">
+          {visibilityError || output.error}
         </p>
         <Button
+          variant="ghost"
           size="xs"
-          class="shrink-0"
           disabled={output.busy}
-          onclick={() => void output.show()}>Show output</Button
+          onclick={() => void retry()}>Retry output</Button
         >
       </div>
     {/if}
-  {/if}
-  {#if output.error}
-    <p
-      class="absolute inset-x-0 bottom-0 z-20 bg-background px-5 py-1 text-xs text-destructive"
-      role="alert"
-    >
-      {output.error}
-    </p>
   {/if}
 </div>

@@ -217,23 +217,26 @@ If startup fails or takes too long, use **Cancel**, check resources, and retry.
 You can inspect recent process output while startup is still in progress:
 
 1. Choose **View output** in Local runtime or the task's runtime controls.
-2. The shared **Runtime output** bottom panel opens for that runtime with a blank
-   viewer and disabled output controls. You can select a different runtime explicitly
-   in the panel. Read its warning banner and choose **Show output** only if
-   displaying it on your screen is safe.
+2. The shared **Runtime output** bottom panel opens and displays that runtime's
+   available output immediately. Select another runtime's tab to inspect it.
 3. Use **Search** to find text, **Follow** to follow new output, or **Clear** to
    discard the captured output. Collection continues when Follow is off.
 4. Select text and choose **Copy selection** if you want it on your clipboard.
    Copied text can remain there after the viewer closes.
 
+If the viewer reports an error, choose **Retry output** to try reading again.
+
 The read-only viewer supports colors and in-place progress updates when the
 runtime emits them. It does not accept commands or save log files. Hiding it
 does not stop the runtime. The visible viewer and selected runtime stay available
 when you navigate between workflows, Connections, Local runtime, and History.
-Hiding the panel, changing its tab, opening global Settings, hiding the workspace,
-or switching runtimes clears displayed text and ends consent. Showing output again
-requires fresh consent, but the private bounded tail remains until cleared, the next start attempt, runtime removal, or
-Quit. Older output is discarded as the buffer fills. llama.cpp captures normal
+Hiding the panel, changing its panel tab, opening global Settings, hiding the
+workspace, or switching runtimes clears displayed text and stops the viewer's
+reads. Reopening shows the selected runtime's available output directly. The
+private bounded tail remains until cleared, the next start attempt, runtime
+removal, or Quit. The standalone **Process output** window requires **Show output**
+on each opening or runtime switch. Older output is discarded as the buffer fills.
+llama.cpp captures normal
 informational, warning, and error output without debug logging. This can still
 include prompts or other sensitive text. Output can be sparse or absent; an
 empty viewer is not proof of a failed start.

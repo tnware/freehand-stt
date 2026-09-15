@@ -406,6 +406,10 @@ export function createRuntimeFixture(
       publish(structuredClone(row));
     },
     snapshot: () => structuredClone(rows),
+    removeInstance: (instanceID: string) => {
+      rows = rows.filter((row) => row.instance.id !== instanceID);
+      preferences();
+    },
     finishDownload: (instanceID: string) => {
       const model = downloading.get(instanceID);
       if (!model) throw new Error("No pending fixture download");

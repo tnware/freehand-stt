@@ -11,6 +11,10 @@
   import { Input } from "$lib/components/ui/input";
   import ArrowDownToLineIcon from "@lucide/svelte/icons/arrow-down-to-line";
   import CopyIcon from "@lucide/svelte/icons/copy";
+  import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
+  import ArrowDownIcon from "@lucide/svelte/icons/arrow-down";
+  import SearchIcon from "@lucide/svelte/icons/search";
+  import EraserIcon from "@lucide/svelte/icons/eraser";
 
   let {
     chunks,
@@ -212,65 +216,91 @@
   });
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="flex min-h-0 min-w-0 flex-1 flex-col">
   <div
-    class="flex shrink-0 flex-wrap items-center gap-1.5 border-b border-hairline px-5 py-1.5"
+    class="flex min-w-0 shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-hairline px-3 py-1"
     role="group"
     aria-label="Output controls"
   >
-    <div class="flex min-w-0 flex-1 basis-72 items-center gap-1.5">
-      <Input
-        class="h-6 min-w-28 max-w-72 flex-1 text-xs"
-        type="search"
-        aria-label="Search retained output"
-        placeholder="Search output"
-        maxlength={256}
-        disabled={!enabled}
-        bind:value={query}
-        oninput={() => (feedback = "")}
-        onkeydown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            find(event.shiftKey);
-          }
-        }}
-      />
+    <div class="flex min-w-0 flex-1 items-center gap-0.5">
+      <div class="relative min-w-0 max-w-64 flex-1">
+        <SearchIcon
+          class="pointer-events-none absolute top-1/2 left-2 size-3 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          class="h-6 min-w-0 rounded-sm pl-7 text-xs"
+          type="search"
+          aria-label="Search retained output"
+          placeholder="Search output"
+          maxlength={256}
+          disabled={!enabled}
+          bind:value={query}
+          oninput={() => (feedback = "")}
+          onkeydown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              find(event.shiftKey);
+            }
+          }}
+        />
+      </div>
       <Button
-        variant="outline"
-        size="xs"
+        variant="ghost"
+        size="icon-xs"
+        class="rounded-sm"
+        aria-label="Previous"
+        title="Previous match (Shift+Enter)"
         disabled={!enabled || !query}
-        onclick={() => find(true)}>Previous</Button
+        onclick={() => find(true)}
+        ><ArrowUpIcon class="size-3.5" aria-hidden="true" /></Button
       >
       <Button
-        variant="outline"
-        size="xs"
+        variant="ghost"
+        size="icon-xs"
+        class="rounded-sm"
+        aria-label="Next"
+        title="Next match (Enter)"
         disabled={!enabled || !query}
-        onclick={() => find()}>Next</Button
+        onclick={() => find()}
+        ><ArrowDownIcon class="size-3.5" aria-hidden="true" /></Button
       >
     </div>
-    <div class="flex flex-wrap items-center gap-1.5">
+    <div class="flex shrink-0 items-center gap-0.5">
       <Button
-        variant={following ? "soft" : "ghost"}
-        size="xs"
+        variant="ghost"
+        size="icon-xs"
+        class={following
+          ? "rounded-sm bg-accent-wash text-accent-text"
+          : "rounded-sm"}
+        aria-label="Follow"
+        title={following ? "Stop following new output" : "Follow new output"}
         disabled={!enabled}
         aria-pressed={following}
         onclick={() => {
           following = !following;
           if (following) terminal?.scrollToBottom();
-        }}><ArrowDownToLineIcon class="size-3.5" />Follow</Button
+        }}><ArrowDownToLineIcon class="size-3.5" aria-hidden="true" /></Button
       >
       <Button
         variant="ghost"
-        size="xs"
+        size="icon-xs"
+        class="rounded-sm"
+        aria-label="Copy selection"
+        title="Copy selection"
         disabled={!enabled || !selected}
         onclick={() => void copySelection()}
-        ><CopyIcon class="size-3.5" />Copy selection</Button
+        ><CopyIcon class="size-3.5" aria-hidden="true" /></Button
       >
       <Button
         variant="ghost"
-        size="xs"
+        size="icon-xs"
+        class="rounded-sm"
+        aria-label="Clear"
+        title="Clear retained output"
         disabled={!enabled || busy}
-        onclick={onclear}>Clear</Button
+        onclick={onclear}
+        ><EraserIcon class="size-3.5" aria-hidden="true" /></Button
       >
     </div>
     <span
@@ -284,7 +314,7 @@
       role="region"
       aria-label="Read-only process output"
       aria-describedby={describedby}
-      class="output-terminal absolute inset-x-5 inset-y-3 overflow-hidden"
+      class="output-terminal absolute inset-x-3 inset-y-2 overflow-hidden"
     ></div>
     {@render children?.()}
   </div>

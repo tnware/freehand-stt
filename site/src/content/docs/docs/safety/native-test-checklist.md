@@ -65,7 +65,8 @@ processing, copy recovery, and error states retain usable controls.
 - Use Close, Alt+F4, and the caption system menu with clean settings and with
   dirty global, contextual, and connection drafts. Save must commit before
   hiding; Discard restores applied values; Keep editing and failed saves retain
-  the draft. Hiding clears credential drafts and output consent. Reopen from
+  the draft. Hiding clears credential drafts and displayed workspace output and
+  disables its reader. Reopen from
   the tray and a second launch. Quit must still exit and stop owned services.
 
 ### macOS
@@ -101,8 +102,8 @@ tests and browser fixtures do not establish native inference or permission accep
 On macOS, test NeMo and llama.cpp on each claimed architecture; use a packaged
 app for permissions. Verify Metal on Apple Silicon, CPU on Intel, the llama.cpp
 13.3 minimum, and unavailable managed whisper.cpp with manual connections intact.
-Exercise the existing viewer consent, selection-copy, and teardown cases on both
-platforms.
+Exercise immediate embedded display, standalone viewer consent, selection-copy,
+and teardown on both platforms.
 
 - Start with no manual connections. Open Local runtime, install the official
   binary, and verify that browsing its speech catalog does not download weights
@@ -161,12 +162,19 @@ platforms.
   child remains alive. Quit during warm-up with multiple providers active and
   check process descendants against the separate application shutdown bound.
 - Open **View output** from Local runtime or workflow runtime controls while startup is
-  active. Repeated opens use the shared **Runtime output** bottom panel. Before **Show
-  output** consent there must be no raw output retrieval or displayed tail.
-  Choose a runtime explicitly; navigating between workflows, Connections, Local runtime,
-  and History must retain the visible viewer and its target. Hide the panel, change its
-  tab, enter global Settings, hide the workspace, and change the runtime target in turn;
-  each must end consent and prevent stale visible text or late-read leaks on reopening.
+  active. Repeated opens use the shared **Runtime output** bottom panel and display
+  available output immediately. Opening the panel without an explicit target selects
+  a running runtime, or the first installed runtime if none is running. Choose a
+  runtime tab by pointer and keyboard; navigating between workflows, Connections,
+  Local runtime, and History must retain the visible viewer and its target.
+  Hide the panel, change its panel tab, enter global Settings, hide the workspace
+  or document, and change the runtime target in turn. Each must disable the old
+  reader, clear displayed text, and reject late reads. The hidden viewer must not
+  enable access. Reopening immediately reads the retained target's available tail;
+  it must not restore stale renderer data. Removing the selected runtime must not
+  silently choose another. In the standalone **Process output** window, verify
+  **Show output** is still required on each opening or runtime switch and that no
+  raw output is retrieved or displayed beforehand.
   Use non-sensitive data only, including synthetic HTML/terminal-control text:
   only SGR colors/styles, carriage return, backspace, and CSI K line erasure may
   render as terminal controls. OSC clipboard,
@@ -180,8 +188,10 @@ platforms.
   start attempt, removal, or Quit. Check retained output after process exit,
   generation isolation on restart, and no export, file, event, application
   log, or crash-report output path. Explicit Copy selection must copy only the
-  selected displayed text, never automatically or before consent. After an ordinary subsequent llama.cpp start,
-  verify normal info/warning/error output reaches the consent-gated viewer on
+  selected displayed text, never automatically or before standalone consent.
+  After an ordinary subsequent llama.cpp start, verify normal info/warning/error
+  output reaches the visible embedded viewer directly and the standalone viewer
+  after Show output on
   CPU and CUDA, with `--log-verbosity 3 --log-colors on`, not `--log-disable` or
   trace/debug logging. Check the runtime working directory for no new log or
   prompt files; inherited logging/config overrides must remain excluded.
@@ -252,8 +262,8 @@ tests and a successful executable build do not replace these interactive checks.
   rail page in the main workspace. Repeated requests preserve an unfinished draft.
   Rail, palette, Done, runtime links, native close, and Escape protect unsaved
   edits across global Settings, Connections, and contextual options. Hide/save clears
-  credential input; hide also clears runtime-output consent and stops shortcut capture
-  and overlay preview. Connection creation's Save and return resumes the originating
+  credential input; hide also clears displayed runtime output, disables its reader,
+  and stops shortcut capture and overlay preview. Connection creation's Save and return resumes the originating
   task only after success. Global and contextual Save apply in place. Conflicting
   stale edits are rejected.
 

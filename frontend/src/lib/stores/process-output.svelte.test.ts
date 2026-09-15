@@ -29,6 +29,110 @@ function boundary(
   };
 }
 describe("private process output", () => {
+  it("opens an embedded reader with an immediate first read", async () => {
+    const service = boundary();
+    const state = new ProcessOutputState(service);
+    await state.open("one");
+    expect(service.EnableProcessOutput).toHaveBeenCalledWith({
+      instanceID: "one",
+    });
+    expect(service.ReadProcessOutput).toHaveBeenCalledTimes(1);
+    expect(state.chunks[0].text).toContain("private");
+    state.visible = false;
+    await state.open("");
+    expect(state.chunks).toEqual([]);
+    expect(state.accepted).toBe(false);
+    await state.open("two");
+    expect(service.EnableProcessOutput).toHaveBeenCalledTimes(1);
+    state.dispose();
+  });
+  it("does not reopen after a delayed enable completes behind a hidden tab", async () => {
+    let finish!: () => void;
+    const service = boundary({
+      EnableProcessOutput: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            finish = resolve;
+          }),
+      ),
+    });
+    const state = new ProcessOutputState(service);
+    const opening = state.open("one");
+    await vi.waitFor(() =>
+      expect(service.EnableProcessOutput).toHaveBeenCalledTimes(1),
+    );
+    state.visible = false;
+    const hidden = state.open("");
+    finish();
+    await Promise.all([opening, hidden]);
+    expect(state.accepted).toBe(false);
+    expect(state.chunks).toEqual([]);
+    expect(service.ReadProcessOutput).not.toHaveBeenCalled();
+    expect(service.DisableProcessOutput).toHaveBeenCalledWith({
+      instanceID: "one",
+    });
+    state.dispose();
+  });
+  it("keeps a remounted reader enabled after the disposed reader finishes opening", async () => {
+    let finish!: () => void;
+    let first = true;
+    let enabled = false;
+    const service = boundary({
+      EnableProcessOutput: vi.fn(async () => {
+        if (first) {
+          first = false;
+          await new Promise<void>((resolve) => {
+            finish = resolve;
+          });
+        }
+        enabled = true;
+      }),
+      DisableProcessOutput: vi.fn(async () => {
+        enabled = false;
+      }),
+      ReadProcessOutput: vi.fn(async () => ({
+        enabled,
+        chunks: [],
+        next: 0,
+        truncated: false,
+      })),
+    });
+    const old = new ProcessOutputState(service);
+    const opening = old.open("one");
+    await vi.waitFor(() =>
+      expect(service.EnableProcessOutput).toHaveBeenCalledTimes(1),
+    );
+    old.dispose();
+    const current = new ProcessOutputState(service);
+    const reopened = current.open("one");
+    finish();
+    await Promise.all([opening, reopened]);
+    expect(enabled).toBe(true);
+    expect(current.accepted).toBe(true);
+    expect(current.error).toBe("");
+    expect(old.accepted).toBe(false);
+    expect(service.ReadProcessOutput).toHaveBeenCalledTimes(1);
+    current.dispose();
+  });
+  it("keeps a stopped reader's target recoverable without silently enabling it", async () => {
+    const service = boundary({
+      ReadProcessOutput: vi.fn(async () => ({
+        enabled: false,
+        chunks: [],
+        next: 0,
+        truncated: false,
+      })),
+    });
+    const state = new ProcessOutputState(service);
+    await state.open("one");
+    expect(state.instanceID).toBe("one");
+    expect(state.accepted).toBe(false);
+    expect(state.error).toBe(
+      "Output reading stopped. Reopen the reader to continue.",
+    );
+    expect(service.EnableProcessOutput).toHaveBeenCalledTimes(1);
+    state.dispose();
+  });
   it("drops prior launch text when the backend resets the tail", async () => {
     let reset = false;
     const state = new ProcessOutputState(
@@ -206,7 +310,7 @@ describe("private process output", () => {
     await state.poll();
     expect(state.error).toBe("Could not read process output.");
   });
-  it("requires explicit consent before enabling or reading, and clears on switch", async () => {
+  it("keeps standalone selection gated until show is requested, and clears on switch", async () => {
     const service = boundary();
     const state = new ProcessOutputState(service);
     state.select("one");

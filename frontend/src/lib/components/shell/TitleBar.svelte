@@ -191,6 +191,11 @@
     flex: none;
   }
 
+  .windows .title-identity h1 {
+    /* Align Archivo glyphs with the Windows system-font menu labels. */
+    transform: translateY(2px);
+  }
+
   .title-drag-space {
     height: 100%;
     min-width: 8px;

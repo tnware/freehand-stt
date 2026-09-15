@@ -14,6 +14,13 @@ export type ProcessOutputService = {
   ) => Promise<Awaited<ReturnType<Methods[K]>>>;
 };
 
+// A tab can remount while its previous reader is still closing. Coordinate
+// controls by backend target so an old disable cannot overtake the new enable.
+const controls = new WeakMap<
+  ProcessOutputService,
+  Map<string, Promise<void>>
+>();
+
 export class ProcessOutputState {
   instanceID = $state("");
   accepted = $state(false);
@@ -28,12 +35,20 @@ export class ProcessOutputState {
   #generation = 0;
   #reading = false;
   #disposed = false;
-  #controls: Promise<void> = Promise.resolve();
   constructor(private readonly service: ProcessOutputService) {}
 
-  #control(action: () => Promise<void>) {
-    const pending = this.#controls.then(action);
-    this.#controls = pending.catch(() => {});
+  #control(instanceID: string, action: () => Promise<void>) {
+    let targets = controls.get(this.service);
+    if (!targets) {
+      targets = new Map();
+      controls.set(this.service, targets);
+    }
+    const pending = (targets.get(instanceID) ?? Promise.resolve()).then(action);
+    const settled = pending.catch(() => {});
+    targets.set(instanceID, settled);
+    void settled.then(() => {
+      if (targets.get(instanceID) === settled) targets.delete(instanceID);
+    });
     return pending;
   }
 
@@ -49,10 +64,26 @@ export class ProcessOutputState {
     this.error = "";
     this.truncated = false;
     return previous
-      ? this.#control(() =>
+      ? this.#control(previous, () =>
           this.service.DisableProcessOutput({ instanceID: previous }),
         ).catch(() => {})
       : Promise.resolve();
+  }
+  /** Opening an embedded output tab starts its bounded reader immediately. */
+  async open(instanceID: string) {
+    if (this.#disposed) return;
+    const selection = this.select(instanceID);
+    const generation = this.#generation;
+    await selection;
+    if (
+      !instanceID ||
+      !this.visible ||
+      generation !== this.#generation ||
+      this.#disposed
+    )
+      return;
+    await this.show();
+    if (generation === this.#generation) await this.poll();
   }
   async show() {
     if (!this.instanceID || this.accepted || this.busy || this.#disposed)
@@ -62,7 +93,7 @@ export class ProcessOutputState {
     this.busy = true;
     this.error = "";
     try {
-      await this.#control(async () => {
+      await this.#control(instanceID, async () => {
         if (generation !== this.#generation || this.#disposed) return;
         await this.service.EnableProcessOutput({ instanceID });
         if (generation === this.#generation && !this.#disposed)
@@ -87,7 +118,7 @@ export class ProcessOutputState {
     this.error = "";
     try {
       const instanceID = this.instanceID;
-      await this.#control(() =>
+      await this.#control(instanceID, () =>
         this.service.ClearProcessOutput({ instanceID }),
       );
     } catch {
@@ -95,9 +126,10 @@ export class ProcessOutputState {
         this.error =
           "Could not clear process output. Close and reopen to try again.";
         this.accepted = false;
-        void this.service
-          .DisableProcessOutput({ instanceID: this.instanceID })
-          .catch(() => {});
+        const instanceID = this.instanceID;
+        void this.#control(instanceID, () =>
+          this.service.DisableProcessOutput({ instanceID }),
+        ).catch(() => {});
       }
     } finally {
       if (generation === this.#generation) this.busy = false;
@@ -125,7 +157,8 @@ export class ProcessOutputState {
       });
       if (generation !== this.#generation || this.#disposed) return;
       if (!snapshot.enabled) {
-        this.select("");
+        void this.select(this.instanceID);
+        this.error = "Output reading stopped. Reopen the reader to continue.";
         return;
       }
       if (snapshot.truncated) this.revision++;

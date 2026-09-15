@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures";
+import { installOutputFixture } from "./runtime-output-fixtures";
 
 const control = (
   page: Page,
@@ -211,6 +212,7 @@ test("compact windows open the primary sidebar on demand without stacking hidden
 test("runtime output keeps its explicit target across workspace navigation", async ({
   page,
 }) => {
+  await installOutputFixture(page);
   await page.setViewportSize({ width: 1280, height: 820 });
   await openHistory(page, true);
   await page.evaluate(() => window.testRuntime.addSecondProvider());
@@ -220,14 +222,10 @@ test("runtime output keeps its explicit target across workspace navigation", asy
     exact: true,
   });
   await output.click();
-  const runtime = bottom(page).getByRole("button", {
-    name: "Runtime",
-    exact: true,
-  });
+  const runtime = bottom(page)
+    .getByRole("tablist", { name: "Output runtimes", exact: true })
+    .getByRole("tab", { name: "Second speech provider", exact: true });
   await runtime.click();
-  await page
-    .getByRole("option", { name: "Second speech provider", exact: true })
-    .click();
   for (const area of [
     "Local runtime",
     "Voice transcription",
@@ -241,11 +239,23 @@ test("runtime output keeps its explicit target across workspace navigation", asy
       continue;
     }
     await expect(output).toHaveAttribute("aria-selected", "true");
-    await expect(runtime).toContainText("Second speech provider");
+    await expect(runtime).toHaveAttribute("aria-selected", "true");
+    await expect(
+      bottom(page).getByRole("region", {
+        name: "Read-only process output",
+        exact: true,
+      }),
+    ).toContainText("other-speech");
   }
   await control(page, "bottom panel").click();
   await show(page, "bottom panel");
-  await expect(runtime).toContainText("Second speech provider");
+  await expect(runtime).toHaveAttribute("aria-selected", "true");
+  await expect(
+    bottom(page).getByRole("region", {
+      name: "Read-only process output",
+      exact: true,
+    }),
+  ).toContainText("other-speech");
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });
 

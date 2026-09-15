@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { installOutputFixture } from "./runtime-output-fixtures";
 import { openSection } from "./context-navigation";
 
 test("runtime connections have read-only details and navigate to their owners", async ({
@@ -107,6 +108,7 @@ for (const theme of ["dark", "light"] as const) {
   test(`resource views retain visible controls at compact width in ${theme} mode`, async ({
     page,
   }, testInfo) => {
+    await installOutputFixture(page);
     await page.setViewportSize({ width: 860, height: 1000 });
     await page.emulateMedia({ colorScheme: theme });
     await page.goto(`/tests/browser/app/?runtime&runtime-ready&theme=${theme}`);
@@ -146,8 +148,17 @@ for (const theme of ["dark", "light"] as const) {
       .getByRole("button", { name: "View output", exact: true })
       .click();
     await expect(
-      page.getByRole("button", { name: "Show output", exact: true }),
+      page.getByRole("region", {
+        name: "Read-only process output",
+        exact: true,
+      }),
     ).toBeInViewport();
+    await expect(
+      page.getByRole("region", {
+        name: "Read-only process output",
+        exact: true,
+      }),
+    ).toContainText("Sensitive startup diagnostic");
     await page.screenshot({
       path: testInfo.outputPath(`runtime-list-${theme}.png`),
       fullPage: true,

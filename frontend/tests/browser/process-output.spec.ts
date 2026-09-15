@@ -37,6 +37,7 @@ for (const theme of ["dark", "light"] as const) {
           body: `
       export const CurrentProcessOutput = async () => ({instanceID:"test"});
       export const CloseProcessOutput = async () => {};
+      export const SettingsVisible = async () => true;
     `,
         }),
       );

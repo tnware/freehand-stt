@@ -224,10 +224,17 @@ arrow keys. Home and End move to the permitted size limits. Freehand remembers
 layout visibility, sizes, and the bottom tab locally. These preferences do not
 store drafts, credentials, transcripts, or runtime output.
 
-In **Runtime output**, choose the runtime you want to inspect. Changing pages
-does not change that selection. Output is read-only and requires **Show output**
-consent. Hiding the panel, including opening global Settings, changing its tab or runtime, or hiding the window ends
-that consent and clears the viewer; showing it again requires consent again.
+In **Runtime output**, select a runtime's tab to display its output immediately.
+The first opening selects a running runtime, or the first installed runtime if
+none is running. Changing pages keeps your selected runtime. Hiding the panel,
+opening global Settings, changing the panel tab or runtime, or hiding the window
+clears the viewer and stops its reads. Reopening displays the selected runtime's
+available output directly.
+
+Output is read-only and kept in bounded memory. It can include transcripts,
+prompts, and file paths; use **Copy selection** only for text you want to share.
+Viewing output does not start or stop the runtime. The standalone **Process
+output** window requires **Show output** each time it opens or changes runtime.
 History remains optional.
 
 Live text follows new words until you scroll back to read earlier text. Choose
