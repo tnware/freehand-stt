@@ -1,5 +1,19 @@
 import { test, expect } from "./fixtures";
 
+async function selectSection(
+  page: import("@playwright/test").Page,
+  id: string,
+) {
+  const toggle = page.getByRole("button", {
+    name: "Toggle primary sidebar",
+    exact: true,
+  });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-pressed")) === "false")
+    await toggle.click();
+  await page.locator(`[data-settings-section="${id}"]`).click();
+}
+
 for (const theme of ["light", "dark"]) {
   for (const width of [860, 520]) {
     test(`settings actions remain readable and reachable in ${theme} at ${width}px`, async ({
@@ -23,7 +37,7 @@ for (const theme of ["light", "dark"]) {
         }),
       );
       await page.goto(`/tests/browser/app/?workflows&pickers&theme=${theme}`);
-      await page.locator('[data-settings-section="general"]').click();
+      await selectSection(page, "general");
       await page.locator("#show-window-on-launch").click();
       if (theme === "dark")
         await expect(page.locator("html")).toHaveClass(/dark/);
@@ -77,7 +91,7 @@ for (const theme of ["light", "dark"]) {
       }
 
       for (const section of ["server", "shortcuts"]) {
-        await page.locator(`[data-settings-section="${section}"]`).click();
+        await selectSection(page, section);
         if (section === "shortcuts")
           await expect(
             page.getByRole("group", { name: "Toggle recording", exact: true }),

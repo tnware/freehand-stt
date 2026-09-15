@@ -1,6 +1,8 @@
 <script lang="ts">
   import { setContext } from "svelte";
   import { MediaQuery } from "svelte/reactivity";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
+  import SidebarContribution from "$lib/components/shell/SidebarContribution.svelte";
   import { SETTINGS_NAVIGATION, type SettingsSectionID } from "$lib/navigation";
   import { TASK_CONNECTION_NAVIGATION } from "$lib/shell-navigation.svelte";
   import type { ConnectionManagerRequest } from "$bindings/windowing";
@@ -68,6 +70,7 @@
     onOpenConnection: (request: ConnectionManagerRequest) => void;
     quickSettingsDisabled?: boolean;
   } = $props();
+  const workbench = getWorkbenchLayout();
   const compact = new MediaQuery("(max-width: 699px)");
   let taskSettingsOpen = $state(false);
   let taskSettingsTrigger = $state<HTMLButtonElement | null>(null);
@@ -240,6 +243,7 @@
     if (
       event.key === "Escape" &&
       !event.defaultPrevented &&
+      !workbench &&
       compact.current &&
       taskSettingsOpen
     ) {
@@ -256,7 +260,7 @@
   class:onboarding={showReadiness}
   aria-label="Freehand workspace"
 >
-  {#if compact.current && session.editor.draft && (inputMode === "tts" || !readiness?.initialSetup)}
+  {#if !workbench && compact.current && session.editor.draft && (inputMode === "tts" || !readiness?.initialSetup)}
     <div class="flex shrink-0 items-center border-b border-hairline px-3 py-1">
       <Button
         variant="ghost"
@@ -269,44 +273,48 @@
       <span class="ml-auto text-xs text-muted-foreground">{paneTitle}</span>
     </div>
   {/if}
-  <div class="workspace">
-    {#if compact.current && taskSettingsOpen}<button
+  <div class="workspace" class:fallback={!workbench}>
+    {#if !workbench && compact.current && taskSettingsOpen}<button
         type="button"
         class="settings-backdrop"
         aria-label="Close task settings"
         onclick={() => (taskSettingsOpen = false)}
       ></button>{/if}
-    {#if session.editor.draft && (!compact.current || taskSettingsOpen) && (inputMode === "tts" || !readiness?.initialSetup)}
+    {#if session.editor.draft && (workbench || !compact.current || taskSettingsOpen) && (inputMode === "tts" || !readiness?.initialSetup)}
       {@const workflowSection =
         inputMode === "file"
           ? "server"
           : inputMode === "tts"
             ? "speech"
             : "voice-transcription"}
-      <WorkflowSidebar
-        {session}
-        workflow={inputMode === "file"
-          ? "file"
-          : inputMode === "tts"
-            ? "tts"
-            : "voice"}
-        title={paneTitle}
-        instanceID={managed ? instanceID : ""}
-        disabled={quickSettingsDisabled || session.editor.saving}
-        onOpenConnection={() => onOpenSettingsSection(workflowSection)}
-        onOpenModel={() =>
-          managed && inputMode !== "tts"
-            ? openLocalRuntime()
-            : onOpenSettingsSection(workflowSection)}
-        onOpenOptions={() => onOpenSettingsSection(workflowSection)}
-        onOpenCleanup={onOpenProcessingSettings}
-        onOpenVocabulary={() => onOpenSettingsSection("vocabulary")}
-        onOpenDelivery={inputMode === "voice"
-          ? onOpenGeneralSettings
-          : () => onOpenSettingsSection(workflowSection)}
-        onOpenOverlay={() => onOpenSettingsSection("overlay")}
-        onOpenRuntime={openLocalRuntime}
-      />
+      <SidebarContribution id="workflow">
+        <div class={workbench ? "workflow-sidebar-shell" : "contents"}>
+          <WorkflowSidebar
+            {session}
+            workflow={inputMode === "file"
+              ? "file"
+              : inputMode === "tts"
+                ? "tts"
+                : "voice"}
+            title={paneTitle}
+            instanceID={managed ? instanceID : ""}
+            disabled={quickSettingsDisabled || session.editor.saving}
+            onOpenConnection={() => onOpenSettingsSection(workflowSection)}
+            onOpenModel={() =>
+              managed && inputMode !== "tts"
+                ? openLocalRuntime()
+                : onOpenSettingsSection(workflowSection)}
+            onOpenOptions={() => onOpenSettingsSection(workflowSection)}
+            onOpenCleanup={onOpenProcessingSettings}
+            onOpenVocabulary={() => onOpenSettingsSection("vocabulary")}
+            onOpenDelivery={inputMode === "voice"
+              ? onOpenGeneralSettings
+              : () => onOpenSettingsSection(workflowSection)}
+            onOpenOverlay={() => onOpenSettingsSection("overlay")}
+            onOpenRuntime={openLocalRuntime}
+          />
+        </div>
+      </SidebarContribution>
     {/if}
     <div class="body">
       {#if inputMode === "voice" && session.editor.draft && !readiness?.initialSetup}
@@ -352,7 +360,7 @@
           {messages}
           abovePlayback={inputMode === "tts"}
         />{/if}
-      {#if session.speech.status.source !== TTSSource.SourceCompose && session.speech.status.phase !== TTSPhase.Idle && session.speech.status.phase !== TTSPhase.Cancelled}
+      {#if !workbench && session.speech.status.source !== TTSSource.SourceCompose && session.speech.status.phase !== TTSPhase.Idle && session.speech.status.phase !== TTSPhase.Cancelled}
         <PlaybackBar
           status={session.speech.status}
           onPause={() => session.speech.pauseTTS()}
@@ -751,8 +759,24 @@
     display: flex;
     gap: 0.875rem;
   }
+  .workflow-sidebar-shell {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  .workflow-sidebar-shell :global(.workflow-settings) {
+    width: 100%;
+    min-height: 0;
+  }
+  .workflow-sidebar-shell :global(.srow) {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding-block: 0;
+  }
   @container (max-width: 699px) {
-    .workspace :global(.workflow-settings) {
+    .workspace.fallback :global(.workflow-settings) {
       position: absolute;
       inset: 0 auto 0 0;
       z-index: 46;

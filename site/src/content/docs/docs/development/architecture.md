@@ -749,7 +749,7 @@ appearance updates, and the `ShellReady` handshake against component teardown.
 - `HistoryState` owns history refresh/mutation ordering. Successful refresh
   acknowledges the completed file generation through an injected callback.
   `HistoryPane` owns presentation-only search, source filtering, and selection for
-  its sidebar, expanded reader, and details split. It filters the existing bounded entries by
+  its sidebar, expanded reader, and right-side details contribution. It filters the existing bounded entries by
   final/raw/processed text or file base name and by All, Voice, or Audio files;
   it adds no storage, history acquisition, or inference operation. Sidebar controls
   read applied retention settings and call the existing settings and clear actions.
@@ -777,13 +777,38 @@ disposes subscriptions, timers, and credential drafts without stopping Go-owned
 recording, transcription, or playback. Leaving or hiding Settings releases
 preview/capture resources; backend snapshots preserve unsaved draft conflicts.
 
-The main workspace uses compact recording, file, and playback controls beside
-a task-settings sidebar. `WorkspaceSplit` owns a persisted, keyboard-resizable
-vertical split: the current result above a panel with Recent, Runtime output,
-and Diagnostics tabs. Collapsing the panel releases space to the result while
-retaining a visible restore action. Recent history uses compact expandable rows;
-the History pane places filters and retained entries beside a selected reader and
-the selected run's full details.
+`App` provides one `WorkbenchLayout` context and composes `WorkbenchFrame` around
+the active page. Title-bar controls toggle the primary sidebar, bottom panel,
+and secondary sidebar. `SidebarContribution` registers the active area's content:
+workflow settings, Settings navigation, History browsing, or runtime inventory.
+The primary sidebar follows the area while its wide-window visibility remains a
+workspace preference. Below 700px it uses a separately controlled compact overlay
+and starts hidden; page navigation closes that overlay. Standalone components
+without the layout context render their sidebar locally. `WorkspaceSplit` keeps
+its local layout only for those standalone consumers; shell Home supplies the
+current result without a second bottom panel.
+
+`WorkbenchPanel` supplies Recent, Runtime output, and Diagnostics independently
+of page navigation. The selected tab survives page changes and user hiding.
+The bottom panel is unavailable below 560px viewport height without changing its
+saved visibility choice. History contributes the selected run's `HistoryDetails`
+to the secondary sidebar. In History below 1100px viewport width, it starts
+hidden and the title-bar toggle opens an explicit right-side overlay with
+Escape/backdrop dismissal. It never moves below the reader. Responsive hiding
+preserves the wide-window visibility preference for restoration. Each visible
+region owns its scroll area. `LayoutDivider` draws a 1px hairline with a larger
+pointer target and supports bounded pointer and keyboard resizing, including
+Home/End limits and orientation-aware arrow keys.
+
+`WorkbenchLayout` persists only visibility booleans, bounded bottom/right sizes,
+and the selected bottom tab in WebView local storage. Sidebar snippets, History
+search and selection, output runtime identity, consent, transcript text, and
+runtime output stay in memory. Runtime output has an explicit runtime selector
+independent of navigation. Its reader is disposed when the bottom panel hides
+or changes tabs, and selecting another runtime creates a fresh consent boundary.
+Window hiding also releases consent and buffered viewer output. Showing the
+region again never silently resumes sensitive reads. Recent history continues
+to use compact expandable rows.
 The title bar, activity rail, sidebar, and status bar share neutral surface roles;
 the status bar exposes capture state from every pane. The command palette routes
 through the same navigation and busy-state guards as the rail.
@@ -939,14 +964,13 @@ Durable settings contain ordinary STT, VAD, shortcut, window, appearance, histor
 
 `internal/tts` is deliberately on-demand and provider-neutral. History/file renderer calls identify a backend-retained entry/version or completed stored-file result rather than resending transcript text. Current Voice playback passes only the displayed dictation generation. The dictation owner rejects stale, active, cleared, and closed results, then supplies an immutable text snapshot through the injected `tts.TranscriptSources` collaboration boundary; history retention is not required. The first-class Text to speech workspace is the single deliberate exception: it accepts a bounded user-authored input (4,096 Unicode characters) and does not write that output-oriented content into transcript history. Synthesized bytes never become bridge results. The service captures one coherent TTS settings/credential profile, sends a bounded `/v1/audio/speech` WAV request, validates PCM before native playback, and emits only typed scalar status/progress. The ordinary connection service may discover speech model IDs with authenticated `GET /v1/models` metadata. Generic has no portable voice-list operation; qualified speech profiles add metadata-only voice discovery, and model profiles may restrict selectable voices. One in-memory playback session owns pause/resume/restart/stop/save/clear. Replay reads the retained PCM without another request; Save reconstructs a canonical PCM16 WAV and writes only to a native-dialog destination; Clear zeroes and releases the session. A new request replaces it, recording preempts and releases it before capture, native progress follows audible time rather than output-buffer submission, and shutdown cancels generation immediately and serializes native output teardown within the service wait budget described below.
 
-`WorkspaceSplit` owns the main renderer's result/history presentation. PaneForge
-provides pointer and keyboard resizing at desktop widths; its local-storage
-layout preference is independent of Go-owned settings and contains no content.
-Narrow windows select one pane at a time. `ResultQuickSettings` opens anchored
-Bits UI popovers containing the shared audio, delivery, transcription, and
-cleanup controls. Every edit still passes through `SettingsEditor` and the
-existing coherent settings transaction; opening a popover performs no probe or
-inference request. Transcript and history scrolling do not resize the workspace.
+`WorkbenchFrame` owns the main renderer's region geometry and `WorkbenchLayout`
+owns its presentation preferences, independently of Go-owned settings. Shared
+sidebar contributions navigate to task-specific settings; retained standalone
+consumers may still use local splits and quick-setting popovers. Every edit
+passes through `SettingsEditor` and the existing coherent settings transaction;
+opening a control performs no inference request. Transcript and history
+scrolling do not resize the workspace.
 
 The main, Settings, About, and Transcription details windows use the opaque product palette by default.
 Dark surfaces use a neutral charcoal ladder (`#121212`, `#1b1b1b`,
@@ -981,8 +1005,9 @@ responses, and refreshes after history actions, settings changes, and workflow
 status events. Deleting, clearing, disabling, or evicting history makes details
 unavailable; closing clears its selection. Go does not retain a separate details
 snapshot or persist it. This native details path remains available from Recent and
-Settings history lists. The full History pane embeds the same details component
-beside its reader and omits the redundant native-window action there.
+Settings history lists. The full History pane contributes the same details
+component to the shell's right sidebar and omits the redundant native-window
+action there.
 
 The native status overlay is enabled by default but has an independent persisted opt-out plus curated layout, work-area anchor, phase visibility, motion, surface, visualizer, proportional-size, opacity, edge-distance, and glow settings. `internal/overlay` owns that feature lifecycle: the settings transaction supplies applied configuration, dictation supplies authoritative status, and the package translates both into a narrow `platform.OverlayOptions`/`platform.OverlayStatus` contract. Enabling creates one native surface and bounded level tap; disabling releases its native surface, timers and graphics resources instead of retaining a hidden renderer. Windows additionally owns its HWND/message-loop thread; macOS dispatches AppKit work to the main thread. New settings default to Capsule/minimal/envelope/bottom-center. Existing saved appearance remains authoritative.
 
@@ -990,22 +1015,23 @@ The Win32 renderer queues all changes onto its locked message-loop thread, uses 
 
 Settings can request a presentation-only native preview through a narrow Wails binding. Draft presentation changes update the same renderer, real dictation preempts preview, Settings close stops it, and the applied saved configuration is restored. Preview can temporarily create a surface while the applied feature is disabled, but stopping it destroys that surface. Overlay creation remains a degraded optional capability: native failure is logged without failing dictation or rolling back the saved preference.
 
-Home presents the selected task and current result first. Its sidebar exposes
-the active task's configuration, with a compact settings disclosure at narrow
-widths. Result and bottom panel fill the available height across empty, working,
-recovery, and completed states.
+Home presents the selected task and current result first. Its primary-sidebar
+contribution exposes the active task's configuration; the shared shell owns
+compact visibility and the bottom panel across empty, working, recovery, and
+completed states.
 `HistoryList` owns the bounded transcript scroll viewport; its outer frame and
 drawer pass through the available height instead of nesting another scroll area.
 This keeps mouse-wheel input over transcript text and row controls in the visible
 scroller. Newest-entry arrival in a compact list resets that viewport to the top.
 The full History pane gives its transcript-list sidebar an independent scroll
-area beside a resizable reader/details split. At viewport widths of at least
-1100px, transcript and details sit side by side; narrower widths stack details
-below the transcript. Each owns its scroll area. `HistoryDetails` uses an embedded
+area beside the selected reader. At viewport widths of at least 1100px, the
+optional secondary sidebar shows that run's details; narrower widths hide it
+until the user opens the right-side overlay, preserving the wide-window
+visibility preference. `HistoryDetails` uses an embedded
 44px header and component-scoped heading IDs. Container queries stack field labels
 and values and reflow checkpoints within narrow details panes without omitting
-metadata. Below 700px, an explicit sidebar toggle exposes the list over the main
-area; selecting an entry returns to the reading surface.
+metadata. Below 700px, the title-bar primary-sidebar toggle exposes the list over
+the main area; selecting an entry returns to the reading surface.
 Task-sidebar rows open the relevant settings page; direct switches use
 immediate-save controls. Microphone and delivery controls appear only for
 dictation. TTS shows its own connection and model/voice settings links.

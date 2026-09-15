@@ -2,7 +2,23 @@ import { test, expect } from "./fixtures";
 const section = (page: import("@playwright/test").Page, id: string) =>
   page.locator(`[data-settings-section="${id}"]`);
 
-test("settings search finds detailed options and preserves drafts", async ({ page }) => {
+async function selectSection(
+  page: import("@playwright/test").Page,
+  id: string,
+) {
+  const toggle = page.getByRole("button", {
+    name: "Toggle primary sidebar",
+    exact: true,
+  });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-pressed")) === "false")
+    await toggle.click();
+  await section(page, id).click();
+}
+
+test("settings search finds detailed options and preserves drafts", async ({
+  page,
+}) => {
   const search = page.getByRole("textbox", { name: "Find settings" });
   await search.fill("padding");
   await expect(section(page, "audio")).toBeVisible();
@@ -18,7 +34,7 @@ test("settings search finds detailed options and preserves drafts", async ({ pag
   await expect(page.getByText("No matching settings.")).toBeVisible();
   await search.press("Escape");
   await expect(search).toHaveValue("");
-  await section(page, "audio").click();
+  await selectSection(page, "audio");
   await expect(page.locator("#max-duration")).toHaveValue("150");
 });
 
@@ -28,34 +44,51 @@ for (const width of [860, 520]) {
     saves,
   }, info) => {
     await page.setViewportSize({ width, height: 740 });
-    await section(page, "audio").click();
+    await selectSection(page, "audio");
     const tuning = page
       .locator("details")
-      .filter({ has: page.locator("summary", { hasText: "Speech detection tuning" }) });
+      .filter({
+        has: page.locator("summary", { hasText: "Speech detection tuning" }),
+      });
     await expect(tuning).not.toHaveAttribute("open", "");
-    await expect(page.getByRole("slider", { name: "Silence indicator delay" })).toBeHidden();
+    await expect(
+      page.getByRole("slider", { name: "Silence indicator delay" }),
+    ).toBeHidden();
     await page.locator('label[for="silence-trimming"]').click();
-    await expect(page.locator("#silence-trimming")).toHaveAttribute("aria-checked", "true");
+    await expect(page.locator("#silence-trimming")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     await tuning.locator("summary").click();
-    const padding = page.getByRole("slider", { name: "Speech padding", exact: true });
+    const padding = page.getByRole("slider", {
+      name: "Speech padding",
+      exact: true,
+    });
     await padding.focus();
     await padding.press("ArrowRight");
     await expect(padding).toHaveAttribute("aria-valuenow", "350");
     await tuning.locator("summary").click();
-    await section(page, "history").click();
-    await page.getByRole("button", { name: "Save and return", exact: true }).click();
+    await selectSection(page, "history");
+    await page
+      .getByRole("button", { name: "Save and return", exact: true })
+      .click();
     await saves.complete(await saves.waitForStart(), "invalid-speech-padding");
-    await expect(section(page, "audio")).toHaveAttribute("aria-current", "page");
+    await expect(section(page, "audio")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     await expect(tuning).toHaveAttribute("open", "");
     await expect(padding).toBeFocused();
     await expect(padding).toHaveAttribute("aria-valuenow", "350");
     await tuning.locator("summary").click();
-    await section(page, "general").click();
-    await section(page, "audio").click();
+    await selectSection(page, "general");
+    await selectSection(page, "audio");
     await page.screenshot({ path: info.outputPath(`audio-${width}.png`) });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
   });
 }
 
@@ -64,19 +97,28 @@ test("overlay has compact defaults and retains tuning when it does not apply", a
 }, info) => {
   await page.setViewportSize({ width: 860, height: 740 });
   await page.goto("/tests/browser/app/?theme=dark");
-  await section(page, "overlay").click();
+  await selectSection(page, "overlay");
   const tuning = page
     .locator("details")
-    .filter({ has: page.locator("summary", { hasText: "Appearance and behavior" }) });
-  await expect(page.getByRole("button", { name: "Preview overlay", exact: true })).toBeVisible();
-  await expect(page.getByRole("slider", { name: "Overlay glow strength" })).toBeHidden();
+    .filter({
+      has: page.locator("summary", { hasText: "Appearance and behavior" }),
+    });
+  await expect(
+    page.getByRole("button", { name: "Preview overlay", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("slider", { name: "Overlay glow strength" }),
+  ).toBeHidden();
   await page.screenshot({ path: info.outputPath("overlay-compact.png") });
   await tuning.locator("summary").click();
   const glow = page.getByRole("slider", { name: "Overlay glow strength" });
   await glow.focus();
   await glow.press("ArrowLeft");
   await expect(glow).toHaveAttribute("aria-valuenow", "95");
-  const surface = page.getByRole("group", { name: "Overlay surface", exact: true });
+  const surface = page.getByRole("group", {
+    name: "Overlay surface",
+    exact: true,
+  });
   await surface.getByRole("radio", { name: "Minimal", exact: true }).click();
   await expect(glow).toHaveAttribute("aria-disabled", "true");
   await surface.getByRole("radio", { name: "Glass", exact: true }).click();

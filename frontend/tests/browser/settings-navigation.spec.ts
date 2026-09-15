@@ -7,27 +7,46 @@ const content = (page: import("@playwright/test").Page) =>
 const section = (page: import("@playwright/test").Page, id: string) =>
   page.locator(`[data-settings-section="${id}"]`);
 
+async function openSidebar(page: import("@playwright/test").Page) {
+  const toggle = page.getByRole("button", {
+    name: "Toggle primary sidebar",
+    exact: true,
+  });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-pressed")) === "false")
+    await toggle.click();
+}
+
+async function selectSection(
+  page: import("@playwright/test").Page,
+  id: string,
+) {
+  await openSidebar(page);
+  await section(page, id).click();
+}
+
 for (const width of [1100, 520]) {
   test.describe(`settings at ${width}px`, () => {
     test.use({ viewport: { width, height: 620 } });
 
-    test("navigation resets the destination scroll without taking keyboard focus", async ({
+    test("navigation resets destination scroll and keeps focus on a visible navigation control", async ({
       page,
     }) => {
-      await section(page, "audio").click();
+      await selectSection(page, "audio");
       await content(page).evaluate((el) => {
         el.scrollTop = el.scrollHeight;
       });
       await expect
         .poll(() => content(page).evaluate((el) => el.scrollTop))
         .toBeGreaterThan(0);
-      await section(page, "overlay").click();
+      await selectSection(page, "overlay");
       await expect
         .poll(() => content(page).evaluate((el) => el.scrollTop))
         .toBe(0);
       await content(page).evaluate((el) => {
         el.scrollTop = el.scrollHeight;
       });
+      await openSidebar(page);
       await section(page, "overlay").focus();
       await page.keyboard.press("ArrowDown");
       await expect(section(page, "general")).toBeFocused();
@@ -39,7 +58,7 @@ for (const width of [1100, 520]) {
     test("inline connection editing keeps Save visible, Back resets scroll, and Done returns to the workflow", async ({
       page,
     }) => {
-      await section(page, "connections").click();
+      await selectSection(page, "connections");
       const window = manager(page);
       await expect(section(page, "connections")).toHaveAttribute(
         "aria-current",
@@ -91,9 +110,9 @@ for (const width of [1100, 520]) {
     }) => {
       await page.locator("summary", { hasText: "Request settings" }).click();
       await page.locator("#file-transcription-timeout").fill("75");
-      await section(page, "audio").click();
+      await selectSection(page, "audio");
       await page.locator("#max-duration").fill("0");
-      await section(page, "history").click();
+      await selectSection(page, "history");
       await page
         .getByRole("button", { name: "Save and return", exact: true })
         .click();
@@ -115,11 +134,12 @@ for (const width of [1100, 520]) {
           })
           .last(),
       ).toBeVisible();
+      await openSidebar(page);
       await expect(section(page, "audio")).toHaveAccessibleName(
         /needs attention/i,
       );
       await expect(page.getByText(/RuntimeError:/)).toHaveCount(0);
-      await section(page, "history").click();
+      await selectSection(page, "history");
       await expect(
         page.getByRole("button", { name: "Review Audio", exact: true }),
       ).toBeVisible();
@@ -132,7 +152,7 @@ for (const width of [1100, 520]) {
         "aria-invalid",
         "true",
       );
-      await section(page, "server").click();
+      await selectSection(page, "server");
       await expect(page.locator("#file-transcription-timeout")).toHaveValue(
         "75",
       );
@@ -159,9 +179,9 @@ for (const width of [1100, 520]) {
       page,
       saves,
     }) => {
-      await section(page, "audio").click();
+      await selectSection(page, "audio");
       await page.locator("#max-duration").fill("0");
-      await section(page, "server").click();
+      await selectSection(page, "server");
       await page
         .getByRole("button", { name: "Show connections", exact: true })
         .click();
@@ -176,7 +196,7 @@ for (const width of [1100, 520]) {
       await expect(page.getByRole("alertdialog")).toHaveCount(0);
       await expect(page.locator("#max-duration")).toBeFocused();
       await expect(page.locator("#max-duration")).toHaveValue("0");
-      await section(page, "server").click();
+      await selectSection(page, "server");
       await expect(page.locator("#saved-connection-stt")).toHaveValue(
         "Original server",
       );
@@ -185,7 +205,7 @@ for (const width of [1100, 520]) {
     test("everyday controls keep mechanics in disclosures and omit deferred delivery", async ({
       page,
     }) => {
-      await section(page, "audio").click();
+      await selectSection(page, "audio");
       const details = page
         .locator("details")
         .filter({ hasText: "Speech detection tuning" });
@@ -196,7 +216,7 @@ for (const width of [1100, 520]) {
           name: "Voice activity detection mode",
         }),
       ).toBeVisible();
-      await section(page, "general").click();
+      await selectSection(page, "general");
       await expect(
         page.getByText("Direct input", { exact: true }),
       ).toBeVisible();

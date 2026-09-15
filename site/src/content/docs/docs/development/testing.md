@@ -838,7 +838,7 @@ list is an acceptance procedure, not a claim that the checks have passed:
 34. Open About in a development build and a packaged build. Confirm its compact metadata matches `build/config.yml`, the executable's Details tab, and Installed apps; only the development build shows **Development**. Run `wails3 task common:check:release-info`, deliberately make one generated Windows version field stale, and confirm the check and package build fail until `wails3 task common:update:build-assets` repairs it.
 35. Move and resize the main window on a non-primary display. Open Settings and confirm it stays inside the main workspace. Open About and Transcription details, and confirm each hidden auxiliary window opens centered over the main window without leaving that display's usable work area. Move an already-open auxiliary window and invoke it again; confirm it is focused without jumping. Hide and reopen it; confirm it returns relative to the main window rather than retaining independent placement. Choose tray Quit, relaunch, and confirm only the main window restores its normal size and screen-relative position. Then disconnect the saved display and relaunch; confirm the main window is fully visible and centered on the primary work area.
 36. In direct-input mode, compare short, long, multiline, and non-ASCII transcripts in Notepad, a Chromium text field, VS Code or another editor, a terminal, and an Office-style rich-text target. Ordinary text should appear in one immediate update; long text should complete without visible fixed-delay stepping, truncation, or broken surrogate pairs. Change focus during a long insertion and confirm delivery stops before the next dispatch rather than redirecting its remainder. Confirm the terminal records only UTF-16 unit count, batch count, duration, strategy, and bounded failure stage—never text or target identity.
-37. Resize the transcript/panel divider by dragging and with the keyboard, quit through the tray, and relaunch. Confirm the split restores and both regions scroll independently. At the 560x560 minimum window size, verify Transcript/Recent switching, panel tabs, and the Task settings drawer stay within the window. Open audio, transcription, cleanup, and delivery Settings from the sidebar or drawer, then return and confirm the transcript or speech composer is preserved. Exercise nested selectors, Escape focus return, explicit Save and return, pending saves, and failed-save recovery. Check both light/dark palettes and opaque/Mica modes. Clearing WebView site data may reset pane sizes but must not alter Go-owned settings or transcript history.
+37. Toggle the primary sidebar, bottom panel, and History secondary sidebar from the title bar; drag both dividers and resize them with the keyboard. Quit through the tray and relaunch to check visibility, size, and selected bottom-tab restoration. Cross the 700px width, 1100px width, and 560px height thresholds: primary navigation becomes an explicit overlay, History details auto-hide but remain reachable through the right-side overlay, and the bottom panel hides without losing its tab or visibility preference. Details must never stack below the reader. Check independent scrolling, overlay Escape/backdrop dismissal, focus return, and restoration when room returns. Open task Settings from the sidebar, then return and confirm the transcript or composer is preserved. Exercise nested selectors, Save and return, pending saves, and failed-save recovery in light/dark and opaque/Mica modes. Clearing WebView site data may reset presentation preferences but must not alter Go-owned settings or retain history/output.
 38. In an isolated user-data directory, place `settings.db` and `settings.json` fixtures before launch. Confirm first-run defaults and an empty connection catalog, with those files and legacy credentials untouched. Save and reopen `freehand.db`. Exercise corrupt/newer SQLite, foreign database identity, locked files, and uncertain save recovery: the workspace must pause new work and ordinary saves; Retry reloads committed state, and only explicit Reset archives and replaces the current database. Restore a `freehand.db` upgrade backup with Freehand closed. Verify credential references remain coherent without exposing keys.
 39. Configure a dedicated local or remote `/v1/audio/speech` endpoint under **Speech playback**. Press **Test**, confirm the authenticated `GET /v1/models` result populates the model picker, enter the provider's voice ID, and save. Then press **Preview**. Verify the fixed preview phrase plays, pause/resume preserve progress, restart begins at zero, and stop releases the session.
 40. Enable History, create raw-only and successfully cleaned entries, and verify Listen reads the selected final version. Complete a stored-audio transcript with History off and verify its result can still be listened to. Start a toggle or hold recording during playback and confirm playback stops before capture begins without transcript/history mutation.
@@ -1093,17 +1093,18 @@ history, including stale, active, cleared, and closed results. Fake speech clien
 verify backend-owned Voice text selection without retaining history and the 4,096
 Unicode code-point boundary, including supplementary characters.
 Browser workspace fixtures cover desktop pointer/keyboard resizing, restored
-pane heights, short-window view switching, and task-sidebar links with
+pane sizes and visibility, responsive region hiding, and task-sidebar links with
 asynchronous save outcomes in Settings. They use the actual home
 components with mocked Wails services and no inference traffic. Workspace checks
 also cover Voice Listen with history off, hover/keyboard action tooltips, expiring
 copy confirmation, and preservation of supplementary Unicode in the composer.
 Copy-feedback unit tests cover repeated clicks, out-of-order completion, failure,
 and teardown.
-The split-restoration test waits for the persisted percentage to match the
-separator's final value before reloading, then checks the restored pixel height.
-A storage change alone is insufficient because a debounced earlier drag write
-can precede the keyboard adjustment.
+Layout restoration checks wait for the saved size to match the separator's final
+value before reloading, then check the restored geometry and visibility. Inspect
+the stored payload: only layout booleans, bounded sizes, and the bottom tab belong
+there, never transcript text, History search/selection, output runtime identity,
+consent, or output bytes.
 Renderer coverage checks that speech commands preserve the composer draft and
 that file readiness excludes microphone and shortcut prerequisites while retaining
 endpoint and authentication checks. Interactive acceptance should switch between
@@ -1136,7 +1137,7 @@ Fresh-store fixtures exercise completed and realtime Voice configurations, indep
 
 For native acceptance, open Voice → Transcription: there must be no separate Live button. Choose NeMo-Speech.cpp, its loaded model, and the explicit Nemotron profile; enable Realtime inside that panel. Verify live results and one-row captions. Turn realtime off and record using the same connection/model. Switch to an ineligible model/connection and verify mode is disabled. Configure Audio file separately, switch between tasks, and verify independent connection/model/language settings and truthful footer status. Restart and repeat. Test Voice-only first-run setup with Audio file unconfigured. These native checks are separate from successful builds and deterministic tests.
 
-Language dropdown acceptance: open Settings from the workflow sidebar or compact Task settings drawer and check the searchable language picker and qualified Nemotron select at short and normal window heights. Repeat in first-run readiness, where available controls save immediately. Menus must remain within the window, scroll internally with the wheel, and expose the final option through keyboard navigation.
+Language dropdown acceptance: open Settings from the workflow sidebar or the compact primary-sidebar overlay and check the searchable language picker and qualified Nemotron select at short and normal window heights. Repeat in first-run readiness, where available controls save immediately. Menus must remain within the window, scroll internally with the wheel, and expose the final option through keyboard navigation.
 
 ### Shared vocabulary acceptance
 
@@ -1360,6 +1361,34 @@ also exposes its temperature and timeout controls. Speech preview stays beside
 voice selection. All workflow fixtures use synthetic profiles and service
 responses; they do not contact inference servers.
 
+### Shared workspace layout
+
+Exercise the title-bar primary, bottom, and secondary visibility controls across
+Voice, Audio file, Text to speech, Settings, Runtimes, and History. Primary content
+must follow the area without resetting the wide-window visibility preference.
+Below 700px wide, it starts hidden and opens as an overlay through the same
+title-bar control. Check Escape, backdrop dismissal, page navigation, focus on
+opening, and focus return when a region hides or crosses a breakpoint.
+
+The bottom panel retains Recent, Runtime output, or Diagnostics across page
+changes and user hiding. It automatically hides below 560px viewport height and
+restores the user's visibility choice and tab when room returns. History details
+occupy only the secondary sidebar: auto-hide them below 1100px and open them on
+demand as a right-side overlay through the title-bar toggle. Check Escape and
+backdrop dismissal; never stack details below the transcript, and restore the
+wide-window preference on widening. Check both thin
+dividers' larger pointer targets, drag limits, keyboard arrows, Home/End limits,
+separator names, orientation, and focus indicators.
+
+Select a Runtime output target, accept sensitive-output consent, and switch
+pages: navigation must not choose another runtime. Hiding the bottom panel,
+changing tabs or runtime targets, and hiding the window must end consent, clear
+viewer output, and fence late reads. Returning requires fresh consent. Removing
+the selected runtime must not silently pick another. Diagnostics checks use the
+explicitly selected workflow's saved connection and remain metadata-only.
+Browser fixtures establish renderer behavior; native window-hide events,
+clipboard behavior, and runtime process lifecycles require separate OS acceptance.
+
 ### Workspace history and error presentation
 
 The full History pane must combine retention status, History settings, Clear history,
@@ -1377,9 +1406,12 @@ details-window bindings. Check selection after cleanup
 updates, new arrivals, deletion, eviction, disabling retention, and clearing the
 full history while a filter hides some entries. At widths below 700px, exercise
 the sidebar toggle, keyboard access, overlay dismissal, and selecting an entry
-without trapping or obscuring the reader. The reader/details split must change
-from side by side at 1100px and wider to stacked below that width; verify pointer
-and keyboard resizing. The list, reader, and details must scroll independently
+without trapping or obscuring the reader. The right details sidebar must be
+available at 1100px and wider and automatically hide below that width without
+stacking or resetting its wide-window visibility preference. Its title-bar
+toggle must still expose an inspectable right-side overlay at narrow widths.
+Verify pointer and keyboard
+resizing. The list, reader, and details must scroll independently
 without an outer page scrollbar. At a 360px details-pane width, retain readable
 long identifiers, model names, timestamps, usage/cost/performance values, and
 every checkpoint field. Check component-scoped heading associations and the

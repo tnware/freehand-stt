@@ -63,6 +63,7 @@ test("startup stage, elapsed time and cancellation remain visible", async ({
   await expect(
     page.getByText(/Warming up selected model · \d+s in this stage/),
   ).toBeVisible();
+  await page.getByRole("button", { name: "View output", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Show output", exact: true }),
   ).toBeEnabled();

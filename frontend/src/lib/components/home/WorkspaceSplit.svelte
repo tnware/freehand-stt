@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick, type Snippet } from "svelte";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import { MediaQuery } from "svelte/reactivity";
   import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
   import * as Resizable from "$lib/components/ui/resizable";
@@ -22,6 +23,7 @@
     working: boolean;
   } = $props();
 
+  const shell = getWorkbenchLayout();
   const uid = $props.id();
   const panelID = `${uid}-panel`;
   let tab = $state("recent");
@@ -63,7 +65,9 @@
 {/snippet}
 
 <div bind:this={workspace} class="flex min-h-0 flex-1 flex-col">
-  {#if roomy.current && !collapsed}
+  {#if shell}
+    {@render result()}
+  {:else if roomy.current && !collapsed}
     <Resizable.PaneGroup
       direction="vertical"
       autoSaveId="freehand-workspace-v2"

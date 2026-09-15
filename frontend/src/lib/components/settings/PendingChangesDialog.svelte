@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
   import * as Dialog from "$lib/components/ui/dialog";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
 
   let {
     open,
@@ -29,6 +30,11 @@
     onDiscard: () => void;
     onSave: () => void;
   } = $props();
+  const layout = getWorkbenchLayout();
+
+  $effect(() => {
+    if (open) return layout?.claimNotifications("modal");
+  });
 
   function preventDismissWhileBusy(event: Event) {
     // onOpenChange observes a close; these hooks can prevent it.

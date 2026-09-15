@@ -14,7 +14,7 @@ test("speech settings retain a failed voice draft and return to the composer aft
     .getByRole("textbox", { name: "Text to speak", exact: true })
     .fill("Keep this draft.");
   await page
-    .getByRole("button", { name: "Task settings", exact: true })
+    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
     .click();
   const sidebar = page.getByRole("complementary", {
     name: "Text to speech settings",
@@ -35,18 +35,24 @@ test("speech settings retain a failed voice draft and return to the composer aft
   await save.click();
   await saves.complete(await saves.waitForStart(), "failure");
   await expect(
-    settings.getByText("Fixture save failed. Try again.", { exact: true }),
+    page
+      .getByRole("complementary", { name: "Notifications", exact: true })
+      .getByText("Fixture save failed. Try again.", { exact: true }),
   ).toBeVisible();
   await expect(voice).toHaveValue("custom-voice");
   await expect(settings).toBeVisible();
   await save.click();
   await saves.complete(await saves.waitForStart(), "success");
   await expect(settings).toHaveCount(0);
+  await expect(sidebar).toBeHidden();
+  await page
+    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
+    .click();
   await expect(sidebar.getByRole("button", { name: /^Voice / })).toContainText(
     "custom-voice",
   );
   await page
-    .getByRole("button", { name: "Close task settings", exact: true })
+    .getByRole("button", { name: "Dismiss primary sidebar", exact: true })
     .click();
   await expect(
     page.getByRole("textbox", { name: "Text to speak", exact: true }),

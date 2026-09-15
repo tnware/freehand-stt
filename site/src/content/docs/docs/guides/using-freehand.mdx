@@ -164,14 +164,40 @@ You do not need history to copy a transcript after failed insertion.
 The task sidebar shows its connection, model, and relevant language, cleanup,
 vocabulary, or speech options. Select a row to open its settings. Direct switches
 apply immediately; edits in Settings apply when you save. Voice also shows
-delivery and overlay settings. At compact widths, open **Task settings** to reach
-the same controls.
+delivery and overlay settings. Use the left sidebar button in the title bar to
+reach these controls when the sidebar is hidden.
 
-The panel below the result has **Recent**, **Runtime output**, and **Diagnostics**
-tabs. Drag the divider to change the panel height, or focus it with Tab and use
-the arrow keys. Freehand remembers the split. **Hide panel** gives the result
-more space; **Show panel** restores it. Runtime output requires your consent and
-is read-only. History remains optional.
+### Workspace layout
+
+The title bar has three layout buttons: left sidebar, bottom panel, and right
+sidebar. Their visibility choices apply across the workspace.
+
+Use **Ctrl+B** for the left sidebar, **Ctrl+J** for the bottom panel, and
+**Ctrl+Alt+B** for History details. On macOS, use **⌘** in place of **Ctrl**.
+
+- The **left sidebar** follows the area you open: task settings, Settings
+  sections, runtime inventory, or History. Below 700px wide it starts hidden;
+  its title-bar button opens it over the current page.
+- The **bottom panel** has **Recent**, **Runtime output**, and **Diagnostics**
+  tabs. Its selected tab stays the same when you change pages or hide and restore
+  the panel. It hides automatically in windows shorter than 560px and returns to
+  your chosen visibility when there is room.
+- The **right sidebar** shows the selected History entry's **Transcription
+  details**. Below 1100px wide it starts hidden; its title-bar button opens the
+  details as an overlay on the right. Escape or the backdrop closes the overlay.
+  Widening restores your normal sidebar visibility choice.
+
+Drag either thin divider to resize its region, or focus it with Tab and use the
+arrow keys. Home and End move to the permitted size limits. Freehand remembers
+layout visibility, sizes, and the bottom tab locally. These preferences do not
+store transcripts or runtime output.
+
+In **Runtime output**, choose the runtime you want to inspect. Changing pages
+does not change that selection. Output is read-only and requires **Show output**
+consent. Hiding the panel, changing its tab or runtime, or hiding the window ends
+that consent and clears the viewer; showing it again requires consent again.
+History remains optional.
+
 Live text follows new words until you scroll back to read earlier text. Choose
 **Jump to latest**, or scroll to the bottom, to resume following.
 
@@ -212,12 +238,13 @@ name, and filter by **All**, **Voice**, or **Audio files**. Search includes the
 final, raw, and cleaned versions already in memory; it does not search files on
 disk or recover transcripts from earlier sessions.
 
-Select an entry to read its full transcript and **Transcription details** in the
-main area. Both show the selected run. Drag the divider to give either more room;
-details appear beside the transcript in wide windows and below it in narrower
-windows. At compact sizes, choose **Browse** to open the list over the main area,
-then choose a transcript. You can also browse **Recent** below a workflow, where the
-latest transcript opens automatically and older entries expand when selected.
+Select an entry to read its full transcript in the main area. The right sidebar
+shows that same run's **Transcription details**; use its title-bar button to show
+or hide it. Details remain on the right and open as an overlay below 1100px wide.
+At compact sizes, use the left sidebar button to open the list over
+the main area, then choose a transcript. You can also browse **Recent** in the
+bottom panel from any page, where the latest transcript opens automatically and
+older entries expand when selected.
 
 The sidebar shows whether retention is on, opens **History settings**, and offers
 **Clear history** to remove all retained entries. Filtering the list does not

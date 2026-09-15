@@ -1,6 +1,17 @@
 import { test, expect } from "./fixtures";
-const section = (page: import("@playwright/test").Page, id: string) =>
-  page.locator(`[data-settings-section="${id}"]`);
+async function selectSection(
+  page: import("@playwright/test").Page,
+  id: string,
+) {
+  const toggle = page.getByRole("button", {
+    name: "Toggle primary sidebar",
+    exact: true,
+  });
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-pressed")) === "false")
+    await toggle.click();
+  await page.locator(`[data-settings-section="${id}"]`).click();
+}
 
 for (const width of [520, 860]) {
   test(`shared profile and language controls preserve drafts at ${width}px`, async ({
@@ -8,7 +19,7 @@ for (const width of [520, 860]) {
   }, info) => {
     await page.setViewportSize({ width, height: 740 });
     await page.goto("/tests/browser/app/?workflows&pickers&theme=dark");
-    await section(page, "voice-transcription").click();
+    await selectSection(page, "voice-transcription");
     const model = page.locator("#voice-model");
     const profile = page.locator("#voice-profile");
     const language = page.locator("#voice-language");
@@ -50,8 +61,8 @@ for (const width of [520, 860]) {
     await page.keyboard.press("End");
     await page.keyboard.press("Enter");
     await expect(language).toHaveValue("Finnish");
-    await section(page, "general").click();
-    await section(page, "voice-transcription").click();
+    await selectSection(page, "general");
+    await selectSection(page, "voice-transcription");
     await expect(profile).toContainText("Qwen3-ASR");
     await expect(language).toHaveValue("Finnish");
     await page.screenshot({
@@ -78,8 +89,8 @@ test("unlisted language search still offers custom server values", async ({
   await expect(
     page.getByText("Custom values are sent to the server unchanged."),
   ).toBeVisible();
-  await section(page, "general").click();
-  await section(page, "server").click();
+  await selectSection(page, "general");
+  await selectSection(page, "server");
   await expect(page.locator("#language-custom")).toHaveValue("custom-en");
 });
 

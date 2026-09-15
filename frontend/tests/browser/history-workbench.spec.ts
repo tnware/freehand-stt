@@ -65,7 +65,7 @@ test("History filters and search select the matching reader and recover from no 
   await expect(information(page)).toContainText("fixture/voice-3");
   await expect(information(page)).toContainText("voice-response-3");
   const splitter = page.getByRole("separator", {
-    name: "Resize transcript and details",
+    name: "Resize editor and secondary sidebar",
     exact: true,
   });
   const before = (await reader(page).boundingBox())!;
@@ -165,7 +165,7 @@ test("Clear history preserves entries after failure and clears every source on r
   await page.setViewportSize({ width: 560, height: 760 });
   await openHistory(page);
   await page
-    .getByRole("button", { name: "History sidebar", exact: true })
+    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
     .click();
   await browser(page)
     .getByRole("button", { name: "Audio files", exact: true })
@@ -181,12 +181,17 @@ test("Clear history preserves entries after failure and clears every source on r
   await expect(page.getByRole("alert")).toBeInViewport();
   await expect(transcripts(page)).toHaveCount(1);
   await page
-    .getByRole("button", { name: "Close history sidebar", exact: true })
+    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
     .click();
   await expect(reader(page)).toContainText("Confirm the microphone settings.");
-  await expect(information(page)).toContainText("fixture/file-2");
+  await expect(information(page)).toHaveCount(0);
   await page
-    .getByRole("button", { name: "History sidebar", exact: true })
+    .getByRole("button", { name: "Toggle secondary sidebar", exact: true })
+    .click();
+  await expect(information(page)).toContainText("fixture/file-2");
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
     .click();
   await browser(page)
     .getByRole("button", { name: "Clear history", exact: true })
@@ -196,15 +201,17 @@ test("Clear history preserves entries after failure and clears every source on r
     browser(page).getByRole("button", { name: "Clear history", exact: true }),
   ).toBeDisabled();
   await page
-    .getByRole("button", { name: "Close history sidebar", exact: true })
+    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
     .click();
   await expect(reader(page)).toHaveCount(0);
   await expect(information(page)).toHaveCount(0);
   await expect(
-    page.getByText("No transcripts yet.", { exact: true }),
+    page
+      .getByRole("region", { name: "Transcript history", exact: true })
+      .getByText("No transcripts yet.", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "History sidebar", exact: true })
+    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
     .click();
   await browser(page)
     .getByRole("button", { name: "All sources", exact: true })
@@ -271,56 +278,61 @@ test("the compact History sidebar opens on demand and closes after selecting a t
   });
   await search.focus();
   await page.setViewportSize({ width: 640, height: 720 });
-  await expect(browser(page)).toBeVisible();
-  await expect(search).toBeFocused();
-  await page
-    .getByRole("button", { name: "Close history sidebar", exact: true })
-    .click();
   const toggle = page.getByRole("button", {
-    name: "History sidebar",
+    name: "Toggle primary sidebar",
     exact: true,
-    includeHidden: true,
   });
-  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toBeFocused();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await expect(browser(page)).toBeHidden();
   await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await expect(browser(page)).toBeVisible();
+  await expect(search).toBeFocused();
   await browser(page)
     .getByRole("button", { name: "Voice", exact: true })
     .click();
   await expect(browser(page)).toBeVisible();
   await transcript(page, "Ship the updated voice workflow.").click();
-  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await expect(browser(page)).toBeHidden();
+  await expect(toggle).toBeFocused();
   await expect(reader(page)).toContainText("Ship the updated voice workflow.");
   await toggle.click();
   await expect(
     transcript(page, "Ship the updated voice workflow."),
   ).toHaveAttribute("aria-current", "true");
-  await page
-    .getByRole("button", { name: "Close history sidebar", exact: true })
-    .click();
+  await page.keyboard.press("Escape");
   await expect(browser(page)).toBeHidden();
   await expect(toggle).toBeFocused();
   await expect(reader(page)).toBeInViewport();
-  await expect(information(page)).toBeInViewport();
-  expect((await information(page).boundingBox())!.y).toBeGreaterThan(
-    (await reader(page).boundingBox())!.y,
-  );
+  await expect(information(page)).toHaveCount(0);
+  const detailsToggle = page.getByRole("button", {
+    name: "Toggle secondary sidebar",
+    exact: true,
+  });
+  await expect(detailsToggle).toBeEnabled();
+  await detailsToggle.click();
+  await expect(information(page)).toContainText("fixture/voice-1");
+  await page.keyboard.press("Escape");
+  await expect(detailsToggle).toBeFocused();
+  await expect(information(page)).toHaveCount(0);
   const transcriptScroll = reader(page).locator(".overflow-y-auto").first();
   const text = reader(page).getByRole("textbox", { name: /^Transcript from / });
-  const detailsBefore = await information(page).evaluate(
-    (element) => element.scrollTop,
-  );
   await text.focus();
   await text.press("Home");
   await text.press("PageDown");
   await expect
     .poll(() => transcriptScroll.evaluate((element) => element.scrollTop))
     .toBeGreaterThan(0);
-  expect(await information(page).evaluate((element) => element.scrollTop)).toBe(
-    detailsBefore,
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(text).toBeFocused();
+  await expect(information(page)).toBeInViewport();
+  expect((await information(page).boundingBox())!.x).toBeGreaterThan(
+    (await reader(page).boundingBox())!.x,
+  );
+  const detailsBefore = await information(page).evaluate(
+    (element) => element.scrollTop,
   );
   const transcriptBefore = await transcriptScroll.evaluate(
     (element) => element.scrollTop,
@@ -339,7 +351,7 @@ test("Settings navigation keeps runtime management on the activity rail", async 
   page,
 }) => {
   await openHistory(page);
-  await page
+  await browser(page)
     .getByRole("button", { name: "History settings", exact: true })
     .click();
   const navigation = page.getByRole("navigation", {

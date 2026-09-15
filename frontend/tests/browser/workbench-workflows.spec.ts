@@ -33,14 +33,18 @@ test("bottom panel really collapses and its tabs support keyboard navigation", a
   await page.goto("/tests/browser/app/?view=workspace");
   const transcript = page.getByRole("region", { name: "Current result" });
   const initial = await transcript.boundingBox();
-  await page.getByRole("button", { name: "Hide panel", exact: true }).click();
+  const toggle = page.getByRole("button", {
+    name: "Toggle bottom panel",
+    exact: true,
+  });
+  await toggle.click();
   await expect(
     page.getByRole("region", { name: "Transcript history" }),
   ).toBeHidden();
   await expect
     .poll(async () => (await transcript.boundingBox())!.height)
     .toBeGreaterThan(initial!.height + 60);
-  await page.getByRole("button", { name: "Show panel", exact: true }).click();
+  await toggle.click();
   const recent = page.getByRole("tab", { name: /^Recent/ });
   await recent.focus();
   await page.keyboard.press("End");
@@ -54,14 +58,29 @@ test("bottom panel really collapses and its tabs support keyboard navigation", a
   await expect(recent).toBeFocused();
 });
 
-test("short windows retain output and diagnostic panels", async ({ page }) => {
-  await page.setViewportSize({ width: 900, height: 520 });
+test("short windows hide the bottom panel and restore its selected tab", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 740 });
   await page.goto("/tests/browser/app/?view=workspace");
   await page.getByRole("tab", { name: "Diagnostics", exact: true }).click();
+  await page.setViewportSize({ width: 900, height: 520 });
+  await expect(
+    page.getByRole("region", { name: "Bottom panel", exact: true }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Toggle bottom panel", exact: true }),
+  ).toBeDisabled();
+  await page.setViewportSize({ width: 900, height: 740 });
   await expect(
     page.getByRole("tabpanel", { name: "Diagnostics" }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Runtime output", exact: true }).click();
+  await page.setViewportSize({ width: 900, height: 520 });
+  await expect(
+    page.getByRole("region", { name: "Bottom panel", exact: true }),
+  ).toBeHidden();
+  await page.setViewportSize({ width: 900, height: 740 });
   await expect(
     page.getByRole("tabpanel", { name: "Runtime output" }),
   ).toBeVisible();
@@ -76,14 +95,17 @@ test("compact task settings remain reachable without squeezing the transcript", 
     page.getByRole("complementary", { name: "Voice transcription settings" }),
   ).toBeHidden();
   await page
-    .getByRole("button", { name: "Task settings", exact: true })
+    .getByRole("button", { name: "Toggle primary sidebar", exact: true })
     .click();
   await expect(
     page.getByRole("complementary", { name: "Voice transcription settings" }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Close task settings", exact: true })
+    .getByRole("button", { name: "Dismiss primary sidebar", exact: true })
     .click();
+  await expect(
+    page.getByRole("button", { name: "Toggle primary sidebar", exact: true }),
+  ).toBeFocused();
   const width = await page
     .getByRole("region", { name: "Current result" })
     .evaluate((node) => node.getBoundingClientRect().width);

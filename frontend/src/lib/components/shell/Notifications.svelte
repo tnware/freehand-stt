@@ -4,11 +4,24 @@
   import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
   import InfoIcon from "@lucide/svelte/icons/info";
   import XIcon from "@lucide/svelte/icons/x";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
 
-  import { orderMessages, type Message, type MessageTone } from "$lib/utils/messages";
+  import {
+    orderMessages,
+    type Message,
+    type MessageTone,
+  } from "$lib/utils/messages";
 
-  let { messages = [], abovePlayback = false }: { messages?: Message[]; abovePlayback?: boolean } =
-    $props();
+  let {
+    messages = [],
+    abovePlayback = false,
+    shell = false,
+  }: {
+    messages?: Message[];
+    abovePlayback?: boolean;
+    shell?: boolean;
+  } = $props();
+  const layout = getWorkbenchLayout();
   const orderedMessages = $derived(orderMessages(messages));
 
   const icons = {
@@ -31,52 +44,54 @@
 </script>
 
 <!-- Shared notices float above the workspace footer; task errors stay with their controls. -->
-<aside
-  aria-label="Notifications"
-  class="pointer-events-none fixed z-40 {abovePlayback
-    ? 'inset-x-4 bottom-52'
-    : 'right-4 bottom-20 w-[420px] max-w-[calc(100vw-32px)]'}"
->
-  <div
-    class="pointer-events-auto max-h-[min(40vh,24rem)] space-y-2 overflow-y-auto overscroll-contain rounded-md"
+{#if !layout || shell}
+  <aside
+    aria-label="Notifications"
+    class="pointer-events-none fixed z-50 {abovePlayback
+      ? 'inset-x-4 bottom-52'
+      : 'right-4 bottom-20 w-[420px] max-w-[calc(100vw-32px)]'}"
   >
-    {#each orderedMessages as message (message.id)}
-      {@const Icon = icons[message.tone]}
-      <div class="rounded-md bg-popover shadow-lg">
-        <div
-          class="flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-xs leading-relaxed {tones[
-            message.tone
-          ]}"
-          role={message.tone === "error" ? "alert" : "status"}
-          aria-atomic="true"
-        >
-          <Icon class="mt-px size-[14px] shrink-0 {marks[message.tone]}" />
-          <p
-            class="min-w-0 flex-1 break-words text-card-foreground"
-            class:line-clamp-2={message.tone === "error"}
+    <div
+      class="pointer-events-auto max-h-[min(40vh,24rem)] space-y-2 overflow-y-auto overscroll-contain rounded-md"
+    >
+      {#each orderedMessages as message (message.id)}
+        {@const Icon = icons[message.tone]}
+        <div class="rounded-md bg-popover shadow-lg">
+          <div
+            class="flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-xs leading-relaxed {tones[
+              message.tone
+            ]}"
+            role={message.tone === "error" ? "alert" : "status"}
+            aria-atomic="true"
           >
-            {message.text}
-          </p>
-          {#if message.tone === "error"}<FeedbackDetails
-              title="Action could not be completed"
-              label="Error details"
-              message={message.text}
-            />{/if}
-          {#if message.onDismiss}
-            <button
-              type="button"
-              class="dismiss"
-              aria-label="Dismiss this message"
-              onclick={message.onDismiss}
+            <Icon class="mt-px size-[14px] shrink-0 {marks[message.tone]}" />
+            <p
+              class="min-w-0 flex-1 break-words text-card-foreground"
+              class:line-clamp-2={message.tone === "error"}
             >
-              <XIcon class="size-[13px]" />
-            </button>
-          {/if}
+              {message.text}
+            </p>
+            {#if message.tone === "error"}<FeedbackDetails
+                title="Action could not be completed"
+                label="Error details"
+                message={message.text}
+              />{/if}
+            {#if message.onDismiss}
+              <button
+                type="button"
+                class="dismiss"
+                aria-label="Dismiss this message"
+                onclick={message.onDismiss}
+              >
+                <XIcon class="size-[13px]" />
+              </button>
+            {/if}
+          </div>
         </div>
-      </div>
-    {/each}
-  </div>
-</aside>
+      {/each}
+    </div>
+  </aside>
+{/if}
 
 <style>
   .dismiss {

@@ -8,6 +8,15 @@
   import * as WindowingService from "$bindings/windowing/service";
   import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
   import TitleBar from "$lib/components/shell/TitleBar.svelte";
+  import WorkbenchFrame from "$lib/components/shell/WorkbenchFrame.svelte";
+  import WorkbenchPanel from "$lib/components/shell/WorkbenchPanel.svelte";
+  import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
+  import Notifications from "$lib/components/shell/Notifications.svelte";
+  import type { Message } from "$lib/utils/messages";
+  import {
+    WorkbenchLayout,
+    provideWorkbenchLayout,
+  } from "$lib/workbench-layout.svelte";
   import HomeScreen from "$lib/components/home/HomeScreen.svelte";
   import StatusBar from "$lib/components/shell/StatusBar.svelte";
   import SettingsPane from "$lib/components/settings/SettingsPane.svelte";
@@ -28,8 +37,14 @@
   import { ShellNavigation } from "$lib/shell-navigation.svelte";
   import ConfigurationRecoveryDialog from "$lib/components/settings/ConfigurationRecoveryDialog.svelte";
   import type { SettingsSectionID } from "$lib/navigation";
-  import { FileTranscriptionPhase, State } from "$lib/state";
+  import {
+    FileTranscriptionPhase,
+    State,
+    TTSPhase,
+    TTSSource,
+  } from "$lib/state";
   import { levels } from "$lib/stores/levels.svelte";
+  import { shortcutCapture } from "$lib/stores/shortcutCapture.svelte";
   import {
     session as defaultSession,
     type Session,
@@ -44,6 +59,16 @@
 
   let { session = defaultSession }: { session?: Session } = $props();
   const navigation = new ShellNavigation();
+  const layout = new WorkbenchLayout();
+  provideWorkbenchLayout(layout);
+  let layoutRestored = $state(false);
+  onMount(() => {
+    layout.restore();
+    layoutRestored = true;
+  });
+  $effect(() => {
+    if (layoutRestored) layout.save();
+  });
   /** Non-workflow places. Null means a workflow chain is on screen. */
   let auxPane = $state<"runtimes" | "history" | "settings" | null>(null);
   let aboutOpen = $state(false);
@@ -73,6 +98,42 @@
     auxPane === null ? (inputMode as PaneID) : auxPane,
   );
   const settingsOpen = $derived(auxPane === "settings");
+  const composerVisible = $derived(auxPane === null && inputMode === "tts");
+  const primaryAvailable = $derived(
+    Boolean(layout.sidebars[auxPane ?? "workflow"]),
+  );
+  const messages = $derived.by(() => {
+    const items: Message[] = [];
+    if (layout.notificationsPaused) return items;
+    if (session.messages.info)
+      items.push({
+        id: "info",
+        tone: "info",
+        source: "system",
+        text: session.messages.info,
+        onDismiss: () => session.messages.dismissInfo(),
+      });
+    const speechFailureVisible =
+      session.speech.status.phase === TTSPhase.Failed &&
+      session.messages.isSpeechFailure(session.speech.status.generation);
+    if (session.messages.error && !speechFailureVisible && !layout.errorOwned)
+      items.push({
+        id: "error",
+        tone: "error",
+        source: "action",
+        text: session.messages.error,
+        onDismiss: () => session.messages.dismissError(),
+      });
+    if (session.messages.notice)
+      items.push({
+        id: "notice",
+        tone: "success",
+        source: "action",
+        text: session.messages.notice,
+        onDismiss: () => session.messages.dismissNotice(),
+      });
+    return items;
+  });
 
   function selectPane(id: PaneID) {
     if (workflowBlockedReason(id, voiceActive, fileWorking)) return;
@@ -117,6 +178,30 @@
   // Everything the rail and the chain already expose, addressed by name. No
   // command here can do something the interface cannot.
   const commands = $derived<Command[]>([
+    {
+      id: "layout:primary",
+      group: "Layout",
+      label: "Toggle primary sidebar",
+      keywords: "left sidebar show hide",
+      disabled: !primaryAvailable,
+      run: () => layout.togglePrimary(),
+    },
+    {
+      id: "layout:bottom",
+      group: "Layout",
+      label: "Toggle bottom panel",
+      keywords: "panel show hide recent output diagnostics",
+      disabled: !layout.bottomAvailable.current,
+      run: () => layout.toggleBottom(),
+    },
+    {
+      id: "layout:secondary",
+      group: "Layout",
+      label: "Toggle secondary sidebar",
+      keywords: "right sidebar history details show hide",
+      disabled: auxPane !== "history",
+      run: () => layout.toggleSecondary(),
+    },
     ...PANES.map((pane) => ({
       id: `go:${pane.id}`,
       group: "Go to",
@@ -254,22 +339,30 @@
         if (isWorkflowPane(event.data)) selectPane(event.data);
       },
     );
-    // One accelerator, owned by the renderer: the palette is a window surface,
-    // not a global shortcut competing with dictation.
+    // Workspace shortcuts are local to this window; native dictation shortcuts
+    // remain owned by Go.
     function commandKey(event: KeyboardEvent) {
-      if (event.key !== "k" && event.key !== "K") return;
+      if (shortcutCapture.capturing) return;
+      const key = event.key.toLowerCase();
+      if (!["k", "b", "j"].includes(key) || event.defaultPrevented) return;
       if (
         (macOS
           ? !event.metaKey || event.ctrlKey
           : !event.ctrlKey || event.metaKey) ||
-        event.altKey ||
         event.shiftKey ||
         event.repeat ||
         event.isComposing
       )
         return;
+      if (event.altKey && key !== "b") return;
+      if (key === "j" && !layout.bottomAvailable.current) return;
+      if (key === "b" && !event.altKey && !primaryAvailable) return;
+      if (key === "b" && event.altKey && auxPane !== "history") return;
       event.preventDefault();
-      commandsOpen = !commandsOpen;
+      if (key === "k") commandsOpen = !commandsOpen;
+      else if (key === "j") layout.toggleBottom();
+      else if (event.altKey) layout.toggleSecondary();
+      else layout.togglePrimary();
     }
     window.addEventListener("keydown", commandKey);
 
@@ -368,6 +461,8 @@
     if (!alive) return;
     navigationGeneration++;
     commandsOpen = false;
+    layout.compactPrimaryOpen = false;
+    layout.compactSecondaryOpen = false;
     if (settingsOpen) closeSettings();
     session.editor.discardSettingsDraft();
     session.editor.cancelConnectionEdit();
@@ -414,9 +509,20 @@
     paneLabel={paneByID(activePane).label}
     commandHint={macOS ? "⌘" : "Ctrl"}
     onOpenCommands={() => (commandsOpen = true)}
+    primaryVisible={layout.primaryVisible && primaryAvailable}
+    bottomVisible={layout.bottomVisible}
+    secondaryVisible={auxPane === "history" && layout.secondaryVisible}
+    secondaryAvailable={auxPane === "history"}
+    bottomAvailable={layout.bottomAvailable.current}
+    onTogglePrimary={primaryAvailable
+      ? () => layout.togglePrimary()
+      : undefined}
+    onToggleBottom={() => layout.toggleBottom()}
+    onToggleSecondary={() => layout.toggleSecondary()}
   />
 
   <CommandPalette bind:open={commandsOpen} {commands} />
+  {#if messages.length}<Notifications shell {messages} />{/if}
 
   <div class="flex min-h-0 flex-1">
     <ActivityRail
@@ -426,51 +532,78 @@
       onSelect={selectPane}
     />
 
-    <div
-      class="flex min-w-0 flex-1 flex-col"
-      style:display={auxPane === null ? "flex" : "none"}
-    >
-      <HomeScreen
-        {session}
-        {now}
-        active={auxPane === null}
-        bind:inputMode
-        onOpenHistorySettings={() => openSettings("history")}
-        onOpenServerSettings={() => openSettings("server")}
-        onOpenProcessingSettings={() => openSettings("processing")}
-        onOpenAudioSettings={() => openSettings("audio")}
-        onOpenShortcutSettings={() => openSettings("shortcuts")}
-        onOpenSpeechSettings={() => openSettings("speech")}
-        onOpenGeneralSettings={() => openSettings("general")}
-        onOpenSettingsSection={openSettings}
-        onOpenConnection={openConnection}
-        quickSettingsDisabled={settingsOpen}
-      />
-    </div>
+    <WorkbenchFrame {layout} area={auxPane ?? "workflow"}>
+      {#snippet panel()}
+        <WorkbenchPanel
+          {session}
+          {inputMode}
+          {settingsOpen}
+          onOpenHistorySettings={() => openSettings("history")}
+        />
+      {/snippet}
+      {#snippet children()}
+        <div
+          class="flex min-w-0 flex-1 flex-col"
+          style:display={auxPane === null ? "flex" : "none"}
+        >
+          <HomeScreen
+            {session}
+            {now}
+            active={auxPane === null}
+            bind:inputMode
+            onOpenHistorySettings={() => openSettings("history")}
+            onOpenServerSettings={() => openSettings("server")}
+            onOpenProcessingSettings={() => openSettings("processing")}
+            onOpenAudioSettings={() => openSettings("audio")}
+            onOpenShortcutSettings={() => openSettings("shortcuts")}
+            onOpenSpeechSettings={() => openSettings("speech")}
+            onOpenGeneralSettings={() => openSettings("general")}
+            onOpenSettingsSection={openSettings}
+            onOpenConnection={openConnection}
+            quickSettingsDisabled={settingsOpen}
+          />
+        </div>
 
-    {#if auxPane === "runtimes"}
-      <RuntimesPane
-        {session}
-        workBusy={voiceActive || fileWorking}
-        onOpenConnections={() => openSettings("connections")}
-      />
-    {:else if auxPane === "history"}
-      <HistoryPane
-        {session}
-        onOpenHistorySettings={() => openSettings("history")}
-      />
-    {:else if auxPane !== null}
-      <SettingsPane
-        bind:this={configuration}
-        {session}
-        {navigation}
-        onReturn={closeSettings}
-        onOpenRuntimes={() => {
-          navigation.done();
-          auxPane = "runtimes";
-        }}
-      />
-    {/if}
+        {#if auxPane === "runtimes"}
+          <RuntimesPane
+            {session}
+            workBusy={voiceActive || fileWorking}
+            onOpenConnections={() => openSettings("connections")}
+          />
+        {:else if auxPane === "history"}
+          <HistoryPane
+            {session}
+            onOpenHistorySettings={() => openSettings("history")}
+          />
+        {:else if auxPane !== null}
+          <SettingsPane
+            bind:this={configuration}
+            {session}
+            {navigation}
+            onReturn={closeSettings}
+            onOpenRuntimes={() => {
+              navigation.done();
+              auxPane = "runtimes";
+            }}
+          />
+        {/if}
+        {#if (session.speech.status.source !== TTSSource.SourceCompose || !composerVisible) && session.speech.status.phase !== TTSPhase.Idle && session.speech.status.phase !== TTSPhase.Cancelled}
+          <PlaybackBar
+            status={session.speech.status}
+            onPause={() => session.speech.pauseTTS()}
+            onResume={() => session.speech.resumeTTS()}
+            onRestart={() => session.speech.restartTTS()}
+            onSeek={(request) => session.speech.seekTTS(request)}
+            seeking={session.speech.seeking}
+            saving={session.speech.saving}
+            onStop={() => session.speech.stopTTS()}
+            onSave={() => session.speech.saveTTSAudio()}
+            onClear={() => session.speech.clearTTSAudio()}
+            onOpenSettings={() => openSettings("speech")}
+          />
+        {/if}
+      {/snippet}
+    </WorkbenchFrame>
   </div>
 
   <StatusBar

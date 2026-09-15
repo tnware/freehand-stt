@@ -1,11 +1,20 @@
 <script lang="ts">
   import StatusBar from "$lib/components/shell/StatusBar.svelte";
+  import WorkbenchFrame from "$lib/components/shell/WorkbenchFrame.svelte";
+  import WorkbenchPanel from "$lib/components/shell/WorkbenchPanel.svelte";
+  import PlaybackBar from "$lib/components/home/PlaybackBar.svelte";
+  import Notifications from "$lib/components/shell/Notifications.svelte";
+  import type { Message } from "$lib/utils/messages";
+  import {
+    WorkbenchLayout,
+    provideWorkbenchLayout,
+  } from "$lib/workbench-layout.svelte";
   import {
     taskConnectionDetails,
     taskConnectionStatus,
   } from "$lib/utils/connection";
   import { configurePickerFixture } from "./picker-data";
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { CancellablePromise } from "@wailsio/runtime";
   import { ID as ModelProfileID } from "$bindings/modelprofile";
   import { modelOptions } from "$lib/utils/modelSettings";
@@ -33,6 +42,17 @@
   import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
   import { paneByID, type PaneID } from "$lib/panes";
   import { controlledSaves } from "./save-control";
+
+  const layout = new WorkbenchLayout();
+  provideWorkbenchLayout(layout);
+  let layoutRestored = $state(false);
+  onMount(() => {
+    layout.restore();
+    layoutRestored = true;
+  });
+  $effect(() => {
+    if (layoutRestored) layout.save();
+  });
 
   const listenScenario = new URLSearchParams(location.search).has(
     "listen-pending",
@@ -637,6 +657,39 @@
   onDestroy(() => session.dispose());
   let inputMode = $state("voice");
   let activePane = $state<PaneID>("voice");
+  const messages = $derived.by(() => {
+    const items: Message[] = [];
+    if (session.messages.info)
+      items.push({
+        id: "info",
+        tone: "info",
+        source: "system",
+        text: session.messages.info,
+        onDismiss: () => session.messages.dismissInfo(),
+      });
+    const speechFailureVisible =
+      session.speech.status.phase === TTSPhase.Failed &&
+      (session.speech.status.source !== TTSSource.SourceCompose ||
+        (activePane !== "history" && inputMode === "tts")) &&
+      session.messages.isSpeechFailure(session.speech.status.generation);
+    if (session.messages.error && !speechFailureVisible)
+      items.push({
+        id: "error",
+        tone: "error",
+        source: "action",
+        text: session.messages.error,
+        onDismiss: () => session.messages.dismissError(),
+      });
+    if (session.messages.notice)
+      items.push({
+        id: "notice",
+        tone: "success",
+        source: "action",
+        text: session.messages.notice,
+        onDismiss: () => session.messages.dismissNotice(),
+      });
+    return items;
+  });
   const noop = () => {};
   const footerStatus = $derived(
     taskConnectionStatus(inputMode, session.editor, Date.now()),
@@ -654,7 +707,19 @@
 <div
   class="flex h-screen flex-col overflow-hidden bg-background text-foreground"
 >
-  <TitleBar paneLabel={paneByID(activePane).label} onOpenCommands={noop} />
+  <TitleBar
+    paneLabel={paneByID(activePane).label}
+    onOpenCommands={noop}
+    primaryVisible={layout.primaryVisible}
+    bottomVisible={layout.bottomVisible}
+    secondaryVisible={activePane === "history" && layout.secondaryVisible}
+    secondaryAvailable={activePane === "history"}
+    bottomAvailable={layout.bottomAvailable.current}
+    onTogglePrimary={() => layout.togglePrimary()}
+    onToggleBottom={() => layout.toggleBottom()}
+    onToggleSecondary={() => layout.toggleSecondary()}
+  />
+  {#if messages.length}<Notifications shell {messages} />{/if}
   <div class="flex min-h-0 flex-1">
     <ActivityRail
       pane={activePane}
@@ -669,7 +734,18 @@
         }
       }}
     />
-    <div class="flex min-w-0 flex-1 flex-col">
+    <WorkbenchFrame
+      {layout}
+      area={activePane === "history" ? "history" : "workflow"}
+    >
+      {#snippet panel()}
+        <WorkbenchPanel
+          {session}
+          {inputMode}
+          settingsOpen={false}
+          onOpenHistorySettings={() => (openedSettings = "History settings")}
+        />
+      {/snippet}
       {#if activePane === "history"}
         <HistoryPane
           {session}
@@ -694,7 +770,22 @@
             (openedSettings = `Edit ${request.id || "connections"} for ${request.purpose}`)}
         />
       {/if}
-    </div>
+      {#if (session.speech.status.source !== TTSSource.SourceCompose || activePane === "history" || inputMode !== "tts") && session.speech.status.phase !== TTSPhase.Idle && session.speech.status.phase !== TTSPhase.Cancelled}
+        <PlaybackBar
+          status={session.speech.status}
+          onPause={() => session.speech.pauseTTS()}
+          onResume={() => session.speech.resumeTTS()}
+          onRestart={() => session.speech.restartTTS()}
+          onSeek={(request) => session.speech.seekTTS(request)}
+          seeking={session.speech.seeking}
+          saving={session.speech.saving}
+          onStop={() => session.speech.stopTTS()}
+          onSave={() => session.speech.saveTTSAudio()}
+          onClear={() => session.speech.clearTTSAudio()}
+          onOpenSettings={() => (openedSettings = "Speech settings")}
+        />
+      {/if}
+    </WorkbenchFrame>
   </div>
   <StatusBar
     dictation={session.dictation.status}

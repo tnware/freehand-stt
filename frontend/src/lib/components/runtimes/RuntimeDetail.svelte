@@ -20,6 +20,7 @@
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
   import PanelTabs from "$lib/components/shell/PanelTabs.svelte";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import {
     backendLabel,
     modelSize,
@@ -43,6 +44,7 @@
     onOpenConnections: () => void;
   } = $props();
   const uid = $props.id();
+  const layout = getWorkbenchLayout();
   const status = $derived(row?.status);
   const instance = $derived(row?.instance);
   let now = $state(Date.now());
@@ -260,6 +262,17 @@
       >
     {/each}
     <span class="flex-1"></span>
+    {#if layout && instance}
+      <Button
+        variant="ghost"
+        size="xs"
+        disabled={!layout.bottomAvailable.current}
+        title={!layout.bottomAvailable.current
+          ? "Increase window height to show the bottom panel"
+          : undefined}
+        onclick={() => layout.showOutput(instance.id)}>View output</Button
+      >
+    {/if}
     <button
       type="button"
       class="shrink-0 text-xs text-ink-quiet underline-offset-2 hover:text-accent-text hover:underline"
@@ -707,20 +720,22 @@
         </div>{/if}
     {/if}
   </div>
-  <div
-    class="flex shrink-0 flex-col border-t border-hairline"
-    class:h-56={!panelCollapsed}
-  >
-    <PanelTabs
-      tabs={[{ id: "output", label: "Runtime output" }]}
-      bind:active={panelTab}
-      bind:collapsed={panelCollapsed}
-      note="memory only · not written to disk"
-    />
-    {#if !panelCollapsed}<RuntimeOutputDrawer
-        instanceID={instance?.id ?? ""}
-      />{/if}
-  </div>
+  {#if !layout}
+    <div
+      class="flex shrink-0 flex-col border-t border-hairline"
+      class:h-56={!panelCollapsed}
+    >
+      <PanelTabs
+        tabs={[{ id: "output", label: "Runtime output" }]}
+        bind:active={panelTab}
+        bind:collapsed={panelCollapsed}
+        note="memory only · not written to disk"
+      />
+      {#if !panelCollapsed}<RuntimeOutputDrawer
+          instanceID={instance?.id ?? ""}
+        />{/if}
+    </div>
+  {/if}
 </div>
 <Dialog.Root
   open={confirming !== null}

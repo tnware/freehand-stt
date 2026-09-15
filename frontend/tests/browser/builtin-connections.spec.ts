@@ -134,6 +134,9 @@ for (const theme of ["dark", "light"] as const) {
     await expect(
       page.getByRole("button", { name: "Stop", exact: true }),
     ).toBeInViewport();
+    await page
+      .getByRole("button", { name: "View output", exact: true })
+      .click();
     await expect(
       page.getByRole("button", { name: "Show output", exact: true }),
     ).toBeInViewport();

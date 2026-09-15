@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import type { Session } from "$lib/stores/session.svelte";
   import { saveConnectionAndContinue } from "$lib/shell-navigation.svelte";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import { Action, Purpose, type Connection } from "$bindings/savedconnection";
   import {
     connectionSection,
@@ -44,6 +45,7 @@
     onManageRuntime?: () => void;
     onCancelClose?: () => void;
   } = $props();
+  const layout = getWorkbenchLayout();
   let request = $state<ConnectionManagerRequest | null>(null);
   let visible = $state(false);
   let loading = $state(false);
@@ -52,6 +54,12 @@
   let selectedID = $state("");
   let activateFor = $state<Purpose | undefined>();
   let deleteOpen = $state(false);
+  const inlineError = $derived(
+    discardOpen || deleteOpen ? "" : session.messages.error,
+  );
+  $effect(() => {
+    if (deleteOpen) return layout?.claimNotifications("modal");
+  });
   const editor = $derived(session.editor);
   const busy = $derived(editor.saving || editor.managedConnectionTesting);
   const selected = $derived(
@@ -260,9 +268,13 @@
     } else if (selected) editor.beginConnection(selected);
   }
   onMount(() => {
+    const releaseNotifications = layout?.claimNotifications("error");
     void prepare();
     void session.runtime.load();
-    return clear;
+    return () => {
+      releaseNotifications?.();
+      clear();
+    };
   });
 </script>
 
@@ -310,11 +322,11 @@
       Loading connections…
     </p>
   {:else if visible && editor.applied}
-    {#if !editor.connectionDraft && session.messages.error}<p
+    {#if !editor.connectionDraft && inlineError}<p
         role="alert"
         class="px-5 py-2 text-[13px] text-destructive"
       >
-        {session.messages.error}
+        {inlineError}
       </p>{/if}
     <div class="manager-body" class:editing={showingDetails}>
       <aside class="connection-list bg-background">
@@ -443,7 +455,7 @@
                 chooseWorkflow={!request?.purpose || !request.create}
                 formID="connection-editor"
                 externalActions
-                error={session.messages.error}
+                error={inlineError}
                 onBack={() => leave(false)}
                 onSaved={saved}
               />{/if}
@@ -491,9 +503,9 @@
             </footer>{/if}
         </section>{/if}
     </div>
-  {:else if session.messages.error}<div class="p-5">
+  {:else if inlineError}<div class="p-5">
       <p role="alert" class="text-sm text-destructive">
-        {session.messages.error}
+        {inlineError}
       </p>
       <Button class="mt-3" variant="outline" onclick={prepare}>Try again</Button
       >

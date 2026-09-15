@@ -18,7 +18,7 @@ for (const width of [560, 1156]) {
     async function selectEntry(index: number) {
       if (width < 700) {
         await page
-          .getByRole("button", { name: "History sidebar", exact: true })
+          .getByRole("button", { name: "Toggle primary sidebar", exact: true })
           .click();
       }
       await entries.nth(index).click();
@@ -61,9 +61,19 @@ for (const width of [560, 1156]) {
     await expect(
       first.getByRole("button", { name: "Raw transcript copied", exact: true }),
     ).toBeVisible();
+    if (width < 1100)
+      await page
+        .getByRole("button", { name: "Toggle secondary sidebar", exact: true })
+        .click();
     await expect(
       page.getByRole("region", { name: "Run information", exact: true }),
     ).toContainText("speech/stt");
+    if (width < 1100) {
+      await page.keyboard.press("Escape");
+      await expect(
+        page.getByRole("region", { name: "Run information", exact: true }),
+      ).toHaveCount(0);
+    }
     const menu = first.getByRole("button", {
       name: "Transcript actions",
       exact: true,
@@ -96,7 +106,7 @@ for (const width of [560, 1156]) {
     ).toBeVisible();
     if (width < 700) {
       await page
-        .getByRole("button", { name: "History sidebar", exact: true })
+        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
         .click();
     }
     await expect(entries).toHaveCount(1);

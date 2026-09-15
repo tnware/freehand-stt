@@ -119,7 +119,7 @@ for (const width of [560, 1156]) {
     const original = await text.textContent();
     expect(await selected(page)).toBe(original);
     const scroll = page
-      .getByRole("complementary", { name: "Recent history" })
+      .getByRole("tabpanel", { name: /^Recent/ })
       .locator(".overflow-y-auto");
     await text.press("End");
     await expect

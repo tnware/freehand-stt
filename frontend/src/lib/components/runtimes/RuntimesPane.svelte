@@ -1,6 +1,8 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
+  import SidebarContribution from "$lib/components/shell/SidebarContribution.svelte";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import RuntimeDetail from "./RuntimeDetail.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -16,6 +18,7 @@
     onOpenConnections: () => void;
     workBusy?: boolean;
   } = $props();
+  const workbench = getWorkbenchLayout();
 
   const runtime = $derived(session.runtime);
   let selected = $state("");
@@ -74,123 +77,129 @@
   actually run; the body is whichever runtime you picked.
 -->
 <div class="flex min-h-0 flex-1">
-  <div
-    class="flex w-[168px] shrink-0 flex-col overflow-y-auto border-r border-hairline bg-layer-fill min-[760px]:w-[252px]"
-  >
-    <SidebarHeader title="Runtimes">
-      {#snippet actions()}
-        <Button
-          variant="ghost"
-          size="xs"
-          class="size-6 rounded-sm p-0"
-          disabled={runtime.loading}
-          aria-label="Refresh inventory"
-          title="Refresh inventory"
-          onclick={() => void runtime.load()}
-          ><RefreshCwIcon class="size-3.5" /></Button
-        >
-      {/snippet}
-    </SidebarHeader>
-
+  <SidebarContribution id="runtimes">
     <div
-      class="flex flex-col gap-0.5 p-1.5"
-      role="group"
-      aria-label="Runtime inventory"
+      class="flex min-h-0 shrink-0 flex-col overflow-y-auto border-r border-hairline bg-layer-fill {workbench
+        ? 'h-full w-full'
+        : 'w-[168px] min-[760px]:w-[252px]'}"
     >
-      {#each rows as row (row.entry.id)}
-        {@const on = row.entry.id === active}
-        <button
-          type="button"
-          aria-pressed={on}
-          class="relative flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
-            ? 'bg-accent-wash'
-            : ''}"
-          onclick={() => {
-            selected = row.entry.id;
-            recoveryID = "";
-          }}
-        >
-          {#if on}<span
-              class="absolute inset-y-2 left-0 w-0.5 rounded-sm bg-primary"
-              aria-hidden="true"
-            ></span>{/if}
-          <span
-            class="flex size-6 shrink-0 items-center justify-center rounded-sm bg-subtle-fill-hover"
+      <SidebarHeader title="Runtimes">
+        {#snippet actions()}
+          <Button
+            variant="ghost"
+            size="xs"
+            class="size-6 rounded-sm p-0"
+            disabled={runtime.loading}
+            aria-label="Refresh inventory"
+            title="Refresh inventory"
+            onclick={() => void runtime.load()}
+            ><RefreshCwIcon class="size-3.5" /></Button
           >
-            <ProviderIcon profile={row.entry.id} size={14} />
-          </span>
-          <span class="min-w-0 flex-1">
-            <span
-              class="block truncate text-[13px] {on
-                ? 'text-foreground'
-                : 'text-secondary-foreground'}">{row.entry.name}</span
-            >
-            <span class="block truncate font-mono text-[11px] text-ink-quiet">
-              {[
-                row.entry.id === "llama-cpp"
-                  ? "cleanup"
-                  : row.instance?.status.realtime
-                    ? "streaming"
-                    : "speech",
-                row.instance?.status.version || row.entry.version,
-              ]
-                .filter(Boolean)
-                .join(" · ") || row.view.label}
-            </span>
-          </span>
-          <span
-            class="size-[7px] shrink-0 rounded-full {tone(
-              row.instance?.status.state,
-            )}"
-            aria-hidden="true"
-          ></span>
-        </button>
-      {/each}
-      {#if !rows.length}
-        <p class="px-2 py-3 text-xs text-muted-foreground">
-          {runtime.loading
-            ? "Reading the inventory…"
-            : "No managed runtimes are available for this platform."}
-        </p>
-      {/if}
-    </div>
-    {#if runtime.error}
-      <p class="px-3 py-3 text-[12px] text-destructive" role="alert">
-        {runtime.error}
-      </p>
-    {/if}
+        {/snippet}
+      </SidebarHeader>
 
-    {#if current?.entry}
-      <div class="mt-2 border-t border-hairline px-3 pt-3 pb-4">
-        <p
-          class="mb-2 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
-        >
-          This machine
-        </p>
-        <!-- Freehand knows which backends this machine can actually run;
-               it does not measure VRAM, so this states capability rather
-               than inventing a hardware meter. -->
-        <p class="font-mono text-[11px] text-ink-quiet">
-          {currentInstance?.status.backend
-            ? backendLabel(currentInstance.status.backend)
-            : "backend not selected"}
-        </p>
-        <div class="mt-2 flex flex-wrap gap-1">
-          {#each current.entry.backends ?? [] as backend (backend)}
+      <div
+        class="flex flex-col gap-0.5 p-1.5"
+        role="group"
+        aria-label="Runtime inventory"
+      >
+        {#each rows as row (row.entry.id)}
+          {@const on = row.entry.id === active}
+          <button
+            type="button"
+            aria-pressed={on}
+            class="relative flex min-h-11 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
+              ? 'bg-accent-wash'
+              : ''}"
+            onclick={() => {
+              selected = row.entry.id;
+              recoveryID = "";
+              if (workbench?.compact.current && workbench.compactPrimaryOpen)
+                workbench.closePrimary();
+            }}
+          >
+            {#if on}<span
+                class="absolute inset-y-2 left-0 w-0.5 rounded-sm bg-primary"
+                aria-hidden="true"
+              ></span>{/if}
             <span
-              class="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-secondary-foreground"
-              >{backendLabel(backend)}</span
+              class="flex size-6 shrink-0 items-center justify-center rounded-sm bg-subtle-fill-hover"
             >
-          {/each}
-        </div>
-        {#if current.entry.unavailableReason}
-          <p class="mt-2 text-xs leading-snug text-warning">
-            {current.entry.unavailableReason}
+              <ProviderIcon profile={row.entry.id} size={14} />
+            </span>
+            <span class="min-w-0 flex-1">
+              <span
+                class="block truncate text-[13px] {on
+                  ? 'text-foreground'
+                  : 'text-secondary-foreground'}">{row.entry.name}</span
+              >
+              <span class="block truncate font-mono text-[11px] text-ink-quiet">
+                {[
+                  row.entry.id === "llama-cpp"
+                    ? "cleanup"
+                    : row.instance?.status.realtime
+                      ? "streaming"
+                      : "speech",
+                  row.instance?.status.version || row.entry.version,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || row.view.label}
+              </span>
+            </span>
+            <span
+              class="size-[7px] shrink-0 rounded-full {tone(
+                row.instance?.status.state,
+              )}"
+              aria-hidden="true"
+            ></span>
+          </button>
+        {/each}
+        {#if !rows.length}
+          <p class="px-2 py-3 text-xs text-muted-foreground">
+            {runtime.loading
+              ? "Reading the inventory…"
+              : "No managed runtimes are available for this platform."}
           </p>
         {/if}
       </div>
-    {/if}
-  </div>
+      {#if runtime.error}
+        <p class="px-3 py-3 text-[12px] text-destructive" role="alert">
+          {runtime.error}
+        </p>
+      {/if}
+
+      {#if current?.entry}
+        <div class="mt-2 border-t border-hairline px-3 pt-3 pb-4">
+          <p
+            class="mb-2 text-[10px] font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+          >
+            This machine
+          </p>
+          <!-- Freehand knows which backends this machine can actually run;
+               it does not measure VRAM, so this states capability rather
+               than inventing a hardware meter. -->
+          <p class="font-mono text-[11px] text-ink-quiet">
+            {currentInstance?.status.backend
+              ? backendLabel(currentInstance.status.backend)
+              : "backend not selected"}
+          </p>
+          <div class="mt-2 flex flex-wrap gap-1">
+            {#each current.entry.backends ?? [] as backend (backend)}
+              <span
+                class="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-secondary-foreground"
+                >{backendLabel(backend)}</span
+              >
+            {/each}
+          </div>
+          {#if current.entry.unavailableReason}
+            <p class="mt-2 text-xs leading-snug text-warning">
+              {current.entry.unavailableReason}
+            </p>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  </SidebarContribution>
 
   {#if current}
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -210,8 +219,14 @@
                 size="xs"
                 aria-pressed={currentInstance?.instance.id ===
                   duplicate.instance.id}
-                onclick={() => (recoveryID = duplicate.instance.id)}
-                >{duplicate.instance.name} · {duplicate.instance.id}</Button
+                onclick={() => {
+                  recoveryID = duplicate.instance.id;
+                  if (
+                    workbench?.compact.current &&
+                    workbench.compactPrimaryOpen
+                  )
+                    workbench.closePrimary();
+                }}>{duplicate.instance.name} · {duplicate.instance.id}</Button
               >
             {/each}
           </div>

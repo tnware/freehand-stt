@@ -62,7 +62,7 @@ for (const width of [560, 900, 1156]) {
     const original = await transcript.boundingBox();
     if (width < 700)
       await page
-        .getByRole("button", { name: "Task settings", exact: true })
+        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
         .click();
     const sidebar = page.getByRole("complementary", {
       name: "Voice transcription settings",
@@ -76,12 +76,12 @@ for (const width of [560, 900, 1156]) {
     expect(await transcript.boundingBox()).toEqual(original);
     if (width < 700)
       await page
-        .getByRole("button", { name: "Task settings", exact: true })
+        .getByRole("button", { name: "Dismiss primary sidebar", exact: true })
         .click();
     await expect(result).toBeInViewport();
     await page.getByRole("button", { name: "History", exact: true }).click();
     await expect(
-      page.getByRole("region", { name: "Transcript history" }),
+      page.getByRole("region", { name: "Selected transcript", exact: true }),
     ).toBeVisible();
     await expect(result).toHaveCount(0);
     await page.screenshot({
@@ -100,7 +100,7 @@ test("transcript and bottom panel resize vertically and restore the chosen heigh
 }, info) => {
   await page.goto(scenarioURL);
   const handle = page.getByRole("separator", {
-    name: "Resize transcript and panel",
+    name: "Resize editor and bottom panel",
   });
   const result = page.getByRole("region", {
     name: "Current result",
@@ -126,12 +126,9 @@ test("transcript and bottom panel resize vertically and restore the chosen heigh
   await expect
     .poll(() =>
       page.evaluate(() => {
-        const stored = localStorage.getItem("paneforge:freehand-workspace-v2");
+        const stored = localStorage.getItem("freehand-workbench-layout-v1");
         if (!stored) return null;
-        const layouts = Object.values(JSON.parse(stored)) as {
-          layout: number[];
-        }[];
-        const percent = layouts[0]?.layout[0];
+        const percent = JSON.parse(stored).bottomSize;
         return percent === undefined ? null : Math.round(percent);
       }),
     )

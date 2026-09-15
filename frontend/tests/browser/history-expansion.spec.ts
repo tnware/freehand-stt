@@ -17,7 +17,7 @@ for (const width of [560, 1156]) {
       .getByRole("button", { name: "Add transcript", exact: true })
       .click();
     const scroll = page
-      .getByRole("complementary", { name: "Recent history" })
+      .getByRole("tabpanel", { name: /^Recent/ })
       .locator(".overflow-y-auto");
     await expect(scroll).toHaveCount(1);
     await expect
