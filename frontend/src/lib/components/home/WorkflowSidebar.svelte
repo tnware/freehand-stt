@@ -3,6 +3,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { Switch } from "$lib/components/ui/switch";
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
+  import MicrophoneQuickSettings from "./MicrophoneQuickSettings.svelte";
   import QuickSettings from "./QuickSettings.svelte";
   import SpeechQuickSettings from "./SpeechQuickSettings.svelte";
   import type {
@@ -97,6 +98,10 @@
         aria-label={`${title} quick settings`}
       >
         {#if workflow === "voice"}
+          <MicrophoneQuickSettings
+            editor={session.editor}
+            disabled={controlsDisabled}
+          />
           <VoiceTranscriptionSettings
             sidebar
             {settings}
