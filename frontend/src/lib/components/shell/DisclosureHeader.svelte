@@ -38,18 +38,13 @@
 <div class="workbench-header w-full gap-1 pr-1.5">
   <button
     type="button"
-    class="head-trigger -ml-1 flex h-full min-w-0 flex-1 items-center gap-2 pr-2 pl-1 text-left transition-colors hover:bg-subtle-fill-hover"
+    class="disclosure-trigger head-trigger -ml-1 h-full min-h-0 flex-1 items-center py-0 pr-2 pl-1"
     class:fade={fadeWhenOpen}
     aria-expanded={open}
     aria-controls={controls}
     onclick={onToggle}
   >
-    <ChevronRightIcon
-      class="size-3.5 shrink-0 text-muted-foreground transition-transform duration-150 {open
-        ? 'rotate-90'
-        : ''}"
-      aria-hidden="true"
-    />
+    <ChevronRightIcon class="disclosure-chevron mt-0" aria-hidden="true" />
     <span class="caption shrink-0">{label}</span>
     {#if summaryContent || summary}
       <span

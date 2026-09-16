@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
@@ -147,16 +147,14 @@
     >
   </div>
   {#if current && details.selected && details.enabled}
-    <details class="group border-t border-hairline pt-3">
-      <summary
-        class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-md py-1 text-xs font-medium text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
-        >Technical details<ChevronDownIcon
-          class="size-4 group-open:rotate-180"
-        /></summary
-      >
-      <div class="pt-4">
+    <Disclosure
+      title="Technical details"
+      compact
+      class="border-t border-hairline"
+    >
+      <div>
         <ConnectionDiagnostics platform={details.platform} result={current} />
       </div>
-    </details>
+    </Disclosure>
   {/if}
 </div>

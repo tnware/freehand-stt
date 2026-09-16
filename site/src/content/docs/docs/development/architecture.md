@@ -1047,8 +1047,15 @@ status accents retain their action, selection, and state meanings.
 Transcript and composer text use a separate 15px/26px reading rhythm. Recording,
 file, playback, and output controls sit in docked strips separated by hairlines.
 Settings clusters use `SettingsCard` and `SettingsDisclosure` for flat groups
-separated by rules. `WorkflowSection` supplies the matching collapsible quick-control
-group, with one leading disclosure action. Field groups and catalogs respond to
+separated by rules. Native expandable sections share `Disclosure`, with a leading
+chevron, optional description/icon, expanded-surface contrast, and an indented body.
+`DisclosureButton` gives state-owned runtime panels the same treatment; their
+controlled targets remain mounted while their contents retain conditional mounting.
+The opt-in `disclosure-trigger`, `disclosure-chevron`, and `disclosure-body` styles
+also cover catalog rows and workflow disclosures without changing page or workbench
+header geometry. Native summaries retain browser keyboard semantics; controlled
+buttons expose expanded state and target IDs. `WorkflowSection` supplies the
+collapsible quick-control group, with one leading disclosure action. Field groups and catalogs respond to
 their container width, including a narrow sidebar inside a wide window. Shared fields
 and pickers use 32px controls, actions use 28px controls, and compact toolbars
 use the smaller variants. Native control semantics, visible focus, input

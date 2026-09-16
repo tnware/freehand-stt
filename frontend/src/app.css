@@ -550,17 +550,75 @@ html.dark[data-material="mica"] #app {
     flex-shrink: 0;
     color: var(--muted-foreground);
   }
-  .content-disclosure {
+  /* Opt-in disclosure controls; workbench/page header geometry stays local. */
+  .disclosure-trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 8px;
+    list-style: none;
+    cursor: pointer;
+    text-align: left;
     font-size: 13px;
-    font-weight: 500;
+    line-height: 20px;
     color: var(--foreground);
   }
-  .content-disclosure:hover:not(:disabled) {
+  .disclosure-trigger::-webkit-details-marker {
+    display: none;
+  }
+  .disclosure-trigger[data-density="compact"] {
+    min-height: 28px;
+    padding-block: 4px;
+    font-size: 12px;
+  }
+  details[open] > .disclosure-trigger,
+  .disclosure-trigger[aria-expanded="true"] {
+    background: var(--well);
+  }
+  .disclosure-trigger:hover:not(:disabled) {
     background: var(--subtle-fill-hover);
   }
-  .content-disclosure:focus-visible {
+  .disclosure-trigger:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
+  }
+  .disclosure-chevron {
+    width: 14px;
+    height: 14px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    color: var(--muted-foreground);
+    transition: transform 150ms ease;
+  }
+  details[open] > .disclosure-trigger > .disclosure-chevron,
+  [aria-expanded="true"] > .disclosure-chevron {
+    transform: rotate(90deg);
+    color: var(--accent-text);
+  }
+  .disclosure-icon {
+    display: flex;
+    padding-top: 2px;
+    color: var(--muted-foreground);
+  }
+  .disclosure-icon > svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+  .disclosure-body {
+    min-width: 0;
+    margin-left: 14px;
+    border-left: 1px solid var(--hairline);
+    padding: 8px 12px 12px 15px;
+    overflow-wrap: anywhere;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .disclosure-chevron {
+      transition: none;
+    }
   }
   /* A definition-list grid of run/response facts. dd wraps; narrow panes stack. */
   .details-grid {
@@ -603,17 +661,6 @@ html.dark[data-material="mica"] #app {
       margin-bottom: 0.5rem;
       text-align: left;
     }
-  }
-  /* A disclosure/summary row inside a settings card or detail section. */
-  .content-disclosure-row {
-    display: flex;
-    min-height: 38px;
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    border-bottom: 1px solid var(--hairline);
-    text-align: left;
   }
   /* Menu rows inside title-bar menus and pickers. */
   .menu-row {

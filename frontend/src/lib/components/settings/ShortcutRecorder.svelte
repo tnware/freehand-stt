@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import KeyboardIcon from "@lucide/svelte/icons/keyboard";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
@@ -134,22 +134,14 @@
       </Button>
     </div>
   </div>
-  <details class="group/keys mt-1.5">
-    <summary
-      class="inline-flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
-    >
-      Allowed keys
-      <ChevronDownIcon
-        class="size-3 transition-transform group-open/keys:rotate-180 motion-reduce:transition-none"
-      />
-    </summary>
+  <Disclosure title="Allowed keys" compact class="mt-1.5 border-b-0">
     <p
       id={`${id}-requirement`}
       class="mt-1.5 max-w-xl text-[11.5px] leading-[1.45] text-muted-foreground"
     >
       {requirement}
     </p>
-  </details>
+  </Disclosure>
   <div class="text-xs font-medium" aria-live="polite" aria-atomic="true">
     {#if capturing}
       <p class="mt-2 text-accent-text" role="status">

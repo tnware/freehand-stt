@@ -5,7 +5,7 @@
   import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import ArrowLeftRightIcon from "@lucide/svelte/icons/arrow-left-right";
   import CheckIcon from "@lucide/svelte/icons/check";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import ClipboardIcon from "@lucide/svelte/icons/clipboard";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
@@ -412,18 +412,6 @@
               >{characterLabel(entry.characterCount)}</span
             >
           {/if}
-          {#if !reader}
-            <span
-              class="disclosure-affordance grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground"
-            >
-              <ChevronDownIcon
-                class={cn(
-                  "size-4 transition-transform duration-150 motion-reduce:transition-none",
-                  isExpanded && "rotate-180",
-                )}
-              />
-            </span>
-          {/if}
         {/snippet}
         <article
           class={cn(
@@ -454,12 +442,16 @@
             {:else}
               <button
                 type="button"
-                class="history-disclosure flex min-h-[34px] min-w-0 flex-1 items-center gap-2.5 px-3 py-1 text-left"
+                class="disclosure-trigger min-h-[34px] flex-1 items-center gap-2.5 px-3 py-1"
                 aria-label={`${isExpanded ? "Collapse" : "Expand"} transcript from ${completedDateTime(entry.completedAt)}`}
                 aria-expanded={isExpanded}
                 aria-controls={`${uid}-history-entry-${entry.id}-content`}
                 onclick={() => toggleExpanded(entry.id)}
               >
+                <ChevronRightIcon
+                  class="disclosure-chevron mt-0"
+                  aria-hidden="true"
+                />
                 {@render entryHeading()}
               </button>
             {/if}
@@ -725,21 +717,6 @@
   }
   article {
     container-type: inline-size;
-  }
-  .history-disclosure:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: -2px;
-  }
-  .history-disclosure {
-    transition:
-      background-color 100ms ease,
-      color 100ms ease;
-  }
-  .history-disclosure:hover {
-    background-color: var(--control-fill-hover);
-  }
-  .history-disclosure:hover .disclosure-affordance {
-    color: var(--foreground);
   }
   /* At the default 1080 px window the history column has enough room for two
      readable transcript columns. Narrow layouts keep the vertical flow. */

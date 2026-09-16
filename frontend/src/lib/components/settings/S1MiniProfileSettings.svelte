@@ -1,8 +1,8 @@
 <script lang="ts">
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import { Badge } from "$lib/components/ui/badge";
   import * as Card from "$lib/components/ui/card";
   import * as Field from "$lib/components/ui/field";
-  import { Separator } from "$lib/components/ui/separator";
   import { Textarea } from "$lib/components/ui/textarea";
   import S1MiniControls from "$lib/components/settings/S1MiniControls.svelte";
   import type { ProfileDescriptor, Settings } from "$lib/state";
@@ -50,11 +50,7 @@
       menu.
     </p>
 
-    <details class="text-xs text-muted-foreground">
-      <summary class="cursor-pointer font-medium text-foreground"
-        >S1-mini request details</summary
-      >
-      <Separator class="my-4" />
+    <Disclosure title="S1-mini request details" compact>
       <Field.Group class="gap-4">
         <Field.Field data-disabled={disabled}>
           <div class="flex items-center justify-between gap-3">
@@ -92,6 +88,6 @@
           </Field.Description>
         </Field.Field>
       </Field.Group>
-    </details>
+    </Disclosure>
   </Card.Content>
 </Card.Root>

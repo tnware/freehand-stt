@@ -1757,6 +1757,12 @@ densities in both themes: stable widths and accessible names, disabled busy acti
 reduced-motion spinners, associated loading messages, retry after failure, and
 continued selection from qualified voice presets. Pair it with
 `nonvoice-metadata.spec.ts` for deliberate-entry discovery and retry behavior.
+`disclosures.spec.ts` exercises native settings summaries and controlled runtime
+sections at 560px/1280px in both themes. Verify Enter/Space toggles, visible focus,
+Tab access to expanded controls, hidden collapsed content, persistent controlled
+target IDs, reduced-motion chevrons, nested download details, contained content,
+and no runtime commands from expansion. Existing connection, vocabulary, readiness,
+and catalog tests cover their migrated sections; page-header tests protect geometry.
 Compare fields, pickers, buttons, disclosures, and keyboard focus across pages.
 Check the selected underline in bottom-panel, runtime-output, and History-view
 tabs, plus the edge marker in Settings, Connections, and runtime navigation.

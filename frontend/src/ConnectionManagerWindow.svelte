@@ -25,7 +25,7 @@
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import ActivityIcon from "@lucide/svelte/icons/activity";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import ServerIcon from "@lucide/svelte/icons/server";
   import * as Menu from "$lib/components/ui/dropdown-menu";
   import type { ConnectionManagerRequest } from "$bindings/windowing";
@@ -407,7 +407,7 @@
                     align="end"
                     class="w-80 max-w-[calc(100vw-24px)] p-1.5"
                   >
-                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id) ) as role (role.id)}
+                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id), ) as role (role.id)}
                       {@const Icon = sectionByID(role.section).icon}
                       {@const current =
                         editor.applied.savedConnections.selected?.[role.id] ===
@@ -500,25 +500,11 @@
                 onBack={() => leave(false)}
                 onSaved={saved}
               />{/if}
-            {#if selected}<details
-                class="group/connection-check border-t border-hairline"
+            {#if selected}<Disclosure
+                title={`Connection check · ${connectionStatusLabel(editor.savedConnectionChecks[selected.id] ?? null)}`}
+                icon={ActivityIcon}
+                class="border-t border-hairline"
               >
-                <summary
-                  class="content-disclosure flex cursor-pointer list-none items-center gap-2 rounded-sm py-3 [&::-webkit-details-marker]:hidden"
-                  ><ActivityIcon
-                    class="content-section-icon"
-                    aria-hidden="true"
-                  />
-                  <span class="min-w-0 flex-1"
-                    >Connection check · {connectionStatusLabel(
-                      editor.savedConnectionChecks[selected.id] ?? null,
-                    )}</span
-                  >
-                  <ChevronDownIcon
-                    class="content-section-icon transition-transform group-open/connection-check:rotate-180 motion-reduce:transition-none"
-                    aria-hidden="true"
-                  /></summary
-                >
                 <div class="space-y-3 pb-3">
                   <Button
                     variant="outline"
@@ -542,7 +528,7 @@
                       result={editor.savedConnectionChecks[selected.id]}
                     />{/if}
                 </div>
-              </details>{/if}
+              </Disclosure>{/if}
           </main>
           {#if !selected?.builtIn}<footer
               class="shrink-0 border-t border-hairline px-5 py-2"

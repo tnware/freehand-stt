@@ -64,17 +64,13 @@
     {#if collapsible}
       <button
         type="button"
-        class="module-trigger flex min-h-7 min-w-0 flex-1 items-center gap-2 text-left"
+        class="disclosure-trigger min-h-7 flex-1 items-center px-1 py-1"
+        data-density="compact"
         aria-expanded={open}
         aria-controls={controls}
         onclick={onToggle}
       >
-        <ChevronRightIcon
-          class="size-3.5 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none {open
-            ? 'rotate-90'
-            : ''}"
-          aria-hidden="true"
-        />
+        <ChevronRightIcon class="disclosure-chevron mt-0" aria-hidden="true" />
         {#if dot}
           <span class="size-1.5 shrink-0 rounded-full {dot}" aria-hidden="true"
           ></span>
@@ -128,7 +124,9 @@
     inert={collapsible && !open}
   >
     <div class="drawer-inner">
-      <div class="module-body">{@render children()}</div>
+      <div class="module-body" class:disclosure-body={collapsible}>
+        {@render children()}
+      </div>
     </div>
   </div>
 </section>
@@ -148,10 +146,6 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
-  }
-  .module-trigger:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 1px;
   }
   .drawer {
     display: grid;

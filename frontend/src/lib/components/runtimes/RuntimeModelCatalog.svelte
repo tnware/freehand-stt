@@ -233,18 +233,13 @@
     {#if group.label}
       <button
         type="button"
-        class="content-disclosure flex min-h-9 w-full items-center gap-2 border-b border-hairline bg-well px-1 text-left"
+        class="disclosure-trigger min-h-9 items-center border-b border-hairline bg-well"
         aria-label={`${group.label} models`}
         aria-expanded={isGroupOpen(group)}
         aria-controls={groupID(group.id)}
         onclick={() => toggleGroup(group)}
       >
-        <ChevronRightIcon
-          class="size-3.5 shrink-0 text-muted-foreground {isGroupOpen(group)
-            ? 'rotate-90'
-            : ''}"
-          aria-hidden="true"
-        />
+        <ChevronRightIcon class="disclosure-chevron mt-0" aria-hidden="true" />
         <span>{group.label}</span>
         <span class="ml-auto text-xs font-normal text-muted-foreground"
           >{count} {count === 1 ? "model" : "models"}</span
@@ -256,18 +251,15 @@
         {#if family.label}
           <button
             type="button"
-            class="content-disclosure flex min-h-8 w-full items-center gap-2 border-b border-hairline bg-well px-1 text-left"
+            class="disclosure-trigger min-h-8 items-center border-b border-hairline"
+            data-density="compact"
             aria-label={`${family.label} models`}
             aria-expanded={isFamilyOpen(family)}
             aria-controls={familyID(family.id)}
             onclick={() => toggleFamily(family)}
           >
             <ChevronRightIcon
-              class="size-3.5 shrink-0 text-muted-foreground {isFamilyOpen(
-                family,
-              )
-                ? 'rotate-90'
-                : ''}"
+              class="disclosure-chevron mt-0"
               aria-hidden="true"
             />
             <span>{family.label}</span>
@@ -296,7 +288,8 @@
               <div class="model-row {selected ? 'bg-accent-wash' : ''}">
                 <button
                   type="button"
-                  class="model-identity"
+                  class="disclosure-trigger model-identity"
+                  data-density="compact"
                   aria-label={`Model details: ${model.name}`}
                   title={`${model.name} (${model.id})`}
                   aria-describedby={`${modelID(model.id)}-description`}
@@ -307,9 +300,7 @@
                   }}
                 >
                   <ChevronRightIcon
-                    class="size-3.5 shrink-0 text-muted-foreground {detailsOpen
-                      ? 'rotate-90'
-                      : ''}"
+                    class="disclosure-chevron mt-0"
                     aria-hidden="true"
                   />
                   <span class="min-w-0 flex-1">

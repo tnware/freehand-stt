@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import type { Connection } from "$bindings/savedconnection";
   import type {
     Instance,
@@ -12,7 +13,6 @@
   import { Button } from "$lib/components/ui/button";
   import WorkflowIcon from "@lucide/svelte/icons/workflow";
   import ShieldCheckIcon from "@lucide/svelte/icons/shield-check";
-  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
   let {
     connection,
@@ -78,15 +78,11 @@
     >
   </div>
 </div>
-<details class="group/ownership border-t border-hairline">
-  <summary
-    class="content-disclosure flex min-h-[38px] cursor-pointer list-none items-center gap-2 py-2 [&::-webkit-details-marker]:hidden"
-    ><ChevronRightIcon
-      class="size-3.5 shrink-0 text-muted-foreground transition-transform group-open/ownership:rotate-90 motion-reduce:transition-none"
-      aria-hidden="true"
-    /><ShieldCheckIcon class="content-section-icon" aria-hidden="true" />
-    <span class="min-w-0 flex-1">Connection ownership &amp; safety</span>
-  </summary>
+<Disclosure
+  title="Connection ownership & safety"
+  icon={ShieldCheckIcon}
+  class="border-t border-hairline"
+>
   <div class="content-meta space-y-3 pb-3">
     <p>
       Available automatically from this local runtime. Its name, transport,
@@ -106,7 +102,7 @@
       remote server.
     </p>
   </div>
-</details>
+</Disclosure>
 <section class="space-y-3 border-t border-hairline py-3">
   <h3 class="content-section-title flex items-center gap-2">
     <WorkflowIcon class="content-section-icon" aria-hidden="true" />Task
