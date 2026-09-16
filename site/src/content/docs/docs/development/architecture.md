@@ -977,7 +977,15 @@ primary controls independent from the contextual draft editor.
 `ManagedRuntimeControls` follows each local connection in the primary sidebar,
 including shared cleanup independently of its enabled switch. The same component
 owns runtime status presentation and explicit lifecycle/model commands in detailed
-options; it never starts a process on mount. Active workflow and draft locks remain
+options; it never starts a process on mount. Both placements use the same bounded
+runtime surface, icon, visible model label, status, and management/output actions.
+The contextual connection picker receives the same runtime inventory from its
+owning session for provider icons and status summaries.
+Detailed settings add vertical spacing outside that surface so settings-group
+row separators cannot strip its inner inset. Sidebar field labels use the shared
+value typography, and advanced-option links share `SidebarSettingsLink`. Delivery
+rows adapt to their container width, including a compact-window drawer.
+Active workflow and draft locks remain
 separate from the runtime's own pending state so cancellation stays reachable.
 Metadata-only connection probes do not block runtime commands. Runtime management
 links queue an ephemeral exact-instance selection for the inventory through the
@@ -1046,6 +1054,11 @@ and pickers use 32px controls, actions use 28px controls, and compact toolbars
 use the smaller variants. Native control semantics, visible focus, input
 borders, and floating menu/dialog surfaces stay explicit. Page styling never
 owns workflow state, credentials, or scrolling behavior.
+Model and voice metadata refreshes share `PickerRefreshButton`: an icon action
+in the sidebar and an outlined action in detailed settings, with a stable label,
+busy semantics, and a reduced-motion-aware spinner. Loading and failure text
+belongs to the picker and is associated with its input; refresh failures preserve
+manual model entry and qualified voice presets.
 Transcript and History placeholders share `EmptyState` with explicit pane and
 compact variants. It owns the decorative icon tile, text rhythm, and optional
 action spacing; callers retain state-specific copy, actions, and scroll ownership.

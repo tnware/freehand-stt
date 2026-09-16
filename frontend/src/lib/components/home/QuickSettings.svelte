@@ -220,7 +220,7 @@
 )}
   <div class="field">
     <div class="field-head">
-      <label class="caption truncate" for={id}>{label}</label>
+      <label class="content-value truncate" for={id}>{label}</label>
       <span class="field-meta">{@render meta()}</span>
     </div>
     <div class="field-control">{@render control()}</div>

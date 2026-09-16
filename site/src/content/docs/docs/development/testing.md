@@ -1570,6 +1570,14 @@ must keep its control surface visible. `session-runtime-admission.svelte.test.ts
 keeps metadata probes independent from runtime mutation admission while preserving
 settings, credential, quick-save, setup, and recovery locks.
 
+`sidebar-surfaces.spec.ts` checks Voice, files, and speech with a combined local
+runtime in light/dark and wide/compact windows. Compare primary and contextual
+panels for matching runtime surface insets, visible model labels, 32px selectors,
+reachable actions, and contained horizontal content. Opening these surfaces must
+leave runtime command calls empty. Review its screenshots alongside disabled
+local-cleanup coverage in `quick-runtime-surfaces.spec.ts`; run the page-header
+checks to protect the shared header geometry.
+
 Check the contextual section sets: Voice has Transcription, Audio, Cleanup,
 Vocabulary, Overlay, and Delivery; Audio file has Transcription, Cleanup, and
 Vocabulary; Text to speech has Speech; History has
@@ -1744,6 +1752,11 @@ error messages to real components in 280px and 520px panes in both themes. Check
 local scroll widths, recovery-action access, initial message focus, keyboard
 scrolling, and Escape focus restoration. Deliberately truncated filename summaries
 retain their complete accessible text and title.
+`picker-feedback.spec.ts` checks model/voice refresh actions at sidebar and settings
+densities in both themes: stable widths and accessible names, disabled busy actions,
+reduced-motion spinners, associated loading messages, retry after failure, and
+continued selection from qualified voice presets. Pair it with
+`nonvoice-metadata.spec.ts` for deliberate-entry discovery and retry behavior.
 Compare fields, pickers, buttons, disclosures, and keyboard focus across pages.
 Check the selected underline in bottom-panel, runtime-output, and History-view
 tabs, plus the edge marker in Settings, Connections, and runtime navigation.

@@ -3,10 +3,9 @@
   import FieldHelp from "./FieldHelp.svelte";
   import { modelSources } from "$lib/utils/modelSources";
   import { Combobox } from "bits-ui";
-  import { Button } from "$lib/components/ui/button";
+  import PickerRefreshButton from "./PickerRefreshButton.svelte";
   import * as Menu from "$lib/components/ui/dropdown-menu";
   import CheckIcon from "@lucide/svelte/icons/check";
-  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import EraserIcon from "@lucide/svelte/icons/eraser";
   let {
@@ -81,6 +80,9 @@
   );
   let choosing = $state(false);
   const locked = $derived(disabled || choosing);
+  const hasStatus = $derived(
+    busy || ["loading", "failed", "empty"].includes(metadataStatus),
+  );
   async function choose(model: string) {
     if (!model || locked) return;
     choosing = true;
@@ -96,7 +98,7 @@
 </script>
 
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
-  <div class="flex items-center justify-between gap-3">
+  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
     <div class="flex items-center gap-1">
       <label for={id} class="content-value">Model</label><FieldHelp
         label="About model settings"
@@ -104,20 +106,13 @@
       />
     </div>
     <div class="flex items-center gap-1">
-      <Button
-        variant={sidebar ? "ghost" : "soft"}
-        size="sm"
-        class={sidebar ? "size-6 p-0" : ""}
-        aria-label={serverLoaded ? "Check server" : "Refresh models"}
-        title={serverLoaded ? "Check server" : "Refresh models"}
-        disabled={locked || busy}
+      <PickerRefreshButton
+        label={serverLoaded ? "Check server" : "Refresh models"}
+        {sidebar}
+        busy={busy || metadataStatus === "loading"}
+        disabled={locked}
         onclick={onDiscover}
-        ><RefreshCwIcon
-          class={busy ? "size-3.5 animate-spin" : "size-3.5"}
-        />{#if !sidebar}{serverLoaded
-            ? "Check server"
-            : "Refresh models"}{/if}</Button
-      >
+      />
       {#if onForget && savedModels.includes(value) && !serverLoaded}<Menu.Root
           ><Menu.Trigger
             aria-label="Model actions"
@@ -132,20 +127,6 @@
         >{/if}
     </div>
   </div>
-  {#if busy || metadataStatus === "loading"}
-    <p role="status" class="text-xs text-muted-foreground">
-      Loading model list…
-    </p>
-  {:else if metadataStatus === "failed"}
-    <p role="status" class="text-xs text-muted-foreground">
-      Could not load the model list. Refresh or reopen to retry; you can still
-      enter a model ID.
-    </p>
-  {:else if metadataStatus === "empty"}
-    <p role="status" class="text-xs text-muted-foreground">
-      No model IDs were reported. You can enter a model ID manually.
-    </p>
-  {/if}
   {#if serverLoaded}<p {id} class="text-sm text-muted-foreground">
       Server-loaded model
     </p>
@@ -167,7 +148,7 @@
           data-slot="combobox-input"
           {id}
           aria-label="Choose model"
-          aria-describedby={`${id}-help`}
+          aria-describedby={`${id}-help${hasStatus ? ` ${id}-status` : ""}`}
           placeholder="Search or enter a model ID…"
           class="h-8 w-full min-w-0 rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           spellcheck={false}
@@ -224,6 +205,20 @@
             </p>{/each}{/key}
       </Picker.Content>
     </Combobox.Root>{/if}
+  {#if busy || metadataStatus === "loading"}
+    <p id={`${id}-status`} role="status" class="text-xs text-muted-foreground">
+      Loading model list…
+    </p>
+  {:else if metadataStatus === "failed"}
+    <p id={`${id}-status`} role="status" class="text-xs text-warning">
+      Could not load the model list. Refresh or reopen to retry; you can still
+      enter a model ID.
+    </p>
+  {:else if metadataStatus === "empty"}
+    <p id={`${id}-status`} role="status" class="text-xs text-muted-foreground">
+      No model IDs were reported. You can enter a model ID manually.
+    </p>
+  {/if}
   {#if !sidebar && ((showProfileName && profileName) || (value && !serverLoaded))}
     <p
       class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"

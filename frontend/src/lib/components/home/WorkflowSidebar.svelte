@@ -227,7 +227,7 @@
     {#if workflow === "voice"}
       <button type="button" class="srow" onclick={onOpenDelivery} {disabled}>
         <span class="sk">Insert into</span>
-        <span class="sv"
+        <span class="sv text-secondary-foreground"
           >{settings?.autoInsert ? "Focused app" : "Copy only"}</span
         >
       </button>
@@ -237,12 +237,14 @@
       </button>
       <button type="button" class="srow" onclick={onOpenOverlay} {disabled}>
         <span class="sk">Overlay</span>
-        <span class="sv">{settings?.overlayEnabled ? "On" : "Off"}</span>
+        <span class="sv text-secondary-foreground"
+          >{settings?.overlayEnabled ? "On" : "Off"}</span
+        >
       </button>
     {:else}
       <div class="srow">
         <span class="sk">Result</span>
-        <span class="sv"
+        <span class="sv text-secondary-foreground"
           >{workflow === "tts" ? "Play or save" : "Explicit copy"}</span
         >
       </div>
@@ -292,14 +294,13 @@
     gap: 0.25rem;
     overflow: hidden;
     font-size: 11.5px;
-    color: var(--secondary-foreground);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  @media (max-width: 699px) {
-    .workflow-settings {
-      width: 180px;
-    }
+  .workflow-settings {
+    container-type: inline-size;
+  }
+  @container (max-width: 220px) {
     .srow {
       align-items: flex-start;
       flex-direction: column;

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { session } from "$lib/stores/session.svelte";
+  import type { InstanceStatus } from "$bindings/managedruntime";
   import {
     type Catalog,
     type Change,
@@ -10,6 +10,7 @@
   import { Button } from "$lib/components/ui/button";
   let {
     catalog,
+    runtimeInstances,
     purpose,
     dirty,
     busy,
@@ -20,6 +21,7 @@
     onAdd,
   }: {
     catalog: Catalog;
+    runtimeInstances: InstanceStatus[];
     purpose: Purpose;
     dirty: boolean;
     busy: boolean;
@@ -43,14 +45,15 @@
   class="border-t border-hairline py-3"
   aria-label={inactive ? "Saved manual connection" : "Active connection"}
 >
-  <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+  <div class="flex min-w-0 flex-col gap-1.5">
     <label for={`saved-connection-${purpose}`} class="content-value"
       >Connection</label
     >
-    <div class="min-w-44 flex-1">
+    <div class="min-w-0">
       <ConnectionSelect
         id={`saved-connection-${purpose}`}
         {catalog}
+        {runtimeInstances}
         {purpose}
         disabled={busy}
         {onChange}
@@ -58,9 +61,11 @@
         onManage={onBrowse}
       />
     </div>
+  </div>
+  <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
     <Button
-      variant="soft"
-      size="sm"
+      variant="outline"
+      size="xs"
       disabled={busy}
       onclick={selected ? onManage : onAdd}
       >{selected?.builtIn
@@ -69,18 +74,18 @@
           ? "Edit connection"
           : "Add connection"}</Button
     >
+    {#if selected}<p
+        class="min-w-0 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]"
+        title={connectionTargetLabel(selected, runtimeInstances)}
+      >
+        {connectionTargetLabel(selected, runtimeInstances)}
+      </p>
+    {:else}<p class="mt-2 text-xs text-muted-foreground">
+        {entries.length
+          ? "Choose a saved connection to configure this feature."
+          : "Add a server connection or set up a local runtime. Built-in connections appear automatically."}
+      </p>{/if}
   </div>
-  {#if selected}<p
-      class="mt-2 truncate text-xs text-muted-foreground"
-      title={connectionTargetLabel(selected, session.runtime.instances)}
-    >
-      {connectionTargetLabel(selected, session.runtime.instances)}
-    </p>
-  {:else}<p class="mt-2 text-xs text-muted-foreground">
-      {entries.length
-        ? "Choose a saved connection to configure this feature."
-        : "Add a server connection or set up a local runtime. Built-in connections appear automatically."}
-    </p>{/if}
   {#if dirty}<p class="mt-2 text-xs text-muted-foreground">
       Save or discard your edits before switching connections.
     </p>{/if}

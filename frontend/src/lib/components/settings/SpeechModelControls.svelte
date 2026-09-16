@@ -136,6 +136,7 @@
   {@render modelDetails?.()}
 {/if}
 <VoicePicker
+  sidebar={compact && !showAdvanced}
   id={controlID("voice")}
   value={magpie && (!speech.voice || speech.voice === "alloy")
     ? "default"

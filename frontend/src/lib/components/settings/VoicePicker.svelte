@@ -3,9 +3,8 @@
   import type { Snippet } from "svelte";
   import { Combobox } from "bits-ui";
   import { VoiceScope, type VoicesResult } from "$bindings/inference";
-  import { Button } from "$lib/components/ui/button";
+  import PickerRefreshButton from "./PickerRefreshButton.svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
-  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
 
   let {
     id,
@@ -16,6 +15,7 @@
     busy = false,
     onDiscover,
     compact = false,
+    sidebar = false,
     disabled = false,
     onChoose,
     actions,
@@ -29,6 +29,7 @@
     busy?: boolean;
     onDiscover: () => void;
     compact?: boolean;
+    sidebar?: boolean;
     disabled?: boolean;
     onChoose?: (voice: string) => boolean | Promise<boolean>;
   } = $props();
@@ -114,16 +115,13 @@
   <div class="flex flex-wrap items-center justify-between gap-3">
     <label for={id} class="content-value">Voice</label>
     <div class="flex flex-wrap items-center gap-2">
-      {#if supported}<Button
-          variant="ghost"
-          size="sm"
-          disabled={busy || disabled}
+      {#if supported}<PickerRefreshButton
+          label="Refresh voices"
+          {sidebar}
+          {busy}
+          {disabled}
           onclick={onDiscover}
-        >
-          <RefreshCwIcon class={busy ? "size-4 animate-spin" : "size-4"} />{busy
-            ? "Loading voices…"
-            : "Refresh voices"}
-        </Button>{/if}
+        />{/if}
       {@render actions?.()}
     </div>
   </div>
@@ -157,7 +155,7 @@
           : supported
             ? "Search or enter a voice ID…"
             : "Enter a voice ID…"}
-        class="h-8 w-full rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="h-8 w-full min-w-0 rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
         spellcheck={false}
         maxlength={200}
         oninput={(e) => {
@@ -219,11 +217,12 @@
   <p
     id={`${id}-help`}
     role="status"
-    class={compact && !result
+    class={compact && !result && !busy
       ? "sr-only"
-      : `text-xs leading-relaxed ${failure ? "text-warning" : "text-muted-foreground"}`}
+      : `text-xs leading-relaxed ${failure && !busy ? "text-warning" : "text-muted-foreground"}`}
   >
-    {#if allowedVoices.length}{voices.length} preset voices for this model profile.
+    {#if busy}Loading voices…
+    {:else if allowedVoices.length}{voices.length} preset voices for this model profile.
       {failure
         ? "Server voice refresh failed; the preset list remains available."
         : ""}

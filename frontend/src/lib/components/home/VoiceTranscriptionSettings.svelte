@@ -18,7 +18,7 @@
   import { Textarea } from "$lib/components/ui/textarea";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
-  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+  import SidebarSettingsLink from "./SidebarSettingsLink.svelte";
 
   let {
     editor,
@@ -167,7 +167,7 @@
   class={draft
     ? "flex flex-col gap-3"
     : sidebar
-      ? "flex min-w-0 flex-col gap-2"
+      ? "flex min-w-0 flex-col gap-3"
       : "space-y-4"}
   class:voice-sidebar={sidebar}
 >
@@ -176,9 +176,8 @@
         Transcription
       </h3>{/if}
     <div class="space-y-1.5">
-      <label
-        for={controlID("voice-connection")}
-        class="text-[13px] font-semibold">Connection</label
+      <label for={controlID("voice-connection")} class="content-value"
+        >Connection</label
       >
       <div class="flex gap-2">
         <ConnectionSelect
@@ -233,15 +232,10 @@
     </SettingsDisclosure>
   {:else if sidebar}
     {@render recognitionControls()}
-    {#if onOpenAdvanced}<button
-        type="button"
-        class="flex min-h-7 w-full items-center justify-between gap-2 border-t border-hairline pt-1 text-left text-xs text-secondary-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    {#if onOpenAdvanced}<SidebarSettingsLink
+        label="More transcription options"
         onclick={onOpenAdvanced}
-        >More transcription options<ChevronRightIcon
-          class="size-3 shrink-0"
-          aria-hidden="true"
-        /></button
-      >{/if}
+      />{/if}
   {:else if draft}{@render finishingControls()}{:else}{@render optionalControls()}{/if}
   {#if !draft}<QuickSaveStatus
       quiet={sidebar}
@@ -311,9 +305,7 @@
           : "flex items-center justify-between gap-3 border-t border-hairline pt-3"}
     >
       <div>
-        <label
-          for={controlID("voice-realtime")}
-          class="text-[13px] font-semibold"
+        <label for={controlID("voice-realtime")} class="content-value"
           >{sidebar ? "Live dictation" : "Realtime transcription"}</label
         >
         {#if !sidebar}<p class="mt-1 text-xs text-muted-foreground">
@@ -342,7 +334,7 @@
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
     <div class={draft ? "space-y-2 py-3" : "space-y-1.5"}>
-      <label for={controlID("voice-language")} class="text-[13px] font-semibold"
+      <label for={controlID("voice-language")} class="content-value"
         >Spoken language</label
       >
       <LanguagePicker

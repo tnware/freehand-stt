@@ -521,6 +521,7 @@
           {#if session.editor.draft}
             {#if active === "voice-transcription" || active === "server" || active === "processing" || active === "speech"}
               <SavedConnectionPicker
+                runtimeInstances={session.runtime.instances}
                 catalog={session.editor.draft.savedConnections}
                 purpose={active === "voice-transcription"
                   ? Purpose.Voice

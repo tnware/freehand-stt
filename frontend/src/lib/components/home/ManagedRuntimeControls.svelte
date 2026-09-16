@@ -123,146 +123,141 @@
 </script>
 
 <div
-  class={sidebar ? "flex min-w-0 flex-col gap-1.5" : "min-w-0 space-y-2.5"}
-  class:runtime-sidebar={sidebar}
+  class={sidebar ? "min-w-0" : "min-w-0 py-3"}
   role="group"
   aria-label={`Local runtime ${row?.instance.name || instanceID}`}
 >
-  <div class="flex items-center justify-between gap-2">
-    {#if sidebar}
-      <div class="flex min-w-0 items-start gap-1.5">
-        <span
-          class="text-xs leading-relaxed text-muted-foreground"
-          title="Local runtime">Local</span
+  <div class="runtime-surface">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <span
+        class="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-secondary-foreground"
+      >
+        <CpuIcon
+          class="size-3.5 shrink-0 text-accent-text"
+          aria-hidden="true"
+        />Local runtime
+      </span>
+      {#if operating}
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={disabled || pending === "Cancelling"}
+          onclick={cancel}>Cancel</Button
         >
-        {@render runtimeStatus()}
-      </div>
-    {:else}<span
-        class="flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground"
-      >
-        <CpuIcon class="size-3.5 shrink-0" aria-hidden="true" />Local runtime
-      </span>{/if}
-    {#if operating}
-      <Button
-        variant="outline"
-        size="xs"
-        disabled={disabled || pending === "Cancelling"}
-        onclick={cancel}>Cancel</Button
-      >
-    {:else if needsSetup}
-      <Button variant="soft" size="xs" onclick={manage}>Set up runtime</Button>
-    {:else}
-      <Button
-        variant={running ? "outline" : "soft"}
-        size="xs"
-        disabled={locked ||
-          (!running &&
-            (!view.installed || !selected?.installed || !allModelsReady))}
-        title={workBusy
-          ? "Finish the current task before changing this runtime."
-          : undefined}
-        onclick={command}
-      >
-        {#if running}<SquareIcon class="size-3" />Stop{:else}<PlayIcon
-            class="size-3"
-          />Start{/if}
-      </Button>
-    {/if}
-  </div>
-  {#if !sidebar}{@render runtimeStatus()}{/if}
-  {#if view.startup}<p class="text-xs leading-relaxed text-muted-foreground">
-      {view.startup}
-    </p>{/if}
-  {#if view.transferred}<p class="font-mono text-xs text-muted-foreground">
-      {view.transferred}
-    </p>{/if}
-  {#if !operating && view.completion && !problem && status?.operation?.outcome === "cancelled"}<p
-      class="text-xs text-muted-foreground"
-    >
-      {view.completion}
-    </p>{/if}
-  {#if problem}<p
-      class="break-words text-xs leading-relaxed text-destructive"
-      role="alert"
-    >
-      {problem}
-    </p>{/if}
-
-  {#if row}
-    <div class={sidebar ? "min-w-0" : "space-y-1.5"}>
-      <label
-        for={`${uid}-model`}
-        class={sidebar ? "sr-only" : "text-xs font-medium"}
-        >{role === Role.Speech
-          ? "Selected speech model"
-          : "Selected model"}</label
-      >
-      <Select.Root
-        type="single"
-        bind:value={() => selectedID, chooseModel}
-        items={choices}
-        disabled={modelLocked}
-      >
-        <Select.Trigger
-          id={`${uid}-model`}
-          class="h-7 w-full min-w-0 text-xs"
-          title={running
-            ? "Stop the runtime to select another downloaded model."
+      {:else if needsSetup}
+        <Button variant="soft" size="xs" onclick={manage}>Set up runtime</Button
+        >
+      {:else}
+        <Button
+          variant={running ? "outline" : "soft"}
+          size="xs"
+          disabled={locked ||
+            (!running &&
+              (!view.installed || !selected?.installed || !allModelsReady))}
+          title={workBusy
+            ? "Finish the current task before changing this runtime."
             : undefined}
+          onclick={command}
         >
-          <span class="min-w-0 truncate"
-            >{selected?.name ||
-              selectedID ||
-              (role === Role.Speech
-                ? "Speech not enabled"
-                : "Choose a model")}</span
-          >
-        </Select.Trigger>
-        <Select.Content
-          >{#each models as model (model.id)}<Select.Item
-              value={model.id}
-              label={model.name}>{model.name}</Select.Item
-            >{/each}</Select.Content
-        >
-      </Select.Root>
-      {#if running && models.length > 1}<p
-          class="mt-1 text-xs leading-relaxed text-muted-foreground"
-        >
-          Stop to change the loaded model.
-        </p>{/if}
+          {#if running}<SquareIcon class="size-3" />Stop{:else}<PlayIcon
+              class="size-3"
+            />Start{/if}
+        </Button>
+      {/if}
     </div>
-    {#if view.backend || status?.version}<p
-        class="break-words text-xs text-muted-foreground"
-      >
-        {[view.backend, status?.version].filter(Boolean).join(" · ")}
+    {@render runtimeStatus()}
+    {#if view.startup}<p class="text-xs leading-relaxed text-muted-foreground">
+        {view.startup}
       </p>{/if}
-  {/if}
-  {#if row?.instance.speechModel}<p
-      class="text-xs leading-relaxed text-muted-foreground"
+    {#if view.transferred}<p class="font-mono text-xs text-muted-foreground">
+        {view.transferred}
+      </p>{/if}
+    {#if !operating && view.completion && !problem && status?.operation?.outcome === "cancelled"}<p
+        class="text-xs text-muted-foreground"
+      >
+        {view.completion}
+      </p>{/if}
+    {#if problem}<p
+        class="break-words text-xs leading-relaxed text-destructive"
+        role="alert"
+      >
+        {problem}
+      </p>{/if}
+
+    {#if row}
+      <div class="min-w-0 space-y-1.5">
+        <label
+          for={`${uid}-model`}
+          class="text-xs font-medium text-secondary-foreground"
+          >{role === Role.Speech
+            ? "Selected speech model"
+            : "Selected model"}</label
+        >
+        <Select.Root
+          type="single"
+          bind:value={() => selectedID, chooseModel}
+          items={choices}
+          disabled={modelLocked}
+        >
+          <Select.Trigger
+            id={`${uid}-model`}
+            class="h-8 w-full min-w-0 text-[13px]"
+            title={running
+              ? "Stop the runtime to select another downloaded model."
+              : undefined}
+          >
+            <span class="min-w-0 truncate"
+              >{selected?.name ||
+                selectedID ||
+                (role === Role.Speech
+                  ? "Speech not enabled"
+                  : "Choose a model")}</span
+            >
+          </Select.Trigger>
+          <Select.Content
+            >{#each models as model (model.id)}<Select.Item
+                value={model.id}
+                label={model.name}>{model.name}</Select.Item
+              >{/each}</Select.Content
+          >
+        </Select.Root>
+        {#if running && models.length > 1}<p
+            class="mt-1 text-xs leading-relaxed text-muted-foreground"
+          >
+            Stop to change the loaded model.
+          </p>{/if}
+      </div>
+      {#if view.backend || status?.version}<p
+          class="break-words text-xs text-muted-foreground"
+        >
+          {[view.backend, status?.version].filter(Boolean).join(" · ")}
+        </p>{/if}
+    {/if}
+    {#if row?.instance.speechModel}<p
+        class="text-xs leading-relaxed text-muted-foreground"
+      >
+        Start and Stop affect transcription and speech together.
+      </p>{/if}
+    <div
+      class="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-hairline pt-2"
     >
-      Start and Stop affect transcription and speech together.
-    </p>{/if}
-  <div
-    class={sidebar
-      ? "flex flex-wrap items-center gap-x-3 gap-y-1"
-      : "flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-hairline pt-2"}
-  >
-    <Button
-      variant="link"
-      size="xs"
-      class="h-auto min-h-5 p-0 text-xs"
-      onclick={manage}>Manage runtime</Button
-    >
-    {#if row}<Button
+      <Button
         variant="link"
         size="xs"
         class="h-auto min-h-5 p-0 text-xs"
-        disabled={!!layout && !layout.bottomAvailable.current}
-        title={layout && !layout.bottomAvailable.current
-          ? "Make the window taller to show runtime output."
-          : undefined}
-        onclick={output}>View output</Button
-      >{/if}
+        onclick={manage}>Manage runtime</Button
+      >
+      {#if row}<Button
+          variant="link"
+          size="xs"
+          class="h-auto min-h-5 p-0 text-xs"
+          disabled={!!layout && !layout.bottomAvailable.current}
+          title={layout && !layout.bottomAvailable.current
+            ? "Make the window taller to show runtime output."
+            : undefined}
+          onclick={output}>View output</Button
+        >{/if}
+    </div>
   </div>
 </div>
 
@@ -296,8 +291,15 @@
 {/snippet}
 
 <style>
-  .runtime-sidebar {
-    border-left: 1px solid var(--hairline);
-    padding: 0.125rem 0 0.125rem 0.5rem;
+  .runtime-surface {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.625rem;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-md);
+    background: var(--well);
+    overflow-wrap: anywhere;
   }
 </style>
