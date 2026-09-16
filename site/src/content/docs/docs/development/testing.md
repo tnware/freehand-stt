@@ -1739,6 +1739,11 @@ bottom panel, and resetting History search and source filters from its empty sta
 themes at 560px and 1280px, including recording and file-start states. The Listen
 pending checks also verify that its label and width survive the spinner swap and
 that reduced motion disables rotation.
+`long-content.spec.ts` supplies unbroken metadata, model names, filenames, and
+error messages to real components in 280px and 520px panes in both themes. Check
+local scroll widths, recovery-action access, initial message focus, keyboard
+scrolling, and Escape focus restoration. Deliberately truncated filename summaries
+retain their complete accessible text and title.
 Compare fields, pickers, buttons, disclosures, and keyboard focus across pages.
 Check the selected underline in bottom-panel, runtime-output, and History-view
 tabs, plus the edge marker in Settings, Connections, and runtime navigation.

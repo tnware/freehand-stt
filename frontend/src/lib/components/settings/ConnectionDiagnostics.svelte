@@ -33,7 +33,7 @@
 </script>
 
 <section
-  class="space-y-3"
+  class="min-w-0 space-y-3 [overflow-wrap:anywhere]"
   aria-label="Connection check results"
   aria-live="polite"
 >
@@ -64,7 +64,7 @@
       class="divide-y divide-hairline border-y border-hairline"
     >
       {#each result.checks as check (check.kind)}<div
-          class="grid grid-cols-[18px_1fr] gap-x-2 py-2.5"
+          class="grid grid-cols-[18px_minmax(0,1fr)] gap-x-2 py-2.5"
         >
           {#if check.status === CheckStatus.CheckPassed}<CircleCheckIcon
               class="mt-0.5 size-4 text-success"

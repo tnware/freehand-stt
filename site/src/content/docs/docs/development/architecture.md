@@ -1057,6 +1057,10 @@ validation typography while retaining their own layout and transaction behavior.
 when idle. Long recovery messages may expand and wrap. Indicators are decorative,
 so each owning settings group announces the result once. Backend validation remains
 the source of field errors; shared presentation does not introduce new validation.
+`ConnectionDiagnostics` constrains its value column and wraps unbroken server
+metadata inside the owning pane. `FeedbackDetails` keeps its title and optional
+recovery action outside a keyboard-focusable message scroll region. Opening
+focuses the message at its beginning; Escape restores focus to the trigger.
 Search pickers share the `ui/combobox` content, option, and trigger components.
 The content owns portal placement, viewport limits, one scrollable option region,
 and an optional stationary action footer. Feature owners retain filtering,
