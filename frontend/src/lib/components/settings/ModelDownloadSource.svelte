@@ -30,7 +30,7 @@
       Source: NeMo’s built-in model manager
     {:else if source.repositoryURL}
       Source: <a
-        class="break-all text-accent-text underline underline-offset-2 hover:text-accent-text"
+        class="source-link"
         href={source.repositoryURL}
         onclick={(event) => void open(event, event.currentTarget.href)}
         >{source.repository}</a

@@ -318,7 +318,7 @@
             <TranscriptText
               content={{ key: `file:${live.generation}`, text: live.text }}
               label="Audio file transcript"
-              class="mt-2.5 min-h-5 w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
+              class="reading-text mt-2.5 min-h-5"
             />
           {:else}
             <p
@@ -554,7 +554,7 @@
                         parts: comparison.raw,
                       }}
                       label="Raw transcript text"
-                      class="w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
+                      class="reading-text"
                     />
                   </section>
 
@@ -605,7 +605,7 @@
                         parts: comparison.processed,
                       }}
                       label="Cleaned transcript text"
-                      class="w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
+                      class="reading-text"
                     />
                   </section>
                 </div>
@@ -613,7 +613,7 @@
                 <TranscriptText
                   content={{ key: String(entry.id), text: entry.text }}
                   label={`Transcript from ${completedDateTime(entry.completedAt)}`}
-                  class="mt-2.5 w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
+                  class="reading-text mt-2.5"
                 />
               {/if}
             </div>

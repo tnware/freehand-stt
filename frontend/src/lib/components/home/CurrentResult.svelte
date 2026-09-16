@@ -151,7 +151,7 @@
           </p>
         {/if}
         {#if live || text}
-          <div class="w-full max-w-[760px] px-3 py-3.5">
+          <div class="w-full px-3 py-3.5">
             {#if live}
               <p class="content-meta mb-3" role="status">
                 Live preview · text may change
@@ -166,7 +166,7 @@
                   : undefined,
               }}
               label={live ? "Live transcript" : "Current transcript"}
-              class="whitespace-pre-wrap break-words text-[15px] leading-[26px] text-foreground"
+              class="reading-text"
             />
           </div>
         {:else if !message}

@@ -26,7 +26,7 @@
   <p class="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
     <span>Source</span>
     <a
-      class="break-all text-accent-text underline underline-offset-2 hover:text-accent-text"
+      class="source-link"
       href={source.repositoryURL}
       onclick={(event) => void open(event, source.repositoryURL)}
       >{source.repositoryURL.replace("https://github.com/", "")}</a

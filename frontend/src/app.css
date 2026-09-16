@@ -713,6 +713,26 @@ html.dark[data-material="mica"] #app {
     line-height: 1.5;
     color: var(--muted-foreground);
   }
+  /* Reading text: transcripts and long results keep a comfortable measure. */
+  .reading-text {
+    width: 100%;
+    max-width: 76ch;
+    font-size: 15px;
+    line-height: 26px;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    color: var(--foreground);
+  }
+  /* Underlined accent text links to external sources. */
+  .source-link {
+    overflow-wrap: break-all;
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .source-link:hover {
+    color: var(--accent-text);
+  }
   /* A pane's empty state: centered icon tile, title, and guidance. */
   .pane-empty {
     display: flex;
