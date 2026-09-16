@@ -43,14 +43,6 @@ mark uses a tighter vector viewBox so its artwork, rather than an invisible
 application-icon canvas, determines its rendered size. The application tile
 retains deliberate outer safe space for Windows surfaces that mask or frame it.
 
-The native main, Settings, and About captions deliberately set Wails'
-`DisableIcon`; they are not missing icon consumers. Their taskbar identity comes
-from the executable resource, while the About content uses the generated vector
-mark. The current release path is NSIS. Wails v3.0.0-beta.16's experimental
-`tool msix` path synthesizes transparent placeholder visual assets and exposes no
-project-asset input, so it is not treated as a shippable branded package until
-that packaging path is replaced or upstream gains an explicit asset contract.
-
 ## Site palette
 
 Product-site controls, cards, borders, supporting text, and links use neutral
@@ -64,13 +56,6 @@ mark, decorative particle effects, and faithful app demonstrations; provider
 artwork retains its original colors.
 Do not reuse those colors as site UI accents. Preserve visible focus rings,
 underlined prose links, and readable contrast in both documentation themes.
-
-The download page groups builds under monochrome Windows and Apple platform
-marks from Bootstrap Icons v1.13.1. `PlatformIcon.astro` records the source;
-`site/public/licenses/bootstrap-icons.txt` ships the MIT notice. These decorative
-marks accompany visible platform names and never imply release availability.
-Backend comparison tables use `SupportIndicator.astro` for check, dash, and
-planned-clock symbols with accessible text, driven by the existing catalog.
 
 ## Updating artwork
 
@@ -117,15 +102,3 @@ The app and site import those exact files through shared presentation helpers;
 they are not copies produced by the Freehand product-mark generator. See its
 README and the [backend maintenance guide](../backend-compatibility/#provider-identity-assets)
 for provenance, neutral fallbacks, licensing, and visual checks.
-
-
-Backend and model guide headings resolve their identity from the same guide paths
-and icon IDs as the public directories in `site/src/data/backends.ts` and
-`site/src/data/models.ts`. Do not add per-page provider frontmatter: it creates a
-second mapping that can drift. Overview and comparison pages have no single
-provider mark. `ModelIcon.astro` shares the S1-mini neutral monogram between its
-directory card and guide; it is not licensed Superwhisper artwork.
-
-After changing either directory, build the site and check each linked guide's
-heading against its directory card. Verify both themes and a narrow viewport,
-including long model names, and confirm overview headings remain unbranded.

@@ -111,15 +111,13 @@ export default defineConfig({
           label: "Contribute",
           items: [
             { slug: "docs/development" },
-            { slug: "docs/development/architecture" },
-            { slug: "docs/development/testing" },
             { slug: "docs/development/backend-compatibility" },
             { slug: "docs/development/storage" },
             { slug: "docs/development/brand-assets" },
           ],
         },
         {
-          label: "Maintainer records",
+          label: "Maintenance and safety",
           collapsed: true,
           items: [
             { slug: "docs/development/releases" },

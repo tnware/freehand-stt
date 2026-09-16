@@ -58,7 +58,7 @@ The complete action matrix and normalization rules are documented in
 - Treat endpoint settings and their credential as one coherent operation snapshot. Do not pair an endpoint/model captured before a settings save with a credential loaded after that save.
 - Capture the complete request profile, including both applicable credentials, under the settings transaction lock before microphone or stored-audio work starts. Allow later settings changes, but apply them only to later operations.
 - Derive microphone, stored-file, connection-test, shortcut-capture, and preparation work from the Wails application context and give each operation an explicit timeout or cancellation path.
-- Shutdown stops accepting work before cancelling active work, suppresses late publication, and closes stored-file and dictation work before history. Dictation and stored-file services each have a five-second teardown wait budget; speech has two seconds. These are not a shared process-exit deadline or a guarantee that every native call is interruptible. Native capture checks its closed fence around preparation so no late warmup may recreate a resource after close. See [shutdown ownership](../../development/architecture/#shutdown-and-audio-export-ownership).
+- Shutdown stops accepting work before cancelling active work, suppresses late publication, and closes stored-file and dictation work before history. Dictation and stored-file services each have a five-second teardown wait budget; speech has two seconds. These are not a shared process-exit deadline or a guarantee that every native call is interruptible. Native capture checks its closed fence around preparation so no late warmup may recreate a resource after close.
 
 ## WebView boundary
 

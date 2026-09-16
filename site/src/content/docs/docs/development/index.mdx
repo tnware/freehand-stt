@@ -1,6 +1,6 @@
 ---
 title: Contributor documentation
-description: Build, test, understand, and release Freehand.
+description: Set up, validate, and release Freehand.
 ---
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
@@ -19,16 +19,6 @@ boundary.
 Choose the reference for the work you are doing:
 
 <CardGrid>
-  <LinkCard
-    title="Understand the architecture"
-    description="Runtime ownership, package boundaries, and data flow."
-    href="architecture/"
-  />
-  <LinkCard
-    title="Test a change"
-    description="Deterministic checks and the separate native Windows and macOS acceptance requirements."
-    href="testing/"
-  />
   <LinkCard
     title="Work with GitHub Actions"
     description="CI checks, documentation deployment, and release automation."
@@ -62,5 +52,4 @@ Use these references for safety requirements and native acceptance:
 
 - [Windows safety invariants](../safety/windows/)
 - [Logging contract](../safety/logging/)
-- [Native Windows acceptance checklist](../safety/native-test-checklist/)
-- [Native macOS acceptance](testing/#native-macos-acceptance)
+- [Native Windows and macOS acceptance](../safety/native-test-checklist/)
