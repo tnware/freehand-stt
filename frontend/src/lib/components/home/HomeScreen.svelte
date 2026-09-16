@@ -626,10 +626,8 @@
                           sttMetadataStatus={session.editor.connectionMetadataStatus(
                             Purpose.Transcription,
                           )}
-                          showCapture={false}
                           showCleanup={false}
                           settings={runtimeSettings!}
-                          devices={session.editor.devices}
                           processingProfiles={session.editor.processingProfiles}
                           connection={session.editor.connection}
                           processingConnection={session.editor
@@ -670,8 +668,6 @@
                             session.editor.saving}
                           {onOpenServerSettings}
                           {onOpenProcessingSettings}
-                          {onOpenAudioSettings}
-                          {onOpenDeliverySettings}
                         />
                       {/if}
                     {/snippet}

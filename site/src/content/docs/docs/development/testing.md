@@ -1762,3 +1762,9 @@ recording, delivery, permissions, or window behavior.
 Header checks verify computed typography as well as geometry with pickers mounted,
 so a component stylesheet that changes CSS layer ordering cannot silently reset
 page titles, toolbar spacing, or tab controls.
+
+For settings-row changes, run `settings-feedback.spec.ts` together with quick-control
+and settings-streamlining checks. Verify that label clicks focus the control,
+rejected saves preserve values and expose inline recovery, and idle/saving/saved
+feedback leaves neighboring controls in place. Inspect long errors in narrow panes
+and both themes; reduced motion must stop decorative saving spinners.

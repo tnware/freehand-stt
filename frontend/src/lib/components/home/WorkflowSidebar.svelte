@@ -125,13 +125,11 @@
           <QuickSettings
             sidebar
             embedded
-            showCapture={false}
             showTranscription={workflow === "file"}
             {settings}
             runtime={session.runtime}
             {runtimeWorkBusy}
             onManageRuntime={onOpenRuntime}
-            devices={session.editor.devices}
             processingProfiles={session.editor.processingProfiles}
             connection={session.editor.connection}
             processingConnection={session.editor.processingConnection}
@@ -175,8 +173,6 @@
               session.editor.testAppliedConnection(Purpose.Cleanup)}
             onOpenServerSettings={onOpenOptions}
             onOpenProcessingSettings={onOpenCleanup}
-            onOpenAudioSettings={onOpenOptions}
-            onOpenDeliverySettings={onOpenDelivery}
             disabled={controlsDisabled}
           />
         {/if}

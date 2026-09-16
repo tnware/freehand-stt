@@ -1046,6 +1046,13 @@ and pickers use 32px controls, actions use 28px controls, and compact toolbars
 use the smaller variants. Native control semantics, visible focus, input
 borders, and floating menu/dialog surfaces stay explicit. Page styling never
 owns workflow state, credentials, or scrolling behavior.
+Settings rows share `FieldCaption` for label, help, and inline
+validation typography while retaining their own layout and transaction behavior.
+`SaveIndicator` reserves an icon slot for pending, saved, and failed states;
+`QuickSaveStatus` owns the corresponding live text and reserves one line even
+when idle. Long recovery messages may expand and wrap. Indicators are decorative,
+so each owning settings group announces the result once. Backend validation remains
+the source of field errors; shared presentation does not introduce new validation.
 Search pickers share the `ui/combobox` content, option, and trigger components.
 The content owns portal placement, viewport limits, one scrollable option region,
 and an optional stationary action footer. Feature owners retain filtering,

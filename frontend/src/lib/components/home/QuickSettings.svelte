@@ -9,18 +9,15 @@
   import ConnectionSelect from "$lib/components/settings/ConnectionSelect.svelte";
   import { Purpose, type Change } from "$bindings/savedconnection";
   import { usesServerLoadedModel } from "$lib/utils/compatibility";
-  import CheckIcon from "@lucide/svelte/icons/check";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import SaveIndicator from "../settings/SaveIndicator.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import WorkflowSection from "./WorkflowSection.svelte";
-  import QuickControls from "$lib/components/home/QuickControls.svelte";
   import S1MiniControls from "$lib/components/settings/S1MiniControls.svelte";
   import * as Select from "$lib/components/ui/select";
   import { Switch } from "$lib/components/ui/switch";
   import {
     PostProcessingPreset,
     type ConnectionResult,
-    type Device,
     type ProfileDescriptor,
     type Settings,
   } from "$lib/state";
@@ -42,14 +39,12 @@
     runtime,
     runtimeWorkBusy = false,
     onManageRuntime = () => {},
-    showCapture = true,
     showTranscription = true,
     embedded = false,
     sidebar = false,
     showCleanup = true,
     onAddConnection,
     settings,
-    devices,
     processingProfiles,
     connection,
     processingConnection,
@@ -70,22 +65,18 @@
     onTestProcessingConnection,
     onOpenServerSettings,
     onOpenProcessingSettings,
-    onOpenAudioSettings,
-    onOpenDeliverySettings,
     disabled = false,
   }: {
     /** Applied settings: every edit in this rack is persisted immediately. */
     runtime?: ManagedRuntimeState;
     runtimeWorkBusy?: boolean;
     onManageRuntime?: () => void;
-    showCapture?: boolean;
     showTranscription?: boolean;
     embedded?: boolean;
     sidebar?: boolean;
     showCleanup?: boolean;
     onAddConnection?: (purpose: Purpose) => void;
     settings: Settings;
-    devices: Device[];
     processingProfiles: ProfileDescriptor[];
     connection: ConnectionResult | null;
     processingConnection: ConnectionResult | null;
@@ -105,13 +96,15 @@
     onEnterCleanup?: () => void;
     sttMetadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     processingMetadataStatus?:
-      "idle" | "loading" | "ready" | "empty" | "failed";
+      | "idle"
+      | "loading"
+      | "ready"
+      | "empty"
+      | "failed";
     onTestConnection: () => Promise<void>;
     onTestProcessingConnection: () => Promise<void>;
     onOpenServerSettings: () => void;
     onOpenProcessingSettings: () => void;
-    onOpenAudioSettings: () => void;
-    onOpenDeliverySettings: () => void;
     disabled?: boolean;
   } = $props();
   const uid = $props.id();
@@ -235,19 +228,6 @@
 {/snippet}
 
 <fieldset class="m-0 flex min-w-0 flex-col gap-2.5 border-0 p-0" {disabled}>
-  {#if showCapture}
-    <QuickControls
-      {settings}
-      {devices}
-      {pending}
-      {savedField}
-      {onUpdate}
-      {onOpenAudioSettings}
-      {onOpenDeliverySettings}
-      {disabled}
-    />
-  {/if}
-
   {#if showTranscription}
     <WorkflowSection
       {sidebar}
@@ -419,14 +399,11 @@
           />{/if}{/snippet}
       {#snippet actions()}
         <span class="flex shrink-0 items-center gap-1.5">
-          {#if isPending("processing-enabled")}
-            <LoaderCircleIcon
-              class="size-3 animate-spin text-ink-quiet"
-              aria-label="Saving"
-            />
-          {:else if savedField === "processing-enabled"}
-            <CheckIcon class="size-3 text-success" aria-label="Saved" />
-          {/if}
+          <SaveIndicator
+            pending={isPending("processing-enabled")}
+            saved={savedField === "processing-enabled"}
+            failed={failedField === "processing-enabled"}
+          />
           <Switch
             id={controlID("quick-post-processing-enabled")}
             size="sm"
@@ -510,13 +487,14 @@
           />
         {/if}
         {#snippet profileMeta()}
-          {#if isPending("processing-profile")}
-            <LoaderCircleIcon class="inline size-3 animate-spin" />
-          {:else if savedField === "processing-profile"}
-            <CheckIcon class="inline size-3 text-success" />
-          {:else}
+          <span class="inline-flex items-center gap-1.5">
             raw kept on failure
-          {/if}
+            <SaveIndicator
+              pending={isPending("processing-profile")}
+              saved={savedField === "processing-profile"}
+              failed={failedField === "processing-profile"}
+            />
+          </span>
         {/snippet}
         {#snippet profileControl()}
           <Select.Root
