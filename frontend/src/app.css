@@ -540,6 +540,11 @@ html.dark[data-material="mica"] #app {
     border-radius: 4px;
     background: var(--well);
   }
+  /* Inline guidance/status callouts share the accent wash and edge bar. */
+  .content-callout {
+    border-left: 2px solid var(--accent-edge);
+    background: var(--accent-wash);
+  }
   .content-section-icon {
     width: 16px;
     height: 16px;

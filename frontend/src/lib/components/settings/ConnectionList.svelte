@@ -101,7 +101,7 @@
     </div>
   </div>
   {#if !sidebar}<div
-      class="flex h-[26px] shrink-0 items-center px-5 text-[10px] font-semibold tracking-[0.07em] text-ink-quiet uppercase"
+      class="flex h-[26px] shrink-0 items-center px-5 text-[10px] font-bold tracking-[0.07em] text-secondary-foreground uppercase"
     >
       <span class="min-w-0 flex-1">Name</span>
       <span class="hidden w-[190px] shrink-0 @min-[810px]/connections:block"

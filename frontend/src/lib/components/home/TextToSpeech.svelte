@@ -1,4 +1,5 @@
 <script lang="ts">
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import type { SeekRequest } from "$bindings/tts";
   import type { Snippet } from "svelte";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
@@ -140,20 +141,16 @@
   <div class="workbench-toolbar flex-wrap gap-y-1 py-1">
     <SquarePenIcon class="content-section-icon" aria-hidden="true" />
     <h2 class="content-title">Compose</h2>
-    <span
-      class={cn(
-        "mr-auto inline-flex h-5 items-center rounded-sm border px-1.5 text-xs",
-        failed
-          ? "border-destructive/30 text-destructive"
-          : working
-            ? "border-accent-edge bg-accent-wash text-accent-text"
-            : "border-border text-muted-foreground",
-      )}
+    <div
+      class="mr-auto min-w-0"
       role="status"
       title="Local configuration only; connection checks appear in the footer."
     >
-      {stateLabel}
-    </span>
+      <StatusBadge
+        tone={failed ? "danger" : working ? "accent" : "neutral"}
+        class={working ? "font-semibold" : ""}
+      >{stateLabel}</StatusBadge>
+    </div>
     {#if quickSettings}
       <div class="min-w-0 shrink-0">{@render quickSettings()}</div>
     {/if}
@@ -166,7 +163,7 @@
   <div class="flex min-h-24 flex-1 flex-col overflow-y-auto">
     {#if !configured}
       <div
-        class="mx-3 mt-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-l-2 border-accent-edge bg-accent-wash px-3 py-2.5"
+        class="content-callout mx-3 mt-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5"
       >
         <p
           id={setupGuidanceID}

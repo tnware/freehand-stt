@@ -140,7 +140,7 @@
               ? `${uid}-${row.entry.id}-error`
               : undefined}
             class="flex min-h-11 items-center gap-2.5 border-l-2 pl-2.5 pr-3 py-1.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
-              ? 'border-primary bg-accent-wash'
+              ? 'border-primary bg-accent-wash-strong'
               : 'border-transparent'}"
             onclick={() => {
               selected = row.entry.id;

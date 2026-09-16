@@ -3,6 +3,7 @@
   import { followTranscript } from "$lib/utils/transcriptScroll";
   import { onDestroy } from "svelte";
   import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import { Button } from "$lib/components/ui/button";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import AudioLinesIcon from "@lucide/svelte/icons/audio-lines";
@@ -58,33 +59,39 @@
 >
   <div class="workbench-toolbar flex-wrap gap-y-1 py-1">
     <h2 class="content-title">Transcript</h2>
-    <span
-      class="mr-auto inline-flex min-h-5 min-w-0 items-center gap-1.5 rounded-sm border px-1.5 text-xs {live ||
-      working
-        ? 'border-record-edge bg-record-wash text-record-text'
-        : recovery
-          ? 'border-warning/30 text-warning'
-          : failed
-            ? 'border-destructive/30 text-destructive'
-            : 'border-border text-muted-foreground'}"
-      role="status"
-      >{#if live}<span
+    <div class="mr-auto min-w-0" role="status">
+      <StatusBadge
+        tone={live || working
+          ? "danger"
+          : recovery
+            ? "warning"
+            : failed
+              ? "danger"
+              : "neutral"}
+        class={live || working
+          ? "border-record-edge bg-record-wash text-record-text"
+          : text
+            ? "font-semibold"
+            : ""}
+      >
+        {#if live}<span
             class="size-1.5 shrink-0 rounded-full bg-record motion-safe:animate-pulse"
             aria-hidden="true"
           ></span>{/if}{live
-        ? "Live"
-        : working
-          ? "In progress"
-          : recovery
-            ? "Ready to copy"
-            : failed
-              ? "Needs attention"
-              : text
-                ? "Ready"
-                : mode === "file"
-                  ? "No transcript yet"
-                  : "Nothing recorded yet"}</span
-    >
+          ? "Live"
+          : working
+            ? "In progress"
+            : recovery
+              ? "Ready to copy"
+              : failed
+                ? "Needs attention"
+                : text
+                  ? "Ready"
+                  : mode === "file"
+                    ? "No transcript yet"
+                    : "Nothing recorded yet"}
+      </StatusBadge>
+    </div>
     {#if text}
       <div class="ml-auto flex shrink-0 items-center gap-1">
         {#if onListen}<Button
