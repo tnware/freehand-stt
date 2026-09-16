@@ -246,7 +246,11 @@
         >
       </button>
     {/if}
-    <div id={groupID(group.id)} hidden={!isGroupOpen(group)}>
+    <div
+      id={groupID(group.id)}
+      class:catalog-children={!!group.label}
+      hidden={!isGroupOpen(group)}
+    >
       {#each group.families as family (family.id)}
         {#if family.label}
           <button
@@ -269,7 +273,11 @@
             >
           </button>
         {/if}
-        <div id={familyID(family.id)} hidden={!isFamilyOpen(family)}>
+        <div
+          id={familyID(family.id)}
+          class:catalog-children={!!family.label}
+          hidden={!isFamilyOpen(family)}
+        >
           {#each family.models as model (model.id)}
             {@const speechModel = isSpeechRuntimeModel(model)}
             {@const selected =
@@ -399,7 +407,7 @@
                 </span>
               </div>
               {#if downloading}<div
-                  class="space-y-1 px-2 py-2 text-xs text-secondary-foreground"
+                  class="space-y-1 py-2 pl-[30px] pr-2 text-xs text-secondary-foreground"
                   role="status"
                 >
                   {#if busy}
@@ -419,7 +427,7 @@
               <div
                 id={modelID(model.id)}
                 hidden={!detailsOpen}
-                class="space-y-2 border-t border-hairline bg-well py-2 pl-6 pr-2 text-xs text-muted-foreground"
+                class="space-y-2 border-t border-hairline bg-well py-2 pl-[30px] pr-2 text-xs text-muted-foreground"
               >
                 {#if detailsOpen}
                   <p>
@@ -449,6 +457,10 @@
   .model-catalog {
     container-type: inline-size;
   }
+  .catalog-children {
+    /* Nest the child chevron beneath its parent label (14px icon + 8px gap). */
+    padding-left: 22px;
+  }
   .model-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 56px 82px 104px;
@@ -461,8 +473,8 @@
     min-width: 0;
     min-height: 44px;
     align-items: center;
-    gap: 6px;
-    padding: 4px 2px;
+    gap: 8px;
+    padding: 4px 8px;
     text-align: left;
   }
   .model-identity:hover {
@@ -488,7 +500,7 @@
     .model-size {
       display: flex;
       gap: 8px;
-      padding-left: 22px;
+      padding-left: 30px;
       text-align: left;
     }
     .model-status {
@@ -518,7 +530,7 @@
     .model-status {
       grid-column: 1;
       grid-row: 3;
-      padding-left: 22px;
+      padding-left: 30px;
       text-align: left;
     }
   }
