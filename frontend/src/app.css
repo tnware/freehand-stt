@@ -410,8 +410,7 @@ html.dark[data-material="mica"] #app {
   background: rgb(18 18 18 / 78%);
 }
 
-/* Keep the registry Dialog source untouched while making its window-level
- * material calmer: Fluent smoke dims the owner without blurring its content. */
+/* Overlay smoke: dialogs and contextual sidebar backdrops dim alike. */
 [data-slot="dialog-overlay"] {
   background-color: var(--dialog-smoke);
   backdrop-filter: none;
@@ -562,6 +561,216 @@ html.dark[data-material="mica"] #app {
   .content-disclosure:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
+  }
+  /* Combobox picker surface: one geometry for every search dropdown. */
+  .picker-content {
+    z-index: 50;
+    max-height: min(20rem, var(--bits-combobox-content-available-height));
+    width: var(--bits-combobox-anchor-width);
+    min-width: 16rem;
+    max-width: calc(100vw - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    background: var(--popover);
+    padding: 4px;
+    color: var(--popover-foreground);
+    box-shadow: var(--float);
+  }
+  .picker-item {
+    display: flex;
+    cursor: default;
+    align-items: center;
+    gap: 12px;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 14px;
+    outline: none;
+  }
+  .picker-item[data-highlighted] {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+  .picker-trigger {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    display: flex;
+    width: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted-foreground);
+  }
+  /* A definition-list grid of run/response facts. dd wraps; narrow panes stack. */
+  .details-grid {
+    display: grid;
+    grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
+    column-gap: 1.25rem;
+    font-size: 13px;
+  }
+  .details-grid > dt {
+    color: var(--muted-foreground);
+  }
+  .details-grid > dd {
+    min-width: 0;
+    text-align: right;
+    font-weight: 500;
+    color: var(--foreground);
+    overflow-wrap: anywhere;
+  }
+  @container history-details (max-width: 420px) {
+    .details-grid {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0.125rem;
+    }
+    .details-grid > dd {
+      justify-content: flex-start;
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }
+  }
+  @container response-metadata (max-width: 380px) {
+    .details-grid {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0.125rem;
+    }
+    .details-grid > dd {
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }
+  }
+  /* Segmented option rows (appearance/material toggles): a framed grid that
+   * fills its row; segments stay buttons inside it. */
+  .segment-grid {
+    display: grid;
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--hairline);
+    background: transparent;
+    padding: 2px;
+  }
+  .segment-grid > button {
+    min-width: 0;
+    white-space: normal;
+    padding-inline: 4px;
+    font-size: 0.75rem;
+  }
+  /* A disclosure/summary row inside a settings card or detail section. */
+  .content-disclosure-row {
+    display: flex;
+    min-height: 38px;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--hairline);
+    text-align: left;
+  }
+  /* Text actions: a link-styled button for low-emphasis recovery/navigation. */
+  .link-action {
+    display: grid;
+    place-items: center;
+    min-height: 1.25rem;
+    width: fit-content;
+    padding: 4px 0;
+    font-weight: 500;
+    color: var(--accent-text);
+  }
+  .link-action:hover:not(:disabled) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .link-action:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* Menu rows inside title-bar menus and pickers. */
+  .menu-row {
+    display: flex;
+    cursor: default;
+    user-select: none;
+    align-items: center;
+    gap: 8px;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    outline: none;
+  }
+  .menu-row[data-highlighted] {
+    background: var(--accent-wash-strong);
+    color: var(--accent-text);
+  }
+  .menu-row[data-disabled] {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  /* Section footnote: a quiet explanatory strip under a settings group. */
+  .section-footnote {
+    border-top: 1px solid var(--hairline);
+    padding-block: 12px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--muted-foreground);
+  }
+  /* A pane's empty state: centered icon tile, title, and guidance. */
+  .pane-empty {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 0%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px 20px;
+    text-align: center;
+  }
+  .pane-empty-icon {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border-radius: 8px;
+    border: 1px solid var(--hairline);
+    background: var(--well);
+    color: var(--accent-text);
+    box-shadow: var(--lift);
+  }
+  .pane-empty-title {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--foreground);
+  }
+  /* A run of mono literals (checksum + companions) wrapping in place. */
+  .mono-run {
+    display: inline-flex;
+    min-height: 1.25rem;
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+  /* Inline literal: endpoints, IDs and checksums on a well chip. */
+  .mono-chip {
+    display: inline-block;
+    min-height: 1.25rem;
+    max-width: 100%;
+    border-radius: 4px;
+    background: var(--well);
+    padding: 2px 6px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    color: var(--foreground);
+    overflow-wrap: break-all;
   }
 }
 

@@ -41,13 +41,13 @@
   </p>
   <details class="group">
     <summary
-      class="w-fit cursor-pointer rounded-sm py-1 font-medium text-accent-text hover:underline focus-visible:outline-ring"
+      class="link-action"
       >Binary download details</summary
     >
     <div class="mt-2 divide-y divide-hairline">
       {#each artifacts as artifact (`${artifact.os}/${artifact.architecture}/${artifact.backend}/${artifact.filename}`)}
         <div class="min-w-0 space-y-1 py-3 first:pt-0 last:pb-0">
-          <p class="text-[13px] font-medium text-foreground">
+          <p class="content-value">
             {backendLabel(artifact.backend)} · {artifact.os} / {artifact.architecture}
             · {modelSize(artifact.sizeBytes)}
           </p>

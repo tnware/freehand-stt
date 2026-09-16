@@ -150,7 +150,7 @@
 {#snippet endpointValue(value?: string)}
   {#if value}
     <span
-      class="inline-block min-h-5 max-w-full rounded-sm bg-well px-1.5 py-0.5 font-mono text-xs leading-tight font-normal text-foreground break-all"
+      class="mono-chip font-normal"
     >
       {value}
     </span>
@@ -162,7 +162,7 @@
 {#snippet modelValue(value?: string)}
   {#if value}
     <span
-      class="inline-block min-h-5 max-w-full rounded-sm bg-well px-1.5 py-0.5 font-mono text-xs leading-tight font-medium text-foreground break-all"
+      class="mono-chip"
     >
       {value}
     </span>
@@ -190,7 +190,7 @@
 
 {#snippet characterValue(value?: number, suffix?: string)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
+    class="mono-run"
   >
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{(value ?? 0).toLocaleString()}</span
@@ -234,7 +234,7 @@
       tabindex="0"
       role="region"
       aria-label="Run information"
-      class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-3 [&_dd]:my-0.5 [&_dd]:min-w-0 [&_dd]:font-medium [&_dd]:text-foreground [&_dt]:my-0.5 [&_dt]:text-[12px]"
+      class="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain p-3"
     >
       <section
         class="content-summary flex min-w-0 flex-col gap-3"
@@ -249,7 +249,7 @@
           >
         </div>
         <dl
-          class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
+          class="details-grid"
         >
           {#if embedded}
             <dt class="text-muted-foreground">Source</dt>
@@ -313,7 +313,7 @@
           >
         </div>
         <dl
-          class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
+          class="details-grid"
         >
           <dt class="text-muted-foreground">Server</dt>
           <dd class="text-right">{@render endpointValue(details.server)}</dd>
@@ -387,7 +387,7 @@
             >
           </div>
           <dl
-            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
+            class="details-grid"
           >
             <dt class="text-muted-foreground">Filename</dt>
             <dd class="text-right break-all">
@@ -415,7 +415,7 @@
             >
           </div>
           <dl
-            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
+            class="details-grid"
           >
             <dt class="text-muted-foreground">Microphone</dt>
             <dd class="text-right break-words">
@@ -597,7 +597,7 @@
             </Badge>
           </div>
           <dl
-            class="details-grid grid grid-cols-[minmax(8rem,auto)_minmax(0,1fr)] gap-x-5 text-[13px]"
+            class="details-grid"
           >
             <dt class="text-muted-foreground">Server</dt>
             <dd class="text-right">
@@ -659,9 +659,6 @@
     container: history-details / inline-size;
   }
 
-  .details-grid > dd {
-    overflow-wrap: anywhere;
-  }
 
   .checkpoint-label {
     position: absolute;
@@ -674,17 +671,6 @@
   }
 
   @container history-details (max-width: 420px) {
-    .details-grid {
-      grid-template-columns: minmax(0, 1fr);
-      row-gap: 0.125rem;
-    }
-
-    .details-grid > dd {
-      justify-content: flex-start;
-      margin-bottom: 0.5rem;
-      text-align: left;
-    }
-
     .checkpoint-heading {
       display: none;
     }

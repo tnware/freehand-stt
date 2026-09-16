@@ -31,7 +31,7 @@
   class="flex flex-wrap items-center justify-between gap-3 border-t border-hairline py-3"
 >
   <div>
-    <p class="text-[13px] font-medium">Shared vocabulary</p>
+    <p class="content-value">Shared vocabulary</p>
     <p class="mt-1 text-xs text-muted-foreground">
       {enabled ? "On for supported models" : "Off for this workflow"}
     </p>

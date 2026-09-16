@@ -169,7 +169,7 @@
   <div class={compact ? "space-y-4" : "space-y-4 p-5"}>
     {#if profile.capabilities.speechLanguage}
       <div class="space-y-1.5">
-        <label for={controlID("language")} class="text-[13px] font-medium"
+        <label for={controlID("language")} class="content-value"
           >Speech language</label
         >
         <LanguagePicker
@@ -194,7 +194,7 @@
     {/if}
     {#if profile.capabilities.speechInstructions}
       <div class="space-y-1.5">
-        <label for={controlID("instructions")} class="text-[13px] font-medium"
+        <label for={controlID("instructions")} class="content-value"
           >Voice style</label
         >
         <textarea

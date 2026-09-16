@@ -493,7 +493,7 @@
     {#if instance}
       <button
         type="button"
-        class="content-disclosure flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        class="content-disclosure content-disclosure-row"
         aria-expanded={preferencesOpen}
         onclick={() => (preferencesOpen = !preferencesOpen)}
         ><span class="flex min-w-0 items-center gap-2"
@@ -573,7 +573,7 @@
     {#if entry.source}
       <button
         type="button"
-        class="content-disclosure flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        class="content-disclosure content-disclosure-row"
         aria-expanded={sourceOpen}
         onclick={() => (sourceOpen = !sourceOpen)}
         ><span class="flex min-w-0 items-center gap-2"
@@ -599,7 +599,7 @@
     {#if instance}
       <button
         type="button"
-        class="content-disclosure flex min-h-[38px] w-full items-center justify-between gap-3 border-b border-hairline text-left"
+        class="content-disclosure content-disclosure-row"
         aria-expanded={manageOpen}
         onclick={() => (manageOpen = !manageOpen)}
         ><span class="flex min-w-0 items-center gap-2"

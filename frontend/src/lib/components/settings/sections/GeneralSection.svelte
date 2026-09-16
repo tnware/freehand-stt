@@ -139,7 +139,7 @@
                 value={mode.value}
               />
               <span class="min-w-0">
-                <span class="block text-[13px] font-medium text-foreground"
+                <span class="content-value block"
                   >{mode.label}</span
                 >
                 <span class="block text-xs leading-5 text-muted-foreground">
@@ -197,7 +197,7 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-[13px] font-medium text-foreground"
+          <span class="content-value block"
             >Direct input</span
           >
           <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">
@@ -218,7 +218,7 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-[13px] font-medium text-foreground"
+          <span class="content-value block"
             >Manual copy</span
           >
           <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">

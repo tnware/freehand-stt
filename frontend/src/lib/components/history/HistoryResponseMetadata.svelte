@@ -101,7 +101,7 @@
 
 {#snippet durationValue(value: number)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
+    class="mono-run"
   >
     <span class="min-w-0 [overflow-wrap:anywhere]">{duration(value)}</span>
   </span>
@@ -109,7 +109,7 @@
 
 {#snippet modelValue(value: string)}
   <span
-    class="inline-block min-h-5 max-w-full rounded-sm bg-well px-1.5 py-0.5 font-mono text-xs leading-tight font-medium text-foreground break-all"
+    class="mono-chip"
   >
     {value}
   </span>
@@ -117,7 +117,7 @@
 
 {#snippet tokenValue(value: number, suffix?: string)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-semibold tabular-nums text-foreground"
+    class="mono-run font-semibold"
   >
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{value.toLocaleString()}</span
@@ -130,7 +130,7 @@
 
 {#snippet metricValue(value: number, suffix: string, digits = 2)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
+    class="mono-run"
   >
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{decimal(value, digits)}</span
@@ -141,7 +141,7 @@
 
 {#snippet costValue(value: number, suffix: string)}
   <span
-    class="inline-flex min-h-5 max-w-full flex-wrap items-center gap-1.5 font-mono text-xs leading-tight font-medium tabular-nums text-foreground"
+    class="mono-run"
   >
     <span class="min-w-0 [overflow-wrap:anywhere]">{reportedCost(value)}</span>
     <span class="font-normal text-muted-foreground">{suffix}</span>
@@ -150,7 +150,7 @@
 
 {#snippet identifierValue(value: string)}
   <span
-    class="inline-block min-h-5 max-w-full rounded-sm bg-well px-1.5 py-0.5 font-mono text-xs leading-tight font-normal text-foreground break-all"
+    class="mono-chip font-normal"
   >
     {value}
   </span>
@@ -187,7 +187,7 @@
         {/if}
       </div>
       <dl
-        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-xs"
+        class="details-grid"
       >
         {#if usage.type}
           <dt class="text-muted-foreground">Basis</dt>
@@ -283,7 +283,7 @@
         details
       </h4>
       <dl
-        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-xs"
+        class="details-grid"
       >
         {#if requests > 1}
           <dt class="text-muted-foreground">Requests</dt>
@@ -357,7 +357,7 @@
         {/if}
       </div>
       <dl
-        class="response-grid grid grid-cols-[minmax(7rem,auto)_minmax(0,1fr)] gap-x-4 text-xs"
+        class="details-grid"
       >
         {#if performance.promptTokens != null}
           <dt class="text-muted-foreground">Prompt evaluated</dt>
@@ -430,25 +430,5 @@
 <style>
   .response-metadata {
     container: response-metadata / inline-size;
-  }
-
-  .response-grid > dd {
-    min-width: 0;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--foreground);
-    overflow-wrap: anywhere;
-  }
-
-  @container response-metadata (max-width: 380px) {
-    .response-grid {
-      grid-template-columns: minmax(0, 1fr);
-      row-gap: 0.125rem;
-    }
-
-    .response-grid > dd {
-      margin-bottom: 0.5rem;
-      text-align: left;
-    }
   }
 </style>

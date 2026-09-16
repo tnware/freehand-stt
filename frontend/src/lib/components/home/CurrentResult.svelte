@@ -170,20 +170,15 @@
             />
           </div>
         {:else if !message}
-          <div
-            class="flex flex-1 flex-col items-center justify-center gap-3 px-5 py-8 text-center"
-          >
-            <span
-              class="grid size-12 place-items-center rounded-lg border border-hairline bg-well text-muted-foreground shadow-lift"
-              aria-hidden="true"
-            >
+          <div class="pane-empty">
+            <span class="pane-empty-icon" aria-hidden="true">
               {#if working}<LoaderCircleIcon
-                  class="size-6 animate-spin text-accent-text motion-reduce:animate-none"
+                  class="size-6 animate-spin motion-reduce:animate-none"
                 />
               {:else if mode === "file"}<FileAudioIcon class="size-6" />
-              {:else}<AudioLinesIcon class="size-6 text-accent-text" />{/if}
+              {:else}<AudioLinesIcon class="size-6" />{/if}
             </span>
-            <p class="text-[17px] font-semibold text-foreground">
+            <p class="pane-empty-title">
               {failed
                 ? "No transcript to show"
                 : working

@@ -46,7 +46,7 @@
     </p>{/if}
   <details>
     <summary
-      class="w-fit cursor-pointer rounded-sm py-1 font-medium text-accent-text hover:underline focus-visible:outline-ring"
+      class="link-action"
       >Model download details</summary
     >
     {#if description}<p class="mt-3 leading-relaxed">{description}</p>{/if}

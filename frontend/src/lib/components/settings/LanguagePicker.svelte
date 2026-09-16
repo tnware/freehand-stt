@@ -139,7 +139,7 @@
           {/snippet}
         </Combobox.Input>
         <Combobox.Trigger
-          class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
+          class="picker-trigger"
           aria-label="Show languages"
           ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
         >
@@ -147,7 +147,7 @@
       <Combobox.Portal>
         <Combobox.Content
           data-slot="combobox-content"
-          class="z-50 max-h-[min(18rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-56 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-float"
+          class="picker-content"
           sideOffset={4}
           collisionPadding={12}
         >
@@ -157,7 +157,7 @@
               <Combobox.Item
                 value={choice.value}
                 label={choice.label}
-                class="flex cursor-default items-center justify-between gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                class="picker-item justify-between"
               >
                 <span class="min-w-0 flex-1 break-words">{choice.label}</span>
                 {#if selected === choice.value}<CheckIcon

@@ -155,7 +155,7 @@
     </Combobox.Input>
     <Combobox.Trigger
       aria-label="Show connections"
-      class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
+      class="picker-trigger"
     >
       <ChevronsUpDownIcon class="size-4" />
     </Combobox.Trigger>
@@ -164,7 +164,7 @@
     ><Combobox.Content
       data-slot="combobox-content"
       sideOffset={4}
-      class="z-50 flex max-h-[min(24rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-float"
+      class="picker-content"
     >
       <div class="min-h-0 overflow-y-auto overscroll-contain p-1">
         {#each matches as c (c.id)}

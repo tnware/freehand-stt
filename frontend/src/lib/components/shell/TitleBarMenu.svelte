@@ -67,14 +67,14 @@
                   checked={item.checked}
                   disabled={item.disabled}
                   onSelect={() => void choose(item)}
-                  class="flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none data-[highlighted]:bg-accent-wash data-[highlighted]:text-accent-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                  class="menu-row"
                   >{@render label()}</Menubar.CheckboxItem
                 >
               {:else}
                 <Menubar.Item
                   disabled={item.disabled}
                   onSelect={() => void choose(item)}
-                  class="flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none data-[highlighted]:bg-accent-wash data-[highlighted]:text-accent-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                  class="menu-row"
                   >{@render label()}</Menubar.Item
                 >
               {/if}

@@ -32,7 +32,7 @@
 </script>
 
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
-  <label for={id} class="text-[13px] font-medium">Speaking speed</label>
+  <label for={id} class="content-value">Speaking speed</label>
   <div class="flex items-center gap-3">
     <Slider.Root
       {id}

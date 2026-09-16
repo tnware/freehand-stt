@@ -112,7 +112,7 @@
 
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <label for={id} class="text-[13px] font-medium">Voice</label>
+    <label for={id} class="content-value">Voice</label>
     <div class="flex flex-wrap items-center gap-2">
       {#if supported}<Button
           variant="ghost"
@@ -187,7 +187,7 @@
       </Combobox.Input>
       <Combobox.Trigger
         aria-label="Show voices"
-        class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
+        class="picker-trigger"
         ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
       >
     </div>
@@ -196,13 +196,13 @@
         data-slot="combobox-content"
         sideOffset={4}
         collisionPadding={12}
-        class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-float"
+        class="picker-content"
       >
         {#key query}{#each choices as choice (choice.value)}
             <Combobox.Item
               value={choice.value}
               label={choice.label}
-              class="flex cursor-default items-center gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+              class="picker-item"
             >
               <span class="min-w-0 flex-1 break-all"
                 ><span class="font-mono"

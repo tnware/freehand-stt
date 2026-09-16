@@ -231,14 +231,11 @@
           {/key}
         </section>
       {:else}
-        <div
-          class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-5 text-center"
-        >
-          <HistoryIcon
-            class="mb-1 size-6 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <p class="content-title">
+        <div class="pane-empty">
+          <span class="pane-empty-icon" aria-hidden="true"
+            ><HistoryIcon class="size-6" /></span
+          >
+          <p class="pane-empty-title">
             {!enabled
               ? "History is turned off."
               : filtered && retained.length

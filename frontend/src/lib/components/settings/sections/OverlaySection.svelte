@@ -134,7 +134,7 @@
       description="Choose how much status detail to show."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-4 rounded-md border border-hairline bg-transparent p-0.5 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
+        class="segment-grid grid-cols-4"
         type="single"
         spacing={1}
         size="sm"
@@ -163,7 +163,7 @@
       description="Follow the app’s monitor and stay inside its usable area."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-3 rounded-md border border-hairline bg-transparent p-0.5 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
+        class="segment-grid grid-cols-3"
         type="single"
         spacing={1}
         size="sm"
@@ -210,7 +210,7 @@
       description="Choose a glass, solid or minimal background."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-3 rounded-md border border-hairline bg-transparent p-0.5 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
+        class="segment-grid grid-cols-3"
         type="single"
         spacing={1}
         size="sm"
@@ -236,7 +236,7 @@
       description="How microphone activity looks while recording."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-4 rounded-md border border-hairline bg-transparent p-0.5 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
+        class="segment-grid grid-cols-4"
         type="single"
         spacing={1}
         size="sm"
@@ -265,7 +265,7 @@
       description="Show recording only, all active work, or include results."
     >
       <ToggleGroup.Root
-        class="grid w-full grid-cols-3 rounded-md border border-hairline bg-transparent p-0.5 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
+        class="segment-grid grid-cols-3"
         type="single"
         spacing={1}
         size="sm"

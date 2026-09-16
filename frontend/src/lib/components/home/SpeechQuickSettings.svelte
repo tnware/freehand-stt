@@ -102,7 +102,7 @@
 
 {#snippet controls()}
   <div class="space-y-1.5">
-    <label for={connectionID} class="text-[13px] font-medium">Connection</label>
+    <label for={connectionID} class="content-value">Connection</label>
     <ConnectionSelect
       id={connectionID}
       catalog={current.savedConnections}
