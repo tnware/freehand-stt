@@ -1,150 +1,192 @@
-import { test, expect } from "@playwright/test";
-// This surface has native fixed dimensions, including in the full browser suite.
+import { test, expect } from "./fixtures";
+
 test.use({ viewport: { width: 360, height: 500 } });
-test("recording guidance promises dismissal, not external focus restoration", async ({
+const calls = (page: import("@playwright/test").Page) =>
+  page.evaluate(() => (window as any).trayCalls);
+
+test("quick view guides destination-focused recording and never offers capture commands", async ({
   page,
 }) => {
   await page.goto("/tests/browser/app/?view=tray");
+  await expect(page.getByRole("status")).toHaveText("Ready to dictate");
   await expect(
-    page.getByText("Hides this panel before recording.", { exact: true }),
+    page.getByText("Focus a text field in your app, then use your shortcut."),
   ).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: /^Toggle recording:/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^(Start|Stop) recording$/ }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("combobox")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Close quick view", exact: true })
+    .click();
+  expect(await calls(page)).toEqual(["hide"]);
 });
 
-test("compact task surface dismisses before start and stop", async ({
+for (const state of ["recording", "working"]) {
+  test(`${state} exposes safe cancellation without stopping for delivery`, async ({
+    page,
+  }) => {
+    await page.goto(`/tests/browser/app/?view=tray&${state}`);
+    await expect(
+      page.getByRole("button", { name: /^(Start|Stop) recording$/ }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Copy", exact: true }),
+    ).toBeDisabled();
+    await page
+      .getByRole("button", {
+        name: state === "recording" ? "Cancel recording" : "Cancel dictation",
+        exact: true,
+      })
+      .click();
+    expect(await calls(page)).toEqual(["cancel"]);
+    await expect(page.getByRole("status")).toHaveText("Ready to dictate");
+  });
+}
+
+test("copy uses the retained result and navigation stays task scoped", async ({
   page,
 }) => {
-  await page.goto("/tests/browser/app/?view=tray");
-  await page
-    .getByRole("button", { name: "Start recording", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Stop recording", exact: true }),
-  ).toBeEnabled();
-  await page
-    .getByRole("button", { name: "Stop recording", exact: true })
-    .click();
-  await expect
-    .poll(() => page.evaluate(() => (window as any).trayCalls))
-    .toEqual(["hide", "start", "hide", "stop"]);
-  await expect(
-    page.getByRole("button", { name: "Start recording", exact: true }),
-  ).toBeDisabled();
-});
-
-test("bounded result, native copy, and task-scoped navigation", async ({
-  page,
-}, testInfo) => {
   await page.goto("/tests/browser/app/?view=tray&result");
   await page.getByRole("button", { name: "Copy", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Copied", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("button", { name: "Open Freehand" }).click();
-  await expect
-    .poll(() => page.evaluate(() => (window as any).trayCalls))
-    .toEqual(["copy", "settings:voice-transcription", "main"]);
-  expect(
-    await page.evaluate(() => ({
-      width: document.documentElement.scrollWidth,
-      height: document.documentElement.scrollHeight,
-    })),
-  ).toEqual({ width: 360, height: 500 });
-  expect(
-    (await page.locator(".tray header").boundingBox())!.y,
-  ).toBeGreaterThanOrEqual(12);
-  await page.screenshot({ path: testInfo.outputPath("tray-popover.png") });
-});
-test("loading and clipboard errors stay explicit", async ({ page }) => {
-  await page.goto("/tests/browser/app/?view=tray&loading");
-  await expect(
-    page.getByRole("button", { name: "Start recording", exact: true }),
-  ).toBeDisabled();
-  await expect(page.getByRole("status")).toContainText("Loading");
-  await page.evaluate(() => (window as any).trayFixture.release());
-  await expect(
-    page.getByRole("button", { name: "Start recording", exact: true }),
-  ).toBeEnabled();
-  await page.goto("/tests/browser/app/?view=tray&result&copy-error");
-  await page.getByRole("button", { name: "Copy", exact: true }).click();
-  await expect(page.getByRole("alert")).toHaveText("Clipboard unavailable");
-  await expect(
-    page.getByRole("button", { name: "Copied", exact: true }),
-  ).toHaveCount(0);
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  expect(
-    (await page.locator(".tray header").boundingBox())!.y,
-  ).toBeGreaterThanOrEqual(12);
-});
-test("failed hide prevents capture", async ({ page }) => {
-  await page.goto("/tests/browser/app/?view=tray&hide-error");
   await page
-    .getByRole("button", { name: "Start recording", exact: true })
+    .getByRole("button", { name: "Voice settings", exact: true })
     .click();
-  await expect(page.getByRole("alert")).toHaveText("Cannot dismiss panel");
-  expect(await page.evaluate(() => (window as any).trayCalls)).toEqual([
-    "hide",
+  await page
+    .getByRole("button", { name: "Open Freehand", exact: true })
+    .click();
+  expect(await calls(page)).toEqual([
+    "copy",
+    "settings:voice-transcription",
+    "main",
   ]);
 });
 
-test("missing microphone keeps recording unavailable without dismissing the panel", async ({
+test("copy recovery and clipboard failure remain explicit", async ({
   page,
 }) => {
-  await page.goto("/tests/browser/app/?view=tray&no-microphone");
-  const controls = page.getByRole("region", { name: "Recording controls" });
-  await expect(controls.getByRole("status")).toHaveText("Setup needed");
+  await page.goto("/tests/browser/app/?view=tray&recovery&copy-error");
+  await expect(page.getByRole("status")).toHaveText("Transcript ready to copy");
+  await page.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Clipboard unavailable");
   await expect(
-    controls.getByRole("button", { name: "Start recording", exact: true }),
-  ).toBeDisabled();
-  await expect(
-    page.getByText("Finish Voice setup in Settings to record.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  expect(await page.evaluate(() => (window as any).trayCalls)).toEqual([]);
-});
-test("realtime-capable backend retains its model picker in completed mode", async ({
-  page,
-}) => {
-  await page.goto("/tests/browser/app/?view=tray");
-  await expect(page.locator("#tray-model")).toBeVisible();
-  await page.evaluate(() => {
-    const editor = (window as any).trayFixture.session.editor;
-    const settings = JSON.parse(JSON.stringify(editor.applied));
-    settings.compatibilityProfiles.transcription = [
-      {
-        id: settings.voiceTranscription.compatibilityProfile,
-        capabilities: { serverLoadedModel: true, realtime: true },
-      },
-    ];
-    settings.voiceTranscription.realtime = false;
-    editor.applySettingsSnapshot(settings);
-  });
-  await expect(page.locator("#tray-model")).toBeVisible();
-  await page.locator("#tray-model").fill("local/completed");
-  await expect(
-    page.getByRole("option", { name: /local\/completed/ }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Copied", exact: true }),
+  ).toHaveCount(0);
+  expect(await calls(page)).toEqual(["copy-pending"]);
 });
 
-test("model choice commits without creating a settings draft", async ({
+test("loading, missing microphone and missing shortcut have reachable next steps", async ({
   page,
 }) => {
-  await page.goto("/tests/browser/app/?view=tray");
-  await page.locator("#tray-model").fill("local/alternate");
-  await page.getByRole("option", { name: /local\/alternate/ }).click();
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          (window as any).trayFixture.session.editor.applied.voiceTranscription
-            .model,
-      ),
-    )
-    .toBe("local/alternate");
-  expect(
-    await page.evaluate(
-      () => (window as any).trayFixture.session.editor.runtimeDirty,
-    ),
-  ).toBe(false);
+  await page.goto("/tests/browser/app/?view=tray&loading");
+  await expect(page.getByRole("status")).toHaveText("Loading Freehand…");
+  await expect(
+    page.getByRole("button", { name: "Copy", exact: true }),
+  ).toBeDisabled();
+  await page.evaluate(() => (window as any).trayFixture.release());
+  await expect(page.getByRole("status")).toHaveText("Ready to dictate");
+  await page.goto("/tests/browser/app/?view=tray&no-microphone");
+  await expect(page.getByRole("status")).toHaveText("Voice setup needed");
+  await page
+    .getByRole("button", { name: "Open Voice settings", exact: true })
+    .click();
+  expect(await calls(page)).toEqual(["settings:voice-transcription"]);
+  await page.goto("/tests/browser/app/?view=tray&no-shortcut");
+  await expect(page.getByRole("status")).toHaveText("Set a recording shortcut");
+  await page
+    .getByRole("button", { name: "Configure shortcut", exact: true })
+    .click();
+  expect(await calls(page)).toEqual(["settings:shortcuts"]);
+});
+
+test("local runtime status follows its owner without changing runtime or model settings", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?view=tray&managed");
+  const config = page.getByRole("region", {
+    name: "Voice configuration",
+    exact: true,
+  });
+  await expect(config).toContainText("Running");
+  await page.evaluate(() =>
+    window.testRuntime.change("nemo-default", { state: "stopped" }),
+  );
+  await expect(config).toContainText("Stopped");
+  await expect(page.getByRole("status")).toHaveText("Voice setup needed");
+  await config
+    .getByRole("button", { name: "Manage runtime", exact: true })
+    .click();
+  expect(await calls(page)).toEqual(["settings:local-runtime"]);
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+});
+
+for (const theme of ["dark", "light"] as const) {
+  test(`quick view stays readable and keeps navigation reachable in ${theme}`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(60_000);
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    for (const state of [
+      "idle",
+      "result",
+      "recording",
+      "working",
+      "error",
+      "recovery",
+      "managed",
+      "no-shortcut",
+    ]) {
+      await page.goto(`/tests/browser/app/?view=tray&${state}&theme=${theme}`);
+      await expect(page.getByRole("main")).toHaveAttribute(
+        "aria-busy",
+        "false",
+      );
+      const footer = page.getByRole("button", {
+        name: "Open Freehand",
+        exact: true,
+      });
+      await expect(footer).toBeInViewport();
+      await expect(
+        page.getByRole("button", { name: "Close quick view", exact: true }),
+      ).toBeInViewport();
+      expect(
+        await page.evaluate(() => ({
+          width: document.documentElement.scrollWidth,
+          height: document.documentElement.scrollHeight,
+        })),
+      ).toEqual({ width: 360, height: 500 });
+      if (state === "result") {
+        const result = page.getByRole("region", {
+          name: "Latest transcript",
+          exact: true,
+        });
+        await result.focus();
+        await result.press("End");
+        await expect
+          .poll(() => result.evaluate((el) => el.scrollTop))
+          .toBeGreaterThan(0);
+      }
+      await page.screenshot({
+        path: info.outputPath(`tray-${state}-${theme}.png`),
+      });
+      expect(await calls(page)).toEqual([]);
+    }
+  });
+}
+
+test("failed dismissal reports an error without touching capture", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?view=tray&hide-error");
+  await page
+    .getByRole("button", { name: "Close quick view", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toHaveText("Cannot dismiss panel");
+  expect(await calls(page)).toEqual(["hide"]);
 });

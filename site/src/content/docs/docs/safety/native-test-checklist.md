@@ -215,19 +215,16 @@ and teardown on both platforms.
   monitors. Escape, focus loss, Alt+F4, and Main/Settings navigation hide the
   panel without cancelling work. Right-click must dismiss it before opening the
   native menu, including authoritative Quit.
-- Use the connection and model pickers by mouse and keyboard. Verify committed
-  changes, metadata-only discovery, failed-save feedback, and disabled controls
-  while work or a conflicting Settings draft is active.
-- Start and stop from the panel with Notepad and a browser field as destinations,
-  then repeat with other Freehand windows visible and with the tray overflow
-  open. Observe the actual foreground window and focused control after native
-  dismissal and before recording begins. No automatic activation or cached
-  target may substitute for the normal recording-start capture. Change focus
-  during processing and verify explicit-copy recovery rather than insertion
-  into the new target. Check latest-result Copy and failed clipboard feedback.
-- Browser fixtures verify command ordering and presentation only. Run these
-  native focus checks separately; neither a successful build nor a mock hide
-  proves which application Windows focuses after the panel closes.
+- Confirm quick view displays Voice status, the configured shortcut, connection,
+  local runtime status when selected, and the latest dictation. Copy and safe
+  cancellation remain available; recording start/stop and configuration pickers
+  are absent. Voice settings and runtime links open their owners in the workspace.
+- Dismiss quick view, focus Notepad or a browser field, then start and finish with
+  the global shortcut. Opening the panel must never capture a new target or start
+  recording. Change focus during processing and verify explicit-copy recovery.
+  Check latest-result Copy and failed clipboard feedback.
+- Browser fixtures verify presentation and command routing only. Run native focus,
+  tray positioning, dismissal, and clipboard checks separately on each platform.
 
 ## SQLite settings acceptance
 

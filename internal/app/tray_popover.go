@@ -46,7 +46,8 @@ func trayPopoverWindowOptionsForPlatform(osName string, appearance config.Appear
 	}
 	if osName == "windows" {
 		// This is a keyboard-interactive popup, not the passive status overlay.
-		// Keep native activation; recording awaits Hide before target capture.
+		// Keep native activation for status, explicit copy, and navigation.
+		// Recording starts only from a destination-focused shortcut or main.
 		o.Windows.HiddenOnTaskbar = true
 	}
 	return o

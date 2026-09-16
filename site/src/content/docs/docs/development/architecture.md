@@ -711,14 +711,11 @@ keyboard-interactive Wails window on Windows. The Windows panel has no taskbar
 entry and uses Wails' native placement with an 8-DIP offset from the work-area
 edges. Right-click retains the native menu; Windows explicitly hides the panel
 before opening it, while macOS uses AppKit's native pre-click tracking.
-Its separate renderer Session projects existing dictation/settings state and
-uses the same commands and quick-save authority, not a second recording engine.
-Dismissal does not cancel Go-owned work. Start/stop dismiss the panel first;
-normal target capture and insertion checks remain unchanged, with no cached
-external-target override or forced external-application activation. Windows
-captures whichever target is actually focused after synchronous window Hide;
-there is no promise of restoring the pre-popover application or control. Main and
-Settings navigation also hides the panel. The runtime controller does not synthesize or repurpose
+Its separate renderer Session presents existing dictation/settings state, with
+explicit copy, cancellation, and navigation. It exposes no capture or quick-save
+controls. Dismissal does not cancel Go-owned work or restore a destination;
+recording starts from a destination-focused shortcut or the main workspace.
+Main and Settings navigation hides the panel. The runtime controller does not synthesize or repurpose
 brand imagery. It receives generated, purpose-drawn light and dark Windows ICO
 families at composition time and lets Wails select the closest frame and react
 to system-theme changes. The canonical vector sources and consumer matrix are

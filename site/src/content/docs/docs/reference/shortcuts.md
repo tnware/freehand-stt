@@ -13,6 +13,19 @@ Voice setup and use the on-screen recording controls without a global shortcut.
 For insertion into another application, a working shortcut lets you start while
 that destination is focused; otherwise review the result and copy it explicitly.
 
+## Tray quick view
+
+Click the tray or menu-bar icon to see dictation status, your recording shortcut,
+the selected Voice connection, and your latest transcript. Use **Copy** for an
+explicit clipboard action. **Voice settings** opens configuration in the main
+window; **Open Freehand** opens the workspace.
+
+To record into another app, close quick view, focus the destination text field,
+and use your recording shortcut. Quick view does not start or stop recordings.
+During recording or processing, **Cancel recording** or **Cancel dictation**
+discards the active operation. Closing quick view leaves work running. Right-click
+the tray icon for the native menu, including **Quit Freehand**.
+
 ## Windows
 
 | Action | Required | Accepted forms | Default |
