@@ -9,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
 type runtimeAdapter interface {
@@ -17,31 +19,31 @@ type runtimeAdapter interface {
 	Pull(context.Context, string, func(AcquisitionProgress)) error
 	RemoveModel(context.Context, string) error
 	Remove(context.Context) error
-	Start(context.Context, string) (*ownedProcess, Endpoint, error)
+	Start(context.Context, string) (processHandle, Endpoint, error)
 }
 type worker struct {
-	mu                   sync.Mutex
-	publicationMu        sync.Mutex
-	configuration        workerConfig
-	changed              func(workerSnapshot)
-	logger               *slog.Logger
-	checkIdle            func() error
-	status               Status
-	endpoint             Endpoint
-	busy, closed, saving bool
-	generation           uint64
-	provider             provider
-	adapter              runtimeAdapter
-	ctx                  context.Context
-	cancel               context.CancelFunc
-	operationCancel      context.CancelFunc
-	processCancel        context.CancelFunc
-	output               processOutput
-	outputLaunch         uint64
-	startingProcess      *ownedProcess
-	process              *ownedProcess
-	providerProcess      *providerProcess
-	wg                   sync.WaitGroup
+	mu              sync.Mutex
+	publicationMu   sync.Mutex
+	configuration   workerConfig
+	changed         func(workerSnapshot)
+	logger          *slog.Logger
+	checkIdle       func() error
+	status          Status
+	endpoint        Endpoint
+	busy, closed    bool
+	generation      uint64
+	provider        provider
+	adapter         runtimeAdapter
+	ctx             context.Context
+	cancel          context.CancelFunc
+	operationCancel context.CancelFunc
+	processCancel   context.CancelFunc
+	output          processOutput
+	outputLaunch    uint64
+	startingProcess processHandle
+	process         processHandle
+	providerProcess *providerProcess
+	wg              sync.WaitGroup
 }
 
 var errBusy = errors.New("Wait for the current managed speech operation to finish.")
@@ -113,7 +115,7 @@ func (s *worker) resolveLocked() (Endpoint, error) {
 	// Never lease its endpoint just because the status event has not caught up.
 	if s.process != nil {
 		select {
-		case <-s.process.done:
+		case <-s.process.Done():
 			return Endpoint{}, errNotReady
 		default:
 		}
@@ -139,7 +141,7 @@ func (s *worker) idle() error {
 	return nil
 }
 
-func (s *worker) configureLocked(p workerConfig) *ownedProcess {
+func (s *worker) configureLocked(p workerConfig) processHandle {
 	old := s.configuration
 	s.configuration = p
 	if old == p {
@@ -211,6 +213,8 @@ func (s *worker) runOperation(phase, state string, guard bool, model string, wor
 	if state != "" {
 		s.status.State = state
 	}
+	// Reserve shutdown ownership while admission is still locked; launching
+	// with WaitGroup.Go after unlocking would race ServiceShutdown.
 	s.wg.Add(1)
 	s.mu.Unlock()
 	go func() {
@@ -328,7 +332,7 @@ func (s *worker) InstallBackend(backend string) error {
 	}
 	if owner.process != nil {
 		select {
-		case <-owner.process.done:
+		case <-owner.process.Done():
 			owner.process = nil
 		default:
 			owner.mu.Unlock()
@@ -395,7 +399,7 @@ func (s *worker) DownloadModel(id string) error {
 				return nil
 			}
 		}
-		return errIntegrity
+		return artifact.ErrIntegrity
 	})
 }
 func (s *worker) RemoveModel(id string) error {
@@ -503,15 +507,17 @@ func (s *worker) startProcess(ctx context.Context) error {
 	s.endpoint = endpoint
 	s.processCancel = s.operationCancel
 	s.status.State = "running"
+	// Reserve shutdown ownership while admission is still locked; launching
+	// with WaitGroup.Go after unlocking would race ServiceShutdown.
 	s.wg.Add(1)
 	s.mu.Unlock()
 	go func() {
 		defer s.wg.Done()
 		select {
-		case <-proc.done:
+		case <-proc.Done():
 		case <-s.ctx.Done():
-			proc.kill()
-			<-proc.done
+			proc.Kill()
+			<-proc.Done()
 		}
 		s.mu.Lock()
 		if s.process != proc {
@@ -536,13 +542,9 @@ func (s *worker) startProcess(ctx context.Context) error {
 
 // Called inside an admitted start operation, whose WaitGroup reservation is
 // still held. Rejected launches remain owned until the OS confirms their exit.
-func (s *worker) discardProcess(proc *ownedProcess) {
-	s.wg.Add(1)
-	proc.kill()
-	go func() {
-		defer s.wg.Done()
-		<-proc.done
-	}()
+func (s *worker) discardProcess(proc processHandle) {
+	proc.Kill()
+	s.wg.Go(func() { <-proc.Done() })
 }
 func (s *worker) Start() error { return s.run("start", "starting", true, s.startProcess) }
 func (s *worker) stopProcess(ctx context.Context) error {
@@ -556,9 +558,9 @@ func (s *worker) stopProcess(ctx context.Context) error {
 	}
 	s.mu.Unlock()
 	if p != nil {
-		p.kill()
+		p.Kill()
 		select {
-		case <-p.done:
+		case <-p.Done():
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(4 * time.Second):
@@ -591,9 +593,6 @@ func (s *worker) Cancel() error {
 	}
 	if s.closed {
 		return errNotReady
-	}
-	if s.saving {
-		return errBusy
 	}
 	if s.operationCancel != nil {
 		s.operationCancel()
@@ -663,10 +662,10 @@ func (s *worker) closeNow() {
 	s.status.State = "stopped"
 	s.mu.Unlock()
 	if starting != nil {
-		starting.kill()
+		starting.Kill()
 	}
 	if p != nil {
-		p.kill()
+		p.Kill()
 	}
 }
 

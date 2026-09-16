@@ -17,7 +17,7 @@ type outputStartupAdapter struct {
 	finish   chan struct{}
 }
 
-func (a *outputStartupAdapter) Start(ctx context.Context, model string) (*ownedProcess, Endpoint, error) {
+func (a *outputStartupAdapter) Start(ctx context.Context, model string) (processHandle, Endpoint, error) {
 	reportStartupProgress(ctx, "launching")
 	p, err := launchOwned(runtimeProcessContext(ctx), os.Args[0], []string{"-test.run=^TestProcessOutputChild$"}, "", append(os.Environ(), "FREEHAND_OUTPUT_HELPER=1"))
 	if err != nil {
@@ -29,8 +29,8 @@ func (a *outputStartupAdapter) Start(ctx context.Context, model string) (*ownedP
 	case <-a.finish:
 	case <-ctx.Done():
 	}
-	p.kill()
-	_ = p.wait(ctx)
+	p.Kill()
+	_ = p.Wait(ctx)
 	return p, Endpoint{}, errors.New("fixture readiness failure")
 }
 func TestProcessOutputChild(t *testing.T) {
@@ -46,7 +46,7 @@ func TestProcessOutputDuringStartupAndFailure(t *testing.T) {
 	if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
 		t.Skip("owned runtime processes are supported only on Windows and macOS")
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	a := &outputStartupAdapter{launched: make(chan struct{}), finish: make(chan struct{})}
 	w := &worker{ctx: ctx, cancel: cancel, adapter: a, providerProcess: &providerProcess{}, configuration: workerConfig{Enabled: true, Model: "fixture"}, status: Status{Supported: true, Models: []Model{{ID: "fixture", Installed: true}}}}
@@ -113,15 +113,10 @@ func TestProcessOutputDuringStartupAndFailure(t *testing.T) {
 	}
 }
 
-func TestProcessOutputPreservesParserPrefix(t *testing.T) {
+func TestProcessOutputKeepsTailBeyondDiagnosticPrefix(t *testing.T) {
 	w := &worker{}
-	prefix := &boundedOutput{}
-	writer := observedOutput{prefix: prefix, observer: &startupObserver{output: func(stream string, p []byte) { w.appendProcessOutput(0, stream, p) }}, stream: "stdout"}
 	input := "\x1b[31m" + strings.Repeat("a", outputLimit) + "tail\x1b[0m"
-	n, err := writer.Write([]byte(input))
-	if n != len(input) || err != nil || !prefix.overflow || string(prefix.bytes()) != input[:outputLimit] {
-		t.Fatal("parser prefix/overflow changed")
-	}
+	w.appendProcessOutput(0, "stdout", []byte(input))
 	chunks := w.output.chunks
 	if !strings.HasSuffix(chunks[len(chunks)-1].Text, "tail\x1b[0m") {
 		t.Fatal("viewer not rolling")

@@ -59,6 +59,13 @@ file clients while retaining their separate response limits and text admission.
 
 ## Managed desktop runtimes
 
+Run `go test ./internal/managedruntime/...` to include the private artifact and
+process packages. Archive/path/rollback fixtures live with artifact installation;
+Job Object, lifetime-pipe, and listener-identity fixtures live with process
+ownership. Inventory, provider, worker, publication, and output-access fixtures
+exercise the managed-runtime owner. Preserve that coverage when changing package
+boundaries, including cancellation and late-completion scenarios.
+
 Keep managed-runtime tests isolated from the user's application-data directory.
 Use small synthetic archives, fake HTTP listeners, and disposable child
 executables for deterministic checks; these fixtures are not official NeMo
@@ -357,7 +364,7 @@ keys from starting recording. On macOS repeat optional-toggle persistence and
 capture recovery in a packaged app with the required permissions. Deterministic
 fixtures do not establish OS registration ownership or cross-platform acceptance.
 
-Run `go test -race ./internal/shortcut ./internal/settings ./internal/input ./internal/platform ./internal/app`
+Run `go test -race ./internal/shortcut ./internal/settings ./internal/input ./internal/platform/... ./internal/app`
 and `npx playwright test --config shortcut-recovery.config.ts` from `frontend`
 (for the browser command only). The browser fixture uses the real generated retry
 binding and Wails request envelope with a mocked transport, not native keyboard or
@@ -408,7 +415,7 @@ Record commands, actual results, and unverified cases. Live inference
 uses only an explicitly selected endpoint/model; do not qualify a model inventory.
 Microphone or keyboard denial must leave file transcription and TTS independently usable.
 
-Insertion fixtures in `internal/platform`, `internal/insertion` and
+Insertion fixtures in `internal/platform/input`, `internal/insertion` and
 `internal/dictation` cover native predicate categories, app/window validation,
 first-failure preservation, raw-error redaction and capture-rejection lifetime.
 `frontend/tests/browser/insertion-diagnostics.spec.ts` uses synthetic service
@@ -765,7 +772,7 @@ focus-safe delivery; retain the separate native acceptance below.
 ## Shutdown and cancellation acceptance
 
 Run `go test -race ./internal/dictation ./internal/filetranscription ./internal/tts
-./internal/platform ./internal/activity` on Windows. Controlled capture, player,
+./internal/platform/... ./internal/activity` on Windows. Controlled capture, player,
 transport, and export boundaries exercise blocked teardown, cancellation before
 lock acquisition, late completion, repeated shutdown, and independent export
 ownership. Tests hold and release operations explicitly; deadline cases check the
@@ -777,7 +784,7 @@ CI uses fake devices and services and never performs inference.
 
 For opt-in hardware acceptance on a Windows desktop, set
 `$env:FREEHAND_NATIVE_AUDIO_ACCEPTANCE = "1"`, then run
-`go test ./internal/platform -run '^TestNativeAudioShutdown$' -count=1 -v -timeout 20s`.
+`go test ./internal/platform/audio -run '^TestNativeAudioShutdown$' -count=1 -v -timeout 20s`.
 Remove the environment variable afterward. This exercises the default microphone
 for 100 ms in memory and discards it, then closes real WASAPI output while playing
 silence, while paused, and after an explicit rewind/play. It does not save audio or contact a server. A pass proves
@@ -1193,7 +1200,7 @@ Open Transcription details from Recent. Verify one independently resizable nativ
 
 ## Realtime and Connection Manager acceptance
 
-Run `go test ./internal/realtime ./internal/dictation ./internal/settings ./internal/storage ./internal/overlay ./internal/platform ./internal/windowing`
+Run `go test ./internal/realtime ./internal/dictation ./internal/settings ./internal/storage ./internal/overlay ./internal/platform/... ./internal/windowing`
 and the frontend checks/tests. Fixtures cover exact session configuration,
 binary PCM frames, authoritative final replacement, missing final failure,
 cancellation, stale preview fencing, independent credentials, transactional
@@ -1352,7 +1359,7 @@ Go seek tests cover playing, paused, and completed intent, stale generations,
 out-of-range values, native errors, resume failure, and shutdown during a blocked
 seek. Windows adapter tests check whole-frame alignment and unchanged full WAV export.
 For an opt-in real Windows output check, set `FREEHAND_NATIVE_PLAYBACK_ACCEPTANCE=1`
-and run `go test ./internal/platform -run '^TestNativePlaybackSeek$' -count=1 -v`.
+and run `go test ./internal/platform/audio -run '^TestNativePlaybackSeek$' -count=1 -v`.
 This plays synthetic silence only and checks seek, paused position, resumed clock,
 buffer drain, and resource closure. It does not exercise a microphone or inference
 server and does not establish audible speech quality. For interactive acceptance,

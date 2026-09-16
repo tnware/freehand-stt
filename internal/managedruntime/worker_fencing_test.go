@@ -7,12 +7,12 @@ import (
 )
 
 type cancelledStartAdapter struct {
-	serviceAdapter
-	child  *ownedProcess
+	workerAdapter
+	child  processHandle
 	cancel context.CancelFunc
 }
 
-func (a *cancelledStartAdapter) Start(context.Context, string) (*ownedProcess, Endpoint, error) {
+func (a *cancelledStartAdapter) Start(context.Context, string) (processHandle, Endpoint, error) {
 	a.cancel()
 	return a.child, Endpoint{Enabled: true, BaseURL: "http://127.0.0.1:12345/v1", Model: "advertised"}, nil
 }
@@ -20,7 +20,7 @@ func (a *cancelledStartAdapter) Start(context.Context, string) (*ownedProcess, E
 func TestCancelledStartRemainsOwnedUntilChildExits(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	child := &ownedProcess{done: make(chan struct{}), closeJob: func() {}}
+	child := &fakeProcess{done: make(chan struct{}), closeJob: func() {}}
 	defer close(child.done)
 	w := newWorker(t.TempDir(), nemoProvider{}, workerConfig{Enabled: true, Model: "nemotron-3.5"}, nil, nil)
 	w.status.Models = []Model{{ID: "nemotron-3.5", Installed: true}}
@@ -39,8 +39,9 @@ func TestResolveRejectsExitedProcessBeforeMonitorPublishes(t *testing.T) {
 	w.status.Supported = true
 	w.status.State = "running"
 	w.endpoint = Endpoint{Enabled: true, BaseURL: "http://127.0.0.1:12345/v1", Model: "advertised"}
-	w.process = &ownedProcess{done: make(chan struct{})}
-	close(w.process.done)
+	proc := &fakeProcess{done: make(chan struct{})}
+	w.process = proc
+	close(proc.done)
 	w.mu.Lock()
 	_, err := w.resolveLocked()
 	w.mu.Unlock()

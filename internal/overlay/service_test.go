@@ -7,7 +7,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/dictation"
-	"github.com/tnware/freehand-stt/internal/platform"
+	nativeoverlay "github.com/tnware/freehand-stt/internal/platform/overlay"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -16,18 +16,18 @@ type levelFake struct{}
 func (*levelFake) TakeLevel() float64 { return 0 }
 
 type statusOverlayFake struct {
-	levels  platform.LevelSource
-	options []platform.OverlayOptions
-	updates []platform.OverlayStatus
+	levels  nativeoverlay.LevelSource
+	options []nativeoverlay.OverlayOptions
+	updates []nativeoverlay.OverlayStatus
 	closes  int
 }
 
-func (o *statusOverlayFake) SetLevelSource(levels platform.LevelSource) { o.levels = levels }
-func (o *statusOverlayFake) Configure(options platform.OverlayOptions) error {
+func (o *statusOverlayFake) SetLevelSource(levels nativeoverlay.LevelSource) { o.levels = levels }
+func (o *statusOverlayFake) Configure(options nativeoverlay.OverlayOptions) error {
 	o.options = append(o.options, options)
 	return nil
 }
-func (o *statusOverlayFake) Update(status platform.OverlayStatus) error {
+func (o *statusOverlayFake) Update(status nativeoverlay.OverlayStatus) error {
 	o.updates = append(o.updates, status)
 	return nil
 }
@@ -37,19 +37,19 @@ func TestOverlayForStatus(t *testing.T) {
 	cases := []struct {
 		name   string
 		status dictation.Status
-		kind   platform.OverlayKind
+		kind   nativeoverlay.OverlayKind
 	}{
-		{"idle hides", dictation.Status{State: dictation.Idle}, platform.OverlayHidden},
-		{"recording", dictation.Status{State: dictation.Recording}, platform.OverlayRecording},
-		{"speech", dictation.Status{State: dictation.Recording, VADState: dictation.VADSpeech}, platform.OverlayRecordingSpeech},
-		{"silence", dictation.Status{State: dictation.Recording, VADState: dictation.VADSilence}, platform.OverlayRecordingSilence},
-		{"countdown", dictation.Status{State: dictation.Recording, AutoStopState: dictation.AutoStopCountdown}, platform.OverlayRecordingCountdown},
-		{"transcribing", dictation.Status{State: dictation.Transcribing}, platform.OverlayTranscribing},
-		{"post-processing", dictation.Status{State: dictation.PostProcessing}, platform.OverlayPostProcessing},
-		{"ready", dictation.Status{State: dictation.Ready}, platform.OverlayReady},
-		{"cancelling", dictation.Status{State: dictation.Cancelling}, platform.OverlayCancelling},
-		{"ordinary failure", dictation.Status{State: dictation.Failed}, platform.OverlayFailed},
-		{"copy required", dictation.Status{State: dictation.Failed, CanCopy: true}, platform.OverlayCopyRequired},
+		{"idle hides", dictation.Status{State: dictation.Idle}, nativeoverlay.OverlayHidden},
+		{"recording", dictation.Status{State: dictation.Recording}, nativeoverlay.OverlayRecording},
+		{"speech", dictation.Status{State: dictation.Recording, VADState: dictation.VADSpeech}, nativeoverlay.OverlayRecordingSpeech},
+		{"silence", dictation.Status{State: dictation.Recording, VADState: dictation.VADSilence}, nativeoverlay.OverlayRecordingSilence},
+		{"countdown", dictation.Status{State: dictation.Recording, AutoStopState: dictation.AutoStopCountdown}, nativeoverlay.OverlayRecordingCountdown},
+		{"transcribing", dictation.Status{State: dictation.Transcribing}, nativeoverlay.OverlayTranscribing},
+		{"post-processing", dictation.Status{State: dictation.PostProcessing}, nativeoverlay.OverlayPostProcessing},
+		{"ready", dictation.Status{State: dictation.Ready}, nativeoverlay.OverlayReady},
+		{"cancelling", dictation.Status{State: dictation.Cancelling}, nativeoverlay.OverlayCancelling},
+		{"ordinary failure", dictation.Status{State: dictation.Failed}, nativeoverlay.OverlayFailed},
+		{"copy required", dictation.Status{State: dictation.Failed, CanCopy: true}, nativeoverlay.OverlayCopyRequired},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestRejectedStartShowsFailureWithoutPreviousRunMetadata(t *testing.T) {
 	for range 2 {
 		ApplyStatus(service, dictation.Status{State: dictation.Failed, Generation: 4, CanCopy: true, StartRejected: true})
 		last := fake.updates[len(fake.updates)-1]
-		if last.Kind != platform.OverlayFailed || !last.StartedAt.IsZero() || !last.FinishedAt.IsZero() || last.Checkpoints != 0 || last.Shortcut != "" {
+		if last.Kind != nativeoverlay.OverlayFailed || !last.StartedAt.IsZero() || !last.FinishedAt.IsZero() || last.Checkpoints != 0 || last.Shortcut != "" {
 			t.Fatalf("rejected start showed old result metadata instead of failure: %+v", last)
 		}
 	}
@@ -89,10 +89,10 @@ func TestOptionsMapAllCuratedPreferences(t *testing.T) {
 		Surface: config.OverlaySurfaceSolid, Visualizer: config.OverlayVisualizerEnvelope,
 		SizePercent: 125, OpacityPercent: 80, EdgeOffset: 42, GlowPercent: 50,
 	}
-	want := platform.OverlayOptions{
-		Layout: platform.OverlayLayoutDetailed, Anchor: platform.OverlayAnchorBottomRight,
-		Motion: platform.OverlayMotionReduced, Surface: platform.OverlaySurfaceSolid,
-		Visualizer: platform.OverlayVisualizerEnvelope,
+	want := nativeoverlay.OverlayOptions{
+		Layout: nativeoverlay.OverlayLayoutDetailed, Anchor: nativeoverlay.OverlayAnchorBottomRight,
+		Motion: nativeoverlay.OverlayMotionReduced, Surface: nativeoverlay.OverlaySurfaceSolid,
+		Visualizer: nativeoverlay.OverlayVisualizerEnvelope,
 		Scale:      1.25, Opacity: 0.8, EdgeOffset: 42, Glow: 0.5,
 	}
 	if got := optionsFromPreferences(preferences); got != want {
@@ -104,7 +104,7 @@ func TestServiceOwnsNativeLifecycleAndPreservesRunMetadata(t *testing.T) {
 	settings := config.Default()
 	var created []*statusOverlayFake
 	levels := &levelFake{}
-	service := NewService(settings, func() platform.LevelSource { return levels }, nil)
+	service := NewService(settings, func() nativeoverlay.LevelSource { return levels }, nil)
 	service.newOverlay = func() (statusOverlay, error) {
 		overlay := &statusOverlayFake{}
 		created = append(created, overlay)
@@ -126,7 +126,7 @@ func TestServiceOwnsNativeLifecycleAndPreservesRunMetadata(t *testing.T) {
 	})
 	ApplyStatus(service, dictation.Status{State: dictation.Transcribing, Generation: 4})
 	last := created[0].updates[len(created[0].updates)-1]
-	if last.Kind != platform.OverlayTranscribing || last.Generation != 4 || !last.StartedAt.Equal(started) || last.Checkpoints != 2 || last.Shortcut == "" {
+	if last.Kind != nativeoverlay.OverlayTranscribing || last.Generation != 4 || !last.StartedAt.Equal(started) || last.Checkpoints != 2 || last.Shortcut == "" {
 		t.Fatalf("transcription presentation lost run metadata: %#v", last)
 	}
 
@@ -162,11 +162,11 @@ func TestPreviewUsesDraftPreferencesAndRealDictationPreemptsIt(t *testing.T) {
 	if err := service.StartPreview(request); err != nil {
 		t.Fatal(err)
 	}
-	if len(fake.options) == 0 || fake.options[len(fake.options)-1].Layout != platform.OverlayLayoutMeter {
+	if len(fake.options) == 0 || fake.options[len(fake.options)-1].Layout != nativeoverlay.OverlayLayoutMeter {
 		t.Fatalf("preview options = %#v", fake.options)
 	}
 	preview := fake.updates[len(fake.updates)-1]
-	if !preview.Preview || preview.Kind != platform.OverlayRecordingSpeech || preview.Shortcut == "" {
+	if !preview.Preview || preview.Kind != nativeoverlay.OverlayRecordingSpeech || preview.Shortcut == "" {
 		t.Fatalf("initial preview = %#v", preview)
 	}
 
@@ -184,16 +184,16 @@ func TestPreviewUsesDraftPreferencesAndRealDictationPreemptsIt(t *testing.T) {
 }
 
 func TestVisibilityPolicyIsBounded(t *testing.T) {
-	if !visibilityIncludes(config.OverlayVisibilityRecording, platform.OverlayRecordingSpeech) {
+	if !visibilityIncludes(config.OverlayVisibilityRecording, nativeoverlay.OverlayRecordingSpeech) {
 		t.Fatal("recording-only visibility hid recording")
 	}
-	if visibilityIncludes(config.OverlayVisibilityRecording, platform.OverlayTranscribing) {
+	if visibilityIncludes(config.OverlayVisibilityRecording, nativeoverlay.OverlayTranscribing) {
 		t.Fatal("recording-only visibility showed transcription")
 	}
-	if !visibilityIncludes(config.OverlayVisibilityActive, platform.OverlayPostProcessing) || visibilityIncludes(config.OverlayVisibilityActive, platform.OverlayReady) {
+	if !visibilityIncludes(config.OverlayVisibilityActive, nativeoverlay.OverlayPostProcessing) || visibilityIncludes(config.OverlayVisibilityActive, nativeoverlay.OverlayReady) {
 		t.Fatal("active visibility does not separate processing from outcomes")
 	}
-	if !visibilityIncludes(config.OverlayVisibilityAll, platform.OverlayCopyRequired) {
+	if !visibilityIncludes(config.OverlayVisibilityAll, nativeoverlay.OverlayCopyRequired) {
 		t.Fatal("all-phase visibility hid a terminal outcome")
 	}
 }

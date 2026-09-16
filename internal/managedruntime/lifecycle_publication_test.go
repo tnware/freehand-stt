@@ -10,7 +10,7 @@ import (
 // A metadata-only fake holds launch and process exit at explicit barriers.
 // No executable, model file, network request, or inference is involved.
 type publicationAdapter struct {
-	serviceAdapter
+	workerAdapter
 	launchState func() string
 	entered     chan string
 	launch      chan struct{}
@@ -18,7 +18,7 @@ type publicationAdapter struct {
 	processDone chan struct{}
 }
 
-func (a *publicationAdapter) Start(ctx context.Context, model string) (*ownedProcess, Endpoint, error) {
+func (a *publicationAdapter) Start(ctx context.Context, model string) (processHandle, Endpoint, error) {
 	a.startContext = ctx
 	a.entered <- a.launchState()
 	reportStartupProgress(ctx, "verifying_runtime")
@@ -28,7 +28,7 @@ func (a *publicationAdapter) Start(ctx context.Context, model string) (*ownedPro
 	case <-ctx.Done():
 		return nil, Endpoint{}, ctx.Err()
 	}
-	p := &ownedProcess{done: a.processDone, closeJob: func() { close(a.stopEntered) }}
+	p := &fakeProcess{done: a.processDone, closeJob: func() { close(a.stopEntered) }}
 	return p, Endpoint{Enabled: true, BaseURL: "http://127.0.0.1:12345", Model: "authoritative", Profile: qualified[model].Profile}, nil
 }
 

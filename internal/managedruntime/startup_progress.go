@@ -14,7 +14,7 @@ type startupObserverKey struct{}
 type runtimeProcessKey struct{}
 type startupObserver struct {
 	output   func(string, []byte)
-	child    func(*ownedProcess)
+	child    func(processHandle)
 	progress func(string)
 }
 
@@ -45,7 +45,7 @@ func (w *worker) observeStartup(ctx context.Context) context.Context {
 	w.mu.Unlock()
 	o := &startupObserver{}
 	o.output = func(stream string, p []byte) { w.appendProcessOutput(launch, stream, p) }
-	o.child = func(p *ownedProcess) {
+	o.child = func(p processHandle) {
 		w.mu.Lock()
 		stale := w.closed || ctx.Err() != nil || launch != w.outputLaunch
 		if !stale {
@@ -53,7 +53,7 @@ func (w *worker) observeStartup(ctx context.Context) context.Context {
 		}
 		w.mu.Unlock()
 		if stale {
-			p.kill()
+			p.Kill()
 		}
 	}
 	o.progress = func(phase string) {
@@ -71,16 +71,4 @@ func (w *worker) observeStartup(ctx context.Context) context.Context {
 		w.notify()
 	}
 	return context.WithValue(ctx, startupObserverKey{}, o)
-}
-
-type observedOutput struct {
-	prefix   *boundedOutput
-	observer *startupObserver
-	stream   string
-}
-
-func (o observedOutput) Write(p []byte) (int, error) {
-	n, err := o.prefix.Write(p)
-	o.observer.output(o.stream, p)
-	return n, err
 }

@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
 // Opt-in qualification of official GPU distributions through the production
@@ -27,17 +29,17 @@ func TestGGMLPinnedCUDABundles(t *testing.T) {
 				http.ServeFile(w, r, filepath.Join(dir, filepath.Base(r.URL.Path)))
 			}))
 			defer srv.Close()
-			g.cuda.archives = append([]asset(nil), g.cuda.archives...)
-			for i, pin := range g.cuda.archives {
-				u, err := url.Parse(pin.url)
+			g.cuda.Archives = append([]artifact.Asset(nil), g.cuda.Archives...)
+			for i, pin := range g.cuda.Archives {
+				u, err := url.Parse(pin.URL)
 				if err != nil {
 					t.Fatal(err)
 				}
 				filename := filepath.Base(u.Path)
-				if err := verifyFile(t.Context(), filepath.Join(dir, filename), pin.size, pin.sha256); err != nil {
+				if err := artifact.VerifyFile(t.Context(), filepath.Join(dir, filename), pin.Size, pin.SHA256); err != nil {
 					t.Fatal(err)
 				}
-				g.cuda.archives[i].url = srv.URL + "/" + filename
+				g.cuda.Archives[i].URL = srv.URL + "/" + filename
 			}
 			a := g.newAdapter(t.TempDir()).(*ggmlAdapter)
 			a.downloadClient = srv.Client()
@@ -69,10 +71,10 @@ func TestGGMLPinnedCUDABundles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := p.wait(ctx); err != nil {
+			if err := p.Wait(ctx); err != nil {
 				t.Fatal(err)
 			}
-			if len(p.stdout.bytes())+len(p.stderr.bytes()) == 0 {
+			if len(p.Stdout())+len(p.Stderr()) == 0 {
 				t.Fatal("no metadata output from CUDA distribution")
 			}
 			if g.id == LlamaCPP {
@@ -80,10 +82,10 @@ func TestGGMLPinnedCUDABundles(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := p.wait(ctx); err != nil {
+				if err := p.Wait(ctx); err != nil {
 					t.Fatal(err)
 				}
-				if !strings.Contains(string(p.stdout.bytes()), "CUDA0") {
+				if !strings.Contains(string(p.Stdout()), "CUDA0") {
 					t.Fatal("the pinned CUDA device was not enumerated")
 				}
 			}

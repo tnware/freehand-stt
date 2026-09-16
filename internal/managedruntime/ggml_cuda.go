@@ -11,21 +11,23 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
-func (g ggmlProvider) bundle(backend string) (runtimeBundle, error) {
+func (g ggmlProvider) bundle(backend string) (artifact.Bundle, error) {
 	if r, ok := recipeFor(g.id, runtime.GOOS, runtime.GOARCH, backend); ok {
 		// Existing consumers project these fields from the registry; retain
 		// fixture overrides without maintaining a second set of release pins.
 		if backend == "cpu" {
-			r.archives = []asset{g.release}
-			r.executable = g.executable
+			r.Archives = []artifact.Asset{g.release}
+			r.Executable = g.Executable
 		} else if backend == "cuda" {
-			r.runtimeBundle = g.cuda
+			r.Bundle = g.cuda
 		}
-		return r.runtimeBundle, nil
+		return r.Bundle, nil
 	}
-	return runtimeBundle{}, errors.New("Choose a binary supported on this operating system and architecture.")
+	return artifact.Bundle{}, errors.New("Choose a binary supported on this operating system and architecture.")
 }
 func (g ggmlProvider) backendArguments(model string, s modelSpec, root string, port int, backend string) ([]string, error) {
 	if _, err := g.bundle(backend); err != nil {
@@ -69,7 +71,7 @@ func cudaMetadataSupported(output string, minDriver, minCapability float64) bool
 	return driver >= minDriver && capability >= minCapability
 }
 func (a *ggmlAdapter) admitCUDA(ctx context.Context) error {
-	if err := safeRoot(a.root); err != nil {
+	if err := artifact.CheckRoot(a.root); err != nil {
 		return err
 	}
 	recipe, ok := recipeFor(a.recipe.id, runtime.GOOS, runtime.GOARCH, "cuda")
@@ -88,7 +90,7 @@ func (a *ggmlAdapter) admitCUDA(ctx context.Context) error {
 
 // Query the same default NVIDIA ordinal used by CUDA_VISIBLE_DEVICES=0 and
 // CUDA0 at model launch. No PATH search, inherited overrides, or raw output DTO.
-func probeGGMLGPU(ctx context.Context, launch func(context.Context, string, []string, string, []string) (*ownedProcess, error)) gpuMetadata {
+func probeGGMLGPU(ctx context.Context, launch func(context.Context, string, []string, string, []string) (processHandle, error)) gpuMetadata {
 	unknown := gpuMetadata{}
 	exe := filepath.Join(os.Getenv("SystemRoot"), "System32", "nvidia-smi.exe")
 	if runtime.GOOS != "windows" || !filepath.IsAbs(exe) {
@@ -100,14 +102,12 @@ func probeGGMLGPU(ctx context.Context, launch func(context.Context, string, []st
 	if err != nil {
 		return unknown
 	}
-	if err := p.wait(probe); err != nil {
+	if err := p.Wait(probe); err != nil {
 		return unknown
 	}
-	p.stdout.mu.Lock()
-	overflow := p.stdout.overflow
-	p.stdout.mu.Unlock()
+	overflow := p.StdoutOverflow()
 	if overflow {
 		return unknown
 	}
-	return gpuMetadata{vendor: "nvidia", ordinal: 0, output: string(p.stdout.bytes()), known: true}
+	return gpuMetadata{vendor: "nvidia", ordinal: 0, output: string(p.Stdout()), known: true}
 }

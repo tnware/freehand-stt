@@ -15,7 +15,7 @@ import (
 // This boundary adapter exercises the real HTTP acquisition and worker events;
 // it replaces only runtime installation/metadata and the remote file origin.
 type streamingAcquisitionAdapter struct {
-	serviceAdapter
+	workerAdapter
 	root   string
 	spec   modelSpec
 	client *http.Client
@@ -48,16 +48,17 @@ func TestDownloadStreamsProgressBeforeVerifiedTerminal(t *testing.T) {
 	spec.size = 8
 	spec.sha256 = fmt.Sprintf("%x", sha256.Sum256([]byte("testdata")))
 	client := &http.Client{Transport: ggmlRewriteTransport{srv.URL, srv.Client().Transport}}
-	a := &streamingAcquisitionAdapter{serviceAdapter: serviceAdapter{installed: true}, root: t.TempDir(), spec: spec, client: client}
+	a := &streamingAcquisitionAdapter{workerAdapter: workerAdapter{installed: true}, root: t.TempDir(), spec: spec, client: client}
 	events := make(chan Status, 64)
-	s := NewService(Options{Preferences: Defaults(), Changed: func(st Status) { events <- st }})
+	s := newTestWorker(t, false)
+	s.changed = func(st workerSnapshot) { events <- st.Status }
 	s.status.Supported = true
 	s.adapter = a
 	if err := s.startup(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	defer s.ServiceShutdown()
-	waitService(t, s, "installed")
+	waitWorker(t, s, "installed")
 	if err := s.DownloadModel("nemotron-3.5"); err != nil {
 		t.Fatal(err)
 	}
@@ -105,15 +106,15 @@ func TestDownloadStreamsProgressBeforeVerifiedTerminal(t *testing.T) {
 	}
 }
 
-type noAcquisitionAdapter struct{ serviceAdapter }
+type noAcquisitionAdapter struct{ workerAdapter }
 
 func (a *noAcquisitionAdapter) Pull(context.Context, string, func(AcquisitionProgress)) error {
 	return nil
 }
 func TestDownloadCannotSucceedWithoutInstalledModel(t *testing.T) {
-	s := testService(t, &serviceAdapter{installed: true})
-	waitService(t, s, "installed")
-	s.adapter = &noAcquisitionAdapter{serviceAdapter{installed: true}}
+	s := testWorker(t, &workerAdapter{installed: true})
+	waitWorker(t, s, "installed")
+	s.adapter = &noAcquisitionAdapter{workerAdapter{installed: true}}
 	if err := s.DownloadModel("nemotron-3.5"); err != nil {
 		t.Fatal(err)
 	}
@@ -124,8 +125,8 @@ func TestDownloadCannotSucceedWithoutInstalledModel(t *testing.T) {
 }
 
 func TestTerminalPublicationAllowsNextAdmission(t *testing.T) {
-	s := testService(t, &serviceAdapter{installed: true})
-	waitService(t, s, "installed")
+	s := testWorker(t, &workerAdapter{installed: true})
+	waitWorker(t, s, "installed")
 	entered, release := make(chan struct{}), make(chan struct{})
 	defer close(release)
 	s.publicationMu.Lock()
@@ -150,13 +151,13 @@ func TestTerminalPublicationAllowsNextAdmission(t *testing.T) {
 }
 
 func TestDownloadPublishesTerminalResult(t *testing.T) {
-	a := &serviceAdapter{installed: true}
-	s := testService(t, a)
-	waitService(t, s, "installed")
+	a := &workerAdapter{installed: true}
+	s := testWorker(t, a)
+	waitWorker(t, s, "installed")
 	if err := s.DownloadModel("nemotron-3.5"); err != nil {
 		t.Fatal(err)
 	}
-	waitService(t, s, "installed")
+	waitWorker(t, s, "installed")
 	b, err := json.Marshal(s.GetStatus())
 	if err != nil {
 		t.Fatal(err)

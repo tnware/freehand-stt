@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
 // Optional native qualification using explicitly predownloaded official ZIPs.
@@ -28,15 +30,15 @@ func TestGGMLPinnedRuntimeZIPs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := tc.recipe
 			archive := filepath.Join(dir, tc.name+".zip")
-			if err := verifyFile(t.Context(), archive, g.release.size, g.release.sha256); err != nil {
+			if err := artifact.VerifyFile(t.Context(), archive, g.release.Size, g.release.SHA256); err != nil {
 				t.Fatal(err)
 			}
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, archive) }))
 			defer srv.Close()
 			local := g.release
-			local.url = srv.URL
+			local.URL = srv.URL
 			root := t.TempDir()
-			if err := installBinaryAsset(t.Context(), root, local, g.executable, srv.Client(), nil); err != nil {
+			if err := artifact.Install(t.Context(), root, artifact.Bundle{Archives: []artifact.Asset{local}, Executable: g.Executable}, srv.Client(), nil); err != nil {
 				t.Fatal(err)
 			}
 			a := g.newAdapter(root).(*ggmlAdapter)
@@ -73,18 +75,18 @@ func TestGGMLPinnedRuntimeZIPs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err = p.wait(ctx); err != nil {
+			if err = p.Wait(ctx); err != nil {
 				t.Fatal(err)
 			}
-			if len(p.stdout.bytes())+len(p.stderr.bytes()) == 0 {
+			if len(p.Stdout())+len(p.Stderr()) == 0 {
 				t.Fatal("no CLI help output")
 			}
 			if g.id == LlamaCPP {
-				if !strings.Contains(string(p.stderr.bytes()), "argument '--offline' specified multiple times") {
+				if !strings.Contains(string(p.Stderr()), "argument '--offline' specified multiple times") {
 					t.Fatal("normal upstream warning missing from owned stderr capture")
 				}
 				// Prefixes default off, but the warning still emits its SGR reset.
-				if !strings.Contains(string(p.stderr.bytes()), "\x1b[0m") {
+				if !strings.Contains(string(p.Stderr()), "\x1b[0m") {
 					t.Fatal("forced upstream ANSI colors missing from private capture")
 				}
 			}

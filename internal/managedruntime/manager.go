@@ -46,9 +46,8 @@ type ResolvedEndpoint struct {
 	Contract     Contract   `json:"contract"`
 }
 
-// Manager owns inventory and admission, not process state. Each instance uses
-// the same worker engine as the temporary Service facade. Directory is the
-// application-data root (unlike the legacy Options.Directory runtime root).
+// Manager owns inventory and admission. Each instance delegates process state
+// to one worker. Directory is the application-data root.
 // Lock order is manager -> worker; callbacks and persistence run under neither.
 type Manager struct {
 	mu           sync.Mutex
@@ -214,7 +213,7 @@ func ApplyInstances(m *Manager, instances []Instance) error {
 // publicationLocked only changes metadata and fences/cancels affected workers.
 // Provider identity cannot change in-place: a different provider needs a new ID
 // so no adapter can adopt another provider's installation or model cache.
-func (m *Manager) publicationLocked(next []Instance) (kills []*ownedProcess, closing, starting []*worker) {
+func (m *Manager) publicationLocked(next []Instance) (kills []processHandle, closing, starting []*worker) {
 	nextIDs := map[string]bool{}
 	for _, i := range next {
 		nextIDs[i.ID] = true
@@ -309,7 +308,7 @@ func (m *Manager) validateUpdateLocked(next []Instance) error {
 }
 func (m *Manager) finish(next []Instance, publish bool) {
 	m.mu.Lock()
-	var kills []*ownedProcess
+	var kills []processHandle
 	var closing, starting []*worker
 	if publish {
 		kills, closing, starting = m.publicationLocked(next)
@@ -337,7 +336,7 @@ func (m *Manager) finish(next []Instance, publish bool) {
 		}(w)
 	}
 	for _, p := range kills {
-		p.kill()
+		p.Kill()
 	}
 	for _, w := range starting {
 		_ = w.startup(ctx)

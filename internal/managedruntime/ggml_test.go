@@ -1,9 +1,10 @@
 package managedruntime
 
 import (
+	"testing"
+
 	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
-	"testing"
 )
 
 func TestGGMLProviderRoleAdmission(t *testing.T) {

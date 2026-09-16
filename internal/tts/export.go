@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"os"
+
+	"github.com/tnware/freehand-stt/internal/diagnostics"
 )
 
 // Native file selection authorizes this destination. Cancellation is checked
@@ -39,4 +41,62 @@ func writeAudio(ctx context.Context, out io.Writer, wav []byte) error {
 		wav = wav[n:]
 	}
 	return ctx.Err()
+}
+
+// SaveAudio writes the retained playback session to a user-selected WAV file.
+// The native dialog owns path selection and cancellation; audio remains inside
+// Go for the entire operation.
+func (s *Service) SaveAudio() (bool, error) {
+	if !s.saving.CompareAndSwap(false, true) {
+		return false, errors.New("speech audio save dialog is already open")
+	}
+	defer s.saving.Store(false)
+	if s.closed.Load() {
+		return false, errors.New("application is shutting down")
+	}
+	s.mu.Lock()
+	canSave := s.status.CanSave
+	generation := s.status.Generation
+	s.mu.Unlock()
+	if !canSave {
+		return false, errors.New("there is no generated speech to save")
+	}
+	if s.saveFile == nil {
+		return false, errors.New("speech audio saving is unavailable")
+	}
+	path, err := s.saveFile()
+	if err != nil {
+		return false, errors.New("speech audio save dialog could not be opened")
+	}
+	if path == "" {
+		return false, nil
+	}
+	s.control.Lock()
+	if s.closed.Load() || !s.isCurrent(generation) {
+		s.control.Unlock()
+		return false, errors.New("speech session changed while choosing a save location")
+	}
+	// Pin this generation's audio while serialized with replacement/clear. Disk
+	// I/O owns only the independent WAV, so playback can stop immediately.
+	wav, err := s.player.Snapshot()
+	if err != nil {
+		s.control.Unlock()
+		return false, errors.New("generated speech could not be saved")
+	}
+	ctx, cancel := s.operationContext()
+	s.workers.Add(1)
+	s.control.Unlock()
+	defer s.workers.Done()
+	defer cancel()
+	defer clear(wav)
+	err = s.writeAudio(ctx, path, wav)
+	if ctx.Err() != nil || s.closed.Load() {
+		return false, errors.New("speech audio save cancelled during shutdown")
+	}
+	if err != nil {
+		s.logger.Warn("speech audio save failed", "generation", generation, "error_kind", diagnostics.ErrorKind(err))
+		return false, errors.New("generated speech could not be saved")
+	}
+	s.logger.Info("speech audio saved", "generation", generation, "outcome", "saved")
+	return true, nil
 }

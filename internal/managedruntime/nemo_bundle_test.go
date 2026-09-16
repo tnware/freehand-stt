@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
 // Replace only artifact bytes and the child boundary; catalog, verification,
@@ -35,7 +36,7 @@ func managedSpeechBundleFixture(t *testing.T, root string) (*nemoAdapter, *[]str
 		nemoTokenizerMembers[n].size, nemoTokenizerMembers[n].sha256 = 7, digest
 	}
 	originalLaunch := a.launch
-	a.launch = func(ctx context.Context, exe string, args []string, dir string, env []string) (*ownedProcess, error) {
+	a.launch = func(ctx context.Context, exe string, args []string, dir string, env []string) (processHandle, error) {
 		if strings.Join(args, " ") != "--json model pull "+model.repo {
 			return originalLaunch(ctx, exe, args, dir, env)
 		}
@@ -56,7 +57,7 @@ func managedSpeechBundleFixture(t *testing.T, root string) (*nemoAdapter, *[]str
 				return nil, err
 			}
 		}
-		p := &ownedProcess{done: make(chan struct{}), closeJob: func() {}}
+		p := &fakeProcess{done: make(chan struct{}), closeJob: func() {}}
 		close(p.done)
 		return p, nil
 	}
@@ -86,7 +87,7 @@ func TestNeMoSpeechBundleAcquisitionVerificationAndRemoval(t *testing.T) {
 		if err := os.WriteFile(target, []byte("corrupt"), 0600); err != nil {
 			t.Fatal(err)
 		}
-		if err := verifyNeMoModel(t.Context(), root, "magpie-tts"); !errors.Is(err, errIntegrity) {
+		if err := verifyNeMoModel(t.Context(), root, "magpie-tts"); !errors.Is(err, artifact.ErrIntegrity) {
 			t.Fatalf("accepted corrupt companion: %v", err)
 		}
 		if err := os.WriteFile(target, []byte("fixture"), 0600); err != nil {
@@ -97,7 +98,7 @@ func TestNeMoSpeechBundleAcquisitionVerificationAndRemoval(t *testing.T) {
 	if err := os.WriteFile(extra, []byte("fixture"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyNeMoModel(t.Context(), root, "magpie-tts"); !errors.Is(err, errIntegrity) {
+	if err := verifyNeMoModel(t.Context(), root, "magpie-tts"); !errors.Is(err, artifact.ErrIntegrity) {
 		t.Fatalf("accepted extra tokenizer input: %v", err)
 	}
 	if err := os.Remove(extra); err != nil {
@@ -138,7 +139,7 @@ func TestNeMoCombinedStartUsesVerifiedInputsAndOneProcess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(p.kill)
+	t.Cleanup(p.Kill)
 	if endpoint.Model != "actual GGUF name" || endpoint.SpeechModel != "actual Magpie name" {
 		t.Fatalf("wrong role identities: %+v", endpoint)
 	}

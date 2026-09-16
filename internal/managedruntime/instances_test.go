@@ -76,7 +76,4 @@ func TestNeMoInstanceSeparatesOptionalSpeechFromASR(t *testing.T) {
 	if err := ValidateInstance(valid); err != nil || valid.ModelForRole(compatibility.Speech) != "" {
 		t.Fatal("speech must be optional without changing the ASR selection", err)
 	}
-	if Validate(Preferences{Model: "magpie-tts"}) == nil {
-		t.Fatal("legacy ASR preferences accepted a speech-only model")
-	}
 }

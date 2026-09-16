@@ -9,7 +9,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/config"
 	"github.com/tnware/freehand-stt/internal/dictation"
-	"github.com/tnware/freehand-stt/internal/platform"
+	nativeoverlay "github.com/tnware/freehand-stt/internal/platform/overlay"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -18,13 +18,13 @@ type timeoutOverlayFake struct {
 	mu sync.Mutex
 }
 
-func (f *timeoutOverlayFake) Update(status platform.OverlayStatus) error {
+func (f *timeoutOverlayFake) Update(status nativeoverlay.OverlayStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.statusOverlayFake.Update(status)
 }
 
-func (f *timeoutOverlayFake) snapshot() (platform.OverlayStatus, int) {
+func (f *timeoutOverlayFake) snapshot() (nativeoverlay.OverlayStatus, int) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.updates[len(f.updates)-1], len(f.updates)
@@ -43,7 +43,7 @@ func timeoutService(t *testing.T) (*Service, *timeoutOverlayFake) {
 	return service, fake
 }
 
-func lastOverlayKind(fake *timeoutOverlayFake) platform.OverlayKind {
+func lastOverlayKind(fake *timeoutOverlayFake) nativeoverlay.OverlayKind {
 	status, _ := fake.snapshot()
 	return status.Kind
 }
@@ -59,7 +59,7 @@ func TestOutcomeOverlayExpiresWithoutClearingResult(t *testing.T) {
 				service, fake := timeoutService(t)
 				ApplyStatus(service, outcome)
 				visibleKind := lastOverlayKind(fake)
-				if visibleKind == platform.OverlayHidden {
+				if visibleKind == nativeoverlay.OverlayHidden {
 					t.Fatal("outcome was not shown")
 				}
 				time.Sleep(4 * time.Second)
@@ -69,7 +69,7 @@ func TestOutcomeOverlayExpiresWithoutClearingResult(t *testing.T) {
 				}
 				time.Sleep(time.Second)
 				synctest.Wait()
-				if lastOverlayKind(fake) != platform.OverlayHidden {
+				if lastOverlayKind(fake) != nativeoverlay.OverlayHidden {
 					t.Fatal("outcome did not disappear after five seconds")
 				}
 				if service.status != outcome {
@@ -80,7 +80,7 @@ func TestOutcomeOverlayExpiresWithoutClearingResult(t *testing.T) {
 				ApplySettings(service, settings)
 				settings.OverlayEnabled = true
 				ApplySettings(service, settings)
-				if lastOverlayKind(fake) != platform.OverlayHidden {
+				if lastOverlayKind(fake) != nativeoverlay.OverlayHidden {
 					t.Fatal("settings replay resurrected dismissed outcome")
 				}
 				ApplyStatus(service, outcome) // A fresh rejected attempt may retain the same result generation.
@@ -89,7 +89,7 @@ func TestOutcomeOverlayExpiresWithoutClearingResult(t *testing.T) {
 				}
 				time.Sleep(5 * time.Second)
 				synctest.Wait()
-				if lastOverlayKind(fake) != platform.OverlayHidden {
+				if lastOverlayKind(fake) != nativeoverlay.OverlayHidden {
 					t.Fatal("fresh attempt did not expire")
 				}
 			})
@@ -106,14 +106,14 @@ func TestOutcomeTimerCannotHideNewerFeedbackOrActiveWork(t *testing.T) {
 		ApplyStatus(service, outcome)
 		time.Sleep(time.Second)
 		synctest.Wait()
-		if lastOverlayKind(fake) != platform.OverlayFailed {
+		if lastOverlayKind(fake) != nativeoverlay.OverlayFailed {
 			t.Fatal("old deadline hid fresh rejection")
 		}
 		for _, state := range []dictation.State{dictation.Recording, dictation.Transcribing, dictation.PostProcessing} {
 			ApplyStatus(service, dictation.Status{State: state, Generation: 2})
 			time.Sleep(6 * time.Second)
 			synctest.Wait()
-			if lastOverlayKind(fake) == platform.OverlayHidden {
+			if lastOverlayKind(fake) == nativeoverlay.OverlayHidden {
 				t.Fatalf("timer hid active %s", state)
 			}
 		}
@@ -129,13 +129,13 @@ func TestOutcomeExpiryDoesNotInterruptPreviewOrOutliveShutdown(t *testing.T) {
 		}
 		time.Sleep(5 * time.Second)
 		synctest.Wait()
-		if last, _ := fake.snapshot(); !last.Preview || last.Kind == platform.OverlayHidden {
+		if last, _ := fake.snapshot(); !last.Preview || last.Kind == nativeoverlay.OverlayHidden {
 			t.Fatal("outcome expiry interrupted preview")
 		}
 		if err := service.StopPreview(); err != nil {
 			t.Fatal(err)
 		}
-		if lastOverlayKind(fake) != platform.OverlayHidden {
+		if lastOverlayKind(fake) != nativeoverlay.OverlayHidden {
 			t.Fatal("stopping preview restored expired outcome")
 		}
 		ApplyStatus(service, dictation.Status{State: dictation.Failed})

@@ -76,7 +76,7 @@ func SaveManagedInstances(s *Service, instances []managedruntime.Instance) error
 			for _, c := range store.ConnectionCatalog().Entries {
 				if c.Details.ManagedInstanceID != "" && !c.BuiltIn {
 					for _, p := range c.Uses {
-						if _, _, err := config.ManagedContract(next, c.Details.ManagedInstanceID, roleForPurpose(p)); err != nil {
+						if _, _, err := config.ManagedContract(next, c.Details.ManagedInstanceID, savedconnection.Role(p)); err != nil {
 							return err
 						}
 					}
@@ -121,17 +121,6 @@ func SaveManagedInstances(s *Service, instances []managedruntime.Instance) error
 		s.settingsChanged(result)
 	}
 	return err
-}
-
-func roleForPurpose(p savedconnection.Purpose) compatibility.Role {
-	switch p {
-	case savedconnection.Cleanup:
-		return compatibility.PostProcessing
-	case savedconnection.Speech:
-		return compatibility.Speech
-	default:
-		return compatibility.Transcription
-	}
 }
 
 func (s *Service) resolveManaged(v config.Settings, id string, role compatibility.Role) (managedruntime.ResolvedEndpoint, error) {
@@ -286,7 +275,7 @@ func (r *connectionResolver) ResolveSavedConnection(id string) (savedconnection.
 	if len(c.Uses) == 0 {
 		return savedconnection.Connection{}, "", ErrManagedUnavailable
 	}
-	e, err := s.resolveManaged(s.current(), c.Details.ManagedInstanceID, roleForPurpose(c.Uses[0]))
+	e, err := s.resolveManaged(s.current(), c.Details.ManagedInstanceID, savedconnection.Role(c.Uses[0]))
 	if err != nil {
 		return savedconnection.Connection{}, "", err
 	}

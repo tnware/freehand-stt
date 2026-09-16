@@ -1,33 +1,10 @@
-// Package managedruntime owns the opt-in, isolated NeMo-Speech.cpp runtime.
-// It never reads remote endpoint configuration or credentials.
 package managedruntime
 
 import (
-	"errors"
-
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
 const Version = "0.1.0"
-
-type Preferences struct {
-	Enabled  bool   `json:"enabled"`
-	Model    string `json:"model"`
-	Realtime bool   `json:"realtime"`
-}
-
-func Defaults() Preferences           { return Preferences{Model: "nemotron-3.5", Realtime: true} }
-func (p Preferences) Validate() error { return Validate(p) }
-func Validate(p Preferences) error {
-	q, ok := qualified[p.Model]
-	if !ok || p.Model == "magpie-tts" {
-		return errors.New("Choose a supported managed speech model.")
-	}
-	if p.Realtime && !q.Realtime {
-		return errors.New("This model does not support realtime dictation.")
-	}
-	return nil
-}
 
 type Endpoint struct {
 	Enabled     bool

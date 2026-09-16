@@ -553,13 +553,60 @@ internal/tts               on-demand synthesis and single-session playback state
 internal/config            non-secret profiles and validation
 internal/credential        credential interface
 internal/insertion         focus-safe insertion policy
-internal/platform          Windows and macOS native adapters; unsupported-platform stubs
+internal/platform/audio    native capture, playback, permissions, and level taps
+internal/platform/keyboard native hold-to-talk and temporary shortcut capture
+internal/platform/input    native target identity, Unicode insertion, explicit copy
+internal/platform/overlay  passive native overlay presentation and rendering
+internal/platform/startup  per-user native startup registration
+internal/managedruntime    runtime inventory, provider adapters, worker lifecycle
+internal/managedruntime/internal/artifact verified files, archives, and installation
+internal/managedruntime/internal/process  owned process trees and listener identity
+internal/storage           SQLite transactions, migrations, and generated queries
+internal/realtime          shared session lifecycle with distinct NeMo/vLLM protocols
 internal/postprocess       transcript-cleanup request and outcome policy
 internal/tray              native status, last-activity, recovery, and window actions
 internal/updates           persisted polling policy and Wails updater lifecycle
 frontend/src/lib           testable settings/status state
 frontend/src               thin Svelte components
 ```
+
+### Organizing implementation files
+
+Freehand uses one Go module. Domain packages own their mutable state and expose
+narrow capability boundaries. Within each domain, filenames describe the work:
+dictation admission, capture, processing, status, and delivery; file selection,
+transcription, and streaming; speech sources, generation, playback, and export.
+These files share their existing owner, locks, generations, and shutdown budget.
+Settings keeps snapshots, save/rollback, recovery, and request-profile capture
+inside the same package and transaction boundary. Configuration values and
+validation are grouped by Voice, speech, cleanup, overlay, and transport.
+
+Native adapters are grouped by capability under `internal/platform`. Each
+capability contains its Windows and macOS implementations, unsupported-platform
+stubs, native bridge sources, and tests. `internal/app` composes them directly.
+The platform-neutral `audio`, `hotkey`, `insertion`, and `shortcut` packages retain
+their contracts and policy. Capture and playback share native audio setup;
+hold-to-talk and shortcut capture share one keyboard coordination boundary.
+The overlay consumes a small level-source interface satisfied by the audio tap,
+without depending on the native audio implementation.
+
+The managed-runtime package owns inventory admission, provider selection,
+worker state, ordered publication, and output access. Its private `artifact`
+package owns pinned download verification, safe extraction, owned-path checks,
+and installation rollback. Its private `process` package owns native process
+trees, bounded private output, and listener identity. Neither leaf imports its
+parent. Process launch accepts explicit output/start callbacks; the parent
+applies worker-generation and shutdown guards before publishing observations.
+`Manager` is the renderer boundary, and each runtime instance uses the same
+worker engine. Provider recipes and model qualification stay with that owner.
+
+Use provider-specific names for provider-specific files, such as
+`nemo_adapter.go` and `nemo_catalog.go`. Shared mechanisms use their actual
+responsibility as their name. Keep tests beside the implementation they exercise;
+generated SQLite code remains in `storage/dbgen`, with queries and immutable
+migrations in their existing directories. A new subpackage must have a small,
+one-way dependency boundary and must not require exporting an owner's locks or
+mutable state.
 
 Action feedback remains renderer presentation. `SessionMessages` distinguishes a
 speech-status failure by operation generation from an unrelated command error.
@@ -1151,7 +1198,7 @@ workspace titles; controls retain the native system typeface. The semantic CSS r
 cover cards, inputs, popovers, dialogs, and navigation. The workspace title bar,
 auxiliary native captions, and startup backgrounds in `internal/app/window.go`
 match the ground; overlay colour
-constants in `internal/platform/overlay.go` match the panel and accent. Status
+constants in `internal/platform/overlay/overlay.go` match the panel and accent. Status
 colours keep their separate meanings. Dark Mica applies one translucent charcoal
 tint at `#app` plus translucent panels, while auxiliary native captions remain
 under DWM control. Light-mode tokens remain independent.

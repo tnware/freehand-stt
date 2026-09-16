@@ -3,6 +3,8 @@ package managedruntime
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
 // NeMo v0.1.0 (4f9676226f667d14608487df744f375db87127f8),
@@ -20,7 +22,7 @@ func nemoAcquiredBytes(root string, spec modelSpec) AcquisitionProgress {
 		safe := true
 		for dir := filepath.Dir(path); ; dir = filepath.Dir(dir) {
 			info, err := os.Lstat(dir)
-			if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || isReparse(dir) {
+			if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || artifact.IsReparse(dir) {
 				safe = false
 				break
 			}
@@ -32,7 +34,7 @@ func nemoAcquiredBytes(root string, spec modelSpec) AcquisitionProgress {
 			continue
 		}
 		info, err := os.Lstat(path)
-		if err == nil && info.Mode().IsRegular() && !isReparse(path) {
+		if err == nil && info.Mode().IsRegular() && !artifact.IsReparse(path) {
 			p.Bytes = info.Size()
 			return boundedAcquisition(p)
 		}

@@ -4,7 +4,7 @@ interface Props { realtime?: boolean }
 const { realtime = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 // Illustrative scene, not a native capture. Capsule geometry and stage treatment
-// reference internal/platform/overlay_darwin.m; no microphone or network access.
+// reference internal/platform/overlay/overlay_darwin.m; no microphone or network access.
 const transcript = [
   "Start with a small idea.",
   realtime ? "Build something useful, then take a moment to try it out." : "Make something useful, then try it out.",

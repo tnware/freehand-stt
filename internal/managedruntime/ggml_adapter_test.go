@@ -14,6 +14,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
 // Exercise actual adapter verification, launch admission and readiness; replace
@@ -34,11 +36,11 @@ func WithGGMLEndpointFixture(t *testing.T, id ProviderID, handler http.Handler, 
 	s.sha256 = fmt.Sprintf("%x", sha256.Sum256([]byte("fixture")))
 	g.specs[key] = s
 	root := t.TempDir()
-	data := zipFixture(t, map[string]string{g.executable: "test executable, not run"})
+	data := zipFixture(t, map[string]string{g.Executable: "test executable, not run"})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(data) }))
 	defer srv.Close()
-	g.release = asset{"cpu", srv.URL, fmt.Sprintf("%x", sha256.Sum256(data)), int64(len(data))}
-	if err := installBinaryAsset(t.Context(), root, g.release, g.executable, srv.Client(), nil); err != nil {
+	g.release = artifact.Asset{Backend: "cpu", URL: srv.URL, SHA256: fmt.Sprintf("%x", sha256.Sum256(data)), Size: int64(len(data))}
+	if err := artifact.Install(t.Context(), root, artifact.Bundle{Archives: []artifact.Asset{g.release}, Executable: g.Executable}, srv.Client(), nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(s.directory(root), 0700); err != nil {
@@ -48,8 +50,8 @@ func WithGGMLEndpointFixture(t *testing.T, id ProviderID, handler http.Handler, 
 		t.Fatal(err)
 	}
 	a := g.newAdapter(root).(*ggmlAdapter)
-	a.launch = func(ctx context.Context, exe string, args []string, dir string, env []string) (*ownedProcess, error) {
-		if exe != filepath.Join(root, "runtime", filepath.FromSlash(g.executable)) || dir != filepath.Dir(exe) {
+	a.launch = func(ctx context.Context, exe string, args []string, dir string, env []string) (processHandle, error) {
+		if exe != filepath.Join(root, "runtime", filepath.FromSlash(g.Executable)) || dir != filepath.Dir(exe) {
 			t.Fatal("unowned executable")
 		}
 		value := func(flag string) string {
@@ -86,7 +88,7 @@ func WithGGMLEndpointFixture(t *testing.T, id ProviderID, handler http.Handler, 
 				handler.ServeHTTP(w, r)
 			}
 		})}
-		p := &ownedProcess{done: make(chan struct{}), pid: 123}
+		p := &fakeProcess{done: make(chan struct{}), pid: 123}
 		p.closeJob = func() { server.Close() }
 		go func() { _ = server.Serve(l); close(p.done) }()
 		return p, nil
@@ -96,9 +98,9 @@ func WithGGMLEndpointFixture(t *testing.T, id ProviderID, handler http.Handler, 
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer p.kill()
+	defer p.Kill()
 	exercise(ep)
-	p.kill()
+	p.Kill()
 	// Exact bytes remain required at each start, even after an earlier success.
 	if err = os.WriteFile(s.path(root), []byte("corrupt"), 0600); err != nil {
 		t.Fatal(err)
@@ -118,7 +120,7 @@ func TestGGMLReadinessRejectsForeignDeadAndWrongAlias(t *testing.T) {
 			}
 		}))
 		a := g.newAdapter(t.TempDir()).(*ggmlAdapter)
-		p := &ownedProcess{done: make(chan struct{}), pid: 123}
+		p := &fakeProcess{done: make(chan struct{}), pid: 123}
 		for _, owned := range []bool{false, true} {
 			if owned && g.id == WhisperCPP {
 				continue
@@ -192,7 +194,7 @@ func (r ggmlRewriteTransport) RoundTrip(req *http.Request) (*http.Response, erro
 }
 func TestGGMLPinnedSourcesAndEnvironment(t *testing.T) {
 	for _, g := range []ggmlProvider{llamaProvider, whisperProvider} {
-		if len(g.release.sha256) != 64 || g.release.size <= 0 || !strings.HasPrefix(g.release.url, "https://github.com/ggml-org/") || !strings.Contains(g.release.url, "/releases/download/"+g.version+"/") {
+		if len(g.release.SHA256) != 64 || g.release.Size <= 0 || !strings.HasPrefix(g.release.URL, "https://github.com/ggml-org/") || !strings.Contains(g.release.URL, "/releases/download/"+g.version+"/") {
 			t.Fatal("unpinned runtime")
 		}
 		for _, s := range g.specs {

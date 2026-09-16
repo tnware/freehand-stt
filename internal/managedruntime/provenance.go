@@ -5,6 +5,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
 type ModelAcquisitionMethod string
@@ -74,8 +76,8 @@ type RuntimeArtifact struct {
 // subprocess, network lookup, or independent frontend pin registry is involved.
 func runtimeSource(provider ProviderID) *RuntimeSource {
 	source := &RuntimeSource{Artifacts: []RuntimeArtifact{}}
-	appendAsset := func(os, arch string, a asset) bool {
-		u, err := url.Parse(a.url)
+	appendAsset := func(os, arch string, a artifact.Asset) bool {
+		u, err := url.Parse(a.URL)
 		if err != nil || u.Scheme != "https" || u.Host != "github.com" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
 			return false
 		}
@@ -90,14 +92,14 @@ func runtimeSource(provider ProviderID) *RuntimeSource {
 			return false
 		}
 		source.RepositoryURL, source.ReleaseURL = repositoryURL, releaseURL
-		source.Artifacts = append(source.Artifacts, RuntimeArtifact{OS: os, Architecture: arch, Backend: a.backend, Filename: path.Base(u.Path), URL: a.url, SHA256: a.sha256, SizeBytes: a.size})
+		source.Artifacts = append(source.Artifacts, RuntimeArtifact{OS: os, Architecture: arch, Backend: a.Backend, Filename: path.Base(u.Path), URL: a.URL, SHA256: a.SHA256, SizeBytes: a.Size})
 		return true
 	}
 	for key, recipe := range platformRecipes {
 		if key.provider != provider {
 			continue
 		}
-		for _, a := range recipe.archives {
+		for _, a := range recipe.Archives {
 			if !appendAsset(key.os, key.arch, a) {
 				return nil
 			}

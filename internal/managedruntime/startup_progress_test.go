@@ -1,13 +1,12 @@
 package managedruntime
 
 import (
-	"context"
 	"testing"
 )
 
 func TestStartupProgressFencesOldLaunch(t *testing.T) {
 	w := &worker{busy: true, status: Status{Phase: "start", Operation: Operation{Outcome: "running"}}}
-	ctx := w.observeStartup(context.Background())
+	ctx := w.observeStartup(t.Context())
 	reportStartupProgress(ctx, "verifying_runtime")
 	first := w.GetStatus()
 	if first.StartupProgress == nil || first.StartupProgress.Phase != "verifying_runtime" || first.StartupProgress.StartedAt <= 0 {
@@ -17,7 +16,7 @@ func TestStartupProgressFencesOldLaunch(t *testing.T) {
 	if w.GetStatus().StartupProgress.Phase != "verifying_runtime" {
 		t.Fatal("non-allowlisted progress")
 	}
-	next := w.observeStartup(context.Background())
+	next := w.observeStartup(t.Context())
 	reportStartupProgress(next, "waiting_ready")
 	reportStartupProgress(ctx, "warming_up")
 	w.appendProcessOutput(1, "stdout", []byte("old"))

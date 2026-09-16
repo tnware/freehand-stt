@@ -17,12 +17,12 @@ func registerTestProvider(t *testing.T) ProviderID {
 }
 
 type delayedProviderAdapter struct {
-	serviceAdapter
+	workerAdapter
 	done chan struct{}
 }
 
-func (a *delayedProviderAdapter) Start(context.Context, string) (*ownedProcess, Endpoint, error) {
-	return &ownedProcess{done: a.done, closeJob: func() {}}, Endpoint{Enabled: true, BaseURL: "http://127.0.0.1:12345", Model: "authoritative"}, nil
+func (a *delayedProviderAdapter) Start(context.Context, string) (processHandle, Endpoint, error) {
+	return &fakeProcess{done: a.done, closeJob: func() {}}, Endpoint{Enabled: true, BaseURL: "http://127.0.0.1:12345", Model: "authoritative"}, nil
 }
 
 func TestProviderProcessAdmissionRetainsStoppingOwner(t *testing.T) {
@@ -34,7 +34,7 @@ func TestProviderProcessAdmissionRetainsStoppingOwner(t *testing.T) {
 	defer func() { close(done); _ = m.ServiceShutdown() }()
 	for _, w := range m.workers {
 		w.status.Supported = true
-		w.adapter = &serviceAdapter{installed: true, downloaded: true}
+		w.adapter = &workerAdapter{installed: true, downloaded: true}
 	}
 	if err := m.startup(t.Context()); err != nil {
 		t.Fatal(err)
@@ -44,18 +44,18 @@ func TestProviderProcessAdmissionRetainsStoppingOwner(t *testing.T) {
 	}
 	first, second := m.workers[one.ID], m.workers[two.ID]
 	first.adapter = &delayedProviderAdapter{done: done}
-	if err := first.startProcess(context.Background()); err != nil {
+	if err := first.startProcess(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	// A cancelled/removed endpoint is not proof that the child has exited.
-	if err := second.startProcess(context.Background()); err == nil {
+	if err := second.startProcess(t.Context()); err == nil {
 		t.Fatal("started concurrent provider process")
 	}
 	first.mu.Lock()
 	killed := first.configureLocked(workerConfig{Enabled: true, Model: "parakeet-tdt"})
 	first.mu.Unlock()
-	killed.kill()
-	if err := second.startProcess(context.Background()); err == nil {
+	killed.Kill()
+	if err := second.startProcess(t.Context()); err == nil {
 		t.Fatal("forgot provider owner before process exit")
 	}
 }
@@ -68,7 +68,7 @@ func TestProviderInstallRejectsLegacyDuplicates(t *testing.T) {
 	defer m.ServiceShutdown()
 	for _, w := range m.workers {
 		w.status.Supported = true
-		w.adapter = &serviceAdapter{}
+		w.adapter = &workerAdapter{}
 	}
 	if err := m.startup(t.Context()); err != nil {
 		t.Fatal(err)

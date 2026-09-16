@@ -23,7 +23,11 @@ import (
 	inputservice "github.com/tnware/freehand-stt/internal/input"
 	"github.com/tnware/freehand-stt/internal/managedruntime"
 	overlayservice "github.com/tnware/freehand-stt/internal/overlay"
-	"github.com/tnware/freehand-stt/internal/platform"
+	nativeaudio "github.com/tnware/freehand-stt/internal/platform/audio"
+	nativeinput "github.com/tnware/freehand-stt/internal/platform/input"
+	nativekeyboard "github.com/tnware/freehand-stt/internal/platform/keyboard"
+	nativeoverlay "github.com/tnware/freehand-stt/internal/platform/overlay"
+	nativestartup "github.com/tnware/freehand-stt/internal/platform/startup"
 	"github.com/tnware/freehand-stt/internal/postprocess"
 	"github.com/tnware/freehand-stt/internal/releaseinfo"
 	"github.com/tnware/freehand-stt/internal/resources"
@@ -86,11 +90,11 @@ type App struct {
 	updates         *updates.Service
 	windowing       *windowing.Service
 	services        []application.Service
-	audio           *platform.Capture
-	playback        *platform.Playback
-	hold            *platform.HoldHook
+	audio           *nativeaudio.Capture
+	playback        *nativeaudio.Playback
+	hold            *nativekeyboard.HoldHook
 	shortcuts       *shortcut.Controller
-	capture         *platform.ShortcutCapturer
+	capture         *nativekeyboard.ShortcutCapturer
 	wails           *application.App
 	mainWindow      *windowController
 	trayPopover     *windowController
@@ -162,17 +166,17 @@ func New(opts Options) (*App, error) {
 		return a.hold.Available()
 	}
 
-	a.audio = &platform.Capture{}
-	a.overlay = overlayservice.NewService(settings, func() platform.LevelSource {
+	a.audio = &nativeaudio.Capture{}
+	a.overlay = overlayservice.NewService(settings, func() nativeoverlay.LevelSource {
 		return a.audio.NewLevelTap()
 	}, rootLogger)
-	a.capture = &platform.ShortcutCapturer{}
+	a.capture = &nativekeyboard.ShortcutCapturer{}
 	keys := store.STTCredentials()
 	processingKeys := store.CleanupCredentials()
 	ttsKeys := store.SpeechCredentials()
 	client := inference.New()
 	processor := postprocess.New(client, rootLogger.With("component", "postprocess"))
-	nativeInput := platform.NewInput(rootLogger.With("component", "insertion"))
+	nativeInput := nativeinput.NewInput(rootLogger.With("component", "insertion"))
 	if closer, ok := any(nativeInput).(io.Closer); ok {
 		a.nativeInput = closer
 	}
@@ -190,7 +194,7 @@ func New(opts Options) (*App, error) {
 	a.managedRuntime = managedruntime.NewManager(a.managedRuntimeOptions(storage.Directory(store), admission))
 	transcripts := history.NewStore(settings.HistoryEnabled, nativeInput)
 	a.settingsService = settingsservice.NewService(
-		store, settings, keys, processingKeys, platform.Startup{}, holdAvailability,
+		store, settings, keys, processingKeys, nativestartup.Startup{}, holdAvailability,
 		a.applyShortcuts, a.applyOverlaySettings,
 		transcripts.SetEnabled,
 		func(next config.Settings) { filetranscription.ApplySettings(a.files, next) },
@@ -218,7 +222,7 @@ func New(opts Options) (*App, error) {
 	profileSource := settingsservice.RequestProfiles(a.settingsService)
 	a.dictation = dictation.NewService(a.audio, nativeInput, client, processor, settingsSource, settingsservice.DictationProfiles(a.settingsService), transcripts, admission, a.publishStatus, rootLogger.With("component", "dictation"))
 	a.files = filetranscription.NewService(settingsSource, profileSource, client, processor, transcripts, nativeInput, a.chooseAudioFile, a.publishFileStatus, a.publishFileDelta, admission, rootLogger)
-	a.playback = &platform.Playback{}
+	a.playback = &nativeaudio.Playback{}
 	a.tts = tts.NewService(
 		settingsservice.TextToSpeechProfiles(a.settingsService),
 		client,
@@ -287,7 +291,7 @@ func New(opts Options) (*App, error) {
 		application.NewService(a.windowing),
 		application.NewService(a.overlay),
 	}
-	a.hold = platform.NewHoldHook(
+	a.hold = nativekeyboard.NewHoldHook(
 		func() { _ = a.dictation.StartRecording(dictation.RecordingHold) },
 		func() { _ = a.dictation.StopRecording() },
 		func() { _ = a.dictation.Cancel() },
@@ -443,7 +447,7 @@ func (a *App) newWailsApp() {
 // loop before Wails owns it. Each failure is degraded, never fatal.
 func (a *App) onStarted(*application.ApplicationEvent) {
 	if !a.settingsService.GetSettings().Configuration.RecoveryRequired {
-		if err := (platform.Startup{}).Set(a.settings.StartWithWindows); err != nil {
+		if err := (nativestartup.Startup{}).Set(a.settings.StartWithWindows); err != nil {
 			a.logger.Warn("startup registration reconciliation failed", "error_kind", diagnostics.ErrorKind(err))
 		}
 	}

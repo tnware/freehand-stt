@@ -5,7 +5,7 @@ import (
 
 	"github.com/tnware/freehand-stt/internal/audio"
 	"github.com/tnware/freehand-stt/internal/dictation"
-	"github.com/tnware/freehand-stt/internal/platform"
+	nativeoverlay "github.com/tnware/freehand-stt/internal/platform/overlay"
 )
 
 // The main-window meter is fed far more slowly than the overlay's. Every
@@ -25,7 +25,7 @@ const (
 // message would be dozens of numbers per tick to say what one number already
 // says.
 type levelPump struct {
-	tap      platform.LevelSource
+	tap      nativeoverlay.LevelSource
 	emit     func(level float64)
 	wanted   func() bool
 	envelope audio.Envelope
@@ -33,7 +33,7 @@ type levelPump struct {
 	done     chan struct{}
 }
 
-func newLevelPump(tap platform.LevelSource, emit func(float64), wanted func() bool) *levelPump {
+func newLevelPump(tap nativeoverlay.LevelSource, emit func(float64), wanted func() bool) *levelPump {
 	return &levelPump{
 		tap:      tap,
 		emit:     emit,

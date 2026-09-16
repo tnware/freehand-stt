@@ -192,10 +192,10 @@ func TestProviderRuntimeSourceProjectsPinnedArchives(t *testing.T) {
 				if key.provider != d.ID {
 					continue
 				}
-				for _, a := range recipe.archives {
-					u, _ := url.Parse(a.url)
-					id := key.os + "/" + key.arch + "/" + a.backend + "/" + a.url
-					expected[id] = RuntimeArtifact{OS: key.os, Architecture: key.arch, Backend: a.backend, Filename: path.Base(u.Path), URL: a.url, SHA256: a.sha256, SizeBytes: a.size}
+				for _, a := range recipe.Archives {
+					u, _ := url.Parse(a.URL)
+					id := key.os + "/" + key.arch + "/" + a.Backend + "/" + a.URL
+					expected[id] = RuntimeArtifact{OS: key.os, Architecture: key.arch, Backend: a.Backend, Filename: path.Base(u.Path), URL: a.URL, SHA256: a.SHA256, SizeBytes: a.Size}
 				}
 			}
 			if len(decoded.Source.Artifacts) != len(expected) {

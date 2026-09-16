@@ -1,7 +1,6 @@
 package managedruntime
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -105,14 +104,14 @@ func TestManagerIndependentlySupervisesInstances(t *testing.T) {
 	one := Instance{ID: LegacyInstanceID, Name: "Voice", Provider: NeMoSpeechCPP, Model: "nemotron-3.5"}
 	two := Instance{ID: "second", Name: "Files", Provider: secondProvider, Model: "nemotron-3.5"}
 	m := NewManager(ManagerOptions{Directory: t.TempDir(), Instances: []Instance{one, two}})
-	adapters := map[string]*serviceAdapter{}
+	adapters := map[string]*workerAdapter{}
 	for id, w := range m.workers {
-		a := &serviceAdapter{installed: true, downloaded: true}
+		a := &workerAdapter{installed: true, downloaded: true}
 		adapters[id] = a
 		w.adapter = a
 		w.status.Supported = true
 	}
-	if err := m.startup(context.Background()); err != nil {
+	if err := m.startup(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = m.ServiceShutdown() })
@@ -139,7 +138,7 @@ func TestManagerIndependentlySupervisesInstances(t *testing.T) {
 		t.Fatalf("stopping one changed other: %+v %v", after, err)
 	}
 	select {
-	case <-adapters[two.ID].process.done:
+	case <-adapters[two.ID].process.Done():
 		t.Fatal("stopped another process")
 	default:
 	}
@@ -166,7 +165,7 @@ func TestManagerIndependentlySupervisesInstances(t *testing.T) {
 	}
 	for _, a := range adapters {
 		select {
-		case <-a.process.done:
+		case <-a.process.Done():
 		default:
 			t.Fatal("shutdown left a child owned")
 		}

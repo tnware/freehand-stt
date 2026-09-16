@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/tnware/freehand-stt/internal/compatibility"
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/process"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
@@ -65,5 +66,5 @@ func (g ggmlProvider) descriptor() ProviderDescriptor {
 	return ProviderDescriptor{ID: g.id, Name: g.name, Version: g.version, Supported: supported, UnavailableReason: reason, Backends: hostBackends(g.id), Models: models, Source: runtimeSource(g.id)}
 }
 func (g ggmlProvider) newAdapter(root string) runtimeAdapter {
-	return &ggmlAdapter{root: root, recipe: g, launch: launchOwned, listenerOwner: ownsListener}
+	return &ggmlAdapter{root: root, recipe: g, launch: launchOwned, listenerOwner: process.OwnsListener}
 }

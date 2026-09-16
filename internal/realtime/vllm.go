@@ -3,18 +3,25 @@ package realtime
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"strings"
 
 	"github.com/coder/websocket"
-	"github.com/tnware/freehand-stt/internal/compatibility"
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
-func (s *Session) writeAudio(ctx context.Context, frame []byte) error {
-	if s.backend != compatibility.VLLM {
-		return s.conn.Write(ctx, websocket.MessageBinary, frame)
+// vLLM has no session.updated acknowledgement. The ordered start event follows
+// model selection; asynchronous admission errors fail the session.
+func configureVLLM(ctx context.Context, conn *websocket.Conn, model string) error {
+	message, _ := json.Marshal(map[string]any{"type": "session.update", "model": model})
+	if conn.Write(ctx, websocket.MessageText, message) != nil || conn.Write(ctx, websocket.MessageText, []byte(`{"type":"input_audio_buffer.commit","final":false}`)) != nil {
+		return errors.New("realtime server configuration was not accepted")
 	}
+	return nil
+}
+
+func (s *Session) writeVLLMAudio(ctx context.Context, frame []byte) error {
 	// Base64 contains no JSON delimiters. Avoid a persistent string copy of audio.
 	message := append([]byte(`{"type":"input_audio_buffer.append","audio":"`), make([]byte, base64.StdEncoding.EncodedLen(len(frame)))...)
 	base64.StdEncoding.Encode(message[len(`{"type":"input_audio_buffer.append","audio":"`):], frame)

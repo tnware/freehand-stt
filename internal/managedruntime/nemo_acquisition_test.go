@@ -19,7 +19,7 @@ func TestNemoAcquisitionMeasuredProgressAndOutcomes(t *testing.T) {
 			spec := modelSpecs["nemotron-3.5"]
 			originalLaunch := a.launch
 			release := make(chan struct{})
-			a.launch = func(ctx context.Context, exe string, args []string, dir string, env []string) (*ownedProcess, error) {
+			a.launch = func(ctx context.Context, exe string, args []string, dir string, env []string) (processHandle, error) {
 				if strings.Join(args, " ") != "--json model pull "+spec.repo {
 					return originalLaunch(ctx, exe, args, dir, env)
 				}
@@ -29,7 +29,7 @@ func TestNemoAcquisitionMeasuredProgressAndOutcomes(t *testing.T) {
 				if err := os.WriteFile(spec.path(root)+".partial", []byte("fix"), 0600); err != nil {
 					return nil, err
 				}
-				p := &ownedProcess{done: make(chan struct{}), closeJob: func() {}}
+				p := &fakeProcess{done: make(chan struct{}), closeJob: func() {}}
 				p.stdout.Write([]byte("private child URL/token canary"))
 				go func() {
 					defer close(p.done)
@@ -56,14 +56,15 @@ func TestNemoAcquisitionMeasuredProgressAndOutcomes(t *testing.T) {
 				return p, nil
 			}
 			events := make(chan Status, 64)
-			s := NewService(Options{Preferences: Defaults(), Changed: func(st Status) { events <- st }})
+			s := newTestWorker(t, false)
+			s.changed = func(st workerSnapshot) { events <- st.Status }
 			s.status.Supported = true
 			s.adapter = a
 			if err := s.startup(t.Context()); err != nil {
 				t.Fatal(err)
 			}
 			defer s.ServiceShutdown()
-			waitService(t, s, "installed")
+			waitWorker(t, s, "installed")
 			if err := s.DownloadModel("nemotron-3.5"); err != nil {
 				t.Fatal(err)
 			}

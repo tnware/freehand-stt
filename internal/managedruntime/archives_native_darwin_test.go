@@ -15,7 +15,19 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
+
+// macOS exposes /var as an OS symlink. Use its physical temporary directory
+// for fixtures; production managed storage still rejects linked ancestors.
+func TestMain(m *testing.M) {
+	dir, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil || os.Setenv("TMPDIR", dir) != nil {
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
+}
 
 // Opt-in release qualification: archives supplied by the maintainer, never
 // downloaded in CI. Only --help executes; no model is loaded or enumerated.
@@ -29,26 +41,26 @@ func TestDarwinOfficialRuntimeArchives(t *testing.T) {
 			continue
 		}
 		t.Run(string(key.provider)+"/"+key.arch+"/"+key.backend, func(t *testing.T) {
-			bundle := recipe.runtimeBundle
-			bundle.archives = append([]asset(nil), bundle.archives...)
-			for i, a := range bundle.archives {
-				u, _ := url.Parse(a.url)
+			bundle := recipe.Bundle
+			bundle.Archives = append([]artifact.Asset(nil), bundle.Archives...)
+			for i, a := range bundle.Archives {
+				u, _ := url.Parse(a.URL)
 				filename := filepath.Join(cache, path.Base(u.Path))
-				if err := verifyFile(t.Context(), filename, a.size, a.sha256); err != nil {
+				if err := artifact.VerifyFile(t.Context(), filename, a.Size, a.SHA256); err != nil {
 					t.Fatal(err)
 				}
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, filename) }))
 				t.Cleanup(srv.Close)
-				bundle.archives[i].url = srv.URL
+				bundle.Archives[i].URL = srv.URL
 			}
 			root := t.TempDir()
-			if err := installRuntimeBundle(t.Context(), root, bundle, http.DefaultClient, nil); err != nil {
+			if err := artifact.Install(t.Context(), root, bundle, http.DefaultClient, nil); err != nil {
 				t.Fatal(err)
 			}
-			if err := verifyRuntimeBundle(t.Context(), filepath.Join(root, "runtime"), bundle); err != nil {
+			if err := artifact.Verify(t.Context(), filepath.Join(root, "runtime"), bundle); err != nil {
 				t.Fatal(err)
 			}
-			exe := filepath.Join(root, "runtime", filepath.FromSlash(bundle.executable))
+			exe := filepath.Join(root, "runtime", filepath.FromSlash(bundle.Executable))
 			m, err := macho.Open(exe)
 			if err != nil {
 				t.Fatal(err)
@@ -74,15 +86,15 @@ func TestDarwinOfficialRuntimeArchives(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer p.kill()
-			if err = p.wait(ctx); err != nil {
-				t.Fatalf("metadata command failed: %v; %s", err, p.stderr.bytes())
+			defer p.Kill()
+			if err = p.Wait(ctx); err != nil {
+				t.Fatalf("metadata command failed: %v; %s", err, p.Stderr())
 			}
 			if key.provider == NeMoSpeechCPP {
-				if !strings.Contains(string(p.stdout.bytes()), "nemo-speech") {
+				if !strings.Contains(string(p.Stdout()), "nemo-speech") {
 					t.Fatal("CLI help missing")
 				}
-			} else if !strings.Contains(string(p.stdout.bytes()), "--gpu-layers") {
+			} else if !strings.Contains(string(p.Stdout()), "--gpu-layers") {
 				t.Fatal("server help missing")
 			}
 		})

@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+
+	"github.com/tnware/freehand-stt/internal/managedruntime/internal/artifact"
 )
 
 // All bundle pins are from NVIDIA/NeMo-Speech.cpp v0.1.0 models/index.json.
@@ -42,13 +44,13 @@ func nemoTokenizerDirectory(root string) string {
 
 func verifyNeMoModel(ctx context.Context, root, id string) error {
 	spec := modelSpecs[id]
-	if err := verifyFile(ctx, spec.path(root), spec.size, spec.sha256); err != nil {
+	if err := artifact.VerifyFile(ctx, spec.path(root), spec.size, spec.sha256); err != nil {
 		return err
 	}
 	if id != "magpie-tts" {
 		return nil
 	}
-	if err := verifyFile(ctx, nemoCodecSpec.path(root), nemoCodecSpec.size, nemoCodecSpec.sha256); err != nil {
+	if err := artifact.VerifyFile(ctx, nemoCodecSpec.path(root), nemoCodecSpec.size, nemoCodecSpec.sha256); err != nil {
 		return err
 	}
 	dir := nemoTokenizerDirectory(root)
@@ -57,10 +59,10 @@ func verifyNeMoModel(ctx context.Context, root, id string) error {
 		return err
 	}
 	if len(entries) != len(nemoTokenizerMembers) {
-		return errIntegrity
+		return artifact.ErrIntegrity
 	}
 	for _, member := range nemoTokenizerMembers {
-		if err := verifyFile(ctx, filepath.Join(dir, member.name), member.size, member.sha256); err != nil {
+		if err := artifact.VerifyFile(ctx, filepath.Join(dir, member.name), member.size, member.sha256); err != nil {
 			return err
 		}
 	}
@@ -86,13 +88,13 @@ func nemoModelAcquiredBytes(root, id string) AcquisitionProgress {
 	// The CLI deletes the tar prefix once its verified tokenizer is extracted.
 	// File metadata only: extraction completion is not integrity acceptance.
 	if tokenizer == 0 {
-		complete := safeRoot(nemoTokenizerDirectory(root)) == nil
+		complete := artifact.CheckRoot(nemoTokenizerDirectory(root)) == nil
 		for _, member := range nemoTokenizerMembers {
 			if !complete {
 				break
 			}
 			info, err := os.Lstat(filepath.Join(nemoTokenizerDirectory(root), member.name))
-			if err != nil || !info.Mode().IsRegular() || info.Size() != member.size || isReparse(filepath.Join(nemoTokenizerDirectory(root), member.name)) {
+			if err != nil || !info.Mode().IsRegular() || info.Size() != member.size || artifact.IsReparse(filepath.Join(nemoTokenizerDirectory(root), member.name)) {
 				complete = false
 				break
 			}

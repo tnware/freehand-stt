@@ -20,13 +20,14 @@ import (
 	"errors"
 
 	inputservice "github.com/tnware/freehand-stt/internal/input"
-	"github.com/tnware/freehand-stt/internal/platform"
+	nativeaudio "github.com/tnware/freehand-stt/internal/platform/audio"
+	nativekeyboard "github.com/tnware/freehand-stt/internal/platform/keyboard"
 )
 
 type nativePermissionAccess struct{ app *App }
 
 func (p nativePermissionAccess) Current() inputservice.PermissionStatus {
-	return inputservice.PermissionStatus{Required: true, Microphone: platform.MicrophoneAuthorization(), Accessibility: C.AXIsProcessTrusted() != 0, Keyboard: platform.KeyboardAuthorization()}
+	return inputservice.PermissionStatus{Required: true, Microphone: nativeaudio.MicrophoneAuthorization(), Accessibility: C.AXIsProcessTrusted() != 0, Keyboard: nativekeyboard.KeyboardAuthorization()}
 }
 func (p nativePermissionAccess) Request(ctx context.Context, kind string) error {
 	if err := ctx.Err(); err != nil {
@@ -34,7 +35,7 @@ func (p nativePermissionAccess) Request(ctx context.Context, kind string) error 
 	}
 	switch kind {
 	case "microphone":
-		return platform.RequestMicrophoneAuthorization(ctx)
+		return nativeaudio.RequestMicrophoneAuthorization(ctx)
 	case "accessibility":
 		C.freehand_request_accessibility_ui()
 	case "keyboard":
