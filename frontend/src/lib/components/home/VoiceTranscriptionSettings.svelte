@@ -172,13 +172,13 @@
   class:voice-sidebar={sidebar}
 >
   {#if !draft}
-    {#if !setup && !sidebar}<h3 class="content-section-title">
+    {#if !setup && !sidebar}<h3 class="text-[13px] font-semibold">
         Transcription
       </h3>{/if}
     <div class="space-y-1.5">
       <label
         for={controlID("voice-connection")}
-        class="content-section-title">Connection</label
+        class="text-[13px] font-semibold">Connection</label
       >
       <div class="flex gap-2">
         <ConnectionSelect
@@ -313,7 +313,7 @@
       <div>
         <label
           for={controlID("voice-realtime")}
-          class="content-section-title"
+          class="text-[13px] font-semibold"
           >{sidebar ? "Live dictation" : "Realtime transcription"}</label
         >
         {#if !sidebar}<p class="mt-1 text-xs text-muted-foreground">
@@ -342,7 +342,7 @@
   {/if}
   {#if (profile?.capabilities.languageHint || profile?.languages?.length) && (!cfg.realtime || profile?.realtimeLanguageHint)}
     <div class={draft ? "space-y-2 py-3" : "space-y-1.5"}>
-      <label for={controlID("voice-language")} class="content-section-title"
+      <label for={controlID("voice-language")} class="text-[13px] font-semibold"
         >Spoken language</label
       >
       <LanguagePicker
@@ -359,7 +359,7 @@
   {/if}
   {#if !sidebar && !cfg.realtime && profile?.capabilities.transcriptionPrompt}
     <div class={draft ? "space-y-2 py-3" : "space-y-1.5"}>
-      <label for={controlID("voice-prompt")} class="content-section-title"
+      <label for={controlID("voice-prompt")} class="text-[13px] font-semibold"
         >Context hint</label
       ><Textarea
         id={controlID("voice-prompt")}
@@ -403,7 +403,7 @@
   {/if}
   {#if cfg.realtime}
     <div class="flex items-center justify-between gap-3">
-      <label for={controlID("voice-captions")} class="content-section-title"
+      <label for={controlID("voice-captions")} class="text-[13px] font-semibold"
         >Live overlay captions</label
       >
       <Switch
@@ -428,7 +428,7 @@
     <div class="flex items-center justify-between gap-3">
       <label
         for={controlID("voice-temperature-override")}
-        class="content-section-title">Override temperature</label
+        class="text-[13px] font-semibold">Override temperature</label
       ><Switch
         id={controlID("voice-temperature-override")}
         checked={cfg.transcriptionOptions.temperatureOverride}
@@ -461,7 +461,7 @@
   {/if}
   {#if draft && !cfg.realtime}
     <div class="space-y-1.5">
-      <label for={controlID("voice-timeout")} class="content-section-title"
+      <label for={controlID("voice-timeout")} class="text-[13px] font-semibold"
         >Recording request timeout (seconds)</label
       ><Input
         id={controlID("voice-timeout")}

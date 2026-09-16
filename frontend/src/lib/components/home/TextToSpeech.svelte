@@ -148,8 +148,8 @@
     >
       <StatusBadge
         tone={failed ? "danger" : working ? "accent" : "neutral"}
-        class={working ? "font-semibold" : ""}
-      >{stateLabel}</StatusBadge>
+        class={working ? "font-semibold" : ""}>{stateLabel}</StatusBadge
+      >
     </div>
     {#if quickSettings}
       <div class="min-w-0 shrink-0">{@render quickSettings()}</div>
@@ -239,7 +239,7 @@
             : "Speak"}
         {#if !working}<kbd
             aria-hidden="true"
-            class="ml-1 hidden text-[10px] opacity-70 @sm:inline"
+            class="ml-1 hidden text-2xs opacity-70 @sm:inline"
             >{shortcutVisual}</kbd
           >{/if}
       </Button>

@@ -1024,7 +1024,10 @@ belong below it. Settings may keep this header sticky while its content scrolls.
 Interface text is 13px and help text is 12px. Reader and toolbar gutters use 12px;
 full-page settings forms retain a 20px content inset.
 Sidebar headers use the shared 34px `workbench-header` role; docked controls use
-the 28px minimum `workbench-toolbar` role. Toolbars and page actions can wrap when
+the 28px minimum `workbench-toolbar` role. Titles retain the established 16px
+semibold type; compact uppercase headings and section icons remain muted.
+Header surfaces inherit their parent background and use hairline dividers.
+Toolbars and page actions can wrap when
 their own pane narrows. `workbench-tab` provides the same selected underline,
 hover, and inset keyboard focus for bottom-panel tabs, runtime output targets,
 and History sidebar views. Navigation lists use full-width rows and an edge
@@ -1043,10 +1046,26 @@ and pickers use 32px controls, actions use 28px controls, and compact toolbars
 use the smaller variants. Native control semantics, visible focus, input
 borders, and floating menu/dialog surfaces stay explicit. Page styling never
 owns workflow state, credentials, or scrolling behavior.
+Search pickers share the `ui/combobox` content, option, and trigger components.
+The content owns portal placement, viewport limits, one scrollable option region,
+and an optional stationary action footer. Feature owners retain filtering,
+metadata refresh, selection validation, and draft behavior. `ToggleGroup.Root`
+uses its `segments` layout for framed equal-width options; its utility classes
+must override the root and item defaults together. Shared component classes
+must not silently lose geometry to registry utility classes. Component styles must
+not declare a named CSS layer before the global Tailwind layer order; shared
+picker presentation uses utility classes so mounting a picker cannot change the
+cascade of unrelated headings or workbench layout.
+`DownloadDetails` retains a native disclosure with a visible chevron.
+History fact grids stack labels and values at narrow container widths; literal
+chips wrap long IDs and checksums. `StatusBadge` distinguishes recording from
+ordinary processing and errors, and owns its optional status dot. Every command
+palette entry supplies a semantic icon, including the title bar's layout icons.
+
 The shared switch uses a pill track and an inset circular thumb, retaining
 Bits UI state, keyboard semantics, and visible focus indicators.
 
-The renderer retains the existing neutral light and charcoal surfaces and brand
+The renderer uses cool neutral light and charcoal surfaces with blue brand
 accents. Page headings and field labels establish the reading order; descriptions
 use readable secondary text. Primary actions use dedicated action tokens for
 legible normal and hover states. The shared `Button` soft variant identifies

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DownloadDetails from "$lib/components/common/DownloadDetails.svelte";
   import type { RuntimeSource } from "$bindings/managedruntime";
   import { Browser } from "@wailsio/runtime";
   import { backendLabel, modelSize } from "$lib/utils/managedRuntime";
@@ -39,11 +40,7 @@
       >Official release</a
     >
   </p>
-  <details class="group">
-    <summary
-      class="link-action"
-      >Binary download details</summary
-    >
+  <DownloadDetails title="Binary download details">
     <div class="mt-2 divide-y divide-hairline">
       {#each artifacts as artifact (`${artifact.os}/${artifact.architecture}/${artifact.backend}/${artifact.filename}`)}
         <div class="min-w-0 space-y-1 py-3 first:pt-0 last:pb-0">
@@ -58,7 +55,7 @@
         </div>
       {/each}
     </div>
-  </details>
+  </DownloadDetails>
   {#if linkError}<p role="alert" class="text-destructive">
       Could not open the source in your browser.
     </p>{/if}

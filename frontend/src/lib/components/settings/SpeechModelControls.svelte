@@ -218,7 +218,8 @@
                 ...speech.options,
                 instructions: event.currentTarget.value,
               });
-          }}></textarea>
+          }}
+        ></textarea>
         <p class="text-xs leading-relaxed text-muted-foreground">
           Describe tone, emotion, or delivery. Leave empty for the selected
           voice’s usual style.

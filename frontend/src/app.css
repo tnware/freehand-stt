@@ -69,6 +69,8 @@
   /* The record control is the one saturated constant in both themes. The
    * wash/edge/text trio carries the same hue onto a surface, so the status
    * bar can state "recording" without a second colour entering the palette. */
+  /* Windows caption close hover red, per platform convention. */
+  --close-hover: #c42b1c;
   --record: #cf4d62;
   --record-wash: rgb(207 77 98 / 12%);
   --record-edge: rgb(207 77 98 / 35%);
@@ -245,6 +247,8 @@
 }
 
 @theme inline {
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1rem;
   --font-display: "Archivo Variable", var(--font-sans);
   --font-sans:
     "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
@@ -392,7 +396,7 @@
 @utility caption {
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.35;
   color: var(--secondary-foreground);
@@ -449,11 +453,10 @@ html.dark[data-material="mica"] #app {
     align-items: center;
     gap: 8px;
     padding-inline: 12px;
-    border-bottom: 1px solid var(--border);
-    background: var(--well);
+    border-bottom: 1px solid var(--hairline);
   }
   .workbench-header {
-    height: 36px;
+    height: 34px;
   }
   .workbench-toolbar {
     min-height: 28px;
@@ -471,24 +474,21 @@ html.dark[data-material="mica"] #app {
     color: var(--muted-foreground);
     font-size: 12px;
     font-weight: 500;
-    letter-spacing: 0.01em;
     white-space: nowrap;
     transition:
       color 100ms,
       background-color 100ms;
   }
   .workbench-tab:is([aria-selected="true"], [aria-pressed="true"]) {
-    color: var(--accent-text);
-    font-weight: 600;
+    color: var(--foreground);
   }
   .workbench-tab:is([aria-selected="true"], [aria-pressed="true"])::after {
     content: "";
     position: absolute;
-    inset-inline: 10px;
+    inset-inline: 12px;
     bottom: 0;
-    height: 2px;
-    border-radius: 1px 1px 0 0;
-    background: var(--primary);
+    height: 1px;
+    background: var(--accent-text);
   }
   .workbench-tab:hover:not(:disabled):not([aria-disabled="true"]) {
     background: var(--subtle-fill-hover);
@@ -501,7 +501,7 @@ html.dark[data-material="mica"] #app {
   .content-title {
     font-family: var(--font-sans);
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.35;
     letter-spacing: 0;
     color: var(--foreground);
@@ -514,11 +514,11 @@ html.dark[data-material="mica"] #app {
   }
   .content-kicker {
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.5;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--secondary-foreground);
+    color: var(--muted-foreground);
   }
   .content-meta {
     font-size: 12px;
@@ -548,7 +548,7 @@ html.dark[data-material="mica"] #app {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: var(--accent-text);
+    color: var(--muted-foreground);
   }
   .content-disclosure {
     font-size: 13px;
@@ -562,46 +562,6 @@ html.dark[data-material="mica"] #app {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
   }
-  /* Combobox picker surface: one geometry for every search dropdown. */
-  .picker-content {
-    z-index: 50;
-    max-height: min(20rem, var(--bits-combobox-content-available-height));
-    width: var(--bits-combobox-anchor-width);
-    min-width: 16rem;
-    max-width: calc(100vw - 24px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    background: var(--popover);
-    padding: 4px;
-    color: var(--popover-foreground);
-    box-shadow: var(--float);
-  }
-  .picker-item {
-    display: flex;
-    cursor: default;
-    align-items: center;
-    gap: 12px;
-    border-radius: 4px;
-    padding: 10px 12px;
-    font-size: 14px;
-    outline: none;
-  }
-  .picker-item[data-highlighted] {
-    background: var(--accent);
-    color: var(--accent-foreground);
-  }
-  .picker-trigger {
-    position: absolute;
-    inset-block: 0;
-    inset-inline-end: 0;
-    display: flex;
-    width: 2.25rem;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted-foreground);
-  }
   /* A definition-list grid of run/response facts. dd wraps; narrow panes stack. */
   .details-grid {
     display: grid;
@@ -610,9 +570,13 @@ html.dark[data-material="mica"] #app {
     font-size: 13px;
   }
   .details-grid > dt {
+    margin-block: 2px;
+    font-size: 12px;
     color: var(--muted-foreground);
   }
   .details-grid > dd {
+    margin-block: 2px;
+    justify-content: flex-end;
     min-width: 0;
     text-align: right;
     font-weight: 500;
@@ -640,22 +604,6 @@ html.dark[data-material="mica"] #app {
       text-align: left;
     }
   }
-  /* Segmented option rows (appearance/material toggles): a framed grid that
-   * fills its row; segments stay buttons inside it. */
-  .segment-grid {
-    display: grid;
-    width: 100%;
-    border-radius: 6px;
-    border: 1px solid var(--hairline);
-    background: transparent;
-    padding: 2px;
-  }
-  .segment-grid > button {
-    min-width: 0;
-    white-space: normal;
-    padding-inline: 4px;
-    font-size: 0.75rem;
-  }
   /* A disclosure/summary row inside a settings card or detail section. */
   .content-disclosure-row {
     display: flex;
@@ -666,24 +614,6 @@ html.dark[data-material="mica"] #app {
     gap: 12px;
     border-bottom: 1px solid var(--hairline);
     text-align: left;
-  }
-  /* Text actions: a link-styled button for low-emphasis recovery/navigation. */
-  .link-action {
-    display: grid;
-    place-items: center;
-    min-height: 1.25rem;
-    width: fit-content;
-    padding: 4px 0;
-    font-weight: 500;
-    color: var(--accent-text);
-  }
-  .link-action:hover:not(:disabled) {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-  .link-action:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
   }
   /* Menu rows inside title-bar menus and pickers. */
   .menu-row {
@@ -725,13 +655,14 @@ html.dark[data-material="mica"] #app {
   }
   /* Underlined accent text links to external sources. */
   .source-link {
-    overflow-wrap: break-all;
+    overflow-wrap: anywhere;
     color: var(--accent-text);
     text-decoration: underline;
     text-underline-offset: 2px;
   }
-  .source-link:hover {
-    color: var(--accent-text);
+  .source-link:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   /* A pane's empty state: centered icon tile, title, and guidance. */
   .pane-empty {
@@ -755,12 +686,6 @@ html.dark[data-material="mica"] #app {
     background: var(--well);
     color: var(--accent-text);
     box-shadow: var(--lift);
-  }
-  .pane-empty-title {
-    font-size: 17px;
-    font-weight: 600;
-    line-height: 1.35;
-    color: var(--foreground);
   }
   /* A run of mono literals (checksum + companions) wrapping in place. */
   .mono-run {
@@ -790,7 +715,7 @@ html.dark[data-material="mica"] #app {
     line-height: 1rem;
     font-weight: 500;
     color: var(--foreground);
-    overflow-wrap: break-all;
+    overflow-wrap: anywhere;
   }
 }
 

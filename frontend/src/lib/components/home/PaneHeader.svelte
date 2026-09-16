@@ -27,7 +27,7 @@
 <!-- Names the place. The window title bar carries identity only, and the rail
      is icon-only, so this is where a pane says what it is. -->
 <header
-  class={cn("workbench-header @container justify-between", className)}
+  class={cn("workbench-header @container h-11 justify-between", className)}
   bind:clientHeight={height}
   data-page-header
 >

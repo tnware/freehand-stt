@@ -101,7 +101,7 @@
     </div>
   </div>
   {#if !sidebar}<div
-      class="flex h-[26px] shrink-0 items-center px-5 text-[10px] font-bold tracking-[0.07em] text-secondary-foreground uppercase"
+      class="flex h-[26px] shrink-0 items-center px-5 text-[10px] font-semibold tracking-[0.07em] text-ink-quiet uppercase"
     >
       <span class="min-w-0 flex-1">Name</span>
       <span class="hidden w-[190px] shrink-0 @min-[810px]/connections:block"
@@ -152,13 +152,13 @@
           >
           {#if connection.builtIn && !sidebar}
             <span
-              class="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-ink-quiet"
+              class="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-2xs text-ink-quiet"
               >built-in</span
             >
           {/if}
         </span>
         <span
-          class="shrink-0 truncate font-mono text-[10px] text-secondary-foreground {sidebar
+          class="shrink-0 truncate font-mono text-2xs text-secondary-foreground {sidebar
             ? 'pl-[26px]'
             : 'hidden w-[190px] @min-[810px]/connections:block'}"
           title={endpoint}>{endpoint}</span

@@ -72,7 +72,7 @@
       <div class="flex items-center gap-2">
         <p id={`${id}-title`} class="content-value">{title}</p>
         <span
-          class="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+          class="rounded-sm bg-muted px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground"
         >
           {clearable ? "Optional" : "Required"}
         </span>

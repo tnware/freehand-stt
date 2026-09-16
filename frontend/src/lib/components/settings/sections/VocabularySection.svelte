@@ -239,7 +239,7 @@
 
   <div class="border-t border-hairline" aria-label="Vocabulary workflows">
     <div class="pt-3 pb-1">
-      <h3 class="content-value">Use vocabulary in</h3>
+      <h3 class="text-[13px] font-medium">Use vocabulary in</h3>
       <p class="mt-1 text-xs text-muted-foreground">
         Changes apply after saving.
       </p>

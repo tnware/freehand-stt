@@ -4,7 +4,7 @@ for (const width of [1280, 560]) {
   for (const theme of ["light", "dark"] as const) {
     test(`page headers keep their geometry across navigation at ${width}px in ${theme}`, async ({
       page,
-    }) => {
+    }, info) => {
       await page.setViewportSize({ width, height: 820 });
       await page.emulateMedia({ colorScheme: theme });
       await page.goto(
@@ -19,7 +19,8 @@ for (const width of [1280, 560]) {
         ".workbench-columns > div [data-page-header]:visible",
       );
       let baseline:
-        { top: number; titleInset: number; titleTop: number } | undefined;
+        | { top: number; titleInset: number; titleTop: number }
+        | undefined;
       for (const name of [
         "Voice transcription",
         "Audio file",
@@ -37,6 +38,16 @@ for (const width of [1280, 560]) {
         await expect(header, `${name} has one page header`).toHaveCount(1);
         const title = header.getByRole("heading").first();
         await expect(title).toBeInViewport();
+        await expect(title).toHaveCSS("font-size", "16px");
+        await expect(title).toHaveCSS("font-weight", "600");
+        // Settings keeps its existing opaque background while the header sticks.
+        if (name !== "Settings") {
+          await expect(header).toHaveCSS(
+            "background-color",
+            "rgba(0, 0, 0, 0)",
+          );
+        }
+
         const bounds = (await header.boundingBox())!;
         const titleBounds = (await title.boundingBox())!;
         baseline ??= {
@@ -61,6 +72,9 @@ for (const width of [1280, 560]) {
           `${name} document fits`,
         ).toBe(true);
       }
+      await page.screenshot({
+        path: info.outputPath(`page-headers-${width}-${theme}.png`),
+      });
     });
   }
 }

@@ -1,10 +1,10 @@
 <script lang="ts">
+  import * as Picker from "$lib/components/ui/combobox";
   import FieldHelp from "./FieldHelp.svelte";
   import { modelSources } from "$lib/utils/modelSources";
   import { Combobox } from "bits-ui";
   import { Button } from "$lib/components/ui/button";
   import * as Menu from "$lib/components/ui/dropdown-menu";
-  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import CheckIcon from "@lucide/svelte/icons/check";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
@@ -197,47 +197,32 @@
               value={open ? query : value}
             />{/snippet}
         </Combobox.Input>
-        <Combobox.Trigger
-          aria-label="Show models"
-          class="picker-trigger"
-          ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
-        >
+        <Picker.Trigger aria-label="Show models" />
       </div>
-      <Combobox.Portal
-        ><Combobox.Content
-          data-slot="combobox-content"
-          sideOffset={4}
-          collisionPadding={12}
-          class="picker-content"
-        >
-          {#key query}{#each choices as choice (choice.value)}
-              <Combobox.Item
-                value={choice.value}
-                label={choice.label}
-                class="picker-item"
+      <Picker.Content>
+        {#key query}{#each choices as choice (choice.value)}
+            <Picker.Item value={choice.value} label={choice.label}>
+              <span class="min-w-0 flex-1 break-all font-mono"
+                >{custom === choice.value
+                  ? `Use “${choice.value}”`
+                  : choice.value}</span
               >
-                <span class="min-w-0 flex-1 break-all font-mono"
-                  >{custom === choice.value
-                    ? `Use “${choice.value}”`
-                    : choice.value}</span
-                >
-                <span class="shrink-0 text-xs text-muted-foreground">
-                  {modelSources(
-                    choice.value,
-                    models,
-                    savedModels,
-                    draftModels,
-                  )}</span
-                >
-                {#if value === choice.value}<CheckIcon
-                    class="size-3.5 shrink-0"
-                  />{/if}
-              </Combobox.Item>
-            {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
-                Enter a model ID, or refresh the server’s model list.
-              </p>{/each}{/key}
-        </Combobox.Content></Combobox.Portal
-      >
+              <span class="shrink-0 text-xs text-muted-foreground">
+                {modelSources(
+                  choice.value,
+                  models,
+                  savedModels,
+                  draftModels,
+                )}</span
+              >
+              {#if value === choice.value}<CheckIcon
+                  class="size-3.5 shrink-0"
+                />{/if}
+            </Picker.Item>
+          {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
+              Enter a model ID, or refresh the server’s model list.
+            </p>{/each}{/key}
+      </Picker.Content>
     </Combobox.Root>{/if}
   {#if !sidebar && ((showProfileName && profileName) || (value && !serverLoaded))}
     <p

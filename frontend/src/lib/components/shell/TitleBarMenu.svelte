@@ -67,15 +67,13 @@
                   checked={item.checked}
                   disabled={item.disabled}
                   onSelect={() => void choose(item)}
-                  class="menu-row"
-                  >{@render label()}</Menubar.CheckboxItem
+                  class="menu-row">{@render label()}</Menubar.CheckboxItem
                 >
               {:else}
                 <Menubar.Item
                   disabled={item.disabled}
                   onSelect={() => void choose(item)}
-                  class="menu-row"
-                  >{@render label()}</Menubar.Item
+                  class="menu-row">{@render label()}</Menubar.Item
                 >
               {/if}
             {/each}

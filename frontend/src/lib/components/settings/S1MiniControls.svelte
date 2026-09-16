@@ -5,7 +5,9 @@
   import { cn } from "$lib/utils";
 
   type ProcessorSettings = Settings["postProcessing"];
-  type S1MiniPatch = Partial<Pick<ProcessorSettings, "styling" | "structure" | "context">>;
+  type S1MiniPatch = Partial<
+    Pick<ProcessorSettings, "styling" | "structure" | "context">
+  >;
 
   let {
     processor,
@@ -42,7 +44,8 @@
       return;
     }
     if (value === processor.styling) return;
-    if ((await onChange({ styling: value })) === false) stylingValue = processor.styling;
+    if ((await onChange({ styling: value })) === false)
+      stylingValue = processor.styling;
   }
 
   async function commitStructure(value: string) {
@@ -51,7 +54,8 @@
       return;
     }
     if (value === processor.structure) return;
-    if ((await onChange({ structure: value })) === false) structureValue = processor.structure;
+    if ((await onChange({ structure: value })) === false)
+      structureValue = processor.structure;
   }
 
   async function commitContext(value: string) {
@@ -60,11 +64,14 @@
       return;
     }
     if (value === processor.context) return;
-    if ((await onChange({ context: value })) === false) contextValue = processor.context;
+    if ((await onChange({ context: value })) === false)
+      contextValue = processor.context;
   }
 
   function optionLabel(value: string): string {
-    return value.replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+    return value
+      .replaceAll("-", " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase());
   }
 </script>
 
@@ -73,8 +80,9 @@
     <div class="text-xs leading-relaxed">
       <p class="font-medium">Cleanup language · English only</p>
       <p class="mt-1 text-muted-foreground">
-        If the input language is unknown, S1-mini runs assuming English. Non-English selections or
-        detected results use raw text instead. This preset does not translate.
+        If the input language is unknown, S1-mini runs assuming English.
+        Non-English selections or detected results use raw text instead. This
+        preset does not translate.
       </p>
     </div>
   {/if}
@@ -109,7 +117,7 @@
           value={styling}
           aria-label={`Use ${optionLabel(styling)} styling`}
           class={cn(
-            "relative isolate h-9 min-w-0 rounded-none bg-transparent px-1 pt-4 pb-0 text-[10.5px] font-normal text-muted-foreground shadow-none",
+            "relative isolate h-9 min-w-0 rounded-none bg-transparent px-1 pt-4 pb-0 text-2xs font-normal text-muted-foreground shadow-none",
             "hover:bg-transparent hover:text-foreground data-[state=on]:bg-transparent data-[state=on]:font-semibold data-[state=on]:text-primary",
             "before:absolute before:top-1 before:left-1/2 before:z-10 before:size-2 before:-translate-x-1/2 before:rounded-full before:bg-border",
             "after:absolute after:top-[7px] after:right-1/2 after:h-0.5 after:w-full after:bg-border first:after:hidden",

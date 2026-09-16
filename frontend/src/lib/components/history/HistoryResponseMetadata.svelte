@@ -100,25 +100,19 @@
 </script>
 
 {#snippet durationValue(value: number)}
-  <span
-    class="mono-run"
-  >
+  <span class="mono-run">
     <span class="min-w-0 [overflow-wrap:anywhere]">{duration(value)}</span>
   </span>
 {/snippet}
 
 {#snippet modelValue(value: string)}
-  <span
-    class="mono-chip"
-  >
+  <span class="mono-chip">
     {value}
   </span>
 {/snippet}
 
 {#snippet tokenValue(value: number, suffix?: string)}
-  <span
-    class="mono-run font-semibold"
-  >
+  <span class="mono-run font-semibold">
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{value.toLocaleString()}</span
     >
@@ -129,9 +123,7 @@
 {/snippet}
 
 {#snippet metricValue(value: number, suffix: string, digits = 2)}
-  <span
-    class="mono-run"
-  >
+  <span class="mono-run">
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{decimal(value, digits)}</span
     >
@@ -140,18 +132,14 @@
 {/snippet}
 
 {#snippet costValue(value: number, suffix: string)}
-  <span
-    class="mono-run"
-  >
+  <span class="mono-run">
     <span class="min-w-0 [overflow-wrap:anywhere]">{reportedCost(value)}</span>
     <span class="font-normal text-muted-foreground">{suffix}</span>
   </span>
 {/snippet}
 
 {#snippet identifierValue(value: string)}
-  <span
-    class="mono-chip font-normal"
-  >
+  <span class="mono-chip font-normal">
     {value}
   </span>
 {/snippet}
@@ -186,86 +174,84 @@
           {@render coverageValue(response.usageReportCount ?? 0, requests)}
         {/if}
       </div>
-      <dl
-        class="details-grid"
-      >
+      <dl class="details-grid">
         {#if usage.type}
           <dt class="text-muted-foreground">Basis</dt>
-          <dd class="text-right">{usage.type.replaceAll("_", " ")}</dd>
+          <dd>{usage.type.replaceAll("_", " ")}</dd>
         {/if}
         {#if usage.inputTokens != null}
           <dt class="text-muted-foreground">
             {stage === "processing" ? "Prompt tokens" : "Input tokens"}
           </dt>
-          <dd class="text-right">{@render tokenValue(usage.inputTokens)}</dd>
+          <dd>{@render tokenValue(usage.inputTokens)}</dd>
         {/if}
         {#if usage.outputTokens != null}
           <dt class="text-muted-foreground">
             {stage === "processing" ? "Completion tokens" : "Output tokens"}
           </dt>
-          <dd class="text-right">{@render tokenValue(usage.outputTokens)}</dd>
+          <dd>{@render tokenValue(usage.outputTokens)}</dd>
         {/if}
         {#if usage.totalTokens != null}
           <dt class="text-muted-foreground">Total tokens</dt>
-          <dd class="text-right">{@render tokenValue(usage.totalTokens)}</dd>
+          <dd>{@render tokenValue(usage.totalTokens)}</dd>
         {/if}
         {#if usage.audioInputTokens != null}
           <dt class="text-muted-foreground">Audio input tokens</dt>
-          <dd class="text-right">
+          <dd>
             {@render tokenValue(usage.audioInputTokens)}
           </dd>
         {/if}
         {#if usage.textInputTokens != null}
           <dt class="text-muted-foreground">Text input tokens</dt>
-          <dd class="text-right">
+          <dd>
             {@render tokenValue(usage.textInputTokens)}
           </dd>
         {/if}
         {#if usage.cachedInputTokens != null}
           <dt class="text-muted-foreground">Cached input tokens</dt>
-          <dd class="text-right">
+          <dd>
             {@render tokenValue(usage.cachedInputTokens)}
           </dd>
         {/if}
         {#if usage.cacheWriteTokens != null}
           <dt class="text-muted-foreground">Cache write tokens</dt>
-          <dd class="text-right">
+          <dd>
             {@render tokenValue(usage.cacheWriteTokens)}
           </dd>
         {/if}
         {#if usage.reasoningOutputTokens != null}
           <dt class="text-muted-foreground">Reasoning tokens</dt>
-          <dd class="text-right">
+          <dd>
             {@render tokenValue(usage.reasoningOutputTokens)}
           </dd>
         {/if}
         {#if response.serverAudioSeconds != null}
           <dt class="text-muted-foreground">Audio duration</dt>
-          <dd class="text-right">
+          <dd>
             {@render durationValue(response.serverAudioSeconds * 1000)}
           </dd>
         {/if}
         {#if usage.audioSeconds != null}
           <dt class="text-muted-foreground">Billable audio</dt>
-          <dd class="text-right">
+          <dd>
             {@render durationValue(usage.audioSeconds * 1000)}
           </dd>
         {/if}
         {#if usage.reportedCost != null}
           <dt class="text-muted-foreground">Provider-reported cost</dt>
-          <dd class="text-right">
+          <dd>
             {@render costValue(usage.reportedCost, "reported units")}
           </dd>
         {/if}
         {#if usage.upstreamCost != null}
           <dt class="text-muted-foreground">Upstream cost</dt>
-          <dd class="text-right">
+          <dd>
             {@render costValue(usage.upstreamCost, "reported units")}
           </dd>
         {/if}
         {#if response.costReportCount && requests > 1}
           <dt class="text-muted-foreground">Cost coverage</dt>
-          <dd class="text-right">
+          <dd>
             {@render coverageValue(response.costReportCount, requests)}
           </dd>
         {/if}
@@ -282,58 +268,56 @@
         <FileTextIcon class="content-section-icon" aria-hidden="true" />Request
         details
       </h4>
-      <dl
-        class="details-grid"
-      >
+      <dl class="details-grid">
         {#if requests > 1}
           <dt class="text-muted-foreground">Requests</dt>
-          <dd class="text-right">{requests.toLocaleString()}</dd>
+          <dd>{requests.toLocaleString()}</dd>
         {/if}
         {#if response.effectiveModel}
           <dt class="text-muted-foreground">Effective model</dt>
-          <dd class="text-right">
+          <dd>
             {@render modelValue(response.effectiveModel)}
           </dd>
         {/if}
         {#if response.provider}
           <dt class="text-muted-foreground">Provider</dt>
-          <dd class="text-right break-words">{response.provider}</dd>
+          <dd class="break-words">{response.provider}</dd>
         {/if}
         {#if response.finishReason}
           <dt class="text-muted-foreground">Finish reason</dt>
-          <dd class="text-right">
+          <dd>
             {response.finishReason.replaceAll("_", " ")}
           </dd>
         {/if}
         {#if response.serviceTier}
           <dt class="text-muted-foreground">Service tier</dt>
-          <dd class="text-right">{response.serviceTier}</dd>
+          <dd>{response.serviceTier}</dd>
         {/if}
         {#if response.createdAtUnix != null}
           <dt class="text-muted-foreground">Created</dt>
-          <dd class="text-right break-words">
+          <dd class="break-words">
             {responseDateTime(response.createdAtUnix)}
           </dd>
         {/if}
         {#if response.detectedLanguages?.length}
           <dt class="text-muted-foreground">Detected languages</dt>
-          <dd class="text-right">{response.detectedLanguages.join(", ")}</dd>
+          <dd>{response.detectedLanguages.join(", ")}</dd>
         {/if}
         {#if response.requestId}
           <dt class="text-muted-foreground">Request ID</dt>
-          <dd class="text-right">
+          <dd>
             {@render identifierValue(response.requestId)}
           </dd>
         {/if}
         {#if response.responseId}
           <dt class="text-muted-foreground">Response ID</dt>
-          <dd class="text-right">
+          <dd>
             {@render identifierValue(response.responseId)}
           </dd>
         {/if}
         {#if response.systemFingerprint}
           <dt class="text-muted-foreground">System fingerprint</dt>
-          <dd class="text-right">
+          <dd>
             {@render identifierValue(response.systemFingerprint)}
           </dd>
         {/if}
@@ -356,30 +340,28 @@
           )}
         {/if}
       </div>
-      <dl
-        class="details-grid"
-      >
+      <dl class="details-grid">
         {#if performance.promptTokens != null}
           <dt class="text-muted-foreground">Prompt evaluated</dt>
-          <dd class="text-right">
+          <dd>
             {@render tokenValue(performance.promptTokens, "tokens")}
           </dd>
         {/if}
         {#if performance.promptMilliseconds != null}
           <dt class="text-muted-foreground">Prompt time</dt>
-          <dd class="text-right">
+          <dd>
             {@render durationValue(performance.promptMilliseconds)}
           </dd>
         {/if}
         {#if performance.promptTokensPerSecond != null}
           <dt class="text-muted-foreground">Prompt speed</dt>
-          <dd class="text-right">
+          <dd>
             {@render metricValue(performance.promptTokensPerSecond, "tok/s")}
           </dd>
         {/if}
         {#if performance.promptMillisecondsPerToken != null}
           <dt class="text-muted-foreground">Prompt latency</dt>
-          <dd class="text-right">
+          <dd>
             {@render metricValue(
               performance.promptMillisecondsPerToken,
               "ms/token",
@@ -388,19 +370,19 @@
         {/if}
         {#if performance.generatedTokens != null}
           <dt class="text-muted-foreground">Generated</dt>
-          <dd class="text-right">
+          <dd>
             {@render tokenValue(performance.generatedTokens, "tokens")}
           </dd>
         {/if}
         {#if performance.generationMilliseconds != null}
           <dt class="text-muted-foreground">Generation time</dt>
-          <dd class="text-right">
+          <dd>
             {@render durationValue(performance.generationMilliseconds)}
           </dd>
         {/if}
         {#if performance.generationTokensPerSecond != null}
           <dt class="text-muted-foreground">Generation speed</dt>
-          <dd class="text-right">
+          <dd>
             {@render metricValue(
               performance.generationTokensPerSecond,
               "tok/s",
@@ -409,7 +391,7 @@
         {/if}
         {#if performance.generationMillisecondsPerToken != null}
           <dt class="text-muted-foreground">Generation latency</dt>
-          <dd class="text-right">
+          <dd>
             {@render metricValue(
               performance.generationMillisecondsPerToken,
               "ms/token",
@@ -418,7 +400,7 @@
         {/if}
         {#if performance.cachedPromptTokens != null}
           <dt class="text-muted-foreground">Cached prompt</dt>
-          <dd class="text-right">
+          <dd>
             {@render tokenValue(performance.cachedPromptTokens, "tokens")}
           </dd>
         {/if}

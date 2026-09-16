@@ -135,7 +135,9 @@
   let recommendation = $state<BinaryOptions | null>(null);
   let binaryChoice = $state("auto");
   type Removal =
-    { kind: "files" } | { kind: "instance" } | { kind: "model"; model: Model };
+    | { kind: "files" }
+    | { kind: "instance" }
+    | { kind: "model"; model: Model };
   let confirming = $state<Removal | null>(null);
   let alive = true;
   onDestroy(() => {

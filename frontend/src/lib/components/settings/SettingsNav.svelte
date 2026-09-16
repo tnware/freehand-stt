@@ -208,7 +208,7 @@
               >
               {#if counts[section.id] !== undefined}
                 <span
-                  class="figure ml-auto font-mono text-[10px] text-ink-quiet {workbench
+                  class="figure ml-auto font-mono text-2xs text-ink-quiet {workbench
                     ? 'inline'
                     : 'hidden min-[760px]:inline'}">{counts[section.id]}</span
                 >

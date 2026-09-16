@@ -235,7 +235,7 @@
           <div class="mt-2 flex flex-wrap gap-1">
             {#each current.entry.backends ?? [] as backend (backend)}
               <span
-                class="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-secondary-foreground"
+                class="rounded-sm border border-border px-1.5 py-0.5 text-2xs text-secondary-foreground"
                 >{backendLabel(backend)}</span
               >
             {/each}

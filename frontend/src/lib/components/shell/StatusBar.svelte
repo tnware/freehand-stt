@@ -174,7 +174,7 @@
     {#if connectionDetails.model}
       <span class="h-3 w-px shrink-0 bg-border" aria-hidden="true"></span>
       <span
-        class="hidden max-w-48 truncate font-mono text-[10px] text-ink-quiet min-[900px]:inline"
+        class="hidden max-w-48 truncate font-mono text-2xs text-ink-quiet min-[900px]:inline"
         title={connectionDetails.model}>{connectionDetails.model}</span
       >
     {/if}

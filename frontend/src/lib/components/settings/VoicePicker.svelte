@@ -1,9 +1,9 @@
 <script lang="ts">
+  import * as Picker from "$lib/components/ui/combobox";
   import type { Snippet } from "svelte";
   import { Combobox } from "bits-ui";
   import { VoiceScope, type VoicesResult } from "$bindings/inference";
   import { Button } from "$lib/components/ui/button";
-  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import CheckIcon from "@lucide/svelte/icons/check";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
 
@@ -185,51 +185,36 @@
             value={open ? query : value}
           />{/snippet}
       </Combobox.Input>
-      <Combobox.Trigger
-        aria-label="Show voices"
-        class="picker-trigger"
-        ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
-      >
+      <Picker.Trigger aria-label="Show voices" />
     </div>
-    <Combobox.Portal
-      ><Combobox.Content
-        data-slot="combobox-content"
-        sideOffset={4}
-        collisionPadding={12}
-        class="picker-content"
-      >
-        {#key query}{#each choices as choice (choice.value)}
-            <Combobox.Item
-              value={choice.value}
-              label={choice.label}
-              class="picker-item"
+    <Picker.Content>
+      {#key query}{#each choices as choice (choice.value)}
+          <Picker.Item value={choice.value} label={choice.label}>
+            <span class="min-w-0 flex-1 break-all"
+              ><span class="font-mono"
+                >{custom === choice.value
+                  ? `Use “${choice.value}”`
+                  : choice.label}</span
+              >{#if choice.label !== choice.value}<span
+                  class="mt-0.5 block text-xs text-muted-foreground"
+                  >{choice.value}</span
+                >{/if}</span
             >
-              <span class="min-w-0 flex-1 break-all"
-                ><span class="font-mono"
-                  >{custom === choice.value
-                    ? `Use “${choice.value}”`
-                    : choice.label}</span
-                >{#if choice.label !== choice.value}<span
-                    class="mt-0.5 block text-xs text-muted-foreground"
-                    >{choice.value}</span
-                  >{/if}</span
-              >
-              {#if choice.language}<span class="text-xs text-muted-foreground"
-                  >{choice.language}</span
-                >{/if}
-              {#if value === choice.value}<CheckIcon
-                  class="size-3.5 shrink-0"
-                />{/if}
-            </Combobox.Item>
-          {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
-              {allowedVoices.length
-                ? "No matching preset voices."
-                : supported
-                  ? "Refresh voices, or enter a voice ID supplied by your server."
-                  : "Enter a voice ID supplied by your server."}
-            </p>{/each}{/key}
-      </Combobox.Content></Combobox.Portal
-    >
+            {#if choice.language}<span class="text-xs text-muted-foreground"
+                >{choice.language}</span
+              >{/if}
+            {#if value === choice.value}<CheckIcon
+                class="size-3.5 shrink-0"
+              />{/if}
+          </Picker.Item>
+        {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
+            {allowedVoices.length
+              ? "No matching preset voices."
+              : supported
+                ? "Refresh voices, or enter a voice ID supplied by your server."
+                : "Enter a voice ID supplied by your server."}
+          </p>{/each}{/key}
+    </Picker.Content>
   </Combobox.Root>
   <p
     id={`${id}-help`}

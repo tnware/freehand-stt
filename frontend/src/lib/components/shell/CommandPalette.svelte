@@ -12,7 +12,7 @@
     keywords?: string;
     /** The current value, shown right-aligned: which model, which connection. */
     detail?: string;
-    icon?: Component;
+    icon: Component;
     disabled?: boolean;
     run: () => void;
   };
@@ -122,7 +122,7 @@
       bind:this={results}
       id="command-results"
       aria-label="Commands"
-      class="max-h-[320px] overflow-y-auto p-1.5"
+      class="max-h-[min(320px,70dvh)] overflow-y-auto p-1.5"
       role="listbox"
     >
       {#each matches as command, position (command.id)}
@@ -144,11 +144,7 @@
           onmouseenter={() => (index = position)}
           onclick={() => choose(command)}
         >
-          {#if command.icon}
-            <command.icon class="size-4 shrink-0" aria-hidden="true" />
-          {:else}
-            <span class="size-4 shrink-0"></span>
-          {/if}
+          <command.icon class="size-4 shrink-0" aria-hidden="true" />
           <span class="min-w-0 flex-1 truncate text-[13px]"
             >{command.label}</span
           >

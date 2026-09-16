@@ -170,9 +170,7 @@
     {/if}
   </div>
   {#if !sidebar}{@render runtimeStatus()}{/if}
-  {#if view.startup}<p
-      class="text-xs leading-relaxed text-muted-foreground"
-    >
+  {#if view.startup}<p class="text-xs leading-relaxed text-muted-foreground">
       {view.startup}
     </p>{/if}
   {#if view.transferred}<p class="font-mono text-xs text-muted-foreground">

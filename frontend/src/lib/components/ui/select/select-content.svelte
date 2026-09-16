@@ -36,7 +36,9 @@
   >
     <SelectScrollUpButton />
     <SelectPrimitive.Viewport
-      class={cn("min-h-0 w-full min-w-(--bits-select-anchor-width) overscroll-contain scroll-my-1")}
+      class={cn(
+        "min-h-0 w-full min-w-(--bits-select-anchor-width) overscroll-contain scroll-my-1",
+      )}
     >
       {@render children?.()}
     </SelectPrimitive.Viewport>

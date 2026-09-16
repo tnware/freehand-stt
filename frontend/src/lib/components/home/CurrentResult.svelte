@@ -61,23 +61,19 @@
     <h2 class="content-title">Transcript</h2>
     <div class="mr-auto min-w-0" role="status">
       <StatusBadge
-        tone={live || working
-          ? "danger"
-          : recovery
-            ? "warning"
-            : failed
-              ? "danger"
-              : "neutral"}
-        class={live || working
-          ? "border-record-edge bg-record-wash text-record-text"
-          : text
-            ? "font-semibold"
-            : ""}
+        tone={recovery
+          ? "warning"
+          : failed
+            ? "danger"
+            : live
+              ? "recording"
+              : working
+                ? "accent"
+                : "neutral"}
+        dot={live}
+        pulse={live}
       >
-        {#if live}<span
-            class="size-1.5 shrink-0 rounded-full bg-record motion-safe:animate-pulse"
-            aria-hidden="true"
-          ></span>{/if}{live
+        {live
           ? "Live"
           : working
             ? "In progress"
@@ -178,7 +174,7 @@
               {:else if mode === "file"}<FileAudioIcon class="size-6" />
               {:else}<AudioLinesIcon class="size-6" />{/if}
             </span>
-            <p class="pane-empty-title">
+            <p class="content-title">
               {failed
                 ? "No transcript to show"
                 : working

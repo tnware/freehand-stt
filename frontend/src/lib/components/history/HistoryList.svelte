@@ -1,4 +1,5 @@
 <script lang="ts">
+  import HistoryOutcomeBadge from "./HistoryOutcomeBadge.svelte";
   import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import ArrowLeftRightIcon from "@lucide/svelte/icons/arrow-left-right";
   import CheckIcon from "@lucide/svelte/icons/check";
@@ -90,29 +91,12 @@
       (ttsStatus?.phase === TTSPhase.Generating ? ttsStatus : undefined),
   );
 
-  const outcomeLabel = (outcome: HistoryOutcome): string => {
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "Copy required";
-    if (outcome === HistoryOutcome.HistoryFailed) return "Delivery failed";
-    if (outcome === HistoryOutcome.HistoryTranscribed) return "Audio file";
-    if (outcome === HistoryOutcome.HistoryCancelled) return "Cancelled";
-    return "Inserted";
-  };
-
   const outcomeDot = (outcome: HistoryOutcome): string => {
     if (outcome === HistoryOutcome.HistoryFailed) return "bg-destructive";
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-primary";
+    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-warning";
     if (outcome === HistoryOutcome.HistoryCancelled)
       return "bg-muted-foreground/50";
     return "bg-success";
-  };
-
-  const outcomeBadgeClass = (outcome: HistoryOutcome): string => {
-    if (outcome === HistoryOutcome.HistoryFailed) return "";
-    if (outcome === HistoryOutcome.HistoryCopyRequired)
-      return "bg-accent-wash-strong text-accent-text";
-    if (outcome === HistoryOutcome.HistoryInserted)
-      return "bg-success/10 text-success";
-    return "";
   };
 
   const completedDateTime = (completedAt: string): string =>
@@ -405,17 +389,10 @@
             >
               {completedLabel(entry.completedAt)}
             </time>
-            <Badge
-              variant={entry.outcome === HistoryOutcome.HistoryFailed
-                ? "destructive"
-                : "secondary"}
-              class={cn(
-                "text-xs tracking-normal normal-case",
-                outcomeBadgeClass(entry.outcome),
-              )}
-            >
-              {outcomeLabel(entry.outcome)}
-            </Badge>
+            <HistoryOutcomeBadge
+              outcome={entry.outcome}
+              fileLabel="Audio file"
+            />
             {#if hasProcessing(entry)}
               <Badge
                 variant="secondary"

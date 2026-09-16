@@ -243,7 +243,7 @@
       {#snippet supportedUses()}
         {#if form}
           <div class="space-y-3 py-3">
-            <h4 class="content-value">Used for</h4>
+            <h4 class="text-[13px] font-medium">Used for</h4>
             <p class="text-xs text-muted-foreground">
               Choose where this connection appears. Each workflow keeps its own
               model and options.
@@ -501,7 +501,7 @@
                   : "Save for later"}</Select.Trigger
               >
               <Select.Content>
-                {#each roles.filter( (role) => supports(role.id) ) as role (role.id)}<Select.Item
+                {#each roles.filter( (role) => supports(role.id), ) as role (role.id)}<Select.Item
                     value={role.id}>Set up {role.label}</Select.Item
                   >{/each}
                 <Select.Separator /><Select.Item value="save-only"

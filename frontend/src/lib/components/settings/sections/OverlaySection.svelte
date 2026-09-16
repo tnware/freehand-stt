@@ -134,7 +134,8 @@
       description="Choose how much status detail to show."
     >
       <ToggleGroup.Root
-        class="segment-grid grid-cols-4"
+        layout="segments"
+        class="grid-cols-4"
         type="single"
         spacing={1}
         size="sm"
@@ -163,7 +164,8 @@
       description="Follow the app’s monitor and stay inside its usable area."
     >
       <ToggleGroup.Root
-        class="segment-grid grid-cols-3"
+        layout="segments"
+        class="grid-cols-3"
         type="single"
         spacing={1}
         size="sm"
@@ -210,7 +212,8 @@
       description="Choose a glass, solid or minimal background."
     >
       <ToggleGroup.Root
-        class="segment-grid grid-cols-3"
+        layout="segments"
+        class="grid-cols-3"
         type="single"
         spacing={1}
         size="sm"
@@ -236,7 +239,8 @@
       description="How microphone activity looks while recording."
     >
       <ToggleGroup.Root
-        class="segment-grid grid-cols-4"
+        layout="segments"
+        class="grid-cols-4"
         type="single"
         spacing={1}
         size="sm"
@@ -265,7 +269,8 @@
       description="Show recording only, all active work, or include results."
     >
       <ToggleGroup.Root
-        class="segment-grid grid-cols-3"
+        layout="segments"
+        class="grid-cols-3"
         type="single"
         spacing={1}
         size="sm"

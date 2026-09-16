@@ -28,12 +28,14 @@
 		value = $bindable(),
 		class: className,
 		size = "default",
+		layout = "inline",
 		spacing = 0,
 		orientation = "horizontal",
 		variant = "default",
 		...restProps
 	}: ToggleGroupPrimitive.RootProps &
 		ToggleVariants & {
+			layout?: "inline" | "segments";
 			spacing?: number;
 			orientation?: "horizontal" | "vertical";
 		} = $props();
@@ -69,7 +71,9 @@ get along, so we shut typescript up by casting `value` to `never`.
 	style={`--gap: ${spacing}`}
 	class={cn(
 		"rounded-md data-[spacing=0]:data-[variant=outline]:shadow-xs group/toggle-group flex w-fit flex-row items-center gap-[--spacing(var(--gap))] data-vertical:flex-col data-vertical:items-stretch",
-		className
+		layout === "segments" &&
+			"grid w-full rounded-md border border-hairline bg-transparent p-0.5 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs",
+		className,
 	)}
 	{...restProps}
 />

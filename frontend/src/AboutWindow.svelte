@@ -165,7 +165,7 @@
         </div>
         {#if build}
           <div
-            class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 font-mono text-[10.5px] text-muted-foreground"
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 font-mono text-xs text-ink-quiet"
           >
             <span
               >{platformPresentation(build.platform).name}{platformPresentation(

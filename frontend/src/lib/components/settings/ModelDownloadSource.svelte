@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DownloadDetails from "$lib/components/common/DownloadDetails.svelte";
   import {
     ModelAcquisitionMethod,
     type ModelSource,
@@ -44,11 +45,7 @@
       Includes {source.companions.length} companion files, downloaded and verified
       with the model.
     </p>{/if}
-  <details>
-    <summary
-      class="link-action"
-      >Model download details</summary
-    >
+  <DownloadDetails title="Model download details">
     {#if description}<p class="mt-3 leading-relaxed">{description}</p>{/if}
     <dl
       class="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 [&>dt]:text-muted-foreground"
@@ -81,7 +78,7 @@
     {#if delegated}<p class="mt-2">
         Model details from NeMo’s bundled index.
       </p>{/if}
-  </details>
+  </DownloadDetails>
   {#if linkError}<p role="alert" class="text-destructive">
       Could not open the source in your browser.
     </p>{/if}

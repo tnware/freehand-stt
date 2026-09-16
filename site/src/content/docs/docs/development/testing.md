@@ -1745,3 +1745,20 @@ controls remain reachable, and notices do not obscure compact settings. Existing
 workspace, readiness, settings-layout, visual-hierarchy, speech-playback, runtime,
 and process-output browser suites exercise these surfaces with synthetic data.
 Repeat the native WebView review at supported DPI scales before release.
+
+### Workbench styling regression checks
+
+After changing shared chrome or extracting component styles, run the browser
+checks for page headers, visual hierarchy, pickers, transcript readers, history
+expansion, and UI consistency. Check light and dark themes at narrow and wide
+widths. Inspect computed layout as well as classes: Tailwind utility precedence
+can override shared component-layer styles without a Svelte diagnostic. Confirm
+that picker footer actions remain reachable while options scroll, metadata
+values align with their labels when stacked, long literals wrap, segmented
+controls remain equal-width grids, and palette commands retain their icons.
+Browser fixtures validate renderer behavior only; they do not qualify native
+recording, delivery, permissions, or window behavior.
+
+Header checks verify computed typography as well as geometry with pickers mounted,
+so a component stylesheet that changes CSS layer ordering cannot silently reset
+page titles, toolbar spacing, or tab controls.

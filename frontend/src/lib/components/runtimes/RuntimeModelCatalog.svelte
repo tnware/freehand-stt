@@ -320,7 +320,7 @@
                         >{model.name}</span
                       >
                       {#if model.recommended}<span
-                          class="shrink-0 text-[10px] font-medium text-muted-foreground"
+                          class="shrink-0 text-2xs font-medium text-muted-foreground"
                           >Recommended</span
                         >{/if}
                     </span>

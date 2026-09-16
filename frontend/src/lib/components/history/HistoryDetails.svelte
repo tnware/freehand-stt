@@ -1,4 +1,5 @@
 <script lang="ts">
+  import HistoryOutcomeBadge from "./HistoryOutcomeBadge.svelte";
   import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
   import CircleMinusIcon from "@lucide/svelte/icons/circle-minus";
   import CircleXIcon from "@lucide/svelte/icons/circle-x";
@@ -12,7 +13,6 @@
   import { Separator } from "$lib/components/ui/separator";
   import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import {
-    HistoryOutcome,
     HistoryProcessingStatus,
     HistoryResponseMode,
     HistorySource,
@@ -63,14 +63,6 @@
     return "Not available";
   };
 
-  const outcomeLabel = (outcome: HistoryOutcome): string => {
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "Copy required";
-    if (outcome === HistoryOutcome.HistoryFailed) return "Delivery failed";
-    if (outcome === HistoryOutcome.HistoryTranscribed) return "Transcribed";
-    if (outcome === HistoryOutcome.HistoryCancelled) return "Cancelled";
-    return "Inserted";
-  };
-
   const processingLabel = (status: HistoryProcessingStatus): string => {
     if (status === HistoryProcessingStatus.HistoryProcessingCompleted)
       return "Completed";
@@ -81,29 +73,6 @@
     if (status === HistoryProcessingStatus.HistoryProcessingPending)
       return "Pending";
     return "Not requested";
-  };
-
-  const badgeVariant = (
-    outcome: HistoryOutcome,
-  ): "default" | "secondary" | "destructive" => {
-    if (outcome === HistoryOutcome.HistoryFailed) return "destructive";
-    if (
-      outcome === HistoryOutcome.HistoryCancelled ||
-      outcome === HistoryOutcome.HistoryTranscribed
-    )
-      return "secondary";
-    return "default";
-  };
-
-  const outcomeBadgeClass = (outcome: HistoryOutcome): string => {
-    if (
-      outcome === HistoryOutcome.HistoryInserted ||
-      outcome === HistoryOutcome.HistoryTranscribed
-    )
-      return "bg-success/10 text-success";
-    if (outcome === HistoryOutcome.HistoryCopyRequired)
-      return "bg-primary/10 text-primary";
-    return "";
   };
 
   const processingVariant = (
@@ -149,9 +118,7 @@
 
 {#snippet endpointValue(value?: string)}
   {#if value}
-    <span
-      class="mono-chip font-normal"
-    >
+    <span class="mono-chip font-normal">
       {value}
     </span>
   {:else}
@@ -161,9 +128,7 @@
 
 {#snippet modelValue(value?: string)}
   {#if value}
-    <span
-      class="mono-chip"
-    >
+    <span class="mono-chip">
       {value}
     </span>
   {:else}
@@ -189,9 +154,7 @@
 {/snippet}
 
 {#snippet characterValue(value?: number, suffix?: string)}
-  <span
-    class="mono-run"
-  >
+  <span class="mono-run">
     <span class="min-w-0 [overflow-wrap:anywhere]"
       >{(value ?? 0).toLocaleString()}</span
     >
@@ -218,12 +181,7 @@
               {sourceLabel(details.source)} · run #{entry.id.toLocaleString()}
             </p>
           </div>
-          <Badge
-            variant={badgeVariant(entry.outcome)}
-            class={outcomeBadgeClass(entry.outcome)}
-          >
-            {outcomeLabel(entry.outcome)}
-          </Badge>
+          <HistoryOutcomeBadge outcome={entry.outcome} />
         </div>
       </header>
     {/if}
@@ -248,32 +206,25 @@
             class="content-section-title">Run</svelte:element
           >
         </div>
-        <dl
-          class="details-grid"
-        >
+        <dl class="details-grid">
           {#if embedded}
             <dt class="text-muted-foreground">Source</dt>
-            <dd class="text-right">{sourceLabel(details.source)}</dd>
+            <dd>{sourceLabel(details.source)}</dd>
             <dt class="text-muted-foreground">Run</dt>
-            <dd class="text-right">#{entry.id.toLocaleString()}</dd>
+            <dd>#{entry.id.toLocaleString()}</dd>
             <dt class="text-muted-foreground">Delivery outcome</dt>
-            <dd class="text-right">
-              <Badge
-                variant={badgeVariant(entry.outcome)}
-                class={outcomeBadgeClass(entry.outcome)}
-              >
-                {outcomeLabel(entry.outcome)}
-              </Badge>
+            <dd>
+              <HistoryOutcomeBadge outcome={entry.outcome} />
             </dd>
           {/if}
           <dt class="text-muted-foreground">Started</dt>
-          <dd class="text-right break-words">{dateTime(details.startedAt)}</dd>
+          <dd class="break-words">{dateTime(details.startedAt)}</dd>
           <dt class="text-muted-foreground">Completed</dt>
-          <dd class="text-right break-words">
+          <dd class="break-words">
             {dateTime(details.completedAt)}
           </dd>
           <dt class="text-muted-foreground">Total elapsed</dt>
-          <dd class="text-right">
+          <dd>
             {@render durationValue(details.elapsedMilliseconds)}
           </dd>
           <dt class="text-muted-foreground">
@@ -282,17 +233,17 @@
               ? "Audio submitted"
               : "Audio length"}
           </dt>
-          <dd class="text-right">
+          <dd>
             {@render durationValue(details.audioDurationMilliseconds)}
           </dd>
           <dt class="text-muted-foreground">Characters delivered</dt>
-          <dd class="text-right">
+          <dd>
             {@render characterValue(
               processing.deliveredCharacters ?? entry.characterCount,
             )}
           </dd>
           <dt class="text-muted-foreground">Delivery mode</dt>
-          <dd class="text-right">
+          <dd>
             {insertionModeLabel(details.insertionMode)}
           </dd>
         </dl>
@@ -312,27 +263,25 @@
             class="content-section-title">Speech recognition</svelte:element
           >
         </div>
-        <dl
-          class="details-grid"
-        >
+        <dl class="details-grid">
           <dt class="text-muted-foreground">Server</dt>
-          <dd class="text-right">{@render endpointValue(details.server)}</dd>
+          <dd>{@render endpointValue(details.server)}</dd>
           <dt class="text-muted-foreground">Route</dt>
-          <dd class="text-right break-all">{details.route}</dd>
+          <dd class="break-all">{details.route}</dd>
           <dt class="text-muted-foreground">Authentication</dt>
-          <dd class="text-right">
+          <dd>
             {details.authenticationMode === "none" ? "None" : "API key"}
           </dd>
           <dt class="text-muted-foreground">Model</dt>
-          <dd class="text-right">{@render modelValue(details.model)}</dd>
+          <dd>{@render modelValue(details.model)}</dd>
           <dt class="text-muted-foreground">Language</dt>
-          <dd class="text-right">
+          <dd>
             {details.language === "auto"
               ? "Automatic detection"
               : details.language || "Server default"}
           </dd>
           <dt class="text-muted-foreground">Response</dt>
-          <dd class="text-right">
+          <dd>
             {#if details.responseMode === HistoryResponseMode.HistoryResponseStreamed}
               {@render statusValue(
                 details.buffered ? "Streamed · buffered" : "Streamed",
@@ -344,23 +293,23 @@
           </dd>
           {#if details.streamFallbackReason}
             <dt class="text-muted-foreground">Streaming fallback</dt>
-            <dd class="text-right">
+            <dd>
               {details.streamFallbackReason.replaceAll("_", " ")}
             </dd>
           {/if}
           <dt class="text-muted-foreground">Request time</dt>
-          <dd class="text-right">
+          <dd>
             {@render durationValue(details.transcriptionMilliseconds)}
           </dd>
           {#if details.requestTimeoutSeconds}
             <dt class="text-muted-foreground">Request timeout</dt>
-            <dd class="text-right">
+            <dd>
               {@render durationValue(details.requestTimeoutSeconds * 1000)}
             </dd>
           {/if}
           {#if details.errorKind}
             <dt class="text-muted-foreground">Terminal error</dt>
-            <dd class="text-right">{details.errorKind}</dd>
+            <dd>{details.errorKind}</dd>
           {/if}
         </dl>
         {#if details.transcription}
@@ -386,17 +335,15 @@
               class="content-section-title">Audio file</svelte:element
             >
           </div>
-          <dl
-            class="details-grid"
-          >
+          <dl class="details-grid">
             <dt class="text-muted-foreground">Filename</dt>
-            <dd class="text-right break-all">
+            <dd class="break-all">
               {details.fileName || "Not available"}
             </dd>
             <dt class="text-muted-foreground">File size</dt>
-            <dd class="text-right">{bytes(details.fileSize)}</dd>
+            <dd>{bytes(details.fileSize)}</dd>
             <dt class="text-muted-foreground">Upload time</dt>
-            <dd class="text-right">
+            <dd>
               {@render durationValue(details.uploadMilliseconds)}
             </dd>
           </dl>
@@ -414,25 +361,23 @@
               class="content-section-title">Voice capture</svelte:element
             >
           </div>
-          <dl
-            class="details-grid"
-          >
+          <dl class="details-grid">
             <dt class="text-muted-foreground">Microphone</dt>
-            <dd class="text-right break-words">
+            <dd class="break-words">
               {details.microphone || "Not available"}
             </dd>
             <dt class="text-muted-foreground">Recording control</dt>
-            <dd class="text-right">
+            <dd>
               {details.recordingMode === RecordingMode.RecordingHold
                 ? "Hold to talk"
                 : "Toggle"}
             </dd>
             <dt class="text-muted-foreground">Recording length</dt>
-            <dd class="text-right">
+            <dd>
               {@render durationValue(details.captureDurationMilliseconds)}
             </dd>
             <dt class="text-muted-foreground">VAD</dt>
-            <dd class="text-right">
+            <dd>
               {@render statusValue(
                 details.vadEnabled ? details.vadMode || "On" : "Off",
                 details.vadEnabled ? "positive" : "inactive",
@@ -440,14 +385,12 @@
             </dd>
             {#if details.vadEnabled}
               <dt class="text-muted-foreground">Indicator delay</dt>
-              <dd class="text-right">
+              <dd>
                 {@render durationValue(details.vadActivitySilenceMilliseconds)}
               </dd>
               <dt class="text-muted-foreground">Silence trimming</dt>
               {#if details.silenceTrimming}
-                <dd
-                  class="flex flex-wrap items-center justify-end gap-1.5 text-right"
-                >
+                <dd class="flex flex-wrap items-center gap-1.5">
                   {@render statusValue("On", "positive")}
                   {@render durationValue(
                     details.speechPaddingMilliseconds,
@@ -455,22 +398,20 @@
                   )}
                 </dd>
               {:else}
-                <dd class="text-right">
+                <dd>
                   {@render statusValue("Off", "inactive")}
                 </dd>
               {/if}
               <dt class="text-muted-foreground">Automatic stop</dt>
               {#if details.autoStopEnabled && !details.autoStopActive}
-                <dd class="text-right">
+                <dd>
                   {@render statusValue(
                     "Inactive in hold mode",
                     "informational",
                   )}
                 </dd>
               {:else if details.autoStopEnabled}
-                <dd
-                  class="flex flex-wrap items-center justify-end gap-1.5 text-right"
-                >
+                <dd class="flex flex-wrap items-center gap-1.5">
                   {@render statusValue("On", "positive")}
                   {@render durationValue(
                     details.autoStopSilenceMilliseconds,
@@ -482,13 +423,13 @@
                   )}
                 </dd>
               {:else}
-                <dd class="text-right">
+                <dd>
                   {@render statusValue("Off", "inactive")}
                 </dd>
               {/if}
               {#if details.autoStopActive}
                 <dt class="text-muted-foreground">Stop trigger</dt>
-                <dd class="text-right">
+                <dd>
                   {@render statusValue(
                     details.autoStopped ? "Silence" : "Manual or limit",
                     details.autoStopped ? "positive" : "informational",
@@ -497,18 +438,18 @@
               {/if}
             {/if}
             <dt class="text-muted-foreground">Silence splitting</dt>
-            <dd class="text-right">
+            <dd>
               {@render statusValue(
                 details.silenceSplitting ? "On" : "Off",
                 details.silenceSplitting ? "positive" : "inactive",
               )}
             </dd>
             <dt class="text-muted-foreground">Checkpoints</dt>
-            <dd class="text-right">
+            <dd>
               {details.segmentCount?.toLocaleString() ?? "None"}
             </dd>
             <dt class="text-muted-foreground">Duration limit</dt>
-            <dd class="text-right">
+            <dd>
               {@render statusValue(
                 details.durationLimitReached ? "Reached" : "Within limit",
                 details.durationLimitReached ? "warning" : "positive",
@@ -596,33 +537,29 @@
               {processingLabel(processing.status)}
             </Badge>
           </div>
-          <dl
-            class="details-grid"
-          >
+          <dl class="details-grid">
             <dt class="text-muted-foreground">Server</dt>
-            <dd class="text-right">
+            <dd>
               {@render endpointValue(processing.server)}
             </dd>
             <dt class="text-muted-foreground">Model</dt>
-            <dd class="text-right">{@render modelValue(processing.model)}</dd>
+            <dd>{@render modelValue(processing.model)}</dd>
             <dt class="text-muted-foreground">Profile</dt>
-            <dd class="text-right">
+            <dd>
               {processingProfileName([], processing.preset)}
             </dd>
             <dt class="text-muted-foreground">Elapsed</dt>
-            <dd class="text-right">
+            <dd>
               {@render durationValue(processing.elapsedMilliseconds)}
             </dd>
             {#if processing.timeoutSeconds}
               <dt class="text-muted-foreground">Timeout</dt>
-              <dd class="text-right">
+              <dd>
                 {@render durationValue(processing.timeoutSeconds * 1000)}
               </dd>
             {/if}
             <dt class="text-muted-foreground">Characters</dt>
-            <dd
-              class="flex flex-wrap items-center justify-end gap-1.5 text-right"
-            >
+            <dd class="flex flex-wrap items-center gap-1.5">
               {@render characterValue(processing.rawCharacterCount, "raw")}
               {#if processing.processedCharacters !== undefined}
                 {@render characterValue(
@@ -633,13 +570,13 @@
             </dd>
             {#if processing.styling}
               <dt class="text-muted-foreground">S1-mini controls</dt>
-              <dd class="text-right">
+              <dd>
                 {processing.styling} · {processing.structure} · {processing.context}
               </dd>
             {/if}
             {#if processing.errorKind}
               <dt class="text-muted-foreground">Fallback reason</dt>
-              <dd class="text-right text-warning!">{processing.errorKind}</dd>
+              <dd class="text-warning!">{processing.errorKind}</dd>
             {/if}
           </dl>
           {#if processing.response}
@@ -658,7 +595,6 @@
   .history-details {
     container: history-details / inline-size;
   }
-
 
   .checkpoint-label {
     position: absolute;

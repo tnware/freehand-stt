@@ -24,9 +24,7 @@
     {#each keys as key, index (`${key}-${index}`)}
       <Kbd.Root aria-hidden="true">{key}</Kbd.Root>
       {#if index < keys.length - 1}
-        <span aria-hidden="true" class="text-[10px] text-muted-foreground"
-          >+</span
-        >
+        <span aria-hidden="true" class="text-2xs text-muted-foreground">+</span>
       {/if}
     {/each}
   </Kbd.Group>

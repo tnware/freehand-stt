@@ -235,7 +235,7 @@
           <span class="pane-empty-icon" aria-hidden="true"
             ><HistoryIcon class="size-6" /></span
           >
-          <p class="pane-empty-title">
+          <p class="content-title">
             {!enabled
               ? "History is turned off."
               : filtered && retained.length
