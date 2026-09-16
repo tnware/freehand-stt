@@ -412,7 +412,7 @@
             <p class="content-section-title">
               Recommended: {backendLabel(recommendation.recommendedBackend)}
             </p>
-            <p class="mt-0.5 font-mono text-[11px] text-ink-quiet">
+            <p class="mt-0.5 font-mono text-xs text-ink-quiet">
               {recommendation.os} · {recommendation.architecture} · {recommendation.reason}
             </p>
             <div class="mt-2.5 flex flex-wrap gap-1.5">
@@ -529,11 +529,11 @@
                 act(() => runtime.saveInstance({ ...instance, autoStart }))}
             />
           </div>
-          <p class="break-all font-mono text-[11px] text-ink-quiet">
+          <p class="break-all font-mono text-xs text-ink-quiet">
             Active API model: {row?.activeModel || "None"}
           </p>
           {#if instance.speechModel}<p
-              class="break-all font-mono text-[11px] text-ink-quiet"
+              class="break-all font-mono text-xs text-ink-quiet"
             >
               Active speech API model: {row?.activeSpeechModel || "None"}
             </p>

@@ -139,7 +139,7 @@
         disabled={busy}
         aria-current={connection.id === selected ? "true" : undefined}
         onclick={() => onSelect(connection)}
-        class={`connection-row flex w-full border-b border-l-2 border-b-hairline text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50 ${sidebar ? "min-h-[60px] flex-col items-stretch gap-0.5 pl-2.5 pr-3 py-1.5" : "min-h-[52px] items-center pl-[18px] pr-5"} ${connection.id === selected ? "border-l-primary bg-accent-wash" : "border-l-transparent hover:bg-subtle-fill-hover"}`}
+        class={`connection-row flex w-full border-b border-l-2 border-b-hairline text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50 ${sidebar ? "min-h-[60px] flex-col items-stretch gap-0.5 pl-2.5 pr-3 py-1.5" : "min-h-[52px] items-center pl-[18px] pr-5"} ${connection.id === selected ? "border-l-primary bg-accent-wash-strong" : "border-l-transparent hover:bg-subtle-fill-hover"}`}
       >
         <span class="flex min-w-0 flex-1 items-center gap-2.5">
           <ProviderIcon
@@ -201,7 +201,7 @@
           {/if}
           {#if sidebar}
             <span
-              class="min-w-0 truncate text-[11px] text-muted-foreground"
+              class="min-w-0 truncate text-xs text-muted-foreground"
               title={usedBy ||
                 (connection.builtIn
                   ? "Built-in connection · Not in use"

@@ -88,7 +88,7 @@
       <span
         class={cn(
           "font-normal text-muted-foreground",
-          compact && "font-sans text-[11px] tracking-normal normal-case",
+          compact && "font-sans text-xs tracking-normal normal-case",
         )}
       >
         · {optionLabel(processor.styling)}
@@ -146,7 +146,7 @@
             class={cn(
               "min-w-0 font-normal text-muted-foreground data-[state=on]:border-accent-edge data-[state=on]:bg-accent-wash data-[state=on]:font-medium data-[state=on]:text-accent-text",
               compact
-                ? "h-[26px] rounded-md px-2.5 text-[11px]"
+                ? "h-[26px] rounded-md px-2.5 text-xs"
                 : "h-7 rounded-full px-3 text-[11.5px]",
             )}
           >
@@ -179,7 +179,7 @@
             class={cn(
               "min-w-0 font-normal text-muted-foreground data-[state=on]:border-accent-edge data-[state=on]:bg-accent-wash data-[state=on]:font-medium data-[state=on]:text-accent-text",
               compact
-                ? "h-[26px] rounded-md px-2.5 text-[11px]"
+                ? "h-[26px] rounded-md px-2.5 text-xs"
                 : "h-7 rounded-full px-3 text-[11.5px]",
             )}
           >

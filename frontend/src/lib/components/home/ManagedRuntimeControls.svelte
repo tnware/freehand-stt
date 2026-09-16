@@ -132,13 +132,13 @@
     {#if sidebar}
       <div class="flex min-w-0 items-start gap-1.5">
         <span
-          class="text-[11px] leading-relaxed text-muted-foreground"
+          class="text-xs leading-relaxed text-muted-foreground"
           title="Local runtime">Local</span
         >
         {@render runtimeStatus()}
       </div>
     {:else}<span
-        class="flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground"
+        class="flex min-w-0 items-center gap-1.5 text-xs font-medium text-muted-foreground"
       >
         <CpuIcon class="size-3.5 shrink-0" aria-hidden="true" />Local runtime
       </span>{/if}
@@ -171,11 +171,11 @@
   </div>
   {#if !sidebar}{@render runtimeStatus()}{/if}
   {#if view.startup}<p
-      class="text-[11px] leading-relaxed text-muted-foreground"
+      class="text-xs leading-relaxed text-muted-foreground"
     >
       {view.startup}
     </p>{/if}
-  {#if view.transferred}<p class="font-mono text-[11px] text-muted-foreground">
+  {#if view.transferred}<p class="font-mono text-xs text-muted-foreground">
       {view.transferred}
     </p>{/if}
   {#if !operating && view.completion && !problem && status?.operation?.outcome === "cancelled"}<p
@@ -228,19 +228,19 @@
         >
       </Select.Root>
       {#if running && models.length > 1}<p
-          class="mt-1 text-[11px] leading-relaxed text-muted-foreground"
+          class="mt-1 text-xs leading-relaxed text-muted-foreground"
         >
           Stop to change the loaded model.
         </p>{/if}
     </div>
     {#if view.backend || status?.version}<p
-        class="break-words text-[11px] text-muted-foreground"
+        class="break-words text-xs text-muted-foreground"
       >
         {[view.backend, status?.version].filter(Boolean).join(" · ")}
       </p>{/if}
   {/if}
   {#if row?.instance.speechModel}<p
-      class="text-[11px] leading-relaxed text-muted-foreground"
+      class="text-xs leading-relaxed text-muted-foreground"
     >
       Start and Stop affect transcription and speech together.
     </p>{/if}
@@ -252,13 +252,13 @@
     <Button
       variant="link"
       size="xs"
-      class="h-auto min-h-5 p-0 text-[11px]"
+      class="h-auto min-h-5 p-0 text-xs"
       onclick={manage}>Manage runtime</Button
     >
     {#if row}<Button
         variant="link"
         size="xs"
-        class="h-auto min-h-5 p-0 text-[11px]"
+        class="h-auto min-h-5 p-0 text-xs"
         disabled={!!layout && !layout.bottomAvailable.current}
         title={layout && !layout.bottomAvailable.current
           ? "Make the window taller to show runtime output."

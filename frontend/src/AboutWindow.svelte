@@ -183,7 +183,7 @@
         <div class="flex items-center gap-4 border-t border-hairline px-5 py-3">
           <div class="min-w-0 flex-1">
             <p class="text-xs font-medium text-foreground">Software updates</p>
-            <p class="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+            <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">
               {updateSummary(updateStatus)}
             </p>
           </div>

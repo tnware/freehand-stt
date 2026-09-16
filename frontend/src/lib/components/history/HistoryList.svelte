@@ -109,7 +109,7 @@
   const outcomeBadgeClass = (outcome: HistoryOutcome): string => {
     if (outcome === HistoryOutcome.HistoryFailed) return "";
     if (outcome === HistoryOutcome.HistoryCopyRequired)
-      return "bg-accent-wash text-accent-text";
+      return "bg-accent-wash-strong text-accent-text";
     if (outcome === HistoryOutcome.HistoryInserted)
       return "bg-success/10 text-success";
     return "";
@@ -298,7 +298,7 @@
               ></span>
               <Badge
                 variant={live.failed ? "destructive" : "secondary"}
-                class="text-[11px] tracking-normal normal-case"
+                class="text-xs tracking-normal normal-case"
               >
                 {#if live.working}
                   <LoaderCircleIcon
@@ -410,7 +410,7 @@
                 ? "destructive"
                 : "secondary"}
               class={cn(
-                "text-[11px] tracking-normal normal-case",
+                "text-xs tracking-normal normal-case",
                 outcomeBadgeClass(entry.outcome),
               )}
             >
@@ -419,7 +419,7 @@
             {#if hasProcessing(entry)}
               <Badge
                 variant="secondary"
-                class="text-[11px] tracking-normal text-accent-text normal-case"
+                class="text-xs tracking-normal text-accent-text normal-case"
               >
                 {processingLabel(entry)}
               </Badge>
@@ -490,7 +490,7 @@
                 size="xs"
                 class={cn(
                   "mr-2 min-w-[4.75rem]",
-                  isComparing && "bg-accent-wash text-accent-text",
+                  isComparing && "bg-accent-wash-strong text-accent-text",
                 )}
                 aria-label={isComparing
                   ? "Show the final transcript"

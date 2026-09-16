@@ -142,7 +142,7 @@
     <h2 class="content-title">Compose</h2>
     <span
       class={cn(
-        "mr-auto inline-flex h-5 items-center rounded-sm border px-1.5 text-[11px]",
+        "mr-auto inline-flex h-5 items-center rounded-sm border px-1.5 text-xs",
         failed
           ? "border-destructive/30 text-destructive"
           : working

@@ -44,7 +44,7 @@
         <Menubar.Content
           align="start"
           sideOffset={4}
-          class="z-50 max-h-[var(--bits-menubar-content-available-height)] min-w-60 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none"
+          class="z-50 max-h-[var(--bits-menubar-content-available-height)] min-w-60 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-float outline-none"
           style="--wails-draggable: no-drag"
         >
           {#each menu.groups as group, index (index)}
@@ -58,7 +58,7 @@
                 </span>
                 <span class="flex-1">{item.label}</span>
                 {#if item.shortcut}<span
-                    class="ml-4 text-[11px] text-muted-foreground"
+                    class="ml-4 text-xs text-muted-foreground"
                     >{item.shortcut}</span
                   >{/if}
               {/snippet}

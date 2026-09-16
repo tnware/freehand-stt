@@ -71,7 +71,7 @@
   </div>
   <div class="flex shrink-0 items-center gap-2 pr-1.5">
     {#if note}
-      <span class="hidden text-[11px] text-ink-quiet min-[900px]:inline"
+      <span class="hidden text-xs text-ink-quiet min-[900px]:inline"
         >{note}</span
       >
     {/if}

@@ -91,7 +91,7 @@
         : "justify-center px-0 min-[760px]:justify-start min-[760px]:pl-2.5 min-[760px]:pr-3",
       "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
       id === active
-        ? "border-primary bg-accent-wash font-medium text-foreground"
+        ? "border-primary bg-accent-wash-strong font-medium text-foreground"
         : "border-transparent text-secondary-foreground hover:bg-subtle-fill-hover hover:text-foreground active:bg-subtle-fill-pressed",
     );
 

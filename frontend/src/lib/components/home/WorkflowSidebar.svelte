@@ -250,7 +250,7 @@
           >{workflow === "tts" ? "Play or save" : "Explicit copy"}</span
         >
       </div>
-      <p class="px-2.5 pt-0.5 pb-1 text-[11px] leading-snug text-ink-quiet">
+      <p class="px-2.5 pt-0.5 pb-1 text-xs leading-snug text-ink-quiet">
         {workflow === "tts"
           ? "Audio is generated on request and never saved automatically."
           : "A file transcript is never inserted into another application."}

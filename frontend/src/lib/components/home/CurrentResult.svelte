@@ -59,16 +59,19 @@
   <div class="workbench-toolbar flex-wrap gap-y-1 py-1">
     <h2 class="content-title">Transcript</h2>
     <span
-      class="mr-auto inline-flex min-h-5 min-w-0 items-center rounded-sm border px-1.5 text-[11px] {live ||
+      class="mr-auto inline-flex min-h-5 min-w-0 items-center gap-1.5 rounded-sm border px-1.5 text-xs {live ||
       working
-        ? 'border-accent-edge bg-accent-wash text-accent-text'
+        ? 'border-record-edge bg-record-wash text-record-text'
         : recovery
           ? 'border-warning/30 text-warning'
           : failed
             ? 'border-destructive/30 text-destructive'
             : 'border-border text-muted-foreground'}"
       role="status"
-      >{live
+      >{#if live}<span
+            class="size-1.5 shrink-0 rounded-full bg-record motion-safe:animate-pulse"
+            aria-hidden="true"
+          ></span>{/if}{live
         ? "Live"
         : working
           ? "In progress"
@@ -161,19 +164,19 @@
           </div>
         {:else if !message}
           <div
-            class="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-4 text-center"
+            class="flex flex-1 flex-col items-center justify-center gap-3 px-5 py-8 text-center"
           >
             <span
-              class="mb-1 grid size-6 place-items-center text-muted-foreground"
+              class="grid size-12 place-items-center rounded-lg border border-hairline bg-well text-muted-foreground shadow-lift"
               aria-hidden="true"
             >
               {#if working}<LoaderCircleIcon
-                  class="size-6 animate-spin motion-reduce:animate-none"
+                  class="size-6 animate-spin text-accent-text motion-reduce:animate-none"
                 />
               {:else if mode === "file"}<FileAudioIcon class="size-6" />
-              {:else}<AudioLinesIcon class="size-6" />{/if}
+              {:else}<AudioLinesIcon class="size-6 text-accent-text" />{/if}
             </span>
-            <p class="content-title">
+            <p class="text-[17px] font-semibold text-foreground">
               {failed
                 ? "No transcript to show"
                 : working

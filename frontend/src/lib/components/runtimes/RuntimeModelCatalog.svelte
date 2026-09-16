@@ -246,7 +246,7 @@
           aria-hidden="true"
         />
         <span>{group.label}</span>
-        <span class="ml-auto text-[11px] font-normal text-muted-foreground"
+        <span class="ml-auto text-xs font-normal text-muted-foreground"
           >{count} {count === 1 ? "model" : "models"}</span
         >
       </button>
@@ -271,7 +271,7 @@
               aria-hidden="true"
             />
             <span>{family.label}</span>
-            <span class="ml-auto text-[11px] font-normal text-muted-foreground"
+            <span class="ml-auto text-xs font-normal text-muted-foreground"
               >{family.models.length}
               {family.models.length === 1 ? "variant" : "variants"}</span
             >
@@ -333,7 +333,7 @@
                   </span>
                 </button>
                 <span
-                  class="model-size text-right text-[11px] text-secondary-foreground"
+                  class="model-size text-right text-xs text-secondary-foreground"
                 >
                   <span class="block text-muted-foreground">{task(model)}</span>
                   <span class="font-mono" title={modelSize(model.sizeBytes)}

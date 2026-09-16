@@ -38,7 +38,7 @@
       {@const active = pane === entry.id}
       <button
         type="button"
-        class="rail-item relative grid h-[42px] w-12 place-items-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-[current=page]:bg-accent-wash aria-[current=page]:text-accent-text"
+        class="rail-item relative grid h-[42px] w-12 place-items-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 aria-[current=page]:bg-accent-wash-strong aria-[current=page]:text-accent-text"
         aria-current={active ? "page" : undefined}
         aria-label={entry.label}
         title={blocked || entry.label}
@@ -59,7 +59,7 @@
     position: absolute;
     inset-block: 0;
     inset-inline-start: 0;
-    width: 2px;
+    width: 3px;
     background: var(--primary);
   }
   @media (forced-colors: active) {

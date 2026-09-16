@@ -62,7 +62,7 @@
       {#if source.filename}<dt>File</dt>
         <dd class="break-all font-mono">{source.filename}</dd>{/if}
       {#if source.sha256}<dt>SHA-256</dt>
-        <dd class="break-all font-mono text-[11px]">{source.sha256}</dd>{/if}
+        <dd class="break-all font-mono text-xs">{source.sha256}</dd>{/if}
     </dl>
     {#each (source.companions ?? []).filter((companion) => companion !== null) as companion (companion.filename)}
       <dl
@@ -75,7 +75,7 @@
         <dt>Revision</dt>
         <dd class="break-all font-mono">{companion.revision}</dd>
         <dt>SHA-256</dt>
-        <dd class="break-all font-mono text-[11px]">{companion.sha256}</dd>
+        <dd class="break-all font-mono text-xs">{companion.sha256}</dd>
       </dl>
     {/each}
     {#if delegated}<p class="mt-2">

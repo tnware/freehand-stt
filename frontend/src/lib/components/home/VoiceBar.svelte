@@ -104,7 +104,9 @@
 </script>
 
 <section
-  class="@container flex flex-col gap-2 border-b border-hairline bg-layer-fill px-3 py-2"
+  class="@container flex flex-col gap-2 border-b px-3 py-2 {recording
+    ? 'border-record-edge bg-record-wash'
+    : 'border-hairline bg-layer-fill'}"
   aria-label="Voice capture"
 >
   <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -122,7 +124,10 @@
             aria-hidden="true"
           />
         {:else}
-          <MicIcon class="content-section-icon" aria-hidden="true" />
+          <MicIcon
+            class="content-section-icon {recording ? 'text-record' : ''}"
+            aria-hidden="true"
+          />
         {/if}
         {label}
       </p>

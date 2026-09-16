@@ -52,7 +52,7 @@
             · {modelSize(artifact.sizeBytes)}
           </p>
           <p class="break-all font-mono">{artifact.filename}</p>
-          <p class="break-all font-mono text-[11px]">
+          <p class="break-all font-mono text-xs">
             <span class="font-sans">SHA-256 </span>{artifact.sha256}
           </p>
         </div>

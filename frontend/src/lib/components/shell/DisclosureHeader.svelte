@@ -53,7 +53,7 @@
     <span class="caption shrink-0">{label}</span>
     {#if summaryContent || summary}
       <span
-        class="summary figure min-w-0 flex-1 truncate text-[11px] text-ink-quiet"
+        class="summary figure min-w-0 flex-1 truncate text-xs text-ink-quiet"
       >
         {#if summaryContent}
           {@render summaryContent()}

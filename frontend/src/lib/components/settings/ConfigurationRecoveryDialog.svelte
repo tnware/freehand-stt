@@ -23,7 +23,7 @@
     showCloseButton={false}
     escapeKeydownBehavior="ignore"
     interactOutsideBehavior="ignore"
-    class="gap-0 bg-dialog-surface p-0 shadow-xl ring-dialog-stroke sm:max-w-[460px]"
+    class="gap-0 bg-dialog-surface p-0 shadow-float ring-dialog-stroke sm:max-w-[460px]"
   >
     <Dialog.Header class="border-b border-hairline px-5 py-4">
       <div class="flex items-start gap-3">

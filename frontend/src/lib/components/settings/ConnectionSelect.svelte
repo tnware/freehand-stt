@@ -164,7 +164,7 @@
     ><Combobox.Content
       data-slot="combobox-content"
       sideOffset={4}
-      class="z-50 flex max-h-[min(24rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md"
+      class="z-50 flex max-h-[min(24rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-float"
     >
       <div class="min-h-0 overflow-y-auto overscroll-contain p-1">
         {#each matches as c (c.id)}

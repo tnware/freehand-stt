@@ -214,7 +214,7 @@
         />{:else}<MicIcon class="size-5" />{/if}
       {recording ? "Stop recording" : "Start recording"}
     </button>
-    <p class="text-center text-[11px] leading-relaxed text-muted-foreground">
+    <p class="text-center text-xs leading-relaxed text-muted-foreground">
       {recording
         ? "Close this panel to keep recording."
         : "Hides this panel before recording."}
@@ -226,7 +226,7 @@
         <label for="tray-connection" class="text-xs font-medium"
           >Voice connection</label
         ><button
-          class="text-[11px] text-muted-foreground hover:text-foreground"
+          class="text-xs text-muted-foreground hover:text-foreground"
           onclick={settingsWindow}>Options ↗</button
         >
       </div>

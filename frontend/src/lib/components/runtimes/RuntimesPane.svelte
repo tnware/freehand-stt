@@ -160,7 +160,7 @@
                   ? 'text-foreground'
                   : 'text-secondary-foreground'}">{row.entry.name}</span
               >
-              <span class="block truncate font-mono text-[11px] text-ink-quiet">
+              <span class="block truncate font-mono text-xs text-ink-quiet">
                 {[
                   row.entry.id === "llama-cpp"
                     ? "cleanup"
@@ -227,7 +227,7 @@
           <!-- Freehand knows which backends this machine can actually run;
                it does not measure VRAM, so this states capability rather
                than inventing a hardware meter. -->
-          <p class="font-mono text-[11px] text-ink-quiet">
+          <p class="font-mono text-xs text-ink-quiet">
             {currentInstance?.status.backend
               ? backendLabel(currentInstance.status.backend)
               : "backend not selected"}

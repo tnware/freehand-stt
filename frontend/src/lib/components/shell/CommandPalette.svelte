@@ -153,7 +153,7 @@
             >{command.label}</span
           >
           {#if command.detail}
-            <span class="max-w-[40%] truncate text-[11px] text-ink-quiet"
+            <span class="max-w-[40%] truncate text-xs text-ink-quiet"
               >{command.detail}</span
             >
           {/if}
