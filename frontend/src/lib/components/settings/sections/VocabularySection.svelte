@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Input } from "$lib/components/ui/input";
   import Disclosure from "$lib/components/common/Disclosure.svelte";
   import { Service as SettingsService } from "$bindings/settings";
   import type {
@@ -279,7 +280,7 @@
       title="Vocabulary strength"
       description="Shared by Voice and audio files using Nemotron. 3 is a starting point; stronger hints can increase incorrect matches. The server may cap this value."
     >
-      {#snippet control()}<input
+      {#snippet control()}<Input
           aria-label="Vocabulary strength"
           type="number"
           min="0"
@@ -290,8 +291,7 @@
             (boost) => onChange({ boost: boost ?? 0 })
           }
           {disabled}
-          data-slot="input"
-          class="h-8 w-20 rounded-md border border-input bg-well px-2.5 text-[13px] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+          class="w-20"
         />{/snippet}
     </SettingRow>
     <p class="py-3 text-xs leading-5 text-muted-foreground">

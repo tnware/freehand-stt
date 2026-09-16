@@ -9,7 +9,7 @@
   import { connectionWorkflows } from "$lib/utils/connectionChoices";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
   import type { Purpose } from "$bindings/savedconnection";
-  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import { Button } from "$lib/components/ui/button";
   import WorkflowIcon from "@lucide/svelte/icons/workflow";
   import ShieldCheckIcon from "@lucide/svelte/icons/shield-check";
@@ -19,6 +19,8 @@
     instance,
     status,
     providers,
+    pending = "",
+    problem = "",
     busy = false,
     onManageRuntime,
     onWorkflow,
@@ -27,12 +29,16 @@
     instance?: Instance;
     status?: InstanceStatus;
     providers: ProviderDescriptor[];
+    pending?: string;
+    problem?: string;
     busy?: boolean;
     onManageRuntime: () => void;
     onWorkflow: (purpose: Purpose) => void;
   } = $props();
   const provider = $derived(providers.find((p) => p.id === instance?.provider));
-  const view = $derived(runtimePresentation(status?.status));
+  const view = $derived(
+    runtimePresentation(status?.status, undefined, pending),
+  );
   const model = $derived(
     provider?.models?.find((m) => m.id === instance?.model),
   );
@@ -49,14 +55,7 @@
         {provider?.name ?? instance?.provider ?? "Unavailable runtime"} · Runtime-owned
       </p>
     </div>
-    <StatusBadge
-      tone={status?.status.state === "running"
-        ? "success"
-        : status?.status.state === "error"
-          ? "danger"
-          : "neutral"}
-      dot>{view.label}</StatusBadge
-    >
+    <RuntimeStatus {view} {problem} badge />
   </div>
   <dl class="border-y border-hairline py-3">
     <dt class="content-kicker">Selected model</dt>

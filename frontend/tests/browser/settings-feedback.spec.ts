@@ -77,6 +77,11 @@ test("narrow settings rows retain label focus and an associated wrapping validat
     ),
   );
   await expect(error.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+  await input.hover();
+  const errorColor = await error.evaluate((el) => getComputedStyle(el).color);
+  await expect
+    .poll(() => input.evaluate((el) => getComputedStyle(el).borderColor))
+    .toBe(errorColor);
   await page.screenshot({ path: info.outputPath("field-error-narrow.png") });
   expect(await row.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
     true,

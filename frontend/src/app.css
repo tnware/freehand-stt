@@ -748,20 +748,6 @@ html.dark[data-material="mica"] #app {
   padding-inline: 0;
 }
 
-/* Shared control geometry belongs to the application, across all windows. */
-[data-slot="input"],
-[data-slot="combobox-input"],
-[data-slot="textarea"],
-[data-slot="select-trigger"] {
-  border-radius: var(--radius-md);
-  color: var(--foreground);
-}
-[data-slot="input"]:not(:focus-visible):not([aria-invalid="true"]),
-[data-slot="combobox-input"]:not(:focus-visible):not([aria-invalid="true"]),
-[data-slot="textarea"]:not(:focus-visible):not([aria-invalid="true"]),
-[data-slot="select-trigger"]:not(:focus-visible):not([aria-invalid="true"]) {
-  border-color: color-mix(in srgb, var(--muted-foreground) 75%, var(--well));
-}
 [data-slot="popover-content"],
 [data-slot="dropdown-menu-content"],
 [data-slot="select-content"],

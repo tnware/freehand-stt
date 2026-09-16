@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Input } from "$lib/components/ui/input";
+  import { pickerControl } from "$lib/utils/controlStyles";
   import * as Picker from "$lib/components/ui/combobox";
   import { untrack } from "svelte";
   import { Combobox } from "bits-ui";
@@ -100,14 +102,13 @@
       supported language before transcribing.
     </p>{/if}
   {#if automaticOnly && known}
-    <input
+    <Input
       {id}
       type="text"
       value={selectedLabel}
       readonly
       {disabled}
       aria-describedby={`${id}-help`}
-      class="h-8 w-full rounded-md border border-input bg-well px-3 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     />
   {:else}
     <Combobox.Root
@@ -126,7 +127,7 @@
         <Combobox.Input
           data-slot="combobox-input"
           {id}
-          class="h-8 w-full rounded-md border border-input bg-well px-3 pr-9 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          class={pickerControl}
           aria-describedby={`${id}-help`}
           placeholder="Search languages…"
           oninput={(event) => {

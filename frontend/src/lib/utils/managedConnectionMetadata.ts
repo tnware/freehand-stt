@@ -1,5 +1,6 @@
 import { Purpose } from "$bindings/savedconnection";
 import type { InstanceStatus } from "$bindings/managedruntime";
+import { runtimePresentation } from "./managedRuntime";
 import type { Settings } from "$lib/state";
 
 export interface RuntimeMetadataSource {
@@ -36,7 +37,9 @@ export function managedConnectionMetadata(
     state === "running" &&
     !starting &&
     !stopping;
+  const presentation = runtimePresentation(row?.status, undefined, pending);
   return {
+    presentation,
     ready,
     key: JSON.stringify([
       id,

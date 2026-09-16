@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { pickerControl } from "$lib/utils/controlStyles";
   import * as Picker from "$lib/components/ui/combobox";
   import type { Snippet } from "svelte";
   import { Combobox } from "bits-ui";
@@ -155,7 +156,7 @@
           : supported
             ? "Search or enter a voice ID…"
             : "Enter a voice ID…"}
-        class="h-8 w-full min-w-0 rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        class={pickerControl + " font-mono"}
         spellcheck={false}
         maxlength={200}
         oninput={(e) => {

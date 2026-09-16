@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { pickerControl } from "$lib/utils/controlStyles";
+  import { cn } from "$lib/utils";
   import * as Picker from "$lib/components/ui/combobox";
   import * as WindowingService from "$bindings/windowing/service";
   import Settings2Icon from "@lucide/svelte/icons/settings-2";
@@ -142,7 +144,11 @@
       {id}
       aria-label="Choose connection"
       placeholder={open ? "Search connections…" : "Choose or add a connection…"}
-      class={`w-full min-w-0 rounded-md border border-input bg-well pr-9 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${compact ? "h-7 text-xs" : "h-8"} ${selected && !open ? "pl-9" : "pl-3"}`}
+      class={cn(
+        pickerControl,
+        compact && "h-7 text-xs",
+        selected && !open && "pl-9",
+      )}
       oninput={(event) => {
         query = event.currentTarget.value;
         open = true;

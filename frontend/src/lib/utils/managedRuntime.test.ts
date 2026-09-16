@@ -425,3 +425,59 @@ describe("local runtime presentation", () => {
     expect(models.map((m) => m.id)).toEqual(["b", "n", "a"]);
   });
 });
+
+describe("runtime visual state", () => {
+  it.each([
+    ["not_installed", "neutral", false],
+    ["installed", "neutral", false],
+    ["stopped", "neutral", false],
+    ["running", "success", false],
+    ["starting", "accent", true],
+    ["stopping", "accent", true],
+    ["installing", "accent", true],
+    ["error", "danger", false],
+  ])("presents %s consistently", (state, tone, busy) => {
+    expect(runtimePresentation({ ...status, state })).toMatchObject({
+      tone,
+      busy,
+    });
+  });
+  it("shows pending work over old lifecycle outcomes without changing readiness", () => {
+    expect(
+      runtimePresentation({ ...status, state: "running" }, 0, "Stop"),
+    ).toMatchObject({ tone: "accent", busy: true, ready: true });
+    expect(
+      runtimePresentation(
+        { ...status, state: "error", error: "Previous failure" },
+        0,
+        "Start",
+      ),
+    ).toMatchObject({ tone: "accent", busy: true, error: "", ready: false });
+  });
+  it("distinguishes operation failure from process readiness and unsupported hosts", () => {
+    const failed = {
+      ...status,
+      state: "running",
+      operation: {
+        id: 5,
+        kind: "download",
+        model: "",
+        outcome: "failed",
+        error: "Download failed",
+      },
+    };
+    expect(runtimePresentation(failed)).toMatchObject({
+      tone: "danger",
+      busy: false,
+      ready: true,
+    });
+    expect(
+      runtimePresentation({ ...status, supported: false, state: "running" }),
+    ).toMatchObject({ tone: "warning", ready: false });
+    expect(runtimePresentation(undefined)).toMatchObject({
+      tone: "neutral",
+      ready: false,
+      busy: false,
+    });
+  });
+});

@@ -8,7 +8,7 @@
 <Combobox.Trigger
   {...props}
   class={cn(
-    "absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground",
+    "absolute inset-y-0 right-0 flex w-8 items-center justify-center rounded-r-md text-muted-foreground outline-none transition-colors hover:bg-subtle-fill-hover hover:text-foreground aria-expanded:text-accent-text focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none",
     className,
   )}
 >

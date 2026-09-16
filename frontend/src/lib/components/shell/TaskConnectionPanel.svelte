@@ -1,6 +1,7 @@
 <script lang="ts">
   import Disclosure from "$lib/components/common/Disclosure.svelte";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
+  import StatusIndicator from "$lib/components/common/StatusIndicator.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -69,12 +70,16 @@
         Choose a saved connection for this task.
       </p>
     {:else if details.runtime && !details.runtime.ready}
-      <StatusBadge tone="warning">{details.runtime.label}</StatusBadge>
+      <RuntimeStatus
+        view={details.runtime.presentation}
+        label={details.runtime.label}
+        badge
+      />
       <p class="text-xs text-muted-foreground">{details.runtime.detail}</p>
-    {:else if details.busy}<p class="flex items-center gap-2">
-        <LoaderCircleIcon
-          class="size-4 animate-spin motion-reduce:animate-none"
-        />Checking connection…
+    {:else if details.busy}<p
+        class="flex items-center gap-1.5 text-accent-text"
+      >
+        <StatusIndicator tone="accent" busy />Checking connection…
       </p>
     {:else if details.stale}<StatusBadge tone="warning"
         >Settings changed since the last check.</StatusBadge

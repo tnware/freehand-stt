@@ -35,7 +35,7 @@
 </script>
 
 <div
-  class="grid gap-2 py-3 @min-[600px]:grid-cols-[minmax(0,1fr)_minmax(180px,1fr)] @min-[600px]:items-start @min-[600px]:gap-4"
+  class="grid min-w-0 gap-2 py-3 @min-[600px]:grid-cols-[minmax(0,1fr)_minmax(180px,1fr)] @min-[600px]:items-start @min-[600px]:gap-4"
   role="group"
   aria-labelledby={labelID}
   aria-describedby={[hint ? hintID : null, issue ? errorID : null]

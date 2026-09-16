@@ -12,6 +12,7 @@
     connectionWorkflows,
   } from "$lib/utils/connectionChoices";
   import { endpointHost } from "$lib/utils/endpoint";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
   import SearchIcon from "@lucide/svelte/icons/search";
@@ -19,6 +20,8 @@
   let {
     catalog,
     instances = [],
+    pendingFor,
+    errorFor,
     selected = "",
     creating = false,
     busy = false,
@@ -28,6 +31,8 @@
   }: {
     catalog: Catalog;
     instances?: InstanceStatus[];
+    pendingFor: (id: string) => string;
+    errorFor: (id: string) => string;
     selected?: string;
     creating?: boolean;
     busy?: boolean;
@@ -113,7 +118,7 @@
       <span class="hidden w-[140px] shrink-0 @min-[620px]/connections:block"
         >Used by</span
       >
-      <span class="w-[104px] shrink-0">State</span>
+      <span class="w-[140px] shrink-0">State</span>
     </div>{/if}
   <nav
     aria-label="Saved connections"
@@ -126,7 +131,11 @@
       {@const instance = instances.find(
         (item) => item.instance.id === connection.details.managedInstanceID,
       )}
-      {@const runtimeView = runtimePresentation(instance?.status)}
+      {@const runtimeView = runtimePresentation(
+        instance?.status,
+        undefined,
+        pendingFor(connection.details.managedInstanceID ?? ""),
+      )}
       {@const metadata = connection.details.managedInstanceID
         ? ["Managed runtime", runtimeView.backend].filter(Boolean).join(" · ")
         : connection.details.compatibilityProfile || "OpenAI-compatible"}
@@ -179,21 +188,15 @@
         >
         <span
           class="flex shrink-0 items-center {sidebar
-            ? 'min-w-0 gap-1.5 pl-[26px]'
-            : 'w-[104px]'}"
+            ? 'min-w-0 flex-wrap gap-1.5 pl-[26px]'
+            : 'w-[140px]'}"
         >
           {#if connection.details.managedInstanceID}
-            <StatusBadge
-              class="shrink-0 whitespace-nowrap"
-              tone={instance?.status.state === "running"
-                ? "success"
-                : instance?.status.state === "error"
-                  ? "danger"
-                  : instance?.status.state === "starting"
-                    ? "accent"
-                    : "neutral"}
-              dot>{runtimeView.label}</StatusBadge
-            >
+            <RuntimeStatus
+              view={runtimeView}
+              problem={errorFor(connection.details.managedInstanceID)}
+              badge
+            />
           {:else if active.length}
             <StatusBadge tone="accent" class="shrink-0 whitespace-nowrap"
               >In use</StatusBadge
@@ -201,7 +204,7 @@
           {/if}
           {#if sidebar}
             <span
-              class="min-w-0 truncate text-xs text-muted-foreground"
+              class="min-w-0 basis-full break-words text-xs leading-relaxed text-muted-foreground"
               title={usedBy ||
                 (connection.builtIn
                   ? "Built-in connection · Not in use"

@@ -21,7 +21,7 @@
   import { Switch } from "$lib/components/ui/switch";
   import * as Dialog from "$lib/components/ui/dialog";
   import RuntimeDownloadSource from "$lib/components/settings/RuntimeDownloadSource.svelte";
-  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import RuntimeOutputDrawer from "./RuntimeOutputDrawer.svelte";
   import RuntimeModelCatalog from "./RuntimeModelCatalog.svelte";
@@ -273,21 +273,16 @@
   </PaneHeader>
   {@render notice?.()}
   <div class="workbench-toolbar flex-wrap gap-x-3 gap-y-1 py-1.5">
-    <StatusBadge
-      tone={busy
-        ? "accent"
-        : problem
-          ? "danger"
-          : running
-            ? "success"
-            : "neutral"}
-      dot
-      >{status
+    <RuntimeStatus
+      {view}
+      {problem}
+      badge
+      label={status
         ? view.label
         : entry.supported
           ? "Not installed"
-          : "Unavailable"}</StatusBadge
-    >
+          : "Unavailable"}
+    />
     <dl class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
       {#each metadata as fact (fact.label)}
         <div
@@ -337,7 +332,7 @@
             class="flex items-start gap-2 text-[12px] text-secondary-foreground"
           >
             <LoaderCircleIcon
-              class="mt-0.5 size-3.5 shrink-0 animate-spin"
+              class="mt-0.5 size-3.5 shrink-0 motion-safe:animate-spin"
               aria-hidden="true"
             />
             <span class="min-w-0 break-words"

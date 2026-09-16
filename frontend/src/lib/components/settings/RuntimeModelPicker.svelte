@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { pickerControl } from "$lib/utils/controlStyles";
   import * as Picker from "$lib/components/ui/combobox";
   import FieldHelp from "./FieldHelp.svelte";
   import { modelSources } from "$lib/utils/modelSources";
@@ -150,7 +151,7 @@
           aria-label="Choose model"
           aria-describedby={`${id}-help${hasStatus ? ` ${id}-status` : ""}`}
           placeholder="Search or enter a model ID…"
-          class="h-8 w-full min-w-0 rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          class={pickerControl + " font-mono"}
           spellcheck={false}
           onclick={() => {
             if (!open) {

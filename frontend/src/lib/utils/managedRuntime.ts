@@ -162,18 +162,38 @@ export function runtimePresentation(
     acquisition?.phase === "downloading";
   const bytes = acquisition?.bytes ?? 0;
   const total = acquisition?.totalBytes ?? 0;
+  const busy =
+    !!pendingActivity ||
+    !!active ||
+    starting ||
+    status?.state === "stopping" ||
+    status?.state === "installing";
+  const error =
+    pendingActivity || active
+      ? ""
+      : status?.error ||
+        (operation?.outcome === "failed"
+          ? operation.error || "Operation failed. Review the error and retry."
+          : "");
+  // Presentation only: process activity never substitutes for task admission.
+  const tone: "neutral" | "accent" | "success" | "warning" | "danger" =
+    status?.supported === false
+      ? "warning"
+      : busy
+        ? "accent"
+        : error || status?.state === "error"
+          ? "danger"
+          : ready
+            ? "success"
+            : "neutral";
   return {
+    busy,
+    tone,
     backend: backendLabel(status?.backend ?? ""),
     activity,
     startup,
     completion,
-    error:
-      pendingActivity || active
-        ? ""
-        : status?.error ||
-          (operation?.outcome === "failed"
-            ? operation.error || "Operation failed. Review the error and retry."
-            : ""),
+    error,
     operationModel: pendingActivity && !active ? "" : (modelName ?? ""),
     transferred: measured
       ? `${transferSize(bytes)}${total > 0 ? ` / ${transferSize(total)}` : " downloaded"}`

@@ -352,6 +352,8 @@
           <ConnectionList
             catalog={editor.applied.savedConnections}
             instances={session.runtime.instances}
+            pendingFor={(id) => session.runtime.pendingFor(id)}
+            errorFor={(id) => session.runtime.errorFor(id)}
             selected={selectedID}
             creating={editor.connectionDraft?.creating}
             {busy}
@@ -365,6 +367,8 @@
           <ConnectionList
             catalog={editor.applied.savedConnections}
             instances={session.runtime.instances}
+            pendingFor={(id) => session.runtime.pendingFor(id)}
+            errorFor={(id) => session.runtime.errorFor(id)}
             selected={selectedID}
             creating={editor.connectionDraft?.creating}
             {busy}
@@ -484,6 +488,8 @@
                 connection={selected}
                 instance={runtimeInstance}
                 status={runtimeStatus}
+                pending={session.runtime.pendingFor(runtimeInstance?.id ?? "")}
+                problem={session.runtime.errorFor(runtimeInstance?.id ?? "")}
                 providers={session.runtime.providers}
                 {busy}
                 {onManageRuntime}

@@ -13,7 +13,7 @@
   import PlayIcon from "@lucide/svelte/icons/play";
   import SquareIcon from "@lucide/svelte/icons/square";
   import CpuIcon from "@lucide/svelte/icons/cpu";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
 
   let {
     runtime,
@@ -267,26 +267,7 @@
     role="status"
     aria-label="Local runtime status"
   >
-    {#if operating || (!row && runtime.loading)}
-      <LoaderCircleIcon
-        class="mt-0.5 size-3.5 shrink-0 animate-spin text-accent-text motion-reduce:animate-none"
-        aria-hidden="true"
-      />
-    {:else}<span
-        class="mt-1.5 size-1.5 shrink-0 rounded-full {problem
-          ? 'bg-destructive'
-          : view.ready
-            ? 'bg-success'
-            : 'bg-meter-rest'}"
-        aria-hidden="true"
-      ></span>{/if}
-    <span
-      class="min-w-0 break-words font-medium {problem
-        ? 'text-destructive'
-        : view.ready && !operating
-          ? 'text-success'
-          : 'text-secondary-foreground'}">{label}</span
-    >
+    <RuntimeStatus {view} {label} {problem} loading={!row && runtime.loading} />
   </p>
 {/snippet}
 
