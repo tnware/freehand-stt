@@ -1,0 +1,246 @@
+---
+title: macOS setup and permissions
+description: Install and verify the macOS ZIP, manage permissions, update, and uninstall Freehand.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Install and verify Freehand, then grant permissions for the tasks you want to use.
+Microphone and keyboard permissions are separate from audio-file and speech playback setup.
+
+## Download, verify, and install
+
+Freehand requires **macOS 13 or newer**. Check **Apple menu → About This Mac**
+to choose the right release asset:
+
+| Your Mac | Download |
+| --- | --- |
+| Apple Silicon | `freehand-darwin-arm64.zip` |
+| Intel | `freehand-darwin-amd64.zip` |
+| Both | `SHA256SUMS` from the same release |
+
+:::caution[Ad-hoc signed, not notarized]
+Freehand is not Developer ID-signed or notarized. Verify the official download
+before opening it. A checksum confirms matching bytes, not publisher identity.
+:::
+
+<Steps>
+
+1. Open the official [GitHub Releases](https://github.com/tnware/freehand-stt/releases).
+   Choose `freehand-darwin-arm64.zip` for Apple Silicon or
+   `freehand-darwin-amd64.zip` for Intel. Download `SHA256SUMS` from that **same
+   release**, not another tag or a third-party download site. Older releases may
+   have no macOS assets; choose a release that includes your architecture.
+2. Before opening the ZIP, open Terminal in its download folder and compute its
+   SHA-256 hash:
+
+   ```sh title="Verify the Apple Silicon download"
+   shasum -a 256 freehand-darwin-arm64.zip
+   ```
+
+   For Intel, substitute `freehand-darwin-amd64.zip`. Compare the entire hash
+   with the entry for that exact filename in `SHA256SUMS`. If the entry is
+   missing or the hashes differ, stop and download again from the official
+   release. A checksum verifies matching bytes, not publisher identity.
+3. Double-click the verified ZIP in Finder. Move the extracted **Freehand.app**
+   to **Applications** (or your account's Applications folder) before enabling
+   permissions or login startup. Run the app bundle, not its internal executable.
+4. Open **Freehand** from Applications. If Gatekeeper blocks the first launch
+   and you trust the verified official download, use **System Settings → Privacy
+   & Security → Open Anyway** after the blocked attempt, then confirm macOS's
+   prompt. If that option is unavailable or macOS reports malware, stop rather
+   than bypassing the protection. Never disable Gatekeeper globally or remove
+   quarantine recursively as a routine installation step.
+5. Review the permissions below, then follow [Get started](../../getting-started/).
+   Open About to confirm the installed version matches the chosen release.
+
+</Steps>
+
+:::tip[Choose a permanent app location]
+Keep the bundle in a stable location before enabling permissions or **Start at
+login**. Moving or replacing it may require approval again. Development builds
+have separate permissions even when both apps display **Freehand**; grant access
+to the one you actually run.
+:::
+
+## Choose a workflow
+
+Use [managed local setup](../local-runtime/) for supported recognition,
+S1-mini cleanup, or MagpieTTS speech on this Mac. You can also connect your own
+server or a hosted provider. Check the runtime guide for each model's hardware
+and macOS requirements.
+
+| Workflow | What you need |
+| --- | --- |
+| [Voice dictation](../using-freehand/) | Microphone and a selected transcription service; permissions below depend on recording and delivery |
+| [Audio files](../audio-files/) | Selected transcription service; no microphone, Accessibility permission, or recording shortcut |
+| [Text to speech](../text-to-speech/) | Enabled speech service; no microphone, transcription, or keyboard permissions |
+
+API credentials are kept in your macOS Keychain, not in the settings database.
+Freehand does not display saved keys or store them in plaintext if Keychain access
+is denied. Enter credentials only in Freehand's connection editor;
+never include them in logs, commands or bug reports.
+
+## Native permissions
+
+Open **Settings → General → macOS permissions** to check access. Permission
+checks do not prompt. Use the explicit permission or System Settings action when
+needed, and complete macOS's own approval flow yourself.
+
+| Permission | What uses it | Recovery |
+| --- | --- | --- |
+| Microphone | Recording and microphone preview | Privacy & Security → Microphone |
+| Accessibility | Checking the destination, inserting text, and capturing shortcuts | Privacy & Security → Accessibility |
+| Input Monitoring | Hold-to-talk and capturing shortcuts | Privacy & Security → Input Monitoring |
+
+After changing keyboard permissions, quit and reopen Freehand if macOS requests
+it, then refresh status after returning from System Settings.
+
+| Problem | Next action |
+| --- | --- |
+| Microphone denied | Enable it in the Microphone settings pane; pressing Record again cannot override denial |
+| Permission restricted | Check whether device management controls it |
+| Permission granted but insertion fails | Check Secure Input, app/window focus, target closure, and physical modifiers; use explicit Copy when needed |
+
+Merely displaying permission status starts no audio capture. Permission alone
+does not guarantee an app or control accepts insertion.
+
+:::caution[Secure Input has limits]
+Freehand does not classify password fields. Custom secure fields that do not
+enable macOS Secure Input are not guaranteed to be detected.
+:::
+
+## Shortcuts and delivery
+
+Mac shortcut labels use **Command** and **Option**. Shortcuts use physical
+ANSI/QWERTY key positions; check the combination on your keyboard layout and
+avoid system-reserved combinations.
+
+| Shortcut action | Permission requirement |
+| --- | --- |
+| Use saved **Toggle** or **Show Freehand** | Neither Accessibility nor Input Monitoring |
+| Capture a new shortcut | Both Accessibility and Input Monitoring |
+| Clear an optional shortcut | Neither |
+| Hold to talk unavailable | Saved hold shortcut is retained; Toggle and Show Freehand remain separate |
+
+To restore hold-to-talk after unlocking the session, leaving Secure Input, or
+restoring Input Monitoring:
+
+<Steps>
+
+1. Release all keys. Save shortcut edits first if you want to retry a different combination.
+2. Choose **Settings → Shortcuts → Retry hold-to-talk**.
+3. If it fails, resolve the reported cause and try again.
+
+</Steps>
+
+Retry restores the saved shortcut without saving or discarding drafts. Opening
+Settings or refreshing permissions alone does not restore it.
+
+Start dictation with the intended app and editable field focused, then release
+physical modifiers before delivery. Freehand does not bring an app back to the
+foreground.
+
+| Before delivery | Result |
+| --- | --- |
+| Same app and window remain frontmost | Delivers to the currently focused field |
+| Move to another field in the same window | Delivers there; editor identity is not checked |
+| Move to another app/window, or Secure Input is active | Leaves the result **Copy required** |
+
+**Copy required** can have causes beyond focus changes; read its explanation.
+Delivery can be partial, so check for existing text before pasting to avoid
+duplicates. Freehand does not automatically retry ambiguous typing. Normal
+Unicode delivery does not replace unrelated clipboard content; use **Copy**
+explicitly to recover a transcript.
+
+The status overlay is passive and click-through. It is not a transcript editor or
+an insertion destination. Use the main app or menu-bar item for actions.
+
+## Closing, reopening and login startup
+
+| Action | Behavior |
+| --- | --- |
+| Close an interactive window | Hides it |
+| Click menu-bar item | Opens the compact panel; choose **Open Freehand** for the workspace |
+| Reopen from Dock or launch again | Reveals the existing instance |
+| Right-click menu-bar item → **Quit Freehand**, or <kbd>⌘</kbd> + <kbd>Q</kbd> | Exits the app |
+| **Start at login** | Registers this bundle executable for your next login; does not launch a second instance now |
+
+:::caution[Disable login startup before moving the app]
+Turn off **Start at login**, move the bundle, then open it at the new location
+and enable startup again. If you already moved it, move it back temporarily
+to disable its old registration. Freehand refuses to overwrite a registration
+pointing to a different executable.
+:::
+
+macOS can also disable background/login items in System Settings. Turning off
+startup in Freehand removes only its own per-user registration.
+
+## Update
+
+The in-app updater selects the matching-architecture ZIP, verifies it against
+the release's `SHA256SUMS`, and replaces the app when you choose **Restart**.
+This is checksum verification, not
+Developer ID trust or notarization. If an in-app update fails, use manual
+replacement:
+
+<Steps>
+
+1. Read the newer release notes and download the matching-architecture ZIP plus
+   its same-release `SHA256SUMS`. Verify it using the installation steps above.
+2. Disable **Start at login** before replacing or moving the app, then choose
+   **Quit Freehand** or **Command-Q**. Closing its window is not quitting.
+3. Extract the new ZIP and replace the old app in the same Applications location.
+   Keep private settings backups before an upgrade; do not delete application data.
+4. Open the replacement, check its version in About, and review microphone,
+   Accessibility, and Input Monitoring access. Signature changes can require
+   permission approval again. Re-enable **Start at login** if desired.
+
+</Steps>
+
+An older binary cannot downgrade a newer settings database. Review release notes
+and [settings recovery](../troubleshooting/#saved-settings-need-attention) before
+attempting a downgrade.
+
+## Uninstall
+
+<Steps>
+
+1. Disable **Start at login** while the app is still at its registered location.
+2. Choose **Quit Freehand**, then move **Freehand.app** to Trash in Finder.
+3. Optionally remove Freehand from Accessibility and Input Monitoring in
+   **System Settings → Privacy & Security**.
+
+</Steps>
+
+:::note[Settings and keys remain]
+Removing the app leaves saved settings, backups, and Keychain entries intact.
+History is already memory-only.
+:::
+
+<details>
+<summary>Deliberately remove all local configuration</summary>
+
+First remove saved connections and credentials in the app, then quit. In Finder,
+use **Go → Go to Folder** to remove only
+`~/Library/Application Support/Freehand`. Keep any configuration you want to
+restore; removal is destructive. If credentials remain, review only Freehand's
+entries in Keychain Access and leave unrelated credentials untouched.
+
+</details>
+
+## Reporting a native problem
+
+Include:
+
+- macOS version, Apple Silicon or Intel, and Freehand version.
+- Affected workflow, permission states, and whether the app moved or was replaced.
+- Steps to reproduce the problem.
+
+Do not attach API keys, transcripts, microphone recordings, private endpoint
+URLs, full file paths, or unredacted diagnostics.
+
+<CardGrid>
+  <LinkCard title="Finish first-run setup" href="../../getting-started/" description="Connect a service and try your first task." />
+  <LinkCard title="Resolve a native problem" href="../troubleshooting/" description="Check recording, permissions, and safe delivery." />
+</CardGrid>

@@ -3,12 +3,15 @@ title: Planned backend profiles
 description: Profiles that are not available and when to use a Generic connection instead.
 ---
 
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 import ProviderIcon from "../../../../components/ProviderIcon.astro";
 import { plannedBackends } from "../../../../data/backends";
 
-These dedicated profiles are not available in Freehand. A compatible endpoint may already
-work through **Generic OpenAI-compatible** if it accepts Freehand's request
-fields and response formats. No release date is promised for these profiles.
+:::note[Not available yet]
+These dedicated profiles are planned, with no promised release date. A compatible
+endpoint may already work through **Generic OpenAI-compatible** when it accepts
+Freehand's request fields and response formats.
+:::
 
 {plannedBackends.map((backend) => (
 
@@ -29,6 +32,8 @@ fields and response formats. No release date is promised for these profiles.
 
 ## Use a compatible endpoint today
 
-Compare the service's transcription, chat, or speech API with the
-[Generic profile requirements](../generic/) before connecting. Generic does not
-enable provider-specific features or unrelated realtime protocols.
+<CardGrid>
+  <LinkCard title="Check the Generic contract" href="../generic/" description="Compare your service's transcription, chat, or speech API before connecting." />
+</CardGrid>
+
+Generic does not enable provider-specific features or unrelated realtime protocols.

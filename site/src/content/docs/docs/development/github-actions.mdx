@@ -1,0 +1,130 @@
+---
+title: GitHub Actions
+description: Public continuous integration, Windows and macOS packaging, and Pages deployment.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Use the **Validation** result to decide whether a change passed CI. Use the
+workflow table to find the jobs behind that result or diagnose a blocked
+deployment.
+
+| Workflow | Starts when | Result |
+| --- | --- | --- |
+| **CI** | Every PR, push to `main`, and manual dispatch | Selected app/site checks and one stable **Validation** gate |
+| **Site validation** | Called by CI or Pages | A reusable site check; PRs do not deploy |
+| **Pages** | Matching changes land on `main`, or a maintainer dispatches on `main` | Publishes `site/dist` at `/freehand-stt/` |
+| **Release** | Release Please bookkeeping on `main`; full validation when a release is created | A validated tagged release with Windows and macOS artifacts |
+
+CI's Linux jobs check Go, the SQLite contract, generated branding, Wails bindings,
+and the Svelte frontend. Windows runs native Go tests and validates its CGo
+executable and per-user NSIS installer. macOS produces and validates arm64 and
+amd64 app-bundle ZIPs. Browser regressions are optional local checks; they do not
+gate packaging or release.
+
+:::caution[CI does not run inference]
+CI never invokes a configured speech, cleanup, or text-to-speech model. Native
+runtime acceptance is deliberate and platform-specific; successful packaging or
+cross-compilation does not certify hardware behavior.
+:::
+
+<details>
+<summary>How release publication protects validated artifacts</summary>
+
+Release Please maintains the release PR, changelog, SemVer tag, and draft. The
+tag resolves to one commit for every validation job, with version checks before
+packaging. Publication uses only the complete Windows and macOS artifacts from
+that trusted workflow run; it never rebuilds or downloads PR/other-run artifacts.
+
+The four canonical deliverables and one `SHA256SUMS` must exactly match the
+draft's remote asset names. Missing, unexpected, duplicate, or malformed names
+block publication without deleting unknown remote assets. CI checksum sidecars
+may be inputs but are not published. Publication reads back uploaded checksums
+and creates GitHub attestations before making the draft public. Ordinary main
+pushes perform Release Please bookkeeping without building release artifacts.
+
+</details>
+
+## Workload selection and required checks
+
+| Changed input or run type | Selected work |
+| --- | --- |
+| Site files; root/branding README prose | No application jobs |
+| Application, build, or unknown paths | Application jobs |
+| Shared backend catalog, mark/provider assets, Go manifests, GitHub configuration | Site validation too |
+| Manual run, initial push, release validation | Every workload |
+
+Renames include both paths. A missing Git baseline fails closed. Pages uses
+separate concurrency from PR validation; newer pushes do not interrupt an active
+deployment.
+
+The final **Validation** job runs even when a dependency fails or is skipped.
+It requires every selected job to succeed and accepts only explicitly unselected
+jobs as skipped. Missing selection outputs, cancellation, unexpected skips, and
+failed jobs cannot produce a green gate. Do not require individual conditional
+jobs or add workflow-level path filters to CI: those can leave required checks
+pending on documentation-only changes.
+
+<Steps>
+
+1. Let the GitHub Actions **Validation** check run at least once.
+2. Configure `main` to require pull requests, an up-to-date branch, and that
+   **Validation** check. Do not require individual conditional jobs or add CI
+   workflow-level path filters.
+3. Keep main-push validation until the gate is enforced and release validation
+   has been verified. Any later removal must preserve trusted cache warming;
+   other PRs cannot read a PR's caches.
+
+</Steps>
+
+Main runs also provide evidence for the integrated commit.
+
+## Toolchains and caches
+
+Third-party actions are pinned to immutable commit SHAs. Dependabot proposes
+weekly grouped updates for Actions, Go modules, and both npm lockfiles so a
+fresh repository does not produce one pull request per action.
+
+| Environment | Required toolchain behavior |
+| --- | --- |
+| Ubuntu | Install GTK 4 and WebKitGTK 6.0 development packages before Wails compilation or CLI installation |
+| Windows | Use the exact Wails CLI version from `go.mod`, MSYS2 MinGW-w64 for malgo/miniaudio, and NSIS 3.12; no private runner or registry |
+| CI packaging | Use `npm ci` with the committed lockfile; ordinary local packages retain `npm install` |
+
+<details>
+<summary>Cache boundaries and performance review</summary>
+
+The local `setup-go` action disables the shared default cache and separates
+workload, platform, and toolchain namespaces. Dependency/tool caches include Go
+manifests and pinned tool inputs; compiled caches refresh with source inputs and
+restore only within the same workload/toolchain. Pages cannot fill the
+application cache with a smaller dependency set. PRs can read trusted main caches
+without writing to main. Wails CLI reuse requires an exact dependency/tool cache;
+changed pins never fall back to an older CLI.
+
+Measure cold and warm runs separately. A cache hit does not prove a speedup;
+Windows cache extraction can dominate setup. Source-keyed compiled caches consume
+quota until GitHub evicts them.
+
+</details>
+
+Production Windows artifacts are always built on a native Windows runner. This
+follows Wails' CI guidance and keeps cross-compilation separate from native
+release acceptance. See Wails' official
+[cross-platform build and CI/CD guide](https://v3.wails.io/guides/build/cross-platform/#cicd-integration)
+for the upstream dependency matrix and runner guidance.
+
+## Storage enforcement
+
+The storage job runs the pinned sqlc command, rejects stale or untracked generated
+queries, compares published `internal/storage/schema/` migrations against the PR
+base (or previous main revision), and checks import/query ownership. An alpha-only
+base can introduce `schema/00001_initial.sql`; published migrations in `schema/`
+remain immutable. Real SQLite tests cover migrations,
+recovery, constraints, and file locking; fixtures never use personal settings or
+credentials. See [SQLite storage](../storage/) for the matching local commands.
+
+<CardGrid>
+  <LinkCard title="Prepare a release" href="../releases/" description="Version policy, package commands, and publication requirements." />
+  <LinkCard title="Native acceptance" href="../../safety/native-test-checklist/" description="Collect desktop evidence beyond CI." />
+</CardGrid>

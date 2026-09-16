@@ -12,14 +12,14 @@ const recording = [
   { title: "Shared vocabulary", description: "Keep names and specialist terms in one list for Voice and audio files. Supported models receive them as recognition hints, not guaranteed corrections.", link: "Vocabulary support", path: "/docs/guides/vocabulary/" },
 ];
 const workspace = [
-  { title: "One workspace for speech", description: "Move between tasks, Connections, local runtimes, and History from the activity rail. Resize sidebars, open settings beside your work, and find commands from the title bar.", link: "Explore the workspace", path: "/docs/guides/using-freehand/" },
-  { title: "CPU, RAM & GPU at a glance", description: "Watch activity and memory in the status bar, with adapter details and high-use indicators. Readings cover all apps on this computer; GPU metrics depend on driver support. Remote server usage is separate.", link: "Resource readings", path: "/docs/guides/using-freehand/#check-this-computers-resource-use" },
+  { title: "One workspace for speech", description: "Move between tasks, Connections, local runtimes, and History from the activity rail. Resize sidebars, open settings beside your work, and find commands from the title bar.", link: "Explore the workspace", path: "/docs/guides/workspace/" },
+  { title: "CPU, RAM & GPU at a glance", description: "Watch activity and memory in the status bar, with adapter details and high-use indicators. Readings cover all apps on this computer; GPU metrics depend on driver support. Remote server usage is separate.", link: "Resource readings", path: "/docs/guides/workspace/#check-this-computers-resource-use" },
   { title: "Startup & runtime output", description: "Connection checks wait while a local runtime loads, then refresh when it is ready. Inspect output in the shared panel with search and log highlighting while keeping your task open.", link: "Startup and output", path: "/docs/guides/local-runtime/#startup-and-process-output" },
 ];
 const results = [
   { title: "Current result & recovery", description: "Copy a completed transcript without enabling history. If the original destination is no longer safe for insertion, the result stays available for explicit copy.", link: "Results and delivery", path: "/docs/guides/using-freehand/#current-result-and-task-settings" },
-  { title: "Optional session history", description: "Revisit recent transcripts and compare raw and cleaned versions. History is off by default, stays in memory, and clears when you quit. It never retains audio.", link: "History details", path: "/docs/guides/using-freehand/#history" },
-  { title: "Files & speech playback", description: "Transcribe an audio file without a microphone shortcut. With text to speech enabled, listen to results or generate and save speech from text you enter.", link: "File and speech workflows", path: "/docs/guides/using-freehand/#audio-files" },
+  { title: "Optional session history", description: "Revisit recent transcripts and compare raw and cleaned versions. History is off by default, stays in memory, and clears when you quit. It never retains audio.", link: "History details", path: "/docs/guides/history/" },
+  { title: "Files & speech playback", description: "Transcribe an audio file without a microphone shortcut. With text to speech enabled, listen to results or generate and save speech from text you enter.", link: "File and speech workflows", path: "/docs/guides/audio-files/" },
 ];
 ---
 <ProductLayout current="features" path="features/" title="Features — Freehand" description="Use one speech workspace with local MagpieTTS and transcription, CPU/RAM/GPU readings, runtime output, recording controls, and optional history.">
@@ -36,7 +36,7 @@ const results = [
         <div><dt><span class="overlay-setting-icon"><FeatureIcon name="appearance" /></span>Appearance & behavior</dt><dd>Adjust the surface, visualizer, opacity, glow, motion, and which phases are visible. Or turn the overlay off.</dd></div>
         <div><dt><span class="overlay-setting-icon"><FeatureIcon name="preview" /></span>Preview before saving</dt><dd>Try unsaved changes in the app without recording. Live dictation can use a single-row caption strip instead.</dd></div>
       </dl>
-      <a class="text-link" href={href("/docs/guides/using-freehand/#finding-and-adjusting-settings")}>Overlay settings →</a>
+      <a class="text-link" href={href("/docs/guides/workspace/#find-a-detailed-control")}>Overlay settings →</a>
     </div>
     <OverlayExplorer />
   </section>

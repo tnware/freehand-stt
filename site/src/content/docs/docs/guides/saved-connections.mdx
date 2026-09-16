@@ -1,0 +1,152 @@
+---
+title: Saved connections
+description: Save a server once, select it for each workflow, and manage shared connection details and credentials.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Save a server's address, backend profile, and authentication once. Voice, Audio
+file, Cleanup, and Text to speech then select any connection that supports their
+operation, each with its own task options.
+
+Open **Connections** on the activity rail or **Manage connections…** in a task's
+picker. Search by name, backend, or address, then select an entry to edit it.
+For your first server's required values, use [Connect a speech server](../connect-a-server/).
+
+## Add a connection while setting up a task
+
+<Steps>
+
+1. **Open the task's Settings cog**, then **Transcription**, **Cleanup**, or
+   **Speech**. Choose **Add connection…** from its connection picker.
+2. **Name the connection and enter its server details.** Choose **Backend**, base
+   URL, and authentication. The task you came from is already selected as a use.
+3. **Review available workflows.** Expand **Available in … workflows** only to
+   enable other operations your deployment exposes. This does not select it for
+   those tasks. Allow HTTP explicitly only for a trusted plaintext server.
+4. **Choose Save and return.** The connection is saved and selected for this task.
+5. **Choose the model and model profile**, then **Save** in the options sidebar.
+   whisper.cpp uses its server-loaded model. Choose **Done** to close options.
+
+</Steps>
+
+A failed save leaves the previous connection active and keeps the draft. Correct
+the indicated error and retry. When leaving unsaved edits, **Discard** keeps the
+active connection unchanged; **Keep editing** returns to the draft.
+
+## Create a library entry without using it yet
+
+Open **Connections → Add connection**, fill in server details and supported uses,
+and set **After saving → Save for later**. Choose **Save connection** to create
+an inactive entry. To use it immediately, choose a workflow under **After saving**
+and use **Save and return** instead.
+
+If Save is unavailable, check the message for a missing name, URL, or supported
+use. Existing entries use **Save connection** for edits and **Cancel** to leave.
+
+## What goes where?
+
+| In Connections | In workflow options |
+| --- | --- |
+| Name and supported uses | Active connection |
+| Backend profile and base URL | Model, model profile, and language |
+| Authentication and stored key | Cleanup preset and instructions |
+| Allow HTTP | Voice, speed, and feature enable switches |
+| Transcription health path and headers | Timeouts and model/backend options |
+
+:::caution[Shared edits affect every task using the connection]
+Renaming or replacing a key keeps remembered model options. Changing the URL or
+backend clears model selections and remembered options; choose models again for
+the new server. Requests already running keep their original settings.
+:::
+
+## Built-in local connections
+
+Each configured [local runtime](../local-runtime/) automatically appears as a
+**Built-in** connection on supported computers. Install its runtime and model,
+start it, and select the connection from a compatible task. No separate URL,
+API key, or connection creation is needed.
+
+| Change you want | Where to do it |
+| --- | --- |
+| Install/start/stop the local service | **Local runtime**, or quick runtime controls |
+| Choose its downloaded/loaded model | Runtime model selection |
+| Set language, realtime, or cleanup behavior | The task's options |
+
+The runtime owns its connection name, endpoint, model, and uses. Built-in entries
+cannot be duplicated or deleted in the connection editor and do not count toward
+manual limits. Stopped runtimes stay visible but unavailable; tasks do not switch
+servers automatically. Previously saved local aliases remain intact.
+
+## Reuse a server
+
+Edit the connection, enable another supported use, and **Save connection**. Select
+it in the other workflow, then choose that task's model. Check the
+[backend guides](../../backends/) before enabling an operation: a successful
+metadata check does not establish every capability.
+
+Use separate connections when URLs, credentials, or backend profiles differ.
+Custom transcription headers and health paths apply only to Voice and Audio file,
+not cleanup or speech generation.
+
+## Switch, edit, duplicate, or delete
+
+| Action | Result |
+| --- | --- |
+| Choose an **Active connection** in task options | Switches immediately after resolving any draft; restores its last model/options for that task |
+| **Manage connections…** / **Edit connection** | Opens the catalog / selected entry; **All connections** returns to the list |
+| **Use for…** in the editor | Selects this server for a supported workflow and opens model settings; checkmarks show current uses |
+| **… → Duplicate** | Creates an inactive copy with no remembered model preferences; later edits/key replacements affect only the copy |
+| **… → Delete** | Removes an inactive entry after confirmation |
+
+To delete an active entry or remove a use, first choose another connection or
+**None selected** in every affected task. When switching with draft settings,
+**Save** or **Discard** resolves them; **Keep editing** cancels the switch.
+An unconfigured connection needs a model, and Cleanup/Speech must be enabled again.
+
+Use unique names. You can save up to **32 manual connections per use**: Voice,
+Audio file, Cleanup, and Text to speech. A reusable entry counts toward each use
+it enables. Separate entries may share an address with different credentials.
+See [remembered model settings](../../models/#remember-settings-for-each-model).
+
+## Test and protect credentials
+
+### Check a saved server
+
+Select an entry, expand **Connection check**, and choose **Check connection**.
+This checks that saved entry and its credential without selecting it or using
+unsaved edits. Configure gateway headers and health paths under **Transcription
+connection options**.
+
+It reads health/model metadata, without audio or prompts. Open the task's model
+picker and use **Refresh models** (or **Check server** for whisper.cpp) to assess
+that task's selection. See [connection-check results](../troubleshooting/#understand-connection-check-results)
+for metadata, authentication, model-list, and stale-result meanings.
+
+### Keep or replace a key
+
+Saved keys stay in Windows Credential Manager or macOS Keychain and are never
+shown again. Leave the password field blank to keep a stored key, enter a
+replacement, or explicitly remove it. Leaving the editor or hiding the workspace
+clears an unsaved key draft.
+
+A duplicate can use the same stored key. Replacing the duplicate's key does not
+change the original, and deleting an entry does not remove a key still used by
+another connection.
+
+
+
+A successful check does not guarantee that inference will work or that the key
+has permission to run the selected model. See [credentials and transport](../privacy-and-safety/#credentials-and-transport).
+
+### Discover speech voices
+
+Speaches, Kokoro-FastAPI, and vLLM-Omni offer **Refresh voices** under **Text to
+speech → Speech**. Search or type a voice ID. Speaches may identify voices for
+the selected model; server-wide lists are labelled. Refreshing neither selects
+a voice nor generates audio. Save to remember the voice for that connection/model.
+
+<CardGrid>
+  <LinkCard title="Choose model behavior" href="../../models/" description="Match model profiles to the selected task and backend." />
+  <LinkCard title="Recover saved settings" href="../troubleshooting/#saved-settings-need-attention" description="Resolve rejected edits, loading failures, and backup restoration." />
+</CardGrid>

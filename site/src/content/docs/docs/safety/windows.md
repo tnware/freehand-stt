@@ -3,38 +3,74 @@ title: Windows engineering invariants
 description: Contributor requirements for focus, insertion, credentials, audio, and lifecycle safety.
 ---
 
+Use these invariants when reviewing Windows adapters and workflow changes. Pair
+them with the [native acceptance checklist](../native-test-checklist/); passing
+deterministic tests alone does not establish desktop behavior.
+
+| Change area | Start with |
+| --- | --- |
+| Text delivery or Copy | [Focus and insertion](#focus-and-insertion), [Clipboard](#clipboard) |
+| Recording or shortcuts | [Audio](#audio), [Keyboard hooks and hotkeys](#keyboard-hooks-and-hotkeys) |
+| Settings or new renderer methods | [Credentials](#credentials), [WebView boundary](#webview-boundary) |
+| Background work or shutdown | [Runtime configuration](#runtime-configuration-and-shutdown), [Process lifecycle](#process-lifecycle) |
+| Retention or server probes | [Transcript history](#transcript-history), [Endpoint safety](#endpoint-safety) |
+
 ## Focus and insertion
 
-- Capture the foreground target when recording begins.
-- Never resolve the paste target only after transcription completes.
-- Never restore/focus another application silently merely to paste.
-- If focus changed, retain the result in backend memory and show an explicit Copy action. Never write it to the clipboard automatically.
-- Do not paste after cancellation, timeout, stale generation, or shutdown.
-- Before every Unicode dispatch, wait within a fixed bound for Ctrl, Alt, Shift,
-  and Windows keys to be released. Revalidate focus and cancellation while
-  waiting; require explicit Copy on timeout without releasing keys synthetically.
+:::caution[The recording target is the delivery boundary]
+Capture the foreground target when recording begins. Never choose a new target
+after transcription, reactivate an application to paste, or deliver after
+cancellation, timeout, stale generation, or shutdown.
+:::
+
+| At this boundary | Required behavior |
+| --- | --- |
+| Recording starts | Capture the target's HWND/thread/process identity |
+| Before delivery and each chunk | Revalidate the captured target and focus |
+| Before every Unicode dispatch | Wait within a fixed bound for Ctrl, Alt, Shift, and Windows keys to be released; recheck focus and cancellation while waiting |
+| Focus changes or modifier wait times out | Keep the result in backend memory and offer explicit Copy; never write to the clipboard automatically or release keys synthetically |
 
 ## Clipboard
 
-- Use Unicode clipboard content.
-- Clipboard-paste insertion remains disabled. If implemented later, capture every existing format before mutation and restore only while the clipboard still contains the data object this app set. Never overwrite newer user clipboard content.
-- Treat clipboard-open failures as retryable and bounded.
-- Explicit Copy owns a message-only window and pins its complete clipboard
-  transaction to one OS thread. Open with that owner before emptying; close the
-  clipboard before destroying the owner. Allocation and cancellation failures
-  before mutation must leave clipboard contents untouched.
-- Do not log clipboard content.
-- Transcript history never writes automatically to the clipboard; each historical entry requires an explicit Copy action.
+| Concern | Requirement |
+| --- | --- |
+| Content | Use Unicode; never log clipboard content |
+| Contention | Retry clipboard-open failures only within a bound |
+| Explicit Copy ownership | Own a message-only window and pin the complete transaction to one OS thread |
+| Transaction order | Open with that owner before emptying; close before destroying the owner |
+| Failure before mutation | Allocation/cancellation failure leaves existing contents untouched |
+| History | Every entry needs an explicit Copy action |
+
+:::note[Clipboard-paste insertion is disabled]
+Any future implementation must capture every existing format before mutation,
+then restore only while the clipboard still holds Freehand's data object. Never
+overwrite newer user clipboard content.
+:::
 
 ## Transcript history
 
-- History is disabled by default and retains nothing until a saved setting enables it.
-- Retain only finalized raw/processed transcript text and bounded non-secret run details in the history-owned 20-entry, 2 MiB in-memory ring.
-- Enforce both limits after every mutation, including completion and post-processing updates; a single entry may not exceed the total byte budget.
-- Never retain audio, provisional text, target application identity, credentials, headers, or full file paths. Cancellation discards unfinished text; a finalized raw transcript already retained before cleanup may remain in enabled history, without authorizing insertion or current-result copy after cancellation.
-- Reapply the 20-entry/2-MiB budget after every history mutation. Prefer an explicitly marked raw-only fallback when processed output causes overflow; remove an entry rather than truncate transcript text or silently exceed the budget when raw cannot fit.
-- Release an individually removed entry immediately. Clear the ring when history is disabled, when the user clears it, and during shutdown.
-- Never put transcript content in logs or crash reports. Do not put historical text in generic status/overlay events. Current-result DTOs and opt-in realtime captions are separate bounded presentation contracts; captions never authorize history, copy, cleanup, or insertion.
+| Rule | Required behavior |
+| --- | --- |
+| Default | Disabled; retain nothing until a saved setting enables history |
+| Allowed content | Finalized raw/processed text and bounded non-secret run details |
+| Storage | History-owned **20-entry, 2 MiB** in-memory ring |
+| Every mutation | Reapply both limits, including completion and cleanup updates; one entry cannot exceed the total byte budget |
+| Processed text overflows | Prefer an explicitly marked raw-only fallback |
+| Raw text cannot fit | Remove the entry; never truncate text or exceed the budget |
+| Removal | Release an individually removed entry immediately |
+| Disable, Clear, shutdown | Clear the ring |
+
+Never retain audio, provisional text, target identity, credentials, headers, or
+full paths. Never send transcript content to logs/crash reports, or historical
+text to generic status/overlay events.
+
+:::note[Cancellation and captions do not grant delivery permission]
+Cancellation discards unfinished text. A finalized raw transcript already stored
+before cleanup may remain in enabled history, but does not authorize insertion
+or current-result Copy after cancellation. Current-result DTOs and opt-in
+realtime captions have separate bounded presentation contracts; captions never
+authorize history, Copy, cleanup, or insertion.
+:::
 
 ## Keyboard hooks and hotkeys
 
@@ -55,10 +91,25 @@ The complete action matrix and normalization rules are documented in
 
 ## Runtime configuration and shutdown
 
-- Treat endpoint settings and their credential as one coherent operation snapshot. Do not pair an endpoint/model captured before a settings save with a credential loaded after that save.
-- Capture the complete request profile, including both applicable credentials, under the settings transaction lock before microphone or stored-audio work starts. Allow later settings changes, but apply them only to later operations.
-- Derive microphone, stored-file, connection-test, shortcut-capture, and preparation work from the Wails application context and give each operation an explicit timeout or cancellation path.
-- Shutdown stops accepting work before cancelling active work, suppresses late publication, and closes stored-file and dictation work before history. Dictation and stored-file services each have a five-second teardown wait budget; speech has two seconds. These are not a shared process-exit deadline or a guarantee that every native call is interruptible. Native capture checks its closed fence around preparation so no late warmup may recreate a resource after close.
+1. **Snapshot before work starts.** Capture the complete profile and both
+   applicable credentials under the settings transaction lock. Later saves affect
+   later operations; never combine an old endpoint/model with a new credential.
+2. **Own work through the application context.** Microphone, stored-file,
+   connection-test, shortcut-capture, and preparation work derive from Wails and
+   have explicit cancellation or timeout paths.
+3. **Fence and cancel during shutdown.** Stop accepting work, cancel active work,
+   suppress late publication, and close stored-file/dictation work before history.
+   Native capture checks its closed fence around preparation so late warmup cannot
+   recreate resources.
+
+| Owner | Teardown wait budget |
+| --- | --- |
+| Dictation service | 5 seconds |
+| Stored-file service | 5 seconds |
+| Speech service | 2 seconds |
+
+These are per-service waits, not a shared process-exit deadline or a guarantee
+that every native call is interruptible.
 
 ## WebView boundary
 
@@ -80,11 +131,13 @@ The complete action matrix and normalization rules are documented in
 
 ## Credentials
 
-- Store API keys in Windows Credential Manager.
-- A user-entered key may exist transiently in the renderer password field, with a strict size bound and cleanup after save, settings exit/hide, and teardown.
-- Return only availability and credential-reference metadata to Wails/Svelte; never return a stored key.
-- Redact Authorization, API keys, cookies, extra secret headers, transcripts, and audio from logs.
-- Changing or deleting a profile must not copy another profile's credential implicitly.
+| Location or action | Requirement |
+| --- | --- |
+| Durable API key | Windows Credential Manager only |
+| Renderer password draft | Transient and strictly bounded; clear after save, settings exit/hide, and teardown |
+| Returned Wails/Svelte data | Availability and credential-reference metadata only; never a stored key |
+| Logs | No Authorization, API keys, cookies, secret headers, transcripts, or audio |
+| Change/delete profile | Never implicitly copy another profile's credential |
 
 ## Process lifecycle
 
@@ -95,21 +148,19 @@ The complete action matrix and normalization rules are documented in
 
 ## Endpoint safety
 
-Safe automatic checks:
+Only metadata may be checked automatically:
 
-```text
+```http title="Permitted metadata routes"
 GET /health
 GET /v1/models
 GET /v1/audio/voices  # qualified speech-profile metadata only
 ```
 
-Forbidden automatic checks:
-
-```text
-POST /v1/chat/completions across discovered models
-preloading or cycling models
-parallel inference probes
-```
+:::caution[Never probe a model inventory with inference]
+Do not call chat completions across discovered models, preload/cycle models, or
+run parallel inference probes. Live checks use only an explicitly selected
+endpoint/model and respect its resource limits.
+:::
 
 The settings UI must describe its endpoint test as metadata-only.
 Discovered model IDs may populate a selector, but selection itself performs no network request. Connection failures cross the Wails boundary only as stable status metadata; peer-controlled response bodies and credential material do not.

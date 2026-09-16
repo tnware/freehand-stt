@@ -24,6 +24,11 @@
 - Give each topic one primary home and link to it instead of accumulating repeated
   setup instructions or capability tables. Preserve public heading anchors when
   editing; check rendered internal links and fragments after structural changes.
+- Follow the page patterns in `README.md` under Documentation authoring. Use
+  Starlight Steps for procedures, Tabs for alternatives, and concise tables for
+  comparisons when they improve scanning. Keep required limits visible; reserve
+  disclosures for optional detail. Do not replace prose walls with oversized
+  tables or a sequence of decorative callouts.
 - Prefer Astro components and static HTML. Add a client framework only when a
   real interactive island requires it.
 - Extend Starlight through supported configuration, custom CSS, or component

@@ -8,10 +8,10 @@ both a model and a backend that can serve it, then select the matching Freehand
 profile from the table below. A different size, quantization, or server alias
 does not automatically change the profile; check the model guide's requirements.
 
-To install a model through Freehand rather than manage a server yourself, see
-the [managed runtime and model choices](../../guides/local-runtime/#choose-a-runtime-and-model).
-Only that catalog is available for managed downloads; the families below also
-include models that need a manually configured service.
+:::tip[Want Freehand to install the model?]
+Use the [managed runtime catalog](../../guides/local-runtime/#choose-a-runtime-and-model).
+The families below also include models that require a service you manage yourself.
+:::
 
 ## Families with a Freehand path
 
@@ -28,16 +28,23 @@ include models that need a manually configured service.
 | Qwen3-TTS 1.7B CustomVoice | vLLM-Omni | [Qwen3-TTS](../qwen3-tts/) |
 | S1-mini | llama.cpp, vLLM, compatible chat servers | [S1-mini](../s1-mini/) |
 
-Whisper-family runtimes such as faster-whisper and whisper.cpp are different
-implementations of the same recognition family. A GGUF, ONNX, or MLX conversion
-also describes packaging rather than a new Freehand behavior profile. The server
-can run on any machine reachable from the Windows or macOS client.
+<details>
+<summary>Family, runtime, or model format?</summary>
+
+Whisper is a model family; faster-whisper and whisper.cpp are different
+implementations. GGUF, ONNX, and MLX describe packaging rather than new Freehand
+behavior profiles. A different size, quantization, or alias still needs a
+compatible backend and model profile. The server can run on any machine
+reachable from the Windows or macOS client.
+
+</details>
 
 ## Other families to consider
 
+:::caution[Exploration, not a compatibility list]
 These families have **no dedicated Freehand model profile**. Check the serving
-API before choosing a connection;
-a Hugging Face model download is not itself an API endpoint.
+API before choosing a connection; a model download is not an API endpoint.
+:::
 
 | Recognition family | Distinct behavior to explore |
 | --- | --- |
@@ -61,10 +68,10 @@ controls or an unrelated streaming API.
 
 ## Reading model directories
 
-[Hugging Face's recognition](https://huggingface.co/models?pipeline_tag=automatic-speech-recognition&sort=trending)
+Use Hugging Face's [recognition](https://huggingface.co/models?pipeline_tag=automatic-speech-recognition&sort=trending)
 and [speech-generation](https://huggingface.co/models?pipeline_tag=text-to-speech&sort=trending)
-directories help discover families. Trending and monthly download counts answer
-different questions; neither is a complete inventory of compatible servers.
-Language-specific derivatives, conversions, alignment, and diarization models
-can appear beside general transcription models. Start with the workflow and
-controls you want, then choose the model and its serving backend together.
+directories to discover families, then check:
+
+- **The task:** general transcription, alignment, diarization, and language-specific derivatives can appear together.
+- **The serving API:** popularity and download counts do not establish compatibility.
+- **The controls:** choose the model and backend together for the workflow you need.

@@ -1,0 +1,77 @@
+---
+title: Browse session history
+description: Retain, find, compare, copy, or remove transcripts during the current Freehand session.
+---
+
+import { Steps, LinkCard } from '@astrojs/starlight/components';
+
+Enable history before a recording or file transcription to revisit results and
+compare raw text with successful cleanup. Your latest **Current result** and
+failed-insertion recovery are available even with history off.
+
+:::caution[History lasts only for this session]
+History is **off by default**, kept only in memory, and limited to **20 entries
+and 2 MiB**. It clears when Freehand exits. Copy anything you want to keep before
+quitting. Audio is never retained in history.
+:::
+
+## Enable and find transcripts
+
+<Steps>
+
+1. **Open History** from the activity rail, then **History settings** to enable
+   retention before the run you want to keep.
+2. **Dictate or transcribe a file.** Entries that fit the retention limits appear
+   in the History sidebar and the bottom panel's **Recent** tab.
+3. **Search or filter.** Search transcript text or an audio file's name; filter
+   by **All**, **Voice**, or **Audio files**.
+4. **Select an entry** to read it in the main area. Choose **Copy**, or **Listen**
+   when speech is enabled.
+
+</Steps>
+
+Search includes final, raw, and cleaned text already in memory. It does not
+search recordings on disk or recover earlier sessions. Filtering does not
+change retention.
+
+## Compare raw and cleaned text
+
+Choose **Compare** on an entry with both versions. Each version has its own
+copy control. If cleanup failed, the raw transcript shows the failure explanation.
+
+Retaining both versions after successful cleanup requires history to have been
+enabled before the run and the text to fit its limits. Raw fallback after a
+cleanup failure works without history.
+
+## Inspect or remove entries
+
+| Control | Use |
+| --- | --- |
+| **Details** above the transcript | Opens run details in the right sidebar |
+| **Transcript actions → Remove from history** | Removes the selected entry |
+| **Clear history** | Removes all retained entries |
+| **History settings** | Changes retention; disabling history clears its entries |
+
+History keeps limited run details, not credentials, request headers, full file
+paths, or destination identities. Removing an entry also removes its details;
+an open details window does not keep another copy.
+
+## Browse in a smaller window
+
+Use the left-sidebar button to open the transcript list over the current page.
+**Details** opens a right overlay at narrower widths. On wider windows it opens
+automatically when you enter History; **X** keeps it hidden for that visit.
+
+The **Recent** bottom-panel tab is also available in workflows, Connections,
+Local runtime, and History. Its newest transcript opens automatically; select
+older entries to expand them. **Transcription details** in an entry's action
+menu opens the separate details window.
+
+:::tip[Copy only what you need]
+Focus a transcript, select a passage, and copy it. Select all with
+<kbd>Ctrl</kbd> + <kbd>A</kbd>, then copy with <kbd>Ctrl</kbd> + <kbd>C</kbd>.
+On macOS, use <kbd>⌘</kbd> in place of <kbd>Ctrl</kbd>. The same selection controls
+work in raw/cleaned comparisons.
+:::
+
+<LinkCard title="Understand data lifetimes" href="../privacy-and-safety/#transcripts-and-history" description="See what remains in current results, history, and the speech composer." />

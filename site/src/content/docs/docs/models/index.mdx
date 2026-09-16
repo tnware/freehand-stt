@@ -1,0 +1,145 @@
+---
+title: Model profiles
+description: Choose model behavior independently of your server connection.
+---
+
+import { Steps, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Choose a model profile to show the language, recognition, cleanup, or voice
+controls that match the model your server runs.
+
+| Choice | What it tells Freehand | Example |
+| --- | --- | --- |
+| Connection | Where to send requests and which backend API to use | A vLLM server and its authentication |
+| Model | Which served model ID to request | `Qwen/Qwen3-ASR-1.7B` |
+| Model profile | Which model behavior and controls to use | Qwen3-ASR |
+
+:::note[Names do not select profiles]
+For a manual connection, choose the profile yourself, including when the server
+uses a familiar model name or custom alias. Model discovery reads metadata; it
+does not download, run, or inspect a model to determine its behavior.
+:::
+
+## Choose a model profile
+
+<Tabs>
+  <TabItem label="Manual connection">
+
+<Steps>
+
+1. Open the workflow's **Settings** cog. Choose **Transcription** in Voice or
+   Audio file, **Cleanup** in either transcription workflow, or **Speech** in
+   Text to speech.
+2. Select the connection, then choose or enter its exact **Model** ID.
+3. Review **Model profile** beneath the picker. Choose a specialized profile
+   only when it matches the model your server runs, then choose **Save**.
+
+</Steps>
+
+Use **Generic** for standard backend options, including Whisper transcription,
+Kokoro speech, or your own cleanup instruction. When a backend offers only
+Generic, there is no profile selector. Manual whisper.cpp uses the model
+already loaded on the server.
+
+  </TabItem>
+  <TabItem label="Managed local connection">
+
+Choose a downloaded model in **Local runtimes**, then select its built-in
+Connection in the workflow. Freehand supplies the model ID and matching profile.
+Voice and audio files share the runtime's transcription model. NeMo can also
+load a separate MagpieTTS model for speech.
+
+See [Local runtimes](../guides/local-runtime/#choose-a-runtime-and-model) for
+available models and supported computers.
+
+  </TabItem>
+</Tabs>
+
+| Workflow | Profile choice |
+| --- | --- |
+| Voice / Audio file | Generic, Nemotron, Parakeet, Qwen3-ASR, Cohere Transcribe, or Voxtral Mini Realtime |
+| Cleanup | Generic for your instruction; S1-mini for its fixed prompt and trained controls |
+| Text to speech | Generic, Qwen3-TTS on vLLM-Omni, or MagpieTTS on NeMo |
+
+With **Nemotron**, **Qwen3-ASR**, or **Voxtral Mini Realtime**, Voice's
+**Transcription** options also offer **Realtime transcription** and optional
+overlay captions. Turning realtime off keeps the same connection and model
+for completed recordings. Audio-file transcription has its own selection.
+
+## Dedicated model guides
+
+<CardGrid>
+  <LinkCard title="Nemotron 3.5 ASR streaming" href="./nemotron/" description="Completed and live transcription, languages, and vocabulary boosting." />
+  <LinkCard title="Parakeet TDT v3" href="./parakeet/" description="Completed transcription with automatic language detection." />
+  <LinkCard title="Qwen3-ASR" href="./qwen3-asr/" description="Completed audio with context hints, plus optional live dictation." />
+  <LinkCard title="Cohere Transcribe" href="./cohere-transcribe/" description="Completed recordings and streamed file results in a selected language." />
+  <LinkCard title="Voxtral Mini Realtime" href="./voxtral-realtime/" description="Live or completed transcription with automatic language detection." />
+  <LinkCard title="S1-mini by Superwhisper" href="./s1-mini/" description="English cleanup with styling, structure, and context controls." />
+  <LinkCard title="MagpieTTS" href="./magpie-tts/" description="Local or remote speech with preset voices and language selection." />
+  <LinkCard title="Qwen3-TTS" href="./qwen3-tts/" description="Speech with preset voices, languages, and style instructions." />
+</CardGrid>
+
+Explore the [visual model directory](../../models/) or compare
+[speech model families](./families/) before choosing a server.
+
+## Remember settings for each model
+
+Freehand remembers options separately for each **connection, feature, and model
+ID**. You can choose a saved model without refreshing the server's model list.
+A new model ID starts with Generic and default model options.
+
+| Remembered with each model | Kept when you switch models or connections |
+| --- | --- |
+| Transcription profile, context hint, temperature override, supported NeMo controls | Transcription language |
+| Cleanup profile, output limit, reasoning override | Custom cleanup instruction and S1-mini style, structure, and context |
+| Speech profile, voice, language, voice-style instructions | Speaking speed |
+
+[Vocabulary](../guides/vocabulary/), its Voice/file opt-ins, and Nemotron
+vocabulary strength are separate settings. Enable switches, recording behavior,
+shortcuts, and timeouts also remain feature or application settings. Running
+jobs keep the settings captured when they started. Model preferences contain
+no credentials or generated transcripts.
+
+### Read the model picker
+
+| Label | Meaning |
+| --- | --- |
+| **Saved** | Has remembered options |
+| **Server** | Appears in current server discovery |
+| **Edited** | Has unsaved options in this editing session |
+| **Manual ID** | Comes from neither the saved list nor current discovery |
+
+An ID can have more than one label. Search or enter an exact ID, select it,
+then review its profile and options.
+
+### Save, switch, or discard
+
+| Action | Result |
+| --- | --- |
+| Switch models in the options sidebar | Changes the draft; returning to a model restores its unsaved edits |
+| **Save** | Applies the current selection and all edited model options together |
+| Save fails | Keeps applied settings active and preserves the draft for correction |
+| **Discard** | Restores the applied selection and clears all model drafts |
+| Switch connections | Restores that connection's last selected model for this feature; a new connection needs a model chosen |
+| Use first-run setup controls | Applies valid changes immediately, including restored model options, and shows save status |
+
+:::tip[Review language after switching]
+Changing models preserves transcription language. S1-mini skips cleanup for
+known non-English input. For whisper.cpp, preferences belong to one
+**Server-loaded model** slot: review them yourself whenever you replace the
+model on the server.
+:::
+
+### Forget models or change a connection
+
+Use the model actions menu's **Forget saved settings** after saving or discarding
+edits. It removes the saved preferences and clears the current model selection.
+Enter the ID again to start from defaults. The limit is **32 models per
+connection and feature**; forget an unused model if you reach it.
+
+| Connection change | Effect on model preferences |
+| --- | --- |
+| Rename or change authentication | Keeps remembered models |
+| Change URL or backend profile | Clears remembered models and active model choices; select and review them again |
+| Duplicate | Starts a separate set of preferences |
+| Delete or remove an inactive use | Removes the corresponding remembered preferences |

@@ -1,0 +1,83 @@
+---
+title: Generate and play speech
+description: Configure a voice, generate speech from text, control playback, and save audio.
+---
+
+import { Steps, LinkCard } from '@astrojs/starlight/components';
+
+Use **Text to speech** to hear your own text or **Listen** to a completed
+transcript. Speech is off by default and has its own connection, model, and
+voice. You can use it without a microphone or transcription setup.
+
+For local speech, [add MagpieTTS to NeMo](../local-runtime/#local-speech-with-magpietts).
+For another service, [save a speech connection](../connect-a-server/) first.
+
+## Set up and speak
+
+<Steps>
+
+1. **Open Text to speech → Configure speech.** The sidebar's **Connection** or
+   **Model** row also opens **Speech** options.
+2. **Choose a connection, model, model profile, and voice.** Use **Refresh models**
+   and supported **Refresh voices** to read metadata, or enter exact IDs.
+3. **Turn on Enable text to speech** and choose **Save**.
+4. **Enter your text**, then choose **Speak** or press <kbd>Ctrl</kbd> +
+   <kbd>Enter</kbd>. Enter alone adds a new line. Audio plays when generation succeeds.
+
+</Steps>
+
+:::note[Text and audio lifetimes]
+The composer accepts up to **4,096 Unicode characters**. Longer drafts stay
+editable; shorten them to enable Speak. Unsent text survives task navigation but
+clears when the window reloads or Freehand exits. Generated audio remains in
+memory until cleared, replaced, a recording begins, or Freehand exits. Saving
+an audio file is explicit.
+:::
+
+## Preview a voice before saving
+
+In **Speech** options, turn on **Enable text to speech** and choose **Preview**
+beside the voice selector. This sends a fixed sample phrase to the selected
+service using your **unsaved choices**. It does not save settings or enable
+playback elsewhere. Stop and preview again to hear changes; save to apply them
+to the composer and Listen actions.
+
+## Control playback
+
+| Action | What happens |
+| --- | --- |
+| **Pause** / **Resume** | Pauses or continues existing audio |
+| Playback slider | Moves when you release it; use arrows, Home, or End with the slider focused |
+| **Restart** in **Playback actions** | Replays existing audio from the beginning |
+| **Stop** | Cancels active generation or stops playback |
+| **Save generated speech** | Exports the full generated audio, regardless of playback position |
+| Clear completed audio in **Playback actions** | Removes the retained audio from memory |
+
+Seeking while playing continues playback. Seeking while paused or after
+completion leaves audio paused until **Resume**. It uses audio already in memory
+and sends no new generation request.
+
+You can edit or clear the text during generation or playback; those edits do not
+change the current audio. After generation finishes, **Speak** generates the
+current draft and replaces the previous audio, even if playback is paused.
+Playback and Save continue to use the existing audio until then.
+
+## Listen to a transcript
+
+Choose **Listen** on a completed Voice or Audio-file result, even with history
+off, or on a [retained history entry](../history/). This sends the chosen text to
+your speech endpoint. Playback starts only when you ask; Freehand does not
+automatically read each transcript or provide a voice conversation mode.
+
+## If speech fails
+
+Open **Details** beside playback controls for the explanation and **Speech
+settings**. Check the system output device and volume. In the composer,
+**Try again** uses the current draft; failure does not erase it.
+
+If **Restart** rewinds but cannot open the output device, audio stays paused at
+the beginning. Correct the device and use **Resume** or **Restart**. You can
+still save or clear retained audio. A failed rewind leaves the existing session
+and position in place.
+
+<LinkCard title="Troubleshoot speech playback" href="../troubleshooting/#speech-playback-produces-no-sound" description="Check the enabled service, voice ID, local runtime, and output device." />

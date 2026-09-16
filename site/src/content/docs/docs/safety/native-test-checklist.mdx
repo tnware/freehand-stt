@@ -1,0 +1,78 @@
+---
+title: Native acceptance
+description: Validate desktop integration on Windows and macOS without confusing fixtures with native evidence.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Use this checklist to collect native evidence for a change. Run relevant checks
+on **each affected OS and architecture**, using disposable text, credentials,
+and isolated data.
+
+:::caution[Build success is not native acceptance]
+Compilation, browser fixtures, and cross-compilation do not establish native
+behavior. On macOS, permission acceptance requires a packaged app with a stable
+bundle identity. A local ad-hoc signature does not establish signing or notarization
+acceptance. Skipped tests establish no native evidence.
+:::
+
+<Steps>
+
+1. **Choose the affected checks below.** Inspect any opt-in `FREEHAND_NATIVE_*`
+   test before enabling it: these tests can use real devices or OS resources.
+2. **Run with controlled inputs.** Use only an explicitly selected endpoint/model
+   for live inference. Catalog and health checks remain metadata-only.
+3. **Record the evidence in the issue or PR.** Include revision, OS, architecture,
+   actions, results, and unverified cases. Record CPU/GPU execution separately
+   from installation, CLI help, health responses, and browser fixtures.
+
+</Steps>
+
+## Capture and delivery
+
+| Exercise | Required outcome |
+| --- | --- |
+| Toggle/hold, real key release, repeated activation, cancellation, conflicts, denial | Normal input stays usable; on macOS also test Secure Input and event-tap interruption |
+| Default/selected microphone, removal, repeated start/stop/cancel | No stuck capture; microphone denial leaves file transcription and TTS usable |
+| Unicode, emoji, multiline, and long text in disposable targets | Text survives native delivery correctly |
+| Change app/window, close the target, cancel during processing/insertion | Delivery stops when the captured target becomes invalid; no reactivation or insertion into another window |
+| Change field within the same window on macOS | Delivery uses the currently focused field |
+| Explicit Copy and clipboard contention | Recovery stays explicit; unrelated clipboard content is not mutated by automatic delivery |
+| Realtime captions, disconnects, cancellation | Provisional text authorizes neither insertion nor retention; no automatic audio replay |
+| Cleanup failure | Finalized raw text survives |
+
+:::note[Check for partial insertion before copying]
+A rejected delivery may already have inserted some text. Verify the warning and
+inspect the target before pasting a recovery copy.
+:::
+
+## Desktop lifecycle and presentation
+
+| Exercise | Required outcome |
+| --- | --- |
+| Tray/menu bar, close-to-hide, second launch, main-window reopen; macOS Dock reopen | One application lifecycle; opening the tray never starts capture |
+| Start dictation from another app | Global shortcut captures the intended destination |
+| Passive overlays | Never take focus or intercept input |
+| Changed UI in both themes, keyboard navigation, OS scaling, multiple monitors | Usable layout, controls, and focus indication |
+| Quit during capture, upload, cleanup, playback, runtime startup, or native dialogs | Actual exit and resource release; no late insertion, playback, or export |
+| Changed startup, installer, or updater | Verify the packaged app and actual next launch/login; follow the [release procedure](../../development/releases/) |
+
+A service timeout alone is not proof that native resources were cleaned up.
+
+## Settings, credentials, and local runtimes
+
+| Exercise | Required outcome |
+| --- | --- |
+| Save/reopen, failure recovery, native vault replacement | Secrets stay out of SQLite, logs, argv, events, and returned renderer snapshots |
+| Save, navigation, and hide | Password drafts are cleared |
+| Corruption, newer schema, reset, backup recovery in isolated databases | Personal settings and legacy files remain untouched |
+| Default history and all capture terminal paths | History is off by default; captured audio survives neither completion, failure, cancellation, nor shutdown |
+| Explicit runtime install/download/cancel/start/stop; parent termination | Owned descendants are cleaned up; unrelated servers and manual connections stay untouched |
+| Managed runtime failure | No remote fallback or manual-credential leak to the managed endpoint |
+| Output viewer visible/hidden | Bounded read-only display; hiding revokes reads; standalone output requires consent |
+| Terminal control content | No triggered input, links, clipboard writes, files, or logging; see [logging rules](../logging/) |
+
+<CardGrid>
+  <LinkCard title="Windows invariants" href="../windows/" description="Review the engineering requirements behind these checks." />
+  <LinkCard title="Release lifecycle" href="../../development/releases/" description="Verify packages, signatures, checksums, and updates." />
+</CardGrid>

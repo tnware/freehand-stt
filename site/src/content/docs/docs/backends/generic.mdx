@@ -1,0 +1,103 @@
+---
+title: Generic OpenAI-compatible
+description: Connect an OpenAI-compatible server for transcription, cleanup, or text to speech.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Use **Generic OpenAI-compatible** when your server supports the request and
+response formats below and has no matching dedicated backend profile.
+
+## Obtain an endpoint
+
+Generic is a protocol baseline, not a server program to install. Use the
+URL, model ID, and authentication supplied by your server operator or hosted
+provider. If you want to run a server yourself, start with the
+[backend launch guides](../#run-a-backend) and choose its qualified profile.
+Check that the selected model supports the operation you want to use.
+
+## Configure a connection
+
+<Steps>
+
+1. Open **Connections → Add connection**, choose its purpose and **Generic OpenAI-compatible** profile.
+2. Name it and enter the API base URL, normally ending in `/v1`.
+3. Configure authentication. For an HTTP URL, enable **Allow HTTP for this connection** only if you trust the network. Choose **Save connection**.
+4. Open the workflow's **Settings** cog and choose **Transcription** for Voice or Audio file,
+   **Cleanup** for either transcription workflow, or **Speech** for Text to speech.
+   Select the connection, choose **Refresh models** or enter the exact model ID, then save. Model discovery reads metadata only.
+5. Explicitly try one operation with the model you chose and review the result.
+
+</Steps>
+
+See [Connect a speech server](../../guides/connect-a-server/) for HTTP permission,
+separate servers, and credential configuration.
+
+## Implemented capabilities
+
+| Operation                               | Request and response                                                                                                                        |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Microphone and audio-file transcription | Multipart `file`, `model`, `response_format=json`, and optional `language`, `prompt`, and `temperature`; completed JSON with string `text`. |
+| Optional file streaming                 | `stream=true`; typed transcript delta/done events or legacy per-segment text events. A server may return completed JSON instead.            |
+| Transcript cleanup                      | Non-streaming text chat completions with system/user string messages, temperature zero, and optional `max_tokens`.                          |
+| Speech playback                         | `model`, `input`, string `voice`, `speed`, and `response_format=wav`; fully buffered PCM16 WAV audio.                                       |
+
+:::caution[Enter the API base, not an operation URL]
+Freehand appends `audio/transcriptions`, `chat/completions`, or `audio/speech`.
+A full operation URL would append the path again. Confirm your server accepts
+the fields and formats above; an OpenAI-compatible label alone is not enough.
+:::
+
+## Available options
+
+| Area | Limit or failure behavior |
+| --- | --- |
+| Request fields | No model-name inference or automatic provider-only parameters |
+| File streaming | Progressive output for an uploaded file; does not enable live microphone or Realtime API sessions |
+| Stream completion | Typed streams need a final transcript; legacy segment streams finish at EOF; incompatible streams are not resubmitted |
+| Upload size | Server limits may be lower than Freehand's 2 GiB ceiling; oversized stored files are not split automatically |
+| Speech audio | Mono/stereo PCM16 WAV at 8–192 kHz, buffered up to 32 MiB; a WAV MIME type does not establish sample encoding |
+| Cleanup failure or length limit | Falls back to raw text under normal delivery and cancellation rules |
+
+The dedicated **OpenAI hosted** profile is planned. Hosted and self-hosted
+endpoints can use Generic when the selected model accepts this exact contract.
+See the [full protocol reference](../../reference/protocol/) for bounds and
+failure handling.
+
+## Optional transcription controls
+
+| Workflow | Where to find the controls |
+| --- | --- |
+| Voice | **Voice transcription → Transcription → Request settings** |
+| Audio file | **Audio file → Transcription → Transcription controls** |
+
+**Context hint** is sent as `prompt`. Temperature is sent only when its override
+is enabled. Leave either unset for server defaults; each model may interpret
+these fields differently. Generic appends enabled [shared vocabulary](../../guides/vocabulary/)
+to `prompt`; it does not send `hotwords`.
+
+See [Transcription controls](../../guides/connect-a-server/#transcription-controls)
+for limits, persistence, and the difference between recognition hints and cleanup.
+
+## Cleanup generation controls
+
+| Control | Generic behavior |
+| --- | --- |
+| Output-token limit | Optional `max_tokens`, from 1 to 65,536; the model may impose a smaller limit |
+| Other token-limit fields | Does not substitute `max_completion_tokens`, send both fields, or retry a rejection |
+| Reasoning | No reasoning fields; turn off a custom reasoning override before switching from llama.cpp or vLLM |
+
+:::caution[S1-mini needs server-side reasoning disabled]
+Configure that on the server, or use qualified llama.cpp or vLLM profiles for
+automatic S1-mini request enforcement. Leave the output limit off if your
+endpoint/model does not accept `max_tokens`.
+:::
+
+See [generation controls](../../guides/post-processing/#generation-controls).
+
+## Language selection
+
+Use the [language guide](../../guides/languages/) to choose Server default,
+automatic detection, a named code, or a custom value. The selected model determines
+which languages work. If you enable S1-mini cleanup, review its
+[English-only language behavior](../../models/s1-mini/#language-and-results).

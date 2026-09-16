@@ -1,0 +1,70 @@
+---
+title: Live transcription
+description: Enable realtime microphone transcription and review words while you speak.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Live transcription streams microphone audio to your selected server while you
+speak. Review the preview in Freehand or enable overlay captions. Stop to finalize
+the text, run optional cleanup, and deliver it while the original destination is
+still safe. Manual-copy mode leaves it ready to copy.
+
+## Choose a model and backend
+
+| Model profile | Qualified backend | Live recognition controls |
+| --- | --- | --- |
+| [Nemotron 3.5 ASR streaming](../../models/nemotron/) | [NeMo-Speech.cpp v0.1.0](../../backends/nemo-speech/) | Automatic/explicit language; shared vocabulary and strength |
+| [Qwen3-ASR](../../models/qwen3-asr/) | [vLLM v0.28.0](../../backends/vllm/) | Automatic language detection |
+| [Voxtral Mini Realtime](../../models/voxtral-realtime/) | [vLLM v0.28.0](../../backends/vllm/) | Automatic language detection |
+
+For local setup on Windows or macOS, [install managed NeMo with Nemotron](../local-runtime/).
+For a server you manage elsewhere, follow the chosen model's guide. Select its
+explicit model profile; a compatible URL or model name alone does not enable live mode.
+
+## Enable live mode
+
+<Steps>
+
+1. **Open Voice transcription → Settings → Transcription** in the right sidebar.
+2. **Select the connection, loaded model, and model profile.**
+3. **Enable Realtime transcription**, shown for a supported combination.
+4. **Optionally enable Live overlay captions.** The main **Overlay** preference
+   must also be on.
+5. **Choose Save**, then focus the destination and start with your recording shortcut.
+
+</Steps>
+
+Language and vocabulary controls follow the model profile. Unavailable completed
+controls remain saved. Edit shared terms under **Settings → Vocabulary** or
+Voice's **Vocabulary** options.
+
+## While recording
+
+| What you do | What happens |
+| --- | --- |
+| Speak | The preview can change; overlay captions show the newest words |
+| Stop or release hold-to-talk | Final text replaces the preview and can proceed to cleanup and delivery |
+| Cancel | The preview is discarded |
+| Lose the stream | The preview is discarded; start a new recording after fixing the connection |
+| Turn realtime off for the next run | The same connection/model remain, with saved completed capture preferences |
+
+:::caution[Preview text is not a completed transcript]
+Only finalized text can be copied, inserted, cleaned up, or retained in optional
+history. Freehand does not replay captured audio after a connection failure.
+:::
+
+Live mode uses your toggle/hold shortcut and duration limit. Silence trimming,
+checkpoints, and automatic stop are bypassed. Keep the destination focused until
+final delivery; [safe insertion rules](../privacy-and-safety/#safe-text-insertion)
+still apply.
+
+Audio files keep independent connection, language, and options. When Voice and
+files use the same managed runtime they share its selected transcription model;
+otherwise their models are independent. File requests remain completed uploads,
+even when the server streams text back.
+
+<CardGrid>
+  <LinkCard title="Tune recognition vocabulary" href="../vocabulary/" description="Add shared names and terminology for supported models." />
+  <LinkCard title="Stream results from a file" href="../audio-files/#choose-a-response-mode" description="Use text updates for an uploaded recording instead of a live microphone." />
+</CardGrid>

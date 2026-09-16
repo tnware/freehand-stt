@@ -1,0 +1,151 @@
+---
+title: Arrange your workspace
+description: Find settings, adjust sidebars and panels, check connections, and read local resource use.
+---
+
+import { Tabs, TabItem, LinkCard } from '@astrojs/starlight/components';
+
+Use the activity rail to choose a workflow or open **Connections**, **Local
+runtime**, **History**, or **Settings**. Press <kbd>Ctrl</kbd> + <kbd>K</kbd>
+(<kbd>⌘</kbd> + <kbd>K</kbd> on macOS) to find a page or command.
+
+## Sidebars and panels
+
+The title bar has a button for each region. On macOS, use <kbd>⌘</kbd> in place
+of <kbd>Ctrl</kbd> in these layout shortcuts.
+
+| Region | Contains | Shortcut |
+| --- | --- | --- |
+| Left sidebar | Quick workflow controls, or the current area's list and navigation | <kbd>Ctrl</kbd> + <kbd>B</kbd> |
+| Bottom panel | **Recent**, **Runtime output**, and **Diagnostics** tabs | <kbd>Ctrl</kbd> + <kbd>J</kbd> |
+| Right sidebar | Detailed task options, or History's details and retention settings | <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>B</kbd> |
+
+Drag a divider to resize, or focus it with Tab and use arrows; Home and End move
+to its size limits. Freehand remembers visibility, sizes, and the bottom tab
+locally. These preferences do not store drafts, credentials, transcripts, or
+runtime output.
+
+At narrow widths, sidebars open over the page. Use the title-bar button to reach
+the left sidebar and **X**, Escape, or the backdrop to close right-side options.
+Unsaved edits must be resolved first. Global Settings hides the bottom panel;
+returning restores your chosen tab and visibility. Short windows also hide it
+until there is room.
+
+## Save settings
+
+| Where you edit | How changes apply |
+| --- | --- |
+| Quick controls in the left sidebar | Save immediately; show **Saving…**, then **Saved** |
+| Detailed options opened with the task's **Settings** cog | Choose **Save**; quick controls pause while you have unsaved edits |
+| **Connections** | Saves shared server details for every task using that connection |
+| Global **Settings** | General, Shortcuts, Overlay, and Vocabulary preferences |
+
+Leaving detailed options offers **Save**, **Discard**, or **Keep editing**.
+A failed save keeps the editable draft and previous applied values. Correct
+the inline error and retry. While saving, the confirmation stays open until
+completion. Changes never alter requests already running.
+
+Shared **Vocabulary** and **Overlay** options can also open beside a workflow.
+They edit the same saved preferences as Settings. Voice's **Delivery** options
+apply to microphone transcripts; startup and appearance remain in General.
+
+### Find a detailed control
+
+| To adjust… | Open |
+| --- | --- |
+| Microphone, maximum duration, silence controls | **Voice → Audio**; expand **Speech detection tuning** for sensitivity and timing |
+| Caption and overlay appearance | **Overlay**; expand **Appearance and behavior** for motion, spacing, opacity, and glow |
+| Request timeouts and diagnostics | The task's **Request settings** |
+| File context and temperature | **Audio file → Transcription controls** |
+| Voice context / temperature | Voice's model options / **Request settings** |
+| Cleanup output and reasoning | **Cleanup → Generation controls** |
+
+Overlay preview shows unsaved appearance changes. Glow is unavailable with a
+Minimal surface. Model pickers read advertised IDs without running them and
+also accept exact IDs. Choose the matching [model profile](../../models/) for
+its supported controls; [language pickers](../languages/) search by name or code.
+
+## Check the active connection
+
+Select connection status at the bottom of the window, then **Check connection**
+or **Check again**. Checks use applied settings and read metadata; they do not
+record, upload audio, or run a model. **Technical details** expands HTTP status
+and individual checks.
+
+Choose **Edit connection** for server details or **Choose connection** to select
+a server. A managed connection shows **Starting runtime** during loading and
+warm-up; its check waits and refreshes when the runtime is ready. NeMo diagnostics
+include advertised capabilities and the server version when available.
+
+<LinkCard title="Interpret connection checks" href="../troubleshooting/#understand-connection-check-results" description="Separate reachability, authentication, model discovery, and configuration." />
+
+## Check this computer's resource use
+
+Select **CPU / RAM / GPU** in the status bar, or the activity icon in a narrow
+window. Readings refresh about every two seconds while the workspace is visible
+and pause when hidden or minimized.
+
+| Reading | How to use it |
+| --- | --- |
+| CPU, RAM, GPU activity, or dedicated GPU memory at 90% | Amber signals pressure; close demanding apps or stop an unused runtime if work is slow |
+| Available RAM | An estimate including reclaimable memory; it can differ from Task Manager or Activity Monitor |
+| GPU activity | Status bar shows the busiest reported adapter; open it for individual adapters |
+| **Measuring…** / **Unavailable** | Sampling is warming up / the metric could not be read |
+
+Readings include **all apps on this computer**, not individual runtime processes
+or a remote inference server. Brief spikes while a model loads are normal.
+Windows reports dedicated GPU memory and shared system RAM. Apple Silicon GPU
+memory is part of shared system RAM, with no separate VRAM pool. Missing driver
+metrics stay labelled unavailable instead of appearing as zero.
+
+## Read results and runtime output
+
+Live text follows new words until you scroll back. Choose **Jump to latest**, or
+scroll to the bottom, to resume. While you select transcript text, the displayed
+text stays still; clearing the selection shows the latest updates. **Jump to
+latest** also clears selection.
+
+Focus a transcript to use select-all and copy, or select a smaller passage.
+Page Up, Page Down, Home, End, and arrows scroll its pane. These controls also
+work in expanded history and raw/cleaned comparisons.
+
+For a selected local connection, the left sidebar shows **Start**, **Stop**, or
+**Cancel**, progress, and errors. Choose a downloaded model while stopped;
+**Manage runtime** opens its inventory entry. **View output** opens that runtime's
+bottom-panel tab immediately. See [runtime output controls](../local-runtime/#startup-and-process-output).
+
+:::caution[Runtime output can contain sensitive text]
+Output can contain transcripts, prompts, and file paths. It is read-only and
+kept in bounded memory; use **Copy selection** only for text you intend to share.
+Hiding the viewer, changing its tab or runtime, opening Settings, or hiding the
+workspace clears displayed output and stops reads. Reopening reads the available
+tail again. Viewing output does not start or stop the runtime.
+:::
+
+The standalone **Process output** window requires **Show output** each time it
+opens or switches runtimes. See [diagnostics privacy](../privacy-and-safety/#diagnostics)
+for buffer limits and lifetime.
+
+## Window controls
+
+<Tabs syncKey="operating-system">
+  <TabItem label="Windows">
+
+Use **File**, **View**, and **Help** beside the Freehand mark. The far-right
+controls minimize, maximize/restore, and close. Drag an empty title-bar area to
+move the window; double-click to maximize/restore. Windows 11 Snap Layouts may
+appear when hovering over maximize, depending on the installed WebView runtime.
+
+  </TabItem>
+  <TabItem label="macOS">
+
+Use the native traffic lights and system menu bar. The green control uses macOS
+fullscreen. Drag the title bar to move the window; double-click follows your
+macOS title-bar setting.
+
+  </TabItem>
+</Tabs>
+
+Closing resolves unsaved settings and hides Freehand. Reopen it through the
+tray or menu-bar icon; choose **Quit** from that icon's menu to exit. See
+[overlay and tray controls](../using-freehand/#status-overlay-and-tray).

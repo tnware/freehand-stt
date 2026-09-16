@@ -20,11 +20,15 @@ before opening it. If the hashes differ, do not run the file; download it again.
 
 ## Install
 
-Freehand requires Windows 11 x64 and WebView2. For recognition, set up a
-[managed local runtime](../local-runtime/) or connect a compatible speech service.
-Only voice dictation requires a microphone; recording shortcuts are optional. Stored-audio
-transcription and text to speech can be configured independently. For a Mac, use
-the [macOS installation guide](../macos-setup/).
+| Before installing | Requirement |
+| --- | --- |
+| Computer | Windows 11 x64 |
+| Web runtime | WebView2; the installer installs it if missing, while the portable executable needs it already installed |
+| Speech processing | A [managed local runtime](../local-runtime/) or compatible service |
+
+Only Voice dictation needs a microphone; recording shortcuts are optional.
+[Audio files](../audio-files/) and [text to speech](../text-to-speech/) can be
+configured independently. For a Mac, use [macOS setup](../macos-setup/).
 
 <Tabs>
   <TabItem label="Installer">
@@ -94,9 +98,22 @@ Start Menu shortcuts or an uninstaller.
 
 ## Upgrade
 
-Install a newer package in place using these steps. This version resets settings
-from earlier alphas; follow the [first-launch notice](../../getting-started/#first-launch)
-to reconfigure connections and API keys after upgrading:
+:::note[Upgrading from an earlier alpha]
+This version does not import earlier alpha settings. Reconfigure connections
+and API keys as described in the [first-launch notice](../../getting-started/#first-launch).
+Earlier settings and saved keys remain untouched.
+:::
+
+<Tabs>
+  <TabItem label="In-app update">
+
+Automatic checks are on by default; turn them off in **Settings → General**.
+When a newer release is available, the update window downloads and verifies the
+standalone executable, then waits for you to restart. It replaces the executable
+without running the installer.
+
+  </TabItem>
+  <TabItem label="Newer installer">
 
 <Steps>
 
@@ -107,10 +124,8 @@ to reconfigure connections and API keys after upgrading:
 
 </Steps>
 
-Automatic update checks are enabled by default and can be disabled under
-**Settings → General**. When a newer release is available, the update window
-downloads and verifies the standalone executable and waits for you to restart.
-The in-app updater replaces the executable; it does not run the installer.
+  </TabItem>
+</Tabs>
 
 The installer does not block installing an older version, but an older app cannot
 downgrade a newer settings database. Read the release notes and
@@ -119,11 +134,16 @@ before downgrading.
 
 ## Portable executable
 
-Use the **Portable** tab under [Install](#install) for the download and
-verification steps. The executable runs without installation and has no Start
-Menu registration or uninstaller. Keep its folder writable if you use in-app
-updates. Portable Freehand still saves settings in your Windows user profile,
-not beside the executable; see [saved settings and backups](../privacy-and-safety/#saved-settings-and-backups).
+Use the **Portable** tab under [Install](#install) for download verification.
+
+| Portable behavior | What to expect |
+| --- | --- |
+| Installation | Runs directly; no Start Menu registration or uninstaller |
+| In-app updates | Keep the executable in a writable folder |
+| Settings | Still saved in your Windows user profile, not beside the executable |
+
+See [saved settings and backups](../privacy-and-safety/#saved-settings-and-backups)
+for configuration locations.
 
 ## Uninstall
 

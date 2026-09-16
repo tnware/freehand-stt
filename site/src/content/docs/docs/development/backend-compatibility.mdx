@@ -1,0 +1,122 @@
+---
+title: Maintain backend compatibility
+description: Keep the application catalog, public matrix, provider guides, and validation evidence aligned.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Use this procedure when changing a server API, model profile, or public support
+claim. Keep the application catalog, generated site data, and guides aligned in
+the same change.
+
+:::caution[Metadata is not qualification]
+A model list cannot prove capability support. Test only an explicitly selected
+endpoint/model, and record fixtures, live behavior, and native acceptance as
+separate evidence.
+:::
+
+## Ownership and update path
+
+| Source | Owns |
+| --- | --- |
+| `internal/compatibility` | Server profile IDs, operations, availability, routes, and capabilities |
+| `internal/modelprofile` | Dedicated model behavior and its intersection with backend capabilities |
+| Settings DTO | The catalog delivered to the renderer |
+| `site/src/data/compatibility.generated.json` | The generated catalog consumed by the website |
+| `site/src/data/backends.ts` and `models.ts` | Editorial summaries, not a second set of support flags |
+
+<Steps>
+
+1. Implement and validate the bounded request/response behavior in Go. Reject
+   wrong-operation and unavailable profiles at the backend boundary.
+2. Update the profile catalog and its capability rules. Keep advanced features
+   unavailable until their model and server requirements are represented.
+3. Run `go generate ./internal/compatibility` from the repository root. Commit
+   `site/src/data/compatibility.generated.json` with the implementation.
+4. Update editorial copy in `site/src/data/backends.ts` and the relevant backend
+   guide under `site/src/content/docs/docs/backends/`. Every catalog profile must
+   have a directory entry and a guide or a specific planned-contract anchor.
+5. Run the affected Go fixtures and the site build. The Go catalog test rejects
+   a stale export; site rendering rejects missing or extra directory entries.
+6. Record validation evidence and limitations in the issue or pull request. Do not promote
+   a source review or fixture result into a claim of native Windows or macOS interoperability.
+
+</Steps>
+
+```sh title="Check the app/site catalog boundary"
+go test ./internal/compatibility
+```
+
+Local site-only builds consume the committed export and need no Go runtime.
+The Pages workflow also runs the Go catalog check, including for site-only
+changes, before publishing the site.
+
+## Backend and model documentation
+
+| Topic | Primary home | Example |
+| --- | --- | --- |
+| Server APIs and installation | `docs/backends/`; the public `/backends/` directory compares operations | NeMo-Speech.cpp |
+| Dedicated model controls and restrictions | `docs/models/`; the public `/models/` directory explains profiles | Nemotron, Qwen3-ASR, S1-mini |
+| Qualification history and results | The issue or pull request | Inspected version, fixtures, and observed behavior |
+
+`internal/modelprofile` remains the authority for dedicated profiles and their
+backend intersections. Update the editorial summaries in `site/src/data/models.ts`
+and the corresponding model guides when these contracts change. Do not present
+Generic examples, such as Whisper or Kokoro, as additional dedicated profiles.
+Link model guides to backend installation and backend guides to model controls.
+Keep test reports and qualification history in issues or pull requests, not in
+this guide or on product cards.
+
+When moving a guide, update internal links and the explicit Starlight sidebar,
+and preserve its old URL with a base-path-aware Astro redirect. Check the Models
+and Backends navigation on desktop and mobile, cross-links, and redirects after
+building the static site. No inference is needed for this review.
+
+## Evidence to record in the issue or pull request
+
+For a live setup, record the operation, Freehand revision, server release or
+commit when known, model/voice identifier, response format or streaming dialect,
+and observed outcome. Explicitly mark unknown versions. Do not publish private
+URLs, credentials, transcripts, machine names, or personal file paths.
+
+| Evidence | Record explicitly |
+| --- | --- |
+| Client fixtures | Request fields, errors, truncation, and completion semantics |
+| Upstream source or documentation | Inspected tag or version |
+| Live setup | Behavior observed for that exact setup |
+| Native interactive acceptance | Windows and macOS results separately |
+
+## Adding a planned profile
+
+<Steps>
+
+1. Add a stable ID with only the relevant operations, availability off, and no
+   implemented capabilities.
+2. Explain the concrete missing contract work in a public directory entry and
+   a specific guide anchor.
+3. Regenerate the catalog and check that Settings and the site agree on the
+   planned state. Track scheduling and delivery in GitHub issues/PRs.
+
+</Steps>
+
+## Public-page review
+
+- [ ] Desktop and mobile navigation show the active page and visible keyboard focus.
+- [ ] Compatibility matrices scroll on small screens.
+- [ ] Links work with the production base path, including guide anchors and redirects.
+- [ ] Canonical metadata is correct.
+- [ ] The directory's main-branch notice remains visible; it does not promise
+  support in an older release.
+
+## Provider identity assets
+
+Use the shared SVG collection and provenance manifest in `branding/providers/`.
+Follow its README for source, license, and asset requirements. Provider identity
+is independent of capability support; do not maintain another set of support
+flags in presentation code. Check the affected app and site surfaces after an
+asset change, including neutral fallbacks and the public icon credits.
+
+<CardGrid>
+  <LinkCard title="Protocol contracts" href="../../reference/protocol/" description="Review request, completion, and discovery behavior." />
+  <LinkCard title="Native acceptance" href="../../safety/native-test-checklist/" description="Collect evidence on each affected platform." />
+</CardGrid>

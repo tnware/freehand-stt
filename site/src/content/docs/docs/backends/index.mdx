@@ -3,14 +3,19 @@ title: Backend compatibility
 description: Choose a backend for transcription, cleanup, and text to speech.
 ---
 
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 import ProviderIcon from "../../../../components/ProviderIcon.astro";
 import { availableBackends } from "../../../../data/backends";
 export const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-Freehand connects to infrastructure you choose. Start with the
-[visual backend directory](../../backends/) to compare operations, then use
-a guide below to get connected. For model-specific recognition, cleanup, and voice controls,
-visit the separate [model directory](../../models/) and [model profile guides](../models/).
+Choose a **backend profile** for the API your server exposes. Choose a
+**model profile** separately for the languages and controls of its loaded model.
+The server can run on your computer, a LAN server, a VPS, or a hosted service.
+
+<CardGrid>
+  <LinkCard title="Compare backends" href="../../backends/" description="Browse the visual directory by transcription, cleanup, and speech capabilities." />
+  <LinkCard title="Choose model behavior" href="../models/" description="Find supported languages, recognition hints, cleanup, and voice controls." />
+</CardGrid>
 
 :::note[Version compatibility]
 Your installed release may have fewer options than these guides. Check each
@@ -37,13 +42,14 @@ guide's server version and model requirements before configuring a connection.
 
 ## Run a backend
 
-For installation inside Freehand, start with [Local runtimes](../guides/local-runtime/).
-That guide lists the supported NeMo, whisper.cpp, and llama.cpp models, tasks,
-and platforms, including optional MagpieTTS speech alongside NeMo transcription.
-Downloads are explicit.
+:::tip[Let Freehand manage a local installation]
+Start with [Local runtimes](../guides/local-runtime/) for supported NeMo,
+whisper.cpp, and llama.cpp models and platforms, including optional MagpieTTS
+speech alongside NeMo transcription. Downloads are explicit.
+:::
 
-The launch recipes below are for services you manage separately. Use them for
-other models, custom runtime settings, or a server on another machine.
+Use the recipes below when you manage the service yourself, need other models
+or runtime settings, or run the server on another machine.
 
 | Server                    | Launch instructions                                                                                             | Freehand operation                         |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
@@ -56,39 +62,44 @@ other models, custom runtime settings, or a server on another machine.
 | vLLM-Omni                 | [Qwen3-TTS serving guide](./vllm-omni/#run-the-server)                                                          | Text to speech with preset voices          |
 | Generic OpenAI-compatible | [Connect an existing endpoint](./generic/)                                                                      | The operations implemented by your server  |
 
-These local examples use PowerShell and loopback ports. Docker recipes require
-Docker Desktop with Linux containers; NVIDIA examples also require a working
-WSL2 GPU setup. Follow [Docker's GPU setup](https://docs.docker.com/desktop/features/gpu/)
-if `docker run --gpus ...` cannot access the card. First use downloads the image
-and the selected model. Model weights stay in the recipe's folder or named
-volume when a container stops.
+### Before running a local recipe
 
-The launch examples include stop and restart commands; guides that link to
-upstream setup use that runtime's instructions. If you run several models on
-one GPU, leave enough memory for each or stop an unused server first.
+- **Shell and containers:** examples use PowerShell and loopback ports. Docker
+  recipes require Linux containers; NVIDIA examples need working WSL2 GPU
+  access. Follow [Docker's GPU setup](https://docs.docker.com/desktop/features/gpu/)
+  if `docker run --gpus ...` cannot access the card.
+- **Downloads and storage:** first use downloads the image and selected model.
+  Stopping a container keeps weights in its recipe's folder or named volume.
+- **Resources and shutdown:** leave memory for every concurrent model or stop
+  unused servers. Recipes include stop/restart commands or link upstream setup.
 
-For a remote or hosted server, use the same profile with the administrator's
-HTTPS base URL, model ID, and authentication instead. Loopback-bound examples
-are for a client on the same PC. See [connection topologies](../guides/connect-a-server/#choose-a-topology)
-for separate STT, cleanup, and speech endpoints.
+For a remote or hosted deployment, use the same profile with the administrator's
+HTTPS base URL, model ID, and authentication. Loopback recipes serve a client on
+the same computer. See [connection topologies](../guides/connect-a-server/#choose-a-topology)
+for separate transcription, cleanup, and speech endpoints.
 
 ## Check your connection
 
-**Check connection** reads server health or model metadata. **Refresh voices**
-lists voices on supported speech servers. Neither action generates audio or
-runs transcription. Use a short recording or voice preview to try your selection.
+| Action | What it checks |
+| --- | --- |
+| **Check connection** | Health or model metadata |
+| **Refresh voices** | Voice metadata on supported speech servers |
+| Short recording or voice preview | Runs only the model you explicitly selected so you can review its output |
+
+Health and discovery never generate audio or run transcription.
 
 ## Choose profiles per operation
 
-Voice transcription, Audio-file transcription, Cleanup, and Text to speech each
-select their own connection. Tasks using the same managed runtime share its
-selected model and get the matching model profile automatically.
+| Where | Configure |
+| --- | --- |
+| **Connections** on the activity rail | Endpoint, authentication, backend profile, and allowed uses |
+| Workflow **Settings** cog | Active connection, model, model profile, voices, and model options |
+| **Local runtimes** | Installation and loaded models for managed connections |
 
-For manual connections, manage endpoint, authentication, and backend profile in
-**Connections** on the activity rail. Use each workflow's **Settings** cog to open
-its right options sidebar for models, model profiles, voices, and other
-model options; Freehand remembers those options for each
-connection and model.
+Voice transcription, Audio-file transcription, Cleanup, and Text to speech
+select their own connection. Tasks using one managed runtime share its selected
+model and get the matching profile automatically. Manual model options are
+remembered per connection and model.
 
 ## Beyond the current contract
 

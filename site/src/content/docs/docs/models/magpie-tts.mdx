@@ -1,0 +1,86 @@
+---
+title: MagpieTTS Multilingual 357M
+description: Generate local speech with MagpieTTS voices and language selection on NeMo-Speech.cpp.
+---
+
+import { Tabs, TabItem, LinkCard } from '@astrojs/starlight/components';
+
+Freehand's **MagpieTTS Multilingual 357M** profile supports the **v2602**
+checkpoint through **NeMo-Speech.cpp v0.1.0**. It generates spoken audio from
+text with a choice of voices and languages.
+
+## Set up speech
+
+<Tabs>
+  <TabItem label="Managed local runtime">
+
+Follow [Local speech with MagpieTTS](../../guides/local-runtime/#local-speech-with-magpietts).
+NeMo can load Magpie alongside your transcription model. Both share the runtime's
+**Start** and **Stop** controls.
+
+  </TabItem>
+  <TabItem label="Manual server">
+
+Follow the [NeMo connection guide](../../backends/nemo-speech/) and enable
+**Text to speech** on the connection. Open **Text to speech → Settings → Speech**,
+choose that connection and its loaded speech model, then select
+**MagpieTTS Multilingual 357M** as the model profile.
+
+  </TabItem>
+</Tabs>
+
+Turn on **Enable text to speech**, choose a voice and language, and **Save**.
+Choose **Preview** to hear your current edits without saving them. Enter text in
+the composer and choose **Speak** to use the saved settings. These actions
+request audio; opening settings and refreshing metadata do not.
+
+## Choose a voice and language
+
+| Choice | Available values |
+| --- | --- |
+| Voices | John, Sofia, Aria, Jason, Leo; each supports all checkpoint languages |
+| Default voice | `default` uses the server's configured speaker |
+| Languages | English, Spanish, German, French, Italian, Vietnamese, Hindi, Mandarin Chinese, Japanese |
+| Server default language | Uses server configuration; does not request automatic detection |
+
+**Refresh voices** reads the loaded model's metadata. After a successful refresh,
+Freehand limits language choices to those the server advertises. Japanese and
+Chinese require NeMo builds with their language frontends enabled.
+
+## Available controls
+
+:::caution[Set speaking speed to 1.0 before switching]
+NeMo v0.1.0 accepts only normal speed. If your current speech setup uses another
+speed, set **Speaking speed** to **1.0** before choosing Magpie or its connection.
+Freehand keeps your previous selection until you correct it.
+:::
+
+| Capability | Availability |
+| --- | --- |
+| Voice and language | Sent with the request |
+| Audio | Complete WAV output |
+| Speed adjustment, style, cloning, streamed speech | Unavailable |
+| Text normalization | Requires server support and grammar assets; managed setup does not install them |
+
+Your speech voice and language are saved with this model's options. Generated
+audio stays in memory until cleared, replaced, recording starts, or Freehand
+quits. You can explicitly save a WAV file from the player.
+
+## Checkpoint version
+
+Managed setup downloads the versioned Magpie model, NanoCodec decoder, and
+tokenizer assets qualified with NeMo v0.1.0.
+
+:::note[The managed checkpoint is v2602]
+The [newer v2607 model card](https://huggingface.co/nvidia/magpie_tts_multilingual_357m)
+adds Arabic, Korean, and Portuguese for twelve languages. Those additions are
+outside Freehand's v2602 profile and managed download; installing or refreshing
+the catalog does not upgrade the checkpoint.
+:::
+
+See the [v2602 model card](https://huggingface.co/nvidia/magpie_tts_multilingual_357m/blob/v2602/README.md),
+[NeMo speech API](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/api.md#post-v1audiospeech),
+and [language frontend requirements](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/tts/configuration.md)
+for the qualified server behavior.
+
+<LinkCard title="Generate and play speech" href="../../guides/text-to-speech/" description="Use the composer, listen to transcripts, control playback, or save a WAV." />

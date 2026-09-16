@@ -1,0 +1,93 @@
+---
+title: Transcribe an audio file
+description: Choose a recording, receive a complete or streamed transcript, and copy the result.
+---
+
+import { Steps, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Use **Audio file** for an existing recording. It has its own connection and
+language, with an independent model in manual mode. Voice and files using the
+same managed runtime share its selected transcription model. No microphone,
+recording shortcut, or completed Voice setup is required. Configure its
+**Transcription** options first, using a
+[saved connection](../connect-a-server/) or [local runtime](../local-runtime/).
+
+| Before you start | Limit |
+| --- | --- |
+| File picker accepts | FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, or WebM |
+| File size | At most **2 GiB**; your server may accept less |
+| Other recording work | Finish or cancel file transcription before using the microphone |
+
+Your server must decode the selected format; Freehand does not transcode it.
+WAV is the conservative choice for whisper.cpp. Freehand does not split oversized
+files for upload. Selecting a file neither uploads nor modifies it.
+
+## Transcribe and copy
+
+<Steps>
+
+1. **Open Audio file** and choose **Choose** to select a recording.
+2. **Choose how results arrive.** Enable **Show text as it arrives** when
+   available, or leave it off for a completed result.
+3. **Choose Transcribe.** Follow progress and use **Cancel** to stop active work.
+4. **Copy the completed transcript** into your destination. File results never
+   insert automatically because no destination was captured.
+
+</Steps>
+
+Choose **Change** for a different file or **Again** to transcribe the same file
+again. Optional [Cleanup](../post-processing/) runs after a successful completed
+transcript. **Listen** is available when [text to speech](../text-to-speech/) is enabled.
+
+## Choose a response mode
+
+<Tabs>
+  <TabItem label="Completed result">
+
+Leave **Show text as it arrives** off to receive the completed transcript.
+**Completed transcript** means text updates are unavailable for the current
+selection. If you change or fix your server, **Try streaming**, when offered,
+enables updates for the next request; it does not upload the file itself.
+
+  </TabItem>
+  <TabItem label="Text as it arrives">
+
+Enable **Show text as it arrives** to review updates from a compatible server.
+The server may still return the complete transcript without intermediate updates.
+This is an uploaded-file request, separate from [live microphone transcription](../live-transcription/).
+
+If streaming fails, available partial text remains copyable and is not sent for
+cleanup. Check it for missing words. Some servers cannot signal whether a stream
+is complete; see [file streaming compatibility](../../reference/protocol/).
+
+  </TabItem>
+</Tabs>
+
+:::caution[Retrying submits the file again]
+If streaming is rejected or incompatible, Freehand stops and remembers that it
+is unavailable for that endpoint and model. **Retry** makes a new completed-mode
+request. It can repeat server work or charges; Freehand never resubmits automatically.
+:::
+
+## Recover a failed request
+
+Open **Details** beside the error, correct the cause, then choose **Retry**.
+Copy any useful partial text before starting again.
+
+| Symptom | Next action |
+| --- | --- |
+| Upload rejected / `413` | Choose a smaller file or adjust the server or proxy's upload limit |
+| Timed out | Review server load and the file request budget in **Request settings** |
+| Partial or interrupted stream | Review the partial result and deliberately retry after fixing the connection |
+
+## Keep a result
+
+The current file result is available with history off. It clears when you clear
+or replace the file, start another transcription, or exit. Temporary request
+audio is deleted after success, failure, or cancellation; the original file is
+unchanged.
+
+<CardGrid>
+  <LinkCard title="Keep session history" href="../history/" description="Enable bounded, memory-only history before a run to keep and compare transcripts." />
+  <LinkCard title="Improve recognition hints" href="../vocabulary/" description="Use shared names and phrases with supported models." />
+</CardGrid>
