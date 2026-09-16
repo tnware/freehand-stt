@@ -169,7 +169,7 @@ describe("SettingsEditor settings snapshots", () => {
     expect(session.editor.applySettingsSnapshot(changed)).toBe(false);
     expect(session.editor.draft.model).toBe("speech/draft");
     expect(session.editor.applied?.model).toBe("speech/stt");
-    expect(session.messages.info).toContain("another window");
+    expect(session.messages.info).toContain("Saved settings changed");
   });
 
   it("tracks and discards unsaved settings and credential drafts", async () => {

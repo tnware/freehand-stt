@@ -35,7 +35,8 @@ Each task selects its own Connection. Local Voice or audio-file recognition does
 not make cleanup local: if cleanup is enabled, its selected connection receives
 the recognized text. Choose [managed llama.cpp with S1-mini](../local-runtime/#local-cleanup-with-s1-mini)
 or another local cleanup service to keep that stage on this computer. Text to
-speech needs a manually configured endpoint; Freehand has no managed TTS runtime.
+speech can use [managed NeMo with MagpieTTS](../local-runtime/#local-speech-with-magpietts)
+or a separately configured endpoint.
 Turn cleanup and speech off or configure them locally if you do not want their
 text sent to a remote service.
 
@@ -101,6 +102,9 @@ to insert text.
 - On macOS, the same app and window must remain focused. If you move to another
   field in that window, Freehand delivers to the currently focused field.
 
+Release shortcut modifiers before delivery. Windows waits briefly for held
+Ctrl, Alt, Shift, or Windows keys; if they remain held, use explicit **Copy**.
+
 macOS Secure Input blocks delivery while active. Freehand does not identify
 every password field: custom secure fields that do not enable Secure Input may
 not be detected. Avoid dictating sensitive text into an uncertain destination.
@@ -151,7 +155,9 @@ redirecting alias; Freehand will not forward your key, audio, or text to the
 redirect destination.
 
 Freehand filters literal copies of your API key from server response details
-and rejects transcript text containing the key. This does not make an untrusted
+and rejects transcript text containing the key, including realtime captions and
+finals. Realtime checks span streaming messages and model-specific text parsing.
+This does not make an untrusted
 server safe: the server has already received the key and could misuse or
 transform it. Only connect to services you trust.
 

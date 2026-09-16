@@ -101,7 +101,6 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	conn, response, err := websocket.Dial(setup, u.String(), &websocket.DialOptions{HTTPClient: client, HTTPHeader: headers})
 	headers.Del("Authorization")
-	key = ""
 	if err != nil {
 		cancel()
 		if response != nil && response.Body != nil {
@@ -129,7 +128,7 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 	} else if err := configureNeMo(setup, conn, cfg, created); err != nil {
 		return fail(err)
 	}
-	go s.run(publish)
+	go s.run(key, publish)
 	return s, nil
 }
 
@@ -156,24 +155,27 @@ func (s *Session) writeAudio(ctx context.Context, frame []byte) error {
 	return s.conn.Write(ctx, websocket.MessageBinary, frame)
 }
 
-func (s *Session) run(publish func(Update)) {
+func (s *Session) run(key string, publish func(Update)) {
 	defer close(s.Done)
 	defer s.cancel()
 	defer s.conn.CloseNow()
 	readDone := make(chan Result, 1)
-	go func() {
+	// Retain the request credential only in the response reader, so reflected
+	// credentials cannot become captions, deliverable text, or history.
+	go func(key string) {
 		var result Result
 		if s.backend == compatibility.VLLM {
-			result = s.readVLLM(publish)
+			result = s.readVLLM(credentialGuard(key), publish)
 		} else {
-			result = s.readNeMo(publish)
+			result = s.readNeMo(credentialGuard(key), publish)
 		}
 		if result.Err != nil {
 			s.once.Do(func() { close(s.Failed) })
 			s.cancel()
 		}
 		readDone <- result
-	}()
+	}(key)
+	key = ""
 	bytes := int64(0)
 	var writeErr error
 	// Always drain after cancellation until the native producer closes. This
@@ -206,7 +208,9 @@ func (s *Session) run(publish func(Update)) {
 		}
 	}
 	s.result = <-readDone
-	if writeErr != nil {
+	// A rejected response cancels an in-flight writer. Preserve that security
+	// classification instead of replacing it with the consequential send error.
+	if _, reflected := errors.AsType[credentialReflectionError](s.result.Err); writeErr != nil && !reflected {
 		s.result.Err = writeErr
 	}
 	s.result.AudioMilliseconds = bytes * 1000 / (audio.SampleRate * 2)

@@ -83,7 +83,7 @@ export class Session {
         !this.editor.configurationRetrying &&
         !this.editor.configurationResetting &&
         !this.editor.quickSettingsPending.length,
-      () => this.editor.load(),
+      () => this.editor.refresh(),
     );
   }
 

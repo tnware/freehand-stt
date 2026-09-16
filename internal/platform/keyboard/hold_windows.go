@@ -4,13 +4,14 @@ package keyboard
 
 import (
 	"errors"
-	"github.com/tnware/freehand-stt/internal/hotkey"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 
+	"github.com/tnware/freehand-stt/internal/hotkey"
 	"golang.org/x/sys/windows"
 )
 
@@ -22,6 +23,7 @@ const (
 	wmSysKeyUp         = 0x0105
 	llkhfLowerInjected = 0x00000002
 	llkhfInjected      = 0x00000010
+	keyboardCloseBound = 2 * time.Second
 )
 
 var user32 = windows.NewLazySystemDLL("user32.dll")
@@ -34,6 +36,19 @@ var callNextHookEx = user32.NewProc("CallNextHookEx")
 var getMessage = user32.NewProc("GetMessageW")
 var postThreadMessage = user32.NewProc("PostThreadMessageW")
 var getCurrentThreadID = kernel32.NewProc("GetCurrentThreadId")
+var peekMessage = user32.NewProc("PeekMessageW")
+
+var nextKeyboardHook = func(code int32, wparam uintptr, data *keyboardData) uintptr {
+	next, _, _ := callNextHookEx.Call(0, uintptr(code), wparam, uintptr(unsafe.Pointer(data)))
+	return next
+}
+
+func stopKeyboardThread(tid uint32) error {
+	if r, _, err := postThreadMessage.Call(uintptr(tid), 0x0012, 0, 0); r == 0 {
+		return err
+	}
+	return nil
+}
 
 type keyboardData struct {
 	VKCode    uint32
@@ -54,21 +69,30 @@ type nativeMessage struct {
 }
 
 type HoldHook struct {
-	mu        sync.Mutex
-	reducer   hotkey.Reducer
-	started   bool
-	threadID  uint32
-	edges     chan hotkey.Edge
-	overflow  chan struct{}
-	done      chan struct{}
-	press     func()
-	release   func()
-	cancel    func()
-	available atomic.Bool
+	mu            sync.Mutex
+	reducer       hotkey.Reducer
+	started       bool
+	initialized   bool
+	closed        bool
+	threadID      uint32
+	edges         chan hotkey.Edge
+	overflow      chan struct{}
+	done          chan struct{}
+	callbacksDone chan struct{}
+	stop          chan struct{}
+	postQuit      func(uint32) error
+	press         func()
+	release       func()
+	cancel        func()
+	available     atomic.Bool
 }
 
 func NewHoldHook(press, release, cancel func()) *HoldHook {
-	return &HoldHook{edges: make(chan hotkey.Edge, 8), overflow: make(chan struct{}, 1), done: make(chan struct{}), press: press, release: release, cancel: cancel}
+	return &HoldHook{
+		edges: make(chan hotkey.Edge, 8), overflow: make(chan struct{}, 1),
+		done: make(chan struct{}), callbacksDone: make(chan struct{}), stop: make(chan struct{}),
+		postQuit: stopKeyboardThread, press: press, release: release, cancel: cancel,
+	}
 }
 
 func (h *HoldHook) Start(value string) error {
@@ -80,100 +104,172 @@ func (h *HoldHook) Start(value string) error {
 	if err != nil {
 		return err
 	}
+	h.mu.Lock()
+	if h.closed || h.initialized {
+		h.mu.Unlock()
+		return errors.New("hold-to-talk hook is already started or closed")
+	}
+	h.initialized = true
+	h.mu.Unlock()
 	ready := make(chan error, 1)
 	go h.consume()
 	go h.loop(chord, ready)
 	if err = <-ready; err != nil {
 		return err
 	}
-	h.available.Store(true)
 	return nil
 }
 
 func (h *HoldHook) loop(chord hotkey.Chord, ready chan<- error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
+	defer h.sourceStopped()
+	// Create the message queue before publishing its thread ID to Close.
+	var msg nativeMessage
+	peekMessage.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0, 0)
 	tid, _, _ := getCurrentThreadID.Call()
 	h.mu.Lock()
 	h.threadID = uint32(tid)
 	h.reducer = hotkey.Reducer{Chord: chord}
+	closed := h.closed
 	h.mu.Unlock()
-	callback := syscall.NewCallback(func(code int, wparam, lparam uintptr) uintptr {
-		if code >= 0 {
-			data := (*keyboardData)(unsafe.Pointer(lparam))
-			if !shortcutCaptureActive.Load() && data.Flags&(llkhfInjected|llkhfLowerInjected) == 0 {
-				down := wparam == wmKeyDown || wparam == wmSysKeyDown
-				up := wparam == wmKeyUp || wparam == wmSysKeyUp
-				if down || up {
-					h.mu.Lock()
-					edge := h.reducer.Event(data.VKCode, down)
-					h.mu.Unlock()
-					if edge != hotkey.NoEdge {
-						select {
-						case h.edges <- edge:
-						default:
-							select {
-							case h.overflow <- struct{}{}:
-							default:
-							}
-						}
-					}
-				}
-			}
-		}
-		next, _, _ := callNextHookEx.Call(0, uintptr(code), wparam, lparam)
-		return next
-	})
+	if closed {
+		ready <- errors.New("hold-to-talk hook is closed")
+		return
+	}
+	callback := syscall.NewCallback(h.callback)
 	hook, _, callErr := setWindowsHookEx.Call(whKeyboardLL, callback, 0, 0)
 	if hook == 0 {
 		ready <- errors.New("low-level keyboard hook could not start: " + callErr.Error())
-		close(h.done)
 		return
 	}
+	defer unhookWindowsHookEx.Call(hook)
 	h.mu.Lock()
 	h.started = true
+	h.available.Store(!h.closed)
 	h.mu.Unlock()
 	ready <- nil
-	var msg nativeMessage
 	for {
+		select {
+		case <-h.stop:
+			return
+		default:
+		}
 		result, _, _ := getMessage.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
 		if int32(result) <= 0 {
 			break
 		}
 	}
-	unhookWindowsHookEx.Call(hook)
+}
+
+// nCode is a Win32 32-bit int, including on amd64. The typed native pointer
+// remains valid only during this callback and is never retained by Go.
+func (h *HoldHook) callback(code int32, wparam uintptr, data *keyboardData) uintptr {
+	if code >= 0 && !shortcutCaptureActive.Load() && data.Flags&(llkhfInjected|llkhfLowerInjected) == 0 {
+		down := wparam == wmKeyDown || wparam == wmSysKeyDown
+		up := wparam == wmKeyUp || wparam == wmSysKeyUp
+		if down || up {
+			h.mu.Lock()
+			if !h.closed {
+				if edge := h.reducer.Event(data.VKCode, down); edge != hotkey.NoEdge {
+					h.enqueueLocked(edge)
+				}
+			}
+			h.mu.Unlock()
+		}
+	}
+	return nextKeyboardHook(code, wparam, data)
+}
+
+func (h *HoldHook) sourceStopped() {
 	h.available.Store(false)
 	h.mu.Lock()
-	edge := h.reducer.ForceRelease()
+	h.reducer.ForceRelease()
 	h.started = false
 	h.mu.Unlock()
-	if edge == hotkey.Released && h.release != nil {
-		h.release()
-	}
-	if h.cancel != nil {
-		h.cancel()
-	}
 	close(h.done)
 }
 
 func (h *HoldHook) consume() {
-	for {
-		select {
-		case edge := <-h.edges:
-			if edge == hotkey.Pressed && h.press != nil {
-				h.press()
-			} else if edge == hotkey.Released && h.release != nil {
-				h.release()
-			}
-		case <-h.overflow:
-			h.mu.Lock()
-			h.reducer.ForceRelease()
-			h.mu.Unlock()
+	defer close(h.callbacksDone)
+	active := false
+	cancel := func() {
+		if active {
+			active = false
 			if h.cancel != nil {
 				h.cancel()
 			}
-		case <-h.done:
+		}
+	}
+	for {
+		// Source teardown never calls recorder code. The one tracked consumer
+		// finishes any in-flight callback and then cancels without replaying edges.
+		select {
+		case <-h.stop:
+			cancel()
 			return
+		case <-h.done:
+			cancel()
+			return
+		default:
+		}
+		select {
+		case <-h.overflow:
+			cancel()
+			continue
+		default:
+		}
+		select {
+		case edge := <-h.edges:
+			h.mu.Lock()
+			closed := h.closed || !h.started
+			h.mu.Unlock()
+			if closed {
+				cancel()
+				return
+			}
+			if edge == hotkey.Pressed && !active {
+				active = true
+				if h.press != nil {
+					h.press()
+				}
+			} else if edge == hotkey.Released && active {
+				active = false
+				if h.release != nil {
+					h.release()
+				}
+			}
+		case <-h.overflow:
+			cancel()
+		case <-h.stop:
+			cancel()
+			return
+		case <-h.done:
+			cancel()
+			return
+		}
+	}
+}
+
+func (h *HoldHook) drainLocked() {
+	for {
+		select {
+		case <-h.edges:
+		default:
+			return
+		}
+	}
+}
+
+func (h *HoldHook) enqueueLocked(edge hotkey.Edge) {
+	select {
+	case h.edges <- edge:
+	default:
+		h.drainLocked()
+		h.reducer.ForceRelease()
+		select {
+		case h.overflow <- struct{}{}:
+		default:
 		}
 	}
 }
@@ -189,15 +285,17 @@ func (h *HoldHook) Configure(value string) error {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if !h.started {
+	if !h.started || h.closed {
 		if value == "" {
 			return nil
 		}
 		return errors.New("hold-to-talk hook is unavailable")
 	}
-	if h.reducer.ForceRelease() == hotkey.Released && h.release != nil {
-		go h.release()
-	}
+	h.reducer.ForceRelease()
+	h.drainLocked()
+	// The consumer owns all callbacks, including a configuration release. This
+	// also settles an already-consumed press whose physical release was queued.
+	h.enqueueLocked(hotkey.Released)
 	h.reducer = hotkey.Reducer{Chord: chord}
 	return nil
 }
@@ -211,16 +309,39 @@ func (h *HoldHook) Available() (bool, string) {
 
 func (h *HoldHook) Close() error {
 	h.mu.Lock()
-	started, tid := h.started, h.threadID
+	if !h.closed {
+		h.closed = true
+		close(h.stop)
+	}
+	initialized, tid := h.initialized, h.threadID
+	h.available.Store(false)
 	h.mu.Unlock()
-	if !started {
+	if !initialized {
 		return nil
 	}
-	if r, _, err := postThreadMessage.Call(uintptr(tid), 0x0012, 0, 0); r == 0 {
-		return err
+	deadline := time.NewTimer(keyboardCloseBound)
+	defer deadline.Stop()
+	var stopErr error
+	select {
+	case <-h.done:
+	default:
+		if tid != 0 {
+			stopErr = h.postQuit(tid)
+		}
 	}
-	<-h.done
-	return nil
+	select {
+	case <-h.done:
+	case <-deadline.C:
+		return errors.Join(stopErr, errors.New("hold-to-talk native shutdown timed out"))
+	}
+	select {
+	case <-h.callbacksDone:
+		return stopErr
+	case <-deadline.C:
+		// Retain both completion channels. A later Close can still observe the
+		// tracked consumer finishing after the owning service cancels its work.
+		return errors.Join(stopErr, errors.New("hold-to-talk callback shutdown timed out"))
+	}
 }
 
 func HoldAvailability() (bool, string) {

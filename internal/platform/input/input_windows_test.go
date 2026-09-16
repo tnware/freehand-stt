@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"testing/synctest"
+	"time"
 
 	"github.com/tnware/freehand-stt/internal/insertion"
 )
@@ -21,10 +23,72 @@ func replaceInputHooks(t *testing.T) {
 	t.Helper()
 	oldForeground := insertionForeground
 	oldDispatch := dispatchUnicodeEvents
+	oldModifiers := insertionModifiersReleased
+	insertionModifiersReleased = func() bool { return true }
 	t.Cleanup(func() {
 		insertionForeground = oldForeground
 		dispatchUnicodeEvents = oldDispatch
+		insertionModifiersReleased = oldModifiers
 	})
+}
+
+func TestInsertUnicodeWaitsForModifiersBeforeEachBatch(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		replaceInputHooks(t)
+		target := inputTestTarget()
+		insertionForeground = func() (insertion.Target, error) { return target, nil }
+		blockedUntil := time.Now().Add(30 * time.Millisecond)
+		insertionModifiersReleased = func() bool { return !time.Now().Before(blockedUntil) }
+		dispatches := 0
+		dispatchUnicodeEvents = func(events []inputEvent) uintptr {
+			if time.Now().Before(blockedUntil) {
+				t.Fatal("dispatched with physical modifiers held")
+			}
+			dispatches++
+			blockedUntil = time.Now().Add(30 * time.Millisecond)
+			return uintptr(len(events))
+		}
+		started := time.Now()
+		if err := (Input{}).InsertUnicode(t.Context(), target, strings.Repeat("x", unicodeInputFastPathUnits+1)); err != nil {
+			t.Fatal(err)
+		}
+		if dispatches != 3 || time.Since(started) != 90*time.Millisecond {
+			t.Fatalf("dispatches=%d, waited=%s", dispatches, time.Since(started))
+		}
+	})
+}
+
+func TestInsertUnicodeModifierWaitRejectsWithoutDispatch(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		interrupt func(context.CancelFunc, *insertion.Target)
+		want      error
+	}{
+		{name: "timeout", want: insertion.ErrCopyRequired},
+		{name: "cancel", interrupt: func(cancel context.CancelFunc, _ *insertion.Target) { cancel() }, want: context.Canceled},
+		{name: "focus", interrupt: func(_ context.CancelFunc, target *insertion.Target) { target.HWND++ }, want: insertion.ErrCopyRequired},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				replaceInputHooks(t)
+				target := inputTestTarget()
+				current := target
+				insertionForeground = func() (insertion.Target, error) { return current, nil }
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				insertionModifiersReleased = func() bool {
+					if test.interrupt != nil {
+						test.interrupt(cancel, &current)
+					}
+					return false
+				}
+				dispatchUnicodeEvents = func([]inputEvent) uintptr { t.Fatal("unexpected dispatch"); return 0 }
+				if err := (Input{}).InsertUnicode(ctx, target, "private text"); !errors.Is(err, test.want) {
+					t.Fatalf("error=%v, want %v", err, test.want)
+				}
+			})
+		})
+	}
 }
 
 func TestInsertUnicodeUsesSingleDispatchForOrdinaryTranscript(t *testing.T) {

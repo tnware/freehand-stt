@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/tnware/freehand-stt/internal/hotkey"
@@ -58,50 +59,21 @@ func (l *shortcutCaptureLoop) stop() {
 	}
 }
 
-func (l *shortcutCaptureLoop) run() {
+func (l *shortcutCaptureLoop) run(ctx context.Context) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	defer close(l.done)
 
+	var msg nativeMessage
+	peekMessage.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0, 0)
 	threadID, _, _ := getCurrentThreadID.Call()
 	l.threadID.Store(uint32(threadID))
-	callback := syscall.NewCallback(func(code int, wparam, lparam uintptr) uintptr {
-		if code < 0 {
-			next, _, _ := callNextHookEx.Call(0, uintptr(code), wparam, lparam)
-			return next
-		}
-		data := (*keyboardData)(unsafe.Pointer(lparam))
-		if data.Flags&(llkhfInjected|llkhfLowerInjected) != 0 {
-			next, _, _ := callNextHookEx.Call(0, uintptr(code), wparam, lparam)
-			return next
-		}
-		down := wparam == wmKeyDown || wparam == wmSysKeyDown
-		up := wparam == wmKeyUp || wparam == wmSysKeyUp
-		if !down && !up {
-			next, _, _ := callNextHookEx.Call(0, uintptr(code), wparam, lparam)
-			return next
-		}
-		result := l.recorder.Event(data.VKCode, down)
-		if result.State == hotkey.CaptureWaiting {
-			preview := l.recorder.Preview()
-			if preview != l.preview {
-				l.preview = preview
-				select {
-				case l.progress <- preview:
-				default:
-				}
-			}
-		}
-		switch result.State {
-		case hotkey.CaptureComplete:
-			l.finish(shortcutCaptureOutcome{chord: result.Chord})
-		case hotkey.CaptureCanceled:
-			l.finish(shortcutCaptureOutcome{canceled: true})
-		case hotkey.CaptureRejected:
-			l.finish(shortcutCaptureOutcome{err: result.Err})
-		}
-		return 1 // Suppress the complete physical edge while capture is active.
-	})
+	defer l.threadID.Store(0)
+	if err := ctx.Err(); err != nil {
+		l.ready <- err
+		return
+	}
+	callback := syscall.NewCallback(l.callback)
 	hook, _, callErr := setWindowsHookEx.Call(whKeyboardLL, callback, 0, 0)
 	if hook == 0 {
 		l.ready <- errors.New("shortcut capture hook could not start: " + callErr.Error())
@@ -110,8 +82,10 @@ func (l *shortcutCaptureLoop) run() {
 	defer unhookWindowsHookEx.Call(hook)
 	l.ready <- nil
 
-	var msg nativeMessage
 	for {
+		if ctx.Err() != nil {
+			return
+		}
 		result, _, _ := getMessage.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
 		if int32(result) <= 0 {
 			return
@@ -119,38 +93,93 @@ func (l *shortcutCaptureLoop) run() {
 	}
 }
 
+func (l *shortcutCaptureLoop) callback(code int32, wparam uintptr, data *keyboardData) uintptr {
+	if code < 0 {
+		return nextKeyboardHook(code, wparam, data)
+	}
+	if data.Flags&(llkhfInjected|llkhfLowerInjected) != 0 {
+		return nextKeyboardHook(code, wparam, data)
+	}
+	down := wparam == wmKeyDown || wparam == wmSysKeyDown
+	up := wparam == wmKeyUp || wparam == wmSysKeyUp
+	if !down && !up {
+		return nextKeyboardHook(code, wparam, data)
+	}
+	result := l.recorder.Event(data.VKCode, down)
+	if result.State == hotkey.CaptureWaiting {
+		preview := l.recorder.Preview()
+		if preview != l.preview {
+			l.preview = preview
+			select {
+			case l.progress <- preview:
+			default:
+			}
+		}
+	}
+	switch result.State {
+	case hotkey.CaptureComplete:
+		l.finish(shortcutCaptureOutcome{chord: result.Chord})
+	case hotkey.CaptureCanceled:
+		l.finish(shortcutCaptureOutcome{canceled: true})
+	case hotkey.CaptureRejected:
+		l.finish(shortcutCaptureOutcome{err: result.Err})
+	}
+	return 1 // Suppress the complete physical edge while capture is active.
+}
+
 type ShortcutCapturer struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc
 	done   <-chan struct{}
+	loop   *shortcutCaptureLoop
+	closed bool
 }
 
 // Capture records one chord using the backend-owned action policy.
 func (c *ShortcutCapturer) Capture(parent context.Context, policy hotkey.ShortcutPolicy, changed func(hotkey.Chord)) (hotkey.Chord, bool, error) {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return hotkey.Chord{}, false, errors.New("shortcut capture is closed")
+	}
 	if !shortcutCaptureActive.CompareAndSwap(false, true) {
+		c.mu.Unlock()
 		return hotkey.Chord{}, false, errShortcutCaptureBusy
 	}
 	defer shortcutCaptureActive.Store(false)
 
 	ctx, cancel := context.WithCancel(parent)
 	loop := newShortcutCaptureLoop(policy)
-	c.mu.Lock()
+	done := make(chan struct{})
 	c.cancel = cancel
-	c.done = loop.done
+	c.done = done
+	c.loop = loop
 	c.mu.Unlock()
+	// Stop the native source even while a presentation callback is blocked.
+	// Track the short cancellation callback through Capture's completion too.
+	stopDone := make(chan struct{})
+	stopOnCancel := context.AfterFunc(ctx, func() { defer close(stopDone); loop.stop() })
 	defer func() {
 		cancel()
+		if !stopOnCancel() {
+			<-stopDone
+		}
 		c.mu.Lock()
 		c.cancel = nil
 		c.done = nil
+		c.loop = nil
+		close(done)
 		c.mu.Unlock()
 	}()
 
-	go loop.run()
+	go loop.run(ctx)
 	select {
 	case err := <-loop.ready:
 		if err != nil {
 			<-loop.done
+			if ctx.Err() != nil {
+				return captureContextResult(parent, policy.Action)
+			}
 			return hotkey.Chord{}, false, err
 		}
 	case <-ctx.Done():
@@ -176,6 +205,9 @@ func (c *ShortcutCapturer) Capture(parent context.Context, policy hotkey.Shortcu
 			<-loop.done
 			return captureContextResult(parent, policy.Action)
 		case <-loop.done:
+			if ctx.Err() != nil {
+				return captureContextResult(parent, policy.Action)
+			}
 			select {
 			case outcome := <-loop.result:
 				return outcome.chord, outcome.canceled, outcome.err
@@ -204,13 +236,28 @@ func (c *ShortcutCapturer) Cancel() {
 
 func (c *ShortcutCapturer) Close() error {
 	c.mu.Lock()
-	cancel, done := c.cancel, c.done
+	c.closed = true
+	cancel, done, loop := c.cancel, c.done, c.loop
 	c.mu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
+	deadline := time.NewTimer(keyboardCloseBound)
+	defer deadline.Stop()
+	if loop != nil {
+		loop.stop()
+		select {
+		case <-loop.done:
+		case <-deadline.C:
+			return errors.New("shortcut capture native shutdown timed out")
+		}
+	}
 	if done != nil {
-		<-done
+		select {
+		case <-done:
+		case <-deadline.C:
+			return errors.New("shortcut capture callback shutdown timed out")
+		}
 	}
 	return nil
 }

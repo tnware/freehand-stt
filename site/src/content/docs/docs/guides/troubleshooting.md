@@ -89,6 +89,11 @@ explicit transcription, cleanup, or speech workflow.
 
 ## Saved settings need attention
 
+If a runtime save finishes while you are editing settings, Freehand keeps your
+draft and reports that saved settings changed. Save your intended edits, or
+discard them to load the latest saved values. The refresh does not silently
+replace your work.
+
 ### An edited value was rejected
 
 If saving fails, correct the marked setting using its error message, then save
@@ -197,6 +202,9 @@ custom secure fields enable it. A stale target or unavailable permission require
 Copy; a generic failure does not prove focus changed or that no text was typed.
 Check for partial delivery before pasting to avoid duplicates.
 
+Release Ctrl, Alt, Shift, and Windows keys before delivery on Windows. If a
+modifier remains held beyond the brief delivery wait, Freehand requires Copy.
+
 Stored-audio results always require an explicit **Copy** action. Also check the
 configured delivery mode: manual copy never inserts automatically.
 
@@ -257,6 +265,11 @@ Automatic long-file segmentation is not currently provided.
 - Choose **Speak** for text you enter, or **Listen** on a retained completed
   transcript. Playback never starts automatically after transcription.
 - Generate the speech again after changing endpoint or output settings.
+
+If **Restart** rewinds the audio but cannot start the output device, the audio
+stays paused at the beginning. Check your output device, then use **Resume** or
+**Restart**; retained audio remains available to save or clear. A failed rewind
+keeps the existing playback session and its progress tracking.
 
 ## Report a problem
 

@@ -70,6 +70,51 @@ function runtimeBoundary() {
 }
 
 describe("Session runtime mutation admission", () => {
+  it("preserves feature edits begun while a runtime preference save is pending", async () => {
+    const pending = CancellablePromise.withResolvers<void>();
+    const runtime = runtimeBoundary();
+    runtime.service.SetInstance = vi.fn(() => pending.promise);
+    const updated = structuredClone(settings);
+    updated.managedRuntimes = [
+      {
+        id: "local",
+        name: "Local speech",
+        provider: ProviderID.NeMoSpeechCPP,
+        model: "nemotron-3.5",
+        autoStart: true,
+      },
+    ];
+    const session = new Session({
+      ...serviceWithStatus(() => CancellablePromise.resolve(idle), {
+        settings: {
+          GetSettings: vi
+            .fn()
+            .mockImplementationOnce(() => CancellablePromise.resolve(settings))
+            .mockImplementationOnce(() => CancellablePromise.resolve(updated)),
+        },
+      }),
+      runtime: runtime.service,
+    });
+    let saving: Promise<boolean> | undefined;
+    try {
+      await session.load();
+      saving = session.runtime.saveInstance(updated.managedRuntimes[0]);
+      expect(runtime.service.SetInstance).toHaveBeenCalledOnce();
+      session.editor.draft!.fileTranscriptionTimeoutSeconds = 75;
+      pending.resolve();
+      expect(await saving).toBe(true);
+      expect(session.editor.draft!.fileTranscriptionTimeoutSeconds).toBe(75);
+      expect(session.editor.dirty).toBe(true);
+      session.editor.discardSettingsDraft();
+      expect(session.editor.applied).toMatchObject(updated);
+      expect(session.editor.dirty).toBe(false);
+    } finally {
+      pending.resolve();
+      await saving;
+      session.dispose();
+    }
+  });
+
   it.each(["file", "cleanup", "speech", "saved connection"] as const)(
     "permits Start and Stop during a pending %s metadata probe",
     async (feature) => {

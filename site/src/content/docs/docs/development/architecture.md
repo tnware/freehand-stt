@@ -389,6 +389,13 @@ The completed Voice snapshot adapts onto the existing STT request fields without
 changing persistent file settings. Native captions carry a bounded transient tail
 in one fixed row; they never become a delivery source or take focus.
 
+The realtime reader retains the immutable request credential only for response
+admission. It rejects literal credential reflections in accumulated deltas,
+wire finals, language evidence, and parsed/joined transcript text before publishing
+that value or returning deliverable text. Rejection signals capture failure and
+drains owned audio through the normal cancellation path; diagnostics expose only
+`credential_reflection`. The key is never stored on the session or in results.
+
 NeMo uses `audio/transcriptions/realtime` beneath the HTTP API root; vLLM retains
 its separate `realtime` route. Completed NeMo requests use `verbose_json` for
 language/duration metadata. Nemotron terminal language tags are stripped only
@@ -421,6 +428,13 @@ Native close resolves Save,
 Discard, or Keep editing before hiding the workspace. Failure retains the draft
 and error. Hiding clears transient credentials, shortcut capture, overlay
 preview, and sensitive runtime output. Go-owned jobs keep their own lifetimes.
+
+Runtime preference changes refresh through the shared editor's snapshot
+reconciliation. A refresh preserves settings and connection drafts, including
+edits begun while the runtime save was pending. Read sequence and snapshot
+revision fences reject responses superseded by a newer read, event, or save
+acknowledgement. Renderer disposal rejects late reads and save acknowledgements
+and prevents queued saves from starting.
 
 ## Durable settings storage
 
@@ -1417,6 +1431,16 @@ window. At insertion time:
 
 The native input adapter keeps UTF-16 surrogate pairs within one dispatch and checks cancellation before each dispatch. A partial Windows `SendInput` result is an ambiguous partial insertion. macOS Quartz posting has no application-delivery acknowledgement and can also be partial or ambiguous. Neither is retried automatically; only bounded delivery metadata may be logged. Diagnostics include UTF-16 unit count, dispatch count, strategy, duration, and a fixed failure stage; they never include transcript text or target identity.
 
+Windows checks held modifiers before each dispatch and waits only within a
+250 ms interval, preserving focus and cancellation checks throughout the wait.
+A timeout requires explicit Copy. Explicit clipboard writes use an owned
+message-only window and one pinned OS thread for the complete open/empty/set/close
+transaction; the owner is destroyed after closing the clipboard. No window is
+activated and automatic insertion never uses this clipboard path.
+Clipboard admission and open retries share a 500 ms context budget. After the
+clipboard is emptied, the synchronous write completes without an intervening
+cancellation check, and failures report that clipboard contents may have changed.
+
 Clipboard-paste mode is represented as a deferred policy boundary but cannot be selected or executed. It must remain fail-closed until complete multi-format clipboard capture, bounded paste synchronization, and conditional restoration that never overwrites newer user clipboard content are implemented.
 
 ## Optional transcript history
@@ -1471,6 +1495,20 @@ still owns it. Cleanup retains ownership until that call returns, and late work
 cannot publish a result, insert a transcript, or start a subsequent playback step.
 Restart separates native stop/reset (`Rewind`) from `Play`; the speech owner
 rechecks cancellation between them, just as it does between `Load` and `Play`.
+A failed rewind retains the previous generation and its monitor. After a
+successful rewind, failed playback starts publish paused audio at its actual
+position with Resume, Restart, Save, and Clear still available. The replacement
+monitor observes resumed playback; neither failure synthesizes new audio or
+forwards raw native errors to the renderer.
+
+Windows hold-to-talk separates the native hook/message-loop completion from its
+single callback consumer. Closing fences new edges and gives both completions
+one two-second wait budget, so a blocked recorder callback cannot prevent Wails
+from reaching feature shutdown. Late callbacks remain tracked and cannot replay
+queued presses. Temporary shortcut capture also stops its native source on
+cancellation and bounds Close to two seconds across source and callback waits.
+Native callback parameters preserve Win32's signed 32-bit `nCode` and native
+event-pointer types; negative codes forward without inspecting event data.
 
 Speech export takes an independent canonical WAV snapshot under player control,
 then releases control before disk I/O. The export worker owns and clears that

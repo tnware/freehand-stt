@@ -33,7 +33,7 @@ func (s *Session) writeVLLMAudio(ctx context.Context, frame []byte) error {
 // vLLM 0.28.0 emits transcription.delta/done, not the NeMo conversation events.
 // Only done after our stop request can yield deliverable text. A disconnected
 // stream, server error, or premature done never promotes the preview.
-func (s *Session) readVLLM(publish func(Update)) Result {
+func (s *Session) readVLLM(guard credentialGuard, publish func(Update)) Result {
 	raw := ""
 	for {
 		event, err := readEvent(s.ctx, s.conn)
@@ -47,6 +47,9 @@ func (s *Session) readVLLM(publish func(Update)) Result {
 			}
 			raw += event.Delta
 			text, _ := s.transcriptText(raw, false)
+			if err := guard.check(raw, text); err != nil {
+				return Result{Err: err}
+			}
 			if publish != nil {
 				publish(Update{Partial: text, Turn: 1})
 			}
@@ -58,6 +61,9 @@ func (s *Session) readVLLM(publish func(Update)) Result {
 				return Result{Err: errors.New("live transcript exceeded its size limit")}
 			}
 			text, language := s.transcriptText(*event.Text, true)
+			if err := guard.check(*event.Text, text, language); err != nil {
+				return Result{Err: err}
+			}
 			if publish != nil {
 				publish(Update{Final: text, Turn: 2})
 			}

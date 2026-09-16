@@ -237,6 +237,10 @@ export class SettingsEditor {
   }
 
   #pendingExternalSettings: Settings | null = null;
+  #disposed = false;
+  #settingsReadID = 0;
+  #settingsRevision = 0;
+  #profilesReadID = 0;
 
   #testedInputs = $state<Partial<Record<Purpose, string>>>({});
   #sttConnectionRevision = 0;
@@ -274,6 +278,8 @@ export class SettingsEditor {
 
   /** Applies a settings payload confirmed by Go and starts a fresh draft. */
   #adopt(settings: Settings) {
+    if (this.#disposed) return false;
+    this.#settingsRevision++;
     this.#invalidateConfirmedMetadata();
     this.quickSettingsFailed = null;
     this.validationIssue = null;
@@ -282,6 +288,7 @@ export class SettingsEditor {
     this.applied = copySettings(settings);
     this.draft = copySettings(this.applied);
     this.microphoneChoice = microphoneChoiceFor(this.applied.microphoneID);
+    return true;
   }
 
   #invalidateSTTConnection() {
@@ -318,22 +325,24 @@ export class SettingsEditor {
   }
 
   /**
-   * Synchronizes a renderer with the backend snapshot committed by another
-   * window. An active settings draft is never overwritten silently; the
-   * settings window owns that draft until the user saves or discards it.
+   * Reconciles external snapshots without replacing an active draft. Only the
+   * response to an explicit save may replace the draft being saved.
    */
   applySettingsSnapshot(settings: Settings): boolean {
+    if (this.#disposed) return false;
     if (settings.configuration.recoveryRequired) {
       this.#adopt(settings);
       this.clearCredentialDraft();
       return true;
     }
-    if ((this.dirty || this.connectionDraft !== null) && !this.saving) {
+    if (this.dirty || this.connectionDraft !== null) {
+      this.#settingsRevision++;
       this.#invalidateConfirmedMetadata();
       this.#pendingExternalSettings = copySettings(settings);
-      this.#messages.reportInfo(
-        "Settings changed in another window. Your edits are preserved; discard them to load the latest settings.",
-      );
+      if (!this.saving)
+        this.#messages.reportInfo(
+          "Saved settings changed. Your edits are preserved; discard them to load the latest settings.",
+        );
       return false;
     }
     this.#adopt(settings);
@@ -466,46 +475,88 @@ export class SettingsEditor {
   }
 
   async refreshDevices() {
-    if (this.devicesBusy) return;
+    if (this.#disposed || this.devicesBusy) return;
     this.#messages.dismissError();
     this.devicesBusy = true;
     try {
-      this.devices = usableDevices(await this.#service.input.ListMicrophones());
+      const devices = await this.#service.input.ListMicrophones();
+      if (!this.#disposed) this.devices = usableDevices(devices);
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (!this.#disposed) this.#messages.fail(cause);
     } finally {
       this.devicesBusy = false;
     }
   }
 
   async load(): Promise<boolean> {
+    if (this.#disposed) return false;
+    const results = await Promise.all([
+      this.refresh(),
+      this.#loadProcessingProfiles(),
+    ]);
+    return results.every(Boolean);
+  }
+
+  async #loadProcessingProfiles(): Promise<boolean> {
+    const readID = ++this.#profilesReadID;
     try {
-      const [settings, processingProfiles] = await Promise.all([
-        this.#service.settings.GetSettings(),
-        this.#service.settings.GetPostProcessingProfiles(),
-      ]);
-      this.#adopt(settings);
+      const processingProfiles =
+        await this.#service.settings.GetPostProcessingProfiles();
+      if (this.#disposed || readID !== this.#profilesReadID) return false;
       this.processingProfiles = processingProfiles ?? [];
       return true;
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (!this.#disposed && readID === this.#profilesReadID)
+        this.#messages.fail(cause);
+      return false;
+    }
+  }
+
+  /** Refreshes preferences after backend changes, retaining any edits made while reading. */
+  async refresh(): Promise<boolean> {
+    if (this.#disposed) return false;
+    const readID = ++this.#settingsReadID;
+    const revision = this.#settingsRevision;
+    try {
+      const settings = await this.#service.settings.GetSettings();
+      if (this.#disposed) return false;
+      // A later read, event, or save owns the confirmed snapshot now.
+      if (
+        readID !== this.#settingsReadID ||
+        revision !== this.#settingsRevision
+      )
+        return this.applied !== null;
+      this.applySettingsSnapshot(settings);
+      return true;
+    } catch (cause) {
+      if (
+        !this.#disposed &&
+        readID === this.#settingsReadID &&
+        revision === this.#settingsRevision
+      )
+        this.#messages.fail(cause);
       return false;
     }
   }
 
   async retryConfiguration(): Promise<boolean> {
-    if (this.configurationRetrying || this.configurationResetting) return false;
+    if (
+      this.#disposed ||
+      this.configurationRetrying ||
+      this.configurationResetting
+    )
+      return false;
     this.configurationRetrying = true;
     this.#messages.dismissError();
     try {
       const settings = await this.#service.settings.RetryConfiguration();
-      this.#adopt(settings);
+      if (!this.#adopt(settings)) return false;
       if (settings.configuration.recoveryRequired) return false;
       this.#messages.announce("Saved settings loaded successfully.");
       await Promise.all([this.refreshDevices(), this.#refreshHistory()]);
       return true;
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (!this.#disposed) this.#messages.fail(cause);
       return false;
     } finally {
       this.configurationRetrying = false;
@@ -513,12 +564,17 @@ export class SettingsEditor {
   }
 
   async resetConfiguration(): Promise<boolean> {
-    if (this.configurationRetrying || this.configurationResetting) return false;
+    if (
+      this.#disposed ||
+      this.configurationRetrying ||
+      this.configurationResetting
+    )
+      return false;
     this.configurationResetting = true;
     this.#messages.dismissError();
     try {
       const settings = await this.#service.settings.ResetConfiguration();
-      this.#adopt(settings);
+      if (!this.#adopt(settings)) return false;
       this.clearCredentialDraft();
       this.#invalidateSTTConnection();
       this.#invalidateProcessingConnection();
@@ -529,7 +585,7 @@ export class SettingsEditor {
       await Promise.all([this.refreshDevices(), this.#refreshHistory()]);
       return true;
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (!this.#disposed) this.#messages.fail(cause);
       return false;
     } finally {
       this.configurationResetting = false;
@@ -543,7 +599,7 @@ export class SettingsEditor {
   }
 
   beginConnection(connection?: Connection, purpose = Purpose.Voice) {
-    if (connection?.builtIn) return;
+    if (this.#disposed || connection?.builtIn) return;
     if (this.runtimeDirty || this.saving) {
       this.#messages.reportInfo(
         "Save or discard feature settings before editing a connection.",
@@ -649,7 +705,12 @@ export class SettingsEditor {
     credentialDraft = "",
     clearCredential = false,
   ): Promise<boolean> {
-    if (!this.draft || this.saving || this.quickSettingsPending.length)
+    if (
+      this.#disposed ||
+      !this.draft ||
+      this.saving ||
+      this.quickSettingsPending.length
+    )
       return false;
     const target = this.applied?.savedConnections.entries?.find(
       (c) => c.id === change.id,
@@ -706,7 +767,7 @@ export class SettingsEditor {
         clearPostProcessingCredential: false,
         clearTextToSpeechCredential: false,
       });
-      this.#adopt(saved);
+      if (!this.#adopt(saved)) return false;
       this.clearCredentialDraft();
       this.#invalidateSTTConnection();
       this.#invalidateProcessingConnection();
@@ -723,7 +784,7 @@ export class SettingsEditor {
       );
       return true;
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (!this.#disposed) this.#messages.fail(cause);
       return false;
     } finally {
       this.saving = false;
@@ -786,6 +847,7 @@ export class SettingsEditor {
   }
 
   async forgetModel(purpose: Purpose): Promise<boolean> {
+    if (this.#disposed) return false;
     if (!this.applied || this.busy || this.runtimeDirty) {
       this.#messages.reportInfo(
         "Save or discard your edits before forgetting a model.",
@@ -807,13 +869,13 @@ export class SettingsEditor {
         clearPostProcessingCredential: false,
         clearTextToSpeechCredential: false,
       });
-      this.#adopt(saved);
+      if (!this.#adopt(saved)) return false;
       this.#messages.announce(
         "Model preferences forgotten. Choose a model to continue.",
       );
       return true;
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (!this.#disposed) this.#messages.fail(cause);
       return false;
     } finally {
       this.saving = false;
@@ -821,7 +883,7 @@ export class SettingsEditor {
   }
 
   async save(): Promise<boolean> {
-    if (!this.draft || this.saving) return false;
+    if (this.#disposed || !this.draft || this.saving) return false;
     this.validationIssue = null;
     for (const purpose of [
       Purpose.Transcription,
@@ -850,7 +912,7 @@ export class SettingsEditor {
         textToSpeechCredentialDraft: this.ttsAPIKey,
         clearTextToSpeechCredential: this.clearTTSKey,
       });
-      this.#adopt(saved);
+      if (!this.#adopt(saved)) return false;
       if (
         sttCredentialChanged ||
         (previous &&
@@ -893,8 +955,10 @@ export class SettingsEditor {
       await this.#refreshHistory();
       return true;
     } catch (cause) {
-      this.validationIssue = settingsValidationIssue(cause);
-      if (!this.validationIssue) this.#messages.fail(cause);
+      if (!this.#disposed) {
+        this.validationIssue = settingsValidationIssue(cause);
+        if (!this.validationIssue) this.#messages.fail(cause);
+      }
       return false;
     } finally {
       this.saving = false;
@@ -902,7 +966,7 @@ export class SettingsEditor {
   }
 
   async completeSetup(): Promise<boolean> {
-    if (!this.applied || this.setupCompleting) return false;
+    if (this.#disposed || !this.applied || this.setupCompleting) return false;
     this.setupCompleting = true;
     this.#messages.dismissError();
     try {
@@ -919,11 +983,11 @@ export class SettingsEditor {
         textToSpeechCredentialDraft: "",
         clearTextToSpeechCredential: false,
       });
-      this.#adopt(saved);
+      if (!this.#adopt(saved)) return false;
       this.#messages.announce("Freehand is ready to use.");
       return true;
     } catch (cause) {
-      this.#messages.fail(cause);
+      if (!this.#disposed) this.#messages.fail(cause);
       return false;
     } finally {
       this.setupCompleting = false;
@@ -939,7 +1003,8 @@ export class SettingsEditor {
     patch: QuickSettingsPatch,
     field: QuickSettingsField,
   ): Promise<boolean> {
-    if (!this.applied || this.isQuickSettingsPending(field)) return false;
+    if (this.#disposed || !this.applied || this.isQuickSettingsPending(field))
+      return false;
     this.quickSettingsPending = [...this.quickSettingsPending, field];
     if (this.quickSettingsSaved === field) this.quickSettingsSaved = null;
     if (this.quickSettingsFailed === field) this.quickSettingsFailed = null;
@@ -947,7 +1012,7 @@ export class SettingsEditor {
 
     let operationResult = false;
     const operation = this.#quickSettingsQueue.then(async () => {
-      if (!this.applied) return;
+      if (this.#disposed || !this.applied) return;
       const next = quickSettingsDraft(this.applied, patch);
 
       const saved = await this.#service.settings.SaveSettings({
@@ -961,7 +1026,7 @@ export class SettingsEditor {
         textToSpeechCredentialDraft: "",
         clearTextToSpeechCredential: false,
       });
-      this.#adopt(saved);
+      if (!this.#adopt(saved)) return;
       this.#markQuickSettingsSaved(field);
       operationResult = true;
     });
@@ -973,8 +1038,10 @@ export class SettingsEditor {
       await operation;
       return operationResult;
     } catch (cause) {
-      this.quickSettingsFailed = field;
-      this.#messages.fail(cause);
+      if (!this.#disposed) {
+        this.quickSettingsFailed = field;
+        this.#messages.fail(cause);
+      }
       return false;
     } finally {
       this.quickSettingsPending = this.quickSettingsPending.filter(
@@ -1322,6 +1389,10 @@ export class SettingsEditor {
       this.quickSettingsPending.length > 0,
   );
   dispose() {
+    if (this.#disposed) return;
+    this.#disposed = true;
+    this.#pendingExternalSettings = null;
+    this.#invalidateConfirmedMetadata();
     this.clearCredentialDraft();
     clearTimeout(this.#quickSettingsSavedTimer);
   }

@@ -21,14 +21,7 @@ var kernel32 = windows.NewLazySystemDLL("kernel32.dll")
 var getForegroundWindow = user32.NewProc("GetForegroundWindow")
 var getWindowThreadProcessID = user32.NewProc("GetWindowThreadProcessId")
 var sendInput = user32.NewProc("SendInput")
-var openClipboard = user32.NewProc("OpenClipboard")
-var closeClipboard = user32.NewProc("CloseClipboard")
-var emptyClipboard = user32.NewProc("EmptyClipboard")
-var setClipboardData = user32.NewProc("SetClipboardData")
-var globalAlloc = kernel32.NewProc("GlobalAlloc")
-var globalLock = kernel32.NewProc("GlobalLock")
-var globalUnlock = kernel32.NewProc("GlobalUnlock")
-var globalFree = kernel32.NewProc("GlobalFree")
+var getAsyncKeyState = user32.NewProc("GetAsyncKeyState")
 
 type Input struct {
 	logger *slog.Logger
@@ -111,6 +104,47 @@ func keyboardEvent(scan uint16, flags uint32) inputEvent {
 }
 
 var insertionForeground = foreground
+var insertionModifiersReleased = modifiersReleased
+
+func modifiersReleased() bool {
+	// SHIFT, CONTROL and MENU cover both sides; Windows keys have separate VKeys.
+	for _, key := range [...]uintptr{0x10, 0x11, 0x12, 0x5B, 0x5C} {
+		state, _, _ := getAsyncKeyState.Call(key)
+		if state&0x8000 != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// SendInput preserves physical modifier state. Never synthesize key-up events:
+// wait briefly for release and keep validating the captured target while waiting.
+func waitForInsertion(ctx context.Context, target insertion.Target) (string, error) {
+	deadline := time.NewTimer(250 * time.Millisecond)
+	defer deadline.Stop()
+	for {
+		if err := ctx.Err(); err != nil {
+			return "context", err
+		}
+		current, err := insertionForeground()
+		if err != nil || !current.Valid() || current != target {
+			return "focus", insertion.ErrCopyRequired
+		}
+		if insertionModifiersReleased() {
+			return "context", ctx.Err()
+		}
+		timer := time.NewTimer(10 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return "context", ctx.Err()
+		case <-deadline.C:
+			timer.Stop()
+			return "modifiers", insertion.NewRejection(insertion.Send, "modifiers_held")
+		case <-timer.C:
+		}
+	}
+}
 
 var dispatchUnicodeEvents = func(events []inputEvent) uintptr {
 	n, _, _ := sendInput.Call(uintptr(len(events)), uintptr(unsafe.Pointer(&events[0])), nativeInputSize)
@@ -156,15 +190,6 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 	}
 	batches := 0
 	for offset := 0; offset < len(u); {
-		select {
-		case <-ctx.Done():
-			return i.insertionFailed(started, len(u), batches, strategy, "context", ctx.Err())
-		default:
-		}
-		current, foregroundErr := insertionForeground()
-		if foregroundErr != nil || !current.Valid() || current != target {
-			return i.insertionFailed(started, len(u), batches, strategy, "focus", insertion.ErrCopyRequired)
-		}
 		end := min(offset+batchUnits, len(u))
 		// Keep a UTF-16 surrogate pair in one dispatch so no Unicode scalar is
 		// split across independently accepted SendInput calls.
@@ -174,6 +199,9 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 		events := make([]inputEvent, 0, (end-offset)*2)
 		for _, v := range u[offset:end] {
 			events = append(events, keyboardEvent(v, 4), keyboardEvent(v, 4|2))
+		}
+		if stage, err := waitForInsertion(ctx, target); err != nil {
+			return i.insertionFailed(started, len(u), batches, strategy, stage, err)
 		}
 		batches++
 		if sent := dispatchUnicodeEvents(events); sent != uintptr(len(events)) {
@@ -189,55 +217,5 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 		"duration_ms", time.Since(started).Milliseconds(),
 		"strategy", strategy,
 	)
-	return nil
-}
-func (Input) Copy(ctx context.Context, text string) error {
-	u, e := windows.UTF16FromString(text)
-	if e != nil {
-		return e
-	}
-	size := uintptr(len(u) * 2)
-	h, _, e := globalAlloc.Call(0x0002, size)
-	if h == 0 {
-		return e
-	}
-	transferred := false
-	defer func() {
-		if !transferred {
-			globalFree.Call(h)
-		}
-	}()
-	p, _, e := globalLock.Call(h)
-	if p == 0 {
-		return e
-	}
-	dst := unsafe.Slice((*uint16)(unsafe.Pointer(p)), len(u))
-	copy(dst, u)
-	globalUnlock.Call(h)
-	var opened bool
-	for i := 0; i < 8; i++ {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		r, _, _ := openClipboard.Call(0)
-		if r != 0 {
-			opened = true
-			break
-		}
-		time.Sleep(time.Duration(i+1) * 10 * time.Millisecond)
-	}
-	if !opened {
-		return errors.New("could not open clipboard")
-	}
-	defer closeClipboard.Call()
-	if r, _, e := emptyClipboard.Call(); r == 0 {
-		return e
-	}
-	if r, _, e := setClipboardData.Call(13, h); r == 0 {
-		return e
-	}
-	transferred = true
 	return nil
 }

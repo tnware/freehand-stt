@@ -191,6 +191,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test Windows safety and application packages
         run: go test ./...
+      - name: Vet Windows native adapters and application packages
+        run: go vet ./...
       - name: Verify release version
         if: inputs.expected-version != ''
         shell: pwsh

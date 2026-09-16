@@ -10,12 +10,19 @@ description: Contributor requirements for focus, insertion, credentials, audio, 
 - Never restore/focus another application silently merely to paste.
 - If focus changed, retain the result in backend memory and show an explicit Copy action. Never write it to the clipboard automatically.
 - Do not paste after cancellation, timeout, stale generation, or shutdown.
+- Before every Unicode dispatch, wait within a fixed bound for Ctrl, Alt, Shift,
+  and Windows keys to be released. Revalidate focus and cancellation while
+  waiting; require explicit Copy on timeout without releasing keys synthetically.
 
 ## Clipboard
 
 - Use Unicode clipboard content.
 - Clipboard-paste insertion remains disabled. If implemented later, capture every existing format before mutation and restore only while the clipboard still contains the data object this app set. Never overwrite newer user clipboard content.
 - Treat clipboard-open failures as retryable and bounded.
+- Explicit Copy owns a message-only window and pins its complete clipboard
+  transaction to one OS thread. Open with that owner before emptying; close the
+  clipboard before destroying the owner. Allocation and cancellation failures
+  before mutation must leave clipboard contents untouched.
 - Do not log clipboard content.
 - Transcript history never writes automatically to the clipboard; each historical entry requires an explicit Copy action.
 
@@ -37,7 +44,13 @@ The complete action matrix and normalization rules are documented in
 - Toggle mode may use `RegisterHotKey` with non-repeat behavior.
 - Hold-to-talk requires both press and release events through a low-level hook or another proven key-state mechanism.
 - Keep callbacks minimal and move work to the owning Go feature.
+- Match the native callback ABI: `nCode` is a signed 32-bit integer. Negative
+  codes forward immediately without dereferencing the event pointer.
 - Unhook and unregister deterministically during shutdown.
+- Hold-hook and temporary-capture Close each wait at most two seconds for their
+  native source and tracked callback work together. Fence new input first;
+  recorder callbacks must not block the native unhook/message-loop completion
+  or prevent Wails from reaching bounded feature shutdown.
 - Report shortcut conflicts instead of silently falling back.
 
 ## Runtime configuration and shutdown

@@ -45,6 +45,12 @@ valid, and a newer generation must not be lost behind a slower snapshot read.
 Settings metadata tests cover the single confirmed-snapshot invalidation path,
 including changes to credentials that do not alter renderer-visible settings.
 
+Settings refresh regressions defer a runtime save, begin a new settings draft,
+then resolve the save through the real Session/editor integration. The draft and
+credential input must survive. Cover reads superseded by events, saves, or newer
+reads, pending connection edits during saves, and disposal before late success
+or failure; queued saves must not start after disposal.
+
 Suspend session initialization at each stage, dispose the session, then resolve
 or reject the outstanding request. No subsequent initialization or session-level
 failure reporting may start. Real App mount/unmount browser fixtures also reject
@@ -1171,6 +1177,33 @@ cover stale completion, Stop fencing, and native save-dialog interleavings with 
 and shutdown. Windows CI runs the complete Go suite, including platform-specific
 input, playback, storage, and settings tests; these do not invoke inference servers.
 
+Windows also runs full `go vet ./...`, including Windows-only native adapters.
+Callback fixtures enter through the actual Windows callback ABI and verify that
+negative hook codes forward without reading event data. COM fixtures check typed
+native-pointer dispatch and output-buffer lifetime without creating GPU workloads.
+Clipboard sequencing fixtures substitute the native calls and never replace the
+tester's clipboard. Modifier fixtures cover release, timeout, cancellation, and
+focus changes before dispatch, including between long-text batches.
+
+Hook shutdown fixtures stall the native source and callback consumer separately.
+Close must return within its shared two-second budget, fence queued presses,
+allow feature teardown to proceed, and retain completion tracking until stalled
+work returns. Temporary shortcut capture has the same source/callback separation.
+These synthetic stalls supplement the service-level blocked-driver tests.
+
+For interactive Windows acceptance, exercise fast dictation with modifiers held,
+release during the wait, focus changes during delivery, and long Unicode text.
+With disposable clipboard contents, verify explicit Copy from Voice, files, and
+History, including a busy clipboard. Quit during active hold recording and
+temporary shortcut capture, then relaunch and check that no hook remains active.
+Record these OS checks separately from the native ABI fixtures and package builds.
+
+Speech restart regressions inject rewind and playback-start errors from playing,
+paused, and completed sessions. Assert retained audio controls, truthful state,
+continued completion monitoring after recovery, safe diagnostics, and no new
+synthesis. Block the native operation across shutdown and reject late restart or
+publication. These tests do not establish real device-loss acceptance.
+
 Current-result tests cover copy/clear and Voice playback generation admission without
 history, including stale, active, cleared, and closed results. Fake speech clients
 verify backend-owned Voice text selection without retaining history and the 4,096
@@ -1207,6 +1240,13 @@ cancellation, stale preview fencing, independent credentials, transactional
 realtime preferences after restart, and reusable window navigation. Caption tests
 cover bounded Unicode text, one-row whitespace normalization, and fit-cache invalidation.
 These fixtures use fake transports and do not invoke inference.
+
+Credential-reflection fixtures exercise NeMo and both qualified vLLM model
+profiles with synthetic keys: whole and split deltas, final text, language fields,
+and matches created by model parsing or turn joins. A rejection must publish no
+matching credential value, return no deliverable text or language evidence, and
+signal capture failure while draining audio. Ordinary text and unauthenticated
+sessions remain accepted.
 
 Qualify a chosen Nemotron model manually against NeMo-Speech.cpp v0.1.0. Record
 the server/runtime/model revision and distinguish transport inference evidence

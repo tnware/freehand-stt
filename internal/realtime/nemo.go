@@ -42,7 +42,7 @@ func configureNeMo(ctx context.Context, conn *websocket.Conn, cfg config.VoiceTr
 	return nil
 }
 
-func (s *Session) readNeMo(publish func(Update)) Result {
+func (s *Session) readNeMo(guard credentialGuard, publish func(Update)) Result {
 	update := Update{Turn: 1}
 	var languages []string
 	for {
@@ -56,10 +56,16 @@ func (s *Session) readNeMo(publish func(Update)) Result {
 				return Result{Err: errors.New("live transcript exceeded its size limit")}
 			}
 			update.Partial += event.Delta
+			if err := guard.check(update.Partial, update.Final+" "+update.Partial); err != nil {
+				return Result{Err: err}
+			}
 			if event.Delta != "" && publish != nil {
 				publish(update)
 			}
 		case "conversation.item.input_audio_transcription.completed":
+			if err := guard.check(append(event.Languages, event.Language, event.Transcript)...); err != nil {
+				return Result{Err: err}
+			}
 			text, detected := modelprofile.StripNemotronLanguageTag(event.Transcript)
 			for _, candidate := range append(event.Languages, event.Language, detected) {
 				if speechlanguage.Unspecified(candidate) {
@@ -77,6 +83,9 @@ func (s *Session) readNeMo(publish func(Update)) Result {
 				return Result{Err: errors.New("live transcript exceeded its size limit")}
 			}
 			update.Final = strings.TrimSpace(update.Final + " " + text)
+			if err := guard.check(update.Final); err != nil {
+				return Result{Err: err}
+			}
 			update.Partial = ""
 			update.Turn++
 			if publish != nil {

@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"runtime"
 	"syscall"
 	"unsafe"
 
@@ -25,19 +26,23 @@ type gpuAdapterMetadata struct {
 	software bool
 }
 
+// COM returns native pointers, not integer handles. Keep that distinction
+// through vtable lookup; convert only at the syscall boundary.
+type comObject struct{ vtable *uintptr }
+
 // Enumerate adapter metadata only. No graphics device, context or workload is
 // created; hardware names and capacities complement PDH's aggregate usage.
 func adapterMetadata() map[string]gpuAdapterMetadata {
 	result := make(map[string]gpuAdapterMetadata)
 	iid := windows.GUID{Data1: 0x770aae78, Data2: 0xf26f, Data3: 0x4dba, Data4: [8]byte{0xa8, 0x29, 0x25, 0x3c, 0x83, 0xd1, 0xb3, 0x87}}
-	var factory uintptr
-	if status, _, _ := createDXGIFactory.Call(uintptr(unsafe.Pointer(&iid)), uintptr(unsafe.Pointer(&factory))); status != 0 || factory == 0 {
+	var factory *comObject
+	if status, _, _ := createDXGIFactory.Call(uintptr(unsafe.Pointer(&iid)), uintptr(unsafe.Pointer(&factory))); status != 0 || factory == nil {
 		return result
 	}
 	defer comMethod(factory, 2)
 	for index := range 8 {
-		var adapter uintptr
-		if comMethod(factory, 12, uintptr(index), uintptr(unsafe.Pointer(&adapter))) != 0 || adapter == 0 {
+		var adapter *comObject
+		if comMethod(factory, 12, uintptr(index), uintptr(unsafe.Pointer(&adapter))) != 0 || adapter == nil {
 			break
 		}
 		var desc adapterDescription
@@ -56,9 +61,9 @@ func adapterMetadata() map[string]gpuAdapterMetadata {
 // through this wrapper, just as syscall.SyscallN does for direct callers.
 //
 //go:uintptrescapes
-func comMethod(object uintptr, index int, args ...uintptr) uintptr {
-	vtable := *(*uintptr)(unsafe.Pointer(object))
-	method := *(*uintptr)(unsafe.Pointer(vtable + uintptr(index)*unsafe.Sizeof(uintptr(0))))
-	result, _, _ := syscall.SyscallN(method, append([]uintptr{object}, args...)...)
+func comMethod(object *comObject, index int, args ...uintptr) uintptr {
+	method := *(*uintptr)(unsafe.Add(unsafe.Pointer(object.vtable), uintptr(index)*unsafe.Sizeof(uintptr(0))))
+	result, _, _ := syscall.SyscallN(method, append([]uintptr{uintptr(unsafe.Pointer(object))}, args...)...)
+	runtime.KeepAlive(object)
 	return result
 }

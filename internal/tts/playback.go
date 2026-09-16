@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/tnware/freehand-stt/internal/diagnostics"
 )
 
 func (s *Service) monitor(ctx context.Context, generation uint64) {
@@ -124,55 +126,62 @@ func (s *Service) Restart() error {
 		return errors.New("application is shutting down")
 	}
 	s.mu.Lock()
-	valid := s.status.CanRestart
-	if !valid {
-		s.mu.Unlock()
+	previous := s.status
+	s.mu.Unlock()
+	if !previous.CanRestart {
 		return errors.New("speech playback cannot be restarted")
 	}
+	ctx, cancel := s.operationContext()
+	if err := ctx.Err(); err != nil {
+		cancel()
+		return err
+	}
+	// Keep the previous generation and its monitor until rewind succeeds.
+	// A failed native Stop can leave the existing session playing.
+	rewindErr := s.player.Rewind()
+	// Native Stop inside Rewind may have outlived shutdown's wait budget.
+	// Play is a separate step and must not be admitted after cancellation.
+	if s.closed.Load() || ctx.Err() != nil {
+		cancel()
+		return context.Canceled
+	}
+	if rewindErr != nil {
+		cancel()
+		s.logger.Warn("speech restart failed", "generation", previous.Generation, "stage", "rewind", "error_kind", diagnostics.ErrorKind(rewindErr))
+		return errors.New("speech playback could not rewind")
+	}
+
+	s.mu.Lock()
 	if s.operation != nil {
 		s.operation()
 	}
-	ctx, cancel := s.operationContext()
 	s.generation++
 	generation := s.generation
 	s.status.Generation = generation
 	s.operation = cancel
 	s.mu.Unlock()
-	if err := s.player.Rewind(); err != nil {
-		cancel()
-		return err
-	}
-	// Native Stop inside Rewind may have outlived shutdown's wait budget.
-	// Play is a separate step and must not be admitted after cancellation.
-	if s.closed.Load() {
+	playErr := s.player.Play()
+	if s.closed.Load() || ctx.Err() != nil {
 		cancel()
 		return context.Canceled
 	}
-	if err := ctx.Err(); err != nil {
-		cancel()
-		return err
-	}
-	if err := s.player.Play(); err != nil {
-		cancel()
-		return err
-	}
 
-	s.mu.Lock()
-	if s.status.Generation == generation {
-		s.status.Phase = Playing
-		s.status.PositionMilliseconds = 0
-		s.status.Message = "Playing transcript"
-		s.status.CanPause = true
-		s.status.CanResume = false
-		s.status.CanStop = true
-		status := s.status
-		s.mu.Unlock()
-		s.publish(status)
-		s.workers.Add(1)
-		go func() { defer s.workers.Done(); s.monitor(ctx, generation) }()
-		return nil
+	status := previous
+	status.Generation = generation
+	status.PositionMilliseconds, status.DurationMilliseconds, _ = s.player.Position()
+	status.Phase, status.Message, status.ErrorKind = Playing, "Playing transcript", ""
+	if playErr != nil {
+		status.Phase, status.Message = Paused, "Playback paused"
 	}
-	s.mu.Unlock()
+	status.CanPause, status.CanResume, status.CanStop = playErr == nil, playErr != nil, true
+	s.update(generation, status)
+	// Paused audio still needs a monitor: Resume reuses this operation.
+	// The control lock keeps worker admission serialized with shutdown.
+	s.workers.Go(func() { s.monitor(ctx, generation) })
+	if playErr != nil {
+		s.logger.Warn("speech restart failed", "generation", generation, "stage", "playback", "error_kind", diagnostics.ErrorKind(playErr))
+		return errors.New("audio was rewound but playback could not restart")
+	}
 	return nil
 }
 
