@@ -1,8 +1,11 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import EraserIcon from "@lucide/svelte/icons/eraser";
+  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
+
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import type { SeekRequest } from "$bindings/tts";
   import type { Snippet } from "svelte";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import SquarePenIcon from "@lucide/svelte/icons/square-pen";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
@@ -83,6 +86,9 @@
       (status.phase === TTSPhase.Generating ||
         status.phase === TTSPhase.Playing ||
         status.phase === TTSPhase.Paused),
+  );
+  const actionBusy = $derived(
+    submitting || (isOwnSession && status.phase === TTSPhase.Generating),
   );
   const generating = $derived(status.phase === TTSPhase.Generating);
   const showPlayback = $derived(
@@ -172,11 +178,8 @@
           Choose a connection, model, and voice in speech settings. You can
           write your text now.
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          class="shrink-0 border-accent-edge bg-background text-accent-text"
-          onclick={onOpenSettings}><SettingsIcon />Configure speech</Button
+        <Button variant="soft" size="sm" onclick={onOpenSettings}
+          ><ButtonIcon icon={SettingsIcon} />Configure speech</Button
         >
       </div>
     {/if}
@@ -220,24 +223,23 @@
         variant="ghost"
         size="sm"
         disabled={!text}
-        onclick={() => (text = "")}>Clear</Button
+        onclick={() => (text = "")}
+        ><ButtonIcon icon={EraserIcon} />Clear</Button
       >
       <Button
         size="sm"
-        class="min-w-24"
+        class="w-32 @sm:w-40"
+        aria-busy={actionBusy}
         disabled={!canSpeak}
         title="Generate this text and replace the current audio"
         onclick={() => onSpeak(text)}
       >
-        {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
-            class="animate-spin motion-reduce:animate-none"
-          />{:else}<Volume2Icon />{/if}
-        {working && status.phase === TTSPhase.Generating
-          ? "Generating…"
-          : failed
-            ? "Try again"
-            : "Speak"}
-        {#if !working}<kbd
+        <ButtonIcon
+          icon={failed ? RotateCcwIcon : Volume2Icon}
+          busy={actionBusy}
+        />
+        {actionBusy ? "Generating…" : failed ? "Try again" : "Speak"}
+        {#if !working && !submitting}<kbd
             aria-hidden="true"
             class="ml-1 hidden text-2xs opacity-70 @sm:inline"
             >{shortcutVisual}</kbd

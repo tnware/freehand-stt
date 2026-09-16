@@ -1,8 +1,12 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import PlayIcon from "@lucide/svelte/icons/play";
+  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
+
   import FolderOpenIcon from "@lucide/svelte/icons/folder-open";
   import FileAudioIcon from "@lucide/svelte/icons/file-audio";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import XIcon from "@lucide/svelte/icons/x";
+  import TooltipButton from "$lib/components/ui/button/TooltipButton.svelte";
   import { Button } from "$lib/components/ui/button";
   import FeedbackDetails from "$lib/components/common/FeedbackDetails.svelte";
   import WorkflowSettingsButton from "./WorkflowSettingsButton.svelte";
@@ -106,30 +110,23 @@
           </span>
         </span>
         {#if !working}
-          <button
-            type="button"
-            class="grid size-6 shrink-0 place-items-center rounded-sm text-muted-foreground transition-colors hover:bg-subtle-fill-hover hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-40"
+          <TooltipButton
+            label="Clear selected audio file"
             onclick={onClear}
+            aria-busy={clearing}
             disabled={busy}
-            aria-label="Clear selected audio file"
-            title="Remove this file"><XIcon class="size-3" /></button
+            ><ButtonIcon icon={XIcon} busy={clearing} /></TooltipButton
           >
         {/if}
       {:else}
         <Button
-          variant="outline"
           size="sm"
           onclick={onChoose}
+          aria-busy={choosing}
           disabled={busy || !!blocked}
           title={blocked || "Choose an audio file"}
         >
-          {#if choosing}
-            <LoaderCircleIcon
-              class="size-3.5 animate-spin motion-reduce:animate-none"
-            />
-          {:else}
-            <FolderOpenIcon class="size-3.5" />
-          {/if}
+          <ButtonIcon icon={FolderOpenIcon} busy={choosing} />
           Choose audio file
         </Button>
         <span class="content-meta">{blocked || "no microphone required"}</span>
@@ -139,14 +136,17 @@
           variant="outline"
           size="sm"
           onclick={onChoose}
+          aria-busy={choosing}
           disabled={busy || working || !!blocked}
           aria-label="Change audio file"
-          ><FolderOpenIcon class="size-3.5" />Change</Button
+          ><ButtonIcon icon={FolderOpenIcon} busy={choosing} />Change</Button
         >
       {/if}
     </div>
 
-    <div class="flex shrink-0 items-center gap-2">
+    <div
+      class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2"
+    >
       {#if showSettings}<WorkflowSettingsButton
           label="Audio file settings"
           disabled={optionsDisabled}
@@ -155,9 +155,12 @@
       {#if status.streamingUnavailable && !status.streamingProfileUnavailable && !working}
         <Button
           variant="outline"
-          size="xs"
+          size="sm"
           onclick={onTryStreamingAgain}
-          disabled={busy || !!blocked}>Try streaming</Button
+          aria-busy={resettingStreaming}
+          disabled={busy || !!blocked}
+          ><ButtonIcon icon={RotateCcwIcon} busy={resettingStreaming} />Try
+          streaming</Button
         >
       {/if}
       {#if working}
@@ -165,8 +168,16 @@
           size="sm"
           variant="outline"
           onclick={onCancel}
+          aria-busy={cancelling ||
+            status.phase === FileTranscriptionPhase.FileTranscriptionCancelling}
           disabled={cancelling || !status.canCancel}
         >
+          <ButtonIcon
+            icon={XIcon}
+            busy={cancelling ||
+              status.phase ===
+                FileTranscriptionPhase.FileTranscriptionCancelling}
+          />
           {cancelling ||
           status.phase === FileTranscriptionPhase.FileTranscriptionCancelling
             ? "Cancelling…"
@@ -176,8 +187,13 @@
         <Button
           size="sm"
           onclick={onStart}
+          aria-busy={starting}
           disabled={busy || !status.canStart || !!blocked}
         >
+          <ButtonIcon
+            icon={failed || completed ? RotateCcwIcon : PlayIcon}
+            busy={starting}
+          />
           {starting
             ? "Starting…"
             : failed

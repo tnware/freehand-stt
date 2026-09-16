@@ -1,4 +1,10 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import Volume2Icon from "@lucide/svelte/icons/volume-2";
+  import CopyIcon from "@lucide/svelte/icons/copy";
+  import CheckIcon from "@lucide/svelte/icons/check";
+  import EraserIcon from "@lucide/svelte/icons/eraser";
+
   import EmptyState from "$lib/components/common/EmptyState.svelte";
   import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import { followTranscript } from "$lib/utils/transcriptScroll";
@@ -94,7 +100,7 @@
         {#if onListen}<Button
             variant="outline"
             size="xs"
-            class="min-w-14"
+            class="min-w-18"
             disabled={working || !canCopy || listenDisabled}
             aria-label={listenBusy
               ? "Preparing speech for this transcript"
@@ -106,20 +112,20 @@
                 ? "Wait for speech generation to finish"
                 : "Listen to transcript"}
             onclick={onListen}
-            >{#if listenBusy}<LoaderCircleIcon
-                class="animate-spin motion-reduce:animate-none"
-              />{:else}Listen{/if}</Button
+            ><ButtonIcon icon={Volume2Icon} busy={listenBusy} />Listen</Button
           >{/if}
         <Button variant="ghost" size="xs" disabled={working} onclick={onClear}
-          >Clear</Button
+          ><ButtonIcon icon={EraserIcon} />Clear</Button
         >
         <Button
           variant="soft"
           size="xs"
-          class="min-w-16"
+          class="min-w-20"
           disabled={working || !canCopy}
           onclick={copy}
-          >{feedback.key === resultKey ? "Copied" : "Copy"}</Button
+          ><ButtonIcon
+            icon={feedback.key === resultKey ? CheckIcon : CopyIcon}
+          />{feedback.key === resultKey ? "Copied" : "Copy"}</Button
         >
       </div>
     {/if}

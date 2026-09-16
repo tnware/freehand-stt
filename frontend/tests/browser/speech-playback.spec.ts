@@ -40,6 +40,27 @@ async function composer(page: Page, theme = "dark") {
     .click();
   return page.getByRole("textbox", { name: "Text to speak", exact: true });
 }
+for (const width of [560, 1000]) {
+  test(`speech action keeps its width while generating at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 820 });
+    const text = await composer(page);
+    await text.fill("Keep the speech action steady.");
+    const speak = page.getByRole("button", { name: "Speak", exact: true });
+    const before = (await speak.boundingBox())!;
+    await text.press("Control+Enter");
+    const generating = page.getByRole("button", {
+      name: "Generating…",
+      exact: true,
+    });
+    await expect(generating).toBeDisabled();
+    await expect(generating).toHaveAttribute("aria-busy", "true");
+    expect((await generating.boundingBox())!.width).toBe(before.width);
+    await expect(generating).toBeInViewport({ ratio: 1 });
+  });
+}
+
 async function playing(page: Page, theme = "dark") {
   const text = await composer(page, theme);
   await text.fill("A short synthetic playback example.");

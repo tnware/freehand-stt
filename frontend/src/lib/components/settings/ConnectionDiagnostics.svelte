@@ -1,4 +1,7 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+
   import { session } from "$lib/stores/session.svelte";
   import { CheckKind, CheckStatus } from "$bindings/connection";
   import type { ConnectionResult } from "$lib/state";
@@ -34,7 +37,7 @@
   aria-label="Connection check results"
   aria-live="polite"
 >
-  <div class="flex items-center justify-between gap-3">
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <p class="content-section-title">Connection check</p>
       <p class="content-meta mt-1">
@@ -44,10 +47,14 @@
       </p>
     </div>
     {#if onCheck}<Button
-        variant="soft"
+        variant="outline"
         size="sm"
         onclick={onCheck}
-        disabled={busy}>{busy ? "Checking…" : "Check again"}</Button
+        disabled={busy}
+        aria-busy={busy}
+        ><ButtonIcon icon={RefreshCwIcon} {busy} />{busy
+          ? "Checking…"
+          : "Check again"}</Button
       >{/if}
   </div>
   {#if stale}<p class="content-meta">

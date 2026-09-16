@@ -1,4 +1,8 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import SquareIcon from "@lucide/svelte/icons/square";
+  import XIcon from "@lucide/svelte/icons/x";
+
   import MicIcon from "@lucide/svelte/icons/mic";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import { Button } from "$lib/components/ui/button";
@@ -166,7 +170,9 @@
         {/if}
       </div>
     </div>
-    <div class="flex shrink-0 items-center gap-2">
+    <div
+      class="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2"
+    >
       {#if showSettings}<WorkflowSettingsButton
           label="Voice settings"
           disabled={optionsDisabled}
@@ -183,9 +189,13 @@
         <Button
           variant="outline"
           size="sm"
+          aria-busy={pending || status.state === State.Cancelling}
           disabled={pending || status.state === State.Cancelling}
           onclick={() => run(onCancel)}
-          >{status.state === State.Cancelling
+          ><ButtonIcon
+            icon={XIcon}
+            busy={pending || status.state === State.Cancelling}
+          />{status.state === State.Cancelling
             ? "Cancelling…"
             : "Cancel"}</Button
         >
@@ -193,6 +203,7 @@
       {#if recording || status.state === State.Idle || status.state === State.Failed}
         <Button
           size="sm"
+          aria-busy={pending}
           disabled={pending ||
             !canToggleRecording(
               status,
@@ -200,7 +211,10 @@
             )}
           onclick={() => run(onToggle)}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          >{recording
+          ><ButtonIcon
+            icon={recording ? SquareIcon : MicIcon}
+            busy={pending}
+          />{recording
             ? "Stop recording"
             : failed || recovery
               ? "Record again"

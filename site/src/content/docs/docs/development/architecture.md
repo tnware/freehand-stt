@@ -1868,9 +1868,14 @@ to their existing callbacks; they do not infer capabilities or own save policy.
 `FieldHelp` presents supporting copy without moving the surrounding controls.
 Restrictions and unavailable states stay inline rather than depending on help.
 
-Shared button variants own the 8px control radius and medium label weight, including
-menu and tooltip triggers. Workspace quick settings align to the adjacent 32px
-actions with 16px icons. Settings navigation uses the shared primary-sidebar overlay below 700px;
+Shared button variants own control shape and medium label weight, including
+menu and tooltip triggers. Workflow actions use 28px buttons with 16px icons;
+compact transcript actions use 24px buttons with 12px icons. Primary fill marks
+Record, initial file selection, Transcribe, Speak, and connection Save. Auxiliary
+checks and changes use outline, Copy and setup guidance use soft accent, and Clear
+uses ghost. `ButtonIcon` preserves the icon slot during pending states and respects
+reduced motion; labels remain visible and callers own busy/disabled behavior.
+Settings navigation uses the shared primary-sidebar overlay below 700px;
 trailing row controls wrap when the content column needs more room.
 
 Speech uses the same toolbar geometry and picker surfaces as transcription. Its
