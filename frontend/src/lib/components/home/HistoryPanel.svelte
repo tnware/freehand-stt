@@ -1,4 +1,5 @@
 <script lang="ts">
+  import EmptyState from "$lib/components/common/EmptyState.svelte";
   import type { SeekRequest } from "$bindings/tts";
   import HistoryIcon from "@lucide/svelte/icons/history";
   import DisclosureHeader from "$lib/components/shell/DisclosureHeader.svelte";
@@ -217,22 +218,19 @@
         onListenLive={onListenFile}
       />
     {:else}
-      <div
-        class="flex h-full min-h-48 flex-col items-center justify-center gap-3 px-5 py-4 text-center"
-      >
-        <div class="grid size-6 place-items-center text-muted-foreground">
-          <HistoryIcon class="size-6" />
-        </div>
-        <div class="max-w-sm">
-          <p class="text-[15px] font-medium">Nothing is being kept</p>
-          <p class="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Keep recent transcripts until you quit. Current results and recovery
-            are available with history off.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onclick={onOpenSettings}
-          >Turn history on</Button
+      <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <EmptyState
+          variant="compact"
+          icon={HistoryIcon}
+          title="Nothing is being kept"
+          description="Keep recent transcripts until you quit. Current results and recovery are available with history off."
         >
+          {#snippet actions()}
+            <Button variant="outline" size="sm" onclick={onOpenSettings}
+              >Turn history on</Button
+            >
+          {/snippet}
+        </EmptyState>
       </div>
     {/if}
     {#if showPlayback}

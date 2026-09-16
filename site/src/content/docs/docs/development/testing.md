@@ -1732,6 +1732,9 @@ column should share the page gutter; related settings should read as divided row
 title inset, and title baseline while navigating all seven rail destinations in
 both themes at 560px and 1280px. Keep one visible main header; workflow status,
 connection details, and runtime recovery notices belong below its fixed divider.
+`empty-states.spec.ts` checks Transcript and recent History placeholders in both
+themes at 560px and 1280px, keyboard access to the retention action in a short
+bottom panel, and resetting History search and source filters from its empty state.
 Compare fields, pickers, buttons, disclosures, and keyboard focus across pages.
 Check the selected underline in bottom-panel, runtime-output, and History-view
 tabs, plus the edge marker in Settings, Connections, and runtime navigation.

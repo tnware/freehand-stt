@@ -1,4 +1,5 @@
 <script lang="ts">
+  import EmptyState from "$lib/components/common/EmptyState.svelte";
   import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import { followTranscript } from "$lib/utils/transcriptScroll";
   import { onDestroy } from "svelte";
@@ -166,35 +167,30 @@
             />
           </div>
         {:else if !message}
-          <div class="pane-empty">
-            <span class="pane-empty-icon" aria-hidden="true">
-              {#if working}<LoaderCircleIcon
-                  class="size-6 animate-spin motion-reduce:animate-none"
-                />
-              {:else if mode === "file"}<FileAudioIcon class="size-6" />
-              {:else}<AudioLinesIcon class="size-6" />{/if}
-            </span>
-            <p class="content-title">
-              {failed
-                ? "No transcript to show"
-                : working
-                  ? "Your result will appear here"
-                  : mode === "file"
-                    ? "Turn an audio file into text"
-                    : "Speak into the application you’re using"}
-            </p>
-            <p class="content-meta max-w-lg">
-              {failed
-                ? mode === "file"
-                  ? "Use Retry above, or choose another file."
-                  : "Use Record again above when you’re ready."
-                : working
-                  ? "You can keep working while Freehand finishes."
-                  : mode === "file"
-                    ? "Choose a file above. The transcript stays available here for inspection and copying."
-                    : "Use your recording shortcut from any application. Your latest transcript will also appear here."}
-            </p>
-          </div>
+          <EmptyState
+            icon={working
+              ? LoaderCircleIcon
+              : mode === "file"
+                ? FileAudioIcon
+                : AudioLinesIcon}
+            busy={working}
+            title={failed
+              ? "No transcript to show"
+              : working
+                ? "Your result will appear here"
+                : mode === "file"
+                  ? "Turn an audio file into text"
+                  : "Speak into the application you’re using"}
+            description={failed
+              ? mode === "file"
+                ? "Use Retry above, or choose another file."
+                : "Use Record again above when you’re ready."
+              : working
+                ? "You can keep working while Freehand finishes."
+                : mode === "file"
+                  ? "Choose a file above. The transcript stays available here for inspection and copying."
+                  : "Use your recording shortcut from any application. Your latest transcript will also appear here."}
+          />
         {/if}
       </div>
     </div>

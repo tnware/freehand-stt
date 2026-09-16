@@ -664,29 +664,6 @@ html.dark[data-material="mica"] #app {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
-  /* A pane's empty state: centered icon tile, title, and guidance. */
-  .pane-empty {
-    display: flex;
-    min-height: 0;
-    flex: 1 1 0%;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 32px 20px;
-    text-align: center;
-  }
-  .pane-empty-icon {
-    display: grid;
-    width: 48px;
-    height: 48px;
-    place-items: center;
-    border-radius: 8px;
-    border: 1px solid var(--hairline);
-    background: var(--well);
-    color: var(--accent-text);
-    box-shadow: var(--lift);
-  }
   /* A run of mono literals (checksum + companions) wrapping in place. */
   .mono-run {
     display: inline-flex;

@@ -1046,6 +1046,10 @@ and pickers use 32px controls, actions use 28px controls, and compact toolbars
 use the smaller variants. Native control semantics, visible focus, input
 borders, and floating menu/dialog surfaces stay explicit. Page styling never
 owns workflow state, credentials, or scrolling behavior.
+Transcript and History placeholders share `EmptyState` with explicit pane and
+compact variants. It owns the decorative icon tile, text rhythm, and optional
+action spacing; callers retain state-specific copy, actions, and scroll ownership.
+Auto margins center content only when space permits, keeping short panels scrollable.
 Settings rows share `FieldCaption` for label, help, and inline
 validation typography while retaining their own layout and transaction behavior.
 `SaveIndicator` reserves an icon slot for pending, saved, and failed states;

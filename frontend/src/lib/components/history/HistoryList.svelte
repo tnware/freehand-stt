@@ -1,4 +1,6 @@
 <script lang="ts">
+  import EmptyState from "$lib/components/common/EmptyState.svelte";
+  import HistoryIcon from "@lucide/svelte/icons/history";
   import HistoryOutcomeBadge from "./HistoryOutcomeBadge.svelte";
   import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import ArrowLeftRightIcon from "@lucide/svelte/icons/arrow-left-right";
@@ -249,13 +251,13 @@
   )}
 >
   {#if entries.length === 0 && !live}
-    <div
-      class="flex min-h-40 flex-col items-center justify-center px-3 py-4 text-center"
-    >
-      <p class="content-title">{emptyTitle}</p>
-      <p class="content-meta mt-1.5 max-w-md">
-        {emptyDescription}
-      </p>
+    <div class="flex min-h-full flex-col">
+      <EmptyState
+        variant="compact"
+        icon={HistoryIcon}
+        title={emptyTitle}
+        description={emptyDescription}
+      />
     </div>
   {:else}
     <div class="flex flex-col">

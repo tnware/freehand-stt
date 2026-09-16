@@ -1,4 +1,5 @@
 <script lang="ts">
+  import EmptyState from "$lib/components/common/EmptyState.svelte";
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import HistoryIcon from "@lucide/svelte/icons/history";
@@ -231,40 +232,39 @@
           {/key}
         </section>
       {:else}
-        <div class="pane-empty">
-          <span class="pane-empty-icon" aria-hidden="true"
-            ><HistoryIcon class="size-6" /></span
-          >
-          <p class="content-title">
-            {!enabled
+        <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          {#snippet emptyActions()}
+            {#if !enabled}
+              <Button
+                variant="outline"
+                size="sm"
+                onclick={onOpenHistorySettings}>History settings</Button
+              >
+            {:else if filtered}
+              <Button
+                variant="outline"
+                size="sm"
+                onclick={() => {
+                  query = "";
+                  source = "all";
+                }}>Reset filters</Button
+              >
+            {/if}
+          {/snippet}
+          <EmptyState
+            actions={!enabled || filtered ? emptyActions : undefined}
+            icon={HistoryIcon}
+            title={!enabled
               ? "History is turned off."
               : filtered && retained.length
                 ? "No matching transcripts."
                 : "No transcripts yet."}
-          </p>
-
-          <p class="content-meta max-w-sm">
-            {!enabled
+            description={!enabled
               ? "Turn retention on in History settings to keep recent transcripts for this session."
               : filtered && retained.length
                 ? "Try another search or show all sources."
                 : "Completed transcripts appear here and are kept in memory until you quit."}
-          </p>
-
-          {#if !enabled}
-            <Button variant="outline" size="sm" onclick={onOpenHistorySettings}
-              >History settings</Button
-            >
-          {:else if filtered}
-            <Button
-              variant="outline"
-              size="sm"
-              onclick={() => {
-                query = "";
-                source = "all";
-              }}>Reset filters</Button
-            >
-          {/if}
+          />
         </div>
       {/if}
 
