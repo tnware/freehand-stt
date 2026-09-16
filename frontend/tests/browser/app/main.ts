@@ -1,3 +1,4 @@
+import DialogFixture from "./DialogFixture.svelte";
 import PickerFeedbackFixture from "./PickerFeedbackFixture.svelte";
 import LongContentFixture from "./LongContentFixture.svelte";
 import TrayFixture from "./TrayFixture.svelte";
@@ -13,19 +14,21 @@ document.documentElement.classList.toggle(
   params.get("theme") === "dark",
 );
 mount(
-  params.get("view") === "picker-feedback"
-    ? PickerFeedbackFixture
-    : params.get("view") === "long-content"
-      ? LongContentFixture
-      : params.get("view") === "tray"
-        ? TrayFixture
-        : params.get("view") === "vocabulary"
-          ? VocabularyFixture
-          : params.get("view") === "transcript"
-            ? TranscriptFixture
-            : params.get("view") === "workspace"
-              ? WorkspaceFixture
-              : SettingsFixture,
+  params.get("view") === "dialogs"
+    ? DialogFixture
+    : params.get("view") === "picker-feedback"
+      ? PickerFeedbackFixture
+      : params.get("view") === "long-content"
+        ? LongContentFixture
+        : params.get("view") === "tray"
+          ? TrayFixture
+          : params.get("view") === "vocabulary"
+            ? VocabularyFixture
+            : params.get("view") === "transcript"
+              ? TranscriptFixture
+              : params.get("view") === "workspace"
+                ? WorkspaceFixture
+                : SettingsFixture,
   {
     target: document.getElementById("app")!,
   },

@@ -421,13 +421,12 @@ test("all downloaded models require fresh confirmation before deletion", async (
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
     "Stop:nemo-default",
   ]);
-  await page.getByRole("button", { name: "Keep", exact: true }).click();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
   await selected
     .getByRole("button", { name: "Delete Nemotron 3.5 Streaming", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Confirm removal", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Delete model", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Download selected model", exact: true }),
   ).toBeVisible();
@@ -521,12 +520,14 @@ test("duplicate runtime recovery preserves identity and resets pending removal",
     .getByRole("button", { name: "Delete runtime", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toContainText("Duplicate speech");
-  await page.getByRole("button", { name: "Keep", exact: true }).click();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
   await page
     .getByRole("button", { name: "Delete runtime", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Confirm removal", exact: true })
+    .getByRole("dialog")
+    .getByRole("button", { name: "Delete runtime", exact: true })
     .click();
   await expect(
     page.getByText(/Multiple saved installations need review/),

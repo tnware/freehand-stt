@@ -19,7 +19,8 @@
   import WrenchIcon from "@lucide/svelte/icons/wrench";
   import { Button } from "$lib/components/ui/button";
   import { Switch } from "$lib/components/ui/switch";
-  import * as Dialog from "$lib/components/ui/dialog";
+  import ActionDialog from "$lib/components/common/ActionDialog.svelte";
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
   import RuntimeDownloadSource from "$lib/components/settings/RuntimeDownloadSource.svelte";
   import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
@@ -139,6 +140,38 @@
     | { kind: "instance" }
     | { kind: "model"; model: Model };
   let confirming = $state<Removal | null>(null);
+  let removing = $state(false);
+  let removalError = $state("");
+  let waitingRemoval = $state<{
+    instanceID: string;
+    operationID: number;
+  } | null>(null);
+
+  function finishRemoval(success: boolean, error = "") {
+    waitingRemoval = null;
+    removing = false;
+    if (success) confirming = null;
+    else
+      removalError =
+        error ||
+        "Could not complete removal. Review the runtime status and try again.";
+  }
+  $effect(() => {
+    if (!waitingRemoval) return;
+    const current = runtime.statusFor(waitingRemoval.instanceID)?.status;
+    const operation = current?.operation;
+    if (operation?.id !== waitingRemoval.operationID) {
+      finishRemoval(
+        false,
+        "Runtime status changed. Review it before trying removal again.",
+      );
+    } else if (operation.outcome !== "running") {
+      finishRemoval(
+        operation.outcome === "succeeded",
+        operation.error || current?.error,
+      );
+    }
+  });
   let alive = true;
   onDestroy(() => {
     alive = false;
@@ -206,18 +239,43 @@
   function act(action: () => Promise<unknown>) {
     if (!actionLocked) void action();
   }
-  function confirmRemoval() {
-    if (!confirming || !instance || actionLocked || running) return;
+  function dismissRemoval() {
+    if (removing) return;
+    confirming = null;
+    removalError = "";
+  }
+  async function confirmRemoval() {
+    if (!confirming || !instance || removing || actionLocked || running) return;
     const target = confirming,
       id = instance.id;
-    confirming = null;
-    act(() =>
-      target.kind === "files"
+    const previousOperation = runtime.statusFor(id)?.status.operation?.id ?? 0;
+    removing = true;
+    removalError = "";
+    try {
+      const success = await (target.kind === "files"
         ? runtime.run(id, "Remove")
         : target.kind === "instance"
           ? runtime.deleteInstance(id)
-          : runtime.removeModel(id, target.model.id),
-    );
+          : runtime.removeModel(id, target.model.id));
+      if (!alive) return;
+      if (!success) {
+        finishRemoval(false, runtime.errorFor(id) || runtime.error);
+        return;
+      }
+      // File/model removal bindings acknowledge a background operation. Keep
+      // the decision visible until that operation publishes its terminal result.
+      const operation = runtime.statusFor(id)?.status.operation;
+      const kind = target.kind === "files" ? "remove" : "remove_model";
+      if (
+        target.kind !== "instance" &&
+        operation?.kind === kind &&
+        operation.id > previousOperation
+      ) {
+        waitingRemoval = { instanceID: id, operationID: operation.id };
+      } else finishRemoval(true);
+    } catch {
+      if (alive) finishRemoval(false);
+    }
   }
   function restart() {
     if (!instance || actionLocked || !running) return;
@@ -629,36 +687,44 @@
     </div>
   {/if}
 </div>
-<Dialog.Root
+<ActionDialog
   open={confirming !== null}
-  onOpenChange={(open) => {
-    if (!open) confirming = null;
-  }}
+  busy={removing}
+  icon={Trash2Icon}
+  tone="danger"
+  title={confirming?.kind === "model"
+    ? `Delete model: ${confirming.model.name}?`
+    : confirming?.kind === "files"
+      ? `Remove runtime files: ${instance?.name}?`
+      : `Delete runtime instance: ${instance?.name}?`}
+  description={confirming?.kind === "model"
+    ? "Deletes this downloaded model. If selected, this Connection becomes unavailable until you download it again or select another model."
+    : confirming?.kind === "files"
+      ? "Deletes this runtime's binary and downloaded models. The instance and its saved Connections remain for repair. Other installations are untouched."
+      : "Remove or reassign every Connection referencing this instance first. Deleting its entry does not delete downloaded files; remove runtime files separately if wanted."}
+  error={removalError}
+  ondismiss={dismissRemoval}
 >
-  <Dialog.Content showCloseButton={false}>
-    <Dialog.Header
-      ><Dialog.Title
-        >{confirming?.kind === "model"
-          ? `Delete model: ${confirming.model.name}?`
-          : confirming?.kind === "files"
-            ? `Remove runtime files: ${instance?.name}?`
-            : `Delete runtime instance: ${instance?.name}?`}</Dialog.Title
-      ><Dialog.Description
-        >{confirming?.kind === "model"
-          ? "Deletes this downloaded model. If selected, this Connection becomes unavailable until you download it again or select another model."
-          : confirming?.kind === "files"
-            ? "Deletes this runtime's binary and downloaded models. The instance and its saved Connections remain for repair. Other installations are untouched."
-            : "Remove or reassign every Connection referencing this instance first. Deleting its entry does not delete downloaded files; remove runtime files separately if wanted."}</Dialog.Description
-      ></Dialog.Header
+  {#snippet actions()}
+    <Button
+      variant="outline"
+      disabled={removing}
+      data-dialog-initial-focus
+      onclick={dismissRemoval}>Cancel</Button
     >
-    <Dialog.Footer
-      ><Button variant="outline" onclick={() => (confirming = null)}
-        >Keep</Button
-      ><Button
-        variant="destructive"
-        disabled={actionLocked || running}
-        onclick={confirmRemoval}>Confirm removal</Button
-      ></Dialog.Footer
+    <Button
+      variant="destructive"
+      disabled={removing || actionLocked || running}
+      onclick={confirmRemoval}
     >
-  </Dialog.Content>
-</Dialog.Root>
+      <ButtonIcon icon={Trash2Icon} busy={removing} />
+      {removing
+        ? "Removing…"
+        : confirming?.kind === "model"
+          ? "Delete model"
+          : confirming?.kind === "files"
+            ? "Remove runtime files"
+            : "Delete runtime"}
+    </Button>
+  {/snippet}
+</ActionDialog>

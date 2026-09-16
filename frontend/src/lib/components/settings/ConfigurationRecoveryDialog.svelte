@@ -6,106 +6,74 @@
   import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
   import * as Alert from "$lib/components/ui/alert";
   import { Button } from "$lib/components/ui/button";
-  import * as Dialog from "$lib/components/ui/dialog";
+  import ActionDialog from "$lib/components/common/ActionDialog.svelte";
   import type { Session } from "$lib/stores/session.svelte";
 
   let { session }: { session: Session } = $props();
 
   const configuration = $derived(session.editor.applied?.configuration);
   const recoveryRequired = $derived(configuration?.recoveryRequired ?? false);
+  const busy = $derived(
+    session.editor.configurationRetrying ||
+      session.editor.configurationResetting,
+  );
   const native = $derived(
     platformPresentation(session.editor.applied?.platform),
   );
 </script>
 
-<Dialog.Root open={recoveryRequired} onOpenChange={() => {}}>
-  <Dialog.Content
-    showCloseButton={false}
-    escapeKeydownBehavior="ignore"
-    interactOutsideBehavior="ignore"
-    class="gap-0 bg-dialog-surface p-0 shadow-float ring-dialog-stroke sm:max-w-[460px]"
-  >
-    <Dialog.Header class="border-b border-hairline px-5 py-4">
-      <div class="flex items-start gap-3">
-        <div
-          class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive"
-        >
-          <FileWarningIcon class="size-5" aria-hidden="true" />
-        </div>
-        <div class="min-w-0">
-          <Dialog.Title class="text-base font-semibold"
-            >Saved settings need attention</Dialog.Title
-          >
-          <Dialog.Description class="mt-1 text-[13px] leading-relaxed">
-            Freehand did not replace your configuration with defaults.
-            Transcription and settings changes are paused until saved settings
-            can be loaded or you explicitly reset them.
-          </Dialog.Description>
-        </div>
-      </div>
-    </Dialog.Header>
-
-    <div class="space-y-3 px-5 py-4">
-      <Alert.Root variant="destructive">
-        <Alert.Title>Configuration could not be loaded</Alert.Title>
-        <Alert.Description
-          >{configuration?.message ??
-            "The saved configuration is invalid."}</Alert.Description
-        >
-      </Alert.Root>
-
-      {#if session.messages.error}
-        <Alert.Root variant="destructive">
-          <Alert.Title>Recovery action failed</Alert.Title>
-          <Alert.Description>{session.messages.error}</Alert.Description>
-        </Alert.Root>
-      {/if}
-
-      <p class="text-xs leading-relaxed text-muted-foreground">
-        Close Freehand before restoring a current-version database backup, then
-        reopen it. Retry loading after fixing file access. Resetting archives
-        the existing database and starts with safe defaults; credentials stored
-        in {native.credentialStore} are not deleted. Reconfigure connections and enter
-        API keys again after resetting.
-      </p>
-    </div>
-
-    <Dialog.Footer
-      class="border-t border-hairline bg-layer-fill px-5 py-4 sm:justify-between"
+<ActionDialog
+  open={recoveryRequired}
+  {busy}
+  dismissible={false}
+  icon={FileWarningIcon}
+  tone="danger"
+  title="Saved settings need attention"
+  description="Transcription and settings changes are paused until your saved configuration can be loaded or you choose to reset it."
+  error={session.messages.error}
+>
+  <Alert.Root variant="destructive">
+    <Alert.Title>Configuration could not be loaded</Alert.Title>
+    <Alert.Description
+      >{configuration?.message ??
+        "The saved configuration is invalid."}</Alert.Description
     >
-      <Button
-        variant="destructive"
-        disabled={session.editor.configurationRetrying ||
-          session.editor.configurationResetting}
-        onclick={() => session.editor.resetConfiguration()}
-      >
-        {#if session.editor.configurationResetting}
-          <LoaderCircleIcon
-            data-icon="inline-start"
-            class="animate-spin motion-reduce:animate-none"
-          />
-        {:else}
-          <RotateCcwIcon data-icon="inline-start" />
-        {/if}
-        {session.editor.configurationResetting
-          ? "Resetting…"
-          : "Reset to defaults"}
-      </Button>
-      <Button
-        disabled={session.editor.configurationRetrying ||
-          session.editor.configurationResetting}
-        onclick={() => session.editor.retryConfiguration()}
-      >
-        {#if session.editor.configurationRetrying}
-          <LoaderCircleIcon
-            data-icon="inline-start"
-            class="animate-spin motion-reduce:animate-none"
-          />
-        {:else}
-          <RefreshCcwIcon data-icon="inline-start" />
-        {/if}
-        {session.editor.configurationRetrying ? "Loading…" : "Retry loading"}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+  </Alert.Root>
+  <p class="text-xs leading-relaxed text-muted-foreground">
+    Retry after fixing file access or restoring a current-version backup with
+    Freehand closed. Reset archives the existing database and starts with safe
+    defaults. Credentials in
+    {native.credentialStore} are kept; reconfigure connections and enter API keys
+    again.
+  </p>
+  {#snippet actions()}
+    <Button
+      variant="destructive"
+      disabled={busy}
+      onclick={() => session.editor.resetConfiguration()}
+    >
+      {#if session.editor.configurationResetting}
+        <LoaderCircleIcon
+          data-icon="inline-start"
+          class="motion-safe:animate-spin"
+        />
+      {:else}<RotateCcwIcon data-icon="inline-start" />{/if}
+      {session.editor.configurationResetting
+        ? "Resetting…"
+        : "Reset to defaults"}
+    </Button>
+    <Button
+      disabled={busy}
+      data-dialog-initial-focus
+      onclick={() => session.editor.retryConfiguration()}
+    >
+      {#if session.editor.configurationRetrying}
+        <LoaderCircleIcon
+          data-icon="inline-start"
+          class="motion-safe:animate-spin"
+        />
+      {:else}<RefreshCcwIcon data-icon="inline-start" />{/if}
+      {session.editor.configurationRetrying ? "Loading…" : "Retry loading"}
+    </Button>
+  {/snippet}
+</ActionDialog>

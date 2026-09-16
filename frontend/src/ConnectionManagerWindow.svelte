@@ -32,7 +32,8 @@
 
   import ConnectionsSection from "$lib/components/settings/sections/ConnectionsSection.svelte";
   import { Button } from "$lib/components/ui/button";
-  import * as Dialog from "$lib/components/ui/dialog";
+  import ActionDialog from "$lib/components/common/ActionDialog.svelte";
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
 
   let {
     session,
@@ -66,9 +67,6 @@
   const inlineError = $derived(
     discardOpen || deleteOpen ? "" : session.messages.error,
   );
-  $effect(() => {
-    if (deleteOpen) return layout?.claimNotifications("modal");
-  });
   const editor = $derived(session.editor);
   const busy = $derived(editor.saving || editor.managedConnectionTesting);
   const selected = $derived(
@@ -275,6 +273,7 @@
   }
   async function remove() {
     if (
+      busy ||
       !selected ||
       selected.builtIn ||
       activeUses.length ||
@@ -288,7 +287,11 @@
     ) {
       selectedID = "";
       deleteOpen = false;
-    } else if (selected) editor.beginConnection(selected);
+    } else if (selected) {
+      const error = session.messages.error;
+      editor.beginConnection(selected);
+      if (error) session.messages.reportFailure(error);
+    }
   }
   onMount(() => {
     const releaseNotifications = layout?.claimNotifications("error");
@@ -590,32 +593,29 @@
   onDiscard={discard}
   onSave={saveAndContinue}
 />
-<Dialog.Root bind:open={deleteOpen}>
-  <Dialog.Content
-    ><Dialog.Header
-      ><Dialog.Title>Delete connection?</Dialog.Title><Dialog.Description
-        >Remove “{selected?.name}” and its unused stored credential.</Dialog.Description
-      ></Dialog.Header
+<ActionDialog
+  open={deleteOpen}
+  {busy}
+  icon={Trash2Icon}
+  tone="danger"
+  title="Delete connection?"
+  description={`Remove “${selected?.name}” and its unused stored credential.`}
+  error={session.messages.error}
+  ondismiss={() => (deleteOpen = false)}
+>
+  {#snippet actions()}
+    <Button
+      variant="outline"
+      disabled={busy}
+      data-dialog-initial-focus
+      onclick={() => (deleteOpen = false)}>Cancel</Button
     >
-    {#if session.messages.error}<p
-        role="alert"
-        class="text-sm text-destructive"
-      >
-        {session.messages.error}
-      </p>{/if}
-    <Dialog.Footer
-      ><Button
-        variant="outline"
-        disabled={busy}
-        onclick={() => {
-          deleteOpen = false;
-        }}>Cancel</Button
-      ><Button variant="destructive" disabled={busy} onclick={remove}
-        >Delete connection</Button
-      ></Dialog.Footer
-    >
-  </Dialog.Content>
-</Dialog.Root>
+    <Button variant="destructive" disabled={busy} onclick={remove}>
+      <ButtonIcon icon={Trash2Icon} {busy} />
+      {busy ? "Deleting…" : "Delete connection"}
+    </Button>
+  {/snippet}
+</ActionDialog>
 
 <style>
   .manager-body {

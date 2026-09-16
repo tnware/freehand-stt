@@ -1,7 +1,8 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
-  import * as Dialog from "$lib/components/ui/dialog";
-  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
+  import ActionDialog from "$lib/components/common/ActionDialog.svelte";
+  import SaveIcon from "@lucide/svelte/icons/save";
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
 
   let {
     open,
@@ -30,42 +31,31 @@
     onDiscard: () => void;
     onSave: () => void;
   } = $props();
-  const layout = getWorkbenchLayout();
-
-  $effect(() => {
-    if (open) return layout?.claimNotifications("modal");
-  });
-
-  function preventDismissWhileBusy(event: Event) {
-    // onOpenChange observes a close; these hooks can prevent it.
-    if (busy) event.preventDefault();
-  }
 </script>
 
-<Dialog.Root
+<ActionDialog
   {open}
-  onOpenChange={(nextOpen) => {
-    if (!nextOpen && !busy) onKeepEditing();
-  }}
+  {busy}
+  {title}
+  {description}
+  {error}
+  {errorClass}
+  icon={SaveIcon}
+  ondismiss={onKeepEditing}
 >
-  <Dialog.Content
-    showCloseButton={!busy}
-    onEscapeKeydown={preventDismissWhileBusy}
-    onInteractOutside={preventDismissWhileBusy}
-  >
-    <Dialog.Header>
-      <Dialog.Title>{title}</Dialog.Title>
-      <Dialog.Description>{description}</Dialog.Description>
-    </Dialog.Header>
-    {#if error}<p role="alert" class={errorClass}>{error}</p>{/if}
-    <Dialog.Footer>
-      <Button variant="outline" disabled={busy} onclick={onKeepEditing}
-        >Keep editing</Button
-      >
-      <Button variant={discardVariant} disabled={busy} onclick={onDiscard}
-        >{discardLabel}</Button
-      >
-      <Button disabled={busy} onclick={onSave}>{saveLabel}</Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+  {#snippet actions()}
+    <Button
+      variant="outline"
+      disabled={busy}
+      data-dialog-initial-focus
+      onclick={onKeepEditing}>Keep editing</Button
+    >
+    <Button variant={discardVariant} disabled={busy} onclick={onDiscard}
+      >{discardLabel}</Button
+    >
+    <Button disabled={busy} onclick={onSave}>
+      <ButtonIcon icon={SaveIcon} {busy} />
+      {busy ? "Saving…" : saveLabel}
+    </Button>
+  {/snippet}
+</ActionDialog>

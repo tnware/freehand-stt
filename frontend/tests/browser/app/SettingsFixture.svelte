@@ -109,6 +109,13 @@
     ],
     selected: { [Purpose.Transcription]: "original" },
   };
+  if (params.has("unused-connection")) {
+    current.savedConnections.entries!.push({
+      ...current.savedConnections.entries![0],
+      id: "unused",
+      name: "Unused server",
+    });
+  }
   if (new URLSearchParams(location.search).has("workflows")) {
     const uses = [
       Purpose.Transcription,
@@ -173,6 +180,16 @@
   const saves = controlledSaves((request) => {
     const next = { ...current, ...request.settings };
     const change = request.connectionChange;
+    if (change?.action === Action.Delete) {
+      next.savedConnections = {
+        ...current.savedConnections,
+        entries: (current.savedConnections.entries ?? []).filter(
+          (entry) => entry.id !== change.id,
+        ),
+      };
+      current = structuredClone(next);
+      return structuredClone(current);
+    }
     if (change) {
       if (change.action !== Action.Create || !change.details)
         throw new Error("Unexpected connection action");
