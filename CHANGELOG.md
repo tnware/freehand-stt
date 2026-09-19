@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.0](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.6...v0.1.0) (2026-09-16)
+
+
+### Features
+
+* add managed speech runtimes for Windows and macOS ([#71](https://github.com/tnware/freehand-stt/issues/71)) ([ef34a22](https://github.com/tnware/freehand-stt/commit/ef34a2259e95bdddace34e393b0da15bbb95edfa))
+* add shared NeMo transcription and MagpieTTS runtime ([#76](https://github.com/tnware/freehand-stt/issues/76)) ([8e95f3a](https://github.com/tnware/freehand-stt/commit/8e95f3ad869b259c0ed8f79c65aed884be023d7f))
+* **macos:** add a menu-bar dictation popover ([#62](https://github.com/tnware/freehand-stt/issues/62)) ([d3e0eb7](https://github.com/tnware/freehand-stt/commit/d3e0eb78f2cab2f05ce19bc7cbd6e1a263051c34))
+* **site:** add restrained icons to the Features hero ([#70](https://github.com/tnware/freehand-stt/issues/70)) ([def1109](https://github.com/tnware/freehand-stt/commit/def110960c2bb085a1abe4cdfdcbcf33b074d66f))
+* **site:** adopt neutral glass styling and platform visuals ([#69](https://github.com/tnware/freehand-stt/issues/69)) ([3c1ac3c](https://github.com/tnware/freehand-stt/commit/3c1ac3c9e7d01622b9b7a2e2476be84ba4dd22f5))
+* **windows:** add a tray dictation popover ([#65](https://github.com/tnware/freehand-stt/issues/65)) ([46198ea](https://github.com/tnware/freehand-stt/commit/46198ea05cdc3287dff25f5e83179903ce2ddaa2))
+
+
+### Bug Fixes
+
+* harden credentials, native input, and async recovery ([#78](https://github.com/tnware/freehand-stt/issues/78)) ([b3605ac](https://github.com/tnware/freehand-stt/commit/b3605acd7abfe11a8d07c23e979f265cd2d24588))
+* **shortcuts:** allow unassigned bindings and recover startup conflicts ([#67](https://github.com/tnware/freehand-stt/issues/67)) ([09d8b8e](https://github.com/tnware/freehand-stt/commit/09d8b8e0e61cd619a6e7f29adc5d4a94b63df59e))
+* updater shutdown and status; align setup and privacy guidance ([#74](https://github.com/tnware/freehand-stt/issues/74)) ([6de0dda](https://github.com/tnware/freehand-stt/commit/6de0ddafff386d969a290ddef9b1fb430c0ab0a9))
+
 ## [0.1.0-alpha.6](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.5...v0.1.0-alpha.6) (2026-09-13)
 
 
