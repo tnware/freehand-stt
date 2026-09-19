@@ -1,8 +1,11 @@
 <script lang="ts">
+  import EmptyState from "$lib/components/common/EmptyState.svelte";
+  import HistoryIcon from "@lucide/svelte/icons/history";
+  import HistoryOutcomeBadge from "./HistoryOutcomeBadge.svelte";
   import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import ArrowLeftRightIcon from "@lucide/svelte/icons/arrow-left-right";
   import CheckIcon from "@lucide/svelte/icons/check";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import ClipboardIcon from "@lucide/svelte/icons/clipboard";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
@@ -90,29 +93,12 @@
       (ttsStatus?.phase === TTSPhase.Generating ? ttsStatus : undefined),
   );
 
-  const outcomeLabel = (outcome: HistoryOutcome): string => {
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "Copy required";
-    if (outcome === HistoryOutcome.HistoryFailed) return "Delivery failed";
-    if (outcome === HistoryOutcome.HistoryTranscribed) return "Audio file";
-    if (outcome === HistoryOutcome.HistoryCancelled) return "Cancelled";
-    return "Inserted";
-  };
-
   const outcomeDot = (outcome: HistoryOutcome): string => {
     if (outcome === HistoryOutcome.HistoryFailed) return "bg-destructive";
-    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-primary";
+    if (outcome === HistoryOutcome.HistoryCopyRequired) return "bg-warning";
     if (outcome === HistoryOutcome.HistoryCancelled)
       return "bg-muted-foreground/50";
     return "bg-success";
-  };
-
-  const outcomeBadgeClass = (outcome: HistoryOutcome): string => {
-    if (outcome === HistoryOutcome.HistoryFailed) return "";
-    if (outcome === HistoryOutcome.HistoryCopyRequired)
-      return "bg-accent-wash text-accent-text";
-    if (outcome === HistoryOutcome.HistoryInserted)
-      return "bg-success/10 text-success";
-    return "";
   };
 
   const completedDateTime = (completedAt: string): string =>
@@ -265,13 +251,13 @@
   )}
 >
   {#if entries.length === 0 && !live}
-    <div
-      class="flex min-h-40 flex-col items-center justify-center px-3 py-4 text-center"
-    >
-      <p class="content-title">{emptyTitle}</p>
-      <p class="content-meta mt-1.5 max-w-md">
-        {emptyDescription}
-      </p>
+    <div class="flex min-h-full flex-col">
+      <EmptyState
+        variant="compact"
+        icon={HistoryIcon}
+        title={emptyTitle}
+        description={emptyDescription}
+      />
     </div>
   {:else}
     <div class="flex flex-col">
@@ -298,7 +284,7 @@
               ></span>
               <Badge
                 variant={live.failed ? "destructive" : "secondary"}
-                class="text-[11px] tracking-normal normal-case"
+                class="text-xs tracking-normal normal-case"
               >
                 {#if live.working}
                   <LoaderCircleIcon
@@ -318,7 +304,7 @@
             <TranscriptText
               content={{ key: `file:${live.generation}`, text: live.text }}
               label="Audio file transcript"
-              class="mt-2.5 min-h-5 w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
+              class="reading-text mt-2.5 min-h-5"
             />
           {:else}
             <p
@@ -405,21 +391,14 @@
             >
               {completedLabel(entry.completedAt)}
             </time>
-            <Badge
-              variant={entry.outcome === HistoryOutcome.HistoryFailed
-                ? "destructive"
-                : "secondary"}
-              class={cn(
-                "text-[11px] tracking-normal normal-case",
-                outcomeBadgeClass(entry.outcome),
-              )}
-            >
-              {outcomeLabel(entry.outcome)}
-            </Badge>
+            <HistoryOutcomeBadge
+              outcome={entry.outcome}
+              fileLabel="Audio file"
+            />
             {#if hasProcessing(entry)}
               <Badge
                 variant="secondary"
-                class="text-[11px] tracking-normal text-accent-text normal-case"
+                class="text-xs tracking-normal text-accent-text normal-case"
               >
                 {processingLabel(entry)}
               </Badge>
@@ -432,18 +411,6 @@
             <span class="content-meta shrink-0 tabular-nums"
               >{characterLabel(entry.characterCount)}</span
             >
-          {/if}
-          {#if !reader}
-            <span
-              class="disclosure-affordance grid size-7 shrink-0 place-items-center rounded-md text-muted-foreground"
-            >
-              <ChevronDownIcon
-                class={cn(
-                  "size-4 transition-transform duration-150 motion-reduce:transition-none",
-                  isExpanded && "rotate-180",
-                )}
-              />
-            </span>
           {/if}
         {/snippet}
         <article
@@ -475,12 +442,16 @@
             {:else}
               <button
                 type="button"
-                class="history-disclosure flex min-h-[34px] min-w-0 flex-1 items-center gap-2.5 px-3 py-1 text-left"
+                class="disclosure-trigger min-h-[34px] flex-1 items-center gap-2.5 px-3 py-1"
                 aria-label={`${isExpanded ? "Collapse" : "Expand"} transcript from ${completedDateTime(entry.completedAt)}`}
                 aria-expanded={isExpanded}
                 aria-controls={`${uid}-history-entry-${entry.id}-content`}
                 onclick={() => toggleExpanded(entry.id)}
               >
+                <ChevronRightIcon
+                  class="disclosure-chevron mt-0"
+                  aria-hidden="true"
+                />
                 {@render entryHeading()}
               </button>
             {/if}
@@ -490,7 +461,7 @@
                 size="xs"
                 class={cn(
                   "mr-2 min-w-[4.75rem]",
-                  isComparing && "bg-accent-wash text-accent-text",
+                  isComparing && "bg-accent-wash-strong text-accent-text",
                 )}
                 aria-label={isComparing
                   ? "Show the final transcript"
@@ -554,7 +525,7 @@
                         parts: comparison.raw,
                       }}
                       label="Raw transcript text"
-                      class="w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
+                      class="reading-text"
                     />
                   </section>
 
@@ -605,7 +576,7 @@
                         parts: comparison.processed,
                       }}
                       label="Cleaned transcript text"
-                      class="w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
+                      class="reading-text"
                     />
                   </section>
                 </div>
@@ -613,7 +584,7 @@
                 <TranscriptText
                   content={{ key: String(entry.id), text: entry.text }}
                   label={`Transcript from ${completedDateTime(entry.completedAt)}`}
-                  class="mt-2.5 w-full max-w-[76ch] text-[15px] leading-[26px] text-foreground break-words whitespace-pre-wrap"
+                  class="reading-text mt-2.5"
                 />
               {/if}
             </div>
@@ -746,21 +717,6 @@
   }
   article {
     container-type: inline-size;
-  }
-  .history-disclosure:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: -2px;
-  }
-  .history-disclosure {
-    transition:
-      background-color 100ms ease,
-      color 100ms ease;
-  }
-  .history-disclosure:hover {
-    background-color: var(--control-fill-hover);
-  }
-  .history-disclosure:hover .disclosure-affordance {
-    color: var(--foreground);
   }
   /* At the default 1080 px window the history column has enough room for two
      readable transcript columns. Narrow layouts keep the vertical flow. */

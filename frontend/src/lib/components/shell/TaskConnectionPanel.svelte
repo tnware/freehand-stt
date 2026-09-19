@@ -1,6 +1,7 @@
 <script lang="ts">
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
+  import StatusIndicator from "$lib/components/common/StatusIndicator.svelte";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import ConnectionDiagnostics from "$lib/components/settings/ConnectionDiagnostics.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -69,12 +70,16 @@
         Choose a saved connection for this task.
       </p>
     {:else if details.runtime && !details.runtime.ready}
-      <StatusBadge tone="warning">{details.runtime.label}</StatusBadge>
+      <RuntimeStatus
+        view={details.runtime.presentation}
+        label={details.runtime.label}
+        badge
+      />
       <p class="text-xs text-muted-foreground">{details.runtime.detail}</p>
-    {:else if details.busy}<p class="flex items-center gap-2">
-        <LoaderCircleIcon
-          class="size-4 animate-spin motion-reduce:animate-none"
-        />Checking connection…
+    {:else if details.busy}<p
+        class="flex items-center gap-1.5 text-accent-text"
+      >
+        <StatusIndicator tone="accent" busy />Checking connection…
       </p>
     {:else if details.stale}<StatusBadge tone="warning"
         >Settings changed since the last check.</StatusBadge
@@ -147,16 +152,14 @@
     >
   </div>
   {#if current && details.selected && details.enabled}
-    <details class="group border-t border-hairline pt-3">
-      <summary
-        class="flex cursor-pointer list-none items-center justify-between gap-2 rounded-md py-1 text-xs font-medium text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden"
-        >Technical details<ChevronDownIcon
-          class="size-4 group-open:rotate-180"
-        /></summary
-      >
-      <div class="pt-4">
+    <Disclosure
+      title="Technical details"
+      compact
+      class="border-t border-hairline"
+    >
+      <div>
         <ConnectionDiagnostics platform={details.platform} result={current} />
       </div>
-    </details>
+    </Disclosure>
   {/if}
 </div>

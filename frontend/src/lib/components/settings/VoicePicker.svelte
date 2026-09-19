@@ -1,11 +1,11 @@
 <script lang="ts">
+  import { pickerControl } from "$lib/utils/controlStyles";
+  import * as Picker from "$lib/components/ui/combobox";
   import type { Snippet } from "svelte";
   import { Combobox } from "bits-ui";
   import { VoiceScope, type VoicesResult } from "$bindings/inference";
-  import { Button } from "$lib/components/ui/button";
-  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
+  import PickerRefreshButton from "./PickerRefreshButton.svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
-  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
 
   let {
     id,
@@ -16,6 +16,7 @@
     busy = false,
     onDiscover,
     compact = false,
+    sidebar = false,
     disabled = false,
     onChoose,
     actions,
@@ -29,6 +30,7 @@
     busy?: boolean;
     onDiscover: () => void;
     compact?: boolean;
+    sidebar?: boolean;
     disabled?: boolean;
     onChoose?: (voice: string) => boolean | Promise<boolean>;
   } = $props();
@@ -112,18 +114,15 @@
 
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <label for={id} class="text-[13px] font-medium">Voice</label>
+    <label for={id} class="content-value">Voice</label>
     <div class="flex flex-wrap items-center gap-2">
-      {#if supported}<Button
-          variant="ghost"
-          size="sm"
-          disabled={busy || disabled}
+      {#if supported}<PickerRefreshButton
+          label="Refresh voices"
+          {sidebar}
+          {busy}
+          {disabled}
           onclick={onDiscover}
-        >
-          <RefreshCwIcon class={busy ? "size-4 animate-spin" : "size-4"} />{busy
-            ? "Loading voices…"
-            : "Refresh voices"}
-        </Button>{/if}
+        />{/if}
       {@render actions?.()}
     </div>
   </div>
@@ -157,7 +156,7 @@
           : supported
             ? "Search or enter a voice ID…"
             : "Enter a voice ID…"}
-        class="h-8 w-full rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class={pickerControl + " font-mono"}
         spellcheck={false}
         maxlength={200}
         oninput={(e) => {
@@ -185,60 +184,46 @@
             value={open ? query : value}
           />{/snippet}
       </Combobox.Input>
-      <Combobox.Trigger
-        aria-label="Show voices"
-        class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
-        ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
-      >
+      <Picker.Trigger aria-label="Show voices" />
     </div>
-    <Combobox.Portal
-      ><Combobox.Content
-        data-slot="combobox-content"
-        sideOffset={4}
-        collisionPadding={12}
-        class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
-      >
-        {#key query}{#each choices as choice (choice.value)}
-            <Combobox.Item
-              value={choice.value}
-              label={choice.label}
-              class="flex cursor-default items-center gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+    <Picker.Content>
+      {#key query}{#each choices as choice (choice.value)}
+          <Picker.Item value={choice.value} label={choice.label}>
+            <span class="min-w-0 flex-1 break-all"
+              ><span class="font-mono"
+                >{custom === choice.value
+                  ? `Use “${choice.value}”`
+                  : choice.label}</span
+              >{#if choice.label !== choice.value}<span
+                  class="mt-0.5 block text-xs text-muted-foreground"
+                  >{choice.value}</span
+                >{/if}</span
             >
-              <span class="min-w-0 flex-1 break-all"
-                ><span class="font-mono"
-                  >{custom === choice.value
-                    ? `Use “${choice.value}”`
-                    : choice.label}</span
-                >{#if choice.label !== choice.value}<span
-                    class="mt-0.5 block text-xs text-muted-foreground"
-                    >{choice.value}</span
-                  >{/if}</span
-              >
-              {#if choice.language}<span class="text-xs text-muted-foreground"
-                  >{choice.language}</span
-                >{/if}
-              {#if value === choice.value}<CheckIcon
-                  class="size-3.5 shrink-0"
-                />{/if}
-            </Combobox.Item>
-          {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
-              {allowedVoices.length
-                ? "No matching preset voices."
-                : supported
-                  ? "Refresh voices, or enter a voice ID supplied by your server."
-                  : "Enter a voice ID supplied by your server."}
-            </p>{/each}{/key}
-      </Combobox.Content></Combobox.Portal
-    >
+            {#if choice.language}<span class="text-xs text-muted-foreground"
+                >{choice.language}</span
+              >{/if}
+            {#if value === choice.value}<CheckIcon
+                class="size-3.5 shrink-0"
+              />{/if}
+          </Picker.Item>
+        {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
+            {allowedVoices.length
+              ? "No matching preset voices."
+              : supported
+                ? "Refresh voices, or enter a voice ID supplied by your server."
+                : "Enter a voice ID supplied by your server."}
+          </p>{/each}{/key}
+    </Picker.Content>
   </Combobox.Root>
   <p
     id={`${id}-help`}
     role="status"
-    class={compact && !result
+    class={compact && !result && !busy
       ? "sr-only"
-      : `text-xs leading-relaxed ${failure ? "text-warning" : "text-muted-foreground"}`}
+      : `text-xs leading-relaxed ${failure && !busy ? "text-warning" : "text-muted-foreground"}`}
   >
-    {#if allowedVoices.length}{voices.length} preset voices for this model profile.
+    {#if busy}Loading voices…
+    {:else if allowedVoices.length}{voices.length} preset voices for this model profile.
       {failure
         ? "Server voice refresh failed; the preset list remains available."
         : ""}

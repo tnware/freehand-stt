@@ -1,0 +1,55 @@
+---
+title: Voxtral Mini Realtime
+description: Follow live dictation with Mistral Voxtral Mini 4B Realtime through vLLM.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Use [mistralai/Voxtral-Mini-4B-Realtime-2602](https://huggingface.co/mistralai/Voxtral-Mini-4B-Realtime-2602)
+with **vLLM v0.28.0** and Freehand's **Voxtral Mini Realtime** model profile.
+
+## Connect Freehand
+
+Set up [vLLM](../../backends/vllm/) on your inference machine with its audio
+dependencies, then serve the checkpoint:
+
+```sh title="Serve Voxtral Mini Realtime"
+vllm serve mistralai/Voxtral-Mini-4B-Realtime-2602
+```
+
+<Steps>
+
+1. Add a **vLLM** connection using the server's HTTP API root, ending in `/v1`.
+2. In **Voice transcription**, choose the connection and the served model ID.
+3. Choose **Voxtral Mini Realtime** as the model profile.
+4. Enable **Realtime transcription** and optionally **Live overlay captions**.
+   Captions also require the main Overlay preference to be on. Save your changes.
+
+</Steps>
+
+Freehand derives `/v1/realtime` from the same connection. The recording shortcut
+starts microphone streaming; provisional words appear in Current result and,
+when enabled, the single-row overlay caption. Stop recording to receive the final
+text and apply your usual cleanup and focus-safe insertion.
+
+## Completed audio
+
+| Mode or setting | Behavior |
+| --- | --- |
+| Realtime on | Live microphone previews, followed by final text when recording stops |
+| Realtime off | Same model for completed recordings and checkpoints |
+| Audio-file transcription | Independent selection; uploads return completed text |
+| Language | Automatic detection |
+| Context, vocabulary, temperature | No controls in this profile |
+
+:::caution[Use the Mini 4B Realtime checkpoint]
+Do not select this profile for other Voxtral variants. Interrupted realtime
+sessions discard previews without inserting provisional text.
+:::
+
+See [vLLM's realtime example](https://docs.vllm.ai/en/v0.28.0/examples/speech_to_text/realtime/)
+for the server's microphone protocol.
+
+<CardGrid>
+  <LinkCard title="Use live transcription" href="../../guides/live-transcription/" description="Recording, captions, cancellation, and final delivery." />
+</CardGrid>

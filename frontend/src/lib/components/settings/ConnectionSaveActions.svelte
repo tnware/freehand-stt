@@ -1,8 +1,10 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import SaveIcon from "@lucide/svelte/icons/save";
+
   import type { Purpose } from "$bindings/savedconnection";
   import type { SettingsEditor } from "$lib/stores/editor.svelte";
   import { Button } from "$lib/components/ui/button";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
 
   let {
     editor,
@@ -46,11 +48,12 @@
   >
   <Button
     type="submit"
+    aria-busy={editor.saving}
     form={formID}
     disabled={busy || !!reason}
     aria-describedby={reason ? explanationID : undefined}
   >
-    {#if editor.saving}<LoaderCircleIcon class="animate-spin" />{/if}
+    <ButtonIcon icon={SaveIcon} busy={editor.saving} />
     {editor.saving
       ? "Saving…"
       : activateFor

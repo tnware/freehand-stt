@@ -1,5 +1,96 @@
 import { test, expect } from "./fixtures";
 
+for (const width of [1280, 560]) {
+  test(`Voice microphone selection saves and recovers at ${width}px`, async ({
+    page,
+    saves,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
+    const sidebar = page.locator("#workbench-primary-sidebar");
+    if (!(await sidebar.isVisible()))
+      await page
+        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
+        .click();
+    const input = sidebar.getByRole("group", {
+      name: "Microphone input",
+      exact: true,
+    });
+    const microphone = input.getByRole("button", {
+      name: "Microphone",
+      exact: true,
+    });
+    await expect(microphone).toContainText("System default microphone");
+
+    await microphone.click();
+    await page
+      .getByRole("option", { name: "Fixture microphone", exact: true })
+      .click();
+    const failed = await saves.waitForStart();
+    await expect(microphone).toBeDisabled();
+    await expect(input.getByRole("status")).toContainText("Saving…");
+    await saves.complete(failed, "failure");
+    await expect(microphone).toBeEnabled();
+    await expect(microphone).toContainText("System default microphone");
+    await expect(input.getByRole("status")).toContainText(
+      "Your previous settings are still active",
+    );
+
+    await microphone.click();
+    await page
+      .getByRole("option", { name: "Fixture microphone", exact: true })
+      .click();
+    await saves.complete(await saves.waitForStart(), "success");
+    await expect(microphone).toContainText("Fixture microphone");
+    await expect(input.getByRole("status")).toHaveText("Saved");
+    await input
+      .getByRole("button", { name: "Refresh microphones", exact: true })
+      .click();
+    await expect(microphone).toContainText("Fixture microphone");
+    await page.screenshot({ path: info.outputPath("microphone-sidebar.png") });
+    expect(
+      await sidebar.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+
+    if (width < 700)
+      await page
+        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
+        .click();
+    await page
+      .getByRole("button", { name: "Voice settings", exact: true })
+      .click();
+    const inspector = page.locator('[data-pane="configuration"]');
+    await inspector
+      .getByRole("tab", { name: "Audio settings", exact: true })
+      .click();
+    await expect(inspector.locator("#microphone-select")).toContainText(
+      "Fixture microphone",
+    );
+    await inspector.locator("#max-duration").fill("140");
+    // At narrow widths the inspector covers the still-mounted primary sidebar.
+    const mountedMicrophone = sidebar.locator('button[id$="-microphone"]');
+    await expect(mountedMicrophone).toBeDisabled();
+    await inspector
+      .getByRole("button", { name: "Discard changes", exact: true })
+      .click();
+    await expect(mountedMicrophone).toBeEnabled();
+    await inspector.getByRole("button", { name: "Done", exact: true }).click();
+    if (!(await sidebar.isVisible()))
+      await page
+        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
+        .click();
+
+    await microphone.click();
+    await page
+      .getByRole("option", { name: "System default microphone", exact: true })
+      .click();
+    await saves.complete(await saves.waitForStart(), "success");
+    await expect(microphone).toContainText("System default microphone");
+    await page.getByRole("button", { name: "Audio file", exact: true }).click();
+    await expect(input).toHaveCount(0);
+  });
+}
+
 for (const workflow of ["Voice transcription", "Audio file"]) {
   test(`${workflow} custom language commits the complete value`, async ({
     page,

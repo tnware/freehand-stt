@@ -139,9 +139,7 @@
                 value={mode.value}
               />
               <span class="min-w-0">
-                <span class="block text-[13px] font-medium text-foreground"
-                  >{mode.label}</span
-                >
+                <span class="content-value block">{mode.label}</span>
                 <span class="block text-xs leading-5 text-muted-foreground">
                   {mode.description}
                 </span>
@@ -197,9 +195,7 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-[13px] font-medium text-foreground"
-            >Direct input</span
-          >
+          <span class="content-value block">Direct input</span>
           <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">
             Type Unicode directly into the application that was focused when
             recording started. This is the default and does not touch the
@@ -218,9 +214,7 @@
           class="mt-0.5"
         />
         <span class="min-w-0">
-          <span class="block text-[13px] font-medium text-foreground"
-            >Manual copy</span
-          >
+          <span class="content-value block">Manual copy</span>
           <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">
             Keep every completed transcript in Freehand until you explicitly
             choose Copy transcript. Nothing is inserted or copied automatically.

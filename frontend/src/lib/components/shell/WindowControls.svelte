@@ -151,7 +151,7 @@
   .close:hover,
   .close:active {
     color: white;
-    background: #c42b1c;
+    background: var(--close-hover);
   }
 
   .caption-button:focus-visible {

@@ -1,0 +1,108 @@
+---
+title: NeMo-Speech.cpp
+description: Use NeMo-Speech.cpp for transcription and MagpieTTS speech generation on one server.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Freehand's **NeMo-Speech.cpp** backend profile supports the **v0.1.0** server API
+for microphone recordings, audio-file uploads, realtime microphone audio, and
+[MagpieTTS speech generation](../../models/magpie-tts/).
+
+| Task | Model profile |
+| --- | --- |
+| Completed or realtime transcription; language and vocabulary controls | [Nemotron 3.5 ASR streaming](../../models/nemotron/) |
+| Completed transcription with automatic language detection | [Parakeet TDT v3](../../models/parakeet/) |
+| Speech generation with voices and languages | [MagpieTTS](../../models/magpie-tts/) |
+
+## Run the server
+
+<CardGrid>
+  <LinkCard title="Install inside Freehand" href="../../guides/local-runtime/" description="Managed Windows or macOS setup; download selected models with Get." />
+  <LinkCard title="Manage your own NeMo server" href="https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/install.md" description="Install v0.1.0 and load transcription, MagpieTTS with its codec/tokenizer, or both." />
+</CardGrid>
+
+The server owns model loading, GPU selection, and chunk latency. It can run on
+the same computer or another machine reachable from Freehand.
+
+## Combined transcription and speech
+
+NeMo can load **one transcription engine and one speech-generation engine in
+the same process**.
+
+| Shared runtime behavior | What it means for you |
+| --- | --- |
+| Both enabled engines load before the listener is ready | Allow memory and startup time for both models |
+| One engine per capability | The request's model field does not switch among several transcription models |
+| Shared process | Starting, stopping, or restarting NeMo affects transcription and speech together |
+
+Managed setup lets you select Nemotron or Parakeet plus optional MagpieTTS.
+For a manual server, set the model paths in [YAML configuration](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/config/server.example.yaml)
+and follow [engine and listener configuration](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/server.md#engine-and-listener-configuration).
+Freehand's Connections select how tasks use that server; they do not load extra
+models on a remote server.
+
+## Connect Freehand
+
+<Steps>
+
+1. Open **Connections** and choose **Add connection**.
+2. Choose **NeMo-Speech.cpp**, name the connection, and enable the uses you need: **Voice transcription**, **Audio-file transcription**, and **Text to speech**.
+3. Enter the HTTP API root, such as `http://127.0.0.1:8088/v1` for a local server on port 8088. Enable **Allow HTTP for this connection** when using HTTP on a trusted network; add authentication if required by the server.
+4. Save the connection, then open the **Settings** cog in a workflow
+   and select it in **Transcription** or **Speech** options.
+5. Check the connection and select the model loaded on the server. Choose **Nemotron 3.5 ASR streaming** or **Parakeet TDT v3** for transcription, and **MagpieTTS Multilingual 357M** for speech generation. Save the workflow settings.
+
+</Steps>
+
+Connection checks read metadata only. They show advertised capabilities and
+device, plus the version when `/health` is available. The qualified version is
+**0.1.0**; metadata does not prove inference support or choose a model profile.
+
+<details>
+<summary>Which models appear in each workflow?</summary>
+
+Each workflow filters models by advertised capability. Transcription also keeps
+entries whose capability is unknown. Connection diagnostics can show both
+transcription and speech models from a combined server. Generic model behavior
+offers completed transcription; choose Nemotron explicitly for Voice's
+**Realtime transcription** switch.
+
+</details>
+
+## Supported API
+
+| Operation | API and result |
+| --- | --- |
+| Completed recordings and files | `/v1/audio/transcriptions` with `verbose_json` for text, language, and duration; no partial file-response streaming |
+| Realtime microphone | `/v1/audio/transcriptions/realtime`; the NeMo transcription WebSocket, without fallback to a general realtime route |
+| Speech | `/v1/audio/speech`, buffered WAV, with [MagpieTTS](../../models/magpie-tts/) voice and language controls |
+| Refresh voices | Reads the speech model's `voices` and `languages` in `/v1/models`; does not synthesize audio |
+
+Enter the HTTP base URL. Freehand derives the WebSocket address; HTTPS uses
+WSS, and a configured API key goes in the upgrade header. Turning realtime off
+keeps the same Voice connection and model for completed recordings.
+
+## Transcription controls
+
+Choose the qualified **Nemotron 3.5 ASR streaming** or **Parakeet TDT v3** model
+profile, then open **NeMo transcription controls** in the workflow's
+Transcription options. Voice and audio files remember their controls separately
+for each connection and model. Save applies changes to the next request.
+
+| Control                       | Default           | Effect and prerequisites                                                                                                                                                                        |
+| ----------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Automatic punctuation         | On                | Keeps model punctuation and server formatting. Off asks NeMo to strip formatting.                                                                                                               |
+| Normalize numbers and dates   | Off               | Requests inverse text normalization (ITN), such as “twenty one” → “21”. Requires a server build with ITN support and configured language grammars.                                              |
+| Profanity filter              | Off               | Requests masking using a word list configured on the server.                                                                                                                                    |
+| Server endpointing delay (ms) | 0: server default | Realtime only. A value from 100 to 10,000 adjusts the pause threshold when server endpointing is already enabled. It does not enable endpointing or change Freehand's microphone stop controls. |
+
+:::note[Controls require server support]
+Metadata does not report optional assets or endpointing configuration. Managed
+NeMo does not install ITN grammars or a profanity word list and uses default
+endpointing. Enabling a control supplies no missing assets, enables no server
+endpointing, and downloads nothing.
+:::
+
+These controls follow the pinned [NeMo server API](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/api.md)
+and [ASR configuration](https://github.com/NVIDIA/NeMo-Speech.cpp/blob/v0.1.0/docs/asr/configuration.md).

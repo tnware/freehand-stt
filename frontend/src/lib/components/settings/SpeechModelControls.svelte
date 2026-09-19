@@ -136,6 +136,7 @@
   {@render modelDetails?.()}
 {/if}
 <VoicePicker
+  sidebar={compact && !showAdvanced}
   id={controlID("voice")}
   value={magpie && (!speech.voice || speech.voice === "alloy")
     ? "default"
@@ -169,7 +170,7 @@
   <div class={compact ? "space-y-4" : "space-y-4 p-5"}>
     {#if profile.capabilities.speechLanguage}
       <div class="space-y-1.5">
-        <label for={controlID("language")} class="text-[13px] font-medium"
+        <label for={controlID("language")} class="content-value"
           >Speech language</label
         >
         <LanguagePicker
@@ -194,7 +195,7 @@
     {/if}
     {#if profile.capabilities.speechInstructions}
       <div class="space-y-1.5">
-        <label for={controlID("instructions")} class="text-[13px] font-medium"
+        <label for={controlID("instructions")} class="content-value"
           >Voice style</label
         >
         <textarea
@@ -218,7 +219,8 @@
                 ...speech.options,
                 instructions: event.currentTarget.value,
               });
-          }}></textarea>
+          }}
+        ></textarea>
         <p class="text-xs leading-relaxed text-muted-foreground">
           Describe tone, emotion, or delivery. Leave empty for the selected
           voice’s usual style.

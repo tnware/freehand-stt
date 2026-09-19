@@ -59,9 +59,10 @@ Record real microphone, keyboard, insertion, Keychain, overlay and login behavio
 separately from unit/browser tests and cross-compilation. Never invoke model
 inventories to qualify a build.
 
-See the [contributor documentation](https://tnware.github.io/freehand-stt/docs/development/)
-for architecture, testing, and native platform acceptance. Before opening a
-pull request, run the checks relevant to the change. The normal baseline is:
+## Validation
+
+Before opening a pull request, run the checks relevant to the change.
+The normal baseline is:
 
 ```powershell
 gofmt -w main.go internal build/scripts
@@ -84,3 +85,18 @@ Use a conventional commit prefix such as `feat:`, `fix:`, `docs:`, or
 `refactor:` because release notes are generated from commit history. In the
 pull request, explain what changed, how it was verified, and any native platform
 behavior that still needs manual validation.
+
+Test observable behavior at its owning boundary, including failure and cancellation
+where relevant. Avoid tests that merely repeat implementation details.
+For UI interactions, run relevant local Playwright cases with
+`npm --prefix frontend run test:browser -- <spec-file>`. Browser fixtures use
+synthetic services and cannot establish native desktop behavior.
+Follow the [native acceptance procedure](site/src/content/docs/docs/safety/native-test-checklist.md)
+for changes involving OS integration.
+
+## Documentation
+
+Update product guides when a change affects how someone uses Freehand. Keep
+contributor pages focused on how to build, validate, generate, or release it.
+Implementation details, decisions, test results, and remaining acceptance work
+belong in the issue or pull request.

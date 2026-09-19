@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { pickerControl } from "$lib/utils/controlStyles";
+  import { cn } from "$lib/utils";
+  import * as Picker from "$lib/components/ui/combobox";
   import * as WindowingService from "$bindings/windowing/service";
   import Settings2Icon from "@lucide/svelte/icons/settings-2";
   import { tick, getContext } from "svelte";
@@ -25,7 +28,6 @@
   } from "$lib/utils/connectionChoices";
   import CheckIcon from "@lucide/svelte/icons/check";
   import PlusIcon from "@lucide/svelte/icons/plus";
-  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   let {
     id,
     catalog,
@@ -142,7 +144,11 @@
       {id}
       aria-label="Choose connection"
       placeholder={open ? "Search connections…" : "Choose or add a connection…"}
-      class={`w-full min-w-0 rounded-md border border-input bg-well pr-9 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${compact ? "h-7 text-xs" : "h-8"} ${selected && !open ? "pl-9" : "pl-3"}`}
+      class={cn(
+        pickerControl,
+        compact && "h-7 text-xs",
+        selected && !open && "pl-9",
+      )}
       oninput={(event) => {
         query = event.currentTarget.value;
         open = true;
@@ -153,67 +159,45 @@
           value={open ? query : (selected?.name ?? "")}
         />{/snippet}
     </Combobox.Input>
-    <Combobox.Trigger
-      aria-label="Show connections"
-      class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
-    >
-      <ChevronsUpDownIcon class="size-4" />
-    </Combobox.Trigger>
+    <Picker.Trigger aria-label="Show connections" />
   </div>
-  <Combobox.Portal
-    ><Combobox.Content
-      data-slot="combobox-content"
-      sideOffset={4}
-      class="z-50 flex max-h-[min(24rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md"
-    >
-      <div class="min-h-0 overflow-y-auto overscroll-contain p-1">
-        {#each matches as c (c.id)}
-          <Combobox.Item
-            value={c.id}
-            label={c.name}
-            class="flex cursor-default items-center gap-3 rounded-sm px-3 py-2.5 outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
-          >
-            <ProviderIcon
-              profile={connectionProvider(c, instances)}
-              size={20}
-            />
-            <span class="min-w-0 flex-1"
-              ><span class="block truncate text-sm font-medium">{c.name}</span
-              ><span class="block truncate text-xs text-muted-foreground"
-                >{connectionTargetLabel(c, instances)}</span
-              ></span
-            >
-            {#if c.id === selected?.id}<CheckIcon
-                class="size-4 shrink-0"
-              />{/if}
-          </Combobox.Item>
-        {:else}<p class="px-3 py-4 text-sm text-muted-foreground">
-            {query.trim()
-              ? "No matching connections."
-              : "No connections for this workflow yet."}
-          </p>{/each}
-        {#if !query.trim()}<Combobox.Item
-            value="none"
-            label="None selected"
-            class="mt-1 flex cursor-default items-center justify-between rounded-sm border-t border-hairline px-3 py-2 text-xs text-muted-foreground outline-none data-highlighted:bg-accent"
-          >
-            None selected {#if !selected}<CheckIcon class="size-3.5" />{/if}
-          </Combobox.Item>{/if}
-      </div>
-      <div class="shrink-0 border-t border-hairline p-1">
-        {#if onAdd}<Button
-            variant="ghost"
-            class="w-full justify-start"
-            disabled={disabled || choosing}
-            onclick={add}><PlusIcon />Add connection…</Button
-          >{/if}
-        <Button
+  <Picker.Content>
+    {#each matches as c (c.id)}
+      <Picker.Item value={c.id} label={c.name}>
+        <ProviderIcon profile={connectionProvider(c, instances)} size={20} />
+        <span class="min-w-0 flex-1"
+          ><span class="block truncate text-sm font-medium">{c.name}</span><span
+            class="block truncate text-xs text-muted-foreground"
+            >{connectionTargetLabel(c, instances)}</span
+          ></span
+        >
+        {#if c.id === selected?.id}<CheckIcon class="size-4 shrink-0" />{/if}
+      </Picker.Item>
+    {:else}<p class="px-3 py-4 text-sm text-muted-foreground">
+        {query.trim()
+          ? "No matching connections."
+          : "No connections for this workflow yet."}
+      </p>{/each}
+    {#if !query.trim()}<Picker.Item
+        value="none"
+        label="None selected"
+        class="mt-1 justify-between border-t border-hairline py-2 text-xs text-muted-foreground"
+      >
+        None selected {#if !selected}<CheckIcon class="size-3.5" />{/if}
+      </Picker.Item>{/if}
+    {#snippet footer()}
+      {#if onAdd}<Button
           variant="ghost"
           class="w-full justify-start"
           disabled={disabled || choosing}
-          onclick={manage}><Settings2Icon />Manage connections…</Button
-        >
-      </div>
-    </Combobox.Content></Combobox.Portal
-  >
+          onclick={add}><PlusIcon />Add connection…</Button
+        >{/if}
+      <Button
+        variant="ghost"
+        class="w-full justify-start"
+        disabled={disabled || choosing}
+        onclick={manage}><Settings2Icon />Manage connections…</Button
+      >
+    {/snippet}
+  </Picker.Content>
 </Combobox.Root>

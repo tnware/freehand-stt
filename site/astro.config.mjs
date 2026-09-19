@@ -40,7 +40,7 @@ export default defineConfig({
       customCss: ["./src/styles/docs.css"],
       components: { PageTitle: "./src/components/DocsPageTitle.astro" },
       lastUpdated: true,
-      // Learn the setup and everyday workflow before browsing implementation-specific guides.
+      // Follow the user journey: install, connect, use, then look up details.
       sidebar: [
         { label: "Freehand home", link: "/" },
         {
@@ -50,6 +50,11 @@ export default defineConfig({
             { label: "Download Freehand", link: "/download/" },
             { slug: "docs/guides/windows-installer" },
             { slug: "docs/guides/macos-setup" },
+          ],
+        },
+        {
+          label: "Set up services",
+          items: [
             { slug: "docs/guides/local-runtime" },
             { slug: "docs/guides/connect-a-server" },
             { slug: "docs/guides/saved-connections" },
@@ -59,17 +64,28 @@ export default defineConfig({
         {
           label: "Use Freehand",
           items: [
-            { slug: "docs/guides/using-freehand" },
+            { slug: "docs/guides/using-freehand", label: "Dictate with Voice" },
+            { slug: "docs/guides/live-transcription" },
+            { slug: "docs/guides/audio-files" },
+            { slug: "docs/guides/text-to-speech" },
+            { slug: "docs/guides/post-processing" },
+            { slug: "docs/guides/history" },
+          ],
+        },
+        {
+          label: "Options and help",
+          items: [
+            { slug: "docs/guides/workspace" },
+            { slug: "docs/reference/shortcuts" },
             { slug: "docs/guides/languages" },
             { slug: "docs/guides/vocabulary" },
-            { slug: "docs/guides/post-processing" },
-            { slug: "docs/guides/live-transcription" },
             { slug: "docs/guides/privacy-and-safety" },
             { slug: "docs/guides/troubleshooting" },
           ],
         },
         {
           label: "Backend reference",
+          collapsed: true,
           items: [
             { label: "Compare backends", link: "/backends/" },
             { slug: "docs/backends" },
@@ -86,6 +102,7 @@ export default defineConfig({
         },
         {
           label: "Model reference",
+          collapsed: true,
           items: [
             { label: "Explore models", link: "/models/" },
             { slug: "docs/models/families" },
@@ -100,34 +117,32 @@ export default defineConfig({
           ],
         },
         {
-          label: "Reference",
+          label: "Technical reference",
+          collapsed: true,
           items: [
-            { slug: "docs/reference/shortcuts" },
             { slug: "docs/reference/protocol" },
             { slug: "docs/reference/provider-icons" },
           ],
         },
         {
           label: "Contribute",
+          collapsed: true,
           items: [
             { slug: "docs/development" },
-            { slug: "docs/development/architecture" },
-            { slug: "docs/development/testing" },
             { slug: "docs/development/backend-compatibility" },
             { slug: "docs/development/storage" },
             { slug: "docs/development/brand-assets" },
-          ],
-        },
-        {
-          label: "Maintainer records",
-          collapsed: true,
-          items: [
-            { slug: "docs/development/releases" },
-            { slug: "docs/development/github-actions" },
-            { slug: "docs/safety/logging" },
-            { slug: "docs/safety/windows" },
-            { slug: "docs/safety/native-test-checklist" },
-
+            {
+              label: "Maintenance and safety",
+              collapsed: true,
+              items: [
+                { slug: "docs/development/releases" },
+                { slug: "docs/development/github-actions" },
+                { slug: "docs/safety/logging" },
+                { slug: "docs/safety/windows" },
+                { slug: "docs/safety/native-test-checklist" },
+              ],
+            },
           ],
         },
       ],

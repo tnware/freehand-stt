@@ -1,0 +1,50 @@
+---
+title: vLLM-Omni
+description: Connect vLLM-Omni for text to speech with Qwen3-TTS preset voices and style instructions.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Freehand supports **vLLM-Omni v0.18.0** for buffered WAV speech generation.
+Choose this backend separately from the **vLLM** transcription or cleanup
+backend. For text to speech, select **vLLM-Omni** in Connections.
+
+## Run the server
+
+Follow the runtime's [installation and Qwen3-TTS serving guide](https://docs.vllm.ai/projects/vllm-omni/en/v0.18.0/user_guide/examples/online_serving/qwen3_tts/)
+on your inference machine. Load **Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice** and
+expose its HTTP API. Configure model loading and the GPU on that server.
+
+## Connect Freehand
+
+<Steps>
+
+1. Open **Connections → Add connection**.
+2. Choose **vLLM-Omni**, select **Text to speech** under **Used for**, and enter the HTTP API root,
+   such as `http://127.0.0.1:8091/v1` for a local service on port 8091.
+3. Configure authentication. If using HTTP on a trusted network, enable
+   **Allow HTTP for this connection**, then save.
+4. Open **Text to speech** and its **Settings** cog, then select the connection and model in **Speech** options.
+5. Choose the [Qwen3-TTS model profile](../../models/qwen3-tts/) to use its preset
+   speakers, ten languages, and voice-style instructions.
+6. Turn on **Enable text to speech**, choose a preset voice, and use **Preview**
+   to hear it. Choose **Save**.
+
+</Steps>
+
+## Supported API
+
+| Operation | Request or result |
+| --- | --- |
+| Connection check | Model metadata only |
+| Refresh voices | `GET /v1/audio/voices`; no synthesis |
+| Speech generation | `POST /v1/audio/speech`, `response_format: "wav"`, `stream: false`, then native playback |
+| Qwen CustomVoice controls | Adds `task_type: "CustomVoice"`, language name, and optional `instructions` |
+
+Generic model behavior offers standard voice-ID and speed fields when the
+loaded model accepts them. Choose the Qwen profile only for its matching
+checkpoint. Reference-voice uploads and voice-cloning tasks are unavailable.
+
+<CardGrid>
+  <LinkCard title="Choose Qwen3-TTS controls" href="../../models/qwen3-tts/" description="Preset speakers, supported languages, and voice-style instructions." />
+</CardGrid>

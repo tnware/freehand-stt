@@ -97,7 +97,7 @@
 <!-- Endpoint reachability is different from capture state; both are ambient,
      so both live here rather than being restated inside each pane. -->
 <footer
-  class="status-bar flex h-6 shrink-0 items-center justify-between gap-2 border-t px-3 text-[11px] leading-none"
+  class="status-bar flex h-6 shrink-0 items-center justify-between gap-2 border-t px-3 text-xs leading-none"
   data-tone={capture.tone}
 >
   <div class="flex min-w-0 flex-1 items-center gap-2.5">
@@ -174,7 +174,7 @@
     {#if connectionDetails.model}
       <span class="h-3 w-px shrink-0 bg-border" aria-hidden="true"></span>
       <span
-        class="hidden max-w-48 truncate font-mono text-[10px] text-ink-quiet min-[900px]:inline"
+        class="hidden max-w-48 truncate font-mono text-2xs text-ink-quiet min-[900px]:inline"
         title={connectionDetails.model}>{connectionDetails.model}</span
       >
     {/if}
@@ -202,7 +202,7 @@
     <Button
       variant="ghost"
       size="xs"
-      class="-mr-1 h-6 rounded-sm px-1.5 text-[11px] font-normal text-secondary-foreground hover:text-foreground focus-visible:ring-inset"
+      class="-mr-1 h-6 rounded-sm px-1.5 text-xs font-normal text-secondary-foreground hover:text-foreground focus-visible:ring-inset"
       onclick={onAbout}
       aria-label={aboutOpen ? "Focus About" : "Open About"}
       title={aboutOpen ? "Focus About" : "Open About"}

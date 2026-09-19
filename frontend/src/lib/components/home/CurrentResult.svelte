@@ -1,8 +1,16 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import Volume2Icon from "@lucide/svelte/icons/volume-2";
+  import CopyIcon from "@lucide/svelte/icons/copy";
+  import CheckIcon from "@lucide/svelte/icons/check";
+  import EraserIcon from "@lucide/svelte/icons/eraser";
+
+  import EmptyState from "$lib/components/common/EmptyState.svelte";
   import TranscriptText from "$lib/components/common/TranscriptText.svelte";
   import { followTranscript } from "$lib/utils/transcriptScroll";
   import { onDestroy } from "svelte";
   import { CopyFeedback } from "$lib/utils/copyFeedback.svelte";
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import { Button } from "$lib/components/ui/button";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import AudioLinesIcon from "@lucide/svelte/icons/audio-lines";
@@ -58,36 +66,41 @@
 >
   <div class="workbench-toolbar flex-wrap gap-y-1 py-1">
     <h2 class="content-title">Transcript</h2>
-    <span
-      class="mr-auto inline-flex min-h-5 min-w-0 items-center rounded-sm border px-1.5 text-[11px] {live ||
-      working
-        ? 'border-accent-edge bg-accent-wash text-accent-text'
-        : recovery
-          ? 'border-warning/30 text-warning'
+    <div class="mr-auto min-w-0" role="status">
+      <StatusBadge
+        tone={recovery
+          ? "warning"
           : failed
-            ? 'border-destructive/30 text-destructive'
-            : 'border-border text-muted-foreground'}"
-      role="status"
-      >{live
-        ? "Live"
-        : working
-          ? "In progress"
-          : recovery
-            ? "Ready to copy"
-            : failed
-              ? "Needs attention"
-              : text
-                ? "Ready"
-                : mode === "file"
-                  ? "No transcript yet"
-                  : "Nothing recorded yet"}</span
-    >
+            ? "danger"
+            : live
+              ? "recording"
+              : working
+                ? "accent"
+                : "neutral"}
+        dot={live}
+        pulse={live}
+      >
+        {live
+          ? "Live"
+          : working
+            ? "In progress"
+            : recovery
+              ? "Ready to copy"
+              : failed
+                ? "Needs attention"
+                : text
+                  ? "Ready"
+                  : mode === "file"
+                    ? "No transcript yet"
+                    : "Nothing recorded yet"}
+      </StatusBadge>
+    </div>
     {#if text}
       <div class="ml-auto flex shrink-0 items-center gap-1">
         {#if onListen}<Button
             variant="outline"
             size="xs"
-            class="min-w-14"
+            class="min-w-18"
             disabled={working || !canCopy || listenDisabled}
             aria-label={listenBusy
               ? "Preparing speech for this transcript"
@@ -99,20 +112,20 @@
                 ? "Wait for speech generation to finish"
                 : "Listen to transcript"}
             onclick={onListen}
-            >{#if listenBusy}<LoaderCircleIcon
-                class="animate-spin motion-reduce:animate-none"
-              />{:else}Listen{/if}</Button
+            ><ButtonIcon icon={Volume2Icon} busy={listenBusy} />Listen</Button
           >{/if}
         <Button variant="ghost" size="xs" disabled={working} onclick={onClear}
-          >Clear</Button
+          ><ButtonIcon icon={EraserIcon} />Clear</Button
         >
         <Button
           variant="soft"
           size="xs"
-          class="min-w-16"
+          class="min-w-20"
           disabled={working || !canCopy}
           onclick={copy}
-          >{feedback.key === resultKey ? "Copied" : "Copy"}</Button
+          ><ButtonIcon
+            icon={feedback.key === resultKey ? CheckIcon : CopyIcon}
+          />{feedback.key === resultKey ? "Copied" : "Copy"}</Button
         >
       </div>
     {/if}
@@ -141,7 +154,7 @@
           </p>
         {/if}
         {#if live || text}
-          <div class="w-full max-w-[760px] px-3 py-3.5">
+          <div class="w-full px-3 py-3.5">
             {#if live}
               <p class="content-meta mb-3" role="status">
                 Live preview · text may change
@@ -156,44 +169,34 @@
                   : undefined,
               }}
               label={live ? "Live transcript" : "Current transcript"}
-              class="whitespace-pre-wrap break-words text-[15px] leading-[26px] text-foreground"
+              class="reading-text"
             />
           </div>
         {:else if !message}
-          <div
-            class="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-4 text-center"
-          >
-            <span
-              class="mb-1 grid size-6 place-items-center text-muted-foreground"
-              aria-hidden="true"
-            >
-              {#if working}<LoaderCircleIcon
-                  class="size-6 animate-spin motion-reduce:animate-none"
-                />
-              {:else if mode === "file"}<FileAudioIcon class="size-6" />
-              {:else}<AudioLinesIcon class="size-6" />{/if}
-            </span>
-            <p class="content-title">
-              {failed
-                ? "No transcript to show"
-                : working
-                  ? "Your result will appear here"
-                  : mode === "file"
-                    ? "Turn an audio file into text"
-                    : "Speak into the application you’re using"}
-            </p>
-            <p class="content-meta max-w-lg">
-              {failed
-                ? mode === "file"
-                  ? "Use Retry above, or choose another file."
-                  : "Use Record again above when you’re ready."
-                : working
-                  ? "You can keep working while Freehand finishes."
-                  : mode === "file"
-                    ? "Choose a file above. The transcript stays available here for inspection and copying."
-                    : "Use your recording shortcut from any application. Your latest transcript will also appear here."}
-            </p>
-          </div>
+          <EmptyState
+            icon={working
+              ? LoaderCircleIcon
+              : mode === "file"
+                ? FileAudioIcon
+                : AudioLinesIcon}
+            busy={working}
+            title={failed
+              ? "No transcript to show"
+              : working
+                ? "Your result will appear here"
+                : mode === "file"
+                  ? "Turn an audio file into text"
+                  : "Speak into the application you’re using"}
+            description={failed
+              ? mode === "file"
+                ? "Use Retry above, or choose another file."
+                : "Use Record again above when you’re ready."
+              : working
+                ? "You can keep working while Freehand finishes."
+                : mode === "file"
+                  ? "Choose a file above. The transcript stays available here for inspection and copying."
+                  : "Use your recording shortcut from any application. Your latest transcript will also appear here."}
+          />
         {/if}
       </div>
     </div>

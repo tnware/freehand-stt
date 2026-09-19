@@ -13,11 +13,11 @@
   /* Surfaces, recessed to raised. --sunk is the only one below the page
    * ground: it is the inside of a meter, a log or a live-text well, and it
    * has to be darker than what surrounds it or the recess inverts. */
-  --sunk: #e7e7e7;
-  --well: #f0f0f0;
-  --background: #f4f4f4;
-  --layer-fill: #ededed;
-  --secondary: #fafafa;
+  --sunk: #d6d9e0;
+  --well: #e8eaef;
+  --background: #f7f8fa;
+  --layer-fill: #eceef2;
+  --secondary: #eff1f5;
   --card: #ffffff;
   --popover: #ffffff;
   --popover-foreground: #202020;
@@ -43,42 +43,44 @@
   --action-primary-hover: #245fcf;
   --action-primary-foreground: #ffffff;
   --accent-text: #245fcf;
-  --accent-wash: rgb(50 111 229 / 9%);
-  --accent-wash-strong: rgb(50 111 229 / 14%);
-  --accent-edge: rgb(50 111 229 / 22%);
+  --accent-wash: rgb(50 111 229 / 12%);
+  --accent-wash-strong: rgb(50 111 229 / 20%);
+  --accent-edge: rgb(50 111 229 / 32%);
   --meter: #326fe5;
   --meter-rest: #c9d9f7;
 
   /* Controls. A control is a subtle raise; an input is a recessed well. */
   --control-fill: #ffffff;
-  --control-fill-hover: #f3f3f3;
+  --control-fill-hover: #eef0f4;
   --control-fill-pressed: #e8e8e8;
   --control-fill-active: #ffffff;
-  --subtle-fill-hover: rgb(15 15 15 / 4%);
-  --subtle-fill-pressed: rgb(15 15 15 / 7%);
+  --subtle-fill-hover: rgb(30 40 70 / 6%);
+  --subtle-fill-pressed: rgb(30 40 70 / 10%);
 
   /* Registry aliases. Accent is the wash that menus and hovers reach for. */
-  --muted: #eeeeee;
-  --accent: #eeeeee;
+  --muted: #eceef3;
+  --accent: #eceef3;
   --accent-foreground: #333333;
 
   /* Status. Green and amber darken on light so they stay legible as text. */
-  --success: #197f60;
-  --warning: #b45309;
+  --success: #0f7a4f;
+  --warning: #c2410c;
   --destructive: #dc2626;
   /* The record control is the one saturated constant in both themes. The
    * wash/edge/text trio carries the same hue onto a surface, so the status
    * bar can state "recording" without a second colour entering the palette. */
+  /* Windows caption close hover red, per platform convention. */
+  --close-hover: #c42b1c;
   --record: #cf4d62;
-  --record-wash: rgb(207 77 98 / 10%);
-  --record-edge: rgb(207 77 98 / 26%);
+  --record-wash: rgb(207 77 98 / 12%);
+  --record-edge: rgb(207 77 98 / 35%);
   --record-text: #a82f44;
 
-  --border: #dddddd;
-  --input: #d2d2d2;
+  --border: #c6cad4;
+  --input: #b8bdca;
   --ring: #326fe5;
-  --card-stroke: #e2e2e2;
-  --hairline: rgb(28 28 28 / 8%);
+  --card-stroke: #ced2dc;
+  --hairline: rgb(30 40 70 / 12%);
   /* The 1px highlight that separates a panel from its ground. */
   --highlight: #ffffff;
 
@@ -92,6 +94,7 @@
 	 * possible cast, giving the same one-step separation the dark inset gets.
 	 */
   --lift: 0 1px 2px rgb(28 28 28 / 5%), 0 4px 14px rgb(28 28 28 / 3%);
+  --float: 0 8px 24px rgb(0 0 0 / 16%), 0 2px 6px rgb(0 0 0 / 8%);
 
   --chart-1: #2563eb;
   --chart-2: #475569;
@@ -101,25 +104,25 @@
 
   --radius: 0.5rem;
 
-  --sidebar: #ededed;
+  --sidebar: #e6e9f0;
   --sidebar-foreground: #202020;
   --sidebar-primary: #326fe5;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eeeeee;
+  --sidebar-accent: #dfe3ec;
   --sidebar-accent-foreground: #333333;
-  --sidebar-border: #dddddd;
+  --sidebar-border: #c6cad4;
   --sidebar-ring: #326fe5;
 }
 
 .dark {
   /* Charcoal surfaces separate the canvas, content and floating controls.
 	 * Brand blue is reserved for actions and selected state. */
-  --sunk: #0e0e0e;
-  --well: #151515;
-  --background: #121212;
-  --layer-fill: #1b1b1b;
-  --secondary: #242424;
-  --card: #1b1b1b;
+  --sunk: #08090b;
+  --well: #101114;
+  --background: #0e0f12;
+  --layer-fill: #17191d;
+  --secondary: #24272d;
+  --card: #1d1f25;
   --popover: #242424;
   --popover-foreground: #f2f2f2;
   --dialog-surface: #242424;
@@ -137,21 +140,21 @@
   --primary-foreground: #080808;
   --primary-hover: #76a9ff;
   --accent-text: #76a9ff;
-  --accent-wash: rgb(77 141 255 / 12%);
-  --accent-wash-strong: rgb(77 141 255 / 18%);
-  --accent-edge: rgb(77 141 255 / 25%);
+  --accent-wash: rgb(77 141 255 / 16%);
+  --accent-wash-strong: rgb(77 141 255 / 26%);
+  --accent-edge: rgb(77 141 255 / 40%);
   --meter: #4d8dff;
   --meter-rest: #303030;
 
-  --control-fill: rgb(210 210 210 / 6%);
-  --control-fill-hover: rgb(210 210 210 / 10%);
-  --control-fill-pressed: rgb(210 210 210 / 4%);
-  --control-fill-active: rgb(210 210 210 / 9%);
-  --subtle-fill-hover: rgb(210 210 210 / 6%);
-  --subtle-fill-pressed: rgb(210 210 210 / 4%);
+  --control-fill: rgb(200 215 245 / 7%);
+  --control-fill-hover: rgb(200 215 245 / 12%);
+  --control-fill-pressed: rgb(200 215 245 / 5%);
+  --control-fill-active: rgb(200 215 245 / 10%);
+  --subtle-fill-hover: rgb(200 215 245 / 7%);
+  --subtle-fill-pressed: rgb(200 215 245 / 5%);
 
-  --muted: rgb(210 210 210 / 6%);
-  --accent: rgb(210 210 210 / 6%);
+  --muted: rgb(200 215 245 / 7%);
+  --accent: rgb(200 215 245 / 7%);
   --accent-foreground: #f2f2f2;
 
   /* Green and amber lighten on dark for the same reason they darken on light. */
@@ -159,21 +162,22 @@
   --warning: #fbbf24;
   --destructive: #f87171;
   --record: #cf4d62;
-  --record-wash: rgb(207 77 98 / 16%);
-  --record-edge: rgb(207 77 98 / 34%);
+  --record-wash: rgb(207 77 98 / 20%);
+  --record-edge: rgb(207 77 98 / 45%);
   --record-text: #f0a8b3;
 
-  --border: #383838;
-  --input: #424242;
+  --border: #484f5e;
+  --input: #535b6c;
   --ring: #76a9ff;
-  --card-stroke: rgb(210 210 210 / 10%);
-  --hairline: rgb(210 210 210 / 10%);
+  --card-stroke: rgb(200 215 245 / 16%);
+  --hairline: rgb(200 215 245 / 13%);
   --highlight: rgb(210 210 210 / 6%);
 
   --scrollbar-thumb: rgb(210 210 210 / 30%);
   --scrollbar-thumb-hover: rgb(210 210 210 / 48%);
 
   --lift: 0 1px 2px rgb(0 0 0 / 22%), 0 6px 18px rgb(0 0 0 / 10%);
+  --float: 0 10px 28px rgb(0 0 0 / 55%), 0 2px 8px rgb(0 0 0 / 30%);
 
   --chart-1: #4d8dff;
   --chart-2: #c3cbd7;
@@ -181,13 +185,13 @@
   --chart-4: #8796ad;
   --chart-5: #606060;
 
-  --sidebar: #1b1b1b;
+  --sidebar: #14161b;
   --sidebar-foreground: #f2f2f2;
   --sidebar-primary: #4d8dff;
   --sidebar-primary-foreground: #121212;
-  --sidebar-accent: rgb(210 210 210 / 6%);
+  --sidebar-accent: rgb(200 215 245 / 8%);
   --sidebar-accent-foreground: #f2f2f2;
-  --sidebar-border: #383838;
+  --sidebar-border: #484f5e;
   --sidebar-ring: #76a9ff;
 }
 
@@ -243,6 +247,8 @@
 }
 
 @theme inline {
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 1rem;
   --font-display: "Archivo Variable", var(--font-sans);
   --font-sans:
     "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
@@ -260,6 +266,7 @@
   --color-record-edge: var(--record-edge);
   --color-record-text: var(--record-text);
   --shadow-lift: var(--lift);
+  --shadow-float: var(--float);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -407,8 +414,7 @@ html.dark[data-material="mica"] #app {
   background: rgb(18 18 18 / 78%);
 }
 
-/* Keep the registry Dialog source untouched while making its window-level
- * material calmer: Fluent smoke dims the owner without blurring its content. */
+/* Overlay smoke: dialogs and contextual sidebar backdrops dim alike. */
 [data-slot="dialog-overlay"] {
   background-color: var(--dialog-smoke);
   backdrop-filter: none;
@@ -533,23 +539,207 @@ html.dark[data-material="mica"] #app {
     border-radius: 4px;
     background: var(--well);
   }
+  /* Inline guidance/status callouts share the accent wash and edge bar. */
+  .content-callout {
+    border-left: 2px solid var(--accent-edge);
+    background: var(--accent-wash);
+  }
   .content-section-icon {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
     color: var(--muted-foreground);
   }
-  .content-disclosure {
+  /* Opt-in disclosure controls; workbench/page header geometry stays local. */
+  .disclosure-trigger {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 8px;
+    list-style: none;
+    cursor: pointer;
+    text-align: left;
     font-size: 13px;
-    font-weight: 500;
+    line-height: 20px;
     color: var(--foreground);
   }
-  .content-disclosure:hover:not(:disabled) {
+  .disclosure-trigger::-webkit-details-marker {
+    display: none;
+  }
+  .disclosure-trigger[data-density="compact"] {
+    min-height: 28px;
+    padding-block: 4px;
+    font-size: 12px;
+  }
+  details[open] > .disclosure-trigger,
+  .disclosure-trigger[aria-expanded="true"] {
+    background: var(--well);
+  }
+  .disclosure-trigger:hover:not(:disabled) {
     background: var(--subtle-fill-hover);
   }
-  .content-disclosure:focus-visible {
+  .disclosure-trigger:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: -2px;
+  }
+  .disclosure-chevron {
+    width: 14px;
+    height: 14px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    color: var(--muted-foreground);
+    transition: transform 150ms ease;
+  }
+  details[open] > .disclosure-trigger > .disclosure-chevron,
+  [aria-expanded="true"] > .disclosure-chevron {
+    transform: rotate(90deg);
+    color: var(--accent-text);
+  }
+  .disclosure-icon {
+    display: flex;
+    padding-top: 2px;
+    color: var(--muted-foreground);
+  }
+  .disclosure-icon > svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+  .disclosure-body {
+    min-width: 0;
+    margin-left: 14px;
+    border-left: 1px solid var(--hairline);
+    padding: 8px 12px 12px 15px;
+    overflow-wrap: anywhere;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .disclosure-chevron {
+      transition: none;
+    }
+  }
+  /* A definition-list grid of run/response facts. dd wraps; narrow panes stack. */
+  .details-grid {
+    display: grid;
+    grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
+    column-gap: 1.25rem;
+    font-size: 13px;
+  }
+  .details-grid > dt {
+    margin-block: 2px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+  }
+  .details-grid > dd {
+    margin-block: 2px;
+    justify-content: flex-end;
+    min-width: 0;
+    text-align: right;
+    font-weight: 500;
+    color: var(--foreground);
+    overflow-wrap: anywhere;
+  }
+  @container history-details (max-width: 420px) {
+    .details-grid {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0.125rem;
+    }
+    .details-grid > dd {
+      justify-content: flex-start;
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }
+  }
+  @container response-metadata (max-width: 380px) {
+    .details-grid {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0.125rem;
+    }
+    .details-grid > dd {
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }
+  }
+  /* Menu rows inside title-bar menus and pickers. */
+  .menu-row {
+    display: flex;
+    cursor: default;
+    user-select: none;
+    align-items: center;
+    gap: 8px;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    outline: none;
+  }
+  .menu-row[data-highlighted] {
+    background: var(--accent-wash-strong);
+    color: var(--accent-text);
+  }
+  .menu-row[data-disabled] {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  /* Section footnote: a quiet explanatory strip under a settings group. */
+  .section-footnote {
+    border-top: 1px solid var(--hairline);
+    padding-block: 12px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--muted-foreground);
+  }
+  /* Reading text: transcripts and long results keep a comfortable measure. */
+  .reading-text {
+    width: 100%;
+    max-width: 76ch;
+    font-size: 15px;
+    line-height: 26px;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    color: var(--foreground);
+  }
+  /* Underlined accent text links to external sources. */
+  .source-link {
+    overflow-wrap: anywhere;
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .source-link:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* A run of mono literals (checksum + companions) wrapping in place. */
+  .mono-run {
+    display: inline-flex;
+    min-height: 1.25rem;
+    max-width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+  /* Inline literal: endpoints, IDs and checksums on a well chip. */
+  .mono-chip {
+    display: inline-block;
+    min-height: 1.25rem;
+    max-width: 100%;
+    border-radius: 4px;
+    background: var(--well);
+    padding: 2px 6px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    color: var(--foreground);
+    overflow-wrap: anywhere;
   }
 }
 
@@ -558,26 +748,12 @@ html.dark[data-material="mica"] #app {
   padding-inline: 0;
 }
 
-/* Shared control geometry belongs to the application, across all windows. */
-[data-slot="input"],
-[data-slot="combobox-input"],
-[data-slot="textarea"],
-[data-slot="select-trigger"] {
-  border-radius: var(--radius-md);
-  color: var(--foreground);
-}
-[data-slot="input"]:not(:focus-visible):not([aria-invalid="true"]),
-[data-slot="combobox-input"]:not(:focus-visible):not([aria-invalid="true"]),
-[data-slot="textarea"]:not(:focus-visible):not([aria-invalid="true"]),
-[data-slot="select-trigger"]:not(:focus-visible):not([aria-invalid="true"]) {
-  border-color: color-mix(in srgb, var(--muted-foreground) 75%, var(--well));
-}
 [data-slot="popover-content"],
 [data-slot="dropdown-menu-content"],
 [data-slot="select-content"],
 [data-slot="combobox-content"] {
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--float);
 }
 /* A dialog is the one surface allowed a wider corner: it is a window, not a
  * panel, and the extra 2px is what separates it from the page behind it. */

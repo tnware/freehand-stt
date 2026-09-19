@@ -1,0 +1,258 @@
+---
+title: Release lifecycle
+description: Versioning, Windows and macOS artifacts, integrity, and update boundaries.
+---
+
+import { Steps, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Prepare a release through Release Please, validate the tagged revision, and
+publish the exact packages that passed validation. Use the version in the release
+manifest and tag; the examples on this page do not identify the current release.
+
+<Steps>
+
+1. **Merge reviewed product changes into `main`.** Release Please accumulates them
+   in one release PR. Let it update `CHANGELOG.md`,
+   `.release-please-manifest.json`, and the version in `build/config.yml`.
+2. **Review and merge the refreshed release PR.** Merging creates a draft release
+   and a `v`-prefixed SemVer tag, then starts Windows and macOS validation and
+   packaging. Merging an ordinary fix does not publish a release.
+3. **Let tagged validation finish.** The same CI workflow used by PRs runs every
+   workload and checks the expected version before packaging.
+4. **Publish the validated artifact set.** Automation downloads the complete
+   Windows/macOS artifacts from that same run, creates checksums and attestations,
+   then makes the draft public as a non-prerelease and GitHub's latest release.
+   It verifies the published flags and latest tag.
+
+</Steps>
+
+:::caution[If validation fails]
+Diagnose and rerun the failed jobs. Do not publish the draft manually, reuse PR
+artifacts, mix workflow runs, or rebuild different bytes after testing.
+Publication rejects prerelease tags before uploading.
+:::
+
+## Version policy
+
+`0.1.0` is the first non-alpha baseline. It remains pre-1.0 SemVer, without a
+frozen 1.0 compatibility contract.
+
+| PR title type | Use for | Example bump from `0.1.0` |
+| --- | --- | --- |
+| `fix` | Corrective changes | `0.1.1` |
+| `feat` | New capabilities | `0.2.0` |
+| Explicit breaking change | A breaking contract change | `1.0.0` |
+
+Write the **PR title** as a Conventional Commit, for example:
+
+```text title="Example corrective PR title"
+fix(security): block inference redirects and sanitize response metadata
+```
+
+The repository squash-merges with the PR title as commit subject and an empty
+body. Release Please reads that title; branch commit messages and PR descriptions
+do not create separate release-note entries. Do not add `!` or force a release
+version for an ordinary bug fix.
+
+<details>
+<summary>Release Please version strategy and ownership</summary>
+
+Release Please uses `prerelease: false` with its `prerelease` versioning strategy.
+Despite that strategy's name, this combination graduates an existing alpha to
+its non-prerelease base version and then applies ordinary SemVer bumps to stable
+versions. There is no `release-as` override pinning future releases. Keep the
+release manifest and application version in the bot-owned release PR; changing
+`initial-version` alone does not override an existing release's version.
+
+Merge reviewed product fixes before the pending release PR so Release Please can
+refresh its changelog. Leave `CHANGELOG.md`, `.release-please-manifest.json`, and
+the version in `build/config.yml` to that release PR rather than editing them in
+fix branches. Merging a fix is not publication: merging the refreshed release PR
+starts the draft/tag and Windows and macOS packaging flow described below.
+
+</details>
+
+### Keep one release identity
+
+| Metadata | Source or derivation |
+| --- | --- |
+| Human version and About | `build/config.yml`; About reads its embedded value |
+| Windows resources and installer | Four-part numeric version derived from the same SemVer value |
+| macOS `CFBundleShortVersionString` | The three release components |
+| macOS `CFBundleVersion` | Numeric build derived from the same SemVer value; no separate counter |
+
+<details>
+<summary>Numeric Windows and macOS version rules</summary>
+
+`build/config.yml` is the release identity source. The release build derives
+Windows' required four-part numeric version from that SemVer value before it
+generates the executable resources and installer metadata. About reads the same
+embedded source. macOS build numbers are derived from that same SemVer value;
+there is no separate counter to update. `CFBundleShortVersionString` uses the
+three release components. `CFBundleVersion` is numeric `major.minor.build`,
+where `build = patch × 262144 + stage × 65536 + revision`; stages are alpha (0),
+beta (1), rc (2), and stable (3, revision 0). This keeps prerelease-to-stable
+ordering while satisfying Apple's numeric bundle format. Supported prereleases
+are `alpha.N`, `beta.N`, and `rc.N`, with the same positive uint16 revision
+bound used by the Windows resources. For example, `0.1.0-alpha.5` produces
+bundle build `0.1.5`, without changing its displayed release version.
+
+Prerelease versions end in a positive numeric revision. For example,
+`0.1.0-alpha.1` maps to Windows `0.1.0.1`; a stable release uses a zero revision.
+
+</details>
+
+Release Please uses its generic line updater and the
+`x-release-please-version` annotation on that one field. Do not switch it to a
+YAML updater: serializing the complete Wails configuration strips comments and
+creates unrelated formatting churn.
+
+After changing product identity or a version manually, synchronize the derived
+assets:
+
+```powershell title="Synchronize derived build assets"
+wails3 task common:update:build-assets
+```
+
+Review the generated diff. `build/windows/nsis/project.nsi` contains
+application-specific policy that must survive an upstream Wails asset refresh.
+Do not repair derived Windows version fields individually.
+
+## Build the Windows package
+
+Freehand requires CGo for native audio, so production artifacts are built on a
+native Windows GitHub runner. This follows Wails' CI guidance to use a native
+runner for the target platform rather than treating a cross-compiled binary as
+release acceptance.
+
+<Tabs>
+  <TabItem label="Per-user package">
+
+Build the public default locally:
+
+```powershell title="Native Windows build"
+wails3 task package CGO_ENABLED=1 ARCH=amd64
+```
+
+  </TabItem>
+  <TabItem label="All-users package">
+
+For an intentional machine-wide installation, add `INSTALL_SCOPE=machine`:
+
+```powershell title="Native Windows build — requires elevation to install"
+wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=machine
+```
+
+  </TabItem>
+</Tabs>
+
+Both paths write `bin/freehand-amd64-installer.exe`. The all-users installer
+requires elevation and is not the public default.
+
+| Check | Expected installer behavior |
+| --- | --- |
+| Shortcuts | One Start Menu shortcut; no Desktop shortcut |
+| After install | Freehand is not launched automatically |
+| App already running | Install/uninstall stops with instructions; it does not terminate the tray process |
+| Uninstall | Settings, WebView state, and Credential Manager entries are retained |
+
+## Public artifact contract
+
+New cross-platform releases must contain the complete asset set below. Older
+releases may lack macOS assets; never present a missing asset as downloadable.
+
+| Required asset | Purpose |
+| --- | --- |
+| `freehand-windows-amd64.exe` | Bare executable selected by Wails updater |
+| `freehand-windows-amd64-installer.exe` | Per-user NSIS installer |
+| `freehand-darwin-arm64.zip` | Apple Silicon app bundle |
+| `freehand-darwin-amd64.zip` | Intel app bundle |
+| `SHA256SUMS` | Exactly the four assets above; no missing or extra entries |
+
+Publication must reject incomplete sets and use only the artifacts from the
+same trusted, validated tagged workflow run. Do not rebuild or mix runs.
+
+:::caution[Integrity and publisher identity are different checks]
+GitHub also records artifact attestations. The binaries are not currently
+Authenticode-signed, so Windows may display an unfamiliar-publisher warning.
+Download only from the official
+[Releases page](https://github.com/tnware/freehand-stt/releases) and verify the
+checksum when installing manually.
+:::
+
+## macOS packaging and updates
+
+Build on native macOS with cgo, the pinned Wails CLI, and Xcode Command Line Tools.
+The deployment target is **macOS 13+**.
+
+<Tabs>
+  <TabItem label="Apple Silicon">
+
+```sh title="Package arm64 on macOS"
+wails3 task package ARCH=arm64
+```
+
+  </TabItem>
+  <TabItem label="Intel">
+
+```sh title="Package amd64 on macOS"
+wails3 task package ARCH=amd64
+```
+
+  </TabItem>
+</Tabs>
+
+Before publication, validate architecture, bundle identity, version, resources,
+ZIP contents, and ad-hoc signature.
+Build checks do not establish real microphone, keyboard, insertion, Intel
+hardware, or update/relaunch acceptance.
+
+The pinned Wails updater selects the exact Darwin architecture ZIP, verifies
+`SHA256SUMS`, extracts its `.app`, and uses a helper to swap the app bundle on
+Restart. Freehand configures no update public key. Ad-hoc signatures and checksums
+are not Developer ID trust or notarization; native install/relaunch acceptance
+is separate. Keep [manual ZIP replacement](../../guides/macos-setup/#update)
+available as recovery.
+
+## Windows in-app updates
+
+| Trigger or stage | Behavior |
+| --- | --- |
+| Automatic checks | Enabled by default; shortly after startup and once per day; disable under **Settings → General** |
+| Already current | Reads GitHub release metadata only |
+| Update found | Wails opens its update window, downloads and verifies the executable |
+| **Check now** | Opens the same flow on demand |
+| Restart | Requires user action |
+
+The current Wails v3 updater stages a verified bare executable by replacing the
+installed executable. It does not run the NSIS installer. Installer-level
+migrations or additional packaged files would require a future updater policy
+change.
+
+There is no Ed25519 release key in the first public lifecycle. The standard
+Wails GitHub provider verifies the downloaded executable with the release's
+`SHA256SUMS`; adding an unused private signing key would not strengthen that
+path. Authenticode is the separate future mechanism for Windows publisher
+identity.
+
+<details>
+<summary>Future Authenticode signing procedure</summary>
+
+When Authenticode is introduced, both the executable and final installer must
+be signed with a trusted timestamp. Wails reads a configured certificate from
+`wails3 setup signing` or the `SIGN_CERTIFICATE`, `SIGN_THUMBPRINT`, and
+`TIMESTAMP_SERVER` task variables. The ordered local task is:
+
+```powershell title="Ordered signing task — requires configured credentials"
+wails3 task package:signed CGO_ENABLED=1 ARCH=amd64
+```
+
+No signing credential is configured today. Never commit certificates,
+passwords, or thumbprints.
+
+</details>
+
+<CardGrid>
+  <LinkCard title="CI and publication checks" href="../github-actions/" description="Diagnose workload selection and blocked publication." />
+  <LinkCard title="Native acceptance" href="../../safety/native-test-checklist/" description="Validate packaged install, permissions, updates, and relaunch." />
+</CardGrid>

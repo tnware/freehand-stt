@@ -1,0 +1,217 @@
+---
+title: whisper.cpp
+description: Connect the native whisper.cpp HTTP server for microphone and file transcription.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+The **whisper.cpp** transcription profile supports completed microphone and
+file uploads to the native HTTP server. Freehand never calls its model-loading
+route; the model loads when the server starts.
+
+## Choose a deployment
+
+On Windows, [managed local setup](../../guides/local-runtime/#whispercpp-transcription)
+can install whisper.cpp, download a supported model, and start it inside
+Freehand. See the [managed model and platform choices](../../guides/local-runtime/)
+before installing. Large-v3 is also available in that managed catalog; the
+commands below show how to run it yourself. Managed whisper.cpp is unavailable
+on macOS.
+
+For a service you manage yourself, run whisper.cpp natively or in Docker and
+configure its model and acceleration there. The instructions below use PowerShell
+and the same model folder and local port.
+
+## Download a model
+
+This manual example uses full **large-v3** for an accuracy-oriented test.
+Choose a smaller checkpoint when memory or latency requires it; see the
+[upstream model table](https://github.com/ggml-org/whisper.cpp#memory-usage).
+
+| Resource | Full large-v3 example |
+| --- | --- |
+| Download | About 3 GB |
+| Model memory | Approximately 3.9 GB upstream estimate; GPU use also depends on buffers and workload |
+| Existing GGML model | Set `$modelDirectory` to its folder instead of downloading again |
+
+```powershell title="Download the selected large-v3 model"
+New-Item -ItemType Directory -Force freehand-whisper-models | Out-Null
+$modelDirectory = (Resolve-Path freehand-whisper-models).Path
+curl.exe --fail --location `
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin `
+  --output "$modelDirectory/ggml-large-v3.bin"
+if ($LASTEXITCODE -ne 0) { throw 'Model download failed.' }
+```
+
+You can reuse the same model folder with a different executable or container.
+
+## Run natively on Windows
+
+Use your existing `whisper-server.exe`, or download and extract an x64 package
+from the [official releases](https://github.com/ggml-org/whisper.cpp/releases).
+Keep the executable and DLLs together. In **b4938**, run from the extracted
+`Release` folder containing `whisper-server.exe`.
+
+| Package | Backend |
+| --- | --- |
+| `whisper-bin-x64.zip` | CPU |
+| `whisper-cublas-...-bin-x64.zip` | CUDA; choose a package compatible with your GPU and driver |
+
+:::caution[Check CUDA support for your GPU]
+The b4938 CUDA archives are labelled 11.8 and 12.4. Native RTX 50-series
+(Blackwell) architecture support requires CUDA 12.8 or later. Use a build known
+to support your card, or follow the optional native build below.
+:::
+
+In the PowerShell session with `$modelDirectory` set, change to the folder
+containing your executable and launch:
+
+```powershell title="Start the native server on port 8051"
+.\whisper-server.exe `
+  -m "$modelDirectory/ggml-large-v3.bin" `
+  --host 127.0.0.1 --port 8051 -t 4
+```
+
+Leave that terminal running. In another PowerShell window, check readiness:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8051/health
+```
+
+Check startup output for **CUDA** and the selected device when using a GPU
+build. A health check does not prove GPU offload. Follow [Connect](#connect)
+using **`http://127.0.0.1:8051`**, authentication **None**, and HTTP permission.
+The model is **Server-loaded**. Save, then try a short recording.
+
+| To… | Action |
+| --- | --- |
+| Stop | Press <kbd>Ctrl</kbd> + <kbd>C</kbd> in the server terminal |
+| Restart | Run the same command |
+| Change models | Restart with a different `-m` path; the manual connection cannot load or switch models |
+| Resolve an occupied port | Stop the other server, or change the port and Freehand's base URL together |
+
+### Build a native CUDA server when needed
+
+<details>
+<summary>Build when a suitable binary is unavailable</summary>
+
+Use Git, CMake 3.24 or later, Visual Studio C++ build tools, and an NVIDIA CUDA
+toolkit compatible with your GPU and compiler. For native RTX 50-series
+architecture support, use CUDA 12.8 or later. From a developer PowerShell
+configured for your C++ toolchain:
+
+```powershell
+git clone https://github.com/ggml-org/whisper.cpp.git
+Set-Location whisper.cpp
+cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=native
+cmake --build build --config Release --target whisper-server --parallel
+```
+
+With the Visual Studio generator, the executable is normally under
+`build/bin/Release`. Keep its generated DLLs alongside it. Follow the
+[upstream CUDA build instructions](https://github.com/ggml-org/whisper.cpp#nvidia-gpu-support)
+and [GPU architecture configuration](https://github.com/ggml-org/whisper.cpp/blob/master/ggml/src/ggml-cuda/CMakeLists.txt)
+for your toolchain. This native build recipe has not been tested separately on
+Windows; verify the backend in startup output before trying a recording.
+
+</details>
+
+## Run whisper.cpp with Docker
+
+This alternative uses Docker Desktop's WSL2 Linux backend and an NVIDIA GPU.
+Use the model directory from [Download a model](#download-a-model). The
+CUDA image below is pinned for a repeatable installation.
+It runs the same HTTP server inside a container.
+
+Start the server:
+
+```powershell title="Start the pinned CUDA container"
+$whisperImage = 'ghcr.io/ggml-org/whisper.cpp@sha256:2285844e0c38744d90eed59ce5b90fe68cd2dfc6ecb07bb0b68b8ff800528be4'
+docker run --detach --name freehand-whisper `
+  --gpus device=0 `
+  --publish 127.0.0.1:8051:8080 `
+  --mount "type=bind,source=$modelDirectory,target=/models,readonly" `
+  --entrypoint /app/build/bin/whisper-server `
+  $whisperImage `
+  -m /models/ggml-large-v3.bin --host 0.0.0.0 --port 8080 -t 4
+```
+
+Inspect startup, then check readiness without transcribing anything:
+
+```powershell
+docker logs --tail 30 freehand-whisper
+Invoke-RestMethod http://127.0.0.1:8051/health
+```
+
+Follow [Connect](#connect) using the same values as the native recipe:
+**`http://127.0.0.1:8051`**, authentication **None**, and HTTP permission. The
+model is **Server-loaded**; do not enter a Hugging Face ID. Choose English for
+an English test, save, then try a short dictation. Health alone does not prove
+recognition quality.
+
+```powershell
+docker stop freehand-whisper
+docker start freehand-whisper
+```
+
+To change the model, download its whisper.cpp GGML file, stop and remove this
+container with `docker rm freehand-whisper`, and rerun the launch command with
+the new `-m` filename. The host model folder is retained. Freehand's connection
+settings stay the same. Refer to [upstream server setup](https://github.com/ggml-org/whisper.cpp/tree/master/examples/server)
+for native builds, other accelerators, and optional format conversion.
+
+## Connect
+
+<Steps>
+
+1. Start `whisper-server` with the model you want to use.
+2. In **Connections**, create a named **whisper.cpp** connection. Enable **Voice transcription**, **Audio-file transcription**, or both under **Used for**.
+3. Set the Base URL to the server root, for example `http://127.0.0.1:8051` for either recipe above.
+   Omit `/v1` and `/inference`. A reverse-proxy prefix can be included.
+4. Choose the authentication mode required by your deployment and permit HTTP
+   only where appropriate. The native server may need a proxy for authentication.
+5. Choose **Save connection**, then open the **Settings** cog in Voice transcription or Audio file
+   and select it under **Transcription** options.
+   Use **Check server** for metadata. The model field shows **Server-loaded model**;
+   no client model ID is required or sent. Save your changes.
+
+</Steps>
+
+| Endpoint setting | Required behavior |
+| --- | --- |
+| Health | `/health` beneath the root/prefix, unless you set an explicit custom health path |
+| Transcription | Default `/inference`; expose this route through a proxy if you change `--inference-path` |
+| Base URL | Root or proxy prefix, not a complete request URL; omit `/v1` and `/inference` |
+| Model | Server-loaded; no client model ID or model listing |
+
+A healthy server is available, but the check does not establish model identity
+or recognition quality. Change the loaded model on the server.
+
+## Supported controls and files
+
+| Control or file | Support |
+| --- | --- |
+| Language, context, temperature | Multipart fields; blank hints and disabled temperature are omitted for server defaults |
+| Vocabulary | No dedicated `hotwords`; supply context through `prompt` |
+| File response | Completed JSON only; no response streaming or automatic retry |
+| Microphone audio | Freehand's normalized WAV |
+| Selected audio files | WAV is the conservative baseline; other formats need server decoder support or optional FFmpeg conversion; Freehand does not transcode them |
+| Cleanup, history, cancellation | Same workflow behavior as other backends |
+
+Choose a language supported by the loaded model. [File limits and timeouts](../../reference/protocol/)
+still apply.
+
+## Supported API
+
+Requests are multipart `POST /inference`, including `file` and
+`response_format=json`, without `model` or `stream`. Responses require a JSON
+object with a string `text`. Non-success statuses and malformed responses fail
+without replay. The configured credential and permitted custom headers apply
+as they do for other transcription profiles.
+
+## Language selection
+
+Use the [language guide](../../guides/languages/) to choose Server default,
+automatic detection, a named code, or a custom value. The selected model determines
+which languages work. If you enable S1-mini cleanup, review its
+[English-only language behavior](../../models/s1-mini/#language-and-results).

@@ -12,6 +12,7 @@
     connectionWorkflows,
   } from "$lib/utils/connectionChoices";
   import { endpointHost } from "$lib/utils/endpoint";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
   import SearchIcon from "@lucide/svelte/icons/search";
@@ -19,6 +20,8 @@
   let {
     catalog,
     instances = [],
+    pendingFor,
+    errorFor,
     selected = "",
     creating = false,
     busy = false,
@@ -28,6 +31,8 @@
   }: {
     catalog: Catalog;
     instances?: InstanceStatus[];
+    pendingFor: (id: string) => string;
+    errorFor: (id: string) => string;
     selected?: string;
     creating?: boolean;
     busy?: boolean;
@@ -113,7 +118,7 @@
       <span class="hidden w-[140px] shrink-0 @min-[620px]/connections:block"
         >Used by</span
       >
-      <span class="w-[104px] shrink-0">State</span>
+      <span class="w-[140px] shrink-0">State</span>
     </div>{/if}
   <nav
     aria-label="Saved connections"
@@ -126,7 +131,11 @@
       {@const instance = instances.find(
         (item) => item.instance.id === connection.details.managedInstanceID,
       )}
-      {@const runtimeView = runtimePresentation(instance?.status)}
+      {@const runtimeView = runtimePresentation(
+        instance?.status,
+        undefined,
+        pendingFor(connection.details.managedInstanceID ?? ""),
+      )}
       {@const metadata = connection.details.managedInstanceID
         ? ["Managed runtime", runtimeView.backend].filter(Boolean).join(" · ")
         : connection.details.compatibilityProfile || "OpenAI-compatible"}
@@ -139,7 +148,7 @@
         disabled={busy}
         aria-current={connection.id === selected ? "true" : undefined}
         onclick={() => onSelect(connection)}
-        class={`connection-row flex w-full border-b border-l-2 border-b-hairline text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50 ${sidebar ? "min-h-[60px] flex-col items-stretch gap-0.5 pl-2.5 pr-3 py-1.5" : "min-h-[52px] items-center pl-[18px] pr-5"} ${connection.id === selected ? "border-l-primary bg-accent-wash" : "border-l-transparent hover:bg-subtle-fill-hover"}`}
+        class={`connection-row flex w-full border-b border-l-2 border-b-hairline text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:opacity-50 ${sidebar ? "min-h-[60px] flex-col items-stretch gap-0.5 pl-2.5 pr-3 py-1.5" : "min-h-[52px] items-center pl-[18px] pr-5"} ${connection.id === selected ? "border-l-primary bg-accent-wash-strong" : "border-l-transparent hover:bg-subtle-fill-hover"}`}
       >
         <span class="flex min-w-0 flex-1 items-center gap-2.5">
           <ProviderIcon
@@ -152,13 +161,13 @@
           >
           {#if connection.builtIn && !sidebar}
             <span
-              class="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-ink-quiet"
+              class="shrink-0 rounded-sm border border-border px-1.5 py-0.5 text-2xs text-ink-quiet"
               >built-in</span
             >
           {/if}
         </span>
         <span
-          class="shrink-0 truncate font-mono text-[10px] text-secondary-foreground {sidebar
+          class="shrink-0 truncate font-mono text-2xs text-secondary-foreground {sidebar
             ? 'pl-[26px]'
             : 'hidden w-[190px] @min-[810px]/connections:block'}"
           title={endpoint}>{endpoint}</span
@@ -179,21 +188,15 @@
         >
         <span
           class="flex shrink-0 items-center {sidebar
-            ? 'min-w-0 gap-1.5 pl-[26px]'
-            : 'w-[104px]'}"
+            ? 'min-w-0 flex-wrap gap-1.5 pl-[26px]'
+            : 'w-[140px]'}"
         >
           {#if connection.details.managedInstanceID}
-            <StatusBadge
-              class="shrink-0 whitespace-nowrap"
-              tone={instance?.status.state === "running"
-                ? "success"
-                : instance?.status.state === "error"
-                  ? "danger"
-                  : instance?.status.state === "starting"
-                    ? "accent"
-                    : "neutral"}
-              dot>{runtimeView.label}</StatusBadge
-            >
+            <RuntimeStatus
+              view={runtimeView}
+              problem={errorFor(connection.details.managedInstanceID)}
+              badge
+            />
           {:else if active.length}
             <StatusBadge tone="accent" class="shrink-0 whitespace-nowrap"
               >In use</StatusBadge
@@ -201,7 +204,7 @@
           {/if}
           {#if sidebar}
             <span
-              class="min-w-0 truncate text-[11px] text-muted-foreground"
+              class="min-w-0 basis-full break-words text-xs leading-relaxed text-muted-foreground"
               title={usedBy ||
                 (connection.builtIn
                   ? "Built-in connection · Not in use"

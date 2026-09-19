@@ -1,0 +1,54 @@
+---
+title: Qwen3-TTS
+description: Choose preset voices, speech language, and delivery instructions with Qwen3-TTS.
+---
+
+import { Steps, LinkCard } from '@astrojs/starlight/components';
+
+Freehand's **Qwen3-TTS 1.7B CustomVoice** profile uses
+[Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice)
+through **vLLM-Omni v0.18.0**.
+
+## Choose the model and voice
+
+<Steps>
+
+1. Follow the [vLLM-Omni connection guide](../../backends/vllm-omni/).
+2. Open **Text to speech → Settings → Speech**. Select the connection and
+   served model, then choose **Qwen3-TTS 1.7B CustomVoice** as the model profile.
+3. Turn on **Enable text to speech** and choose a preset voice.
+
+</Steps>
+
+The voice picker offers the checkpoint's nine preset speakers: Vivian, Serena,
+Uncle Fu, Dylan, Eric, Ryan, Aiden, Ono Anna, and Sohee. **Refresh voices** reads
+server metadata without generating audio.
+
+## Shape the delivery
+
+| Control | Choices or effect |
+| --- | --- |
+| Speech language | Automatic, Chinese, English, Japanese, Korean, German, French, Russian, Portuguese, Spanish, or Italian |
+| Voice style | Up to 500 characters describing delivery; leave empty for the voice's usual style |
+| Speaking speed | Requests a speed from the server; does not change playback locally |
+
+:::tip[Describe the delivery]
+For example: “Speak warmly and clearly, with a relaxed pace.”
+:::
+
+Choose **Preview** to hear the current edits before saving. The preview uses
+your draft voice, model profile, language, style, speed, and timeout together.
+It does not save those edits. Choose **Save** to apply them to the composer and
+explicit Listen actions.
+
+Language and style are remembered with this model's voice settings. Switching
+models keeps speaking speed in place. Generated audio stays in memory until you
+clear it, replace it, start recording, or quit. You can explicitly save a WAV
+file; saving does not clear the audio from memory.
+
+:::caution[Use the matching checkpoint]
+This profile supports **1.7B CustomVoice**. Qwen's Base voice-cloning,
+VoiceDesign, and 0.6B variants are outside this contract.
+:::
+
+<LinkCard title="Generate and play speech" href="../../guides/text-to-speech/" description="Use the composer, listen to transcripts, control playback, or save a WAV." />

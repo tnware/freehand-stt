@@ -56,7 +56,7 @@
     >
       {#each orderedMessages as message (message.id)}
         {@const Icon = icons[message.tone]}
-        <div class="rounded-md bg-popover shadow-lg">
+        <div class="rounded-md bg-popover shadow-float">
           <div
             class="flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-xs leading-relaxed {tones[
               message.tone

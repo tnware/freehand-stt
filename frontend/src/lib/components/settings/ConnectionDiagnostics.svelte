@@ -1,4 +1,7 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+
   import { session } from "$lib/stores/session.svelte";
   import { CheckKind, CheckStatus } from "$bindings/connection";
   import type { ConnectionResult } from "$lib/state";
@@ -30,11 +33,11 @@
 </script>
 
 <section
-  class="space-y-3"
+  class="min-w-0 space-y-3 [overflow-wrap:anywhere]"
   aria-label="Connection check results"
   aria-live="polite"
 >
-  <div class="flex items-center justify-between gap-3">
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <p class="content-section-title">Connection check</p>
       <p class="content-meta mt-1">
@@ -44,10 +47,14 @@
       </p>
     </div>
     {#if onCheck}<Button
-        variant="soft"
+        variant="outline"
         size="sm"
         onclick={onCheck}
-        disabled={busy}>{busy ? "Checking…" : "Check again"}</Button
+        disabled={busy}
+        aria-busy={busy}
+        ><ButtonIcon icon={RefreshCwIcon} {busy} />{busy
+          ? "Checking…"
+          : "Check again"}</Button
       >{/if}
   </div>
   {#if stale}<p class="content-meta">
@@ -57,7 +64,7 @@
       class="divide-y divide-hairline border-y border-hairline"
     >
       {#each result.checks as check (check.kind)}<div
-          class="grid grid-cols-[18px_1fr] gap-x-2 py-2.5"
+          class="grid grid-cols-[18px_minmax(0,1fr)] gap-x-2 py-2.5"
         >
           {#if check.status === CheckStatus.CheckPassed}<CircleCheckIcon
               class="mt-0.5 size-4 text-success"

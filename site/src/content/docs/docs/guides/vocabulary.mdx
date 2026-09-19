@@ -1,0 +1,79 @@
+---
+title: Vocabulary
+description: Share names and terminology across Voice and audio-file transcription.
+---
+
+import { Steps, LinkCard } from '@astrojs/starlight/components';
+
+Add names and phrases to help supported models recognize your terminology.
+Vocabulary is a recognition hint: it neither trains the model nor guarantees
+spelling. Voice and audio files share one list, with separate opt-ins.
+
+## Add and enable terms
+
+<Steps>
+
+1. **Open Settings → Vocabulary**, or **Vocabulary** in Voice's or Audio file's
+   right options sidebar. Both edit the same list.
+2. **Enter one name or phrase per line.** Spaces inside a phrase are preserved;
+   blank lines and exact duplicates are ignored when sending hints.
+3. **Enable Voice transcription, Audio-file transcription, or both.** Check each
+   workflow's support status; its help button explains model restrictions.
+4. **Choose Save.** Changes apply to the next recording or file job, not active work.
+
+</Steps>
+
+The list and opt-ins stay saved when changing connections/models. Voice uses the
+same terms in completed and realtime mode where supported. Terms are stored
+locally and sent only to an enabled, supported transcription destination; review
+sensitive names before switching servers.
+
+:::note[Upgrading from separate vocabulary lists]
+Freehand combines saved Voice, realtime, and file terms into one shared list.
+Previously enabled workflows may therefore send the combined list. Review the
+phrases and both workflow switches before the next transcription.
+:::
+
+## Check support and limits
+
+| Selection | How hints are sent | Request limit |
+| --- | --- | --- |
+| Speaches with a compatible model | Recognition hotwords | 2,048 UTF-8 bytes |
+| Model/backend supporting context hints | Appended to existing transcription context | 8,192 bytes, including context |
+| NeMo-Speech.cpp v0.1.0 with explicit Nemotron 3.5 streaming profile | Vocabulary boosting in completed, file, and realtime requests | 32 phrases; 128 bytes per phrase; 2,048 bytes total |
+| Unsupported combination | Omitted; preference remains saved | No vocabulary sent |
+
+The saved list itself holds **16,384 UTF-8 bytes**. Model request limits can be
+smaller; some characters use multiple bytes.
+
+:::caution[Over-limit lists stop the request]
+If the selected model cannot accept the complete list, Freehand stops before
+sending audio. Shorten the list or disable vocabulary for that workflow.
+Terms are never silently truncated.
+:::
+
+For Nemotron, open **Vocabulary tuning → Vocabulary strength** (0–5). Start at
+**3** and review recognition. Stronger hints can produce incorrect matches;
+the server can cap or disable boosting. Voice and files share this strength.
+
+Generic compatibility does not prove every model uses context hints. Vocabulary
+is separate from cleanup instructions, S1-mini context categories, and speech
+pronunciation; terms are not injected into those controls.
+
+## Review your list
+
+Open **lines to review** below the editor for duplicates and lines exceeding the
+selected models' phrase count, phrase size, or total budget. **Line …** highlights
+the phrase for editing. Context-based feedback includes existing context in the budget.
+
+| Feedback | Meaning |
+| --- | --- |
+| Exact duplicate | Sent once after trimming surrounding whitespace; the saved text is not rewritten |
+| Case difference | A distinct phrase |
+| Workflow **off** | Feedback only; it does not enable the workflow |
+| Support check failed | Choose **Try again**; your draft stays in place |
+
+The list must fit the 16,384-byte storage limit before detailed line feedback is
+available. Save after correcting it.
+
+<LinkCard title="Choose other recognition controls" href="../connect-a-server/#transcription-controls" description="Use subject context, temperature, or a model-specific option alongside vocabulary." />

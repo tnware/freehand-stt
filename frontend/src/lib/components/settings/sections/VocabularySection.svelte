@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Input } from "$lib/components/ui/input";
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import { Service as SettingsService } from "$bindings/settings";
   import type {
     VocabularyPreview,
@@ -11,7 +13,6 @@
   import SettingRow from "../SettingRow.svelte";
   import SettingsDisclosure from "../SettingsDisclosure.svelte";
   import FieldHelp from "../FieldHelp.svelte";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import { Button } from "$lib/components/ui/button";
   import { cn } from "$lib/utils";
 
@@ -117,7 +118,7 @@
 <div class="settings-group">
   <div class="space-y-3 py-3">
     <div class="flex items-center justify-between gap-3">
-      <label for="vocabulary-terms" class="text-[13px] font-medium"
+      <label for="vocabulary-terms" class="content-value"
         >Names and phrases</label
       >
       <FieldHelp
@@ -176,33 +177,16 @@
       </div>
     {/if}
     {#if preview?.issues?.length}
-      <details
-        class="group/lines border-y border-hairline"
-        aria-label="Vocabulary line feedback"
-        aria-busy={checking}
+      <Disclosure
+        title={checking
+          ? "Checking line feedback…"
+          : `${preview.issues.length} ${preview.issues.length === 1 ? "line" : "lines"} to review${preview.duplicateCount ? ` · ${preview.duplicateCount} ${preview.duplicateCount === 1 ? "duplicate" : "duplicates"}` : ""}`}
+        tone={!checking && lineProblems ? "warning" : "default"}
+        label="Vocabulary line feedback"
+        busy={checking}
+        compact
+        class="border-t border-hairline"
       >
-        <summary
-          class="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 text-xs hover:bg-subtle-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
-        >
-          <span
-            class={cn(
-              "min-w-0 flex-1",
-              !checking && lineProblems
-                ? "text-warning"
-                : "text-muted-foreground",
-            )}
-          >
-            {#if checking}Checking line feedback…{:else}{preview.issues.length}
-              {preview.issues.length === 1 ? "line" : "lines"} to review
-              {#if preview.duplicateCount}
-                · {preview.duplicateCount}
-                {preview.duplicateCount === 1 ? "duplicate" : "duplicates"}{/if}
-            {/if}
-          </span>
-          <ChevronDownIcon
-            class="size-4 shrink-0 text-muted-foreground group-open/lines:rotate-180"
-          />
-        </summary>
         <div class="border-t border-hairline">
           <p class="px-3 py-2 text-xs leading-relaxed text-muted-foreground">
             Select a line to edit it. Duplicates are sent once; your list stays
@@ -233,7 +217,7 @@
             {/each}
           </ul>
         </div>
-      </details>
+      </Disclosure>
     {/if}
   </div>
 
@@ -250,7 +234,7 @@
       >
         <ProviderIcon profile={use.backend} />
         <div class="min-w-0 flex-1">
-          <label for={`vocabulary-${use.key}`} class="text-[13px] font-medium"
+          <label for={`vocabulary-${use.key}`} class="content-value"
             >{use.label}</label
           >
           <p
@@ -296,7 +280,7 @@
       title="Vocabulary strength"
       description="Shared by Voice and audio files using Nemotron. 3 is a starting point; stronger hints can increase incorrect matches. The server may cap this value."
     >
-      {#snippet control()}<input
+      {#snippet control()}<Input
           aria-label="Vocabulary strength"
           type="number"
           min="0"
@@ -307,8 +291,7 @@
             (boost) => onChange({ boost: boost ?? 0 })
           }
           {disabled}
-          data-slot="input"
-          class="h-8 w-20 rounded-md border border-input bg-well px-2.5 text-[13px] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+          class="w-20"
         />{/snippet}
     </SettingRow>
     <p class="py-3 text-xs leading-5 text-muted-foreground">

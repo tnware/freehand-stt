@@ -1,0 +1,129 @@
+---
+title: Keyboard shortcuts
+description: Configure global recording, hold-to-talk, and show-window shortcuts.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Assign shortcuts for **Toggle recording**, **Hold to talk**, and **Show Freehand**
+under **Settings → Shortcuts**. All three actions are optional.
+
+<Steps>
+
+1. Choose the shortcut field and press the combination you want to use. Press
+   <kbd>Escape</kbd> to cancel capture.
+2. Check the capture result and choose **Save**. To disable an action, choose
+   **Clear** and save; an empty toggle does not restore the default.
+3. Focus a destination text field and try your recording shortcut. This lets
+   Freehand capture the intended destination when recording begins.
+
+</Steps>
+
+:::tip[You can use Voice without a global shortcut]
+Finish setup and record with the on-screen controls, then review and explicitly
+copy the result. For insertion into another app, start with a working shortcut
+while that destination is focused.
+:::
+
+## Tray quick view
+
+Click the tray or menu-bar icon to see dictation status, your shortcut, selected
+Voice connection, and latest transcript.
+
+| Action | Result |
+| --- | --- |
+| **Copy** | Explicitly copies the latest transcript |
+| **Voice settings** | Opens configuration in the main window |
+| **Open Freehand** | Opens the workspace |
+| **Cancel recording** / **Cancel dictation** | Discards the active recording or processing operation |
+| Close quick view | Leaves active work running |
+| Right-click tray icon → **Quit Freehand** | Quits through the native menu |
+
+To record into another app, close quick view, focus the destination, and use your
+shortcut. Quick view does not start or stop recordings.
+
+## Windows
+
+| Action | Required | Accepted forms | Default |
+| --- | --- | --- | --- |
+| Toggle recording | No | One or more modifiers plus a supported primary key; or F13-F24 alone | `Ctrl+Shift+Space` |
+| Show Freehand | No | One or more modifiers plus a supported primary key; or F13-F24 alone | Unassigned |
+| Hold to talk | No | The global forms above; or two or more modifiers alone | Unassigned |
+
+The supported primary-key groups are A-Z, 0-9, Space, F1-F11, and F13-F24.
+F12 is rejected because Windows reserves it for the debugger. F13-F24 are the
+only unmodified keys accepted: they are intended as dedicated programmable
+keys and avoid taking over ordinary typing or navigation.
+
+## macOS
+
+| Action | Accepted forms | Default |
+| --- | --- | --- |
+| Toggle recording | Modifier plus a supported primary key; or F13–F20 alone | `Control+Shift+Space` |
+| Show Freehand | Modifier plus a supported primary key; or F13–F20 alone | Unassigned |
+| Hold to talk | The forms above; or two or more modifiers alone | Unassigned |
+
+Supported primary keys are **A–Z, 0–9, Space, and F1–F20, including F12**.
+F21–F24 are not mapped. Labels use **Command** and **Option**. Mappings use
+physical ANSI/QWERTY positions: check your layout and avoid system-reserved
+combinations. Fn is not a recordable modifier, though hardware may use it to
+produce a function-key event.
+
+:::note[macOS permissions and recovery]
+Toggle/Show use Carbon shortcuts without Accessibility or Input Monitoring.
+Capturing a new shortcut needs both permissions; hold-to-talk needs keyboard
+observation. After restoring access or leaving Secure Input, release all keys
+and choose **Retry hold-to-talk**. See [macOS setup](../../guides/macos-setup/).
+:::
+
+## Deliberately excluded inputs (Windows)
+
+| Input | Reason or behavior |
+| --- | --- |
+| Navigation/editing keys | Failed or delayed registration could interfere with document use |
+| OEM punctuation | Virtual-key meaning varies by layout and AltGr behavior |
+| Media/browser keys, Caps Lock, Num Lock, Scroll Lock | Retain their system or hardware purpose |
+| `Fn` itself | Usually has no standalone Windows virtual key; translated combinations may produce a supported key such as F13–F24 |
+| Left/right Ctrl, Alt, Shift, Win | Normalize to one logical modifier, matching `RegisterHotKey` and keeping saved chords portable |
+
+Ctrl+Alt chords may overlap AltGr on international layouts. Freehand therefore
+does not describe a locally valid chord as universally safe or available. The
+settings UI explains the accepted shape, while native acceptance testing must
+cover the user's representative layouts and accessibility-key configuration.
+
+## Conflicts and capture results (Windows)
+
+| Result | What to do |
+| --- | --- |
+| Incomplete, unsupported, or Windows-reserved combination | Record a supported form from the Windows table |
+| Duplicate in Freehand | Assign a different combination |
+| Cancelled or timed out | Try capture again; the previous bindings are restored |
+| Rejected during Save | Try another combination; the complete previous shortcut set is restored |
+| Saved shortcut unavailable at startup | Open **Settings → Shortcuts** to replace it, or **Clear** and save |
+
+<details>
+<summary>Why a valid capture can still fail during Save</summary>
+
+Windows does not expose a supported inventory of global shortcuts owned by
+other processes. Toggle and show availability is therefore known only when
+`RegisterHotKey` runs during Save. A Windows rejection is reported separately
+from an in-app duplicate, and the settings transaction restores the complete
+previous shortcut set rather than persisting a partially applied replacement.
+
+</details>
+
+Shortcut capture temporarily pauses Freehand's working shortcuts. Press Escape
+to cancel. A captured, rejected, cancelled, or timed-out attempt restores the
+previous bindings.
+
+If a saved shortcut is unavailable at startup, Freehand keeps your saved choice
+but leaves that binding inactive. Other available shortcuts still work. No
+fallback key is selected automatically. Open **Settings → Shortcuts** to record
+a replacement directly, or **Clear**, save, and record one later. Capture only
+pauses and restores bindings Freehand successfully registered; an existing
+startup conflict does not prevent recording a replacement.
+
+<CardGrid>
+  <LinkCard title="Use Voice" href="../../guides/using-freehand/" description="Record, review, and deliver a transcript." />
+  <LinkCard title="macOS setup" href="../../guides/macos-setup/" description="Manage permissions and recover keyboard observation." />
+</CardGrid>

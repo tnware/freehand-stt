@@ -29,6 +29,13 @@ for (const width of [560, 1156]) {
       });
       await expect(pending).toBeDisabled();
       expect((await pending.boundingBox())!.width).toBe(before.width);
+      if (source !== "history") {
+        await expect(pending).toHaveText("Listen");
+        await expect(pending.locator("svg")).toHaveCSS(
+          "animation-name",
+          "none",
+        );
+      }
       await pending.evaluate((button: HTMLButtonElement) => button.click());
       await expect(
         page.getByText("Listen requests: 1", { exact: true }),

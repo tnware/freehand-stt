@@ -6,22 +6,29 @@
   under `src/content/docs/docs/`.
 - Keep audiences explicit: product landing copy in the custom home page,
   task-oriented installation and usage in the user guide, advanced endpoint
-  behavior in Reference, and repository internals in Contribute or Maintainer
-  records. Do not mix build/release instructions into an end-user task page.
+  behavior in Reference, and actionable contributor procedures in Contribute.
+  Do not mix build/release instructions into an end-user task page.
 - Write user documentation about the product as it works today. Lead with the
   task, prerequisites, steps, expected result, and recovery. Use current UI labels
   checked against source; do not copy issue acceptance criteria into the guide.
+- Keep contributor pages focused on actionable procedures and safety rules.
+  Record implementation decisions and validation results in issues or pull requests.
 - Remove development chronology, rejected-design comparisons (such as "not a
   separate window"), migration internals, and commentary about layout fixes from
   user pages. Keep an upgrade note only when a user must act or understand a
   change to their data.
 - Explain safety and compatibility through user consequences and actions. Keep
   important limits, data lifetimes, costs, permission restrictions, and versioned
-  backend requirements, but reserve process IDs, state ownership, wire formats,
-  and validation machinery for the relevant technical reference.
+  backend requirements. Keep implementation details out of user guides; consult
+  source and tests instead of duplicating their structure in prose.
 - Give each topic one primary home and link to it instead of accumulating repeated
   setup instructions or capability tables. Preserve public heading anchors when
   editing; check rendered internal links and fragments after structural changes.
+- Follow the page patterns in `README.md` under Documentation authoring. Use
+  Starlight Steps for procedures, Tabs for alternatives, and concise tables for
+  comparisons when they improve scanning. Keep required limits visible; reserve
+  disclosures for optional detail. Do not replace prose walls with oversized
+  tables or a sequence of decorative callouts.
 - Prefer Astro components and static HTML. Add a client framework only when a
   real interactive island requires it.
 - Extend Starlight through supported configuration, custom CSS, or component

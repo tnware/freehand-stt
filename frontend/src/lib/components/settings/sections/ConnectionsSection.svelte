@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import { platformPresentation } from "$lib/platform";
   import {
     connectionWorkflows,
@@ -471,13 +472,13 @@
               >{/if}
           {/if}
         {/if}
-        <details class="border-t border-hairline" open={!form.uses.length}>
-          <summary class="cursor-pointer py-3 text-[13px] font-medium"
-            >Available in {form.uses.length}
-            {form.uses.length === 1 ? "workflow" : "workflows"}</summary
-          >
+        <Disclosure
+          title={`Available in ${form.uses.length} ${form.uses.length === 1 ? "workflow" : "workflows"}`}
+          open={!form.uses.length}
+          class="border-t border-hairline"
+        >
           {@render supportedUses()}
-        </details>
+        </Disclosure>
         {#if !form.creating}<p class="py-3 text-xs text-muted-foreground">
             Changing the target or backend resets this connection’s model
             choices.
@@ -501,7 +502,7 @@
                   : "Save for later"}</Select.Trigger
               >
               <Select.Content>
-                {#each roles.filter( (role) => supports(role.id) ) as role (role.id)}<Select.Item
+                {#each roles.filter( (role) => supports(role.id), ) as role (role.id)}<Select.Item
                     value={role.id}>Set up {role.label}</Select.Item
                   >{/each}
                 <Select.Separator /><Select.Item value="save-only"
@@ -513,11 +514,11 @@
         </div>
       {/if}
       {#if !managed && (form.uses.includes(Purpose.Transcription) || form.uses.includes(Purpose.Voice))}
-        <details class="border-t border-hairline py-3">
-          <summary class="cursor-pointer text-[13px] font-medium"
-            >Transcription connection options</summary
-          >
-          <div class="mt-3 space-y-3">
+        <Disclosure
+          title="Transcription connection options"
+          class="border-t border-hairline"
+        >
+          <div class="space-y-3">
             <div class="space-y-2">
               <label for="connection-health" class="text-xs font-medium"
                 >Custom health path</label
@@ -571,7 +572,7 @@
               >
             </div>
           </div>
-        </details>
+        </Disclosure>
       {/if}
     </div>
     {#if error}<p role="alert" class="shrink-0 text-[13px] text-destructive">

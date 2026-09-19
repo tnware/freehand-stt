@@ -1,0 +1,306 @@
+---
+title: Local runtimes
+description: Install local transcription, MagpieTTS speech, and S1-mini cleanup, then manage models and runtime processes.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Let Freehand install a supported runtime, download a model when you ask, and
+start or stop it. Select its built-in connection in a workflow; no server URL
+or API key is needed. For live dictation, start with **NeMo-Speech.cpp and
+Nemotron 3.5 Streaming**.
+
+## Choose a runtime and model
+
+| Runtime | Use it for | Supported computers |
+| --- | --- | --- |
+| **NeMo-Speech.cpp** | Nemotron live/completed transcription, Parakeet completed transcription, optional MagpieTTS speech | Windows 11 x64; macOS 13+ on Apple Silicon or Intel |
+| **whisper.cpp** | Whisper completed transcription | Windows 11 x64 |
+| **llama.cpp** | S1-mini English transcript cleanup | Windows 11 x64; macOS 13.3+ on Apple Silicon or Intel |
+
+:::note[Downloads are explicit]
+Runtime binaries and models are **not bundled with Freehand**. Installing a
+runtime and downloading a model are separate actions. Browsing the catalog
+neither downloads nor runs models. Custom files, alternative versions, and LAN
+serving belong in a [manually managed service](../connect-a-server/).
+:::
+
+Different runtimes can run together, with one installation and one process per
+runtime. NeMo can load one transcription model and optional MagpieTTS together.
+Each task selects its own connection; manual connections stay saved, and a local
+failure never silently sends work to a remote server.
+
+## Before installing
+
+- **Check disk space and memory.** Downloaded weights need disk space and loaded
+  models need memory. Catalog sizes are shown when available; larger models can
+  take longer to load and process.
+- **Allow internet access** for the explicit binary and model downloads.
+- **Use the platform's `curl` for NeMo downloads.** Freehand uses the copy supplied
+  with Windows or macOS; it does not install Python, Docker, WSL, or a toolchain.
+
+Files stay in Freehand's per-user application-data directory, without a global
+installation or PATH changes. Managed whisper.cpp is unavailable on macOS
+because upstream publishes no macOS server executable; use NeMo or a
+[manual whisper.cpp server](../../backends/whisper-cpp/).
+
+### Download sources
+
+| Runtime | Binary source | Model source |
+| --- | --- | --- |
+| NeMo-Speech.cpp | `NVIDIA/NeMo-Speech.cpp` official GitHub releases | NeMo's model manager and installed model index |
+| llama.cpp | `ggml-org/llama.cpp` official GitHub releases | `superwhisper/s1-mini-GGUF` on Hugging Face |
+| whisper.cpp | `ggml-org/whisper.cpp` official GitHub releases | `ggerganov/whisper.cpp` on Hugging Face |
+
+Freehand uses pinned versions. Review **Binary download details** or **Model
+download details** for filenames, source links, and available checksums. NeMo
+model details come from its index and its model manager handles acquisition.
+Viewing these details downloads nothing.
+
+## Set up local transcription
+
+<Steps>
+
+1. **Open Local runtime** on the activity rail. Choose **Install** for
+   **NeMo-Speech.cpp** and keep the recommended Nemotron 3.5 Streaming selection.
+2. **Select NeMo in the inventory sidebar.** Follow installation progress there;
+   use its cancellation action if needed. Installation does not download the model.
+3. **Choose Get for Nemotron** when installation finishes. Wait for **Downloaded**
+   after transfer and verification.
+4. **Choose Start** in the runtime header and wait for **Running**.
+5. **Select the built-in NeMo-Speech.cpp connection in Voice.** Complete microphone
+   and recording setup. No additional connection entry is needed.
+6. **Enable Realtime transcription** under **Voice transcription → Transcription**
+   for a live preview, then save. Captions and language remain Voice options.
+
+</Steps>
+
+Start recording with the destination focused. The preview can change; only final
+text can be copied, inserted, cleaned up, or retained in history. See
+[Live transcription](../live-transcription/) for stop and cancellation behavior.
+
+Audio file selects its own connection. Choose NeMo there to share its selected
+transcription model, or keep another connection. Files use completed requests.
+Turning realtime off in Voice keeps the same connection and model.
+
+## Local speech with MagpieTTS
+
+<Steps>
+
+1. **Install NeMo and select a transcription model** using the steps above.
+   Stop the runtime before changing model selections.
+2. **Choose Get for MagpieTTS Multilingual 357M** in its catalog. This downloads
+   the model, NanoCodec decoder, and tokenizer; wait for **Downloaded**.
+3. **Choose Select on Magpie.** It becomes the speech selection alongside the
+   existing transcription model.
+4. **Start NeMo and wait for Running.** Allow enough system/GPU memory for both
+   models. Starting or stopping from any workflow affects the shared server.
+5. **Open Text to speech**, select the built-in NeMo connection, enable speech,
+   choose voice and language, and save. Use **Preview** or **Speak** to request audio.
+
+</Steps>
+
+The [MagpieTTS guide](../../models/magpie-tts/) lists the five voices, qualified
+languages, and requirements. Adding speech keeps the transcription selection.
+
+To remove speech from the shared process, deselect NeMo in **Text to speech**,
+stop it, and choose **Disable** on its selected Magpie row. Downloaded files and
+the transcription selection remain. NeMo's speech capability and remembered
+speech-model options are removed; review speech settings after selecting Magpie again.
+
+## Choose another model
+
+The runtime's detail pane groups models under **Transcription**, **Text to
+speech**, and **Cleanup**. Choose **Get** to download, then **Select** while
+stopped. Use **Runtime preferences** for startup/binary options and **Manage
+runtime** for removal/recovery. Managing a runtime does not change a task's
+selected connection.
+
+:::note[Switching a shared model affects its workflows]
+Voice and audio files using the same managed runtime share its transcription
+model. Choosing a completed-only model such as Parakeet switches Voice out of
+realtime. Switching back to Nemotron leaves completed mode selected until you
+explicitly enable realtime again. Independent connections are unaffected.
+:::
+
+### whisper.cpp transcription
+
+On Windows, **Install** whisper.cpp, review its binary choice, **Get** a catalog
+model, and **Start**. Select its built-in connection for Voice or files. It
+supports completed transcription only: no live microphone mode or file-response
+streaming. CPU and NVIDIA CUDA binaries are available.
+
+**Whisper Base** is the recommended starting point. Expand or search a model
+family, then inspect a variant's size and download details before choosing Get.
+Model downloads and selection require an installed, stopped runtime.
+
+| Family | Catalog variants |
+| --- | --- |
+| Tiny, Base, Small, Medium | Multilingual and English-only `.en`, plus published Q5/Q8 variants |
+| Large v1, v2, v3 | Multilingual; Q5/Q8 for v2 and Q5 for v3 |
+| Large v3 Turbo | Multilingual standard, Q5, and Q8 |
+
+The catalog includes all 33 standard GGML variants in the
+[pinned official model repository](https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1).
+Use `.en` only for English. Quantized variants reduce disk and memory needs;
+speed and quality depend on the model, quantization, audio, and computer.
+
+### Local cleanup with S1-mini
+
+**Install** llama.cpp, confirm its binary, **Get S1-mini by Superwhisper v1 Q4_K_M**,
+and start it. Select its built-in connection in **Cleanup** and enable cleanup.
+NeMo can continue transcribing while llama.cpp cleans up its final text. CPU
+execution can leave GPU memory available for NeMo.
+
+S1-mini is **English-only**, with reasoning disabled. Explicit non-English input
+skips it; unknown language assumes English. Failed cleanup preserves raw text.
+See [transcript cleanup](../post-processing/) for controls and language handling.
+
+### Use Apple GPU acceleration
+
+On Apple Silicon, NeMo installs Metal automatically. For a new llama.cpp install,
+**Auto (recommended)** chooses **Apple GPU (Metal)**; choose **CPU** to disable
+offload, then **Download and install**. Intel Macs use CPU; CUDA is unavailable.
+
+To change llama.cpp later, stop it, change **Runtime binary**, then start it.
+Downloaded models, connections, and startup preferences remain. Metal shares
+memory with other apps and NeMo; a recommendation does not reserve memory.
+
+### Use NVIDIA GPU acceleration
+
+On Windows, **Install** for llama.cpp or whisper.cpp first shows a recommendation
+without downloading. Keep **Auto (recommended)** or choose **CPU** / **NVIDIA GPU
+(CUDA)**, then **Download and install**. Unknown or unsupported hardware/driver
+information produces a CPU recommendation.
+
+| Requirement | Managed CUDA binary |
+| --- | --- |
+| CUDA package | Pinned CUDA 12.4 |
+| NVIDIA GPU | Compute capability 5.0 or newer |
+| Driver | 551.78 or newer, and new enough to support your GPU |
+| Download includes | Required CUDA libraries; no toolkit or driver installation |
+| Other GPUs | AMD/Intel acceleration is not offered by these managed adapters |
+
+<Steps>
+
+1. **Stop the runtime** before changing its installed binary.
+2. **Choose NVIDIA GPU (CUDA)** under **Runtime binary** and wait for installation.
+3. **Start** and wait for **Running**. If startup fails, check driver/memory or
+   stop and choose **CPU** to return to CPU execution.
+
+</Steps>
+
+Switching keeps models, selections, connections, and startup preferences. A
+failed/cancelled download leaves the old installation in place. **Remove runtime
+files** is not a binary switch: it also deletes models. Existing installations
+never change automatically. Recommendations check compatibility, not free memory;
+CUDA labels identify the binary, not measured GPU offload.
+
+### NeMo models
+
+NeMo's catalog includes models from its installed index that match Freehand's
+supported profiles. Live mode requires a qualified streaming selection. Its
+optional speech model is selected separately from transcription.
+
+Downloads show bytes/percent when the total is known, then verification. A full
+transfer is not finished until verification succeeds. The setup area and model
+row show progress, cancellation, and completion/failure. Cancelled downloads can
+be retried. Stop active work and the runtime before changing or removing models;
+removing one frees its managed cache and using it again requires another download.
+
+## Startup and process output
+
+Start verifies installed files, loads selected models, and waits for readiness.
+Status shows the current phase and elapsed time; GPU startup includes warm-up.
+Wait for **Running**. Connection checks show **Starting runtime** and refresh
+once ready, so there is no need to retry while loading.
+
+Quick runtime controls also appear under each selected local connection,
+including cleanup while cleanup is off. **Start**, **Stop**, and **Cancel** show
+progress there. **Manage runtime** opens the same inventory entry. You can change
+pages while work continues.
+
+<details>
+<summary>What happens during GPU warm-up?</summary>
+
+Only selected installed models are warmed, including when start-at-launch is
+enabled. NeMo and llama.cpp use built-in warm-up. CUDA whisper.cpp receives one
+second of synthetic silence after readiness; Freehand discards the response.
+This never records your microphone, runs other catalog models, or targets a
+remote server. Catalog browsing and connection checks remain metadata-only.
+
+</details>
+
+### Inspect output
+
+<Steps>
+
+1. **Choose View output** on the runtime or its workflow controls. The embedded
+   **Runtime output** tab displays that runtime's available output immediately.
+2. **Search or follow output.** **Follow** controls scrolling; collection continues
+   when it is off. **Highlight logs** colors recognized levels and structured logs.
+3. **Use Copy selection** only for the text you intend to share. **Clear** discards
+   the captured tail. If reading fails, choose **Retry output**.
+
+</Steps>
+
+:::caution[Output can reveal transcripts and prompts]
+The viewer is read-only and memory-only, but upstream output can contain
+sensitive text and file paths. Review [diagnostics privacy](../privacy-and-safety/#diagnostics)
+before screen sharing or copying. Copied text can outlive the viewer on your clipboard.
+:::
+
+Hiding the panel, changing its tab/runtime, opening global Settings, or hiding
+the workspace clears displayed output and stops reads. Reopening displays the
+available tail. The private tail lasts until Clear, a new start attempt, runtime
+removal, or Quit; older text is dropped as it fills. The standalone **Process
+output** window requires **Show output** each opening or runtime switch.
+Neither viewer accepts commands, writes log files, nor controls the process.
+Sparse or empty output alone does not mean startup failed.
+
+## Stop, disable, or remove
+
+| Action | Effect |
+| --- | --- |
+| **Stop** | Releases the server; leaves model downloads and task selections |
+| **Restart** | Waits for successful stop, then reloads selected models; failed/cancelled stop prevents restart |
+| **Start when Freehand launches** | Starts an installed runtime; does not download missing files |
+| Choose a manual connection in a task | Uses its saved URL/model/key for new work |
+| **Remove runtime files** | After confirmation, deletes that runtime's binaries and models; leaves its connections unavailable until repaired |
+| **Quit Freehand** | Stops owned processes, including downloads |
+
+The Voice **Record** button becomes available when its selected runtime is
+running. Previous results stay copyable, and an existing recording keeps its
+Stop/Cancel controls. A stopped or failed runtime never changes connections.
+Removal does not touch manual credentials, source recordings, other runtimes,
+or another application's models.
+
+<details>
+<summary>Recover duplicate installations</summary>
+
+**Manage** exposes duplicates for review. Keep one, remove unwanted runtime
+files, then reassign or remove its connections before **Delete duplicate entry**.
+Deleting only the entry does not remove downloaded files. Freehand neither
+chooses which copy to keep nor runs two copies of one runtime.
+
+</details>
+
+## Privacy and recovery
+
+Local transcription does not make cleanup or speech local: review their
+independent connections. See [managed local recognition](../privacy-and-safety/#managed-local-recognition).
+
+| Failure | Recovery |
+| --- | --- |
+| Installation/download | Read the reported stage, check disk/network, and retry; never bypass an integrity failure |
+| Startup takes too long or fails | Cancel, check local resources, and retry; select a manual endpoint explicitly if needed |
+| Realtime disconnects | Start a new recording; captured audio is not replayed |
+
+NeMo's temporary download diagnostics are deleted after download/cancellation,
+or at the next runtime inspection after an abrupt exit, without copying them to
+application logs.
+
+<CardGrid>
+  <LinkCard title="Start live dictation" href="../live-transcription/" description="Enable realtime, choose captions, and understand final text." />
+  <LinkCard title="Use a manually managed server" href="../../backends/" description="Find deployment recipes for custom models, versions, and network serving." />
+</CardGrid>

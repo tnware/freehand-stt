@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DownloadDetails from "$lib/components/common/DownloadDetails.svelte";
   import type { RuntimeSource } from "$bindings/managedruntime";
   import { Browser } from "@wailsio/runtime";
   import { backendLabel, modelSize } from "$lib/utils/managedRuntime";
@@ -26,7 +27,7 @@
   <p class="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
     <span>Source</span>
     <a
-      class="break-all text-accent-text underline underline-offset-2 hover:text-accent-text"
+      class="source-link"
       href={source.repositoryURL}
       onclick={(event) => void open(event, source.repositoryURL)}
       >{source.repositoryURL.replace("https://github.com/", "")}</a
@@ -39,26 +40,22 @@
       >Official release</a
     >
   </p>
-  <details class="group">
-    <summary
-      class="w-fit cursor-pointer rounded-sm py-1 font-medium text-accent-text hover:underline focus-visible:outline-ring"
-      >Binary download details</summary
-    >
+  <DownloadDetails title="Binary download details">
     <div class="mt-2 divide-y divide-hairline">
       {#each artifacts as artifact (`${artifact.os}/${artifact.architecture}/${artifact.backend}/${artifact.filename}`)}
         <div class="min-w-0 space-y-1 py-3 first:pt-0 last:pb-0">
-          <p class="text-[13px] font-medium text-foreground">
+          <p class="content-value">
             {backendLabel(artifact.backend)} · {artifact.os} / {artifact.architecture}
             · {modelSize(artifact.sizeBytes)}
           </p>
           <p class="break-all font-mono">{artifact.filename}</p>
-          <p class="break-all font-mono text-[11px]">
+          <p class="break-all font-mono text-xs">
             <span class="font-sans">SHA-256 </span>{artifact.sha256}
           </p>
         </div>
       {/each}
     </div>
-  </details>
+  </DownloadDetails>
   {#if linkError}<p role="alert" class="text-destructive">
       Could not open the source in your browser.
     </p>{/if}

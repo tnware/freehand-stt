@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import { windowMaterial, platformPresentation } from "$lib/platform";
   import { providerNotices } from "../../branding/providers/notices";
   import { onMount } from "svelte";
@@ -165,7 +166,7 @@
         </div>
         {#if build}
           <div
-            class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 font-mono text-[10.5px] text-muted-foreground"
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 font-mono text-xs text-ink-quiet"
           >
             <span
               >{platformPresentation(build.platform).name}{platformPresentation(
@@ -183,7 +184,7 @@
         <div class="flex items-center gap-4 border-t border-hairline px-5 py-3">
           <div class="min-w-0 flex-1">
             <p class="text-xs font-medium text-foreground">Software updates</p>
-            <p class="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+            <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">
               {updateSummary(updateStatus)}
             </p>
           </div>
@@ -217,22 +218,23 @@
           and cancellation.
         </p>
       </div>
-      <details
-        class="rounded-lg border border-hairline px-4 py-3 text-xs text-muted-foreground"
+      <Disclosure
+        title="Provider icon credits"
+        compact
+        class="rounded-md border border-hairline"
+        bodyClass="text-xs text-muted-foreground"
       >
-        <summary class="cursor-pointer">Provider icon credits</summary>
         <p class="my-3">
           Brand marks identify providers; they do not imply endorsement. Some
           providers use neutral symbols.
         </p>
         {#each providerNotices as notice (notice.name)}
-          <details class="my-2">
-            <summary class="cursor-pointer">{notice.name}</summary>
+          <Disclosure title={notice.name} compact class="my-2">
             <pre
               class="mt-2 whitespace-pre-wrap break-words text-[10px] leading-relaxed">{notice.text}</pre>
-          </details>
+          </Disclosure>
         {/each}
-      </details>
+      </Disclosure>
     </div>
   </main>
 

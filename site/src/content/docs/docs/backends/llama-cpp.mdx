@@ -1,0 +1,158 @@
+---
+title: llama.cpp
+description: Connect llama.cpp for transcript cleanup with S1-mini or your own instruction.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Use **llama.cpp** to clean up completed transcripts with a text model you host.
+
+For S1-mini, [managed local setup](../../guides/local-runtime/#local-cleanup-with-s1-mini)
+can install and run llama.cpp inside Freehand on supported Windows and macOS
+computers. It supports S1-mini cleanup only. The instructions below are for a
+manually configured service, including custom cleanup models.
+
+## Run llama.cpp on Windows
+
+<Steps>
+
+1. **Install the runtime.** Install the Windows package, then open a new PowerShell window:
+
+   ```powershell title="Install llama.cpp"
+   winget install --exact --id ggml.llamacpp
+   ```
+
+1. **Start S1-mini.** Bind the server to loopback port 8080:
+
+   ```powershell title="Start S1-mini on port 8080"
+   llama-server.exe `
+     -hf superwhisper/s1-mini-GGUF:Q4_K_M `
+     --host 127.0.0.1 --port 8080 `
+     --jinja --reasoning off --temp 0 `
+     -ngl 99 --sleep-idle-seconds 60
+   ```
+
+   `-hf` downloads the selected GGUF model on first use. The command requests GPU
+   offload; check startup output for the backend and offloaded layers. For a
+   CPU-only setup, replace `-ngl 99` with `-ngl 0 --device none`. Package builds and
+   accelerators vary; use the [upstream server instructions](https://github.com/ggml-org/llama.cpp/tree/master/tools/server)
+   for other hosts or backends. This command requires a build supporting
+   `--reasoning off` and idle sleeping.
+
+1. **Check readiness.** Keep the server terminal open. In a second PowerShell window, read metadata:
+
+   ```powershell title="Check health and model metadata"
+   Invoke-RestMethod http://127.0.0.1:8080/health
+   Invoke-RestMethod http://127.0.0.1:8080/v1/models
+   ```
+
+</Steps>
+
+Use these values in [Configure Freehand](#configure-freehand):
+
+| Setting | This recipe |
+| --- | --- |
+| Backend / use | **llama.cpp** / **Cleanup** |
+| Base URL | `http://127.0.0.1:8080/v1` |
+| Authentication | **None**; enable **Allow HTTP for this connection** |
+| Model | Choose the served ID with **Refresh models** |
+| Model profile | **S1-mini by Superwhisper**; requires reasoning off |
+
+**Stop or restart:** press <kbd>Ctrl</kbd> + <kbd>C</kbd> in the server terminal;
+rerun the command to restart with the cached model.
+
+:::tip[Choose whether to keep the model warm]
+`--sleep-idle-seconds 60` releases model memory after 60 idle seconds and reloads
+on the next inference request. Waking adds latency; omit the flag to keep it loaded.
+:::
+
+For a custom cleanup model, use its own GGUF and template requirements, then
+select the **Generic** model profile and enter your cleanup instruction.
+S1-mini's fixed prompt is not a
+general chat prompt. The [post-processing guide](../../guides/post-processing/)
+explains raw fallback and the trained S1-mini controls.
+
+## Configure Freehand
+
+For a manually configured service:
+
+<Steps>
+
+1. Create a **Cleanup** connection in **Connections**, using the **llama.cpp** profile.
+2. Name it and enter the chat API base URL, normally ending in `/v1`.
+3. Configure authentication and HTTP permission, then **Save connection**. In **Voice transcription → Cleanup**, select that connection, enable cleanup, and list models or enter the served model ID.
+4. Choose **Model profile → Generic** for your own instruction, or **S1-mini by Superwhisper** for its built-in instruction.
+5. Save, then explicitly review cleanup of a short transcript.
+
+</Steps>
+
+The [post-processing guide](../../guides/post-processing/) covers setup and
+raw fallback. For the known model setup, follow
+[S1-mini with llama.cpp](../../guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp),
+including its exact prompt and required thinking-disabled behavior.
+
+## Implemented contract
+
+| Contract | Behavior |
+| --- | --- |
+| Route | Non-streaming `POST /chat/completions` beneath the base URL |
+| Request | Model, system/user string messages, temperature zero, `stream=false`, and configured generation controls |
+| Response | String message in the first choice |
+| `finish_reason=length` | Uses raw text instead of incomplete cleanup |
+
+For a manual Connection, choose the **model profile** separately: Generic uses
+your instruction; S1-mini uses its fixed prompt and trained controls. Choosing
+the llama.cpp backend profile does not select or load a cleanup model for you.
+
+## Scope and limits
+
+- This Freehand profile supports text cleanup only, even if your llama.cpp
+  deployment offers other operations.
+- Sampling, context size, and template selection remain server configuration.
+  Freehand supports only the output-limit and disable-reasoning controls below.
+- Cleanup uses one request. There is no automatic long-input chunking or replay.
+- A successful model-list test is not proof that the chosen model accepts the
+  exact fields or follows the selected instruction.
+
+See [protocol details](../../reference/protocol/) and the
+[upstream llama.cpp server documentation](https://github.com/ggml-org/llama.cpp/tree/master/tools/server).
+
+## Cleanup generation controls
+
+In **Voice transcription → Cleanup → Generation controls**:
+
+| Control                    | Request behavior                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Limit output tokens        | Sends `max_tokens` only when enabled, from 1 to 65,536. Off omits the field; a valid number is retained locally.               |
+| Disable reasoning, Generic | Sends `reasoning_effort: "none"` when enabled. Off leaves reasoning to the server.                                             |
+| Disable reasoning, S1-mini | Required and automatically sent on every cleanup request through this backend. It cannot be turned off for this model profile. |
+
+S1-mini always requests reasoning off through this backend. This does not change
+the optional reasoning setting saved for a Generic cleanup model.
+
+:::caution[Keep server-side reasoning off for S1-mini]
+The server and model template must honor the request. An older server can ignore
+an unknown field without failing its model-list check. Keep `--reasoning off`
+and explicitly review the chosen model's behavior.
+:::
+
+<details>
+<summary>Reasoning fields and rejected requests</summary>
+
+`reasoning_effort: "none"` requests thinking-disabled generation. It differs
+from `reasoning_format: "none"`, which controls parsing of generated reasoning.
+Unsupported requests use the normal raw-transcript fallback; Freehand does not
+retry or silently drop the field.
+
+</details>
+
+An output limit is a token budget, not a context-window setting or an automatic
+long-input strategy. A low limit may cause raw fallback. See
+[generation controls](../../guides/post-processing/#generation-controls).
+
+## Language selection
+
+Use the [language guide](../../guides/languages/) to choose Server default,
+automatic detection, a named code, or a custom value. The selected model determines
+which languages work. If you enable S1-mini cleanup, review its
+[English-only language behavior](../../models/s1-mini/#language-and-results).

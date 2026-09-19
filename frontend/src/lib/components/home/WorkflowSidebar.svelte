@@ -3,6 +3,7 @@
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
   import { Switch } from "$lib/components/ui/switch";
   import VoiceTranscriptionSettings from "./VoiceTranscriptionSettings.svelte";
+  import MicrophoneQuickSettings from "./MicrophoneQuickSettings.svelte";
   import QuickSettings from "./QuickSettings.svelte";
   import SpeechQuickSettings from "./SpeechQuickSettings.svelte";
   import type {
@@ -97,6 +98,10 @@
         aria-label={`${title} quick settings`}
       >
         {#if workflow === "voice"}
+          <MicrophoneQuickSettings
+            editor={session.editor}
+            disabled={controlsDisabled}
+          />
           <VoiceTranscriptionSettings
             sidebar
             {settings}
@@ -125,13 +130,11 @@
           <QuickSettings
             sidebar
             embedded
-            showCapture={false}
             showTranscription={workflow === "file"}
             {settings}
             runtime={session.runtime}
             {runtimeWorkBusy}
             onManageRuntime={onOpenRuntime}
-            devices={session.editor.devices}
             processingProfiles={session.editor.processingProfiles}
             connection={session.editor.connection}
             processingConnection={session.editor.processingConnection}
@@ -175,8 +178,6 @@
               session.editor.testAppliedConnection(Purpose.Cleanup)}
             onOpenServerSettings={onOpenOptions}
             onOpenProcessingSettings={onOpenCleanup}
-            onOpenAudioSettings={onOpenOptions}
-            onOpenDeliverySettings={onOpenDelivery}
             disabled={controlsDisabled}
           />
         {/if}
@@ -231,7 +232,7 @@
     {#if workflow === "voice"}
       <button type="button" class="srow" onclick={onOpenDelivery} {disabled}>
         <span class="sk">Insert into</span>
-        <span class="sv"
+        <span class="sv text-secondary-foreground"
           >{settings?.autoInsert ? "Focused app" : "Copy only"}</span
         >
       </button>
@@ -241,16 +242,18 @@
       </button>
       <button type="button" class="srow" onclick={onOpenOverlay} {disabled}>
         <span class="sk">Overlay</span>
-        <span class="sv">{settings?.overlayEnabled ? "On" : "Off"}</span>
+        <span class="sv text-secondary-foreground"
+          >{settings?.overlayEnabled ? "On" : "Off"}</span
+        >
       </button>
     {:else}
       <div class="srow">
         <span class="sk">Result</span>
-        <span class="sv"
+        <span class="sv text-secondary-foreground"
           >{workflow === "tts" ? "Play or save" : "Explicit copy"}</span
         >
       </div>
-      <p class="px-2.5 pt-0.5 pb-1 text-[11px] leading-snug text-ink-quiet">
+      <p class="px-2.5 pt-0.5 pb-1 text-xs leading-snug text-ink-quiet">
         {workflow === "tts"
           ? "Audio is generated on request and never saved automatically."
           : "A file transcript is never inserted into another application."}
@@ -296,14 +299,13 @@
     gap: 0.25rem;
     overflow: hidden;
     font-size: 11.5px;
-    color: var(--secondary-foreground);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  @media (max-width: 699px) {
-    .workflow-settings {
-      width: 180px;
-    }
+  .workflow-settings {
+    container-type: inline-size;
+  }
+  @container (max-width: 220px) {
     .srow {
       align-items: flex-start;
       flex-direction: column;

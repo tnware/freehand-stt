@@ -1,0 +1,263 @@
+---
+title: Troubleshooting
+description: Find a symptom, recover your result, and fix setup, connection, recording, or playback failures.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Start with the visible status or **Details** beside the failed action. Keep a
+copy of any useful result before retrying. A retry can repeat server work or
+charges, so Freehand does not automatically resubmit ordinary inference failures.
+
+| What went wrong? | Start here |
+| --- | --- |
+| Cannot finish first setup | [Task requirements](#setup-does-not-complete) |
+| Connection check or request failed | [Check results](#understand-connection-check-results) · [Failure categories](#connection-and-request-failures) |
+| Recording did not begin | [Microphone and shortcut checks](#recording-does-not-start) |
+| Text did not appear in my app | [Recover with Copy](#a-transcript-was-not-inserted) |
+| Raw text arrived instead of cleaned text | [Cleanup recovery](#cleanup-was-skipped-or-failed) |
+| File transcript is incomplete | [File request recovery](#audio-file-transcription-stops-or-is-incomplete) |
+| Generated speech is silent | [Speech playback](#speech-playback-produces-no-sound) |
+| Settings will not save or load | [Settings recovery](#saved-settings-need-attention) |
+| macOS blocks installation or permissions | [macOS setup](#macos-installation-or-permissions) |
+
+## Setup does not complete
+
+**Voice** readiness and **Finish setup** apply to dictation. You can use Audio
+file or Text to speech without completing Voice setup.
+
+| Task | Must be ready |
+| --- | --- |
+| Voice | Transcription connection/model, required authentication, microphone, and initial metadata check; shortcut optional |
+| Audio file | Its transcription connection/model, authentication if required, and a supported file |
+| Text to speech | Its connection/model/voice, authentication if required, and **Enable text to speech** |
+
+<Steps>
+
+1. **Open the unfinished Voice readiness item.** Correct its settings and save
+   in the options sidebar. First-run controls apply valid changes immediately.
+2. **Check the URL, model, and authentication.** Most base URLs include `/v1`;
+   whisper.cpp uses the root and server-loaded model. Enter a required key in
+   **Connections**, and allow HTTP only for a trusted plaintext service.
+3. **Select an available microphone** or **System default** if the saved device
+   is missing.
+4. **Return to Voice → Check connection / Check again**, then **Finish setup**
+   when ready.
+
+</Steps>
+
+See [Connect a speech server](../connect-a-server/) for the configuration fields.
+
+## Understand connection-check results
+
+Check the task you are using. Success for one does not check the others.
+**Ready to generate** describes local composer configuration; **Not checked**
+and **Settings changed** are not successful reachability checks.
+
+Use **Refresh models** (or **Check server** for whisper.cpp) on the task, then
+**Check again** to repeat. The panel separates:
+
+| Check | What it establishes |
+| --- | --- |
+| Connection | A usable response from the configured metadata route |
+| Authentication | Acceptance of that metadata request; public health routes cannot prove inference permissions |
+| Selected model | Whether an ID is advertised; health-only checks cannot list models and whisper.cpp uses the loaded model |
+| Configuration | Support in Freehand for the model profile/options, including required voice or reasoning settings |
+
+:::note[Metadata success is not an inference test]
+Checks do not submit audio or prompts. An unlisted alias may work, and a listed
+model may be unsuitable for the task. Metadata cannot prove recognition quality,
+language/voice support, cleanup behavior, or permission to run the model.
+:::
+
+Changed connections/models/options clear results or mark them stale; check again.
+For managed connections, **Starting runtime** means loading/warm-up is active.
+Wait for **Running**; checks refresh automatically. If startup fails, inspect
+[runtime output](../local-runtime/#startup-and-process-output) and
+[local resource use](../workspace/#check-this-computers-resource-use).
+
+**Check connection** in Connections checks the saved server/credential without
+selecting it. Open a task to check its model and options.
+
+## Connection and request failures
+
+Correct the cause, then retry deliberately. Check transcription, cleanup, and
+speech independently.
+
+| Visible result | Check next |
+| --- | --- |
+| Invalid settings | API prefix, required fields, and plaintext HTTP policy |
+| Connection failed | Server process, hostname/port, firewall, TLS, and reverse proxy |
+| Unauthorized or forbidden | Authentication mode, current key, and gateway policy |
+| Model not advertised | Exact ID or accepted alias; being unlisted alone does not prove failure |
+| Request too large | File size and server/proxy upload limits |
+| Timed out | The task's request budget, server load, model warm-up, and network |
+| Route unsupported | Whether the server exposes this specific STT, chat, or speech route |
+
+## Recording does not start
+
+<Steps>
+
+1. **Check Voice → Audio.** Select an available microphone; reselect after
+   unplugging, disabling, or replacing it. For a local connection, wait until its
+   runtime is **Running**.
+2. **Finish or cancel audio-file transcription.** It cannot run alongside capture.
+3. **Check Settings → Shortcuts.** Replace an unavailable chord or **Clear** it
+   and save, then use on-screen recording controls.
+4. **Stop speech playback if needed.** Recording normally stops it first. If
+   playback cannot stop, capture does not start; stop explicitly or quit from
+   the tray and relaunch.
+
+</Steps>
+
+A conflicting shortcut rejected on save leaves the working chord in place. A
+shortcut unavailable at launch has no fallback key, but does not block capturing
+a replacement. On-screen recording may require Copy because your destination
+was not focused at recording start. See [shortcut recovery](../../reference/shortcuts/).
+
+:::tip[Wait for the microphone to be ready]
+After an idle period, capture can take a moment to start. Wait for Freehand's
+recording indication before speaking; receiving the shortcut alone is not readiness.
+:::
+
+## A transcript was not inserted
+
+**Check the destination for partial text, then use Copy.** A delivery failure
+does not prove that nothing was typed. Paste only after checking for duplicates.
+
+| Platform | Required destination |
+| --- | --- |
+| Windows | Original app, window, and focused control; release Ctrl, Alt, Shift, and Windows keys before delivery |
+| macOS | Same app and window; moving fields within it delivers to the current field. Secure Input blocks delivery |
+
+Changed/closed targets, unavailable permission, or held modifiers can require
+Copy. macOS does not detect every custom secure field. For the next recording,
+keep the destination focused until completion; Freehand does not activate it.
+See [safe insertion](../privacy-and-safety/#safe-text-insertion).
+
+File results and manual-copy mode always require explicit **Copy**.
+
+## Cleanup was skipped or failed
+
+**Use the raw transcript**, then open **Cleanup** in Voice or Audio file options.
+Confirm it is enabled, check its independent connection/model/credentials, and
+review its timeout before the next attempt.
+
+| Symptom | Check |
+| --- | --- |
+| S1-mini skipped | English-only language restrictions; [language compatibility](../languages/#s1-mini-cleanup-is-english-only) |
+| S1-mini returns empty output | Explicit S1-mini model profile and required reasoning-off configuration |
+| Reported output limit | Raise the output budget for the complete transcript or shorten input |
+| Incomplete text with no reported error | Compare with raw text in enabled history; omissions cannot always be detected |
+
+Freehand neither automatically splits long cleanup inputs nor retries different
+controls. Failure falls back to raw text under normal delivery/cancellation rules.
+Enabled history retains the outcome within its limits. See
+[cleanup setup and controls](../post-processing/).
+
+## Audio-file transcription stops or is incomplete
+
+**Copy any available partial result before retrying.** Partial streaming text is
+not a completed transcript and is not sent for cleanup.
+
+| Symptom | Recovery |
+| --- | --- |
+| `413` / upload rejected | Choose a smaller file or adjust the server/proxy upload limit |
+| Large file or cold model times out | Review the file request budget and server capacity |
+| Incompatible or interrupted stream | Fix the connection and retry deliberately; rejected streaming may offer a new completed-mode request |
+
+Freehand does not split long files or transcode formats. The server must support
+the selected recording. See [audio-file transcription](../audio-files/) for
+picker formats, size limits, and response modes.
+
+## Speech playback produces no sound
+
+Check the system output device and volume, then **Text to speech → Speech**.
+
+| Check | Action |
+| --- | --- |
+| Enabled/configured service | Enable speech, verify its `POST /v1/audio/speech` route, model and voice ID, then save |
+| Managed NeMo | Select MagpieTTS, start the shared runtime, wait for Running, and select NeMo in Speech |
+| Preview differs from playback | Preview uses unsaved choices; save to apply them to Speak/Listen |
+| No request started | Choose **Speak** for a draft or **Listen** on a completed transcript |
+| Endpoint/output settings changed | Generate speech again |
+
+If **Restart** rewinds but cannot open the output device, audio stays paused at
+the beginning. Correct the device and use **Resume** or **Restart**; retained
+audio can still be saved or cleared. Failed rewind keeps the existing session.
+See [speech playback controls](../text-to-speech/#control-playback).
+
+## Saved settings need attention
+
+If saved settings change while you are editing, Freehand keeps the draft and
+reports the change. Save your intended edits, or discard to load the latest
+values; refresh does not silently replace your work.
+
+### An edited value was rejected
+
+Correct the marked setting, then save again. Other draft edits remain and applied
+settings are unchanged. For example, **Voice → Audio → Maximum duration** allows
+**1–262 seconds** without splitting or **1–3,600 seconds** with splitting.
+
+### Saved configuration cannot be loaded
+
+New transcription and settings changes pause when configuration cannot be loaded
+or a save's outcome cannot be confirmed. Defaults do not silently replace it.
+
+| Message/action | Recovery |
+| --- | --- |
+| In use or inaccessible | Close other Freehand instances; check file access/disk space; **Retry loading** |
+| Newer database | Update Freehand to a compatible version; older builds cannot downgrade it |
+| **Reset to defaults** | Use only for a fresh setup; existing database/sidecars are archived under `freehand-recovery-*`. Native keys are not purged; reconfigure and enter keys again |
+
+Earlier alpha settings are not imported. Follow the [first-launch reset notice](../../getting-started/#first-launch)
+if connections disappeared after upgrading; do not rename an alpha database to reuse it.
+
+To restore a backup from the current settings format:
+
+<Steps>
+
+1. **Quit from the tray or macOS menu bar.** Closing the window leaves Freehand running.
+2. **Open the settings folder:** `%LOCALAPPDATA%\Freehand` on Windows, or
+   `~/Library/Application Support/Freehand` through Finder's Go to Folder.
+3. **Preserve the current database.** Copy `freehand.db` and any matching
+   `freehand.db-journal`, `freehand.db-wal`, or `freehand.db-shm` together to a
+   separate recovery folder before removing them from the settings folder.
+4. **Copy a known-good `freehand-*.db` from `freehand-backups`** into the settings
+   folder as `freehand.db`. Keep the original backup; do not mix old sidecars
+   with the restored file.
+5. **Reopen and review settings/authentication.** Backups do not contain API keys;
+   replaced keys may need entering again.
+
+</Steps>
+
+:::caution[Choose a completed backup and keep it private]
+Do not restore `.tmp` files. Freehand keeps the newest three completed pre-upgrade
+backups; reset archives remain until removed. Recovery files can include server
+addresses, headers, and instructions. Downgrading does not convert their format;
+review release notes before using an older version.
+:::
+
+## macOS installation or permissions
+
+Use the matching ZIP and same-release checksums, and launch the installed bundle
+from a stable location. Review Microphone for capture, Accessibility for insertion,
+and Accessibility plus Input Monitoring for shortcut capture/hold-to-talk. Quit
+and reopen after changes when requested; installed and development apps have
+separate permissions.
+
+Release keys and use **Retry hold-to-talk** after keyboard access returns.
+Keychain denial needs the OS approval/recovery flow. Follow the full
+[macOS setup and permissions guide](../macos-setup/).
+
+## Report a problem
+
+Search existing [GitHub issues](https://github.com/tnware/freehand-stt/issues).
+Include app version, visible failure category, attempted operation, and
+reproducible steps. For native issues include OS version, architecture, and
+relevant permission state.
+
+:::caution[Keep private data out of reports]
+Do not include API keys, private endpoint URLs, transcripts, audio, full paths,
+machine names, or unredacted diagnostic output in a public issue.
+:::

@@ -1,34 +1,36 @@
 ---
 title: Contributor documentation
-description: Build, test, understand, and release Freehand.
+description: Set up, validate, and release Freehand.
 ---
 
-import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 This section is for contributors and maintainers. If you want to install,
 configure, or use Freehand, start with the [user guide](../getting-started/).
 
 ## Start contributing
 
-Read the repository's
-[contribution guide](https://github.com/tnware/freehand-stt/blob/main/CONTRIBUTING.md)
-before beginning substantial work. It covers prerequisites, local setup,
-required checks, pull-request expectations, and the native Windows and macOS acceptance
-boundary.
+<Steps>
+
+1. **Set up the repository.** Follow the
+   [contribution guide](https://github.com/tnware/freehand-stt/blob/main/CONTRIBUTING.md)
+   for prerequisites, local builds, and pull-request expectations.
+2. **Choose the procedure for your change.** Use the guides below for generated
+   assets, compatibility, storage, CI, or releases.
+3. **Validate at the right boundary.** Run the required checks and relevant
+   [native acceptance](../safety/native-test-checklist/) on each affected OS and
+   architecture. Record evidence and remaining gaps in the issue or pull request.
+
+</Steps>
+
+:::caution[Builds and fixtures are separate evidence]
+Cross-compilation and browser fixtures do not establish native Windows or macOS
+behavior. Live inference checks use only an explicitly selected endpoint/model.
+:::
 
 Choose the reference for the work you are doing:
 
 <CardGrid>
-  <LinkCard
-    title="Understand the architecture"
-    description="Runtime ownership, package boundaries, and data flow."
-    href="architecture/"
-  />
-  <LinkCard
-    title="Test a change"
-    description="Deterministic checks and the separate native Windows and macOS acceptance requirements."
-    href="testing/"
-  />
   <LinkCard
     title="Work with GitHub Actions"
     description="CI checks, documentation deployment, and release automation."
@@ -58,9 +60,8 @@ Choose the reference for the work you are doing:
 
 ## Maintainer references
 
-Use these references for safety requirements and native acceptance:
-
-- [Windows safety invariants](../safety/windows/)
-- [Logging contract](../safety/logging/)
-- [Native Windows acceptance checklist](../safety/native-test-checklist/)
-- [Native macOS acceptance](testing/#native-macos-acceptance)
+| If your change touches… | Review |
+| --- | --- |
+| Focus, insertion, capture, credentials, or lifecycle | [Windows safety invariants](../safety/windows/) |
+| Diagnostics or runtime output | [Logging contract](../safety/logging/) |
+| Native adapters, packaging, permissions, or shutdown | [Native Windows and macOS acceptance](../safety/native-test-checklist/) |

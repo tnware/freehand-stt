@@ -1,0 +1,209 @@
+---
+title: Speaches
+description: Connect Speaches for transcription and on-demand speech playback.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+Use **Speaches** for microphone and audio-file transcription, or for text to
+speech when the server has a TTS model installed.
+
+## Run Speaches with Docker
+
+Use PowerShell and Docker Desktop with Linux containers. This NVIDIA example
+follows [upstream installation](https://speaches.ai/installation/). The
+`latest-cuda` tag changes; pin a release tag or image digest for a repeatable
+deployment. For CPU-only setup, use the alternative
+below instead of starting a second server.
+
+```powershell title="Start Speaches with NVIDIA CUDA"
+docker run --detach --name freehand-speaches `
+  --gpus device=0 `
+  --publish 127.0.0.1:8000:8000 `
+  --volume freehand-speech-models:/home/ubuntu/.cache/huggingface/hub `
+  ghcr.io/speaches-ai/speaches:latest-cuda
+```
+
+Wait for startup, then explicitly download one model suitable for the GPU's
+available memory. This example selects full Whisper large-v3:
+
+```powershell
+docker logs --tail 30 freehand-speaches
+Invoke-RestMethod -Method Post `
+  -Uri 'http://127.0.0.1:8000/v1/models/Systran/faster-whisper-large-v3'
+Invoke-RestMethod http://127.0.0.1:8000/v1/models
+```
+
+:::note[The download command is an explicit installation]
+The `POST` above installs the selected model as an administrator action.
+Freehand's connection test never makes that request or loads the inventory.
+See the [upstream download instructions](https://speaches.ai/usage/model-discovery/)
+for models supported by your release.
+:::
+
+Use the following settings in [Configure Freehand](#configure-freehand):
+
+| Setting | NVIDIA example |
+| --- | --- |
+| Base URL | `http://127.0.0.1:8000/v1` |
+| Model | `Systran/faster-whisper-large-v3` |
+| Authentication | **None**; enable **Allow HTTP for this connection** |
+
+### CPU alternative
+
+Without an NVIDIA GPU, use this launch command instead:
+
+```powershell title="Start Speaches on CPU"
+docker run --detach --name freehand-speaches `
+  --publish 127.0.0.1:8000:8000 `
+  --volume freehand-speech-models:/home/ubuntu/.cache/huggingface/hub `
+  ghcr.io/speaches-ai/speaches:latest-cpu
+```
+
+Wait for startup in `docker logs --tail 30 freehand-speaches`, then download
+the selected model:
+
+```powershell
+Invoke-RestMethod -Method Post `
+  -Uri 'http://127.0.0.1:8000/v1/models/Systran/faster-distil-whisper-small.en'
+```
+
+Set the Freehand model to
+`Systran/faster-distil-whisper-small.en` and the spoken language to English; the
+remaining connection values stay the same. Compare results with a larger model
+if you have the memory and processing capacity for it. These upstream
+launch recipes have not been separately tested on Windows with every image.
+
+### Stop, restart, and optional playback
+
+```powershell
+docker stop freehand-speaches
+docker start freehand-speaches
+```
+
+The named volume retains downloaded models. Stop and remove this named
+container before recreating it to change between CPU and CUDA images.
+For speech playback, complete the separate
+[upstream TTS installation](https://speaches.ai/usage/text-to-speech/), install a
+selected TTS model, then configure Freehand's speech playback connection below.
+Installing an STT model alone does not provision voices or a TTS model.
+
+## Configure Freehand
+
+<Steps>
+
+1. In **Connections**, create a **Speaches** connection. Enable **Voice
+   transcription**, **Audio-file transcription**, or both under **Used for**.
+2. Enter the base URL including `/v1`, authentication, and HTTP permission,
+   then choose **Save connection**.
+3. Open the **Settings** cog in Voice transcription or Audio file. Select the
+   connection under **Transcription**, choose an installed model, and save.
+4. Try a short recording or file with the model you selected and review its result.
+
+</Steps>
+
+<details>
+<summary>Add speech playback to the same connection</summary>
+
+Enable **Text to speech** under the connection's **Used for** and save. Select
+it in **Text to speech → Speech**, choose the installed TTS model and voice,
+enable text to speech, then preview and save.
+
+Transcription and speech share the connection and key but keep separate models
+and options. Create another connection when the speech endpoint or credentials
+differ. Installing an STT model alone does not install a TTS model or voices.
+
+</details>
+
+The [connection guide](../../guides/connect-a-server/) explains deployment
+topologies and shared settings. Freehand's connection checks read metadata only;
+they do not install, load, or run models.
+
+## Implemented capabilities
+
+| Capability               | Scope                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| Microphone transcription | Completed JSON transcription, including local checkpoint requests.                                  |
+| Stored audio files       | Completed JSON or optional streamed transcript results.                                             |
+| Streaming dialects       | Typed transcript delta/done events and legacy untyped text segments.                                |
+| Language hint            | Optional `language` request field; effect depends on the model.                                     |
+| Recognition context      | Optional `prompt`, at most 8,192 UTF-8 bytes.                                                       |
+| Shared vocabulary        | Sent as `hotwords`, at most 2,048 UTF-8 bytes; Speaches-specific field.                             |
+| Decoding temperature     | Optional `temperature` from 0 to 1; explicit zero is supported.                                     |
+| Speech playback          | Voice ID, speed request, and buffered PCM16 WAV.                                                    |
+| Voice discovery          | Model-associated voices from `/v1/models`, with a labelled server-wide `/v1/audio/voices` fallback. |
+| Transcript cleanup       | Configure a separate Generic, llama.cpp, or vLLM chat connection.                                   |
+
+Context, vocabulary, and temperature are optional. Freehand omits their request
+fields until you configure or enable them.
+
+## Streaming formats
+
+Freehand supports the segment streams used by Speaches v0.8.3 and the typed
+text events used by its v0.9.0-rc.3 Whisper executor. Speech playback buffers
+PCM16 WAV before playing.
+
+## Choose a voice
+
+In **Text to speech → Speech**, select the Speaches connection and TTS model,
+then use **Refresh voices** beside the voice field. Search the list by ID, name,
+or language when the server supplies it. You can also type a custom voice ID.
+The voice selection is remembered for this connection and model.
+
+| Discovery result | What Freehand shows |
+| --- | --- |
+| Selected model has a `voices` field in `/v1/models` | That model's voices; an explicitly empty list stays empty |
+| Model has no `voices` field | A labelled server-wide `/v1/audio/voices` fallback; compatibility with this model is not guaranteed |
+| Discovery fails or server is older | Manual voice entry remains available |
+| Connection or model changes | Hides voice results from the previous selection |
+
+Discovery does not synthesize previews or load models.
+
+## Current limits
+
+The profile does not add timestamps, a translation workflow, server VAD
+controls, voice instructions, or cloning inputs.
+Provider limits and Freehand's bounded-buffer limits still apply; consult the
+[protocol reference](../../reference/protocol/).
+
+## Recognition controls
+
+Whisper-family models support context hints, hotwords, and temperature through
+Speaches. These controls are available for completed and streaming transcription.
+
+For Voice, set **Context hint** in **Voice transcription → Transcription**. For files,
+set context in **Audio file → Transcription → Transcription controls**. Keep shared
+terms in **Settings → Vocabulary**, and enable them for Voice, audio files, or
+both. Freehand sends those terms as `hotwords`.
+
+| Recognition setting | Use it for | Keep in mind |
+| --- | --- | --- |
+| Context | Expected subject matter or wording | Not a rewrite instruction |
+| Hotwords | Terms to favor | Not a strict replacement dictionary |
+| Temperature | A decoding request | Does not guarantee quality or determinism |
+
+Context and hotwords can be supplied together. Model prompt budgets and decoding
+behavior limit their effect; client byte limits are not model token allowances.
+
+Keep these options unset if the selected model does not support them. A rejected
+request fails normally; Freehand does not silently drop hints and repeat inference.
+See [Transcription controls](../../guides/connect-a-server/#transcription-controls).
+
+Freehand does not offer a server-side VAD control: v0.8.3 accepts `vad_filter`,
+while the v0.9.0-rc.3 route runs VAD internally with fixed options. Local
+microphone VAD settings remain independent. Library settings such as beam size
+are not automatically fields on the Speaches HTTP request.
+
+## Language selection
+
+Use the [language guide](../../guides/languages/) to choose Server default,
+automatic detection, a named code, or a custom value. The selected model determines
+which languages work. If you enable S1-mini cleanup, review its
+[English-only language behavior](../../models/s1-mini/#language-and-results).
+
+## Upstream references
+
+- [Speaches repository](https://github.com/speaches-ai/speaches)
+- [v0.8.3 transcription route](https://github.com/speaches-ai/speaches/blob/v0.8.3/src/speaches/routers/stt.py)
+- [v0.9.0-rc.3 Whisper executor](https://github.com/speaches-ai/speaches/blob/v0.9.0-rc.3/src/speaches/executors/whisper.py)
+- [v0.9.0-rc.3 speech route](https://github.com/speaches-ai/speaches/blob/v0.9.0-rc.3/src/speaches/routers/speech.py)

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DownloadDetails from "$lib/components/common/DownloadDetails.svelte";
   import {
     ModelAcquisitionMethod,
     type ModelSource,
@@ -30,7 +31,7 @@
       Source: NeMo’s built-in model manager
     {:else if source.repositoryURL}
       Source: <a
-        class="break-all text-accent-text underline underline-offset-2 hover:text-accent-text"
+        class="source-link"
         href={source.repositoryURL}
         onclick={(event) => void open(event, event.currentTarget.href)}
         >{source.repository}</a
@@ -44,11 +45,7 @@
       Includes {source.companions.length} companion files, downloaded and verified
       with the model.
     </p>{/if}
-  <details>
-    <summary
-      class="w-fit cursor-pointer rounded-sm py-1 font-medium text-accent-text hover:underline focus-visible:outline-ring"
-      >Model download details</summary
-    >
+  <DownloadDetails title="Model download details">
     {#if description}<p class="mt-3 leading-relaxed">{description}</p>{/if}
     <dl
       class="mt-3 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 [&>dt]:text-muted-foreground"
@@ -62,7 +59,7 @@
       {#if source.filename}<dt>File</dt>
         <dd class="break-all font-mono">{source.filename}</dd>{/if}
       {#if source.sha256}<dt>SHA-256</dt>
-        <dd class="break-all font-mono text-[11px]">{source.sha256}</dd>{/if}
+        <dd class="break-all font-mono text-xs">{source.sha256}</dd>{/if}
     </dl>
     {#each (source.companions ?? []).filter((companion) => companion !== null) as companion (companion.filename)}
       <dl
@@ -75,13 +72,13 @@
         <dt>Revision</dt>
         <dd class="break-all font-mono">{companion.revision}</dd>
         <dt>SHA-256</dt>
-        <dd class="break-all font-mono text-[11px]">{companion.sha256}</dd>
+        <dd class="break-all font-mono text-xs">{companion.sha256}</dd>
       </dl>
     {/each}
     {#if delegated}<p class="mt-2">
         Model details from NeMo’s bundled index.
       </p>{/if}
-  </details>
+  </DownloadDetails>
   {#if linkError}<p role="alert" class="text-destructive">
       Could not open the source in your browser.
     </p>{/if}

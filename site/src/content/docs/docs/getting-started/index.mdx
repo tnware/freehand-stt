@@ -1,243 +1,185 @@
 ---
 title: Get started
-description: Install Freehand and start voice dictation, audio-file transcription, or optional text to speech.
+description: Install Freehand, choose where speech runs, and complete your first dictation, file transcript, or speech playback.
 ---
 
-import { CardGrid, LinkCard, Steps } from "@astrojs/starlight/components";
+import { CardGrid, LinkCard, Steps, Tabs, TabItem } from "@astrojs/starlight/components";
 
-Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
-services you choose. Start with voice dictation, transcribe an audio file, or
-generate speech from text. For local transcription, speech generation, and
-cleanup, choose an optional
-[managed local runtime](../guides/local-runtime/) instead of configuring a server.
-Available runtimes vary by platform. Models are not bundled with Freehand;
-runtime installation and model downloads are explicit setup actions.
-
-Freehand is **free forever and open source**, with no Freehand subscription or
-account. Your chosen provider or hosting may have its own costs. A dedicated
-local GPU is not required: connect to another machine or a compatible hosted
-service if your PC lacks the resources, or you want to keep them for other work.
+Freehand turns speech into text and text into speech using a service you choose.
+Install the app, connect a service or set up a local runtime, then try one task.
+You can use each task independently.
 
 ## What you need
 
-- Windows 11 x64 with WebView2, or macOS 13+ on Apple Silicon or Intel.
-- A [managed local runtime](../guides/local-runtime/) for your task,
-  or a reachable compatible service for your task (see the [backend guides](../backends/)).
-- For a manual service: its base URL, model ID (except whisper.cpp's server-loaded model), and API key
-  when authentication is required.
+- **A supported computer:** Windows 11 x64 with WebView2, or macOS 13+ on Apple Silicon or Intel.
+- **Somewhere to run speech:** a [local runtime](../guides/local-runtime/) managed by Freehand,
+  or a compatible service on your computer, another machine, or a hosted provider.
+- **For dictation:** a microphone. Audio files and text to speech do not need one.
 
-| Task                      | Additional requirements                                                                 | Start here                                                        |
-| ------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Voice dictation (default) | Speech-to-text service and a usable microphone; a recording shortcut is optional        | [Run your first dictation](#run-your-first-dictation)             |
-| Audio file transcription  | Speech-to-text service and a supported audio file; no microphone or recording shortcut  | [Transcribe a stored audio file](#transcribe-a-stored-audio-file) |
-| Text to speech (optional) | Speech synthesis service, model and voice ID, and text to speak; no transcription setup | [Generate speech](#generate-speech)                               |
+Freehand is free and open source, with no account or subscription. Your chosen
+provider or hosting may charge for use. A local GPU is not required when you
+connect to another machine or a hosted service.
 
-:::caution[Download verification and signing]
-Choose the Windows installer/portable executable or the macOS ZIP matching your architecture. Download only from the official project and verify against `SHA256SUMS` from the same release. Windows assets are not Authenticode-signed; macOS apps are ad-hoc-signed, not Developer ID-signed or notarized. Older releases may lack macOS assets.
+<CardGrid>
+  <LinkCard title="Install on Windows" href="../guides/windows-installer/" description="Choose the installer or portable executable and verify your download." />
+  <LinkCard title="Install on macOS" href="../guides/macos-setup/" description="Choose Apple Silicon or Intel and grant permissions for the tasks you use." />
+</CardGrid>
+
+:::caution[Verify your download]
+Use the official release and its `SHA256SUMS`. Windows assets are unsigned;
+macOS apps are ad-hoc-signed and are not notarized. The installation guides
+explain verification and platform prompts. Older releases may lack macOS assets.
 :::
-
-Download from the [Releases page](https://github.com/tnware/freehand-stt/releases),
-then follow [Windows installation](../guides/windows-installer/) or
-[macOS installation and permissions](../guides/macos-setup/).
 
 ## First launch
 
-:::caution[Settings reset for earlier alpha installations]
-This version starts with fresh settings. Add your connections, choose models,
-review preferences, and enter API keys again. Earlier alpha settings and saved
-keys are left untouched but are not imported or reused.
-:::
+Freehand opens **Voice** with **Set up voice transcription**. Choose **Audio file**
+or **Text to speech** on the left if you want to start with a different task.
 
-Freehand opens **Voice** with a **Set up voice transcription** screen. To work
-with a recording or generate speech instead, choose **Audio file** or **Text to
-speech** on the activity rail at the left. You can set up each task independently.
+Choose where processing will run:
 
-For the recommended local setup on Windows or macOS, follow
-[Local runtimes](../guides/local-runtime/) to install NeMo, download
-Nemotron 3.5 Streaming, and enable live microphone transcription without entering
-a server URL. Select its built-in Connection separately for Voice and Audio file;
-files use the runtime's selected model in completed mode. Optional local cleanup
-uses managed llama.cpp with S1-mini. Add optional
-[MagpieTTS](../guides/local-runtime/#local-speech-with-magpietts) to NeMo for speech
-generation in the same runtime.
+<Tabs>
+  <TabItem label="Set up a local runtime">
 
-To connect a manual service from your chosen task, use its **Settings** cog to
-open options on the right: **Transcription** for Voice or Audio file, or **Speech**
-for Text to speech. The first-run setup screen also offers connection selection.
+Freehand can install and manage a supported runtime on this computer.
+Runtime binaries and models are separate, explicit downloads; neither is
+bundled with the app.
 
 <Steps>
 
-1. **Add a server.** Open the task's connection picker and choose **Add connection…**.
-   Name it, choose its **Backend**, and enter its base URL and authentication
-   details. Choose **Save and return** to continue to model settings.
-2. **Choose a model.** Select a model listed by your server or enter its exact ID.
-   With whisper.cpp, Freehand uses the model already loaded by the server.
-   Review the [model profile](../models/) and choose **Save** in the options sidebar.
+1. **Open Local runtime.** Follow [local runtime setup](../guides/local-runtime/#set-up-local-transcription)
+   to install NeMo and download the recommended Nemotron 3.5 Streaming model.
+2. **Start the runtime.** Wait for **Running**, then select its built-in
+   **NeMo-Speech.cpp** Connection in Voice. No URL or API key is needed.
+3. **Enable realtime for live dictation.** Turn on **Realtime transcription**
+   in Voice's Transcription options and finish microphone setup below.
 
 </Steps>
 
-:::note[Connection checks read metadata]
-The connection check never submits audio and never invokes a discovered model.
-A successful check does not test transcription quality. For a managed runtime,
-checks wait for loading and warm-up to finish and refresh when it is ready.
+For speech generation, [add MagpieTTS to NeMo](../guides/local-runtime/#local-speech-with-magpietts).
+The local runtime guide also covers whisper.cpp transcription and optional S1-mini cleanup.
+
+  </TabItem>
+  <TabItem label="Connect an existing service">
+
+Have the service's **base URL**, **model ID**, and **API key** if it requires one.
+The service can run locally, on your network, or with a hosted provider.
+
+<Steps>
+
+1. **Add the connection.** In your task's connection picker, choose
+   **Add connection…**. Name it, choose its **Backend**, enter its URL and
+   authentication, then choose **Save and return**.
+2. **Choose the model.** Select or enter the exact model ID and review its
+   [model profile](../models/). whisper.cpp uses its server-loaded model instead.
+3. **Save the options.** Use **Save** in the options sidebar. First-run model
+   selections apply immediately.
+
+</Steps>
+
+Use [Connect a speech server](../guides/connect-a-server/) for endpoint examples
+and connection checks, or [backend guides](../backends/) to run a server yourself.
+
+  </TabItem>
+</Tabs>
+
+Each task selects its own connection. To share a manual service, enable the
+needed [connection uses](../guides/saved-connections/#reuse-a-server) and select
+it in each task. A managed connection supplies its runtime's selected model.
+
+:::note[Coming from an earlier alpha?]
+This version starts with fresh settings. Add your connections, models,
+preferences, and API keys again. Earlier alpha settings and saved keys remain
+untouched and are not imported.
 :::
 
-Voice and Audio file keep separate model and connection choices. To use the
-same server for both, [enable both uses on the saved connection](../guides/saved-connections/#reuse-a-server),
-then select it in each task.
+### Configure the speech endpoint
 
-## Choose the recording language
+For a manual connection, enter the **base URL**, not the full transcription
+route. Most transcription backends use a `/v1` prefix; whisper.cpp uses the
+server root. Follow the [URL examples](../guides/connect-a-server/) for your backend.
+HTTPS is the default. Allow HTTP only on a trusted local or LAN connection:
+it sends audio and credentials without encryption.
 
-Under **Voice transcription → Transcription** or **Audio file → Transcription**, search
-the language picker by name or code, or choose
-**Server default** or **Automatic detection**. Your model must support the
-language. If you use S1-mini cleanup, its only supported language is English.
-See [language selection](../guides/languages/) for detection and fallback behavior.
+### Choose the recording language
 
-## Configure the speech endpoint
+Open your task's **Settings** cog, then **Transcription**, and choose a supported
+language, **Server default**, or **Automatic detection**.
+[Language selection](../guides/languages/) explains which choice to use.
+S1-mini cleanup supports English only.
 
-For Generic, Speaches, NeMo, and vLLM transcription, include the OpenAI API prefix in
-the base URL, typically:
+### Choose your transcript workflow
 
-```text title="Speech endpoint base URL"
-https://speech.example.com/v1
-```
-
-Enter the base URL, not the full `/audio/transcriptions` address. Freehand adds
-the route for you.
-
-For whisper.cpp, use the server root without `/v1`; Freehand uses `/inference`
-and the server-loaded model instead.
-
-HTTPS is required by default. Enable **Allow HTTP for this connection** only for
-a trusted local or LAN service. HTTP sends credentials and audio without
-encryption, so do not enable it for an untrusted network.
-
-See [Connect a speech server](../guides/connect-a-server/) for other backends,
-local and remote server setup, and connection checks.
-
-## Choose your transcript workflow
-
-Leave **Cleanup** off for your first dictation or file transcription. Freehand
-delivers the speech model's transcript unchanged; no chat service is needed.
-
-Later, **Cleanup** options in Voice transcription or Audio file can add an independently configured chat service
-after STT. Choose [custom instructions](../guides/post-processing/#custom-instruction-processor)
-or the optional English-only [S1-mini profile](../guides/post-processing/#s1-mini-by-superwhisper-with-llamacpp).
-If cleanup fails, times out, or returns empty output, Freehand falls back to the
-raw transcript. Cleanup is not required for any of the three tasks.
+Leave **Cleanup** off for your first attempt to receive the speech model's
+transcript unchanged. You can [add cleanup](../guides/post-processing/) later;
+if it fails, Freehand falls back to the raw transcript.
 
 ## Run your first dictation
 
-In **Voice**, choose your connection and model in the setup screen. Changes there
-apply immediately. Expand **Transcription options** for language, realtime, and
-recognition hints supported by your selected model profile.
-
-Follow **Next step** to check your microphone and recording shortcut. On macOS,
-also grant the requested [permissions](../guides/macos-setup/#native-permissions).
-**Ctrl+Shift+Space** is the default toggle shortcut. Save any settings edits
-with **Save**.
-
-If that shortcut conflicts with another application, record a different chord
-under **Settings → Shortcuts**, or choose **Clear** and save it unassigned.
-You can finish setup without a shortcut and use the on-screen recording controls.
-For dictation into another application, start with its text field focused using
-a working shortcut; otherwise review the transcript and copy it explicitly.
-
-Choose **Check connection** to test access without running a model. If the check
-fails, correct the problem and choose **Check again**. **Finish setup** appears
-once the required checks pass; recording becomes available after that change is
-saved.
-
-Now dictate into another application:
-
 <Steps>
 
-1. Focus the text field where the result should go.
-2. Start the configured toggle shortcut, or hold the configured hold-to-talk chord.
-3. Speak.
-4. Stop the toggle recording, or release the hold-to-talk chord.
-5. Wait while Freehand transcribes the audio.
+1. **Finish Voice setup.** Select your connection and model, then follow
+   **Next step** to check the microphone and shortcut. On macOS, grant the
+   requested [permissions](../guides/macos-setup/#native-permissions).
+2. **Check the connection.** Choose **Check connection**, resolve any reported
+   problem, then **Finish setup** and save. The check reads metadata; it does
+   not submit audio or run a model.
+3. **Focus the destination.** Click the text field in the application where
+   your words should appear.
+4. **Record a short phrase.** Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Space</kbd>
+   to start, then press it again to stop. If you changed the shortcut, use that chord.
+5. **Keep the destination focused.** Wait for transcription and delivery.
 
 </Steps>
 
-Keep the destination focused until your text appears. If Freehand cannot safely
-insert it, choose **Copy** on the result and paste it yourself. Check for partially
-inserted text first. Windows requires the original text field; macOS allows you
-to move between fields in the same window. See
-[safe text insertion](../guides/privacy-and-safety/#safe-text-insertion) for details.
+**Expected result:** your text appears in the destination. If insertion is
+blocked, check for partially inserted text, choose **Copy**, and paste it yourself.
+Freehand will not redirect the result to a different focused window. See
+[safe text insertion](../guides/privacy-and-safety/#safe-text-insertion).
+
+:::tip[No working shortcut?]
+Change or clear it under **Settings → Shortcuts**. You can finish setup with
+no shortcut and use the on-screen controls, then copy the result explicitly.
+See [recording and shortcut options](../guides/using-freehand/).
+:::
 
 ## Transcribe a stored audio file
 
-You do not need a microphone, recording shortcut, or completed dictation setup.
+Open **Audio file**, select its transcription connection and model, then
+**Choose** a file. Selecting a file does not upload it; **Transcribe** starts
+the request. **Copy** the finished result yourself.
 
-<Steps>
-
-1. **Open Audio file** and select its speech-to-text connection and model.
-   This selection is separate from Voice, even when you use the same server.
-2. **Select Choose** to open a FLAC, MP3, MP4, MPEG, MPGA, M4A, OGG, WAV, or
-   WebM file. Selecting it does not upload it.
-3. **Choose Transcribe** and wait for the result. Start with completed output;
-   compatible streaming is optional.
-4. **Copy** the completed transcript into the application you want.
-
-</Steps>
-
-File transcripts are available to copy; Freehand does not insert them automatically.
+<LinkCard title="Transcribe an audio file" href="../guides/audio-files/" description="Supported formats, file limits, streaming text, cancellation, and recovery." />
 
 ## Generate speech
 
-Text to speech is optional and off by default. It needs a speech synthesis
-connection. A microphone and recording shortcut are unnecessary. For a local
-service, first [add MagpieTTS to NeMo](../guides/local-runtime/#local-speech-with-magpietts).
-You can also use a [manually configured speech server](../backends/).
+Open **Text to speech → Configure speech**, select a speech connection, model,
+and voice, then turn on **Enable text to speech** and **Save**. Enter text and
+choose **Speak**. Playback is optional and off by default.
 
-<Steps>
-
-1. **Open Text to speech**, then choose **Configure speech** in the composer or
-   its **Settings** cog to open **Speech** options. Add or select its connection as above.
-2. **Choose the model and voice ID**, turn on
-   **Enable text to speech**, and choose **Save**.
-3. **Enter your text**, then choose **Speak** to generate and play audio.
-4. **Use the playback controls** to pause, resume, restart, stop, or explicitly
-   **Save generated speech** to a file.
-
-</Steps>
-
-You can also use **Listen** on completed transcripts, with or without history.
-See [Text to speech](../guides/using-freehand/#text-to-speech) for playback,
-previewing voices, and saving audio.
+<LinkCard title="Generate and play speech" href="../guides/text-to-speech/" description="Choose a voice, preview it, listen to transcripts, and save generated audio." />
 
 ## Optional features
 
-Local voice activity detection and the native status overlay are **on by
-default**. You can configure or disable either. Voice detection alone does not
-enable automatic stop, silence trimming, or checkpoints.
+Start with one successful request, then adjust the options you need.
 
-| Feature                                                       | Initial setting                                    |
-| ------------------------------------------------------------- | -------------------------------------------------- |
-| Local voice detection and status overlay                      | On                                                 |
-| Silence trimming, automatic stop, and pause-aware checkpoints | Off                                                |
-| Transcript cleanup and memory-only history                    | Off                                                |
-| Audio-file transcript                                         | Shown when complete; text updates are optional     |
-| Text-to-speech playback and Windows Mica material             | Off                                                |
-| Insert dictation into the original application                | On, when the destination is still focused and safe |
-| Automatic update checks                                       | On; configurable under **Settings → General**      |
+| Feature | Initial setting | Learn more |
+| --- | --- | --- |
+| Local voice detection and status overlay | On | [Voice controls](../guides/using-freehand/) |
+| Silence trimming, automatic stop, pause-aware checkpoints | Off | [Recording options](../guides/using-freehand/#long-dictation-and-vad) |
+| Transcript cleanup | Off | [Cleanup](../guides/post-processing/) |
+| Memory-only transcript history | Off | [History](../guides/history/) |
+| Audio-file text updates | Completed output; streaming optional | [Audio files](../guides/audio-files/) |
+| Text-to-speech playback | Off | [Text to speech](../guides/text-to-speech/) |
+| Insert dictation into the original application | On, when focused and safe | [Delivery rules](../guides/privacy-and-safety/#safe-text-insertion) |
+| Automatic update checks | On | [Workspace and settings](../guides/workspace/) |
+| Windows Mica material | Off | [Workspace appearance](../guides/workspace/) |
+
+Voice detection alone does not enable automatic stop, trimming, or checkpoints.
 
 ## Where to go next
 
 <CardGrid>
-  <LinkCard
-    title="Explore Freehand's tasks"
-    description="Dictate, transcribe files, and generate speech, with optional cleanup and history."
-    href="../guides/using-freehand/"
-  />
-  <LinkCard
-    title="Resolve a setup problem"
-    description="Check connection, microphone, and text-delivery failures."
-    href="../guides/troubleshooting/"
-  />
+  <LinkCard title="Use Voice" href="../guides/using-freehand/" description="Recording modes, status, and handling the result." />
+  <LinkCard title="Resolve a problem" href="../guides/troubleshooting/" description="Find the next action for connection, microphone, and delivery failures." />
 </CardGrid>
-
-For exact request and response contracts, see
-[Protocol compatibility](../reference/protocol/).

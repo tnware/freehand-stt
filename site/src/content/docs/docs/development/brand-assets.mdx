@@ -1,0 +1,140 @@
+---
+title: Brand asset pipeline
+description: Canonical Freehand artwork and deterministic platform asset generation.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Edit the canonical SVG, regenerate platform inputs, then inspect the affected
+surfaces. Committed deterministic outputs let normal builds run without a design
+application or SVG rasterizer.
+
+| Artwork | Use |
+| --- | --- |
+| Detailed product mark | In-app identity |
+| Rounded application tile | Large application and package surfaces |
+| Simplified mark only | Windows system tray |
+
+:::tip[Changing an icon?]
+Start at [Updating artwork](#updating-artwork). Use the matrix below to identify
+its source and all consumers that need review.
+:::
+
+## Source-to-consumer matrix
+
+| Classification | Path | Consumer |
+| --- | --- | --- |
+| Vendored provider identity | `branding/providers/` | Shared Svelte/Astro provider icons, provenance manifest, and license notices |
+| Authoritative source | `branding/freehand-mark.svg` | In-app `BrandMark`; Apple Icon Composer vector layer |
+| Authoritative source | `branding/freehand-app-tile.svg` | Rounded surface composed with the detailed mark for platform icons |
+| Authoritative source | `branding/freehand-system-mark.svg` | Windows tray light/dark families only |
+| Derived presentation | `branding/freehand-readme-light.png`, `branding/freehand-readme-dark.png` | Theme-aware repository hero; never read by a build or runtime path |
+| Reference only | Other `branding/*.png` files | Design review; never read by a build or runtime path |
+| Generator | `build/scripts/brandassets` | Deterministic SVG-subset rasterization, PNG encoding, and ICO assembly |
+| Generated platform input | `build/appicon.png` | Wails macOS/Linux/mobile generation and packaging |
+| Generated platform input | `build/windows/icon.ico` | Windows executable resources, taskbar/application surfaces, NSIS installer and uninstaller |
+| Generated runtime input | `build/windows/tray-light.ico` | Wails `SystemTray.SetIcon` in Windows light mode |
+| Generated runtime input | `build/windows/tray-dark.ico` | Wails `SystemTray.SetDarkModeIcon` in Windows dark mode |
+| Generated vector | `frontend/src/lib/assets/freehand-mark.svg` | Svelte `BrandMark` in the main header and About window through Vite's asset pipeline |
+| Verified publication copy | `site/src/assets/freehand-mark.svg` | Starlight documentation header; byte-compared with the authoritative source in documentation CI |
+| Verified publication copy | `site/public/favicon.svg` | Astro site favicon; byte-compared with the authoritative source in documentation CI |
+| Generated vector | `build/appicon.icon/Assets/freehand_mark_vector.svg` | Apple Icon Composer source layer |
+| Generated platform output | `build/darwin/icons.icns` | macOS bundle icon, produced by Wails from `build/appicon.png` |
+
+<details>
+<summary>Frame sizes, scaling, and optical treatment</summary>
+
+The Windows ICO files contain 16, 20, 24, 32, 48, 64, 128, and 256 pixel PNG
+frames. Wails selects the closest tray frame to Windows' current small-icon
+metric, including DPI-scaled 20px and 24px shells. Every application frame uses
+the same detailed mark, tile composition, and relative scale so Windows cannot
+change the visual identity when it selects a different resolution. The tray is
+mark-only and has separate light- and dark-theme color treatments. The in-app
+mark uses a tighter vector viewBox so its artwork, rather than an invisible
+application-icon canvas, determines its rendered size. The application tile
+retains deliberate outer safe space for Windows surfaces that mask or frame it.
+
+</details>
+
+## Site palette
+
+| Surface | Palette rule |
+| --- | --- |
+| Product controls, cards, borders, text, links | Neutral charcoal, gray, and white tokens in `site/src/styles/product.css` |
+| Large panels | Faint translucent charcoal, backdrop blur, and low-opacity white borders |
+| Documentation | Light and dark neutral palettes in `site/src/styles/docs.css` |
+| Product-page background | Neutral near-black |
+| Freehand mark, particles, faithful app demos | Blue may be used here; do not reuse it as a site UI accent |
+| Provider artwork | Preserve original colors |
+
+Keep visible focus rings, underlined prose links, and readable contrast in both
+documentation themes.
+
+## Updating artwork
+
+<Steps>
+
+1. Change the appropriate canonical SVG. Do not edit generated PNG, ICO, or
+   copied SVG artifacts.
+2. Regenerate and check from the repository root:
+
+   ```powershell title="Regenerate and verify brand assets"
+   wails3 task common:update:brand-assets
+   wails3 task common:check:brand-assets
+   ```
+
+3. If the macOS bundle icon is affected, run `common:generate:icons`. It runs the
+   same generator, then asks the pinned Wails CLI to produce the icon bundle.
+4. Review every changed consumer in the matrix and complete native Windows
+   acceptance below. Commit the sources and generated outputs together.
+
+</Steps>
+
+<details>
+<summary>Generator support and reproducibility</summary>
+
+`common:generate:icons` first runs the same generator, then asks the pinned
+Wails CLI to produce the macOS icon bundle. The generator implements only the
+SVG primitives used by the three canonical sources (`rect`, rounded `rect`,
+`circle`, grouping, fill, and stroke). Unsupported SVG content fails loudly so
+a design-tool export cannot silently render incorrectly. The detailed glyph
+exists in only `freehand-mark.svg`; the generator composes it with the tile,
+preventing the in-app and application-icon presentations from drifting. CI
+checks every generator-owned application, tray, Apple-layer, and frontend
+output byte for byte. The macOS ICNS remains a pinned-Wails output of the generated
+`build/appicon.png` rather than an output of this repository-owned renderer.
+
+</details>
+
+:::note[README artwork is curated separately]
+The README hero is curated presentation artwork rather than generator output.
+Keep its light and dark compositions synchronized, use the exact canonical
+mark and product language, and replace both variants together when the identity
+changes.
+:::
+
+## Native Windows acceptance
+
+On **Windows 11**, inspect both light and dark modes at **100%, 125%, 150%, and
+200%** scale. Cross-compilation and image decoding do not establish visual
+acceptance.
+
+| Inspect | Expected result |
+| --- | --- |
+| Waveform and caret | Separate, centered, and recognizable |
+| Tray | Mark only, without the white application tile; treatment changes with the theme |
+| Taskbar, Explorer, installer, uninstaller, Installed apps, Start Menu | Appropriate application frame |
+| Main header and About window | Sharp in-app vector mark |
+
+## Provider marks
+
+Provider icons use the separate vendored SVG collection in `branding/providers/`.
+The app and site import those exact files through shared presentation helpers;
+they are not copies produced by the Freehand product-mark generator. See its
+README and the [backend maintenance guide](../backend-compatibility/#provider-identity-assets)
+for provenance, neutral fallbacks, licensing, and visual checks.
+
+<CardGrid>
+  <LinkCard title="Provider icon credits" href="../../reference/provider-icons/" description="Review the published provenance and license notices." />
+  <LinkCard title="Maintain provider identity" href="../backend-compatibility/#provider-identity-assets" description="Keep identity assets separate from support claims." />
+</CardGrid>

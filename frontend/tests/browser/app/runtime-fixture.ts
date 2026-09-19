@@ -296,6 +296,53 @@ export function createRuntimeFixture(
   preferences();
   const calls: string[] = [];
   const downloading = new Map<string, string>();
+  let holdRemoval = false;
+  let removal:
+    | { acknowledge: () => void; complete: (success: boolean) => void }
+    | undefined;
+  const performRemoval = (id: string, kind: string, work: () => void) => {
+    if (!holdRemoval) {
+      work();
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve, reject) => {
+      let acknowledged = false;
+      let sequence = 0;
+      removal = {
+        acknowledge: () => {
+          acknowledged = true;
+          sequence = ++operationID;
+          change(id, {
+            phase: kind,
+            operation: {
+              id: sequence,
+              kind,
+              model: "",
+              error: "",
+              outcome: "running",
+            },
+          });
+          resolve();
+        },
+        complete: (success) => {
+          if (success) work();
+          if (acknowledged) {
+            change(id, {
+              phase: "",
+              operation: {
+                id: sequence,
+                kind,
+                model: "",
+                outcome: success ? "succeeded" : "failed",
+                error: success ? "" : "Fixture removal failed. Try again.",
+              },
+            });
+          } else if (success) resolve();
+          else reject(new Error("Fixture removal failed"));
+        },
+      };
+    });
+  };
   let failStop = false;
   let failCancel = false;
   let holdLifecycle = false;
@@ -396,8 +443,10 @@ export function createRuntimeFixture(
     },
     DeleteInstance: async ({ instanceID }) => {
       calls.push(`DeleteInstance:${instanceID}`);
-      rows = rows.filter((r) => r.instance.id !== instanceID);
-      preferences();
+      await performRemoval(instanceID, "delete", () => {
+        rows = rows.filter((r) => r.instance.id !== instanceID);
+        preferences();
+      });
     },
     Install: async ({ instanceID }) => {
       calls.push(`Install:${instanceID}`);
@@ -456,16 +505,18 @@ export function createRuntimeFixture(
     },
     Remove: async ({ instanceID }) => {
       calls.push(`Remove:${instanceID}`);
-      change(instanceID, {
-        state: "not_installed",
-        backend: "",
-        version: "",
-        models:
-          get(instanceID).status.models?.map((m) => ({
-            ...m,
-            installed: false,
-          })) ?? [],
-      });
+      await performRemoval(instanceID, "remove", () =>
+        change(instanceID, {
+          state: "not_installed",
+          backend: "",
+          version: "",
+          models:
+            get(instanceID).status.models?.map((m) => ({
+              ...m,
+              installed: false,
+            })) ?? [],
+        }),
+      );
     },
     DownloadModel: async ({ instanceID, model }) => {
       calls.push(`DownloadModel:${instanceID}:${model}`);
@@ -490,16 +541,31 @@ export function createRuntimeFixture(
     },
     RemoveModel: async ({ instanceID, model }) => {
       calls.push(`RemoveModel:${instanceID}:${model}`);
-      change(instanceID, {
-        state: "installed",
-        models:
-          get(instanceID).status.models?.map((m) =>
-            m.id === model ? { ...m, installed: false } : m,
-          ) ?? [],
-      });
+      await performRemoval(instanceID, "remove_model", () =>
+        change(instanceID, {
+          state: "installed",
+          models:
+            get(instanceID).status.models?.map((m) =>
+              m.id === model ? { ...m, installed: false } : m,
+            ) ?? [],
+        }),
+      );
     },
   };
   const control = {
+    holdRemoval: () => {
+      holdRemoval = true;
+    },
+    acknowledgeRemoval: () => {
+      if (!removal) throw new Error("No pending removal");
+      removal.acknowledge();
+    },
+    completeRemoval: (success: boolean) => {
+      if (!removal) throw new Error("No pending removal");
+      const pending = removal;
+      removal = undefined;
+      pending.complete(success);
+    },
     holdLifecycle: () => {
       holdLifecycle = true;
     },

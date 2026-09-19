@@ -101,7 +101,7 @@
           class={cn(
             "flex min-h-7 min-w-0 items-center justify-center gap-1 rounded-sm px-1.5 text-xs transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
             source === filter.value
-              ? "bg-accent-wash text-accent-text"
+              ? "bg-accent-wash-strong text-accent-text"
               : "text-muted-foreground",
           )}
           aria-label={filter.name}
@@ -110,7 +110,7 @@
           onclick={() => (source = filter.value)}
         >
           <span class="whitespace-nowrap">{filter.label}</span>
-          <span class="text-[11px] tabular-nums" aria-hidden="true"
+          <span class="text-xs tabular-nums" aria-hidden="true"
             >{filter.count}</span
           >
           <span id={`${uid}-${filter.value}-count`} class="sr-only"
@@ -142,7 +142,7 @@
               class={cn(
                 "flex w-full min-w-0 flex-col gap-1 border-l-2 px-3 py-2.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
                 selectedID === entry.id
-                  ? "border-accent-text bg-accent-wash"
+                  ? "border-accent-text bg-accent-wash-strong"
                   : "border-transparent",
               )}
               aria-label={`View ${sourceLabel(entry)} transcript from ${dateTime}`}
@@ -158,13 +158,13 @@
                 >
                 <time
                   datetime={entry.completedAt}
-                  class="truncate text-[11px] text-muted-foreground"
+                  class="truncate text-xs text-muted-foreground"
                   title={dateTime}>{dateTime}</time
                 >
               </span>
               {#if entry.details.fileName}
                 <span
-                  class="w-full truncate text-[11px] text-muted-foreground"
+                  class="w-full truncate text-xs text-muted-foreground"
                   title={entry.details.fileName}>{entry.details.fileName}</span
                 >
               {/if}

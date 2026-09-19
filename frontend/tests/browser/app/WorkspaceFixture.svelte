@@ -61,7 +61,8 @@
   let finishListen: ((success: boolean) => void) | undefined;
   const saveScenario = new URLSearchParams(location.search).has("save-pending");
   let finishAudioSave:
-    ((outcome: "saved" | "cancelled" | "failed") => void) | undefined;
+    | ((outcome: "saved" | "cancelled" | "failed") => void)
+    | undefined;
   const playbackScenario = new URLSearchParams(location.search).has("playback");
   const fileStreamingScenario = new URLSearchParams(location.search).has(
     "file-streaming",
@@ -243,6 +244,14 @@
             recordingMode: mode,
             startedAt: new Date().toISOString(),
             canCancel: true,
+          });
+          return CancellablePromise.resolve();
+        },
+        ClearCurrent: () => {
+          session.dictation.applyStatus({
+            ...idle,
+            generation: session.dictation.status.generation,
+            transcript: "",
           });
           return CancellablePromise.resolve();
         },

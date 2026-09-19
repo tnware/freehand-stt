@@ -1,228 +1,213 @@
 ---
 title: Connect a speech server
-description: Configure local, LAN, private remote, or hosted OpenAI-compatible speech services.
+description: Save a local, LAN, private remote, or hosted speech service and select it for a task.
 ---
 
-Connect Freehand to a speech service on your computer, another machine, or a
-hosted provider. You need its base URL, model ID, and API key if it requires one.
-This guide covers manually managed services. For installation inside Freehand,
-use [Local runtimes](../local-runtime/) for supported transcription, MagpieTTS
-speech generation, and cleanup models on Windows and macOS.
+import { Steps, Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-Save a server once, then choose it for any task it supports. See
-[Saved connections](../saved-connections/) to manage multiple servers.
-
-## Start from your task
-
-Choose **Voice transcription**, **Audio file**, or **Text to speech**, then use the
-page's **Settings** cog to open its options on the right. Open **Transcription**
-for Voice or files, or **Speech** for text to speech, then choose **Add connection…**
-in its connection picker. Enter the server details and choose **Save and return**,
-then select a model and choose **Save** in the options sidebar. You can also add a
-server from **Connections** on the activity rail.
-
-- **Voice dictation** is the default task. It needs STT and a microphone;
-  complete its readiness screen before recording. A recording shortcut is optional.
-  Use one to start with another application's text field focused, or use the
-  on-screen controls and copy the result explicitly.
-- **Audio file** has its own speech-to-text connection and model. It does not
-  require a microphone or recording shortcut.
-- **Text to speech** needs its own speech connection, model and voice ID, and
-  **Enable text to speech** under **Text to speech → Speech**. It needs no STT
-  connection and can be used before dictation setup.
-
-Optional **Cleanup** sends the transcript to a chat model for editing. Leave it
-off to use the speech model's original text. Configure cleanup separately from
-transcription and text to speech.
-
-## Decide where models run
-
-A local GPU is optional. If your PC has limited memory, or you want its GPU
-available for other work, use a speech service on another machine or a compatible
-hosted provider. Network speed and the server affect response time.
-Audio or text goes to the endpoint you choose, so its data handling policy also
-applies.
-
-Local inference is equally supported when you want to use this PC's resources.
-Freehand is free forever; any chosen provider, server rental, or other hosting
-costs are separate.
-
-## Choose a topology
-
-Tasks can share one gateway or use different servers. Each task keeps its own
-model and options. Tasks using the same saved connection share its address and
-authentication.
-
-### One gateway
-
-```text
-Freehand
-  ├─ STT ───────────────┐
-  ├─ transcript cleanup ├─ https://speech.example.com/v1
-  └─ TTS ───────────────┘
-```
-
-Use this when one compatible gateway exposes every route and model you need.
-Save the gateway once in Connections and enable the uses it exposes. Each feature
-selects it independently and keeps its own model/options. A metadata check does
-not verify support for every enabled operation.
-
-### Separate services
-
-```text
-Freehand
-  ├─ STT ──────────────── Speaches or another compatible speech server
-  ├─ transcript cleanup ─ llama.cpp or another compatible chat server
-  └─ TTS ──────────────── Speaches or another compatible speech server
-```
-
-Use this when models live on different machines or runtimes. A cleanup outage
-does not invalidate successful STT: Freehand preserves and delivers the raw
-transcript.
-
-Compare supported tasks in the [backend directory](../../../backends/),
-or browse the [backend guides](../../backends/).
-
-## Choose a language
-
-Open **Voice transcription → Transcription** or **Audio file → Transcription** and
-search the language picker by name or code. **Server default** uses your server's
-language setting; **Automatic detection** asks it to identify the language.
-Choose a language your model supports, or use **Custom server value** if your
-server requires a value that is not listed.
-
-See [language selection](../languages/) for provider mappings and S1-mini's
-English-only cleanup behavior. Language selection does not request translation.
-
-## Choose a compatibility profile
-
-Choose the server software under **Backend** when adding or editing a connection:
-
-| Connection                            | Available profiles                                                      |
-| ------------------------------------- | ----------------------------------------------------------------------- |
-| Speech to text (microphone and files) | Generic OpenAI-compatible, Speaches, whisper.cpp, vLLM, NeMo-Speech.cpp |
-| Cleanup (optional stage after STT)    | Generic OpenAI-compatible, llama.cpp, vLLM                              |
-| Text to speech                        | Generic OpenAI-compatible, Speaches, Kokoro-FastAPI, vLLM-Omni, NeMo-Speech.cpp |
-
-Choose the profile matching your server. For another OpenAI-compatible service,
-use **Generic OpenAI-compatible** and check its [requirements](../../backends/generic/).
-Support depends on the server version and model; follow the relevant
-[backend guide](../../backends/) before enabling additional tasks.
-
-The **Model profile** is a separate choice in task settings. It adds controls
-for a particular model, such as S1-mini cleanup, Nemotron live transcription,
-or MagpieTTS voice and language selection.
-See [Model profiles](../../models/).
-
-Choose **Save connection** to store the profile and endpoint. Select that entry
-on the relevant task page, then choose its model and save. Changing an existing
-connection's URL or backend clears its model selections and remembered options;
-choose the models again for the new server.
+Connect a service you already run or a hosted provider using its base URL, model
+ID, and authentication details. For Freehand to install and manage a service on
+this computer, follow [Local runtimes](../local-runtime/) instead.
 
 ## Information Freehand needs
 
-For speech to text, collect:
+Have these details ready before opening the connection editor:
 
-- the base URL including its API prefix, normally `/v1`;
-- the exact transcription model ID expected by the server, except whisper.cpp
-  which uses the server-loaded model;
-- the authentication mode and API key, if required;
-- any additional non-secret gateway headers required for transcription;
-- whether the endpoint is intentionally using plaintext HTTP.
+| Detail | What to enter |
+| --- | --- |
+| Base URL | The API prefix, usually `https://speech.example.com/v1`; **not** the full operation URL |
+| Backend profile | The server software, such as Speaches or vLLM |
+| Model ID | The exact ID expected by the server; whisper.cpp uses its already-loaded model |
+| Authentication | **None** or **API key**, according to the server |
+| Gateway requirements | Any additional non-secret transcription headers or custom health path |
 
-For example:
+:::note[whisper.cpp uses the server root]
+For whisper.cpp, enter the root without `/v1`; Freehand appends `/inference`.
+Generic, Speaches, vLLM, and NeMo-Speech.cpp transcription connections use the
+API prefix and append `/audio/transcriptions`.
+:::
 
-```text title="Example gateway settings"
-Base URL: https://speech.example.com/v1
-Model: speech/stt
-Authentication: API key (only if required)
+## Start from your task
+
+<Steps>
+
+1. **Open the task's Settings cog**, then **Transcription**, **Cleanup**, or
+   **Speech** in the right options sidebar.
+2. **Choose Add connection…** in its connection picker. Enter a name, backend
+   profile, base URL, and any required authentication.
+3. **Choose Save and return.** The saved connection is selected for this task.
+4. **Choose the model and model profile**, review task options, and choose
+   **Save** in the options sidebar.
+
+</Steps>
+
+| Task | Required setup | Independent of |
+| --- | --- | --- |
+| Voice transcription | Speech-to-text connection, model, microphone, and Voice readiness check | Recording shortcut, which is optional |
+| Audio file | Its own transcription connection and model | Microphone and Voice readiness |
+| Text to speech | Speech connection, model, voice, and **Enable text to speech** | Microphone and transcription |
+| Cleanup | Optional chat connection, model, and cleanup controls | The transcription server |
+
+Leave **Cleanup** off to keep the speech model's original text. You can also add
+a server directly in **Connections**; see [Saved connections](../saved-connections/)
+for reuse, switching, and editing shared server details.
+
+## Choose a compatibility profile
+
+**Backend** describes the server's API. **Model profile**, chosen separately in
+task settings, describes model behavior and exposes supported controls. Neither
+choice is inferred from a model name or URL.
+
+| Use | Backend profiles |
+| --- | --- |
+| Speech to text | Generic OpenAI-compatible, Speaches, whisper.cpp, vLLM, NeMo-Speech.cpp |
+| Cleanup | Generic OpenAI-compatible, llama.cpp, vLLM |
+| Text to speech | Generic OpenAI-compatible, Speaches, Kokoro-FastAPI, vLLM-Omni, NeMo-Speech.cpp |
+
+Choose the profile matching the server. Use [Generic OpenAI-compatible](../../backends/generic/)
+for another compatible service, then check its requirements. Server version and
+model determine actual support; enabling a use does not verify it.
+
+:::note[Changing the server clears model choices]
+Changing an existing connection's URL or backend clears its model selections
+and remembered options. Choose models again for the new server. See
+[Model profiles](../../models/) for model-specific controls.
+:::
+
+## Decide where models run
+
+| Location | Consider when… |
+| --- | --- |
+| This computer | You want inference to use this computer's resources |
+| Another computer or private server | You want to preserve local memory/GPU capacity or share a server |
+| Hosted provider | You want a compatible service without managing its runtime |
+
+A local GPU is optional. Network speed and server capacity affect response time.
+Audio or text goes to the endpoint you choose, whose data policy applies.
+Freehand is free forever; provider usage and server hosting costs are separate.
+
+## Choose a topology
+
+Tasks can share a gateway or use different servers. Each task keeps its own
+model and options; tasks sharing a connection share its address and authentication.
+
+<Tabs>
+  <TabItem label="One gateway">
+
+<span id="one-gateway"></span>
+
+Save one connection and enable the operations the gateway exposes. Select it
+independently for transcription, cleanup, or speech.
+
+```text title="One saved gateway, independent task models"
+Transcription ─┐
+Cleanup ───────┼─ https://speech.example.com/v1
+Speech ────────┘
 ```
 
-For Generic, Speaches, vLLM, and NeMo-Speech.cpp, Freehand appends `/audio/transcriptions`.
-For whisper.cpp, enter the server root without `/v1`; Freehand appends
-`/inference`. Do not enter the complete operation URL.
+A metadata check does not verify every enabled operation.
+
+  </TabItem>
+  <TabItem label="Separate services">
+
+<span id="separate-services"></span>
+
+Save a connection for each server, then choose it in the relevant task.
+
+```text title="Separate connections"
+Transcription ── Speech service
+Cleanup ──────── Chat service
+Speech ───────── Speech synthesis service
+```
+
+A cleanup outage preserves the successful raw transcript for normal delivery
+or copying.
+
+  </TabItem>
+</Tabs>
+
+## Local and LAN servers
+
+For `http://127.0.0.1:8000/v1` or a private address such as
+`http://192.168.1.50:8000/v1`, explicitly enable **Allow HTTP for this connection**.
+Freehand otherwise rejects plaintext requests.
+
+:::caution[HTTP is unencrypted]
+Only allow HTTP on a network you trust. Audio, transcript text, and credentials
+travel without transport encryption. Prefer HTTPS across machines when practical.
+:::
+
+## Test without invoking a model
+
+Choose **Check connection** using saved settings. The test reads a health route
+or model-list metadata; it never sends audio or a prompt or runs listed models.
+
+| Result | Meaning |
+| --- | --- |
+| **Model list received** | Valid model inventory returned; review whether your selected ID is listed |
+| **Server reachable** | The configured health endpoint responded successfully |
+| **Invalid response** | The response was incompatible, including an HTML gateway page with status 200 |
+| Selected model **Not listed** | Your ID was absent, including from an otherwise valid empty inventory |
+
+Checks show HTTP status, latency, and a failure category. They cannot prove a
+model can transcribe or synthesize, or that an endpoint enforces the supplied key.
+See [connection-check results](../troubleshooting/#understand-connection-check-results).
+
+<details>
+<summary>Use a custom health path</summary>
+
+The optional path is appended beneath the base URL path. A base URL of
+`https://speech.example.com/v1` plus `/health` checks
+`https://speech.example.com/v1/health`, not the host-root route. Include the
+leading slash. A failed custom check is reported without falling back to model
+listing. Leave it blank for the backend default: `/health` for whisper.cpp or
+model-list metadata for other backends.
+
+</details>
+
+Initial **Voice** setup requires **Check connection** before **Finish setup**.
+Afterward, the saved Voice connection is checked on launch and when relevant
+connection settings change. Correct a failed check and retry.
+
+## Choose a language
+
+Open the task's **Transcription → Spoken language** and search by language or
+code. **Server default**, **Automatic detection**, named languages, and custom
+values depend on the selected model. This requests transcription in the source
+language, not translation.
+
+<LinkCard title="Choose a transcription language" href="../languages/" description="Understand automatic detection, server mappings, and S1-mini's English-only cleanup." />
+
+## Transcription controls
+
+Save options before starting a new request. Voice shows context with model
+options and temperature under **Request settings**; Audio file groups them in
+**Transcription controls**. Only supported controls are offered.
+
+| Control | Use |
+| --- | --- |
+| Transcription context | Short subject matter or expected wording; availability varies by backend, model, and mode |
+| Vocabulary | Shared names and phrases, enabled separately for Voice and files; see [Vocabulary](../vocabulary/) |
+| Override temperature | A value from 0 to 1 where supported; leave off for the server default |
+
+Context and vocabulary guide recognition rather than editing its result. Context
+is limited to **8,192 UTF-8 bytes**, including vocabulary when sent as context;
+your model may accept less. These hints are saved locally and sent to the selected
+server when used. Keep secrets out of them.
+
+To compare an option, explicitly transcribe a short sample with your selected
+model, change one setting, and repeat. A rejected request is not retried with
+different options automatically. Use [Cleanup](../post-processing/) to edit text.
 
 ## Example: Speaches on your PC
 
 The [Speaches launch guide](../../backends/speaches/#run-speaches-with-docker)
-contains PowerShell commands for GPU and CPU Docker setups, installing one
-chosen model, configuring Freehand, and stopping or restarting the server.
+covers GPU/CPU Docker setup, installing one chosen model, and connecting Freehand.
+For other deployments, follow the runtime's own guide.
 
-For other runtimes, use the [whisper.cpp launch guide](../../backends/whisper-cpp/#run-natively-on-windows),
-[vLLM launch guide](../../backends/vllm/#run-vllm-with-docker), or
-[llama.cpp launch guide](../../backends/llama-cpp/#run-llamacpp-on-windows).
-The [backend guide index](../../backends/#run-a-backend) compares those recipes.
+<span id="choose-a-backend"></span>
 
-## Local and LAN servers
-
-`http://127.0.0.1:8000/v1` and a private address such as
-`http://192.168.1.50:8000/v1` are plaintext connections. Freehand rejects them
-until **Allow HTTP for this connection** is enabled in that saved connection.
-
-Only enable plaintext HTTP on a network you trust. Audio, transcript text, and
-credentials sent over HTTP are not encrypted in transit. Prefer HTTPS for a
-server reached across machines whenever practical.
-
-## Test without invoking a model
-
-Freehand checks a configured health path or `GET /v1/models`. It reports:
-
-- whether the server was reachable;
-- HTTP status and request latency;
-- a stable failure category;
-- discovered model IDs when the response has a compatible model-list shape;
-- whether the currently configured model appears in that list.
-
-The check never sends audio or a prompt. **Model list received** means the
-server returned a valid model inventory; **Server reachable** means the
-configured health endpoint responded successfully. An HTML gateway page or a
-malformed model list is an **Invalid response**, even with HTTP status 200.
-An empty valid model list is accepted, with the configured model **Not listed**.
-Neither check verifies that a model can transcribe or synthesize audio, or that
-an endpoint actually enforces the supplied credential.
-
-The optional **Custom health path** is appended beneath the base URL path.
-For example, `https://speech.example.com/v1` with `/health` checks
-`https://speech.example.com/v1/health`, not the host-root `/health`.
-Include the leading slash in the field. If that health check fails, Freehand
-reports the failure without trying the model list instead.
-Leave the custom path blank to use the backend's default check: `/health` for
-whisper.cpp, or model-list metadata for other backends.
-
-On the initial **Voice** setup screen, choose **Check connection** before
-**Finish setup**. Freehand then checks that saved connection on launch and when
-relevant connection settings change. If a check fails, correct the problem and
-retry. These checks never run the listed models.
-
-## Choose a backend
-
-Compare transcription, cleanup, and text-to-speech features in the
-[backend directory](../../../backends/), then follow the setup guide for your
-server. For connection or request failures, see [Troubleshooting](../troubleshooting/).
-
-## Transcription controls
-
-Choose options separately under **Voice transcription → Transcription** and
-**Audio file → Transcription**. Voice shows context hints with its model options
-and temperature under **Request settings**. Audio files group these under
-**Transcription controls**. Only options supported by the selected backend and
-model profile are available. Save before starting a new transcription.
-
-| Setting               | Use                                                                                                                              | Availability                                                             |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Transcription context | Short subject matter or examples of expected wording. Leave blank if you do not need a hint.                                     | Generic, Speaches, whisper.cpp, and vLLM; model and mode support varies. |
-| Vocabulary            | Names and phrases to favor during recognition. Edit the shared list under **Settings → Vocabulary** and enable it for each task. | See [Vocabulary](../vocabulary/) for supported combinations and limits.  |
-| Override temperature  | Set a value from 0 to 1. Leave off to use the server default. Higher values can produce more variation.                          | Generic, Speaches, whisper.cpp, and vLLM; model and mode support varies. |
-
-Context and vocabulary help recognition; they do not guarantee spelling or edit
-words after transcription. Use [Cleanup](../post-processing/) for editing.
-Keep context short: Freehand allows up to 8,192 UTF-8 bytes, including vocabulary
-when it is sent as context, but your model may accept less.
-
-These hints are saved in local settings and sent to your transcription server
-when used. Do not put API keys or other secrets in them.
-
-To compare an option, transcribe a short sample with your chosen model, change
-one setting, and transcribe again. A connection check does not test whether the
-model uses these hints. Freehand reports a rejected request without automatically
-retrying it with different options.
+<CardGrid>
+  <LinkCard title="Choose a backend" href="../../backends/" description="Compare supported operations and find server launch recipes." />
+  <LinkCard title="Manage saved connections" href="../saved-connections/" description="Reuse a server, manage credentials, or change a task's selection." />
+</CardGrid>

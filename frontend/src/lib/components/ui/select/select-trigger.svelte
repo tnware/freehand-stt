@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Select as SelectPrimitive } from "bits-ui";
   import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import { fieldControl } from "$lib/utils/controlStyles";
   import { cn, type WithoutChild } from "$lib/utils.js";
 
   let {
@@ -19,11 +20,17 @@
   data-slot="select-trigger"
   data-size={size}
   class={cn(
-    "gap-1.5 rounded-md border border-border bg-well py-1 pr-2 pl-2.5 text-[13px] shadow-none transition-[color,box-shadow,background-color] hover:bg-control-fill-hover focus-visible:border-ring focus-visible:bg-well focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 *:data-[slot=select-value]:flex *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg:not([class*='size-'])]:size-4 flex w-fit items-center justify-between whitespace-nowrap outline-none disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    fieldControl,
+    "flex w-fit max-w-full items-center justify-between gap-1.5 py-1 pr-2 pl-2.5 enabled:hover:bg-control-fill-hover data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4",
     className,
   )}
   {...restProps}
 >
-  {@render children?.()}
-  <ChevronDownIcon class="size-4 text-muted-foreground pointer-events-none" />
+  <span data-slot="select-value" class="min-w-0 flex-1 truncate text-left"
+    >{@render children?.()}</span
+  >
+  <ChevronDownIcon
+    class="size-4 text-muted-foreground pointer-events-none"
+    aria-hidden="true"
+  />
 </SelectPrimitive.Trigger>

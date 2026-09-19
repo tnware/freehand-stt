@@ -143,7 +143,8 @@
   {#if layout.compact.current && primaryVisible}
     <button
       type="button"
-      class="absolute inset-0 z-40 bg-black/30"
+      class="absolute inset-0 z-40"
+      style="background: var(--dialog-smoke)"
       style:inset-inline-start="min(280px, 85%)"
       aria-label="Dismiss primary sidebar"
       onclick={closePrimary}
@@ -152,7 +153,8 @@
   {#if rightOverlay}
     <button
       type="button"
-      class="absolute inset-0 z-40 bg-black/30"
+      class="absolute inset-0 z-40"
+      style="background: var(--dialog-smoke)"
       style:inset-inline-end="min(420px, 85%)"
       aria-label="Dismiss secondary sidebar"
       onclick={closeSecondary}

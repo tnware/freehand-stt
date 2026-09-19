@@ -44,7 +44,7 @@
         <Menubar.Content
           align="start"
           sideOffset={4}
-          class="z-50 max-h-[var(--bits-menubar-content-available-height)] min-w-60 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none"
+          class="z-50 max-h-[var(--bits-menubar-content-available-height)] min-w-60 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-float outline-none"
           style="--wails-draggable: no-drag"
         >
           {#each menu.groups as group, index (index)}
@@ -58,7 +58,7 @@
                 </span>
                 <span class="flex-1">{item.label}</span>
                 {#if item.shortcut}<span
-                    class="ml-4 text-[11px] text-muted-foreground"
+                    class="ml-4 text-xs text-muted-foreground"
                     >{item.shortcut}</span
                   >{/if}
               {/snippet}
@@ -67,15 +67,13 @@
                   checked={item.checked}
                   disabled={item.disabled}
                   onSelect={() => void choose(item)}
-                  class="flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none data-[highlighted]:bg-accent-wash data-[highlighted]:text-accent-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                  >{@render label()}</Menubar.CheckboxItem
+                  class="menu-row">{@render label()}</Menubar.CheckboxItem
                 >
               {:else}
                 <Menubar.Item
                   disabled={item.disabled}
                   onSelect={() => void choose(item)}
-                  class="flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none data-[highlighted]:bg-accent-wash data-[highlighted]:text-accent-text data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-                  >{@render label()}</Menubar.Item
+                  class="menu-row">{@render label()}</Menubar.Item
                 >
               {/if}
             {/each}

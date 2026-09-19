@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { textControl } from "$lib/utils/controlStyles";
   import { cn, type WithElementRef } from "$lib/utils.js";
   import type {
     HTMLInputAttributes,
@@ -31,7 +32,8 @@
     bind:this={ref}
     data-slot={dataSlot}
     class={cn(
-      "h-8 rounded-md border border-border bg-well px-2.5 py-1 text-[13px] shadow-none transition-[color,box-shadow,background-color] file:h-7 file:text-sm file:font-medium hover:bg-well focus-visible:border-ring focus-visible:bg-well focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+      textControl,
+      "file:h-7 file:inline-flex file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
       className,
     )}
     type="file"
@@ -44,7 +46,8 @@
     bind:this={ref}
     data-slot={dataSlot}
     class={cn(
-      "h-8 rounded-md border border-border bg-well px-2.5 py-1 text-[13px] shadow-none transition-[color,box-shadow,background-color] file:h-7 file:text-sm file:font-medium hover:bg-well focus-visible:border-ring focus-visible:bg-well focus-visible:ring-2 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
+      textControl,
+      "file:h-7 file:inline-flex file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
       className,
     )}
     {type}

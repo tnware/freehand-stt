@@ -29,8 +29,28 @@ of the documentation reading surface.
 
 ## Documentation authoring
 
-Use plain `.md` for prose and reference pages. Use `.mdx` when a page benefits
-from Starlight's built-in components. MDX is already included by Starlight;
+Choose the page's job before choosing its formatting. Readers should be able to
+identify the task, find the next action, and recognize success without reading
+every paragraph. Use a short opening, descriptive headings, and one primary
+home for each topic.
+
+| Page type | Reading order |
+| --- | --- |
+| Start or overview | What the reader can do → meaningful choices → links to the task guides |
+| Task guide | Prerequisites → steps → expected result → recovery → next action |
+| Backend or model guide | What works and with which versions → setup → supported options → limits and related guides |
+| Troubleshooting | Symptom → likely check → action → where to go if it persists |
+| Contributor procedure | When to use it → commands or checks → expected evidence → safety constraints |
+
+The sidebar follows installation, service setup, everyday tasks, and options/help.
+Backend, model, technical, and contributor references are collapsed initially.
+Keep detailed file transcription, speech playback, history, and workspace
+instructions in their dedicated guides; `using-freehand.mdx` owns dictation and
+links to the other workflows. `getting-started/index.mdx` should help a new user
+complete one request, rather than repeat every workflow's reference material.
+
+Use `.mdx` when a page benefits from Starlight's built-in components; plain `.md`
+still suits short references using tables and callouts. MDX is included by Starlight;
 there is no extra UI framework or dependency to install. Keep the same file
 stem when converting a page so its published URL remains unchanged.
 
@@ -120,13 +140,26 @@ layout, theme styling, and keyboard behavior; do not recreate its components
 with custom CSS. Use `Badge` for compact status labels and `FileTree` for
 actual directory structures when those help a page, not as decoration.
 
+Avoid replacing a wall of paragraphs with a wall of callouts or cards. Use a
+table when readers need to compare the same properties, not to contain an
+entire essay in each cell. Keep explanatory prose that connects ideas. Place
+shared limits outside tabs, use tabs only for alternatives, and reserve
+`<details>` for information the reader can safely skip. Keep headings outside
+hidden panels where possible so the page outline remains useful.
+
+When splitting a page, retain its existing headings or explicit anchor IDs with
+short links to the new primary home. Update incoming links to that home, and
+check that the sidebar, page outline, and next-page links form a coherent path.
+
 Working examples: `getting-started/index.mdx`, `guides/connect-a-server.mdx`,
 `guides/post-processing.mdx`, `guides/windows-installer.mdx`,
 `guides/using-freehand.mdx`, and `development/index.mdx` under
 `src/content/docs/docs/`.
 
 After authoring, run `npm run build` and check both local and GitHub Pages
-base-path links. For syntax and available props, use the official
+base-path links and fragments, including preserved anchors. Preview a task
+guide, a reference table, and any changed tabs at narrow and desktop widths in
+both themes; check keyboard tab and disclosure controls. For syntax and available props, use the official
 [Starlight component reference](https://starlight.astro.build/components/using-components/)
 and [Markdown guide](https://starlight.astro.build/guides/authoring-content/).
 

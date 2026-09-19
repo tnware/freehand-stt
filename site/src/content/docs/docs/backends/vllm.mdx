@@ -1,0 +1,235 @@
+---
+title: vLLM
+description: Connect vLLM for completed transcription, Qwen or Voxtral realtime dictation, and transcript cleanup.
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+The **vLLM** backend supports speech transcription and text cleanup.
+Choose a speech model for transcription and a text model for cleanup. Each
+workflow has its own model selection and can share a connection or use a
+different endpoint and credentials. Your servers
+can run locally, on another machine, or behind a compatible hosted deployment.
+
+| Your task | Model or backend guide |
+| --- | --- |
+| Completed transcription and optional live dictation | [Qwen3-ASR](../../models/qwen3-asr/) |
+| Completed recognition and streamed file results | [Cohere Transcribe](../../models/cohere-transcribe/) |
+| Live microphone or completed transcription | [Voxtral Mini Realtime](../../models/voxtral-realtime/) |
+| English transcript cleanup | [S1-mini](../../models/s1-mini/) |
+| Qwen3-TTS speech generation | Separate [vLLM-Omni backend](../vllm-omni/) |
+
+Select the matching model profile in workflow settings; the connection profile
+remains **vLLM**.
+
+## Run vLLM with Docker
+
+Use PowerShell with Docker Desktop's WSL2 Linux backend and an NVIDIA GPU.
+This recipe uses vLLM v0.28.0 with the audio packages needed for transcription.
+
+Create a directory containing a file named `Dockerfile`:
+
+```dockerfile title="Dockerfile — vLLM 0.28.0 with audio dependencies"
+FROM vllm/vllm-openai@sha256:61fc8a896b0a4fbbbdc063bc4b0dbc25ce98e02b5050c24aeb7830ac02039b14
+RUN python3 -m pip install --no-deps av==18.1.0 scipy==1.18.1 soundfile==0.14.0 soxr==1.1.0
+```
+
+These are the audio dependencies missing from that specific image; do not
+apply this list blindly to a different release. For other versions, follow
+[upstream installation](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/)
+and the release's audio extras instructions. In the directory containing the
+Dockerfile, build the image and prepare its persistent model cache:
+
+```powershell title="Build the audio image and create its model cache"
+docker build --tag freehand-vllm-audio:0.28.0 .
+docker volume create freehand-vllm-models
+```
+
+### Start Qwen3-ASR transcription
+
+```powershell title="Start completed Qwen3-ASR transcription"
+docker run --detach --name freehand-vllm-stt `
+  --gpus device=0 --shm-size 2g `
+  --publish 127.0.0.1:8052:8000 `
+  --volume freehand-vllm-models:/models/hf `
+  --env HF_HOME=/models/hf --env VLLM_USE_V2_MODEL_RUNNER=0 `
+  --entrypoint python3 freehand-vllm-audio:0.28.0 `
+  -m vllm.entrypoints.openai.api_server `
+  --model Qwen/Qwen3-ASR-0.6B --host 0.0.0.0 --port 8000 `
+  --max-model-len 4096 --max-num-batched-tokens 4096 `
+  --gpu-memory-utilization 0.35 --max-num-seqs 1 `
+  --enforce-eager --no-async-scheduling --no-enable-log-requests
+```
+
+The server downloads only the selected checkpoint on first startup. Qwen3-ASR
+also has a 1.7B checkpoint, covered in the [Qwen3-ASR guide](../../models/qwen3-asr/).
+The [official vLLM recipe](https://docs.vllm.ai/projects/recipes/en/latest/Qwen/Qwen3-ASR.html)
+documents the same transcription API.
+
+```powershell
+docker logs --tail 30 freehand-vllm-stt
+Invoke-RestMethod http://127.0.0.1:8052/health
+Invoke-RestMethod http://127.0.0.1:8052/v1/models
+```
+
+Follow [Connect](#connect) with these values, then try a short recording
+with automatic language detection or English:
+
+| Setting | Completed transcription recipe |
+| --- | --- |
+| Used for | **Voice transcription** (and Audio-file transcription if needed) |
+| Base URL | `http://127.0.0.1:8052/v1` |
+| Authentication | **None**; enable **Allow HTTP for this connection** |
+| Model / profile | `Qwen/Qwen3-ASR-0.6B` / **Qwen3-ASR** |
+| Realtime transcription | **Off** for this recipe; use the [1.7B setup](../../models/qwen3-asr/#run-the-server) for realtime |
+
+```powershell
+docker stop freehand-vllm-stt
+docker start freehand-vllm-stt
+```
+
+### Start S1-mini cleanup
+
+:::caution[Budget for both models]
+S1-mini uses a separate text model and endpoint. If the GPU cannot hold both,
+stop the STT container before starting cleanup. To transcribe and clean up
+in one workflow, provide capacity for both or use another speech server.
+:::
+
+```powershell title="Start S1-mini cleanup"
+docker run --detach --name freehand-vllm-cleanup `
+  --gpus device=0 --shm-size 2g `
+  --publish 127.0.0.1:8053:8000 `
+  --volume freehand-vllm-models:/models/hf `
+  --env HF_HOME=/models/hf --env VLLM_USE_V2_MODEL_RUNNER=0 `
+  --entrypoint python3 freehand-vllm-audio:0.28.0 `
+  -m vllm.entrypoints.openai.api_server `
+  --model superwhisper/s1-mini --host 0.0.0.0 --port 8000 `
+  --max-model-len 2048 --max-num-batched-tokens 2048 `
+  --gpu-memory-utilization 0.35 --max-num-seqs 1 `
+  --enforce-eager --no-async-scheduling --no-enable-log-requests
+```
+
+Check `/health` and `/v1/models` at port **8053**, then follow
+[Connect](#connect) with these values:
+
+| Setting | Cleanup recipe |
+| --- | --- |
+| Used for | **Cleanup** |
+| Base URL | `http://127.0.0.1:8053/v1` |
+| Authentication | **None**; enable **Allow HTTP for this connection** |
+| Model / profile | `superwhisper/s1-mini` / **S1-mini by Superwhisper** |
+| Workflow | Enable cleanup in **Voice transcription → Cleanup** and save |
+
+Freehand requests reasoning off for S1-mini. This example's **2,048-token
+context** is intended for short transcripts.
+
+```powershell
+docker logs --tail 30 freehand-vllm-cleanup
+docker stop freehand-vllm-cleanup
+docker start freehand-vllm-cleanup
+```
+
+To change a container's launch options, stop and remove that named container,
+then repeat its `docker run` command with the new options. The named model
+volume remains.
+
+## Connect
+
+<Steps>
+
+1. In **Connections**, create a **vLLM** entry. Under **Used for**, enable
+   **Voice transcription**, **Audio-file transcription**, or **Cleanup** for
+   the routes your deployment exposes.
+2. Enter a Base URL ending in `/v1`, such as `http://127.0.0.1:8000/v1`,
+   authentication, and HTTP permission. Choose **Save connection**.
+3. Select the connection on its workflow page, then choose the served model ID
+   and matching model profile. Save your changes.
+4. Check connection metadata, then explicitly try the selected model with a
+   short recording, file, or cleanup request.
+
+</Steps>
+
+Connection tests read `/models` beneath the base URL without inference. A
+custom transcription health path is appended to the base URL's path.
+
+On Windows, upstream recommends WSL for vLLM's Linux runtime;
+Freehand itself is a native Windows and macOS application. See the
+[upstream installation guide](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/).
+
+## Local runtime setup notes
+
+The pinned v0.28.0 image needs the optional audio packages for
+transcription. Install the matching release's audio extras when building your
+server image; keep its existing CUDA/PyTorch dependencies pinned. A running
+metadata endpoint alone does not establish that audio decoding is installed.
+
+The Docker examples select the V1 runner and synchronous scheduling for WSL2
+compatibility. Keep these options in the server launch configuration.
+
+## Transcription
+
+| Operation or control | Behavior |
+| --- | --- |
+| Microphone, realtime off | `POST /audio/transcriptions`, completed JSON |
+| Audio file | One upload; completed JSON or streamed result chunks |
+| Language, context, temperature | Optional fields when supported by the selected model profile |
+| Context and vocabulary | v0.28.0 Whisper and Qwen3-ASR use `prompt`; vocabulary is appended there, not sent as `hotwords` |
+| Other recognition controls | No VAD, translation, timestamps, diarization, or other sampling controls |
+
+File streaming describes the arriving result, not realtime microphone audio.
+Model profiles determine interpretation and language support.
+
+<details>
+<summary>How Freehand decides a file stream has completed</summary>
+
+A vLLM stream carries `object: "transcription.chunk"` and
+`choices[].delta.content`. Each server-side audio chunk can finish separately.
+Freehand preserves deltas exactly and requires a successful final chunk plus
+`[DONE]` for the entire request. Length-limited or aborted chunks, malformed
+payloads, provider errors, and premature disconnects remain failures. Accepted
+partial text is available for manual recovery and never treated as a successful
+transcript for automatic cleanup. Freehand does not automatically repeat the
+request. It also accepts completed JSON returned to a streaming request.
+
+</details>
+
+Supported audio formats, upload ceilings, server-side audio splitting, and
+language behavior depend on the deployed vLLM/model combination. Freehand's
+[file and response limits](../../reference/protocol/) also apply.
+
+## Cleanup
+
+Cleanup uses non-streaming `POST /chat/completions`, with the configured model,
+string system/user messages, and temperature zero.
+
+| Control or outcome | Behavior |
+| --- | --- |
+| Output limit | Optional `max_tokens`, 1–65,536; off omits the field |
+| Generic: Disable reasoning | Optionally sends `reasoning_effort: "none"` |
+| S1-mini reasoning | Always sends reasoning off, independently of the saved Generic switch |
+| Rejection, empty output, or `finish_reason: "length"` | Uses raw-transcript fallback without retry |
+
+A compatible runtime and model template must honor the reasoning setting.
+Freehand does not rewrite arbitrary templates or infer support from model IDs.
+
+An output limit does not split long transcripts or enlarge the context window.
+
+## Server version
+
+This profile uses the APIs in **vLLM v0.28.0**:
+
+- [Transcription request and response schemas](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/entrypoints/speech_to_text/transcription/protocol.py).
+- [Speech stream implementation](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/entrypoints/speech_to_text/base/serving.py), including per-chunk finish reasons and whole-file completion.
+- [Chat request mapping](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/entrypoints/openai/chat_completion/protocol.py), which maps reasoning effort `none` to template thinking disabled.
+
+[vLLM-Omni](../vllm-omni/) handles speech generation through a separate backend
+profile. Realtime microphone transcription requires the explicit Qwen3-ASR or
+Voxtral Mini Realtime model profile. Model management remains outside Freehand.
+
+## Language selection
+
+Use the [language guide](../../guides/languages/) to choose Server default,
+automatic detection, a named code, or a custom value. The selected model determines
+which languages work. If you enable S1-mini cleanup, review its
+[English-only language behavior](../../models/s1-mini/#language-and-results).

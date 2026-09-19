@@ -1,0 +1,55 @@
+---
+title: Cohere Transcribe
+description: Use Cohere Transcribe with vLLM for microphone recordings and audio files.
+---
+
+import { Steps, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+The **Cohere Transcribe** profile supports
+[CohereLabs/cohere-transcribe-03-2026](https://huggingface.co/CohereLabs/cohere-transcribe-03-2026)
+through **vLLM v0.28.0**. It provides completed microphone transcription,
+checkpoints, and audio-file results, including streamed file responses.
+
+## Connect the model
+
+:::note[Model access comes first]
+Accept the model's Hugging Face access conditions and authenticate the inference
+runtime with an account that has access. This download login is separate from
+Freehand's API key for the running server.
+:::
+
+Prepare the inference machine using the [vLLM backend guide](../../backends/vllm/),
+including its audio dependencies, then serve the model:
+
+```sh title="Serve Cohere Transcribe"
+vllm serve CohereLabs/cohere-transcribe-03-2026
+```
+
+<Steps>
+
+1. Add a **vLLM** connection using the running server's API address.
+2. Open the **Settings** cog in Voice transcription or Audio file and select
+   the served model under **Transcription**. A custom server alias is fine.
+3. Choose **Cohere Transcribe** as the model profile, select your language,
+   and save.
+
+</Steps>
+
+## Language and recognition controls
+
+| Control | Supported behavior |
+| --- | --- |
+| Spoken language | English, French, German, Italian, Spanish, Portuguese, Greek, Dutch, Polish, Chinese, Japanese, Korean, Vietnamese, or Arabic |
+| Server default (English) | Omits the language field; does **not** request automatic detection |
+| Temperature | Optional override |
+| Punctuation | Enabled by vLLM; no Freehand switch |
+| Context hints and shared vocabulary | Unavailable in this vLLM integration |
+| Realtime microphone streaming | Unavailable; recording or checkpoint requests must complete first |
+
+Settings for the direct Transformers API do not necessarily apply to this server.
+Cleanup and delivery use your existing workflow settings.
+
+<CardGrid>
+  <LinkCard title="Set your spoken language" href="../../guides/languages/" description="Choose the language used for recognition and cleanup." />
+  <LinkCard title="Transcribe an audio file" href="../../guides/audio-files/" description="Upload a file and review its result before copying." />
+</CardGrid>

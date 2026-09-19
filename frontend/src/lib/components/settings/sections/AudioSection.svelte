@@ -261,9 +261,7 @@
               (settings.autoStopSilenceMilliseconds = value)}
             aria-label="Pause before automatic stop"
           />
-          <div
-            class="mt-2 flex justify-between text-[10px] text-muted-foreground"
-          >
+          <div class="mt-2 flex justify-between text-2xs text-muted-foreground">
             <span>0.5 s</span>
             <span>10 s</span>
           </div>
@@ -344,9 +342,7 @@
           onValueChange={changeActivitySilence}
           aria-label="Silence indicator delay"
         />
-        <div
-          class="mt-2 flex justify-between text-[10px] text-muted-foreground"
-        >
+        <div class="mt-2 flex justify-between text-2xs text-muted-foreground">
           <span>Responsive</span>
           <span>Steady</span>
         </div>
@@ -373,9 +369,7 @@
               (settings.speechPaddingMilliseconds = value)}
             aria-label="Speech padding"
           />
-          <div
-            class="mt-2 flex justify-between text-[10px] text-muted-foreground"
-          >
+          <div class="mt-2 flex justify-between text-2xs text-muted-foreground">
             <span>Tighter</span>
             <span>More context</span>
           </div>
@@ -403,9 +397,7 @@
               (settings.autoStopMinimumSpeechMilliseconds = value)}
             aria-label="Speech required to arm automatic stop"
           />
-          <div
-            class="mt-2 flex justify-between text-[10px] text-muted-foreground"
-          >
+          <div class="mt-2 flex justify-between text-2xs text-muted-foreground">
             <span>100 ms</span>
             <span>5 s</span>
           </div>

@@ -29,7 +29,7 @@
 >
   <div class="space-y-4 py-3">
     <div class="flex items-center justify-between gap-3">
-      <label for={`${uid}-punctuation`} class="text-[13px] font-medium"
+      <label for={`${uid}-punctuation`} class="content-value"
         >Automatic punctuation</label
       >
       <Switch
@@ -40,7 +40,7 @@
       />
     </div>
     <div class="flex items-center justify-between gap-3">
-      <label for={`${uid}-normalize`} class="text-[13px] font-medium"
+      <label for={`${uid}-normalize`} class="content-value"
         >Normalize numbers and dates</label
       >
       <Switch
@@ -56,7 +56,7 @@
       wording.
     </p>
     <div class="flex items-center justify-between gap-3">
-      <label for={`${uid}-profanity`} class="text-[13px] font-medium"
+      <label for={`${uid}-profanity`} class="content-value"
         >Profanity filter</label
       >
       <Switch
@@ -76,7 +76,7 @@
       </p>{/if}
     {#if realtime}
       <div class="space-y-2">
-        <label for={`${uid}-endpointing`} class="text-[13px] font-medium"
+        <label for={`${uid}-endpointing`} class="content-value"
           >Server endpointing delay (ms)</label
         >
         <Input

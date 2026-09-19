@@ -161,9 +161,7 @@
   {/if}
 
   {#if !settings.holdAvailable}
-    <p
-      class="border-t border-hairline py-3 text-xs leading-relaxed text-muted-foreground"
-    >
+    <p class="section-footnote">
       {settings.holdAvailabilityReason}
     </p>
   {/if}
@@ -190,9 +188,7 @@
       >
         {permissions.error}
       </p>{/if}
-    <p
-      class="border-t border-hairline py-3 text-xs leading-relaxed text-muted-foreground"
-    >
+    <p class="section-footnote">
       Toggle and Show Freehand use native global shortcuts without
       Accessibility. Recording a shortcut requires Accessibility and Input
       Monitoring; clearing an optional shortcut does not. Hold-to-talk requires
@@ -203,9 +199,7 @@
   {/if}
 
   {#if externalAvailabilityDeferred}
-    <p
-      class="border-t border-hairline py-3 text-xs leading-relaxed text-muted-foreground"
-    >
+    <p class="section-footnote">
       {#if native.mac}
         Freehand rejects unsupported, reserved, or duplicate chords. macOS
         shortcuts used by other applications may still conflict. Review

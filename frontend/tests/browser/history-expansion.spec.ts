@@ -68,7 +68,9 @@ for (const width of [560, 1156]) {
       "/tests/browser/app/?view=workspace&theme=dark&history=expansion",
     );
     const rows = page.locator(".history-entry");
-    const headers = page.locator(".history-disclosure");
+    const headers = page.getByRole("button", {
+      name: /^(Expand|Collapse) transcript from /,
+    });
     await expect(headers.first()).toHaveAttribute("aria-expanded", "true");
     await expect(headers.nth(1)).toHaveAttribute("aria-expanded", "false");
     const fullText = rows.first().getByRole("textbox");
@@ -78,7 +80,7 @@ for (const width of [560, 1156]) {
         (element) => element.scrollHeight <= element.clientHeight,
       ),
     ).toBe(true);
-    const preview = rows.nth(1).locator(".history-disclosure .truncate").last();
+    const preview = headers.nth(1).locator(".truncate").last();
     expect(
       await preview.evaluate(
         (element) => element.scrollWidth > element.clientWidth,
@@ -166,7 +168,9 @@ test("an unretained file result is fully readable above collapsed history", asyn
       (element) => element.scrollHeight <= element.clientHeight,
     ),
   ).toBe(true);
-  for (const header of await page.locator(".history-disclosure").all()) {
+  for (const header of await page
+    .getByRole("button", { name: /^(Expand|Collapse) transcript from / })
+    .all()) {
     await expect(header).toHaveAttribute("aria-expanded", "false");
   }
 });

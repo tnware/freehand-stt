@@ -1,6 +1,6 @@
 <script lang="ts">
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import CpuIcon from "@lucide/svelte/icons/cpu";
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
   import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
@@ -43,7 +43,6 @@
         entry,
         instance,
         view,
-        operating: runtime.isBusy(id),
         problem: runtime.errorFor(id) || view.error,
       };
     }),
@@ -86,15 +85,6 @@
     providerRows.find((row) => row.instance.id === recoveryID) ??
       providerRows[0],
   );
-
-  function tone(state: string | undefined): string {
-    if (state === "running") return "bg-success";
-    if (state === "error") return "bg-destructive";
-    if (state === "starting" || state === "installing" || state === "stopping")
-      return "bg-primary";
-    if (state === "not_installed" || !state) return "bg-meter-rest";
-    return "bg-muted-foreground";
-  }
 </script>
 
 <!--
@@ -140,7 +130,7 @@
               ? `${uid}-${row.entry.id}-error`
               : undefined}
             class="flex min-h-11 items-center gap-2.5 border-l-2 pl-2.5 pr-3 py-1.5 text-left transition-colors hover:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {on
-              ? 'border-primary bg-accent-wash'
+              ? 'border-primary bg-accent-wash-strong'
               : 'border-transparent'}"
             onclick={() => {
               selected = row.entry.id;
@@ -160,7 +150,7 @@
                   ? 'text-foreground'
                   : 'text-secondary-foreground'}">{row.entry.name}</span
               >
-              <span class="block truncate font-mono text-[11px] text-ink-quiet">
+              <span class="block truncate font-mono text-xs text-ink-quiet">
                 {[
                   row.entry.id === "llama-cpp"
                     ? "cleanup"
@@ -172,30 +162,18 @@
                   .filter(Boolean)
                   .join(" · ") || row.view.label}
               </span>
-              <span
-                class="mt-0.5 flex items-start gap-1.5 text-xs leading-relaxed text-secondary-foreground"
-              >
-                {#if row.operating}<LoaderCircleIcon
-                    class="mt-0.5 size-3 shrink-0 animate-spin"
-                    aria-hidden="true"
-                  />{/if}
-                <span class="min-w-0 break-words"
-                  >{row.instance
+              <span class="mt-0.5 block">
+                <RuntimeStatus
+                  view={row.view}
+                  problem={row.problem}
+                  label={row.instance
                     ? row.view.label
                     : row.entry.supported
                       ? "Not installed"
-                      : "Unavailable"}</span
-                >
+                      : "Unavailable"}
+                />
               </span>
             </span>
-            <span
-              class="size-[7px] shrink-0 rounded-full {row.operating
-                ? 'bg-primary'
-                : row.problem
-                  ? 'bg-destructive'
-                  : tone(row.instance?.status.state)}"
-              aria-hidden="true"
-            ></span>
           </button>
           {#if row.problem}<p
               id={`${uid}-${row.entry.id}-error`}
@@ -227,7 +205,7 @@
           <!-- Freehand knows which backends this machine can actually run;
                it does not measure VRAM, so this states capability rather
                than inventing a hardware meter. -->
-          <p class="font-mono text-[11px] text-ink-quiet">
+          <p class="font-mono text-xs text-ink-quiet">
             {currentInstance?.status.backend
               ? backendLabel(currentInstance.status.backend)
               : "backend not selected"}
@@ -235,7 +213,7 @@
           <div class="mt-2 flex flex-wrap gap-1">
             {#each current.entry.backends ?? [] as backend (backend)}
               <span
-                class="rounded-sm border border-border px-1.5 py-0.5 text-[10px] text-secondary-foreground"
+                class="rounded-sm border border-border px-1.5 py-0.5 text-2xs text-secondary-foreground"
                 >{backendLabel(backend)}</span
               >
             {/each}

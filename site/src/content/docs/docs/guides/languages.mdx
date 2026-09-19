@@ -1,0 +1,90 @@
+---
+title: Choose a transcription language
+description: Select input languages, understand automatic detection, and use English-only S1-mini cleanup safely.
+---
+
+import { Steps, LinkCard } from '@astrojs/starlight/components';
+
+Choose the spoken language to guide recognition, or let a supported model detect
+it. This setting requests transcription in the source language, **not translation**.
+Voice and audio files keep independent language choices when you change models
+or connections.
+
+<Steps>
+
+1. **Open Voice transcription or Audio file**, then its **Settings** cog.
+2. **Choose Transcription → Spoken language.** Search by language name or code.
+3. **Select a supported value and Save.** Review both tasks if they share a
+   managed runtime whose model you changed.
+
+</Steps>
+
+Changing a managed model restores its recognition controls while keeping the
+task language. If that language is unsupported, choose a supported value before
+transcribing. For Parakeet, use **Automatic detection**.
+
+## Choose a mode
+
+| Choice | What it requests |
+| --- | --- |
+| **Server default** | The server's configured language or detection behavior |
+| **Automatic detection** | Language detection, where the selected model supports it |
+| A named language | Its code, such as `en`, `es`, or `ja` |
+| **Custom server value** | An explicit value your compatible server requires; existing unlisted values stay here |
+
+:::note[The picker cannot add model support]
+The Generic list includes ISO 639-1 languages, Hawaiian (`haw`), and Cantonese
+(`yue`). This does not prove your model supports them. Automatic detection does
+not make an English-only model multilingual.
+:::
+
+Specialized model profiles narrow the available choices:
+
+| Model profile | Language choice |
+| --- | --- |
+| Nemotron 3.5 ASR streaming | Automatic or a listed locale such as `en-US`, in completed and realtime mode |
+| Qwen3-ASR | Listed hints for completed recordings/files; automatic in realtime. Cantonese/Filipino explicit hints are unavailable with supported vLLM |
+| Cohere Transcribe | Select the spoken language for non-English audio; **Server default (English)** is not automatic detection |
+| Parakeet TDT v3 / Voxtral Mini Realtime | Automatic detection |
+
+Custom values, where available, allow at most **32 UTF-8 bytes**, without control
+characters. Ordinary values are sent unchanged; reserved `auto` uses Automatic
+detection behavior.
+
+## Provider behavior
+
+With the Generic model profile, these backend mappings apply:
+
+| Backend | Server default | Automatic detection |
+| --- | --- | --- |
+| Generic OpenAI-compatible | Server default | Relies on server detection |
+| Speaches | Server default | Detects with a supported model, such as Whisper |
+| whisper.cpp | Server-configured language | Overrides the server default with detection |
+| vLLM | Server default | Detects if the model supports it |
+
+A named language requests that language on all four. Generic, Speaches, and vLLM
+send the same request for Server default and Automatic detection. Choose
+Automatic detection with whisper.cpp to override a fixed server language. If
+detection chooses incorrectly, select the spoken language explicitly where supported.
+
+## S1-mini cleanup is English only
+
+S1-mini's cleanup language cannot be changed. Its handling depends on what is
+known about the transcript:
+
+| Language information | Cleanup result |
+| --- | --- |
+| Explicit non-English selection | Skipped; raw transcript retained |
+| Server reports non-English or mixed-language text, even after English was selected | Skipped; raw transcript retained |
+| Server default / automatic, with no known language | Runs **assuming English**, as shown in the controls |
+
+A language mismatch makes no cleanup request. The English-only notice explains
+why raw text is used for normal safe insertion or explicit file-result copying.
+Enabled history records the reason within its retention limits.
+
+For non-English cleanup, choose a suitable model with the **Generic** cleanup
+profile and instructions, or turn cleanup off. Selecting S1-mini does not change
+the saved transcription language. Freehand neither infers languages from model
+names, probes models for language support, nor silently translates text.
+
+<LinkCard title="Check your model's language support" href="../../models/" description="Find the qualified languages, options, and backend for each model profile." />

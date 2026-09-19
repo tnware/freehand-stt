@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { Input } from "$lib/components/ui/input";
+  import { pickerControl } from "$lib/utils/controlStyles";
+  import * as Picker from "$lib/components/ui/combobox";
   import { untrack } from "svelte";
   import { Combobox } from "bits-ui";
-  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import CheckIcon from "@lucide/svelte/icons/check";
   import type { Option } from "$bindings/speechlanguage";
   import ValueInput from "$lib/components/settings/ValueInput.svelte";
@@ -100,14 +102,13 @@
       supported language before transcribing.
     </p>{/if}
   {#if automaticOnly && known}
-    <input
+    <Input
       {id}
       type="text"
       value={selectedLabel}
       readonly
       {disabled}
       aria-describedby={`${id}-help`}
-      class="h-8 w-full rounded-md border border-input bg-well px-3 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     />
   {:else}
     <Combobox.Root
@@ -126,7 +127,7 @@
         <Combobox.Input
           data-slot="combobox-input"
           {id}
-          class="h-8 w-full rounded-md border border-input bg-well px-3 pr-9 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          class={pickerControl}
           aria-describedby={`${id}-help`}
           placeholder="Search languages…"
           oninput={(event) => {
@@ -138,49 +139,38 @@
             <input {...props} value={open ? query : selectedLabel} />
           {/snippet}
         </Combobox.Input>
-        <Combobox.Trigger
-          class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
-          aria-label="Show languages"
-          ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
-        >
+        <Picker.Trigger aria-label="Show languages" />
       </div>
-      <Combobox.Portal>
-        <Combobox.Content
-          data-slot="combobox-content"
-          class="z-50 max-h-[min(18rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-56 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
-          sideOffset={4}
-          collisionPadding={12}
+      <Picker.Content>
+        <!-- Recreate filtered options so keyboard highlighting cannot retain a reused DOM node. -->
+        {#key query}
+          {#each filtered as choice (choice.value)}
+            <Picker.Item
+              value={choice.value}
+              label={choice.label}
+              class="justify-between"
+            >
+              <span class="min-w-0 flex-1 break-words">{choice.label}</span>
+              {#if selected === choice.value}<CheckIcon
+                  class="size-3.5 shrink-0"
+                />{/if}
+            </Picker.Item>
+          {:else}
+            <p class="px-2 py-3 text-xs text-muted-foreground" role="status">
+              {restricted
+                ? "No matching language in this model profile."
+                : "No matching language. Use Custom server value for an unlisted value."}
+            </p>
+          {/each}
+        {/key}
+        <p
+          class="mt-1 border-t border-hairline px-3 py-2 text-xs leading-relaxed text-muted-foreground"
         >
-          <!-- Recreate filtered options so keyboard highlighting cannot retain a reused DOM node. -->
-          {#key query}
-            {#each filtered as choice (choice.value)}
-              <Combobox.Item
-                value={choice.value}
-                label={choice.label}
-                class="flex cursor-default items-center justify-between gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
-              >
-                <span class="min-w-0 flex-1 break-words">{choice.label}</span>
-                {#if selected === choice.value}<CheckIcon
-                    class="size-3.5 shrink-0"
-                  />{/if}
-              </Combobox.Item>
-            {:else}
-              <p class="px-2 py-3 text-xs text-muted-foreground" role="status">
-                {restricted
-                  ? "No matching language in this model profile."
-                  : "No matching language. Use Custom server value for an unlisted value."}
-              </p>
-            {/each}
-          {/key}
-          <p
-            class="mt-1 border-t border-hairline px-3 py-2 text-xs leading-relaxed text-muted-foreground"
-          >
-            {restricted
-              ? "Language selection options for this model profile."
-              : "Choose a spoken language, or a custom value from your server. This does not translate audio."}
-          </p>
-        </Combobox.Content>
-      </Combobox.Portal>
+          {restricted
+            ? "Language selection options for this model profile."
+            : "Choose a spoken language, or a custom value from your server. This does not translate audio."}
+        </p>
+      </Picker.Content>
     </Combobox.Root>
   {/if}
   {#if customVisible}

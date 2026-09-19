@@ -1,7 +1,11 @@
 <script lang="ts">
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
+  import EraserIcon from "@lucide/svelte/icons/eraser";
+  import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
+
+  import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import type { SeekRequest } from "$bindings/tts";
   import type { Snippet } from "svelte";
-  import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import SquarePenIcon from "@lucide/svelte/icons/square-pen";
   import Volume2Icon from "@lucide/svelte/icons/volume-2";
@@ -83,6 +87,9 @@
         status.phase === TTSPhase.Playing ||
         status.phase === TTSPhase.Paused),
   );
+  const actionBusy = $derived(
+    submitting || (isOwnSession && status.phase === TTSPhase.Generating),
+  );
   const generating = $derived(status.phase === TTSPhase.Generating);
   const showPlayback = $derived(
     isOwnSession &&
@@ -140,20 +147,16 @@
   <div class="workbench-toolbar flex-wrap gap-y-1 py-1">
     <SquarePenIcon class="content-section-icon" aria-hidden="true" />
     <h2 class="content-title">Compose</h2>
-    <span
-      class={cn(
-        "mr-auto inline-flex h-5 items-center rounded-sm border px-1.5 text-[11px]",
-        failed
-          ? "border-destructive/30 text-destructive"
-          : working
-            ? "border-accent-edge bg-accent-wash text-accent-text"
-            : "border-border text-muted-foreground",
-      )}
+    <div
+      class="mr-auto min-w-0"
       role="status"
       title="Local configuration only; connection checks appear in the footer."
     >
-      {stateLabel}
-    </span>
+      <StatusBadge
+        tone={failed ? "danger" : working ? "accent" : "neutral"}
+        class={working ? "font-semibold" : ""}>{stateLabel}</StatusBadge
+      >
+    </div>
     {#if quickSettings}
       <div class="min-w-0 shrink-0">{@render quickSettings()}</div>
     {/if}
@@ -166,7 +169,7 @@
   <div class="flex min-h-24 flex-1 flex-col overflow-y-auto">
     {#if !configured}
       <div
-        class="mx-3 mt-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-l-2 border-accent-edge bg-accent-wash px-3 py-2.5"
+        class="content-callout mx-3 mt-3 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5"
       >
         <p
           id={setupGuidanceID}
@@ -175,11 +178,8 @@
           Choose a connection, model, and voice in speech settings. You can
           write your text now.
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          class="shrink-0 border-accent-edge bg-background text-accent-text"
-          onclick={onOpenSettings}><SettingsIcon />Configure speech</Button
+        <Button variant="soft" size="sm" onclick={onOpenSettings}
+          ><ButtonIcon icon={SettingsIcon} />Configure speech</Button
         >
       </div>
     {/if}
@@ -223,26 +223,25 @@
         variant="ghost"
         size="sm"
         disabled={!text}
-        onclick={() => (text = "")}>Clear</Button
+        onclick={() => (text = "")}
+        ><ButtonIcon icon={EraserIcon} />Clear</Button
       >
       <Button
         size="sm"
-        class="min-w-24"
+        class="w-32 @sm:w-40"
+        aria-busy={actionBusy}
         disabled={!canSpeak}
         title="Generate this text and replace the current audio"
         onclick={() => onSpeak(text)}
       >
-        {#if working && status.phase === TTSPhase.Generating}<LoaderCircleIcon
-            class="animate-spin motion-reduce:animate-none"
-          />{:else}<Volume2Icon />{/if}
-        {working && status.phase === TTSPhase.Generating
-          ? "Generating…"
-          : failed
-            ? "Try again"
-            : "Speak"}
-        {#if !working}<kbd
+        <ButtonIcon
+          icon={failed ? RotateCcwIcon : Volume2Icon}
+          busy={actionBusy}
+        />
+        {actionBusy ? "Generating…" : failed ? "Try again" : "Speak"}
+        {#if !working && !submitting}<kbd
             aria-hidden="true"
-            class="ml-1 hidden text-[10px] opacity-70 @sm:inline"
+            class="ml-1 hidden text-2xs opacity-70 @sm:inline"
             >{shortcutVisual}</kbd
           >{/if}
       </Button>

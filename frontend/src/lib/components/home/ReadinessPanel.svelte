@@ -1,8 +1,8 @@
 <script lang="ts">
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import type { Snippet } from "svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ListChecksIcon from "@lucide/svelte/icons/list-checks";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
   import ShortcutKeys from "$lib/components/common/ShortcutKeys.svelte";
@@ -187,36 +187,25 @@
         </section>
 
         {#if complete.length}
-          <details class="group border-t border-hairline">
-            <summary
-              class="content-disclosure flex min-h-11 cursor-pointer list-none items-center gap-2 py-3 [&::-webkit-details-marker]:hidden"
-            >
-              <CheckIcon class="size-4 text-success" /><span class="flex-1"
-                >{complete.length}
-                {complete.length === 1 ? "check ready" : "checks ready"}</span
-              >
-              <ChevronDownIcon
-                class="size-4 text-muted-foreground group-open:rotate-180"
-              />
-            </summary>
-            <div class="divide-y divide-hairline border-t border-hairline">
+          <Disclosure
+            title={`${complete.length} ${complete.length === 1 ? "check ready" : "checks ready"}`}
+            icon={CheckIcon}
+            class="border-t border-hairline"
+          >
+            <div class="divide-y divide-hairline">
               {#each complete as step (step.id)}{@render readyStep(step)}{/each}
             </div>
-          </details>
+          </Disclosure>
         {/if}
         {#if !readiness.initialSetup && connectionNeedsAttention && serverControls}
-          <details class="group border-t border-hairline">
-            <summary
-              class="content-disclosure flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-3 [&::-webkit-details-marker]:hidden"
-            >
-              Connection and model<ChevronDownIcon
-                class="size-4 text-muted-foreground group-open:rotate-180"
-              />
-            </summary>
-            <div class="border-t border-hairline py-4">
+          <Disclosure
+            title="Connection and model"
+            class="border-t border-hairline"
+          >
+            <div>
               {@render serverControls()}
             </div>
-          </details>
+          </Disclosure>
         {/if}
       </div>
       {#if readiness.initialSetup && serverControls}

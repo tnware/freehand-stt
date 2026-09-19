@@ -233,51 +233,51 @@
     {#if group.label}
       <button
         type="button"
-        class="content-disclosure flex min-h-9 w-full items-center gap-2 border-b border-hairline bg-well px-1 text-left"
+        class="disclosure-trigger min-h-9 items-center border-b border-hairline bg-well"
         aria-label={`${group.label} models`}
         aria-expanded={isGroupOpen(group)}
         aria-controls={groupID(group.id)}
         onclick={() => toggleGroup(group)}
       >
-        <ChevronRightIcon
-          class="size-3.5 shrink-0 text-muted-foreground {isGroupOpen(group)
-            ? 'rotate-90'
-            : ''}"
-          aria-hidden="true"
-        />
+        <ChevronRightIcon class="disclosure-chevron mt-0" aria-hidden="true" />
         <span>{group.label}</span>
-        <span class="ml-auto text-[11px] font-normal text-muted-foreground"
+        <span class="ml-auto text-xs font-normal text-muted-foreground"
           >{count} {count === 1 ? "model" : "models"}</span
         >
       </button>
     {/if}
-    <div id={groupID(group.id)} hidden={!isGroupOpen(group)}>
+    <div
+      id={groupID(group.id)}
+      class:catalog-children={!!group.label}
+      hidden={!isGroupOpen(group)}
+    >
       {#each group.families as family (family.id)}
         {#if family.label}
           <button
             type="button"
-            class="content-disclosure flex min-h-8 w-full items-center gap-2 border-b border-hairline bg-well px-1 text-left"
+            class="disclosure-trigger min-h-8 items-center border-b border-hairline"
+            data-density="compact"
             aria-label={`${family.label} models`}
             aria-expanded={isFamilyOpen(family)}
             aria-controls={familyID(family.id)}
             onclick={() => toggleFamily(family)}
           >
             <ChevronRightIcon
-              class="size-3.5 shrink-0 text-muted-foreground {isFamilyOpen(
-                family,
-              )
-                ? 'rotate-90'
-                : ''}"
+              class="disclosure-chevron mt-0"
               aria-hidden="true"
             />
             <span>{family.label}</span>
-            <span class="ml-auto text-[11px] font-normal text-muted-foreground"
+            <span class="ml-auto text-xs font-normal text-muted-foreground"
               >{family.models.length}
               {family.models.length === 1 ? "variant" : "variants"}</span
             >
           </button>
         {/if}
-        <div id={familyID(family.id)} hidden={!isFamilyOpen(family)}>
+        <div
+          id={familyID(family.id)}
+          class:catalog-children={!!family.label}
+          hidden={!isFamilyOpen(family)}
+        >
           {#each family.models as model (model.id)}
             {@const speechModel = isSpeechRuntimeModel(model)}
             {@const selected =
@@ -296,7 +296,8 @@
               <div class="model-row {selected ? 'bg-accent-wash' : ''}">
                 <button
                   type="button"
-                  class="model-identity"
+                  class="disclosure-trigger model-identity"
+                  data-density="compact"
                   aria-label={`Model details: ${model.name}`}
                   title={`${model.name} (${model.id})`}
                   aria-describedby={`${modelID(model.id)}-description`}
@@ -307,9 +308,7 @@
                   }}
                 >
                   <ChevronRightIcon
-                    class="size-3.5 shrink-0 text-muted-foreground {detailsOpen
-                      ? 'rotate-90'
-                      : ''}"
+                    class="disclosure-chevron mt-0"
                     aria-hidden="true"
                   />
                   <span class="min-w-0 flex-1">
@@ -320,7 +319,7 @@
                         >{model.name}</span
                       >
                       {#if model.recommended}<span
-                          class="shrink-0 text-[10px] font-medium text-muted-foreground"
+                          class="shrink-0 text-2xs font-medium text-muted-foreground"
                           >Recommended</span
                         >{/if}
                     </span>
@@ -333,7 +332,7 @@
                   </span>
                 </button>
                 <span
-                  class="model-size text-right text-[11px] text-secondary-foreground"
+                  class="model-size text-right text-xs text-secondary-foreground"
                 >
                   <span class="block text-muted-foreground">{task(model)}</span>
                   <span class="font-mono" title={modelSize(model.sizeBytes)}
@@ -408,7 +407,7 @@
                 </span>
               </div>
               {#if downloading}<div
-                  class="space-y-1 px-2 py-2 text-xs text-secondary-foreground"
+                  class="space-y-1 py-2 pl-[30px] pr-2 text-xs text-secondary-foreground"
                   role="status"
                 >
                   {#if busy}
@@ -428,7 +427,7 @@
               <div
                 id={modelID(model.id)}
                 hidden={!detailsOpen}
-                class="space-y-2 border-t border-hairline bg-well py-2 pl-6 pr-2 text-xs text-muted-foreground"
+                class="space-y-2 border-t border-hairline bg-well py-2 pl-[30px] pr-2 text-xs text-muted-foreground"
               >
                 {#if detailsOpen}
                   <p>
@@ -458,6 +457,10 @@
   .model-catalog {
     container-type: inline-size;
   }
+  .catalog-children {
+    /* Nest the child chevron beneath its parent label (14px icon + 8px gap). */
+    padding-left: 22px;
+  }
   .model-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 56px 82px 104px;
@@ -470,8 +473,8 @@
     min-width: 0;
     min-height: 44px;
     align-items: center;
-    gap: 6px;
-    padding: 4px 2px;
+    gap: 8px;
+    padding: 4px 8px;
     text-align: left;
   }
   .model-identity:hover {
@@ -497,7 +500,7 @@
     .model-size {
       display: flex;
       gap: 8px;
-      padding-left: 22px;
+      padding-left: 30px;
       text-align: left;
     }
     .model-status {
@@ -527,7 +530,7 @@
     .model-status {
       grid-column: 1;
       grid-row: 3;
-      padding-left: 22px;
+      padding-left: 30px;
       text-align: left;
     }
   }

@@ -113,8 +113,18 @@ export function taskConnectionStatus(
   });
   if (detail.loading) return summary("Loading", "reading settings");
   if (!detail.enabled) return summary("Off", "generation disabled");
-  if (detail.runtime && !detail.runtime.ready)
-    return summary(detail.runtime.label, detail.runtime.detail, "bg-warning");
+  if (detail.runtime && !detail.runtime.ready) {
+    const tone = detail.runtime.presentation.tone;
+    return summary(
+      detail.runtime.label,
+      detail.runtime.detail,
+      tone === "danger"
+        ? "bg-destructive"
+        : tone === "accent"
+          ? "bg-primary"
+          : "bg-warning",
+    );
+  }
   // A draft check must never be attributed to the applied task.
   if (detail.busy) return summary("Checking", "metadata only");
   if (detail.stale)

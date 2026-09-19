@@ -25,14 +25,15 @@
   import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import ActivityIcon from "@lucide/svelte/icons/activity";
-  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+  import Disclosure from "$lib/components/common/Disclosure.svelte";
   import ServerIcon from "@lucide/svelte/icons/server";
   import * as Menu from "$lib/components/ui/dropdown-menu";
   import type { ConnectionManagerRequest } from "$bindings/windowing";
 
   import ConnectionsSection from "$lib/components/settings/sections/ConnectionsSection.svelte";
   import { Button } from "$lib/components/ui/button";
-  import * as Dialog from "$lib/components/ui/dialog";
+  import ActionDialog from "$lib/components/common/ActionDialog.svelte";
+  import ButtonIcon from "$lib/components/ui/button/ButtonIcon.svelte";
 
   let {
     session,
@@ -66,9 +67,6 @@
   const inlineError = $derived(
     discardOpen || deleteOpen ? "" : session.messages.error,
   );
-  $effect(() => {
-    if (deleteOpen) return layout?.claimNotifications("modal");
-  });
   const editor = $derived(session.editor);
   const busy = $derived(editor.saving || editor.managedConnectionTesting);
   const selected = $derived(
@@ -275,6 +273,7 @@
   }
   async function remove() {
     if (
+      busy ||
       !selected ||
       selected.builtIn ||
       activeUses.length ||
@@ -288,7 +287,11 @@
     ) {
       selectedID = "";
       deleteOpen = false;
-    } else if (selected) editor.beginConnection(selected);
+    } else if (selected) {
+      const error = session.messages.error;
+      editor.beginConnection(selected);
+      if (error) session.messages.reportFailure(error);
+    }
   }
   onMount(() => {
     const releaseNotifications = layout?.claimNotifications("error");
@@ -352,6 +355,8 @@
           <ConnectionList
             catalog={editor.applied.savedConnections}
             instances={session.runtime.instances}
+            pendingFor={(id) => session.runtime.pendingFor(id)}
+            errorFor={(id) => session.runtime.errorFor(id)}
             selected={selectedID}
             creating={editor.connectionDraft?.creating}
             {busy}
@@ -365,6 +370,8 @@
           <ConnectionList
             catalog={editor.applied.savedConnections}
             instances={session.runtime.instances}
+            pendingFor={(id) => session.runtime.pendingFor(id)}
+            errorFor={(id) => session.runtime.errorFor(id)}
             selected={selectedID}
             creating={editor.connectionDraft?.creating}
             {busy}
@@ -407,7 +414,7 @@
                     align="end"
                     class="w-80 max-w-[calc(100vw-24px)] p-1.5"
                   >
-                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id) ) as role (role.id)}
+                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id), ) as role (role.id)}
                       {@const Icon = sectionByID(role.section).icon}
                       {@const current =
                         editor.applied.savedConnections.selected?.[role.id] ===
@@ -484,6 +491,8 @@
                 connection={selected}
                 instance={runtimeInstance}
                 status={runtimeStatus}
+                pending={session.runtime.pendingFor(runtimeInstance?.id ?? "")}
+                problem={session.runtime.errorFor(runtimeInstance?.id ?? "")}
                 providers={session.runtime.providers}
                 {busy}
                 {onManageRuntime}
@@ -500,25 +509,11 @@
                 onBack={() => leave(false)}
                 onSaved={saved}
               />{/if}
-            {#if selected}<details
-                class="group/connection-check border-t border-hairline"
+            {#if selected}<Disclosure
+                title={`Connection check · ${connectionStatusLabel(editor.savedConnectionChecks[selected.id] ?? null)}`}
+                icon={ActivityIcon}
+                class="border-t border-hairline"
               >
-                <summary
-                  class="content-disclosure flex cursor-pointer list-none items-center gap-2 rounded-sm py-3 [&::-webkit-details-marker]:hidden"
-                  ><ActivityIcon
-                    class="content-section-icon"
-                    aria-hidden="true"
-                  />
-                  <span class="min-w-0 flex-1"
-                    >Connection check · {connectionStatusLabel(
-                      editor.savedConnectionChecks[selected.id] ?? null,
-                    )}</span
-                  >
-                  <ChevronDownIcon
-                    class="content-section-icon transition-transform group-open/connection-check:rotate-180 motion-reduce:transition-none"
-                    aria-hidden="true"
-                  /></summary
-                >
                 <div class="space-y-3 pb-3">
                   <Button
                     variant="outline"
@@ -542,7 +537,7 @@
                       result={editor.savedConnectionChecks[selected.id]}
                     />{/if}
                 </div>
-              </details>{/if}
+              </Disclosure>{/if}
           </main>
           {#if !selected?.builtIn}<footer
               class="shrink-0 border-t border-hairline px-5 py-2"
@@ -598,32 +593,29 @@
   onDiscard={discard}
   onSave={saveAndContinue}
 />
-<Dialog.Root bind:open={deleteOpen}>
-  <Dialog.Content
-    ><Dialog.Header
-      ><Dialog.Title>Delete connection?</Dialog.Title><Dialog.Description
-        >Remove “{selected?.name}” and its unused stored credential.</Dialog.Description
-      ></Dialog.Header
+<ActionDialog
+  open={deleteOpen}
+  {busy}
+  icon={Trash2Icon}
+  tone="danger"
+  title="Delete connection?"
+  description={`Remove “${selected?.name}” and its unused stored credential.`}
+  error={session.messages.error}
+  ondismiss={() => (deleteOpen = false)}
+>
+  {#snippet actions()}
+    <Button
+      variant="outline"
+      disabled={busy}
+      data-dialog-initial-focus
+      onclick={() => (deleteOpen = false)}>Cancel</Button
     >
-    {#if session.messages.error}<p
-        role="alert"
-        class="text-sm text-destructive"
-      >
-        {session.messages.error}
-      </p>{/if}
-    <Dialog.Footer
-      ><Button
-        variant="outline"
-        disabled={busy}
-        onclick={() => {
-          deleteOpen = false;
-        }}>Cancel</Button
-      ><Button variant="destructive" disabled={busy} onclick={remove}
-        >Delete connection</Button
-      ></Dialog.Footer
-    >
-  </Dialog.Content>
-</Dialog.Root>
+    <Button variant="destructive" disabled={busy} onclick={remove}>
+      <ButtonIcon icon={Trash2Icon} {busy} />
+      {busy ? "Deleting…" : "Delete connection"}
+    </Button>
+  {/snippet}
+</ActionDialog>
 
 <style>
   .manager-body {

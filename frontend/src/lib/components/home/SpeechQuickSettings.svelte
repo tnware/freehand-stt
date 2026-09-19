@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
+  import SidebarSettingsLink from "./SidebarSettingsLink.svelte";
   import QuickSaveStatus from "../settings/QuickSaveStatus.svelte";
   import SpeechModelControls from "../settings/SpeechModelControls.svelte";
   import type { QuickSettingsPatch } from "$lib/stores/editor.svelte";
@@ -62,7 +63,7 @@
 
 <div
   class={sidebar
-    ? "flex min-w-0 flex-col gap-2"
+    ? "flex min-w-0 flex-col gap-3"
     : "flex min-w-0 items-center gap-2"}
   role="group"
   aria-label="Speech quick settings"
@@ -102,7 +103,7 @@
 
 {#snippet controls()}
   <div class="space-y-1.5">
-    <label for={connectionID} class="text-[13px] font-medium">Connection</label>
+    <label for={connectionID} class="content-value">Connection</label>
     <ConnectionSelect
       id={connectionID}
       catalog={current.savedConnections}
@@ -154,13 +155,19 @@
     saved={editor.quickSettingsSaved}
     failed={editor.quickSettingsFailed}
   />
-  <Button
-    variant={sidebar ? "ghost" : "outline"}
-    size="sm"
-    class={sidebar
-      ? "w-full justify-start px-0 text-xs text-secondary-foreground"
-      : "w-full"}
-    disabled={disabled || editor.saving}
-    onclick={() => navigate(onOpenSettings)}>All speech settings</Button
-  >
+  {#if sidebar}
+    <SidebarSettingsLink
+      label="All speech settings"
+      disabled={disabled || editor.saving}
+      onclick={() => navigate(onOpenSettings)}
+    />
+  {:else}
+    <Button
+      variant="outline"
+      size="sm"
+      class="w-full"
+      disabled={disabled || editor.saving}
+      onclick={() => navigate(onOpenSettings)}>All speech settings</Button
+    >
+  {/if}
 {/snippet}

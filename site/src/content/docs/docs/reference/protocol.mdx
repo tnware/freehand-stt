@@ -1,0 +1,465 @@
+---
+title: Protocol profile
+description: The OpenAI-compatible request and response contracts Freehand supports.
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Use this reference to check a request field, response boundary, or safety limit.
+For connection setup, start with [Connect a server](../../guides/connect-a-server/).
+
+| Contract | Look up |
+| --- | --- |
+| Transcription | [Completed/file STT](#stt-request), [realtime](#qualified-realtime-microphone-stt), [optional controls](#optional-stt-control-contract) |
+| Cleanup | [Result handling](#optional-transcript-post-processing), [generation fields](#cleanup-generation-request-fields) |
+| Speech | [Text to speech](#text-to-speech), [voice discovery](#speech-voice-discovery) |
+| Shared behavior | [Headers](#headers), [metadata checks](#metadata-only-connection-check), [budgets and ceilings](#request-budgets-and-safety-ceilings), [language](#language-selection-contract) |
+
+:::caution[Profiles define client contracts, not every served model]
+The selected backend and model profile must both support an operation. Model
+lists and health checks are GET-only metadata; they never establish capabilities
+through inference.
+:::
+
+## Compatibility profiles
+
+Voice shares one connection/model/profile between completed and qualified
+realtime transcription. Audio files, cleanup, and speech have independent
+selections. Profiles are explicit; URLs and model IDs never select one
+automatically. See [Model profiles](../../models/) for model-specific restrictions.
+
+| Profile ID    | Implemented operations    | Contract                                                                                               |
+| ------------- | ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `generic`     | STT, post-processing, TTS | Existing bounded multipart JSON, text chat, and buffered PCM16 WAV contracts                           |
+| `speaches`    | STT, TTS                  | Shared request shapes; typed transcription events and legacy per-segment text SSE; buffered WAV speech |
+| `llama-cpp`   | Post-processing           | Shared non-streaming text chat adapter; prompt preset remains independent                              |
+| `whisper-cpp` | STT                       | Native `/inference`, server-loaded model, `/health`, completed JSON                                    |
+| `vllm`        | STT, realtime, post-processing | Completed JSON, dedicated file-stream decoder, qualified Qwen3-ASR/Voxtral realtime, text cleanup |
+| `nemo-speech-v1` | STT, realtime, TTS | Completed multipart, the NeMo-Speech.cpp v0.1.0 WebSocket contract, and buffered MagpieTTS WAV; explicit model qualification |
+| `kokoro-fastapi` | TTS                     | Buffered PCM16 WAV with `stream: false` and voice metadata discovery |
+| `vllm-omni`   | TTS                       | Buffered WAV, voice discovery, and qualified Qwen3-TTS language/style fields |
+
+The Go catalog exposes implemented capabilities and gates optional STT controls.
+Profiles share implementations where wire contracts match; new dialects must be
+implemented and tested before availability is enabled.
+
+Disabled placeholders are operation-specific: `openai` and `localai` for
+completed STT, post-processing, and TTS; `openedai-speech` for TTS. A disabled dedicated
+profile does not prevent use of a server through the generic contract.
+
+<details>
+<summary>Saved profile fields and validation</summary>
+
+`compatibilityProfile` is independent for `voiceTranscription`, audio-file STT at
+the root, `postProcessing`, and `textToSpeech`. Missing and legacy empty values
+resolve to `generic`. Go rejects unavailable, unknown, and wrong-operation
+selections, including disabled feature settings and metadata probes. Invalid
+saved selections enter configuration recovery without overwriting the document.
+
+</details>
+
+## STT request
+
+```http title="Speech-to-text request"
+POST {base_url}/audio/transcriptions
+Authorization: Bearer <credential>
+Content-Type: multipart/form-data
+
+file=<recording.wav>
+model=speech/stt
+language=<optional>
+prompt=<optional recognition context>
+hotwords=<optional; Speaches only>
+temperature=<optional 0–1; only with override enabled>
+response_format=json
+```
+
+Expected response:
+
+```json title="Completed transcription response"
+{
+  "text": "transcribed text"
+}
+```
+
+Audio files use the same multipart shape with their independent connection and
+model. The picker accepts `flac`, `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `ogg`, `wav`,
+and `webm`; the server must support the selected format. Go revalidates the regular
+file and streams it from disk, keeping audio outside the Wails bridge.
+**whisper.cpp is the exception:** its native `/inference` request has no model
+field.
+
+### Completed and streamed responses
+
+Completed microphone requests always use JSON. Qualified audio-file
+backend/model combinations can also expose streaming:
+
+| Mode | Request | Response |
+| --- | --- | --- |
+| Completed | `response_format=json` | One bounded JSON object with `text` |
+| Streamed file | `response_format=json`, `stream=true` | `text/event-stream`; Generic/Speaches also send `Accept: text/event-stream` |
+
+| Stream dialect | Authoritative completion | Failure behavior |
+| --- | --- | --- |
+| Generic/Speaches typed events | `transcript.text.done` with string `text`; replaces deltas, even when empty | EOF or `[DONE]` without final text fails; missing delta/final text is malformed |
+| Legacy untyped Speaches segments | EOF after untyped text segments | Cannot distinguish normal closure from clean premature EOF |
+| vLLM transcription chunks | `[DONE]` after a successful final chunk | A per-chunk stop is insufficient; errors or incomplete streams fail |
+
+Generic retains legacy Speaches SSE compatibility. Choosing Speaches does not
+weaken typed completion checks. Read failures, provider errors, and incomplete
+streams preserve accepted text as a failed partial result, without cleanup.
+Empty or keepalive-only SSE is not a successful transcript. See the
+[vLLM contract](../../backends/vllm/) for its separate decoder.
+
+:::caution[Retry is an explicit action]
+Rejected or incompatible streaming is never retried automatically: that could
+duplicate inference or billing. Unavailability is remembered for the normalized
+endpoint, model, and effective profile. The user must choose **Retry** to submit
+again in completed mode. Server/proxy upload limits still apply; Freehand does
+not split stored files.
+:::
+
+<details>
+<summary>Buffered responses to a streaming request</summary>
+
+Generic and Speaches accept completed JSON from peers that ignore `stream=true`.
+They also clean up an older Speaches SSE body when an intermediary buffers and
+wraps it inside JSON's `text` field. The UI identifies this fallback as buffered:
+client parsing cannot recover progressive timing after the response was collected.
+
+</details>
+
+Copy is unavailable while file work is active. At the **8 MiB** transcript-response
+ceiling, accepted text remains available as failed-partial output. Enabled history
+may retain it as a failed run only if it fits history's separate **2 MiB total**
+budget.
+
+### Shared transport and response metadata
+
+| Rule | Behavior |
+| --- | --- |
+| Base URL ends in `/v1` | Endpoint joining preserves that prefix without duplication |
+| HTTPS | Required by default |
+| Plain HTTP | Requires **Allow HTTP for this connection** in saved/currently tested settings; audio and credentials travel without transport encryption |
+| Redirects | Every inference and metadata call rejects 301, 302, 303, 307, and 308 without a second request or retry |
+
+Redirect rejection includes same-origin redirects and HTTPS-to-HTTP downgrades,
+regardless of the insecure-HTTP setting. Configure the final base URL. Failure
+metadata exposes neither the Location header nor response body.
+
+<details>
+<summary>Filtering reflected credentials from optional response metadata</summary>
+
+Successful STT (completed or streamed) and chat responses retain only bounded
+optional metadata. Strings containing the literal request credential are
+omitted, including request-ID headers, response/model/provider IDs, finish
+reason, service tier, fingerprint, detected languages, and usage type. The
+check precedes string truncation so a bound cannot retain a prefix of a
+reflected credential. Benign text and metrics survive unsafe optional
+metadata. Model discovery omits reflected IDs rather than making altered IDs
+selectable. These checks do not attempt to detect encoded credentials.
+
+</details>
+
+## Example deployment
+
+```text title="Example speech endpoint settings"
+Base URL: https://speech.example.com/v1
+STT model: speech/stt
+Language: auto/unset
+```
+
+If the endpoint requires authentication, select **API key** and enter its credential in Freehand. The key is stored in Windows Credential Manager or macOS Keychain; no particular gateway is required.
+
+## Headers
+
+| Header | Admission |
+| --- | --- |
+| `Authorization: Bearer ***` | Generated from the credential store when API-key authentication is selected |
+| Validated non-secret extra headers | Accepted for compatible private gateways |
+| Secret-looking extra header names | Rejected; custom headers are not a credential store |
+| Hop-by-hop, `Host`, `Content-Length`, duplicate `Authorization` | Rejected |
+
+## Metadata-only connection check
+
+The check uses the currently displayed profile and endpoint/model values, plus an
+optional bounded credential draft that is never persisted.
+
+| Configuration | Probe target |
+| --- | --- |
+| Custom health path | Appended beneath the base URL path; failure does not fall back to `/models` |
+| No custom path, whisper.cpp | `{base_url}/health` |
+| No custom path, other backends | `{base_url}/models`, with the configured credential |
+
+```text title="A health path preserves the base path"
+https://host/v1 + /health → https://host/v1/health
+```
+
+| Response | Validation |
+| --- | --- |
+| Model probe | JSON object with a non-null `data` array; an empty array is valid |
+| Malformed/missing inventory | Response failure, with HTTP reachability still available |
+| Health probe | Bounded successful body; no model-list schema required |
+
+The result lasts for the window lifetime and includes probe URL, reachability,
+HTTP status, latency, checked time, stable failure kind, bounded model IDs, and
+configured-model presence. Selecting a returned model only updates the draft;
+it performs no request.
+
+:::note[Metadata limits]
+No audio or inference is submitted. The check stops after **15 seconds**, reads
+at most **1 MiB**, and returns at most **200 distinct model IDs** of **200 bytes**
+each.
+:::
+
+## Request budgets and safety ceilings
+
+### Configurable request budgets
+
+Each operation uses the budget captured when it starts. Change these values
+in Settings for subsequent requests; the shared HTTP transport adds no
+separate response-header deadline.
+
+| Operation                   | Default request budget |
+| --------------------------- | ---------------------- |
+| Microphone transcription    | 120 seconds            |
+| Each pause-aware checkpoint | 120 seconds            |
+| Stored-audio transcription  | 360 minutes (6 hours)  |
+| Transcript cleanup          | 120 seconds            |
+| Speech generation           | 180 seconds            |
+
+An explicit retry receives a new request budget. If a server has rejected
+streaming, a subsequent file attempt can use completed output. Freehand does
+not automatically retry an ordinary failed inference request.
+
+### Fixed safety ceilings
+
+These client limits cannot be changed in Settings. A server or reverse proxy
+may impose a lower limit.
+
+| Input or response                                              | Maximum          |
+| -------------------------------------------------------------- | ---------------- |
+| Microphone WAV                                                 | 8 MiB            |
+| Stored audio file                                              | 2 GiB            |
+| Completed microphone transcription, metadata, or chat response | 1 MiB            |
+| Stored-file transcript response                                | 8 MiB            |
+| Chat request                                                   | 2 MiB            |
+| Speech playback text                                           | 4,096 characters |
+| Generated WAV                                                  | 32 MiB           |
+
+## Text to speech
+
+On-demand speech calls `POST /audio/speech` and requests **PCM16 WAV** for native
+playback.
+
+| Setting | Scope |
+| --- | --- |
+| Model, voice, options, request budget | Independent of transcription and cleanup |
+| Reused saved connection | Deliberately shares endpoint, authentication, plaintext-HTTP policy, and credential |
+| Voice lists | Generic has no portable discovery endpoint; qualified backends add [metadata discovery](#speech-voice-discovery) |
+| Manual voice ID | Allowed where the model profile permits it; Qwen3-TTS CustomVoice admits only qualified preset voices |
+
+Example self-hosted values:
+
+```text title="Speech playback model and voice"
+TTS model: <model ID served by your speech endpoint>
+TTS voice: <voice ID supported by that model>
+```
+
+Use only the selected speech model; never iterate across the LLM catalog.
+
+## Optional transcript post-processing
+
+Optional cleanup sends raw STT text to `POST /chat/completions` through an
+independent endpoint, model, and credential. Disable it for verbatim
+transcription. One input receives **one cleanup request**, without sentence
+chunking or an input-relative output limit.
+
+| Outcome | Result |
+| --- | --- |
+| Successful cleanup | Uses cleaned text; retaining both versions requires enabled session history |
+| Failure or empty output | Falls back to raw text, subject to cancellation and normal delivery checks |
+| Explicit `finish_reason: "length"` | Fails with `incomplete_response`, discards partial cleaned text, keeps raw text, and shows an output-limit notice |
+| Missing or another finish reason | Existing response rules apply; unreported omissions cannot be detected |
+
+Safe response metadata may be retained in enabled history. There is no automatic
+cleanup retry. Review [S1-mini result handling](../../models/s1-mini/#language-and-results)
+before processing long text.
+
+S1-mini v1 requires its exact documented system prompt and control line. Valid values are:
+
+```text title="Supported S1-mini control values"
+Styling: casual | semi-casual | semi-formal | formal
+Structure: prose | lists
+Context: general | email
+```
+
+The default is `semi-casual/prose/general`; `balanced` is not a trained S1-mini v1
+value.
+
+:::caution[S1-mini requires thinking disabled]
+llama.cpp and vLLM request this automatically for S1-mini. Generic requires the
+server route to enforce it. Follow the [cleanup setup guide](../../guides/post-processing/).
+:::
+
+<span id="shelved-realtime-microphone-stt-research"></span>
+
+## Qualified realtime microphone STT
+
+Realtime is an optional Voice mode. Pause-aware completed transcription remains
+the manual default; the recommended managed Nemotron setup explicitly enables
+realtime. Generic does not enable it.
+
+| Qualified server | Model | Wire contract |
+| --- | --- | --- |
+| NeMo-Speech.cpp **v0.1.0** | Nemotron 3.5 | Binary 16 kHz mono PCM16 after configuration acknowledgement |
+| vLLM **v0.28.0** | Qwen3-ASR or Voxtral Mini Realtime | JSON/base64 PCM16 with its own session/commit protocol |
+
+These adapters are not interchangeable OpenAI Realtime dialects. Partial text is
+presentation-only; authoritative finals enter optional cleanup and focus-safe
+delivery. Cancellation and transport failure never replay audio automatically.
+
+See [Live transcription](../../guides/live-transcription/) for configuration and
+the [NeMo-Speech.cpp](../../backends/nemo-speech/) and
+[vLLM](../../backends/vllm/) references for their protocol contracts.
+
+## Optional STT control contract
+
+`voiceTranscription.transcriptionOptions` owns microphone options; root
+`transcriptionOptions` owns file options. The selected model can further restrict
+any backend-supported control.
+
+| Field | Backend admission | Validation and default |
+| --- | --- | --- |
+| `prompt` | Generic, Speaches, whisper.cpp, vLLM | Up to **8,192 UTF-8 bytes**; empty by default |
+| `hotwords` | Speaches only | Up to **2,048 UTF-8 bytes**; empty by default |
+| `temperatureOverride` | Where temperature is supported | `false` by default; distinguishes omission from explicit zero |
+| `temperature` | Generic, Speaches, whisper.cpp, vLLM | Finite **0–1**, default `0`; inactive values are retained locally |
+
+Hints reject invalid UTF-8 and control characters other than CR, LF, and tab.
+Go validates on save and before building requests or reading file audio; errors
+never include hint contents. Task-owned [vocabulary](../../guides/vocabulary/)
+is projected into the adapter's supported hint fields.
+
+<details>
+<summary>Immutable request projection</summary>
+
+These settings are copied by value with the job's connection/credential snapshot.
+The same option writer is used for microphone and file multipart bodies and file
+Content-Length calculation. File streaming adds only its existing `stream=true`;
+there is no automatic retry after a rejection, and the existing typed completion
+and response-size rules are unchanged. These controls affect request construction;
+they do not establish model capabilities through metadata discovery.
+
+</details>
+
+## Cleanup generation request fields
+
+`postProcessing.generationOptions` owns these controls. Go validates them even
+when cleanup is disabled, and again before request I/O.
+
+| Saved field | Validation/default | Wire behavior |
+| --- | --- | --- |
+| `limitOutputTokens` | Default `false` | Enables the token-limit field |
+| `maxOutputTokens` | Disabled: integer **0–65,536**; enabled: **1–65,536**; default `0` | Generic, llama.cpp, and vLLM send `max_tokens` only when enabled |
+| `disableReasoning` | Default `false`; explicit override requires llama.cpp or vLLM | Sends `reasoning_effort: "none"` |
+
+No explicit zero token limit, second alias, or guessed model field is sent.
+S1-mini on a qualified reasoning-capable profile derives the reasoning override
+automatically, even when the saved custom override is false. Generic still
+requires server-side configuration for S1-mini.
+
+<details>
+<summary>Ownership and request invariants</summary>
+
+The preset layer expresses the thinking-disabled requirement; compatibility
+capabilities qualify enforcement and the inference adapter owns the wire field.
+No `reasoning_format`, arbitrary template kwargs, or sampling overrides are
+added. Options are copied with the job's connection/credential profile. Both
+microphone and stored-file cleanup retain length-limit rejection, durable raw
+fallback, cancellation, and one request per cleanup attempt.
+
+</details>
+
+## Additional qualified provider profiles
+
+| Provider | Important difference | Setup and limits |
+| --- | --- | --- |
+| whisper.cpp | Native `/inference` and server-loaded model; `/health` beneath the server root; no client model selection or file streaming | [whisper.cpp guide](../../backends/whisper-cpp/) |
+| vLLM v0.28.0 | Completed STT, its own file stream, and cleanup with optional output limits/reasoning off | [vLLM guide](../../backends/vllm/) |
+
+S1-mini requires reasoning off through both qualified cleanup profiles,
+llama.cpp and vLLM.
+
+## Language selection contract
+
+`voiceTranscription.language` and root `language` independently select microphone
+and file languages. Model profiles can further restrict languages and defaults.
+
+| Selection and contract | Request behavior |
+| --- | --- |
+| Empty, common completed contract | Omit the language field |
+| `auto`, Generic/Speaches/vLLM | Omit the language field |
+| `auto`, whisper.cpp | Send `language=auto` |
+| NeMo or specialized vLLM model | Follow the qualified model contract; arbitrary hints are not accepted |
+| Realtime vLLM | Omit language hints |
+
+Completed microphone/file uploads resolve the contract before multipart
+construction, including file content-length calculation.
+
+:::note[S1-mini is English-only]
+The existing S1-mini preset declares fixed `language: "en"` in its read-only
+profile descriptor. Selected or reported non-English input bypasses cleanup
+and preserves raw text with `unsupported_language`; unknown language assumes
+English as displayed in the controls. The fixed prompt and reasoning-off
+contract are unchanged. See [language selection](../../guides/languages/).
+:::
+
+## Speech voice discovery
+
+`ListSpeechVoices` captures one saved connection and credential snapshot in Go.
+Only profiles advertising discovery make requests. Every path below is relative
+to the configured base URL and preserves reverse-proxy prefixes.
+
+| Profile | Metadata route | Accepted voice data |
+| --- | --- | --- |
+| vLLM-Omni | `GET /audio/voices` | String voice IDs |
+| Kokoro-FastAPI | `GET /audio/voices` | ID/name objects or legacy string entries in `voices` |
+| Speaches | Selected model's `voices` in `GET /models`; if absent, `GET /audio/voices` | Fallback is labeled server-wide; an empty model list is not replaced with unrelated voices |
+| NeMo | Selected `speech` row in `GET /models` only | Bounded voice IDs and qualified languages; no `/audio/voices` fallback |
+
+| Discovery bound | Limit |
+| --- | --- |
+| Operation budget | **15 seconds** |
+| Response | **1 MiB** |
+| Unique voice IDs | **500** |
+| Each ID | **200 UTF-8 bytes**, without control characters |
+
+Discovery invokes no inference. Reflected credentials are omitted, redirects are
+rejected, and raw response bodies never appear in diagnostics. Names/languages
+are bounded display metadata, not capability evidence. Lists are transient and
+scoped to the connection/model; a saved voice's absence alone does not block it,
+subject to the model profile's voice restrictions.
+
+### Qualified speech request fields
+
+| Profile | Fields beyond the common buffered WAV contract |
+| --- | --- |
+| Generic and Speaches | Existing model/input/voice/speed/WAV shape |
+| Kokoro-FastAPI | Adds `stream: false` |
+| NeMo MagpieTTS | Model/input/voice, `response_format: "wav"`, fixed `speed: 1`, optional `language`; no style instructions or other speeds |
+| vLLM-Omni | Explicit buffered speech; Qwen3-TTS CustomVoice adds `task_type`, language, and optional style under its [model contract](../../models/qwen3-tts/) |
+
+For NeMo MagpieTTS v2602, empty language uses the server default. Qualified codes
+are en, es, de, fr, it, vi, hi, zh, and ja, or their qualified locales; available
+frontends can narrow the UI choices. The server selects one loaded TTS engine;
+the model field never loads or switches it.
+
+Freehand buffers and validates PCM16 WAV before native playback. Voice blending
+management, Kokoro-specific language overrides, normalization, and progressive
+playback are outside this contract.
+
+<CardGrid>
+  <LinkCard title="Backend compatibility" href="../../backends/" description="Find setup and limitations for a specific server." />
+  <LinkCard title="Model profiles" href="../../models/" description="Check model-specific controls and restrictions." />
+</CardGrid>

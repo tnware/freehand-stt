@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { render } from "svelte/server";
 import { describe, expect, it } from "vitest";
 import CurrentResult from "$lib/components/home/CurrentResult.svelte";
-import QuickControls from "$lib/components/home/QuickControls.svelte";
 import TextToSpeech from "$lib/components/home/TextToSpeech.svelte";
 import { TTSPhase, TTSSource, type TTSStatus } from "$lib/state";
 import { settings } from "$lib/stores/session-fixtures";
@@ -30,20 +29,6 @@ describe("home task presentation", () => {
     expect(read("../../../internal/app/app.go")).toContain(
       'Title: "Freehand — Software Update"',
     );
-  });
-
-  it("renders manual-copy guidance with the delivery controls", () => {
-    const { body } = render(QuickControls, {
-      props: {
-        settings: { ...settings, autoInsert: false },
-        section: "delivery",
-        devices: [],
-        onUpdate: async () => true,
-        onOpenAudioSettings: () => {},
-        onOpenDeliverySettings: () => {},
-      },
-    });
-    expect(body).toContain("Direct input off uses manual copy.");
   });
 
   it.each(["file", "voice"] as const)(

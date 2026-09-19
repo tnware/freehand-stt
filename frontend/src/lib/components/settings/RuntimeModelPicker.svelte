@@ -1,12 +1,12 @@
 <script lang="ts">
+  import { pickerControl } from "$lib/utils/controlStyles";
+  import * as Picker from "$lib/components/ui/combobox";
   import FieldHelp from "./FieldHelp.svelte";
   import { modelSources } from "$lib/utils/modelSources";
   import { Combobox } from "bits-ui";
-  import { Button } from "$lib/components/ui/button";
+  import PickerRefreshButton from "./PickerRefreshButton.svelte";
   import * as Menu from "$lib/components/ui/dropdown-menu";
-  import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
   import CheckIcon from "@lucide/svelte/icons/check";
-  import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
   import EraserIcon from "@lucide/svelte/icons/eraser";
   let {
@@ -81,6 +81,9 @@
   );
   let choosing = $state(false);
   const locked = $derived(disabled || choosing);
+  const hasStatus = $derived(
+    busy || ["loading", "failed", "empty"].includes(metadataStatus),
+  );
   async function choose(model: string) {
     if (!model || locked) return;
     choosing = true;
@@ -96,28 +99,21 @@
 </script>
 
 <div class={compact ? "space-y-2" : "space-y-2 px-5 py-4"}>
-  <div class="flex items-center justify-between gap-3">
+  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
     <div class="flex items-center gap-1">
-      <label for={id} class="text-[13px] font-medium">Model</label><FieldHelp
+      <label for={id} class="content-value">Model</label><FieldHelp
         label="About model settings"
         text={help}
       />
     </div>
     <div class="flex items-center gap-1">
-      <Button
-        variant={sidebar ? "ghost" : "soft"}
-        size="sm"
-        class={sidebar ? "size-6 p-0" : ""}
-        aria-label={serverLoaded ? "Check server" : "Refresh models"}
-        title={serverLoaded ? "Check server" : "Refresh models"}
-        disabled={locked || busy}
+      <PickerRefreshButton
+        label={serverLoaded ? "Check server" : "Refresh models"}
+        {sidebar}
+        busy={busy || metadataStatus === "loading"}
+        disabled={locked}
         onclick={onDiscover}
-        ><RefreshCwIcon
-          class={busy ? "size-3.5 animate-spin" : "size-3.5"}
-        />{#if !sidebar}{serverLoaded
-            ? "Check server"
-            : "Refresh models"}{/if}</Button
-      >
+      />
       {#if onForget && savedModels.includes(value) && !serverLoaded}<Menu.Root
           ><Menu.Trigger
             aria-label="Model actions"
@@ -132,20 +128,6 @@
         >{/if}
     </div>
   </div>
-  {#if busy || metadataStatus === "loading"}
-    <p role="status" class="text-xs text-muted-foreground">
-      Loading model list…
-    </p>
-  {:else if metadataStatus === "failed"}
-    <p role="status" class="text-xs text-muted-foreground">
-      Could not load the model list. Refresh or reopen to retry; you can still
-      enter a model ID.
-    </p>
-  {:else if metadataStatus === "empty"}
-    <p role="status" class="text-xs text-muted-foreground">
-      No model IDs were reported. You can enter a model ID manually.
-    </p>
-  {/if}
   {#if serverLoaded}<p {id} class="text-sm text-muted-foreground">
       Server-loaded model
     </p>
@@ -167,9 +149,9 @@
           data-slot="combobox-input"
           {id}
           aria-label="Choose model"
-          aria-describedby={`${id}-help`}
+          aria-describedby={`${id}-help${hasStatus ? ` ${id}-status` : ""}`}
           placeholder="Search or enter a model ID…"
-          class="h-8 w-full min-w-0 rounded-md border border-input bg-well px-3 pr-9 font-mono text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          class={pickerControl + " font-mono"}
           spellcheck={false}
           onclick={() => {
             if (!open) {
@@ -197,48 +179,47 @@
               value={open ? query : value}
             />{/snippet}
         </Combobox.Input>
-        <Combobox.Trigger
-          aria-label="Show models"
-          class="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
-          ><ChevronsUpDownIcon class="size-4" /></Combobox.Trigger
-        >
+        <Picker.Trigger aria-label="Show models" />
       </div>
-      <Combobox.Portal
-        ><Combobox.Content
-          data-slot="combobox-content"
-          sideOffset={4}
-          collisionPadding={12}
-          class="z-50 max-h-[min(20rem,var(--bits-combobox-content-available-height))] w-[var(--bits-combobox-anchor-width)] min-w-64 max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-md"
-        >
-          {#key query}{#each choices as choice (choice.value)}
-              <Combobox.Item
-                value={choice.value}
-                label={choice.label}
-                class="flex cursor-default items-center gap-3 rounded-sm px-3 py-2.5 text-sm outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+      <Picker.Content>
+        {#key query}{#each choices as choice (choice.value)}
+            <Picker.Item value={choice.value} label={choice.label}>
+              <span class="min-w-0 flex-1 break-all font-mono"
+                >{custom === choice.value
+                  ? `Use “${choice.value}”`
+                  : choice.value}</span
               >
-                <span class="min-w-0 flex-1 break-all font-mono"
-                  >{custom === choice.value
-                    ? `Use “${choice.value}”`
-                    : choice.value}</span
-                >
-                <span class="shrink-0 text-[11px] text-muted-foreground">
-                  {modelSources(
-                    choice.value,
-                    models,
-                    savedModels,
-                    draftModels,
-                  )}</span
-                >
-                {#if value === choice.value}<CheckIcon
-                    class="size-3.5 shrink-0"
-                  />{/if}
-              </Combobox.Item>
-            {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
-                Enter a model ID, or refresh the server’s model list.
-              </p>{/each}{/key}
-        </Combobox.Content></Combobox.Portal
-      >
+              <span class="shrink-0 text-xs text-muted-foreground">
+                {modelSources(
+                  choice.value,
+                  models,
+                  savedModels,
+                  draftModels,
+                )}</span
+              >
+              {#if value === choice.value}<CheckIcon
+                  class="size-3.5 shrink-0"
+                />{/if}
+            </Picker.Item>
+          {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
+              Enter a model ID, or refresh the server’s model list.
+            </p>{/each}{/key}
+      </Picker.Content>
     </Combobox.Root>{/if}
+  {#if busy || metadataStatus === "loading"}
+    <p id={`${id}-status`} role="status" class="text-xs text-muted-foreground">
+      Loading model list…
+    </p>
+  {:else if metadataStatus === "failed"}
+    <p id={`${id}-status`} role="status" class="text-xs text-warning">
+      Could not load the model list. Refresh or reopen to retry; you can still
+      enter a model ID.
+    </p>
+  {:else if metadataStatus === "empty"}
+    <p id={`${id}-status`} role="status" class="text-xs text-muted-foreground">
+      No model IDs were reported. You can enter a model ID manually.
+    </p>
+  {/if}
   {#if !sidebar && ((showProfileName && profileName) || (value && !serverLoaded))}
     <p
       class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"

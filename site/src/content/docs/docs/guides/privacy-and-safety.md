@@ -3,226 +3,256 @@ title: Privacy and safety
 description: What Freehand sends, retains, stores, and inserts on Windows and macOS.
 ---
 
-Freehand is a lightweight Windows and macOS client for speech-to-text and text-to-speech
-services you choose. Audio and text are sent for the workflows you use:
-transcription, optional transcript cleanup, or on-demand speech
-generation from your text or retained transcripts.
-The destination may be localhost, a private server, or a hosted provider, so
-that server's own privacy and retention policy still applies.
+Freehand sends audio or text to the services you choose for transcription,
+optional cleanup, and on-demand speech. Each service may run on this computer,
+a private server, or a hosted provider. **The server's own privacy and retention
+policy still applies.**
+
+:::tip[Check every stage]
+Local transcription does not make cleanup or speech generation local. Review
+the selected connection for each task before sending sensitive audio or text.
+:::
 
 ## What goes where?
 
-| Data                                                   | Destination                                                                                     | What Freehand keeps                                                                                                                                                       |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Microphone or selected-file audio                      | Your configured speech-to-text endpoint                                                         | Audio for the active request; released afterward. Existing source files are unchanged.                                                                                    |
-| Transcript sent for cleanup                            | Your separate cleanup endpoint, when enabled                                                    | Keeping both versions after successful cleanup requires enabled session history. Raw failure fallback does not require history.                                           |
-| API keys                                               | The configured capability endpoint when authentication is enabled                               | Saved keys in Windows Credential Manager or macOS Keychain.                                                                                                               |
-| Transcript history                                     | Memory on your computer                                                                         | Off by default; at most 20 entries and 2 MiB, cleared on exit.                                                                                                            |
-| Speech playback text and audio                         | Your playback endpoint receives text and returns audio                                          | Generated audio in memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit.                                                      |
-| Update checks                                          | GitHub release service                                                                          | Update metadata and any downloaded update; no recordings or transcripts are sent.                                                                                         |
-| Managed runtime installation (Windows/macOS, optional) | Official pinned NeMo, llama.cpp, or whisper.cpp releases and the selected model’s download host | Runtime binaries and selected model weights in Freehand's application-data directory, until removed.                                                                      |
-| Managed process output                                 | Private memory on this computer; displayed immediately in an open Runtime output tab            | A bounded rolling tail, cleared explicitly or on the next start attempt, runtime removal, or exit. Closing the viewer revokes access but does not erase the private tail. |
+| When you use… | What leaves Freehand | Destination |
+| --- | --- | --- |
+| Microphone or audio-file transcription | Recorded or selected-file audio | Selected transcription endpoint |
+| Optional cleanup | Completed transcript | Selected cleanup endpoint |
+| Speak, Preview, or Listen | Your text, a sample phrase, or chosen transcript | Selected speech endpoint |
+| Authenticated requests | Configured API key | Selected capability endpoint |
+| Update checks | A release-metadata request; no recordings or transcripts | GitHub release service |
+| Managed runtime/model installation | Explicit binary or selected-model download requests | Official pinned release and model hosts |
+
+Local retention has separate limits for [audio](#audio),
+[current results and history](#transcripts-and-history),
+[settings](#saved-settings-and-backups), and [runtime output](#diagnostics).
 
 ## Managed local recognition
 
-The optional managed runtime recognizes speech on this computer. Its listener is
-restricted to this computer, not your LAN. Installing binaries and downloading
-models requires internet access; browsing the catalog does not run inference.
-Other software running on the same computer can potentially access a loopback
-service, so a local listener is not a sandbox against other local programs.
+Managed runtime listeners accept connections from **this computer only**.
+They are not exposed to your LAN, but other local software may still access a
+loopback service.
 
-Each task selects its own Connection. Local Voice or audio-file recognition does
-not make cleanup local: if cleanup is enabled, its selected connection receives
-the recognized text. Choose [managed llama.cpp with S1-mini](../local-runtime/#local-cleanup-with-s1-mini)
-or another local cleanup service to keep that stage on this computer. Text to
-speech can use [managed NeMo with MagpieTTS](../local-runtime/#local-speech-with-magpietts)
-or a separately configured endpoint.
-Turn cleanup and speech off or configure them locally if you do not want their
-text sent to a remote service.
+| Part of the workflow | Keep it on this computer |
+| --- | --- |
+| Voice or audio-file recognition | Select the managed transcription Connection |
+| Optional cleanup | Select [managed llama.cpp with S1-mini](../local-runtime/#local-cleanup-with-s1-mini), another local cleanup service, or leave cleanup off |
+| Text to speech | Select [managed NeMo with MagpieTTS](../local-runtime/#local-speech-with-magpietts), another local speech service, or leave speech off |
 
-Freehand keeps your manual connections and their API keys when you enable local
-recognition. It does not send those keys to the managed runtime. A runtime
-failure does not silently switch captured audio to a remote server: retry local
-setup or explicitly return to your manual connection for new work.
+- **Downloads:** runtime binaries and selected model weights stay in Freehand's
+  application-data directory until removed. Installation needs internet access;
+  browsing the catalog does not run inference.
+- **Saved manual connections:** remain available with their keys. Those keys are
+  never sent to the managed runtime.
+- **Runtime failure:** never silently redirects captured audio to a remote server.
+  Recover local setup or explicitly select a manual connection for new work.
+- **Removal:** runtime/model removal leaves source recordings, manual connections,
+  and other applications' model caches intact. Weights are installation data,
+  separate from captured audio and transcript history.
 
-Runtime/model removal does not remove source recordings, manual connections,
-or another application's model cache. Model weights are retained installation
-data, not retained microphone audio or transcript history.
+<details>
+<summary>What happens during selected-model GPU warm-up?</summary>
 
-Starting a selected GPU runtime includes warm-up, also when you enable its
-start-at-launch preference. llama.cpp and NeMo use built-in warm-up. CUDA
-whisper.cpp receives one second of synthetic silence on this computer, using
-only the selected loaded model; Freehand discards its response. This does not
-capture your microphone, enter transcript history, run other catalog models, or
-send a request to a remote service. Connection checks remain metadata-only.
+Starting a selected GPU runtime includes warm-up, including start-at-launch.
+llama.cpp and NeMo use built-in warm-up. CUDA whisper.cpp receives one second
+of synthetic silence on this computer, using only its selected loaded model;
+Freehand discards the response.
+
+This captures no microphone audio, creates no history entry, invokes no other
+catalog models, and contacts no remote inference server. Connection checks
+remain metadata-only.
+
+</details>
 
 ## Audio
 
-Microphone and selected-file audio is kept only for the active transcription
-request. Freehand does not retain audio in history. It releases active audio and
-deletes temporary audio after completion, failure, or cancellation. Selecting an
-existing audio file does not delete or modify the original file.
+| Audio source | Freehand's lifetime |
+| --- | --- |
+| Microphone capture | Active transcription request only; released and temporary audio deleted after success, failure, or cancellation |
+| Selected audio file | Active request only; original file is never modified or deleted |
+| Generated speech | Memory until cleared, replaced, a recording begins, or Freehand exits; saving a file is explicit |
 
-Optional text-to-speech is separate: generated playback audio remains in
-memory until cleared or replaced, a recording begins, or Freehand exits. You
-can explicitly save generated audio. Your chosen inference server may retain
-audio or text according to its own policy.
+Audio is never retained in transcript history. Your chosen inference server
+may retain audio or text under its own policy.
 
 ## Transcripts and history
 
-The latest dictation result stays in memory for inspection and explicit copying,
-until the next recording, Clear, or exit. File transcription keeps its current
-result until you clear or replace the selected file, start another transcription,
-or exit. These single current results are available with history off. Failed
-insertion recovery also works without history.
+| Text | Where it lives | When it clears |
+| --- | --- | --- |
+| Latest dictation result | Memory; available with history off | Next recording, Clear, or exit |
+| Current file result | Memory; available with history off | Clear/replace the file, another transcription, or exit |
+| Unsent speech-composer draft | Current window session; survives task/settings navigation | Window reload or exit |
+| Optional transcript history | Memory; **off by default**, at most **20 entries and 2 MiB** | Removal, disabled/cleared history, retention limits, or exit |
 
-Unsent text in the Text to speech composer stays in the current window session
-across task and settings navigation. It is never written to browser storage or
-the settings database; reloading the window or quitting clears it.
+Composer text is never written to browser storage or the settings database.
+History contains raw and cleaned text with limited non-secret run details. It
+contains no audio, credentials, request headers, full paths, or destination
+identity. **Transcription details** disappear with their history entry; an open
+details window does not keep a separate copy.
 
-Transcript history is disabled by default. When enabled, it is memory-only,
-bounded to 20 entries and 2 MiB, and cleared when Freehand exits. It stores
-raw and cleaned transcript text and limited non-secret run details—not audio,
-credentials, request headers, full file paths, or destination-window identity.
+Keeping both versions after successful cleanup requires enabled history and
+space within its limits. Raw fallback after failed cleanup and failed-insertion
+recovery work with history off.
 
-The **Transcription details** for a history entry are removed with that entry,
-including when you clear or disable history or the entry reaches its retention
-limit. An open details window does not preserve a separate copy.
-
-Stored-audio results require an explicit Copy action. Voice dictation can use
-focus-safe direct insertion or manual copy, according to your settings.
+File results always need explicit **Copy**. Voice results use focus-safe
+insertion or manual copy according to your settings. See
+[session history](../history/) to enable, compare, and remove retained results.
 
 ## Safe text insertion
 
-Start dictation with the intended app and text field focused, and keep them
-focused until delivery finishes. Freehand will not bring an app to the foreground
-to insert text.
+Start dictation with the intended app and text field focused. Keep the
+destination focused until delivery finishes; Freehand never brings it to the
+foreground for you.
 
-- On Windows, the original app, window, and focused control must still match.
-- On macOS, the same app and window must remain focused. If you move to another
-  field in that window, Freehand delivers to the currently focused field.
+| Platform | What must remain focused |
+| --- | --- |
+| Windows | Original app, window, and focused control |
+| macOS | Same app and window; moving to another field in that window delivers to the currently focused field |
 
-Release shortcut modifiers before delivery. Windows waits briefly for held
-Ctrl, Alt, Shift, or Windows keys; if they remain held, use explicit **Copy**.
+Release physical shortcut modifiers before delivery. Windows waits briefly for
+held Ctrl, Alt, Shift, or Windows keys; if they stay held, use **Copy**.
 
-macOS Secure Input blocks delivery while active. Freehand does not identify
-every password field: custom secure fields that do not enable Secure Input may
-not be detected. Avoid dictating sensitive text into an uncertain destination.
+:::caution[Secure Input cannot identify every password field]
+macOS Secure Input blocks delivery while active. Custom secure fields that do
+not enable it may not be detected. Avoid dictating sensitive text into an
+uncertain destination.
+:::
 
-If the destination changes or Freehand cannot safely deliver, the transcript
-stays available for explicit **Copy**. A failed delivery may have inserted some
-text already; check before pasting to avoid duplicates.
+If the destination changes or safe delivery is unavailable, the result stays
+available for explicit **Copy**. **Check for partially inserted text before
+pasting** to avoid duplicates.
 
-Clipboard-paste insertion is not enabled. Freehand does not silently replace
-the clipboard as part of automatic delivery.
+Clipboard-paste insertion is disabled. Automatic delivery does not silently
+replace your clipboard.
 
 ## Saved settings and backups
 
-On Windows, non-secret settings are stored in
-`%LOCALAPPDATA%\Freehand\freehand.db`. They include server addresses, model
-choices, vocabulary, custom instructions, and request headers. Database access is restricted
-to your Windows user and SYSTEM; the database is not encrypted. Treat it and its
-backups as private configuration. API keys remain in Windows Credential Manager or macOS Keychain,
-and transcript history remains memory-only. Window size and position are kept
-separately in `%APPDATA%\Freehand\window-state.json`.
+| Platform | Settings and backups | Window geometry |
+| --- | --- | --- |
+| Windows | `%LOCALAPPDATA%\Freehand\freehand.db` | `%APPDATA%\Freehand\window-state.json` |
+| macOS | `~/Library/Application Support/Freehand/freehand.db` | `window-state.json` in the same directory |
 
-On macOS, settings and backups are under `~/Library/Application Support/Freehand`,
-with `freehand.db` and the separate `window-state.json`. Files use per-user
-permissions, not Windows ACLs; the database is not encrypted. Keychain denial
-does not trigger plaintext credential storage.
+The database stores non-secret configuration such as server addresses, model
+choices, vocabulary, custom instructions, and request headers. API keys remain
+in the native credential store; history stays in memory.
 
-Earlier alpha settings and native credentials are left untouched and are not
-imported or reused on either platform. See the [first-launch reset notice](../../getting-started/#first-launch).
-Future schema upgrades retain up to three database backups; explicit recovery
-resets retain an archive of the replaced current database.
-See [settings recovery](../troubleshooting/#saved-settings-need-attention) before
-restoring or removing these files.
+:::caution[Settings and backups are private, not encrypted]
+Windows database access is restricted to your user and SYSTEM. macOS uses
+per-user file permissions. Neither database is encrypted, and Keychain denial
+never triggers plaintext credential storage.
+:::
+
+| Upgrade or recovery action | Retained data |
+| --- | --- |
+| Earlier alpha settings and native credentials | Left untouched, not imported or reused; see the [first-launch reset notice](../../getting-started/#first-launch) |
+| Future schema upgrades | Up to three database backups |
+| Explicit recovery reset | An archive of the replaced current database |
+
+Read [settings recovery](../troubleshooting/#saved-settings-need-attention)
+before restoring or removing these files.
 
 ## Credentials and transport
 
-API keys are stored in Windows Credential Manager or macOS Keychain. They are not written to the
-settings database or displayed again after saving. Inactive connections keep
-their saved keys. Deleting a connection removes its key only when no saved
-connection still uses it. See [saved connections](../saved-connections/).
+| Protection | What it means |
+| --- | --- |
+| Native credential storage | Saved keys go to Windows Credential Manager or macOS Keychain, never the settings database, and are not displayed again |
+| Inactive connections | Keep their saved keys; deleting a connection removes its key only when no saved connection still uses it |
+| HTTPS by default | HTTP requires explicit permission per connection |
+| No HTTP redirects | Inference and connection checks never follow redirects, even to another path on the same server; configure the final base URL |
 
-HTTPS is required by default. You can explicitly allow HTTP for a trusted local
-or LAN endpoint, but doing so sends audio, transcript text, and credentials
-without transport encryption. Do not enable it across an untrusted network.
+:::caution[HTTP sends content without encryption]
+Allow it only for a trusted local or LAN endpoint. Audio, transcript text, and
+credentials are unencrypted in transport; do not allow HTTP across an untrusted
+network.
+:::
 
-Inference and connection-check requests never follow HTTP redirects, even to
-another path on the same server. Configure the final base URL instead of a
-redirecting alias; Freehand will not forward your key, audio, or text to the
-redirect destination.
-
-Freehand filters literal copies of your API key from server response details
-and rejects transcript text containing the key, including realtime captions and
-finals. Realtime checks span streaming messages and model-specific text parsing.
-This does not make an untrusted
-server safe: the server has already received the key and could misuse or
-transform it. Only connect to services you trust.
+Freehand filters literal API-key copies from server response details and rejects
+transcript text containing the key, including realtime captions and finals.
+Realtime checks span messages and model-specific parsing. This cannot make an
+untrusted server safe: it already received the key and could misuse or transform
+it. Connect only to services you trust. See [saved connections](../saved-connections/)
+for credential management.
 
 ## Connection checks
 
-Finishing the initial **Voice** dictation setup requires an explicit connection
-test. That setup does not gate the **Audio file** or **Text to speech** tabs.
-After dictation setup, Freehand checks the saved STT connection automatically on
-launch and after relevant connection settings change. Automatic and manual
-checks request a health route or
-`GET /v1/models`. They do not submit audio, prompts, or synthetic inference
-jobs, and they do not cycle through discovered models. Model selection itself
-does not invoke the model.
+| Trigger | Behavior |
+| --- | --- |
+| Finish initial **Voice** setup | Requires an explicit connection test; Audio file and Text to speech remain independently usable |
+| Launch after Voice setup, or relevant saved connection changes | Automatically checks the saved STT connection |
+| Automatic or manual connection check | Reads a health route or `GET /v1/models` |
+| Select a model | Does not invoke it |
+
+Checks send no audio, prompts, or synthetic inference jobs and never cycle
+through discovered models. Startup warm-up belongs to the selected managed
+runtime, as described [above](#managed-local-recognition).
 
 ## Update checks
 
-Automatic update checks are on by default. Freehand checks GitHub release
-metadata about 30 seconds after startup and once per day after a successful
-check. Failed attempts retry after 15 minutes while Freehand is running.
-Development builds do not check automatically. You can also use **About → Check now**.
-If an update is available,
-the updater can download and checksum-verify the platform asset, then waits for
-you to restart. macOS uses an app-bundle ZIP; checksum verification does not
-establish Developer ID trust or notarization. See [macOS updates and manual fallback](../macos-setup/#update). You can
-disable automatic checks under **Settings → General**. These checks do not
-send recordings or transcripts to GitHub.
+| Update action | Timing or effect |
+| --- | --- |
+| Automatic checks | On by default; about 30 seconds after startup, then daily after a successful check |
+| Failed automatic check | Retries after 15 minutes while Freehand is running |
+| Development build | Does not check automatically |
+| Manual check | **About → Check now** |
+| Disable automatic checks | **Settings → General** |
+
+Checks read GitHub release metadata without sending recordings or transcripts.
+When an update is available, the updater can download and checksum-verify the
+platform asset, then waits for you to restart. macOS uses an app-bundle ZIP;
+checksum verification does not establish Developer ID trust or notarization.
+See [macOS updates](../macos-setup/#update) or
+[Windows updates](../windows-installer/#upgrade).
 
 ## Diagnostics
 
-Operational logs include status, timing, and failure categories. They
-exclude audio, transcript text, credentials, private headers, full paths,
-model IDs, URL paths and queries, and destination-window identity.
+### Application logs
 
-When you restart into an app update, the Wails update helper separately writes
-`wails-update-<pid>.log` in the operating system's temporary directory. It records
-installation and temporary file paths, process IDs, and replacement errors, so
-paths may reveal your account name. It does not receive your recordings,
-transcripts, or inference API keys. The helper does not delete this file when
-finished; it remains until you or the operating system remove it. Review it
-before sharing it for support.
+Operational logs record status, timing, and failure categories. They exclude
+audio, transcripts, credentials, private headers, full paths, model IDs, URL
+paths/queries, and destination-window identity.
 
-Managed runtime **View output** is separate from those logs. Freehand privately
-captures recent process output in memory even with the viewer closed. The tail
-is limited to 256 KiB and 1,024 chunks, with older text discarded as it fills.
-For llama.cpp this includes normal informational, warning, and error output,
-not debug logging. It can still contain transcripts, prompts, file paths, or
-other sensitive upstream text; Freehand does not promise complete redaction.
-Transcript history being off does not prevent such text appearing in process
-output. This private capture is not saved as a log file.
+### Update helper logs
 
-The shared **Runtime output** panel displays output immediately when you open its
-tab or select another runtime's tab. The selected runtime stays the same as you
-navigate between workflows, Connections, Local runtime, and History. Opening it
-can therefore expose sensitive upstream text during screen sharing. The standalone
-**Process output** window requires **Show output** on each opening or runtime
-switch. Both viewers are read-only,
-with search, colors, and progress updates but no command input or file logging.
-**Copy selection** puts only the text you select on the clipboard when you ask;
-other applications may read it, and it can remain after closing the viewer.
-Hiding the panel, changing its tab or runtime, opening global Settings, or hiding
-the workspace clears displayed text and revokes access without stopping the runtime
-or erasing its private tail. Reopening the embedded tab directly reads the selected
-runtime's available output again; the standalone window waits for Show output.
-**Clear**, the next start attempt, runtime removal, and Quit discard the tail.
-Pausing scrolling does not pause collection. Freehand does not forward this
-output to application logs, events, or crash reports. See
-[startup and process output](../local-runtime/#startup-and-process-output) for
-viewer controls.
+When you restart into an update, Wails separately writes
+`wails-update-<pid>.log` in the operating system's temporary directory.
+
+| Included | Excluded | Lifetime |
+| --- | --- | --- |
+| Installation/temporary paths, process IDs, replacement errors; paths may reveal your account name | Recordings, transcripts, inference API keys | Remains until you or the operating system remove it |
+
+Review that file before sharing it for support.
+
+### Managed runtime output
+
+:::caution[Process output can contain sensitive content]
+The runtime may write transcripts, prompts, paths, or other private upstream
+text. Freehand cannot promise complete redaction. Turning transcript history
+off does not prevent that text appearing in output, and opening a viewer during
+screen sharing can expose it.
+:::
+
+| Output storage | Limit or lifetime |
+| --- | --- |
+| Private rolling tail | Memory only, at most **256 KiB and 1,024 chunks**; oldest text drops as it fills |
+| Collection | Continues with the viewer closed or scrolling paused |
+| Clear, next start attempt, runtime removal, or Quit | Discards the private tail |
+| Application logs, events, and crash reports | Never receive the captured output |
+
+For llama.cpp, capture includes normal information, warnings, and errors rather
+than debug logging. The private tail is not saved as a log file.
+
+| Viewer | When text is shown |
+| --- | --- |
+| Embedded **Runtime output** tab | Immediately on opening or switching runtime tabs; retains the selected runtime across workflows, Connections, Local runtime, and History |
+| Standalone **Process output** window | Requires **Show output** each opening or runtime switch |
+| Hidden viewer, different tab/runtime, global Settings, or hidden workspace | Clears displayed text and revokes reads; leaves the runtime and private tail running |
+| Reopened embedded tab | Immediately reads the available tail again |
+
+Both viewers are read-only, with search, colors, and progress updates. They have
+no command input or file logging. **Copy selection** copies only your selected
+text when you ask; other applications may read it, and it may remain on the
+clipboard after the viewer closes.
+
+See [runtime output controls](../local-runtime/#startup-and-process-output)
+for viewing, clearing, and copying output.

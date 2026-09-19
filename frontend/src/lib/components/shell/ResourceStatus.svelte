@@ -88,7 +88,7 @@
   <Popover.Trigger
     aria-label={`This computer: CPU ${cpuLabel}, RAM ${memoryLabel}, GPU ${gpuLabel}`}
     title="This computer’s resource use"
-    class="flex h-6 shrink-0 items-center gap-2 px-1.5 text-[11px] hover:bg-subtle-fill-hover aria-expanded:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {highCPU ||
+    class="flex h-6 shrink-0 items-center gap-2 px-1.5 text-xs hover:bg-subtle-fill-hover aria-expanded:bg-subtle-fill-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring {highCPU ||
     highMemory ||
     highGPU
       ? 'text-warning'

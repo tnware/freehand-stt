@@ -1,4 +1,11 @@
 <script lang="ts">
+  import SparklesIcon from "@lucide/svelte/icons/sparkles";
+  import CopyIcon from "@lucide/svelte/icons/copy";
+  import SquareIcon from "@lucide/svelte/icons/square";
+  import MicIcon from "@lucide/svelte/icons/mic";
+  import PanelRightIcon from "@lucide/svelte/icons/panel-right";
+  import PanelBottomIcon from "@lucide/svelte/icons/panel-bottom";
+  import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
   import { Purpose } from "$bindings/savedconnection";
   import { windowMaterial } from "$lib/platform";
   import { onMount, tick, untrack } from "svelte";
@@ -237,6 +244,7 @@
   const commands = $derived<Command[]>([
     {
       id: "layout:primary",
+      icon: PanelLeftIcon,
       group: "Layout",
       label: "Toggle primary sidebar",
       keywords: "left sidebar show hide",
@@ -245,6 +253,7 @@
     },
     {
       id: "layout:bottom",
+      icon: PanelBottomIcon,
       group: "Layout",
       label: "Toggle bottom panel",
       keywords: "panel show hide recent output diagnostics",
@@ -253,6 +262,7 @@
     },
     {
       id: "layout:secondary",
+      icon: PanelRightIcon,
       group: "Layout",
       label: "Toggle secondary sidebar",
       keywords: "right sidebar history details show hide",
@@ -270,6 +280,7 @@
     })),
     {
       id: "dictation:toggle",
+      icon: isRecording(session.dictation.status) ? SquareIcon : MicIcon,
       group: "Dictation",
       label: isRecording(session.dictation.status)
         ? "Stop recording"
@@ -281,6 +292,7 @@
     },
     {
       id: "dictation:copy",
+      icon: CopyIcon,
       group: "Dictation",
       label: "Copy the current transcript",
       keywords: "clipboard paste",
@@ -289,6 +301,7 @@
     },
     {
       id: "cleanup:toggle",
+      icon: SparklesIcon,
       group: "Cleanup",
       label: session.editor.applied?.postProcessing.enabled
         ? "Turn cleanup off"
