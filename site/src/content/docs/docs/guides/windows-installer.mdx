@@ -11,6 +11,16 @@ the installer for a normal installation, or the portable executable to run
 without installing. Download `SHA256SUMS` from the **same release** to verify
 either file.
 
+Choose the build for your processor in **Settings → System → About → System type**:
+
+| System type | Installer | Portable executable |
+| --- | --- | --- |
+| x64 (Intel or AMD) | `freehand-windows-amd64-installer.exe` | `freehand-windows-amd64.exe` |
+| ARM64 (for example, Snapdragon) | `freehand-windows-arm64-installer.exe` | `freehand-windows-arm64.exe` |
+
+The [download page](../../../download/) links only to files present in the selected
+public release. Older releases may not contain ARM64 builds.
+
 :::caution[Unsigned Windows builds]
 The current downloads are not Authenticode-signed, so Windows may identify the
 publisher as unknown. Confirm that your download came from the official
@@ -22,11 +32,13 @@ before opening it. If the hashes differ, do not run the file; download it again.
 
 | Before installing | Requirement |
 | --- | --- |
-| Computer | Windows 11 x64 |
+| Computer | Windows 11 x64 or ARM64 |
 | Web runtime | WebView2; the installer installs it if missing, while the portable executable needs it already installed |
 | Speech processing | A [managed local runtime](../local-runtime/) or compatible service |
 
 Only Voice dictation needs a microphone; recording shortcuts are optional.
+On Windows ARM64, connect a compatible service. Freehand's managed Windows
+runtime setup currently supports x64.
 [Audio files](../audio-files/) and [text to speech](../text-to-speech/) can be
 configured independently. For a Mac, use [macOS setup](../macos-setup/).
 
@@ -40,7 +52,7 @@ require administrator access.
 <Steps>
 
 1. **Download the installer and checksums.** Save
-   `freehand-windows-amd64-installer.exe` and `SHA256SUMS` from the same release.
+   the matching installer from the table above and `SHA256SUMS` from the same release.
 
 2. **Verify the download.** Open PowerShell in the download folder and run:
 
@@ -48,8 +60,8 @@ require administrator access.
    Get-FileHash -Algorithm SHA256 .\freehand-windows-amd64-installer.exe
    ```
 
-   Compare the displayed hash with the line for
-   `freehand-windows-amd64-installer.exe` in `SHA256SUMS`. They must match.
+   For ARM64, substitute `freehand-windows-arm64-installer.exe`. Compare the
+   displayed hash with the line for your file in `SHA256SUMS`. They must match.
 
 3. **Run the verified installer.** It checks the Windows version, processor
    architecture, and WebView2 Runtime. If WebView2 is missing, it runs
@@ -69,7 +81,7 @@ Start Menu shortcuts or an uninstaller.
 
 <Steps>
 
-1. **Download the executable and checksums.** Save `freehand-windows-amd64.exe`
+1. **Download the executable and checksums.** Save the matching portable executable
    and `SHA256SUMS` from the same release.
 
 2. **Verify the download.** Open PowerShell in the download folder and run:
@@ -78,8 +90,8 @@ Start Menu shortcuts or an uninstaller.
    Get-FileHash -Algorithm SHA256 .\freehand-windows-amd64.exe
    ```
 
-   Compare the displayed hash with the line for `freehand-windows-amd64.exe`
-   in `SHA256SUMS`. They must match.
+   For ARM64, substitute `freehand-windows-arm64.exe`. Compare the displayed
+   hash with the line for your file in `SHA256SUMS`. They must match.
 
 3. **Open the verified executable.** Keep it in a stable, user-writable folder
    if you want the in-app updater to replace it. Continue with the first-run

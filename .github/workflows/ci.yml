@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: 22
       - name: Test selection and fail-closed gate
-        run: node --test .github/workflows/scripts/validation.test.mjs build/scripts/releaseassembly/*.test.mjs
+        run: node --test .github/workflows/scripts/validation.test.mjs .github/workflows/scripts/verify-pe.test.mjs build/scripts/releaseassembly/*.test.mjs
       - id: select
         name: Select workloads and pin source commit
         env:
@@ -143,10 +143,18 @@ jobs:
       - run: npm --prefix frontend run build
 
   windows:
-    name: Windows package
+    name: Windows ${{ matrix.arch }} package
     needs: changes
     if: needs.changes.outputs.app == 'true'
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -161,11 +169,24 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2
+        if: matrix.arch == 'amd64'
         with:
           msystem: MINGW64
           update: false
           install: mingw-w64-x86_64-gcc
           path-type: inherit
+      - name: Install pinned ARM64 C toolchain
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        run: ./.github/workflows/scripts/install-arm64-toolchain.ps1
+      - name: Require native target architecture
+        shell: pwsh
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          if ((go env GOARCH).Trim() -ne $env:TARGET_ARCH) {
+            throw "Windows validation must execute on the target architecture"
+          }
       - name: Install pinned Wails CLI
         shell: pwsh
         run: |
@@ -209,11 +230,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build executable and per-user installer
         shell: pwsh
-        run: wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=user CI=true
+        run: wails3 task package CGO_ENABLED=1 ARCH=${{ matrix.arch }} INSTALL_SCOPE=user CI=true
       - name: Verify native artifacts
         shell: pwsh
         run: |
-          $artifacts = @("bin/freehand.exe", "bin/freehand-amd64-installer.exe")
+          node .github/workflows/scripts/verify-pe.mjs bin/freehand.exe ${{ matrix.arch }}
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Move-Item -LiteralPath bin/freehand.exe -Destination bin/freehand-${{ matrix.arch }}.exe
+          $artifacts = @("bin/freehand-${{ matrix.arch }}.exe", "bin/freehand-${{ matrix.arch }}-installer.exe")
           foreach ($artifact in $artifacts) {
             $file = Get-Item $artifact
             if ($file.Length -le 0) { throw "Empty artifact: $artifact" }
@@ -223,14 +247,14 @@ jobs:
           git diff --exit-code -- go.mod go.sum
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: freehand-windows-amd64
+          name: freehand-windows-${{ matrix.arch }}
           if-no-files-found: error
           retention-days: 7
           path: |
-            bin/freehand.exe
-            bin/freehand.exe.sha256
-            bin/freehand-amd64-installer.exe
-            bin/freehand-amd64-installer.exe.sha256
+            bin/freehand-${{ matrix.arch }}.exe
+            bin/freehand-${{ matrix.arch }}.exe.sha256
+            bin/freehand-${{ matrix.arch }}-installer.exe
+            bin/freehand-${{ matrix.arch }}-installer.exe.sha256
 
   macos:
     name: macOS native tests and packages

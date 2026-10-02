@@ -11,14 +11,23 @@ import (
 )
 
 type job struct {
-	RunsOn string            `yaml:"runs-on"`
-	Env    map[string]string `yaml:"env"`
-	Name   string            `yaml:"name"`
-	If     string            `yaml:"if"`
-	Needs  yaml.Node         `yaml:"needs"`
-	Uses   string            `yaml:"uses"`
-	With   map[string]any    `yaml:"with"`
-	Steps  []struct {
+	RunsOn   string            `yaml:"runs-on"`
+	Env      map[string]string `yaml:"env"`
+	Name     string            `yaml:"name"`
+	If       string            `yaml:"if"`
+	Needs    yaml.Node         `yaml:"needs"`
+	Uses     string            `yaml:"uses"`
+	With     map[string]any    `yaml:"with"`
+	Strategy struct {
+		FailFast bool `yaml:"fail-fast"`
+		Matrix   struct {
+			Include []struct {
+				Arch   string `yaml:"arch"`
+				Runner string `yaml:"runner"`
+			} `yaml:"include"`
+		} `yaml:"matrix"`
+	} `yaml:"strategy"`
+	Steps []struct {
 		Run  string         `yaml:"run"`
 		Uses string         `yaml:"uses"`
 		With map[string]any `yaml:"with"`
@@ -142,6 +151,41 @@ func TestMacOSNativeValidationAndBothPackages(t *testing.T) {
 	}
 }
 
+func TestWindowsNativeValidationAndBothArchitectures(t *testing.T) {
+	windows := load(t, "ci").Jobs["windows"]
+	if windows.RunsOn != "${{ matrix.runner }}" || windows.Strategy.FailFast {
+		t.Fatal("Windows validation must run every architecture on its selected native runner")
+	}
+	targets := map[string]string{}
+	for _, target := range windows.Strategy.Matrix.Include {
+		targets[target.Arch] = target.Runner
+	}
+	if len(targets) != 2 || targets["amd64"] != "windows-latest" || targets["arm64"] != "windows-11-arm" {
+		t.Fatal("Windows requires x64 and ARM64 native validation")
+	}
+	var commands string
+	var upload bool
+	for _, step := range windows.Steps {
+		commands += step.Run + "\n"
+		if strings.HasPrefix(step.Uses, "actions/upload-artifact@") {
+			upload = step.With["name"] == "freehand-windows-${{ matrix.arch }}" && step.With["if-no-files-found"] == "error"
+			for _, path := range []string{"bin/freehand-${{ matrix.arch }}.exe", "bin/freehand-${{ matrix.arch }}-installer.exe"} {
+				if !slices.Contains(strings.Split(strings.TrimSpace(step.With["path"].(string)), "\n"), path) {
+					t.Errorf("missing architecture-specific artifact: %s", path)
+				}
+			}
+		}
+	}
+	if !upload {
+		t.Fatal("missing architecture-specific artifact upload")
+	}
+	for _, command := range []string{"go env GOARCH", "go test ./...", "go vet ./...", "install-arm64-toolchain.ps1", "ARCH=${{ matrix.arch }}", "verify-pe.mjs bin/freehand.exe ${{ matrix.arch }}"} {
+		if !strings.Contains(commands, command) {
+			t.Errorf("missing Windows validation: %s", command)
+		}
+	}
+}
+
 func TestReleaseAssemblesAndAttestsCompleteAssetsBeforePublication(t *testing.T) {
 	publication := load(t, "release").Jobs["publish"]
 	downloads := map[string]bool{}
@@ -163,13 +207,13 @@ func TestReleaseAssemblesAndAttestsCompleteAssetsBeforePublication(t *testing.T)
 			publish = i
 		}
 	}
-	if len(downloads) != 2 || !downloads["freehand-windows-amd64"] || !downloads["freehand-darwin"] {
-		t.Fatal("release must consume both validated platforms")
+	if len(downloads) != 3 || !downloads["freehand-windows-amd64"] || !downloads["freehand-windows-arm64"] || !downloads["freehand-darwin"] {
+		t.Fatal("release must consume all validated platform architectures")
 	}
 	if assembly < 0 || attestation <= assembly || publish <= attestation {
 		t.Fatal("publication must follow complete assembly and attestations")
 	}
-	for _, asset := range []string{"freehand-windows-amd64.exe", "freehand-windows-amd64-installer.exe", "freehand-darwin-arm64.zip", "freehand-darwin-amd64.zip", "SHA256SUMS"} {
+	for _, asset := range []string{"freehand-windows-amd64.exe", "freehand-windows-amd64-installer.exe", "freehand-windows-arm64.exe", "freehand-windows-arm64-installer.exe", "freehand-darwin-arm64.zip", "freehand-darwin-amd64.zip", "SHA256SUMS"} {
 		if !slices.Contains(strings.Fields(subjects), "dist/"+asset) {
 			t.Errorf("missing attestation: %s", asset)
 		}

@@ -1,8 +1,10 @@
 export const RELEASES_URL = 'https://github.com/tnware/freehand-stt/releases';
 export const RELEASE_API = 'https://api.github.com/repos/tnware/freehand-stt/releases?per_page=10';
 export const ASSETS = {
-  installer: { name: 'freehand-windows-amd64-installer.exe', label: 'Windows installer', detail: 'Windows 11 · x64 · Per-user install' },
-  portable: { name: 'freehand-windows-amd64.exe', label: 'Windows portable', detail: 'Windows 11 · x64 · No installation' },
+  installer: { name: 'freehand-windows-amd64-installer.exe', label: 'Windows x64 installer', detail: 'Windows 11 · x64 · Per-user install' },
+  portable: { name: 'freehand-windows-amd64.exe', label: 'Windows x64 portable', detail: 'Windows 11 · x64 · No installation' },
+  installerArm: { name: 'freehand-windows-arm64-installer.exe', label: 'Windows ARM64 installer', detail: 'Windows 11 · ARM64 · Per-user install' },
+  portableArm: { name: 'freehand-windows-arm64.exe', label: 'Windows ARM64 portable', detail: 'Windows 11 · ARM64 · No installation' },
   macArm: { name: 'freehand-darwin-arm64.zip', label: 'Mac · Apple Silicon', detail: 'macOS 13+ · ARM64 · ZIP' },
   macIntel: { name: 'freehand-darwin-amd64.zip', label: 'Mac · Intel', detail: 'macOS 13+ · x64 · ZIP' },
 };
@@ -27,11 +29,18 @@ export function resolveRelease(data) {
 }
 
 export function recommend({ userAgent = '', platform = '', architecture = '', bitness = '', mobile = false, maxTouchPoints = 0 } = {}) {
-  const unsupported = { primary: null, choices: [], message: 'Choose a desktop build below. Freehand supports Windows 11 x64 and macOS 13+; Linux and mobile are not supported.' };
+  const unsupported = { primary: null, choices: [], message: 'Choose a desktop build below. Freehand supports Windows 11 x64 or ARM64 and macOS 13+; Linux and mobile are not supported.' };
   if (mobile || /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent) || (/Mac/i.test(userAgent + platform) && maxTouchPoints > 1)) return unsupported;
   if (/Windows/i.test(platform + userAgent)) {
-    if (/arm/i.test(architecture + userAgent) || bitness === '32') return unsupported;
-    return { primary: 'installer', choices: ['installer', 'portable'], message: 'For Windows 11 x64: use the installer, or run the portable executable.' };
+    if (bitness === '32') return unsupported;
+    if (/^(arm|arm64|aarch64)$/i.test(architecture) || /\b(ARM64|aarch64)\b/i.test(userAgent)) {
+      return { primary: 'installerArm', choices: ['installerArm', 'portableArm'], message: 'For Windows 11 ARM64: use the ARM64 installer, or run the ARM64 portable executable.' };
+    }
+    if (/^(x86|x86_64|amd64)$/i.test(architecture) && bitness === '64') {
+      return { primary: 'installer', choices: ['installer', 'portable'], message: 'For Windows 11 x64: use the installer, or run the portable executable.' };
+    }
+    // ARM browsers can report an x64 UA. Avoid recommending the wrong installer.
+    return { primary: null, choices: ['installer', 'portable', 'installerArm', 'portableArm'], message: 'Choose x64 for an Intel or AMD PC, or ARM64 for an ARM PC such as a Snapdragon device. Check Settings → System → About → System type; this browser cannot reliably identify your Windows architecture.' };
   }
   if (/macOS|Macintosh|MacIntel|Mac OS X/i.test(platform + userAgent)) {
     // Intel in a Mac UA is also emitted on Apple Silicon. Only explicit client hints identify architecture.

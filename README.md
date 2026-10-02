@@ -75,13 +75,15 @@ managed whisper.cpp remains Windows-only.
 
 ## Install
 
-Freehand supports Windows 11 x64 with WebView2 and macOS 13 or newer on Apple
+Freehand supports Windows 11 x64 or ARM64 with WebView2 and macOS 13 or newer on Apple
 Silicon or Intel (managed llama.cpp requires macOS 13.3). Use a managed local speech runtime or a reachable
 compatible service for your task. Only dictation needs a microphone; recording
 shortcuts are optional. Download the Windows
 installer/portable executable or matching-architecture macOS ZIP from
 [GitHub Releases](https://github.com/tnware/freehand-stt/releases). Older releases
-may not include macOS assets; check the assets attached to the selected release.
+may not include every architecture; check the assets attached to the selected release.
+On Windows ARM64, connect a compatible service: Freehand's managed Windows runtime
+recipes currently support x64 only.
 
 Windows builds are not Authenticode-signed, so Windows may identify their
 publisher as unknown. Verify manual downloads against the published

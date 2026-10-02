@@ -120,10 +120,10 @@ Do not repair derived Windows version fields individually.
 
 ## Build the Windows package
 
-Freehand requires CGo for native audio, so production artifacts are built on a
-native Windows GitHub runner. This follows Wails' CI guidance to use a native
-runner for the target platform rather than treating a cross-compiled binary as
-release acceptance.
+Freehand requires CGo for native audio. CI tests and packages x64 on
+`windows-latest` and ARM64 on `windows-11-arm`. The ARM64 job uses checksum-pinned
+LLVM-MinGW; the x64 job uses MinGW-w64 GCC. Native interactive acceptance still
+requires execution on the corresponding architecture.
 
 <Tabs>
   <TabItem label="Per-user package">
@@ -149,6 +149,20 @@ wails3 task package CGO_ENABLED=1 ARCH=amd64 INSTALL_SCOPE=machine
 Both paths write `bin/freehand-amd64-installer.exe`. The all-users installer
 requires elevation and is not the public default.
 
+For ARM64, use `ARCH=arm64` with LLVM-MinGW's ARM64 compiler. The pinned setup
+script can also install an x64-hosted compiler for local cross-compilation:
+
+```powershell title="Build a Windows ARM64 package"
+./.github/workflows/scripts/install-arm64-toolchain.ps1 -Destination "$PWD/bin/toolchains"
+$env:CC = "$PWD/bin/toolchains/llvm-mingw-20260922-ucrt-aarch64/bin/aarch64-w64-mingw32-clang.exe"
+wails3 task package CGO_ENABLED=1 ARCH=arm64
+```
+
+On an x64 host, use the script's `-HostArchitecture X64` option and the
+`llvm-mingw-20260922-ucrt-x86_64` directory instead. ARM64 packaging writes
+`bin/freehand.exe` and `bin/freehand-arm64-installer.exe`. Local cross-compilation
+does not establish ARM64 runtime acceptance.
+
 | Check | Expected installer behavior |
 | --- | --- |
 | Shortcuts | One Start Menu shortcut; no Desktop shortcut |
@@ -159,18 +173,25 @@ requires elevation and is not the public default.
 ## Public artifact contract
 
 New cross-platform releases must contain the complete asset set below. Older
-releases may lack macOS assets; never present a missing asset as downloadable.
+releases may lack ARM64 Windows or macOS assets; never present a missing asset as downloadable.
 
 | Required asset | Purpose |
 | --- | --- |
 | `freehand-windows-amd64.exe` | Bare executable selected by Wails updater |
 | `freehand-windows-amd64-installer.exe` | Per-user NSIS installer |
+| `freehand-windows-arm64.exe` | Native Windows ARM64 executable selected by Wails updater |
+| `freehand-windows-arm64-installer.exe` | Per-user ARM64 NSIS installer |
 | `freehand-darwin-arm64.zip` | Apple Silicon app bundle |
 | `freehand-darwin-amd64.zip` | Intel app bundle |
-| `SHA256SUMS` | Exactly the four assets above; no missing or extra entries |
+| `SHA256SUMS` | Exactly the six assets above; no missing or extra entries |
 
 Publication must reject incomplete sets and use only the artifacts from the
 same trusted, validated tagged workflow run. Do not rebuild or mix runs.
+Windows CI checks each executable's PE architecture before upload and renames
+the two `freehand.exe` outputs to `freehand-amd64.exe` and `freehand-arm64.exe`
+so release assembly cannot overwrite one architecture with the other.
+The website reads public release assets on page load and enables an architecture's
+download links only when its files exist in that release.
 
 :::caution[Integrity and publisher identity are different checks]
 GitHub also records artifact attestations. The binaries are not currently

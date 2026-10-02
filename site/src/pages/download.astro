@@ -6,9 +6,11 @@ import { ASSETS, RELEASES_URL } from "../lib/downloads.mjs";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const href = (path: string) => `${base}${path}`;
 const platforms = [
-  { id: "windows", name: "Windows", requirements: "Windows 11 · x64", guide: "/docs/guides/windows-installer/", note: "Unsigned builds. The installer works without administrator access.", builds: [
-    { key: "installer", title: "Installer", tag: "Recommended", description: "Install for your account with a Start Menu shortcut and uninstaller." },
-    { key: "portable", title: "Portable", tag: "Standalone EXE", description: "Run from a stable, user-writable folder. No shortcuts or uninstaller." },
+  { id: "windows", name: "Windows", requirements: "Windows 11 · x64 or ARM64", guide: "/docs/guides/windows-installer/", note: "Unsigned builds. The installer works without administrator access. Managed local runtimes currently require Windows x64; on ARM64, connect a compatible speech service.", builds: [
+    { key: "installer", title: "x64 installer", tag: "Intel / AMD", description: "Install for your account with a Start Menu shortcut and uninstaller." },
+    { key: "portable", title: "x64 portable", tag: "Standalone EXE", description: "Run from a stable, user-writable folder. No shortcuts or uninstaller." },
+    { key: "installerArm", title: "ARM64 installer", tag: "ARM / Snapdragon", description: "Install the native ARM64 app for your account with a Start Menu shortcut and uninstaller." },
+    { key: "portableArm", title: "ARM64 portable", tag: "Standalone EXE", description: "Run the native ARM64 app from a stable, user-writable folder." },
   ] },
   { id: "mac", name: "macOS", requirements: "macOS 13 or later", guide: "/docs/guides/macos-setup/", note: "Ad-hoc signed, not notarized. Read the setup guide before opening.", builds: [
     { key: "macArm", title: "Apple Silicon", tag: "ARM64 · ZIP", description: "For Macs with an Apple M-series chip." },
@@ -16,9 +18,9 @@ const platforms = [
   ] },
 ] as const;
 ---
-<ProductLayout current="download" title="Download Freehand for Windows and macOS" description="Freehand for Windows 11 x64 and macOS 13+. Windows installer, portable, Apple Silicon, and Intel release availability." path="download/">
+<ProductLayout current="download" title="Download Freehand for Windows and macOS" description="Freehand for Windows 11 x64 or ARM64 and macOS 13+. Windows installer, portable, Apple Silicon, and Intel release availability." path="download/">
   <section class="download-intro" aria-labelledby="download-title">
-    <div><p class="eyebrow">Windows & macOS</p><h1 id="download-title">Download Freehand</h1><p class="lede">Free and open source. Set up a supported local runtime in Freehand or connect your own speech service. Models and runtimes are separate, optional downloads.</p><div class="actions"><a class="button" href="#all-downloads" data-primary-download>Choose your desktop build</a></div><p data-platform-message>Choose Windows, Apple Silicon, or Intel below. Not every release includes every platform.</p><p class="fine-print">Windows 11 x64 · macOS 13+<br />Your chosen provider or hosting may have its own costs.</p></div>
+    <div><p class="eyebrow">Windows & macOS</p><h1 id="download-title">Download Freehand</h1><p class="lede">Free and open source. Set up a supported local runtime in Freehand or connect your own speech service. Models and runtimes are separate, optional downloads.</p><div class="actions"><a class="button" href="#all-downloads" data-primary-download>Choose your desktop build</a></div><p data-platform-message>Choose Windows x64 or ARM64, Apple Silicon, or Intel below. Not every release includes every platform.</p><p class="fine-print">Windows 11 x64 / ARM64 · macOS 13+<br />Your chosen provider or hosting may have its own costs.</p></div>
     <aside class="release-summary" aria-label="Latest release">
       <header><img src={mark.src} alt="" /><div><p>Latest public release</p><strong data-release-version>Check release availability</strong></div></header>
       <div data-recommendation aria-label="Recommended downloads">

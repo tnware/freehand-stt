@@ -12,11 +12,8 @@ import (
 )
 
 // GDI+ flat API. Only the surface the status overlay needs is bound here.
-//
-// REAL (C float) parameters are passed as uintptr(math.Float32bits(v)) through
-// gpReal. On windows/amd64 the stdcall bridge mirrors the first four integer
-// argument registers into XMM0-XMM3, and arguments past the fourth are passed
-// on the stack in both classes, so a float lands correctly in either position.
+// Calls with REAL (C float) parameters use the typed C bridge beside this file.
+// ARM64 allocates integer and float arguments to separate register banks.
 var gdiplusDLL = windows.NewLazySystemDLL("gdiplus.dll")
 
 var (
@@ -172,11 +169,6 @@ func gdiplusRelease() {
 	}
 }
 
-// gpReal encodes a C float argument for the stdcall bridge.
-func gpReal(value float64) uintptr {
-	return uintptr(math.Float32bits(float32(value)))
-}
-
 // --- surface -----------------------------------------------------------------
 
 func gpBitmapOverMemory(width, height int32, bits unsafe.Pointer) uintptr {
@@ -226,7 +218,7 @@ func gpDeletePath(path uintptr) {
 }
 
 func gpArc(path uintptr, x, y, w, h, start, sweep float64) {
-	gdipAddPathArc.Call(path, gpReal(x), gpReal(y), gpReal(w), gpReal(h), gpReal(start), gpReal(sweep))
+	gpNativeArc(path, x, y, w, h, start, sweep)
 }
 
 // gpCapsulePath builds a rounded rectangle, clamping the corner radius so that
@@ -267,7 +259,7 @@ func gpPolylinePath(points [][2]float64) uintptr {
 	gdipStartPathFigure.Call(path)
 	for index := 1; index < len(points); index++ {
 		from, to := points[index-1], points[index]
-		gdipAddPathLine.Call(path, gpReal(from[0]), gpReal(from[1]), gpReal(to[0]), gpReal(to[1]))
+		gpNativeLine(path, from[0], from[1], to[0], to[1])
 	}
 	return path
 }
@@ -277,7 +269,7 @@ func gpEllipsePath(x, y, w, h float64) uintptr {
 	if path == 0 {
 		return 0
 	}
-	gdipAddPathEllipse.Call(path, gpReal(x), gpReal(y), gpReal(w), gpReal(h))
+	gpNativeEllipse(path, x, y, w, h)
 	return path
 }
 
@@ -334,7 +326,7 @@ func gpRadialBrush(path uintptr, center, edge uint32, focus float64) uintptr {
 		uintptr(unsafe.Pointer(&count)),
 	)
 	if focus > 0 {
-		gdipSetPathGradientFocusScales.Call(brush, gpReal(focus), gpReal(focus))
+		gpNativeFocus(brush, focus)
 	}
 	return brush
 }
@@ -347,7 +339,7 @@ func gpDeleteBrush(brush uintptr) {
 
 func gpPen(color uint32, width float64) uintptr {
 	var pen uintptr
-	if status, _, _ := gdipCreatePen1.Call(uintptr(color), gpReal(width), unitPixel, uintptr(unsafe.Pointer(&pen))); status != gpOk {
+	if status := gpNativePen(color, width, &pen); status != gpOk {
 		return 0
 	}
 	gdipSetPenStartCap.Call(pen, lineCapRound)
@@ -358,7 +350,7 @@ func gpPen(color uint32, width float64) uintptr {
 
 func gpBrushPen(brush uintptr, width float64) uintptr {
 	var pen uintptr
-	if status, _, _ := gdipCreatePen2.Call(brush, gpReal(width), unitPixel, uintptr(unsafe.Pointer(&pen))); status != gpOk {
+	if status := gpNativeBrushPen(brush, width, &pen); status != gpOk {
 		return 0
 	}
 	gdipSetPenStartCap.Call(pen, lineCapRound)
@@ -403,7 +395,7 @@ func gpDrawArc(graphics, pen uintptr, x, y, w, h, start, sweep float64) {
 	if graphics == 0 || pen == 0 {
 		return
 	}
-	gdipDrawArc.Call(graphics, pen, gpReal(x), gpReal(y), gpReal(w), gpReal(h), gpReal(start), gpReal(sweep))
+	gpNativeDrawArc(graphics, pen, x, y, w, h, start, sweep)
 }
 
 // --- text --------------------------------------------------------------------
@@ -433,9 +425,7 @@ func gpFont(family uintptr, size float64, style int) uintptr {
 		return 0
 	}
 	var font uintptr
-	if status, _, _ := gdipCreateFont.Call(
-		family, gpReal(size), uintptr(style), unitPixel, uintptr(unsafe.Pointer(&font)),
-	); status != gpOk {
+	if status := gpNativeFont(family, size, style, &font); status != gpOk {
 		return 0
 	}
 	return font
@@ -542,7 +532,7 @@ func gpGlow(graphics, path uintptr, rgb uint32, maxWidth float64, layers int, pe
 func gpTranslated(graphics uintptr, dx, dy float64, draw func()) {
 	var state uint32
 	gdipSaveGraphics.Call(graphics, uintptr(unsafe.Pointer(&state)))
-	gdipTranslateWorldTransform.Call(graphics, gpReal(dx), gpReal(dy), matrixOrderPrepend)
+	gpNativeTranslate(graphics, dx, dy)
 	draw()
 	gdipRestoreGraphics.Call(graphics, uintptr(state))
 }
