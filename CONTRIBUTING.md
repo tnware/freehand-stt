@@ -97,6 +97,22 @@ synthetic services and cannot establish native desktop behavior.
 Follow the [native acceptance procedure](site/src/content/docs/docs/safety/native-test-checklist.md)
 for changes involving OS integration.
 
+## Dependency updates
+
+Dependabot checks weekly. Minor and patch updates are grouped by ecosystem and
+package directory; major updates arrive as separate pull requests. Frontend
+TypeScript and `svelte-check` updates have their own group so type-checking changes
+can be reviewed separately from routine frontend updates.
+
+For a major toolchain upgrade, check the peer dependency ranges and update coupled
+packages together when needed. Run `npm ci --prefix frontend`, then the frontend
+test, check, and build commands above before merging. Grouping does not establish
+compatibility.
+
+Wails upgrades are manual: update the Go module, `@wailsio/runtime`, and pinned CLI
+references together, regenerate bindings, and validate Windows and macOS packages.
+Dependabot ignores both Wails package entries to preserve that coordinated upgrade.
+
 ## Documentation
 
 Update product guides when a change affects how someone uses Freehand. Keep
