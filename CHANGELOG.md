@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/tnware/freehand-stt/compare/v0.1.0...v0.2.0) (2026-10-03)
+
+
+### Features
+
+* **windows:** add ARM64 builds and release downloads ([#84](https://github.com/tnware/freehand-stt/issues/84)) ([ba61f44](https://github.com/tnware/freehand-stt/commit/ba61f44c65f3c99cfb894542317d93ca3ce16223))
+
+
+### Bug Fixes
+
+* **deps:** separate major dependency updates ([#89](https://github.com/tnware/freehand-stt/issues/89)) ([7c08c94](https://github.com/tnware/freehand-stt/commit/7c08c944b16bd87add7bd08cfe84892e93c22318))
+
 ## [0.1.0](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.6...v0.1.0) (2026-09-16)
 
 
