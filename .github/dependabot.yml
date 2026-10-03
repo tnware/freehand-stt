@@ -4,16 +4,28 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Upgrade Wails together with the frontend runtime and pinned CLI.
+    ignore:
+      - dependency-name: github.com/wailsapp/wails/v3
     groups:
       go-modules:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
+    # The native library, frontend runtime, and CLI share one Wails version.
+    ignore:
+      - dependency-name: "@wailsio/runtime"
     groups:
+      frontend-typecheck:
+        patterns: ["typescript", "svelte-check"]
+        update-types: ["minor", "patch"]
       frontend:
         patterns: ["*"]
+        exclude-patterns: ["typescript", "svelte-check"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: npm
     directory: /site
     schedule:
@@ -21,6 +33,7 @@ updates:
     groups:
       site:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -28,3 +41,4 @@ updates:
     groups:
       github-actions:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
