@@ -16,7 +16,7 @@ if ($actualHash -ne $expectedHash) {
     throw "NSIS installer hash mismatch: expected $expectedHash, got $actualHash"
 }
 
-$process = Start-Process -FilePath $installer -ArgumentList "/S" -Wait -PassThru
+$process = Start-Process -FilePath $installer -ArgumentList "/S" -WindowStyle Hidden -Wait -PassThru
 if ($process.ExitCode -ne 0) {
     throw "NSIS installation failed with exit code $($process.ExitCode)"
 }

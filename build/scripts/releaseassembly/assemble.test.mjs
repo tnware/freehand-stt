@@ -8,8 +8,10 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const assets = [
-  ["freehand.exe", "freehand-windows-amd64.exe"],
+  ["freehand-amd64.exe", "freehand-windows-amd64.exe"],
   ["freehand-amd64-installer.exe", "freehand-windows-amd64-installer.exe"],
+  ["freehand-arm64.exe", "freehand-windows-arm64.exe"],
+  ["freehand-arm64-installer.exe", "freehand-windows-arm64-installer.exe"],
   ["freehand-darwin-arm64.zip", "freehand-darwin-arm64.zip"],
   ["freehand-darwin-amd64.zip", "freehand-darwin-amd64.zip"],
 ];
@@ -22,10 +24,10 @@ function fixture(t) {
   const run = () => spawnSync(process.execPath, [fileURLToPath(new URL("./assemble.mjs", import.meta.url)), input, output], { encoding: "utf8" });
   return { input, output, run };
 }
-test("assembles exactly four byte-preserved assets and one complete checksum manifest", (t) => {
+test("assembles exactly six byte-preserved assets and one complete checksum manifest", (t) => {
   const { input, output, run } = fixture(t);
   // Valid CI checksum sidecars must not leak into the exact public set.
-  writeFileSync(join(input, "freehand.exe.sha256"), "CI checksum sidecar");
+  writeFileSync(join(input, "freehand-amd64.exe.sha256"), "CI checksum sidecar");
   const result = run();
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(readdirSync(output).sort(), ["SHA256SUMS", ...assets.map(([, name]) => name)].sort());

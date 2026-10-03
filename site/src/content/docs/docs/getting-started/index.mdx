@@ -11,7 +11,7 @@ You can use each task independently.
 
 ## What you need
 
-- **A supported computer:** Windows 11 x64 with WebView2, or macOS 13+ on Apple Silicon or Intel.
+- **A supported computer:** Windows 11 x64 or ARM64 with WebView2, or macOS 13+ on Apple Silicon or Intel.
 - **Somewhere to run speech:** a [local runtime](../guides/local-runtime/) managed by Freehand,
   or a compatible service on your computer, another machine, or a hosted provider.
 - **For dictation:** a microphone. Audio files and text to speech do not need one.
@@ -19,6 +19,8 @@ You can use each task independently.
 Freehand is free and open source, with no account or subscription. Your chosen
 provider or hosting may charge for use. A local GPU is not required when you
 connect to another machine or a hosted service.
+On Windows ARM64, choose a compatible service; managed Windows runtimes currently
+require x64. See [Windows setup](../guides/windows-installer/) for architecture choices.
 
 <CardGrid>
   <LinkCard title="Install on Windows" href="../guides/windows-installer/" description="Choose the installer or portable executable and verify your download." />
@@ -28,7 +30,7 @@ connect to another machine or a hosted service.
 :::caution[Verify your download]
 Use the official release and its `SHA256SUMS`. Windows assets are unsigned;
 macOS apps are ad-hoc-signed and are not notarized. The installation guides
-explain verification and platform prompts. Older releases may lack macOS assets.
+explain verification and platform prompts. Older releases may lack some architectures.
 :::
 
 ## First launch

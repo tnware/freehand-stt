@@ -15,10 +15,18 @@ func TestFreehandReleaseAssetSelectsOnlyTheBarePlatformBinary(t *testing.T) {
 		{Name: "freehand-windows-amd64-installer.exe"},
 		{Name: "freehand-windows-amd64.exe"},
 		{Name: "SHA256SUMS"},
+		{Name: "freehand-windows-arm64-installer.exe"},
+		{Name: "freehand-windows-arm64.exe"},
 	}
 	got := freehandReleaseAsset(updater.CheckRequest{Platform: "windows", Arch: "amd64"}, assets)
 	if got != 1 {
 		t.Fatalf("asset index = %d, want 1", got)
+	}
+	if got := freehandReleaseAsset(updater.CheckRequest{Platform: "windows", Arch: "arm64"}, assets); got != 4 {
+		t.Fatalf("ARM64 asset index = %d, want 4", got)
+	}
+	if got := freehandReleaseAsset(updater.CheckRequest{Platform: "windows", Arch: "arm64"}, assets[:4]); got != -1 {
+		t.Fatalf("missing ARM64 executable selected asset %d", got)
 	}
 	if got := freehandReleaseAsset(updater.CheckRequest{Platform: "linux", Arch: "amd64"}, assets); got != -1 {
 		t.Fatalf("unsupported platform selected asset %d", got)

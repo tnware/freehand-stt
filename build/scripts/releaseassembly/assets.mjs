@@ -1,6 +1,8 @@
 export const assets = Object.freeze([
-  ["freehand.exe", "freehand-windows-amd64.exe"],
+  ["freehand-amd64.exe", "freehand-windows-amd64.exe"],
   ["freehand-amd64-installer.exe", "freehand-windows-amd64-installer.exe"],
+  ["freehand-arm64.exe", "freehand-windows-arm64.exe"],
+  ["freehand-arm64-installer.exe", "freehand-windows-arm64-installer.exe"],
   ["freehand-darwin-arm64.zip", "freehand-darwin-arm64.zip"],
   ["freehand-darwin-amd64.zip", "freehand-darwin-amd64.zip"],
 ].sort((a, b) => a[1].localeCompare(b[1])).map(Object.freeze));

@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const names = ["freehand-windows-amd64.exe", "freehand-windows-amd64-installer.exe", "freehand-darwin-arm64.zip", "freehand-darwin-amd64.zip", "SHA256SUMS"];
+const names = ["freehand-windows-amd64.exe", "freehand-windows-amd64-installer.exe", "freehand-windows-arm64.exe", "freehand-windows-arm64-installer.exe", "freehand-darwin-arm64.zip", "freehand-darwin-amd64.zip", "SHA256SUMS"];
 const payload = (names) => ({ assets: names.map((name) => ({ name })) });
 const run = (input) => spawnSync(process.execPath, [fileURLToPath(new URL("./check.mjs", import.meta.url))], { input, encoding: "utf8" });
 test("accepts exactly the public asset names in any order", () => {

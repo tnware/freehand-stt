@@ -21,6 +21,8 @@ Shared development prerequisites:
 ### Windows
 
 Use Windows 11, WebView2, and a compatible C toolchain.
+Use MinGW-w64 GCC for x64 or LLVM-MinGW's `aarch64-w64-mingw32-clang` for ARM64.
+Set `CC` to the compiler matching the target; native audio requires CGo.
 
 ```powershell
 npm ci --prefix frontend
@@ -75,7 +77,8 @@ wails3 task build CGO_ENABLED=1 ARCH=amd64
 git diff --check
 ```
 
-Use `ARCH=arm64` for Apple Silicon native builds. Windows and macOS packaging
+Use `ARCH=arm64` for native Windows ARM64 and Apple Silicon builds. Windows CI
+tests and packages x64 and ARM64 on matching native runners. Windows and macOS packaging
 run on their respective native CI runners; deterministic checks do not establish
 hardware acceptance. Release publication must use the complete Windows and macOS
 artifacts from the same validated tagged run, with one complete `SHA256SUMS`.

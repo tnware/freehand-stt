@@ -18,7 +18,7 @@ deployment.
 
 CI's Linux jobs check Go, the SQLite contract, generated branding, Wails bindings,
 and the Svelte frontend. Windows runs native Go tests and validates its CGo
-executable and per-user NSIS installer. macOS produces and validates arm64 and
+executable and per-user NSIS installer on both x64 and ARM64 runners. macOS produces and validates arm64 and
 amd64 app-bundle ZIPs. Browser regressions are optional local checks; they do not
 gate packaging or release.
 
@@ -36,7 +36,7 @@ tag resolves to one commit for every validation job, with version checks before
 packaging. Publication uses only the complete Windows and macOS artifacts from
 that trusted workflow run; it never rebuilds or downloads PR/other-run artifacts.
 
-The four canonical deliverables and one `SHA256SUMS` must exactly match the
+The six canonical deliverables and one `SHA256SUMS` must exactly match the
 draft's remote asset names. Missing, unexpected, duplicate, or malformed names
 block publication without deleting unknown remote assets. CI checksum sidecars
 may be inputs but are not published. Publication reads back uploaded checksums
@@ -88,7 +88,7 @@ fresh repository does not produce one pull request per action.
 | Environment | Required toolchain behavior |
 | --- | --- |
 | Ubuntu | Install GTK 4 and WebKitGTK 6.0 development packages before Wails compilation or CLI installation |
-| Windows | Use the exact Wails CLI version from `go.mod`, MSYS2 MinGW-w64 for malgo/miniaudio, and NSIS 3.12; no private runner or registry |
+| Windows | Use the exact Wails CLI version from `go.mod`, MSYS2 MinGW-w64 GCC on x64 or checksum-pinned LLVM-MinGW on ARM64, and NSIS 3.12; no private runner or registry |
 | CI packaging | Use `npm ci` with the committed lockfile; ordinary local packages retain `npm install` |
 
 <details>
