@@ -4,6 +4,9 @@ Freehand is the user-facing product name. `freehand-stt` is the repository and
 technical discovery name; it should not appear as the product name in ordinary
 application chrome.
 
+See [Freehand project identity](../TRADEMARKS.md) for official sources and guidance
+on using the project name and logos.
+
 These SVG files are authoritative production artwork:
 
 - [`freehand-mark.svg`](freehand-mark.svg) is the detailed waveform-to-caret
