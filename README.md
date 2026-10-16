@@ -114,3 +114,5 @@ development setup and pull-request guidance.
 
 Please report vulnerabilities through GitHub private vulnerability reporting,
 not a public issue. Freehand is available under the [MIT License](LICENSE).
+See [Freehand project identity](TRADEMARKS.md) for official sources and guidance
+on the project name and logos.
