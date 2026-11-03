@@ -156,8 +156,15 @@
       ? inspectorVisible
       : auxPane === "history" && layout.secondaryVisible,
   );
+  const recentPanelHidden = $derived(
+    (auxPane === "runtimes" || auxPane === "connections") &&
+      layout.tab === "recent",
+  );
+  const panelAvailable = $derived(auxPane !== "settings" && !recentPanelHidden);
   const bottomAvailable = $derived(
-    auxPane !== "settings" && layout.bottomAvailable.current,
+    panelAvailable &&
+      layout.bottomAvailable.current &&
+      !layout.bottomSuppressed,
   );
   const composerVisible = $derived(auxPane === null && inputMode === "tts");
   const primaryAvailable = $derived(
@@ -811,7 +818,11 @@
     {bottomAvailable}
     bottomUnavailableReason={auxPane === "settings"
       ? "The bottom panel is hidden in Settings"
-      : undefined}
+      : layout.bottomSuppressed
+        ? "The bottom panel is hidden during setup"
+        : recentPanelHidden
+          ? "Recent history is available in Voice, Audio file, and History"
+          : undefined}
     onTogglePrimary={primaryAvailable
       ? () => layout.togglePrimary()
       : undefined}
@@ -835,7 +846,7 @@
     <WorkbenchFrame
       {layout}
       area={auxPane ?? "workflow"}
-      panelAvailable={auxPane !== "settings"}
+      {panelAvailable}
       {secondaryShown}
       retainSecondary={inspectorOpen}
       onDismissSecondary={dismissSecondary}

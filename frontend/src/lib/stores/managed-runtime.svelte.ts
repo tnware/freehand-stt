@@ -169,7 +169,9 @@ export class ManagedRuntimeState {
         this.#errors[id] =
           label === "Delete instance"
             ? "Could not delete runtime. Remove or reassign its Connections, finish active work, and try again."
-            : "The runtime operation did not finish. Review its status and try again.";
+            : label === "Save instance"
+              ? "Could not save runtime changes. Review Connections and task settings, finish any active work, and try again."
+              : "The runtime operation did not finish. Review its status and try again.";
         if (retryable)
           this.#retries[id] = () =>
             this.#perform(id, label, action, inventory, cancel);

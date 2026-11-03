@@ -68,3 +68,34 @@ for (const sidebar of [true, false]) {
     });
   }
 }
+
+test("model guidance distinguishes discovery from selection and saved changes", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?view=picker-feedback&sidebar");
+  const input = page.getByRole("combobox", { name: "Choose model" });
+  await expect(
+    page.getByText("Selection applies when you save.", { exact: true }),
+  ).toBeVisible();
+  await expect(input).toHaveAccessibleDescription(
+    /does not download, load, or run models/,
+  );
+  await page.getByRole("button", { name: "About model settings" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "About model settings" }),
+  ).toContainText("a listed model may not support this task");
+  await page.keyboard.press("Escape");
+  await input.click();
+  await expect(
+    page.getByText(/Listed models are not tested for compatibility/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: /fixture\/model/ }),
+  ).toContainText("Selected");
+  await input.fill("my-server/exact-model-id");
+  await expect(
+    page.getByRole("option", { name: /Use “my-server\/exact-model-id”/ }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(input).toHaveValue("fixture/model");
+});

@@ -1,4 +1,8 @@
 <script lang="ts">
+  import {
+    renameConnectionHeader,
+    savedConnectionID,
+  } from "$lib/utils/connectionEditor";
   import Disclosure from "$lib/components/common/Disclosure.svelte";
   import { platformPresentation } from "$lib/platform";
   import {
@@ -148,7 +152,7 @@
     return !!list?.some((p) => p.id === profile && p.available);
   }
   function setProfile(profile: ID) {
-    if (!form) return;
+    if (!form || busy) return;
     form.details.compatibilityProfile = profile;
     form.uses = form.uses.filter((p) => supports(p, profile));
     if (form.creating && !form.uses.length) {
@@ -188,25 +192,45 @@
     if (value === AuthenticationMode.AuthenticationModeNone)
       form.credentialDraft = "";
   }
-  function renameHeader(old: string, next: string) {
-    if (!form || old === next) return;
-    const headers = { ...form.details.headers };
-    const value = headers[old];
-    delete headers[old];
-    headers[next] = value;
+  let headerError = $state("");
+  $effect(() => {
+    // A new editor or transport must not inherit feedback from the previous one.
+    form;
+    form?.details.managedInstanceID;
+    form?.details.compatibilityProfile;
+    headerError = "";
+  });
+  function renameHeader(old: string, input: HTMLInputElement) {
+    if (!form || busy) return;
+    const headers = renameConnectionHeader(
+      form.details.headers ?? {},
+      old,
+      input.value,
+    );
+    if (!headers) {
+      headerError =
+        "A header with that name already exists. Both headers have been kept.";
+      input.value = old;
+      return;
+    }
+    headerError = "";
     form.details.headers = headers;
   }
   function removeHeader(key: string) {
     if (!form) return;
     const headers = { ...form.details.headers };
     delete headers[key];
+    headerError = "";
     form.details.headers = headers;
   }
   function addHeader() {
     if (!form) return;
     let key = "X-Custom-Header",
       n = 1;
-    while (key in (form.details.headers ?? {})) key = `X-Custom-Header-${++n}`;
+    const existing = new Set(
+      Object.keys(form.details.headers ?? {}).map((key) => key.toLowerCase()),
+    );
+    while (existing.has(key.toLowerCase())) key = `X-Custom-Header-${++n}`;
     form.details.headers = { ...form.details.headers, [key]: "" };
   }
   const native = $derived(platformPresentation(editor.applied?.platform));
@@ -217,8 +241,12 @@
     id={formID}
     onsubmit={async (event) => {
       event.preventDefault();
+      if (busy) return;
       const purpose = activateFor;
-      const name = form.name.trim();
+      const editedID = form.creating ? undefined : form.id;
+      const existingIDs = new Set(
+        catalog?.entries?.map((connection) => connection.id),
+      );
       if (
         managed &&
         (!instance ||
@@ -233,9 +261,11 @@
       if (await editor.saveConnection(purpose))
         onSaved(
           purpose,
-          editor.applied?.savedConnections.entries?.find(
-            (connection) => connection.name === name,
-          )?.id,
+          savedConnectionID(
+            editor.applied?.savedConnections.entries ?? [],
+            editedID,
+            existingIDs,
+          ),
         );
     }}
     class="flex min-h-0 flex-col gap-3"
@@ -381,6 +411,7 @@
             id="connection-profile"
             bind:value={() => form.details.compatibilityProfile, setProfile}
             {profiles}
+            disabled={busy}
           />
 
           <ValueRow
@@ -502,7 +533,7 @@
                   : "Save for later"}</Select.Trigger
               >
               <Select.Content>
-                {#each roles.filter( (role) => supports(role.id), ) as role (role.id)}<Select.Item
+                {#each roles.filter( (role) => supports(role.id) ) as role (role.id)}<Select.Item
                     value={role.id}>Set up {role.label}</Select.Item
                   >{/each}
                 <Select.Separator /><Select.Item value="save-only"
@@ -541,7 +572,7 @@
                   <ValueInput
                     aria-label="Header name"
                     value={key}
-                    onblur={(e) => renameHeader(key, e.currentTarget.value)}
+                    onblur={(e) => renameHeader(key, e.currentTarget)}
                     disabled={busy}
                   /><ValueInput
                     aria-label={`Value for ${key}`}
@@ -570,6 +601,9 @@
                   Object.keys(form.details.headers ?? {}).length >= 32}
                 >Add header</Button
               >
+              {#if headerError}<p role="alert" class="text-xs text-destructive">
+                  {headerError}
+                </p>{/if}
             </div>
           </div>
         </Disclosure>

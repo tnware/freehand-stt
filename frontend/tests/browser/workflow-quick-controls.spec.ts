@@ -1,247 +1,215 @@
 import { test, expect } from "./fixtures";
 
+const workflows = [
+  {
+    name: "Voice transcription",
+    preferences: "Voice and microphone settings",
+  },
+  {
+    name: "Audio file",
+    preferences: "Transcription settings",
+  },
+  {
+    name: "Text to speech",
+    preferences: "Voice and speech settings",
+  },
+] as const;
+
 for (const width of [1280, 560]) {
-  test(`Voice microphone selection saves and recovers at ${width}px`, async ({
-    page,
-    saves,
-  }, info) => {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
-    const sidebar = page.locator("#workbench-primary-sidebar");
-    if (!(await sidebar.isVisible()))
+  for (const workflow of workflows) {
+    test(`${workflow.name} keeps everyday controls simple at ${width}px`, async ({
+      page,
+      saves,
+    }, info) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
       await page
-        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
+        .getByRole("button", { name: workflow.name, exact: true })
         .click();
-    const input = sidebar.getByRole("group", {
-      name: "Microphone input",
-      exact: true,
+      const sidebar = page.locator("#workbench-primary-sidebar");
+      if (!(await sidebar.isVisible()))
+        await page
+          .getByRole("button", { name: "Toggle primary sidebar", exact: true })
+          .click();
+      const chooser = sidebar.getByRole("button", {
+        name: "Change engine or model",
+        exact: true,
+      });
+      await expect(chooser).toBeVisible();
+      const sidebarBox = await sidebar.boundingBox();
+      const chooserBox = await chooser.boundingBox();
+      expect(sidebarBox).not.toBeNull();
+      expect(chooserBox).not.toBeNull();
+      // Keep useful model content wide in the narrow rail, with breathing room.
+      expect(chooserBox!.x - sidebarBox!.x).toBeLessThanOrEqual(13);
+      expect(
+        sidebarBox!.x + sidebarBox!.width - chooserBox!.x - chooserBox!.width,
+      ).toBeLessThanOrEqual(14);
+
+      await expect(chooser.locator(".provider-icon img")).toBeVisible();
+      await expect(
+        sidebar.getByRole("region", { name: "Workflow summary" }),
+      ).toBeVisible();
+      await expect(
+        sidebar.getByText(
+          /Your words, naturally|Bring your words to life|Speak, then get back/,
+        ),
+      ).toHaveCount(0);
+      await expect(sidebar.getByText("Model", { exact: true })).toBeVisible();
+      await expect(sidebar.getByRole("combobox")).toHaveCount(0);
+      await expect(sidebar.getByRole("slider")).toHaveCount(0);
+      await expect(sidebar.getByRole("switch")).toHaveCount(0);
+      await expect(
+        sidebar.getByRole("button", { name: "Microphone", exact: true }),
+      ).toHaveCount(0);
+      const original = await chooser.innerText();
+      await chooser.click();
+      const dialog = page.getByRole("dialog", {
+        name: "Engine and model",
+        exact: true,
+      });
+      await expect(
+        dialog.getByRole("combobox", {
+          name: "Choose connection",
+          exact: true,
+        }),
+      ).toBeVisible();
+      const model = dialog.getByRole("combobox", {
+        name: "Choose model",
+        exact: true,
+      });
+      const originalModel = await model.inputValue();
+      await model.fill("unsaved/manual-search");
+      await page.keyboard.press("Escape");
+      await expect(model).toHaveValue(originalModel);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(chooser).toHaveText(original);
+      await expect(chooser).toBeFocused();
+
+      await chooser.click();
+      const longModel = `my-server/${"long-model-name-".repeat(8)}model`;
+      await model.fill(longModel);
+      await page.getByRole("option", { name: /^Use “my-server\// }).click();
+      await saves.complete(await saves.waitForStart(), "success");
+      await expect(model).toHaveValue(longModel);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(chooser).toContainText(longModel);
+      expect(
+        await chooser.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      ).toBe(true);
+      expect(
+        await sidebar.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      ).toBe(true);
+      await page.screenshot({
+        path: info.outputPath("simple-model-sidebar.png"),
+      });
+
+      await sidebar
+        .getByRole("button", { name: "Workflow preferences", exact: true })
+        .click();
+      const preferences = page.getByRole("dialog", {
+        name: "Workflow preferences",
+        exact: true,
+      });
+      await expect(
+        preferences.getByRole("button", {
+          name: workflow.preferences,
+          exact: true,
+        }),
+      ).toBeVisible();
+      if (workflow.name !== "Text to speech") {
+        await expect(
+          preferences.getByRole("button", {
+            name: "Transcript cleanup",
+            exact: true,
+          }),
+        ).toBeVisible();
+        await expect(
+          preferences.getByRole("button", {
+            name: "Personal vocabulary",
+            exact: true,
+          }),
+        ).toBeVisible();
+      }
+      if (workflow.name === "Audio file")
+        await expect(
+          preferences.getByRole("switch", {
+            name: "Stream partial results",
+            exact: true,
+          }),
+        ).toBeVisible();
+      await preferences
+        .getByRole("button", { name: workflow.preferences, exact: true })
+        .click();
+      await expect(preferences).toBeHidden();
+      const inspector = page.locator('[data-pane="configuration"]');
+      await expect(inspector).toBeVisible();
+      if (workflow.name === "Voice transcription") {
+        await expect(inspector.locator("#voice-language")).toBeVisible();
+        await inspector
+          .getByRole("tab", { name: "Audio settings", exact: true })
+          .click();
+        await expect(inspector.locator("#microphone-select")).toBeVisible();
+      }
     });
-    const microphone = input.getByRole("button", {
-      name: "Microphone",
-      exact: true,
-    });
-    await expect(microphone).toContainText("System default microphone");
-
-    await microphone.click();
-    await page
-      .getByRole("option", { name: "Fixture microphone", exact: true })
-      .click();
-    const failed = await saves.waitForStart();
-    await expect(microphone).toBeDisabled();
-    await expect(input.getByRole("status")).toContainText("Saving…");
-    await saves.complete(failed, "failure");
-    await expect(microphone).toBeEnabled();
-    await expect(microphone).toContainText("System default microphone");
-    await expect(input.getByRole("status")).toContainText(
-      "Your previous settings are still active",
-    );
-
-    await microphone.click();
-    await page
-      .getByRole("option", { name: "Fixture microphone", exact: true })
-      .click();
-    await saves.complete(await saves.waitForStart(), "success");
-    await expect(microphone).toContainText("Fixture microphone");
-    await expect(input.getByRole("status")).toHaveText("Saved");
-    await input
-      .getByRole("button", { name: "Refresh microphones", exact: true })
-      .click();
-    await expect(microphone).toContainText("Fixture microphone");
-    await page.screenshot({ path: info.outputPath("microphone-sidebar.png") });
-    expect(
-      await sidebar.evaluate((el) => el.scrollWidth <= el.clientWidth),
-    ).toBe(true);
-
-    if (width < 700)
-      await page
-        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
-        .click();
-    await page
-      .getByRole("button", { name: "Voice settings", exact: true })
-      .click();
-    const inspector = page.locator('[data-pane="configuration"]');
-    await inspector
-      .getByRole("tab", { name: "Audio settings", exact: true })
-      .click();
-    await expect(inspector.locator("#microphone-select")).toContainText(
-      "Fixture microphone",
-    );
-    await inspector.locator("#max-duration").fill("140");
-    // At narrow widths the inspector covers the still-mounted primary sidebar.
-    const mountedMicrophone = sidebar.locator('button[id$="-microphone"]');
-    await expect(mountedMicrophone).toBeDisabled();
-    await inspector
-      .getByRole("button", { name: "Discard changes", exact: true })
-      .click();
-    await expect(mountedMicrophone).toBeEnabled();
-    await inspector.getByRole("button", { name: "Done", exact: true }).click();
-    if (!(await sidebar.isVisible()))
-      await page
-        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
-        .click();
-
-    await microphone.click();
-    await page
-      .getByRole("option", { name: "System default microphone", exact: true })
-      .click();
-    await saves.complete(await saves.waitForStart(), "success");
-    await expect(microphone).toContainText("System default microphone");
-    await page.getByRole("button", { name: "Audio file", exact: true }).click();
-    await expect(input).toHaveCount(0);
-  });
+  }
 }
 
-for (const workflow of ["Voice transcription", "Audio file"]) {
-  test(`${workflow} custom language commits the complete value`, async ({
-    page,
-    saves,
-  }) => {
-    await page.setViewportSize({ width: 1280, height: 820 });
-    await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
-    await page.getByRole("button", { name: workflow, exact: true }).click();
-    const sidebar = page.locator("#workbench-primary-sidebar");
-    const language = sidebar.locator(
-      workflow === "Audio file"
-        ? 'input[id$="-quick-file-language"]'
-        : 'input[id$="-voice-language"]',
-    );
-    await language.fill("unlisted");
-    await page
-      .getByRole("option", { name: "Custom server value…", exact: true })
-      .click();
-    const custom = sidebar.getByRole("textbox", {
-      name: "Custom language value",
-      exact: true,
-    });
-    await custom.fill("");
-    await custom.pressSequentially("en-US");
-    await expect(custom).toHaveValue("en-US");
-    await expect(custom).toBeEnabled();
-    await custom.press("Enter");
-    const save = await saves.waitForStart();
-    await expect(custom).toBeDisabled();
-    await saves.complete(save, "success");
-    await expect(custom).toBeEnabled();
-    await expect(custom).toHaveValue("en-US");
-    await expect(page.locator("#workbench-secondary-sidebar")).toBeHidden();
-  });
-}
-
-test("Voice quick model saves immediately, recovers from failure, and respects a dirty inspector", async ({
+test("model save failure retains the applied selection and permits retry", async ({
   page,
   saves,
-}, info) => {
+}) => {
   await page.setViewportSize({ width: 1280, height: 820 });
   await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
-  const sidebar = page.locator("#workbench-primary-sidebar");
-  const model = sidebar.locator('input[id$="-voice-model"]');
-  const original = await model.inputValue();
-  await expect(
-    sidebar
-      .getByRole("combobox", { name: "Choose connection", exact: true })
-      .first(),
-  ).toBeVisible();
+  const chooser = page
+    .locator("#workbench-primary-sidebar")
+    .getByRole("button", { name: "Change engine or model", exact: true });
+  const original = await chooser.innerText();
+  await chooser.click();
+  const dialog = page.getByRole("dialog", {
+    name: "Engine and model",
+    exact: true,
+  });
+  const model = dialog.getByRole("combobox", {
+    name: "Choose model",
+    exact: true,
+  });
+  const previousModel = await model.inputValue();
   await model.fill("voice/next");
-  await page.getByRole("option", { name: /voice\/next/ }).click();
-  const firstSave = await saves.waitForStart();
+  await page.getByRole("option", { name: /Use “voice\/next”/ }).click();
+  const pending = await saves.waitForStart();
   await expect(model).toBeDisabled();
-  await saves.complete(firstSave, "failure");
+  await expect(chooser).toHaveText(original);
+  await saves.complete(pending, "failure");
   await expect(model).toBeEnabled();
+  await expect(dialog.getByRole("status")).toContainText(
+    "Your previous settings are still active",
+  );
   await page.keyboard.press("Escape");
-  await expect(model).toHaveValue(original);
+  await expect(model).toHaveValue(previousModel);
+  await expect(chooser).toHaveText(original);
   await model.fill("voice/next");
-  await page.getByRole("option", { name: /voice\/next/ }).click();
+  await page.getByRole("option", { name: /Use “voice\/next”/ }).click();
   await saves.complete(await saves.waitForStart(), "success");
   await expect(model).toHaveValue("voice/next");
-  await expect(page.locator("#workbench-secondary-sidebar")).toBeHidden();
-  await page
-    .getByRole("button", { name: "Voice settings", exact: true })
-    .click();
-  const inspector = page.locator('[data-pane="configuration"]');
-  await inspector.locator("#voice-profile").click();
-  await page.getByRole("option", { name: /Qwen3-ASR/ }).click();
-  await expect(model).toBeDisabled();
-  await expect(inspector.locator("#voice-profile")).toContainText("Qwen3-ASR");
-  await page.screenshot({
-    path: info.outputPath("voice-quick-and-detailed.png"),
-  });
-});
-
-test("file language stays independent and cleanup quick changes are shared with Voice", async ({
-  page,
-  saves,
-}, info) => {
-  await page.setViewportSize({ width: 1280, height: 820 });
-  await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
-  const sidebar = page.locator("#workbench-primary-sidebar");
-  const voiceLanguage = await sidebar
-    .locator('input[id$="-voice-language"]')
-    .inputValue();
-  await page.getByRole("button", { name: "Audio file", exact: true }).click();
-  const language = sidebar.getByRole("combobox", {
-    name: "Language",
-    exact: true,
-  });
-  await language.fill("fr");
-  await page.getByRole("option", { name: "French (fr)", exact: true }).click();
-  await saves.complete(await saves.waitForStart(), "success");
-  await expect(language).toHaveValue("French (fr)");
-  const cleanup = sidebar.getByRole("switch", {
-    name: "Post-process transcripts",
-    exact: true,
-  });
-  const previous = await cleanup.getAttribute("aria-checked");
-  await cleanup.click();
-  await saves.complete(await saves.waitForStart(), "success");
-  await expect(cleanup).toHaveAttribute(
-    "aria-checked",
-    previous === "true" ? "false" : "true",
-  );
-  await page.screenshot({ path: info.outputPath("file-quick-settings.png") });
-  await page
-    .getByRole("button", { name: "Voice transcription", exact: true })
-    .click();
-  await expect(sidebar.locator('input[id$="-voice-language"]')).toHaveValue(
-    voiceLanguage,
-  );
-  await expect(cleanup).toHaveAttribute(
-    "aria-checked",
-    previous === "true" ? "false" : "true",
-  );
-  await page.getByRole("button", { name: "Audio file", exact: true }).click();
-  await expect(language).toHaveValue("French (fr)");
+  await page.keyboard.press("Escape");
+  await expect(chooser).toContainText("voice/next");
   await expect(page.locator("#workbench-secondary-sidebar")).toBeHidden();
 });
 
-test("speech quick controls save speed directly and fit the sidebar", async ({
+test("managed model card uses the existing runtime identity without inferring from model IDs", async ({
   page,
-  saves,
-}, info) => {
-  await page.setViewportSize({ width: 1280, height: 820 });
-  await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
-  await page
-    .getByRole("button", { name: "Text to speech", exact: true })
-    .click();
-  const sidebar = page.locator("#workbench-primary-sidebar");
+}) => {
+  await page.goto("/tests/browser/app/?view=workspace&pickers&local-model");
+  const chooser = page.getByRole("button", {
+    name: "Change engine or model",
+    exact: true,
+  });
+  await expect(chooser).toContainText("NeMo-Speech.cpp");
+  await expect(chooser).toContainText("Nemotron 3.5 Streaming");
   await expect(
-    sidebar.getByRole("group", { name: "Speech quick settings", exact: true }),
+    chooser.locator('[data-provider="nemo-speech-cpp"] img'),
   ).toBeVisible();
-  await expect(
-    sidebar.getByRole("combobox", { name: "Choose connection", exact: true }),
-  ).toBeVisible();
-  const speed = sidebar.getByRole("slider", { name: "Speech playback speed" });
-  await speed.focus();
-  await speed.press("ArrowRight");
-  await saves.complete(await saves.waitForStart(), "success");
-  await expect(speed).toHaveAttribute("aria-valuenow", "1.05");
-  await expect(
-    page.getByRole("dialog", { name: "Speech settings", exact: true }),
-  ).toHaveCount(0);
-  await expect(page.locator("#workbench-secondary-sidebar")).toBeHidden();
-  await page.screenshot({ path: info.outputPath("speech-quick-settings.png") });
-  expect(
-    await sidebar.evaluate(
-      (element) => element.scrollWidth <= element.clientWidth,
-    ),
-  ).toBe(true);
 });

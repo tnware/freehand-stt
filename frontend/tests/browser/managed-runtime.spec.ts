@@ -158,6 +158,7 @@ for (const provider of ["llama-cpp", "whisper-cpp"]) {
       ),
     ).toEqual(connections);
     expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+      `GetBinaryOptions:${provider}`,
       `Stop:${before.instance.id}`,
       `InstallBackend:${before.instance.id}:cuda`,
       `Start:${before.instance.id}`,
@@ -385,6 +386,7 @@ test("macOS llama installation and switching use Metal without CUDA", async ({
     "GetBinaryOptions:llama-cpp",
     "SetInstance:llama-cpp",
     "InstallBackend:llama-cpp:metal",
+    "GetBinaryOptions:llama-cpp",
     "InstallBackend:llama-cpp:cpu",
   ]);
 });
@@ -543,4 +545,66 @@ test("duplicate runtime recovery preserves identity and resets pending removal",
       window.testRuntime.snapshot().map((row) => row.instance.id),
     ),
   ).toEqual(["nemo-default"]);
+});
+
+test("installed binary choices respect hardware availability without downloading", async ({
+  page,
+}) => {
+  await page.goto(
+    "/tests/browser/app/?runtime&runtime-ready&runtime-provider=llama-cpp&runtime-cpu-only",
+  );
+  await openRuntimes(page);
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await preferences(page).click();
+  const cuda = page.getByRole("button", {
+    name: "NVIDIA GPU (CUDA)",
+    exact: true,
+  });
+  await expect(cuda).toBeDisabled();
+  await expect(cuda).toHaveAttribute("title", "No compatible GPU available");
+  await expect(
+    page.getByText(
+      "No compatible NVIDIA GPU is available; CPU is recommended.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Re-check binary options", exact: true })
+    .click();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "Stop:llama-cpp-default",
+    "GetBinaryOptions:llama-cpp",
+    "GetBinaryOptions:llama-cpp",
+  ]);
+});
+
+test("runtime model switches project consistently into the sidebar and status bar", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?main&runtime&runtime-ready");
+  await expect(page.locator("footer.status-bar")).toContainText("nemotron-3.5");
+  await openRuntimes(page);
+  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  await page
+    .getByRole("article", { name: "Parakeet TDT v3", exact: true })
+    .getByRole("button", { name: "Select", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Voice transcription", exact: true })
+    .click();
+  const sidebar = page.getByRole("complementary", {
+    name: "Voice transcription settings",
+  });
+  await expect(sidebar).toContainText("Parakeet TDT v3");
+  await expect(page.locator("footer.status-bar")).toContainText("parakeet-tdt");
+  await expect(page.locator("footer.status-bar")).not.toContainText(
+    "nemotron-3.5",
+  );
+  const applied = await page.evaluate(() =>
+    window.testConnectionWindows.settings(),
+  );
+  expect(applied.voiceTranscription.model).toBe("parakeet-tdt");
+  expect(applied.model).toBe("parakeet-tdt");
+  expect(applied.voiceTranscription.realtime).toBe(false);
 });

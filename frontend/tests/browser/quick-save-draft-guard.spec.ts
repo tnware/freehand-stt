@@ -7,11 +7,10 @@ test("an already-open inspector is read-only until a sidebar save finishes", asy
   await page.setViewportSize({ width: 1280, height: 820 });
   await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
   const sidebar = page.locator("#workbench-primary-sidebar");
-  const cleanup = sidebar.getByRole("switch", {
-    name: "Post-process transcripts",
+  const chooser = sidebar.getByRole("button", {
+    name: "Change engine or model",
     exact: true,
   });
-  const previousCleanup = await cleanup.getAttribute("aria-checked");
   await page
     .getByRole("button", { name: "Voice settings", exact: true })
     .click();
@@ -19,10 +18,24 @@ test("an already-open inspector is read-only until a sidebar save finishes", asy
   const language = inspector.locator("#voice-language");
   const previousLanguage = await language.inputValue();
   await expect(language).toBeEnabled();
-  await expect(cleanup).toBeEnabled();
-
-  await cleanup.click();
+  await expect(chooser).toBeEnabled();
+  await chooser.click();
+  const modelDialog = page.getByRole("dialog", {
+    name: "Engine and model",
+    exact: true,
+  });
+  const model = modelDialog.getByRole("combobox", {
+    name: "Choose model",
+    exact: true,
+  });
+  await model.fill("guard/next-model");
+  await page.getByRole("option", { name: /Use “guard\/next-model”/ }).click();
   const quickSave = await saves.waitForStart();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("dialog", { name: "Engine and model", exact: true }),
+  ).toBeHidden();
   await expect(
     inspector.getByText("Applying quick settings…", { exact: true }),
   ).toBeVisible();
@@ -57,15 +70,12 @@ test("an already-open inspector is read-only until a sidebar save finishes", asy
   await saves.complete(quickSave, "success");
   await expect(terms).toBeEnabled();
   await expect(terms).toHaveValue(previousTerms);
-  await expect(cleanup).toHaveAttribute(
-    "aria-checked",
-    previousCleanup === "true" ? "false" : "true",
-  );
+  await expect(chooser).toContainText("guard/next-model");
   const nextTerms = [previousTerms, "Save guard regression"]
     .filter(Boolean)
     .join("\n");
   await terms.fill(nextTerms);
-  await expect(cleanup).toBeDisabled();
+  await expect(chooser).toBeDisabled();
   await expect(
     inspector.getByText("Unsaved changes", { exact: true }),
   ).toBeVisible();
@@ -80,10 +90,7 @@ test("an already-open inspector is read-only until a sidebar save finishes", asy
     inspector.getByText("All changes saved", { exact: true }),
   ).toBeVisible();
   await inspector.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(cleanup).toHaveAttribute(
-    "aria-checked",
-    previousCleanup === "true" ? "false" : "true",
-  );
+  await expect(chooser).toContainText("guard/next-model");
   await page
     .getByRole("button", { name: "Voice settings", exact: true })
     .click();
@@ -99,12 +106,22 @@ test("opening the inspector during a failed quick save cannot create a draft tha
 }) => {
   await page.setViewportSize({ width: 1280, height: 820 });
   await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
-  const cleanup = page
+  const chooser = page
     .locator("#workbench-primary-sidebar")
-    .getByRole("switch", { name: "Post-process transcripts", exact: true });
-  const previousCleanup = await cleanup.getAttribute("aria-checked");
-  await cleanup.click();
+    .getByRole("button", { name: "Change engine or model", exact: true });
+  const original = await chooser.innerText();
+  await chooser.click();
+  const model = page
+    .getByRole("dialog", { name: "Engine and model", exact: true })
+    .getByRole("combobox", { name: "Choose model", exact: true });
+  await model.fill("guard/failed-model");
+  await page.getByRole("option", { name: /Use “guard\/failed-model”/ }).click();
   const quickSave = await saves.waitForStart();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("dialog", { name: "Engine and model", exact: true }),
+  ).toBeHidden();
   await page
     .getByRole("button", { name: "Voice settings", exact: true })
     .click();
@@ -119,7 +136,7 @@ test("opening the inspector during a failed quick save cannot create a draft tha
   await saves.complete(quickSave, "failure");
   await expect(duration).toBeEnabled();
   await expect(duration).toHaveValue(previousDuration);
-  await expect(cleanup).toHaveAttribute("aria-checked", previousCleanup!);
+  await expect(chooser).toHaveText(original);
   const changed = previousDuration === "140" ? "141" : "140";
   await duration.fill(changed);
   await expect(

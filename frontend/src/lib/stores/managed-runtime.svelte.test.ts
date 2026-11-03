@@ -159,6 +159,65 @@ describe("managed runtime inventory", () => {
     runtime.applyStatus(row("three"));
     expect(runtime.instances).toEqual([]);
   });
+  it("gives bounded save guidance and retries without publishing a rejected model", async () => {
+    let saved = row("one");
+    let reject = true;
+    const SetInstance = vi.fn<ManagedRuntimeService["SetInstance"]>(
+      async (instance) => {
+        if (reject) throw new Error("private connection URL and storage path");
+        saved = { ...saved, instance };
+      },
+    );
+    const changed = vi.fn();
+    const runtime = new ManagedRuntimeState(
+      boundary({ GetInstances: async () => [saved], SetInstance }),
+      () => true,
+      changed,
+    );
+    await runtime.load();
+    const next = { ...saved.instance, model: "parakeet-tdt" };
+    expect(await runtime.saveInstance(next)).toBe(false);
+    expect(runtime.errorFor("one")).toBe(
+      "Could not save runtime changes. Review Connections and task settings, finish any active work, and try again.",
+    );
+    expect(runtime.errorFor("one")).not.toContain("private");
+    expect(runtime.statusFor("one")?.instance.model).toBe("nemotron-3.5");
+    expect(runtime.pendingFor("one")).toBe("");
+    expect(changed).not.toHaveBeenCalled();
+    expect(runtime.canRetry("one")).toBe(true);
+
+    reject = false;
+    expect(await runtime.retry("one")).toBe(true);
+    expect(SetInstance).toHaveBeenNthCalledWith(2, next);
+    expect(runtime.statusFor("one")?.instance.model).toBe("parakeet-tdt");
+    expect(runtime.errorFor("one")).toBe("");
+    expect(runtime.canRetry("one")).toBe(false);
+    expect(changed).toHaveBeenCalledOnce();
+  });
+  it("keeps destructive failures non-retryable and never displays raw errors", async () => {
+    const runtime = new ManagedRuntimeState(
+      boundary({
+        DeleteInstance: async () => {
+          throw new Error("private storage detail");
+        },
+        Start: async () => {
+          throw new Error("private process detail");
+        },
+      }),
+    );
+    await runtime.load();
+    expect(await runtime.deleteInstance("one")).toBe(false);
+    expect(runtime.errorFor("one")).toBe(
+      "Could not delete runtime. Remove or reassign its Connections, finish active work, and try again.",
+    );
+    expect(runtime.canRetry("one")).toBe(false);
+    expect(runtime.statusFor("one")).toBeDefined();
+    expect(await runtime.run("one", "Start")).toBe(false);
+    expect(runtime.errorFor("one")).toBe(
+      "The runtime operation did not finish. Review its status and try again.",
+    );
+    expect(runtime.canRetry("one")).toBe(true);
+  });
   it("targets independent instances while blocking duplicate work on one", async () => {
     const Start = vi.fn(async () => {});
     const runtime = new ManagedRuntimeState(boundary({ Start }));

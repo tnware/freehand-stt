@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ModelSelectionSummary from "$lib/components/settings/ModelSelectionSummary.svelte";
   import NeMoTranscriptionControls from "../settings/NeMoTranscriptionControls.svelte";
   import SettingsCard from "../settings/SettingsCard.svelte";
   import SettingsDisclosure from "../settings/SettingsDisclosure.svelte";
@@ -171,6 +172,12 @@
       : "space-y-4"}
   class:voice-sidebar={sidebar}
 >
+  {#if !setup && !(managed && runtime)}<ModelSelectionSummary
+      {settings}
+      purpose={Purpose.Voice}
+      {runtime}
+      {draft}
+    />{/if}
   {#if !draft}
     {#if !setup && !sidebar}<h3 class="text-[13px] font-semibold">
         Transcription
@@ -211,7 +218,7 @@
   {#if draft}
     <SettingsCard>
       {#if managed && runtime}<ManagedRuntimeControls
-          {sidebar}
+          sidebar
           workBusy={runtimeWorkBusy}
           {runtime}
           {instanceID}
