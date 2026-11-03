@@ -107,14 +107,14 @@ describe("runtime catalog presentation", () => {
   });
   it("labels known language and quantization variants only as presentation metadata", () => {
     expect(runtimeVariantLabel(ProviderID.WhisperCPP, "base")).toBe(
-      "Multilingual · Standard",
+      "Multilingual · Standard file",
     );
     expect(runtimeVariantLabel(ProviderID.WhisperCPP, "base.en-q5_1")).toBe(
-      "English only · Q5_1",
+      "English only · Reduced precision (Q5_1)",
     );
     expect(
       runtimeVariantLabel(ProviderID.WhisperCPP, "large-v3-turbo-q8_0"),
-    ).toBe("Multilingual · Q8_0");
+    ).toBe("Multilingual · Reduced precision (Q8_0)");
     expect(runtimeVariantLabel(ProviderID.WhisperCPP, "base-custom")).toBe("");
   });
 });

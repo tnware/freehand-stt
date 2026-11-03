@@ -69,9 +69,11 @@ function whisperFamily(id: string) {
 export function runtimeVariantLabel(provider: ProviderID, id: string): string {
   if (provider !== ProviderID.WhisperCPP || !whisperFamily(id)) return "";
   const language = id.includes(".en") ? "English only" : "Multilingual";
-  const quantization =
-    /-(q[58]_[01])$/.exec(id)?.[1].toUpperCase() ?? "Standard";
-  return `${language} · ${quantization}`;
+  const quantization = /-(q[58]_[01])$/.exec(id)?.[1].toUpperCase();
+  const file = quantization
+    ? `Reduced precision (${quantization})`
+    : "Standard file";
+  return `${language} · ${file}`;
 }
 
 /** Presentation only: callers supply the already-qualified provider catalog. */

@@ -40,7 +40,7 @@ for (const provider of ["llama-cpp", "whisper-cpp", "nemo-speech-cpp"]) {
     }
     if (provider === "nemo-speech-cpp") {
       await expect(
-        models.getByText("Source: NeMo’s built-in model manager"),
+        models.getByText("NeMo’s built-in model manager", { exact: true }),
       ).toHaveCount(2);
       await expect(models.getByRole("link")).toHaveCount(0);
     } else {

@@ -63,7 +63,9 @@ for (const { width, ready } of [
     await details.focus();
     await page.keyboard.press("Enter");
     await expect(details).toHaveAttribute("aria-expanded", "true");
-    await expect(recommended.getByText("Model ID:")).toBeVisible();
+    await expect(
+      recommended.getByText("Model ID", { exact: true }),
+    ).toBeVisible();
     await expect(
       recommended.getByRole("link", {
         name: "ggerganov/whisper.cpp",
@@ -185,12 +187,24 @@ for (const width of [1280, 560]) {
 
     await page.getByRole("button", { name: "Stop", exact: true }).click();
     await expect(select).toBeEnabled();
+    const selectBox = await select.boundingBox();
+    const downloadBox = await download.boundingBox();
+    expect(selectBox).not.toBeNull();
+    expect(downloadBox).not.toBeNull();
     await select.click();
     await expect(model.getByText("Selected", { exact: true })).toBeVisible();
     await expect(
       model.getByText("Not downloaded", { exact: true }),
     ).toBeVisible();
     await expect(download).toBeEnabled();
+    const downloadAfterSelection = await download.boundingBox();
+    expect(downloadAfterSelection?.x).toBeCloseTo(downloadBox!.x, 0);
+    expect(downloadAfterSelection?.y).toBeCloseTo(downloadBox!.y, 0);
+    // A second click at Select's old coordinates must not become Download.
+    await page.mouse.click(
+      selectBox!.x + selectBox!.width / 2,
+      selectBox!.y + selectBox!.height / 2,
+    );
     await expect(
       page.getByRole("button", { name: "Start", exact: true }),
     ).toHaveCount(0);
@@ -202,6 +216,14 @@ for (const width of [1280, 560]) {
     await download.click();
     await expect(model.getByText("Selected", { exact: true })).toBeVisible();
     await expect(model.getByText("Downloading", { exact: true })).toBeVisible();
+    // Cancel lives with progress, never under the just-clicked Download button.
+    await page.mouse.click(
+      downloadBox!.x + downloadBox!.width / 2,
+      downloadBox!.y + downloadBox!.height / 2,
+    );
+    expect(await page.evaluate(() => window.testRuntime.calls)).not.toContain(
+      "Cancel:whisper-cpp-default",
+    );
     await model.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(model.getByText("Selected", { exact: true })).toBeVisible();
     await expect(
@@ -230,6 +252,56 @@ for (const width of [1280, 560]) {
     ]);
     expect(
       await catalog.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+for (const width of [1280, 560]) {
+  test(`speech selection cannot turn a repeated click into Disable at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(
+      "/tests/browser/app/?main&runtime&runtime-ready&runtime-combined",
+    );
+    await page
+      .getByRole("button", { name: "Local runtime", exact: true })
+      .click();
+    const speech = page.getByRole("article", {
+      name: "Magpie TTS Multilingual",
+      exact: true,
+    });
+    await speech.getByRole("button", { name: "Disable", exact: true }).click();
+    await page.setViewportSize({ width, height: 900 });
+    const select = speech.getByRole("button", { name: "Select", exact: true });
+    await expect(select).toBeEnabled();
+    await select.scrollIntoViewIfNeeded();
+    const selectBox = await select.boundingBox();
+    const download = speech.getByRole("button", {
+      name: "Download",
+      exact: true,
+    });
+    const beforeDownload = await download.boundingBox();
+    await select.click();
+    await expect(speech.getByText("Selected", { exact: true })).toBeVisible();
+    await expect(select).toHaveCount(0);
+    const afterDownload = await download.boundingBox();
+    expect(afterDownload?.x).toBeCloseTo(beforeDownload!.x, 0);
+    expect(afterDownload?.y).toBeCloseTo(beforeDownload!.y, 0);
+    const calls = await page.evaluate(() => [...window.testRuntime.calls]);
+    await page.mouse.click(
+      selectBox!.x + selectBox!.width / 2,
+      selectBox!.y + selectBox!.height / 2,
+    );
+    await expect(speech.getByText("Selected", { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual(calls);
+    await expect(
+      speech.getByRole("button", { name: "Disable", exact: true }),
+    ).toBeEnabled();
+    expect(
+      await speech.evaluate(
         (element) => element.scrollWidth <= element.clientWidth,
       ),
     ).toBe(true);

@@ -1,10 +1,11 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { Role } from "$bindings/compatibility";
-  import type {
-    InstanceStatus,
-    Model,
-    ProviderDescriptor,
+  import {
+    ProviderID,
+    type InstanceStatus,
+    type Model,
+    type ProviderDescriptor,
   } from "$bindings/managedruntime";
   import BoxIcon from "@lucide/svelte/icons/box";
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
@@ -15,7 +16,7 @@
   import XIcon from "@lucide/svelte/icons/x";
   import { Button } from "$lib/components/ui/button";
   import { Input } from "$lib/components/ui/input";
-  import ModelDownloadSource from "$lib/components/settings/ModelDownloadSource.svelte";
+  import RuntimeModelDetails from "./RuntimeModelDetails.svelte";
   import {
     isSpeechRuntimeModel,
     modelSize,
@@ -258,6 +259,12 @@
           ? "Stop the runtime to download, remove, or select a model. Start it again when ready."
           : "Browsing and selecting do not download files. Use Download to get a model."}
   </p>
+  {#if supported && entry.id === ProviderID.WhisperCPP && models.some((model) => model.recommended)}
+    <p class="content-meta pb-2">
+      For a starting point, choose a model marked Recommended. Expand a family
+      to compare language and file variants.
+    </p>
+  {/if}
   {#if supported && entry.models?.some(isSpeechRuntimeModel)}
     <p class="content-meta pb-2">
       Choose one transcription model and optionally a speech model. Both load in
@@ -353,7 +360,7 @@
                     class="catalog-model"
                     class:model-selected={selected}
                   >
-                    <div class="model-row">
+                    <div class="model-row" class:speech-model={speechModel}>
                       <button
                         type="button"
                         class="disclosure-trigger model-identity"
@@ -421,34 +428,45 @@
                               : "Not downloaded"}
                         </span>
                       </span>
-                      <span
-                        class="model-actions flex items-center justify-end gap-1"
+                      <div
+                        class="model-actions"
+                        class:speech-actions={speechModel}
                       >
-                        {#if downloading && busy}
-                          <Button
-                            variant="outline"
-                            size="xs"
-                            disabled={cancelling}
-                            onclick={onCancel}>Cancel</Button
-                          >
-                        {:else}
-                          {#if !model.installed}<Button
-                              variant="outline"
-                              size="xs"
-                              disabled={controlsLocked}
-                              title={!supported
-                                ? unavailableReason
-                                : !installed
-                                  ? "Install this runtime first"
-                                  : running
-                                    ? "Stop the runtime before downloading a model"
-                                    : undefined}
-                              onclick={() => onGet(model)}
-                              ><DownloadIcon
-                                class="size-3"
-                                aria-hidden="true"
-                              />Download</Button
-                            >{/if}
+                        <div class="transfer-slot">
+                          {#if !(downloading && busy)}
+                            {#if !model.installed}<Button
+                                variant="outline"
+                                size="xs"
+                                disabled={controlsLocked}
+                                title={!supported
+                                  ? unavailableReason
+                                  : !installed
+                                    ? "Install this runtime first"
+                                    : running
+                                      ? "Stop the runtime before downloading a model"
+                                      : undefined}
+                                onclick={() => onGet(model)}
+                                ><DownloadIcon
+                                  class="size-3"
+                                  aria-hidden="true"
+                                />Download</Button
+                              >{/if}
+                            {#if model.installed}<Button
+                                variant="ghost"
+                                size="xs"
+                                class="size-6 p-0"
+                                disabled={controlsLocked}
+                                aria-label={`Delete ${model.name}`}
+                                title="Remove downloaded files"
+                                onclick={() => onRemove(model)}
+                                ><Trash2Icon
+                                  class="size-3.5"
+                                  aria-hidden="true"
+                                /></Button
+                              >{/if}
+                          {/if}
+                        </div>
+                        <div class="selection-slot">
                           {#if !selected}<Button
                               variant="outline"
                               size="xs"
@@ -462,34 +480,32 @@
                                     : "Select this model without downloading files"}
                               onclick={() => onSelect(model)}>Select</Button
                             >{/if}
-                          {#if selected && speechModel}<Button
-                              variant="outline"
-                              size="xs"
-                              disabled={controlsLocked}
-                              title="Deselect this runtime in Text to speech first. Disabling keeps downloaded files."
-                              onclick={onDisableSpeech}>Disable</Button
-                            >{/if}
-                          {#if model.installed}<Button
-                              variant="ghost"
-                              size="xs"
-                              class="size-6 p-0"
-                              disabled={controlsLocked}
-                              aria-label={`Delete ${model.name}`}
-                              title="Remove downloaded files"
-                              onclick={() => onRemove(model)}
-                              ><Trash2Icon
-                                class="size-3.5"
-                                aria-hidden="true"
-                              /></Button
-                            >{/if}
-                        {/if}
-                      </span>
+                        </div>
+                        {#if speechModel}<div class="disable-slot">
+                            {#if selected && speechModel}<Button
+                                variant="outline"
+                                size="xs"
+                                disabled={controlsLocked}
+                                title="Deselect this runtime in Text to speech first. Disabling keeps downloaded files."
+                                onclick={onDisableSpeech}>Disable</Button
+                              >{/if}
+                          </div>{/if}
+                      </div>
                     </div>
                     {#if downloading}<div
                         class="space-y-1 py-2 pl-[30px] pr-2 text-xs text-secondary-foreground"
                         role="status"
                       >
                         {#if busy}
+                          <div class="flex items-center justify-between gap-3">
+                            <span>{model.name} download</span>
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              disabled={cancelling}
+                              onclick={onCancel}>Cancel</Button
+                            >
+                          </div>
                           {#if view.percent !== null}<progress
                               class="h-1.5 w-full accent-primary"
                               max="100"
@@ -506,16 +522,14 @@
                     <div
                       id={modelID(model.id)}
                       hidden={!detailsOpen}
-                      class="model-details space-y-2 text-xs text-muted-foreground"
+                      class="model-details"
                     >
                       {#if detailsOpen}
-                        <p>
-                          Model ID: <span
-                            class="break-all font-mono text-secondary-foreground"
-                            >{model.id}</span
-                          >
-                        </p>
-                        {#if source}<ModelDownloadSource {source} />{/if}
+                        <RuntimeModelDetails
+                          modelID={model.id}
+                          {variant}
+                          {source}
+                        />
                       {/if}
                     </div>
                   </article>
@@ -594,17 +608,18 @@
     border-top: 1px solid var(--hairline);
   }
   .model-selected {
-    background: var(--accent-wash);
     box-shadow: inset 2px 0 var(--accent-text);
+  }
+  .model-selected .model-row {
+    background: var(--accent-wash);
   }
   .model-details {
     margin: 0 10px 10px 30px;
-    padding: 10px 0 0;
     border-top: 1px solid var(--hairline);
   }
   .model-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 56px 96px 144px;
+    grid-template-columns: minmax(0, 1fr) 56px 96px 152px;
     min-height: 60px;
     align-items: center;
     gap: 8px;
@@ -628,8 +643,31 @@
     outline: 2px solid var(--ring);
     outline-offset: -2px;
   }
+  .model-row.speech-model {
+    grid-template-columns: minmax(0, 1fr) 56px 96px 212px;
+  }
+  .model-actions {
+    display: grid;
+    grid-template-columns: 88px 60px;
+    align-items: center;
+    gap: 4px;
+  }
+  .model-actions.speech-actions {
+    grid-template-columns: 88px 56px 60px;
+  }
+  .transfer-slot,
+  .selection-slot,
+  .disable-slot {
+    display: flex;
+    min-height: 24px;
+    justify-content: flex-end;
+  }
+  .model-selected .model-identity:hover {
+    background: transparent;
+  }
   @container (max-width: 620px) {
-    .model-row {
+    .model-row,
+    .model-row.speech-model {
       grid-template-columns: minmax(0, 1fr) auto 104px;
       row-gap: 2px;
       padding-block: 4px;
@@ -637,7 +675,9 @@
     .model-identity {
       grid-column: 1 / 3;
     }
-    .model-actions {
+    .model-actions,
+    .model-actions.speech-actions {
+      grid-template-columns: minmax(0, 1fr);
       grid-column: 3;
       grid-row: 1 / 3;
       flex-wrap: wrap;
@@ -653,7 +693,8 @@
     }
   }
   @container (max-width: 400px) {
-    .model-row {
+    .model-row,
+    .model-row.speech-model {
       grid-template-columns: minmax(0, 1fr) auto;
       row-gap: 4px;
       padding-block: 6px;
@@ -661,7 +702,8 @@
     .model-identity {
       grid-column: 1 / -1;
     }
-    .model-actions {
+    .model-actions,
+    .model-actions.speech-actions {
       grid-column: 2;
       grid-row: 2 / 4;
       max-width: 104px;
