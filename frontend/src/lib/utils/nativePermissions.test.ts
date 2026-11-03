@@ -9,6 +9,29 @@ const status: PermissionStatus = {
 };
 
 describe("permission actions", () => {
+  it("pairs each permission with its functional explanation", () => {
+    expect(
+      permissionRows(status).map(({ kind, description }) => ({
+        kind,
+        description,
+      })),
+    ).toEqual([
+      {
+        kind: "microphone",
+        description: "Record speech and preview microphone input.",
+      },
+      {
+        kind: "accessibility",
+        description:
+          "Check the destination, insert text, and capture shortcuts.",
+      },
+      {
+        kind: "keyboard",
+        description: "Capture shortcuts and use hold-to-talk.",
+      },
+    ]);
+  });
+
   it("offers an explicit request only for undecided microphone access", () => {
     expect(permissionRows(status)[0]).toMatchObject({
       kind: "microphone",

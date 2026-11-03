@@ -105,3 +105,21 @@ for (const theme of ["light", "dark"] as const) {
     await expect(empty).toHaveCount(0);
   });
 }
+
+test("history-off notice appears once and remains available when Recent is hidden", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?view=workspace&history=off");
+  const notice = page.getByText(
+    "History is off. Current results remain available until you clear them or start again.",
+    { exact: true },
+  );
+  await expect(
+    page.getByText("Nothing is being kept", { exact: true }),
+  ).toBeVisible();
+  await expect(notice).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Toggle bottom panel", exact: true })
+    .click();
+  await expect(notice).toBeVisible();
+});

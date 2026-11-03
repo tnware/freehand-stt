@@ -15,6 +15,7 @@
   import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
+  import { runtimeConnectionModels } from "$lib/utils/runtimeConnectionModels";
   import SearchIcon from "@lucide/svelte/icons/search";
   import PlusIcon from "@lucide/svelte/icons/plus";
   let {
@@ -136,6 +137,10 @@
         undefined,
         pendingFor(connection.details.managedInstanceID ?? ""),
       )}
+      {@const runtimeModels = runtimeConnectionModels(
+        instance?.instance,
+        instance?.status,
+      )}
       {@const metadata = connection.details.managedInstanceID
         ? ["Managed runtime", runtimeView.backend].filter(Boolean).join(" · ")
         : connection.details.compatibilityProfile || "OpenAI-compatible"}
@@ -187,7 +192,7 @@
           title={usedBy || "Not in use"}>{usedBy || "Not in use"}</span
         >
         <span
-          class="flex shrink-0 items-center {sidebar
+          class="flex shrink-0 flex-col items-start gap-1 {sidebar
             ? 'min-w-0 flex-wrap gap-1.5 pl-[26px]'
             : 'w-[140px]'}"
         >
@@ -197,6 +202,11 @@
               problem={errorFor(connection.details.managedInstanceID)}
               badge
             />
+            <span
+              class="break-words text-xs leading-relaxed text-muted-foreground"
+            >
+              {runtimeModels.summary}
+            </span>
           {:else if active.length}
             <StatusBadge tone="accent" class="shrink-0 whitespace-nowrap"
               >In use</StatusBadge
@@ -204,7 +214,7 @@
           {/if}
           {#if sidebar}
             <span
-              class="min-w-0 basis-full break-words text-xs leading-relaxed text-muted-foreground"
+              class="min-w-0 break-words text-xs leading-relaxed text-muted-foreground"
               title={usedBy ||
                 (connection.builtIn
                   ? "Built-in connection · Not in use"

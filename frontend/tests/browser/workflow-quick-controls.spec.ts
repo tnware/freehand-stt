@@ -3,14 +3,17 @@ import { test, expect } from "./fixtures";
 const workflows = [
   {
     name: "Voice transcription",
+    model: "speech/stt",
     preferences: "Voice and microphone settings",
   },
   {
     name: "Audio file",
+    model: "speech/stt",
     preferences: "Transcription settings",
   },
   {
     name: "Text to speech",
+    model: "speech/tts",
     preferences: "Voice and speech settings",
   },
 ] as const;
@@ -22,7 +25,9 @@ for (const width of [1280, 560]) {
       saves,
     }, info) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto("/tests/browser/app/?main&workflows&pickers&setup-ready");
+      await page.goto(
+        "/tests/browser/app/?main&workflows&pickers&setup-ready&workflow-identity",
+      );
       await page
         .getByRole("button", { name: workflow.name, exact: true })
         .click();
@@ -36,6 +41,26 @@ for (const width of [1280, 560]) {
         exact: true,
       });
       await expect(chooser).toBeVisible();
+      await expect(chooser.locator(".model-name")).toHaveText(workflow.model);
+      await expect(chooser.locator(".model-connection")).toHaveText(
+        "Original server",
+      );
+      await expect(chooser.locator(".model-identity")).toContainText(
+        "Generic OpenAI-compatible",
+      );
+      expect(
+        await chooser.evaluate((el) => {
+          const model = el.querySelector(".model-selection")!;
+          const engine = el.querySelector(".model-identity")!;
+          return (
+            model.getBoundingClientRect().bottom <=
+            engine.getBoundingClientRect().top
+          );
+        }),
+      ).toBe(true);
+      await expect(
+        chooser.getByRole("status", { name: "Selected local runtime status" }),
+      ).toHaveCount(0);
       const sidebarBox = await sidebar.boundingBox();
       const chooserBox = await chooser.boundingBox();
       expect(sidebarBox).not.toBeNull();
@@ -79,6 +104,9 @@ for (const width of [1280, 560]) {
         exact: true,
       });
       const originalModel = await model.inputValue();
+      await expect(dialog.getByRole("status")).toContainText(
+        "Changes apply immediately to the next request.",
+      );
       await model.fill("unsaved/manual-search");
       await page.keyboard.press("Escape");
       await expect(model).toHaveValue(originalModel);
@@ -208,8 +236,42 @@ test("managed model card uses the existing runtime identity without inferring fr
     exact: true,
   });
   await expect(chooser).toContainText("NeMo-Speech.cpp");
-  await expect(chooser).toContainText("Nemotron 3.5 Streaming");
+  await expect(chooser.locator(".model-name")).toHaveText(
+    "Nemotron 3.5 Streaming",
+  );
+  await expect(chooser.locator(".model-connection")).toHaveText(
+    "NeMo-Speech.cpp",
+  );
   await expect(
     chooser.locator('[data-provider="nemo-speech-cpp"] img'),
   ).toBeVisible();
 });
+
+for (const width of [1280, 560]) {
+  test(`Output opens delivery settings by keyboard at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/tests/browser/app/?main&workflows&setup-ready");
+    const sidebar = page.locator("#workbench-primary-sidebar");
+    if (!(await sidebar.isVisible()))
+      await page
+        .getByRole("button", { name: "Toggle primary sidebar", exact: true })
+        .click();
+    const output = sidebar.getByRole("button", {
+      name: "Output settings",
+      exact: true,
+    });
+    await expect(output).toContainText("Original app · copy if blocked");
+    await output.focus();
+    await output.press("Enter");
+    const inspector = page.locator('[data-pane="configuration"]');
+    await expect(inspector).toBeVisible();
+    await expect(
+      inspector.getByRole("radiogroup", { name: "Transcript delivery mode" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "Workflow preferences", exact: true }),
+    ).toBeHidden();
+  });
+}

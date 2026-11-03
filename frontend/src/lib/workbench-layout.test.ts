@@ -17,6 +17,10 @@ describe("workbench layout preferences", () => {
           outputInstanceID: "untrusted-runtime",
           runtimeInstanceID: "untrusted-manage-target",
           runtimeProviderID: "untrusted-provider",
+          runtimeSetupIntent: {
+            providerID: "untrusted-provider",
+            purpose: "speech",
+          },
           diagnosticWorkflow: "file",
         }),
     });
@@ -30,6 +34,7 @@ describe("workbench layout preferences", () => {
     expect(layout.outputInstanceID).toBe("");
     expect(layout.runtimeInstanceID).toBe("");
     expect(layout.runtimeProviderID).toBe("");
+    expect(layout.runtimeSetupIntent).toBeNull();
     expect(layout.diagnosticWorkflow).toBe("voice");
   });
 
@@ -40,6 +45,10 @@ describe("workbench layout preferences", () => {
     layout.outputInstanceID = "private-runtime";
     layout.runtimeInstanceID = "private-manage-target";
     layout.runtimeProviderID = "private-provider";
+    layout.runtimeSetupIntent = {
+      providerID: "private-provider",
+      purpose: "cleanup",
+    };
     layout.tab = "output";
     layout.claimNotifications("modal");
     layout.claimNotifications("error");

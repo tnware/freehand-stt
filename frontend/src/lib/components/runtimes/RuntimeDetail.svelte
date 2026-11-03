@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    runtimeSetupGuidance,
+    type RuntimeSetupPurpose,
+  } from "$lib/utils/runtimeSetupIntent";
+  import type { Catalog } from "$bindings/savedconnection";
+  import { runtimeDeletionReferences } from "$lib/utils/runtimeDeletion";
   import { onDestroy, type Snippet } from "svelte";
   import {
     ProviderID,
@@ -8,13 +14,13 @@
     type ProviderDescriptor,
   } from "$bindings/managedruntime";
   import DisclosureButton from "$lib/components/common/DisclosureButton.svelte";
-  import BoxIcon from "@lucide/svelte/icons/box";
+  import CheckIcon from "@lucide/svelte/icons/check";
+  import { runtimeBinaryContext } from "$lib/utils/runtimeBinaryContext";
   import CpuIcon from "@lucide/svelte/icons/cpu";
   import DownloadIcon from "@lucide/svelte/icons/download";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import PackageIcon from "@lucide/svelte/icons/package";
   import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
-  import TagIcon from "@lucide/svelte/icons/tag";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import WrenchIcon from "@lucide/svelte/icons/wrench";
   import { Button } from "$lib/components/ui/button";
@@ -44,6 +50,10 @@
     workBusy = false,
     onOpenConnections,
     notice,
+    useAction,
+    connectionCatalog,
+    setupPurpose,
+    onReturnToSetup,
   }: {
     runtime: ManagedRuntimeState;
     row: InstanceStatus | undefined;
@@ -52,7 +62,14 @@
     workBusy?: boolean;
     onOpenConnections: () => void;
     notice?: Snippet;
+    useAction?: Snippet;
+    connectionCatalog?: Catalog;
+    setupPurpose?: RuntimeSetupPurpose;
+    onReturnToSetup?: (section: "speech" | "processing") => void;
   } = $props();
+  const deletionReferences = $derived(
+    runtimeDeletionReferences(connectionCatalog, row?.instance.id ?? ""),
+  );
   const uid = $props.id();
   const layout = getWorkbenchLayout();
   const status = $derived(row?.status);
@@ -71,8 +88,10 @@
     view.installed || (!!status?.backend && status.state !== "not_installed"),
   );
   const busy = $derived(!!instance && runtime.isBusy(instance.id));
+  let installing = $state(false);
   const actionLocked = $derived(
     locked ||
+      installing ||
       workBusy ||
       busy ||
       !entry.supported ||
@@ -96,43 +115,61 @@
   const missingModel = $derived(
     !selectedModel?.installed ? selectedModel : selectedSpeechModel,
   );
-  const metadata = $derived(
+  const identifiers = $derived(
     [
+      { label: "Selected model ID", value: instance?.model },
+      { label: "Selected speech model ID", value: instance?.speechModel },
       {
-        label: "Version",
-        value: status?.version || entry.version,
-        icon: TagIcon,
-        technical: true,
+        label: "Reported model ID",
+        value:
+          status?.selectedModel !== instance?.model
+            ? status?.selectedModel
+            : "",
       },
       {
-        label: "Backend",
-        value: status?.backend ? backendLabel(status.backend) : "",
-        icon: CpuIcon,
-        technical: false,
+        label: "Reported speech model ID",
+        value:
+          status?.selectedSpeechModel !== instance?.speechModel
+            ? status?.selectedSpeechModel
+            : "",
       },
+      { label: "Active API model", value: row?.activeModel || "None" },
       {
-        label: "Selected model",
-        value: status?.selectedModel,
-        icon: BoxIcon,
-        technical: true,
-      },
-      {
-        label: "Selected speech model",
-        value: status?.selectedSpeechModel,
-        icon: BoxIcon,
-        technical: true,
+        label: "Active speech API model",
+        value: instance?.speechModel ? row?.activeSpeechModel || "None" : "",
       },
     ].filter((fact) => fact.value),
   );
   const problem = $derived(
     runtime.errorFor(instance?.id ?? entry.id) || view.error,
   );
+  const setup = $derived(
+    setupPurpose
+      ? runtimeSetupGuidance(setupPurpose, entry, row, pending, problem)
+      : null,
+  );
+  const setupMissingModel = $derived(
+    setup?.selected && !setup.selected.installed
+      ? setup.selected
+      : missingModel,
+  );
+  const downloadLabel = $derived(
+    !!setupMissingModel && setupMissingModel.id === instance?.speechModel
+      ? "speech model"
+      : setupPurpose === "speech"
+        ? "transcription model"
+        : setupPurpose === "cleanup"
+          ? "cleanup model"
+          : "model",
+  );
+  let modelCatalog: RuntimeModelCatalog | undefined = $state();
   let preferencesOpen = $state(false);
   let sourceOpen = $state(false);
   let manageOpen = $state(false);
   let panelTab = $state("output");
   let panelCollapsed = $state(false);
   let probing = $state(false);
+  let installReview = $state(false);
   let recommendation = $state<BinaryOptions | null>(null);
   let binaryChoice = $state("auto");
   type Removal =
@@ -196,6 +233,7 @@
   );
 
   let installedOptions = $state<BinaryOptions | null>(null);
+  const binary = $derived(runtimeBinaryContext(status, installedOptions));
   let checkingInstalledOptions = $state(false);
   let installedOptionsAttempted = $state(false);
   async function checkInstalledOptions() {
@@ -217,10 +255,10 @@
       void checkInstalledOptions();
   });
 
-  function install(backend?: string) {
+  function reviewInstall() {
     if (actionLocked || runtime.busy || probing || !entry.models?.length)
       return;
-    if (switchable && !backend) {
+    if (switchable) {
       probing = true;
       recommendation = null;
       void runtime
@@ -236,6 +274,19 @@
         });
       return;
     }
+    installReview = true;
+  }
+  function confirmInstall(backend?: string) {
+    if (
+      actionLocked ||
+      runtime.busy ||
+      probing ||
+      !(switchable
+        ? recommendation && choiceAvailable && backend === chosenBackend
+        : installReview)
+    )
+      return;
+    installing = true;
     void (async () => {
       let target = instance;
       if (!target) {
@@ -254,7 +305,12 @@
       if (alive) recommendation = null;
       if (backend) await runtime.installBackend(target.id, backend);
       else await runtime.run(target.id, "Install");
-    })();
+    })().finally(() => {
+      if (alive) {
+        installing = false;
+        installReview = false;
+      }
+    });
   }
   function act(action: () => Promise<unknown>) {
     if (!actionLocked) void action();
@@ -307,6 +363,7 @@
 <div class="flex min-h-0 min-w-0 flex-1 flex-col">
   <PaneHeader title={entry.name} icon={CpuIcon}>
     {#snippet actions()}
+      {@render useAction?.()}
       {#if busy && instance}
         <Button
           variant="outline"
@@ -322,19 +379,27 @@
             disabled={actionLocked}
             onclick={restart}>Restart</Button
           >{/if}
-        {#if !running && !selectedModelsReady}
+        {#if setup?.chooseModel}
           <Button
             variant="outline"
             size="xs"
-            aria-label="Download selected model"
-            disabled={actionLocked || !missingModel}
+            disabled={actionLocked}
+            onclick={() => void modelCatalog?.focusRole(setup!.role)}
+            >Choose {setup.label} model</Button
+          >
+        {:else if !running && !selectedModelsReady}
+          <Button
+            variant="outline"
+            size="xs"
+            aria-label={setup
+              ? `Download selected ${downloadLabel}`
+              : "Download selected model"}
+            disabled={actionLocked || !setupMissingModel}
             onclick={() =>
-              missingModel &&
-              act(() => runtime.downloadModel(instance.id, missingModel.id))}
-            ><DownloadIcon class="size-3" />Get {missingModel ===
-            selectedSpeechModel
-              ? "speech model"
-              : "model"}</Button
+              setupMissingModel &&
+              act(() =>
+                runtime.downloadModel(instance.id, setupMissingModel.id),
+              )}><DownloadIcon class="size-3" />Download {downloadLabel}</Button
           >
         {:else}
           <Button
@@ -350,55 +415,73 @@
     {/snippet}
   </PaneHeader>
   {@render notice?.()}
-  <div class="workbench-toolbar flex-wrap gap-x-3 gap-y-1 py-1.5">
-    <RuntimeStatus
-      {view}
-      {problem}
-      badge
-      label={status
-        ? view.label
-        : entry.supported
-          ? "Not installed"
-          : "Unavailable"}
-    />
-    <dl class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-      {#each metadata as fact (fact.label)}
-        <div
-          class="flex min-w-0 items-center gap-1.5"
-          title={`${fact.label}: ${fact.value}`}
+  <div
+    class="workbench-toolbar runtime-toolbar"
+    role="group"
+    aria-label="Runtime status and actions"
+  >
+    <div class="runtime-toolbar-state">
+      <RuntimeStatus
+        {view}
+        {problem}
+        badge
+        label={status
+          ? view.label
+          : entry.supported
+            ? "Not installed"
+            : "Unavailable"}
+      />
+      {#if binary.currentID}
+        <span
+          class="min-w-0 truncate text-xs text-secondary-foreground"
+          title={`${binary.currentLabel}: ${binary.current}`}
         >
-          <fact.icon
-            class="size-3.5 shrink-0 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <dt class="sr-only">{fact.label}</dt>
-          <dd
-            class="min-w-0 truncate text-xs {fact.technical
-              ? 'font-mono text-muted-foreground'
-              : 'font-medium text-foreground'}"
-          >
-            {fact.value}
-          </dd>
-        </div>
-      {/each}
-    </dl>
-    <span class="flex-1"></span>
-    {#if layout && instance}
-      <Button
-        variant="ghost"
-        size="xs"
-        disabled={!layout.bottomAvailable.current}
-        title={!layout.bottomAvailable.current
-          ? "Increase window height to show the bottom panel"
-          : undefined}
-        onclick={() => layout.showOutput(instance.id)}>View output</Button
+          {binary.current}
+        </span>
+      {/if}
+      {#if binary.version}
+        <span
+          class="runtime-toolbar-version truncate font-mono text-xs text-ink-quiet"
+          title={`Installed version: ${binary.version}`}>{binary.version}</span
+        >
+      {/if}
+    </div>
+    <div class="runtime-toolbar-actions">
+      {#if layout && instance}
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={!layout.bottomAvailable.current}
+          title={!layout.bottomAvailable.current
+            ? "Increase window height to show the bottom panel"
+            : undefined}
+          onclick={() => layout.showOutput(instance.id)}>View output</Button
+        >
+      {/if}
+      <Button variant="ghost" size="xs" onclick={onOpenConnections}
+        >Open Connections</Button
       >
-    {/if}
-    <Button variant="ghost" size="xs" onclick={onOpenConnections}
-      >Open Connections</Button
-    >
+    </div>
   </div>
   <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-3">
+    {#if setup}
+      <section
+        class="space-y-2 border-b border-hairline py-3"
+        aria-label={`Local ${setup.label} setup guidance`}
+      >
+        <p class="content-kicker">Local {setup.label} setup</p>
+        <h3 class="content-section-title">{setup.next}</h3>
+        <p class="content-meta">{setup.detail}</p>
+        {#if onReturnToSetup}
+          <Button
+            variant="outline"
+            size="xs"
+            onclick={() => onReturnToSetup?.(setup.section)}
+            >Return to {setup.settingsLabel}</Button
+          >
+        {/if}
+      </section>
+    {/if}
     {#if busy || view.completion || problem}
       <div
         class="space-y-1.5 border-b border-hairline py-3"
@@ -459,22 +542,28 @@
             </p>
             <p class="content-meta mt-0.5">
               {entry.unavailableReason ||
-                "Install the runtime, then explicitly download a model."}
+                (entry.supported
+                  ? "Install the runtime, then download a model."
+                  : "Choose a supported runtime or connect to a speech server.")}
             </p>
           </div>
-          <Button
-            size="xs"
-            disabled={actionLocked ||
-              probing ||
-              runtime.busy ||
-              !entry.models?.length}
-            onclick={() => install()}
-            ><DownloadIcon class="size-3" />{probing
-              ? "Checking…"
-              : recommendation
-                ? "Re-check"
-                : "Install"}</Button
-          >
+          {#if entry.supported}
+            <Button
+              size="xs"
+              disabled={actionLocked ||
+                probing ||
+                runtime.busy ||
+                !entry.models?.length}
+              onclick={reviewInstall}
+              ><DownloadIcon class="size-3" />{probing
+                ? "Checking…"
+                : recommendation
+                  ? "Re-check"
+                  : "Install"}</Button
+            >
+          {:else}<Button variant="outline" size="xs" onclick={onOpenConnections}
+              >Use a connection</Button
+            >{/if}
         </div>
         {#if probing}<p class="text-xs text-ink-quiet" role="status">
             Checking host binary options · no files are downloaded
@@ -492,7 +581,7 @@
             </p>
             <div class="mt-2.5 flex flex-wrap gap-1.5">
               <Button
-                variant="outline"
+                variant={binaryChoice === "auto" ? "soft" : "outline"}
                 size="xs"
                 aria-pressed={binaryChoice === "auto"}
                 disabled={actionLocked}
@@ -500,7 +589,7 @@
                 >Auto (recommended)</Button
               >
               {#each recommendation.options ?? [] as option (option.backend)}<Button
-                  variant="outline"
+                  variant={binaryChoice === option.backend ? "soft" : "outline"}
                   size="xs"
                   aria-pressed={binaryChoice === option.backend}
                   disabled={actionLocked ||
@@ -511,6 +600,14 @@
                   >{backendLabel(option.backend)}</Button
                 >{/each}
             </div>
+            {#if choiceAvailable}<p
+                class="content-meta mt-3"
+                aria-label="Selected installation backend"
+              >
+                Will install: <strong class="font-medium text-foreground"
+                  >{backendLabel(chosenBackend)}</strong
+                >
+              </p>{/if}
             <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
               <p class="text-xs text-ink-quiet">
                 Downloads on install · checksum pinned
@@ -518,7 +615,7 @@
               <Button
                 size="xs"
                 disabled={actionLocked || runtime.busy || !choiceAvailable}
-                onclick={() => install(chosenBackend)}
+                onclick={() => confirmInstall(chosenBackend)}
                 >Download and install</Button
               ><Button
                 variant="ghost"
@@ -531,6 +628,8 @@
       </div>
     {/if}
     <RuntimeModelCatalog
+      bind:this={modelCatalog}
+      preferredRole={setup?.role}
       {models}
       {entry}
       {row}
@@ -565,150 +664,195 @@
         if (instance) void runtime.cancel(instance.id);
       }}
     />
-    {#if instance}
-      <DisclosureButton
-        title="Runtime preferences"
-        icon={SlidersHorizontalIcon}
-        summary={instance.autoStart ? "starts with Freehand" : "manual start"}
-        open={preferencesOpen}
-        controls={`${uid}-preferencesOpen`}
-        onclick={() => (preferencesOpen = !preferencesOpen)}
-      />
-      <div id={`${uid}-preferencesOpen`} hidden={!preferencesOpen}>
-        {#if preferencesOpen}
-          <div class="disclosure-body space-y-3 border-b border-hairline">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <label for={`${uid}-autostart`} class="content-value"
-                  >Start when Freehand launches</label
-                >
-                <p class="content-meta mt-1">
-                  Uses the selected models. Does not download missing files.
+    <section
+      class="runtime-settings"
+      aria-labelledby={`${uid}-settings-heading`}
+    >
+      <h3 id={`${uid}-settings-heading`} class="content-kicker mb-2">
+        Runtime settings
+      </h3>
+      <div class="runtime-settings-list">
+        {#if instance}
+          <DisclosureButton
+            title="Runtime preferences"
+            icon={SlidersHorizontalIcon}
+            summary={instance.autoStart
+              ? "starts with Freehand"
+              : "manual start"}
+            open={preferencesOpen}
+            controls={`${uid}-preferencesOpen`}
+            onclick={() => (preferencesOpen = !preferencesOpen)}
+          />
+          <div id={`${uid}-preferencesOpen`} hidden={!preferencesOpen}>
+            {#if preferencesOpen}
+              <div class="disclosure-body space-y-3 border-b border-hairline">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <label for={`${uid}-autostart`} class="content-value"
+                      >Start when Freehand launches</label
+                    >
+                    <p class="content-meta mt-1">
+                      Uses the selected models. Does not download missing files.
+                    </p>
+                  </div>
+                  <Switch
+                    id={`${uid}-autostart`}
+                    checked={instance.autoStart}
+                    disabled={actionLocked}
+                    onCheckedChange={(autoStart) =>
+                      act(() =>
+                        runtime.saveInstance({ ...instance, autoStart }),
+                      )}
+                  />
+                </div>
+                <dl class="grid gap-2" aria-label="Runtime identifiers">
+                  {#each identifiers as fact (fact.label)}
+                    <div class="min-w-0">
+                      <dt class="content-meta">{fact.label}</dt>
+                      <dd
+                        class="mt-0.5 break-all font-mono text-xs text-secondary-foreground"
+                      >
+                        {fact.value}
+                      </dd>
+                    </div>
+                  {/each}
+                  {#if binary.version}<div>
+                      <dt class="content-meta">Installed version</dt>
+                      <dd
+                        class="mt-0.5 break-all font-mono text-xs text-secondary-foreground"
+                      >
+                        {binary.version}
+                      </dd>
+                    </div>{/if}
+                </dl>
+                {#if instance.speechModel}<p class="content-meta">
+                    Start, Stop and Restart affect transcription and speech
+                    together.
+                  </p>{/if}
+                {#if switchable && installed}<fieldset
+                    disabled={actionLocked || running}
+                  >
+                    <legend class="content-section-title mb-2"
+                      >Runtime binary</legend
+                    >
+                    <p
+                      class="content-meta mb-2"
+                      aria-label="Current runtime backend"
+                    >
+                      {binary.currentLabel}:
+                      <strong class="font-medium text-foreground"
+                        >{binary.current}</strong
+                      >
+                    </p>
+                    <div class="flex flex-wrap gap-1.5">
+                      {#each binary.choices as option (option.backend)}<Button
+                          variant={option.current ? "soft" : "outline"}
+                          size="xs"
+                          aria-pressed={option.current}
+                          title={option.reason}
+                          disabled={actionLocked ||
+                            running ||
+                            checkingInstalledOptions ||
+                            !installedOptions?.supported ||
+                            !option.supported ||
+                            !option.available ||
+                            option.current}
+                          onclick={() => {
+                            if (!running)
+                              act(() =>
+                                runtime.installBackend(
+                                  instance.id,
+                                  option.backend,
+                                ),
+                              );
+                          }}>{backendLabel(option.backend)}</Button
+                        >{/each}
+                    </div>
+                  </fieldset>
+                  <p class="content-meta" role="status">
+                    {checkingInstalledOptions
+                      ? "Checking host binary options · no files are downloaded"
+                      : installedOptions
+                        ? binary.recommendation
+                          ? `Recommended for this computer: ${binary.recommendation}.`
+                          : "No compatible binary recommendation is available."
+                        : "Could not check available binaries. Re-check to try again."}
+                  </p>
+                  {#if installedOptions?.reason}<p class="content-meta">
+                      {installedOptions.reason}
+                    </p>{/if}
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    disabled={checkingInstalledOptions || actionLocked}
+                    onclick={() => void checkInstalledOptions()}
+                    >Re-check binary options</Button
+                  >
+                  <p class="content-meta">
+                    {#if running}Stop to change binary.
+                    {/if}Switching downloads the selected binary and keeps
+                    models and saved Connections.
+                  </p>{/if}
+                <p class="content-meta">
+                  Stopping or removing files keeps saved Connections selected.
+                  There is no automatic fallback.
                 </p>
               </div>
-              <Switch
-                id={`${uid}-autostart`}
-                checked={instance.autoStart}
-                disabled={actionLocked}
-                onCheckedChange={(autoStart) =>
-                  act(() => runtime.saveInstance({ ...instance, autoStart }))}
-              />
-            </div>
-            <p class="break-all font-mono text-xs text-ink-quiet">
-              Active API model: {row?.activeModel || "None"}
-            </p>
-            {#if instance.speechModel}<p
-                class="break-all font-mono text-xs text-ink-quiet"
+            {/if}
+          </div>
+        {/if}
+        {#if entry.source}
+          <DisclosureButton
+            title="Binary download source"
+            icon={PackageIcon}
+            summary="official release · checksum pinned"
+            open={sourceOpen}
+            controls={`${uid}-sourceOpen`}
+            onclick={() => (sourceOpen = !sourceOpen)}
+          />
+          <div id={`${uid}-sourceOpen`} hidden={!sourceOpen}>
+            {#if sourceOpen}<div
+                class="disclosure-body border-b border-hairline"
               >
-                Active speech API model: {row?.activeSpeechModel || "None"}
-              </p>
-              <p class="content-meta">
-                Start, Stop and Restart affect transcription and speech
-                together.
-              </p>{/if}
-            {#if switchable && installed}<fieldset
-                disabled={actionLocked || running}
+                <RuntimeDownloadSource
+                  source={entry.source}
+                  backend={sourceBackend}
+                />
+              </div>{/if}
+          </div>
+        {/if}
+        {#if instance}
+          <DisclosureButton
+            title="Manage runtime"
+            icon={WrenchIcon}
+            summary="remove files · delete entry"
+            open={manageOpen}
+            controls={`${uid}-manageOpen`}
+            onclick={() => (manageOpen = !manageOpen)}
+          />
+          <div id={`${uid}-manageOpen`} hidden={!manageOpen}>
+            {#if manageOpen}<div
+                class="disclosure-body flex flex-wrap gap-1.5 border-b border-hairline"
               >
-                <legend class="content-section-title mb-2"
-                  >Runtime binary</legend
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={actionLocked || running || !installed}
+                  onclick={() => (confirming = { kind: "files" })}
+                  ><Trash2Icon class="size-3" />Remove downloaded files</Button
+                ><Button
+                  variant="outline"
+                  size="xs"
+                  class="text-destructive"
+                  disabled={actionLocked || running}
+                  onclick={() => (confirming = { kind: "instance" })}
+                  >Delete runtime</Button
                 >
-                <div class="flex flex-wrap gap-1.5">
-                  {#each installedOptions?.options ?? [] as option (option.backend)}<Button
-                      variant="outline"
-                      size="xs"
-                      aria-pressed={status?.backend === option.backend}
-                      title={option.reason}
-                      disabled={actionLocked ||
-                        running ||
-                        checkingInstalledOptions ||
-                        !installedOptions?.supported ||
-                        !option.supported ||
-                        !option.available ||
-                        status?.backend === option.backend}
-                      onclick={() => {
-                        if (!running)
-                          act(() =>
-                            runtime.installBackend(instance.id, option.backend),
-                          );
-                      }}>{backendLabel(option.backend)}</Button
-                    >{/each}
-                </div>
-              </fieldset>
-              <p class="content-meta" role="status">
-                {checkingInstalledOptions
-                  ? "Checking host binary options · no files are downloaded"
-                  : installedOptions
-                    ? installedOptions.reason
-                    : "Could not check available binaries. Re-check to try again."}
-              </p>
-              <Button
-                variant="outline"
-                size="xs"
-                disabled={checkingInstalledOptions || actionLocked}
-                onclick={() => void checkInstalledOptions()}
-                >Re-check binary options</Button
-              >
-              <p class="content-meta">
-                {#if running}Stop to change binary.
-                {/if}Switching downloads the selected binary and keeps models
-                and saved Connections.
-              </p>{/if}
-            <p class="content-meta">
-              Stopping or removing files keeps saved Connections selected. There
-              is no automatic fallback.
-            </p>
+              </div>{/if}
           </div>
         {/if}
       </div>
-    {/if}
-    {#if entry.source}
-      <DisclosureButton
-        title="Binary download source"
-        icon={PackageIcon}
-        summary="official release · checksum pinned"
-        open={sourceOpen}
-        controls={`${uid}-sourceOpen`}
-        onclick={() => (sourceOpen = !sourceOpen)}
-      />
-      <div id={`${uid}-sourceOpen`} hidden={!sourceOpen}>
-        {#if sourceOpen}<div class="disclosure-body border-b border-hairline">
-            <RuntimeDownloadSource
-              source={entry.source}
-              backend={sourceBackend}
-            />
-          </div>{/if}
-      </div>
-    {/if}
-    {#if instance}
-      <DisclosureButton
-        title="Manage runtime"
-        icon={WrenchIcon}
-        summary="remove files · delete entry"
-        open={manageOpen}
-        controls={`${uid}-manageOpen`}
-        onclick={() => (manageOpen = !manageOpen)}
-      />
-      <div id={`${uid}-manageOpen`} hidden={!manageOpen}>
-        {#if manageOpen}<div
-            class="disclosure-body flex flex-wrap gap-1.5 border-b border-hairline"
-          >
-            <Button
-              variant="outline"
-              size="xs"
-              disabled={actionLocked || running || !installed}
-              onclick={() => (confirming = { kind: "files" })}
-              ><Trash2Icon class="size-3" />Remove downloaded files</Button
-            ><Button
-              variant="outline"
-              size="xs"
-              class="text-destructive"
-              disabled={actionLocked || running}
-              onclick={() => (confirming = { kind: "instance" })}
-              >Delete runtime</Button
-            >
-          </div>{/if}
-      </div>
-    {/if}
+    </section>
   </div>
   {#if !layout}
     <div
@@ -728,6 +872,36 @@
   {/if}
 </div>
 <ActionDialog
+  open={installReview}
+  title={`Install ${entry.name}?`}
+  description="Downloads the runtime software for this machine. Model files are downloaded separately, and nothing starts automatically."
+  icon={DownloadIcon}
+  busy={installing}
+  ondismiss={() => (installReview = false)}
+>
+  <p class="text-sm">Version {entry.version}</p>
+  {#if entry.source}
+    <RuntimeDownloadSource source={entry.source} />
+    <p class="text-xs text-muted-foreground">
+      Release builds are listed for reference. The installer chooses the
+      supported build for this machine and verifies its checksum.
+    </p>
+  {/if}
+  <p class="text-sm">Next: download a model, then start the runtime.</p>
+  {#snippet actions()}
+    <Button
+      variant="outline"
+      data-dialog-initial-focus
+      disabled={installing}
+      onclick={() => (installReview = false)}>Not now</Button
+    >
+    <Button
+      disabled={actionLocked || runtime.busy}
+      onclick={() => confirmInstall()}>Download and install</Button
+    >
+  {/snippet}
+</ActionDialog>
+<ActionDialog
   open={confirming !== null}
   busy={removing}
   icon={Trash2Icon}
@@ -741,10 +915,28 @@
     ? "Deletes this downloaded model. If selected, this Connection becomes unavailable until you download it again or select another model."
     : confirming?.kind === "files"
       ? "Deletes this runtime's binary and downloaded models. The instance and its saved Connections remain for repair. Other installations are untouched."
-      : "Remove or reassign every Connection referencing this instance first. Deleting its entry does not delete downloaded files; remove runtime files separately if wanted."}
+      : "Deletes the runtime entry and its built-in connection. Downloaded files remain; remove runtime files separately if wanted."}
   error={removalError}
   ondismiss={dismissRemoval}
 >
+  {#if confirming?.kind === "instance"}
+    {#if deletionReferences.workflows.length}
+      <p class="text-sm">
+        Choose another connection in these workflows before deleting:
+        {deletionReferences.workflows.join(", ")}.
+      </p>
+    {/if}
+    {#if deletionReferences.connections.length}
+      <p class="text-sm">
+        In Connections, delete or change the runtime target of these custom
+        saved connections first: {deletionReferences.connections.join(", ")}.
+      </p>
+    {/if}
+    <p class="text-sm text-muted-foreground">
+      The built-in connection is removed automatically. You do not need to
+      delete it in Connections. Deletion will not switch workflows for you.
+    </p>
+  {/if}
   {#snippet actions()}
     <Button
       variant="outline"
@@ -768,3 +960,53 @@
     </Button>
   {/snippet}
 </ActionDialog>
+
+<style>
+  .runtime-toolbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-block: 6px;
+  }
+  .runtime-toolbar-state {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+  }
+  .runtime-toolbar-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+  }
+  .runtime-toolbar-version {
+    display: none;
+    max-width: 120px;
+  }
+  @media (min-width: 1000px) {
+    .runtime-toolbar-version {
+      display: inline;
+    }
+  }
+  .runtime-settings {
+    margin-top: 24px;
+    padding-block: 16px 24px;
+    border-top: 1px solid var(--hairline);
+  }
+  .runtime-settings-list {
+    padding-inline: 4px;
+  }
+  .runtime-settings-list :global(.disclosure-trigger) {
+    border-bottom: 0;
+    border-radius: 4px;
+  }
+  .runtime-settings-list :global(.disclosure-trigger[aria-expanded="true"]) {
+    background: var(--secondary);
+  }
+  .runtime-settings-list :global(.disclosure-body) {
+    margin-bottom: 12px;
+    border-bottom: 0;
+  }
+</style>

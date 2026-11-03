@@ -10,11 +10,52 @@ const preferences = (page: Page) =>
 
 async function installRuntime(page: Page) {
   await page.getByRole("button", { name: "Install", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Download and install", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Download selected model", exact: true }),
   ).toBeVisible();
   return page.evaluate(() => window.testRuntime.snapshot()[0].instance.id);
 }
+
+test("NeMo installation requires review and leaves models for a separate download", async ({
+  page,
+}) => {
+  await page.goto(
+    "/tests/browser/app/?runtime&runtime-provider=nemo-speech-cpp",
+  );
+  await openRuntimes(page);
+  const before = await page.evaluate(() => window.testRuntime.snapshot());
+  await page.getByRole("button", { name: "Install", exact: true }).click();
+  const review = page.getByRole("dialog", { name: "Install NeMo-Speech.cpp?" });
+  await expect(review).toBeVisible();
+  await expect(
+    review.getByRole("button", { name: "Not now", exact: true }),
+  ).toBeFocused();
+  await expect(review).toContainText("Model files are downloaded separately");
+  await expect(
+    review.getByRole("link", { name: "NVIDIA/NeMo-Speech.cpp", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+  await review.getByRole("button", { name: "Not now", exact: true }).click();
+  await expect(review).toHaveCount(0);
+  expect(await page.evaluate(() => window.testRuntime.snapshot())).toEqual(
+    before,
+  );
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+  await page.getByRole("button", { name: "Install", exact: true }).click();
+  await review
+    .getByRole("button", { name: "Download and install", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Download selected model", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+    "SetInstance:nemo-speech-cpp",
+    "Install:nemo-speech-cpp",
+  ]);
+});
 
 for (const backend of ["cuda", "cpu"]) {
   test(`GGML setup probes before explicit ${backend} installation`, async ({
@@ -34,7 +75,7 @@ for (const backend of ["cuda", "cpu"]) {
       page.getByRole("heading", { name: "Models", exact: true }),
     ).toHaveCount(1);
     await expect(
-      model.getByRole("button", { name: "Get", exact: true }),
+      model.getByRole("button", { name: "Download", exact: true }),
     ).toBeDisabled();
     await expect(
       model.getByRole("button", { name: "Select", exact: true }),
@@ -69,7 +110,7 @@ for (const backend of ["cuda", "cpu"]) {
       page.getByRole("heading", { name: "Models", exact: true }),
     ).toHaveCount(1);
     await expect(
-      model.getByRole("button", { name: "Get", exact: true }),
+      model.getByRole("button", { name: "Download", exact: true }),
     ).toBeEnabled();
     // Creating the instance remounts its detail owner; the same catalog and
     // source disclosure remain available after that lifecycle transition.
@@ -227,7 +268,7 @@ test("catalog download progress, cancellation and completion stay at the model",
     name: "Parakeet TDT v3",
     exact: true,
   });
-  await model.getByRole("button", { name: "Get", exact: true }).click();
+  await model.getByRole("button", { name: "Download", exact: true }).click();
   const progress = model.getByRole("progressbar");
   await expect(progress).toBeVisible();
   await page.evaluate(
@@ -244,7 +285,7 @@ test("catalog download progress, cancellation and completion stay at the model",
   await expect(progress).toHaveAttribute("value", "50");
   await model.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(model.getByRole("status")).toContainText("cancelled");
-  await model.getByRole("button", { name: "Get", exact: true }).click();
+  await model.getByRole("button", { name: "Download", exact: true }).click();
   await page.evaluate((id) => window.testRuntime.finishDownload(id), id);
   await expect(model.getByRole("status")).toContainText(
     "downloaded and verified",
@@ -353,7 +394,7 @@ test("unsupported hosts never offer an enabled runtime installation", async ({
   await openRuntimes(page);
   await expect(
     page.getByRole("button", { name: "Install", exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
 });
 

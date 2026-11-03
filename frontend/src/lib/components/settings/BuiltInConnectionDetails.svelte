@@ -8,6 +8,7 @@
   } from "$bindings/managedruntime";
   import { connectionWorkflows } from "$lib/utils/connectionChoices";
   import { runtimePresentation } from "$lib/utils/managedRuntime";
+  import { runtimeConnectionModels } from "$lib/utils/runtimeConnectionModels";
   import type { Purpose } from "$bindings/savedconnection";
   import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import { Button } from "$lib/components/ui/button";
@@ -39,8 +40,8 @@
   const view = $derived(
     runtimePresentation(status?.status, undefined, pending),
   );
-  const model = $derived(
-    provider?.models?.find((m) => m.id === instance?.model),
+  const models = $derived(
+    runtimeConnectionModels(instance, status?.status, provider?.models ?? []),
   );
   const uses = $derived(
     connectionWorkflows.filter((role) => connection.uses?.includes(role.id)),
@@ -60,13 +61,26 @@
   <dl class="border-y border-hairline py-3">
     <dt class="content-kicker">Selected model</dt>
     <dd class="content-value mt-1 break-words">
-      {model?.name ?? instance?.model ?? "Unavailable"}
+      {models.primary?.name ?? "No model selected"}
     </dd>
-    <dd class="content-meta mt-1">
-      {uses.map((role) => role.label).join(" · ") ||
-        "No qualified tasks for this model"}
-    </dd>
+    {#if models.primary}<dd class="content-meta mt-1">
+        {models.primary.label}
+      </dd>{/if}
+    {#if models.speech}
+      <dt class="content-kicker mt-3">Selected speech model</dt>
+      <dd class="content-value mt-1 break-words">{models.speech.name}</dd>
+      <dd class="content-meta mt-1">{models.speech.label}</dd>
+    {/if}
   </dl>
+  <p class="content-meta">
+    {uses.map((role) => role.label).join(" · ") ||
+      "No qualified tasks for this model"}
+  </p>
+  {#if models.primary?.missing || models.speech?.missing}
+    <p class="content-meta">
+      Download missing models in Local runtime before starting.
+    </p>
+  {/if}
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="content-meta">Local endpoint · No connection credentials</p>
     <Button
@@ -93,8 +107,14 @@
       <dd class="content-value break-words">{connection.name}</dd>
       <dt>Installed binary</dt>
       <dd class="content-value">{view.backend || "Not reported"}</dd>
-      {#if model}<dt>Model ID</dt>
-        <dd class="break-all font-mono text-foreground">{model.id}</dd>{/if}
+      {#if models.primary}<dt>Model ID</dt>
+        <dd class="break-all font-mono text-foreground">
+          {models.primary.id}
+        </dd>{/if}
+      {#if models.speech}<dt>Speech model ID</dt>
+        <dd class="break-all font-mono text-foreground">
+          {models.speech.id}
+        </dd>{/if}
     </dl>
     <p>
       Stopping the runtime keeps task selections. Requests never fall back to a

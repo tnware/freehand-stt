@@ -46,6 +46,22 @@ describe("runtime catalog presentation", () => {
       "Other models",
     ]);
     expect(groups[0].families[0].label).toBe("Tiny");
+    const speechFirst = runtimeModelGroups(
+      ProviderID.WhisperCPP,
+      models,
+      Role.Speech,
+    );
+    expect(speechFirst.map((group) => group.id)).toEqual([
+      "speech",
+      "transcription",
+      "cleanup",
+      "other",
+    ]);
+    expect(
+      speechFirst
+        .flatMap((group) => group.families.flatMap((family) => family.models))
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    ).toEqual([...models].sort((a, b) => a.id.localeCompare(b.id)));
     expect(
       groups.flatMap((group) =>
         group.families.flatMap((family) => family.models),
@@ -91,14 +107,14 @@ describe("runtime catalog presentation", () => {
   });
   it("labels known language and quantization variants only as presentation metadata", () => {
     expect(runtimeVariantLabel(ProviderID.WhisperCPP, "base")).toBe(
-      "Multilingual · Standard",
+      "Multilingual · Standard file",
     );
     expect(runtimeVariantLabel(ProviderID.WhisperCPP, "base.en-q5_1")).toBe(
-      "English only · Q5_1",
+      "English only · Reduced precision (Q5_1)",
     );
     expect(
       runtimeVariantLabel(ProviderID.WhisperCPP, "large-v3-turbo-q8_0"),
-    ).toBe("Multilingual · Q8_0");
+    ).toBe("Multilingual · Reduced precision (Q8_0)");
     expect(runtimeVariantLabel(ProviderID.WhisperCPP, "base-custom")).toBe("");
   });
 });

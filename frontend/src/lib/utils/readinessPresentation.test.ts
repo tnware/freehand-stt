@@ -19,12 +19,16 @@ describe("readiness next action", () => {
   it("keeps prerequisites ahead of checking and completion", () => {
     const current = configured();
     current.voiceTranscription.model = "";
-    expect(nextReadinessAction(appReadiness(current, null, [], false))).toMatchObject({
+    expect(
+      nextReadinessAction(appReadiness(current, null, [], false)),
+    ).toMatchObject({
       kind: "settings",
       section: "voice-transcription",
     });
     current.voiceTranscription.model = "speech/stt";
-    expect(nextReadinessAction(appReadiness(current, null, [], false))).toMatchObject({
+    expect(
+      nextReadinessAction(appReadiness(current, null, [], false)),
+    ).toMatchObject({
       kind: "settings",
       section: "audio",
     });
@@ -49,16 +53,25 @@ describe("readiness next action", () => {
   });
   it("waits for device discovery and offers finish only after metadata success", () => {
     const current = configured();
-    expect(nextReadinessAction(appReadiness(current, null, [], true)).kind).toBe("wait");
-    expect(nextReadinessAction(appReadiness(current, null, devices, false)).kind).toBe("check");
-    expect(nextReadinessAction(appReadiness(current, connectionResult, devices, false)).kind).toBe(
-      "complete",
-    );
+    expect(
+      nextReadinessAction(appReadiness(current, null, [], true)).kind,
+    ).toBe("wait");
+    expect(
+      nextReadinessAction(appReadiness(current, null, devices, false)).kind,
+    ).toBe("check");
+    expect(
+      nextReadinessAction(
+        appReadiness(current, connectionResult, devices, false),
+      ).kind,
+    ).toBe("complete");
   });
   it("routes missing authentication before issuing another check", () => {
     const current = configured();
-    current.voiceTranscription.authenticationMode = AuthenticationMode.AuthenticationModeAPIKey;
-    expect(nextReadinessAction(appReadiness(current, null, devices, false))).toMatchObject({
+    current.voiceTranscription.authenticationMode =
+      AuthenticationMode.AuthenticationModeAPIKey;
+    expect(
+      nextReadinessAction(appReadiness(current, null, devices, false)),
+    ).toMatchObject({
       kind: "settings",
       step: "credential",
     });
@@ -67,9 +80,26 @@ describe("readiness next action", () => {
     const current = configured();
     current.authenticationMode = AuthenticationMode.AuthenticationModeNone;
     current.toggleShortcut = "";
-    expect(nextReadinessAction(appReadiness(current, null, [], false, "file")).kind).toBe("check");
     expect(
-      nextReadinessAction(appReadiness(current, connectionResult, [], false, "file")).kind,
+      nextReadinessAction(appReadiness(current, null, [], false, "file")).kind,
+    ).toBe("check");
+    expect(
+      nextReadinessAction(
+        appReadiness(current, connectionResult, [], false, "file"),
+      ).kind,
     ).not.toBe("complete");
+  });
+});
+
+it("keeps a selected local installation as the setup destination", () => {
+  const current = configured();
+  current.voiceTranscription.managedInstanceID = "selected-local";
+  const readiness = appReadiness(current, null, devices, false);
+  expect(readiness.managedInstanceID).toBe("selected-local");
+  expect(readiness.connectionSelected).toBe(true);
+  expect(nextReadinessAction(readiness)).toMatchObject({
+    kind: "settings",
+    section: "local-runtime",
+    label: "Continue local setup",
   });
 });

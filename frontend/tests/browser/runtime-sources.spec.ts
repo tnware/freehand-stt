@@ -31,7 +31,7 @@ for (const provider of ["llama-cpp", "whisper-cpp", "nemo-speech-cpp"]) {
     await expect(rows).toHaveCount(provider === "nemo-speech-cpp" ? 2 : 1);
     for (const row of await rows.all()) {
       await expect(
-        row.getByRole("button", { name: "Get", exact: true }),
+        row.getByRole("button", { name: "Download", exact: true }),
       ).toBeDisabled();
       await expect(
         row.getByRole("button", { name: "Select", exact: true }),
@@ -40,7 +40,7 @@ for (const provider of ["llama-cpp", "whisper-cpp", "nemo-speech-cpp"]) {
     }
     if (provider === "nemo-speech-cpp") {
       await expect(
-        models.getByText("Source: NeMo’s built-in model manager"),
+        models.getByText("NeMo’s built-in model manager", { exact: true }),
       ).toHaveCount(2);
       await expect(models.getByRole("link")).toHaveCount(0);
     } else {

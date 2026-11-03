@@ -18,6 +18,7 @@
   let {
     active,
     sections,
+    searchAllSettings = false,
     counts = {},
     onSelect,
     onOpenChain,
@@ -27,6 +28,7 @@
     active: SettingsSectionID;
     /** Restrict this navigation and its search to the supplied settings. */
     sections?: SettingsSectionID[];
+    searchAllSettings?: boolean;
     /** Per-section tallies, shown as the design draws them. */
     counts?: Partial<Record<SettingsSectionID, number>>;
     onSelect: (id: SettingsSectionID) => void;
@@ -43,8 +45,9 @@
   const matches = $derived(
     matchingSettingsSections(query).filter(
       (section) =>
-        section.id !== "local-runtime" &&
-        (!sections || sections.includes(section.id)),
+        (query.trim() && searchAllSettings) ||
+        (section.id !== "local-runtime" &&
+          (!sections || sections.includes(section.id))),
     ),
   );
   const tabStop = $derived(

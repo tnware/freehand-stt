@@ -12,6 +12,7 @@ export type RuntimeModelGroup = {
 export function runtimeModelGroups(
   provider: ProviderID,
   models: readonly Model[],
+  preferredRole?: Role,
 ): RuntimeModelGroup[] {
   const tasks = [
     {
@@ -32,22 +33,30 @@ export function runtimeModelGroups(
     bucket.push(model);
     buckets.set(id, bucket);
   }
-  return [...tasks, { id: "other", label: "Other models", roles: [] }].flatMap(
-    (task) => {
-      const entries = buckets.get(task.id);
-      if (!entries?.length) return [];
-      return [
-        {
-          id: task.id,
-          label: buckets.size > 1 ? task.label : "",
-          families: runtimeModelFamilies(provider, entries).map((family) => ({
-            ...family,
-            id: `${task.id}:${family.id}`,
-          })),
-        },
-      ];
-    },
-  );
+  const orderedTasks = preferredRole
+    ? tasks.toSorted(
+        (a, b) =>
+          Number(b.roles.includes(preferredRole)) -
+          Number(a.roles.includes(preferredRole)),
+      )
+    : tasks;
+  return [
+    ...orderedTasks,
+    { id: "other", label: "Other models", roles: [] },
+  ].flatMap((task) => {
+    const entries = buckets.get(task.id);
+    if (!entries?.length) return [];
+    return [
+      {
+        id: task.id,
+        label: buckets.size > 1 ? task.label : "",
+        families: runtimeModelFamilies(provider, entries).map((family) => ({
+          ...family,
+          id: `${task.id}:${family.id}`,
+        })),
+      },
+    ];
+  });
 }
 
 function whisperFamily(id: string) {
@@ -60,9 +69,11 @@ function whisperFamily(id: string) {
 export function runtimeVariantLabel(provider: ProviderID, id: string): string {
   if (provider !== ProviderID.WhisperCPP || !whisperFamily(id)) return "";
   const language = id.includes(".en") ? "English only" : "Multilingual";
-  const quantization =
-    /-(q[58]_[01])$/.exec(id)?.[1].toUpperCase() ?? "Standard";
-  return `${language} · ${quantization}`;
+  const quantization = /-(q[58]_[01])$/.exec(id)?.[1].toUpperCase();
+  const file = quantization
+    ? `Reduced precision (${quantization})`
+    : "Standard file";
+  return `${language} · ${file}`;
 }
 
 /** Presentation only: callers supply the already-qualified provider catalog. */

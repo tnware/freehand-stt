@@ -239,6 +239,7 @@
     {/key}
   {:else}
     <SettingsScreen
+      searchAllSettings={!!onNavigateExternal}
       bind:this={screen}
       bind:session
       bind:active={navigation.active}

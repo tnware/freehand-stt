@@ -3,6 +3,7 @@ import type { PermissionKind } from "$lib/stores/nativePermissions.svelte";
 type PermissionRow = {
   kind: PermissionKind;
   label: string;
+  description: string;
   state: string;
   action: "request" | "settings" | null;
 };
@@ -14,6 +15,7 @@ export function permissionRows(
     {
       kind: "microphone",
       label: "Microphone",
+      description: "Record speech and preview microphone input.",
       state:
         status.microphone === "authorized"
           ? "Allowed"
@@ -32,12 +34,14 @@ export function permissionRows(
     {
       kind: "accessibility",
       label: "Accessibility",
+      description: "Check the destination, insert text, and capture shortcuts.",
       state: status.accessibility ? "Allowed" : "Not allowed",
       action: status.accessibility ? null : "settings",
     },
     {
       kind: "keyboard",
       label: "Input Monitoring",
+      description: "Capture shortcuts and use hold-to-talk.",
       state: status.keyboard ? "Allowed" : "Not allowed",
       action: status.keyboard ? null : "settings",
     },

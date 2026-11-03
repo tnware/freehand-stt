@@ -2,14 +2,20 @@ import type { Readiness, ReadinessStep } from "./readiness";
 import type { SettingsSectionID } from "$lib/navigation";
 
 export type ReadinessAction =
-  | { kind: "settings"; label: string; section: SettingsSectionID; step: ReadinessStep["id"] }
+  | {
+      kind: "settings";
+      label: string;
+      section: SettingsSectionID;
+      step: ReadinessStep["id"];
+    }
   | { kind: "check" | "complete" | "wait"; label: string };
 
 /** Presentation priority only: appReadiness remains the readiness authority. */
 export function nextReadinessAction(readiness: Readiness): ReadinessAction {
   if (readiness.canComplete) return { kind: "complete", label: "Finish setup" };
   const prerequisite = readiness.steps.find(
-    (step) => step.id !== "connection" && step.blocking && step.status !== "complete",
+    (step) =>
+      step.id !== "connection" && step.blocking && step.status !== "complete",
   );
   if (prerequisite?.status === "pending")
     return { kind: "wait", label: "Looking for a microphone…" };
@@ -23,7 +29,10 @@ export function nextReadinessAction(readiness: Readiness): ReadinessAction {
     };
     return {
       kind: "settings",
-      label: labels[prerequisite.id],
+      label:
+        prerequisite.settingsSection === "local-runtime"
+          ? "Continue local setup"
+          : labels[prerequisite.id],
       section: prerequisite.settingsSection,
       step: prerequisite.id,
     };
@@ -31,7 +40,9 @@ export function nextReadinessAction(readiness: Readiness): ReadinessAction {
   if (readiness.canTestConnection)
     return {
       kind: "check",
-      label: readiness.steps.some((step) => step.id === "connection" && step.status === "attention")
+      label: readiness.steps.some(
+        (step) => step.id === "connection" && step.status === "attention",
+      )
         ? "Check again"
         : "Check connection",
     };

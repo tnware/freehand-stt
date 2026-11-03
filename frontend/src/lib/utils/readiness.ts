@@ -25,12 +25,17 @@ export type ReadinessStep = {
   id: "server" | "credential" | "microphone" | "shortcut" | "connection";
   label: string;
   detail: string;
+  /** Compact identity, without repeating the next-step instruction. */
+  summary?: string;
   status: ReadinessStepStatus;
   blocking: boolean;
   settingsSection?: SettingsSectionID;
 };
 
 export type Readiness = {
+  /** A saved choice remains selected while its model/authentication needs work. */
+  connectionSelected?: boolean;
+  managedInstanceID?: string;
   initialSetup: boolean;
   recoveryNeeded: boolean;
   recoveryKey: string;
@@ -56,6 +61,12 @@ export function appReadiness(
   const voice = task === "voice";
   const endpoint = voice ? settings.voiceTranscription : settings;
   const managed = !!endpoint.managedInstanceID;
+  const selectedConnectionID =
+    settings.savedConnections.selected?.[voice ? "voice" : "stt"];
+  const selectedConnection = settings.savedConnections.entries?.find(
+    (entry) => entry.id === selectedConnectionID,
+  );
+  const connectionSelected = managed || !!selectedConnectionID;
   const runtime =
     instance && instance.instance.id === endpoint.managedInstanceID
       ? instance.status
@@ -91,11 +102,16 @@ export function appReadiness(
     {
       id: "server",
       label: "Speech-to-text server",
+      summary: serverConfigured
+        ? `${endpointLabel(endpoint.baseURL)} · ${serverLoadedModel ? "Server-loaded model" : compactModel(endpoint.model)}`
+        : selectedConnection?.name,
       detail: serverConfigured
         ? `${endpointLabel(endpoint.baseURL)} · ${serverLoadedModel ? "Server-loaded model" : compactModel(endpoint.model)}`
-        : serverLoadedModel
-          ? "Add a server endpoint."
-          : "Add an endpoint and model.",
+        : selectedConnection
+          ? `${selectedConnection.name} · ${endpoint.baseURL.trim() ? "Choose a model to continue." : "Review this connection’s endpoint."}`
+          : serverLoadedModel
+            ? "Add a server endpoint."
+            : "Add an endpoint and model.",
       status: serverConfigured ? "complete" : "attention",
       blocking: !serverConfigured,
       settingsSection: voice ? "voice-transcription" : "server",
@@ -168,10 +184,33 @@ export function appReadiness(
 
   if (managed) {
     const view = runtimePresentation(runtime);
+    const modelName =
+      view.selected?.name ?? runtime?.selectedModel ?? "Local runtime";
+    const setupDetail = !runtime
+      ? "Refresh the runtime inventory to find this installation."
+      : !runtime.supported
+        ? "Unavailable on this machine. Choose another local runtime or a server connection."
+        : view.busy
+          ? view.activity
+          : view.error || runtime.state === "error"
+            ? "Review the runtime error before continuing."
+            : !view.installed
+              ? "Install this runtime to continue."
+              : !view.selected?.installed
+                ? "Download the selected model to continue."
+                : runtime.selectedSpeechModel &&
+                    !runtime.models?.some(
+                      (model) =>
+                        model.id === runtime.selectedSpeechModel &&
+                        model.installed,
+                    )
+                  ? "Download the selected speech model before starting."
+                  : "Start this runtime to continue.";
     allSteps[0] = {
       id: "server",
       label: "Local speech runtime",
-      detail: view.selected?.name ?? runtime?.selectedModel ?? "Local runtime",
+      summary: modelName,
+      detail: view.ready ? modelName : `${modelName} · ${setupDetail}`,
       status: view.ready ? "complete" : "attention",
       blocking: !view.ready,
       settingsSection: "local-runtime",
@@ -187,7 +226,7 @@ export function appReadiness(
     allSteps[4] = {
       id: "connection",
       label: "Runtime readiness",
-      detail: runtime?.error || runtime?.phase || view.label,
+      detail: runtime?.error || (view.busy ? view.activity : view.label),
       status: view.ready ? "complete" : "attention",
       blocking: !view.ready,
       settingsSection: "local-runtime",
@@ -236,6 +275,8 @@ export function appReadiness(
   });
 
   return {
+    connectionSelected,
+    managedInstanceID: endpoint.managedInstanceID,
     initialSetup,
     recoveryNeeded,
     recoveryKey,

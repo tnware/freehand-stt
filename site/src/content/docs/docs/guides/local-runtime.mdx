@@ -62,14 +62,16 @@ Viewing these details downloads nothing.
 <Steps>
 
 1. **Open Local runtime** on the activity rail. Choose **Install** for
-   **NeMo-Speech.cpp** and keep the recommended Nemotron 3.5 Streaming selection.
+   **NeMo-Speech.cpp**. Review its version and download source, then choose
+   **Download and install**. **Not now** leaves the installation unchanged.
 2. **Select NeMo in the inventory sidebar.** Follow installation progress there;
    use its cancellation action if needed. Installation does not download the model.
-3. **Choose Get for Nemotron** when installation finishes. Wait for **Downloaded**
+3. **Choose Download for Nemotron** when installation finishes. Wait for **Downloaded**
    after transfer and verification.
 4. **Choose Start** in the runtime header and wait for **Running**.
-5. **Select the built-in NeMo-Speech.cpp connection in Voice.** Complete microphone
-   and recording setup. No additional connection entry is needed.
+5. **Choose Use for Voice** to select this runtime and return to dictation. If it
+   is already selected, choose **Open Voice**. Complete microphone and recording
+   setup; no additional connection entry is needed.
 6. **Enable Realtime transcription** under **Voice transcription → Transcription**
    for a live preview, then save. Captions and language remain Voice options.
 
@@ -89,7 +91,7 @@ Turning realtime off in Voice keeps the same connection and model.
 
 1. **Install NeMo and select a transcription model** using the steps above.
    Stop the runtime before changing model selections.
-2. **Choose Get for MagpieTTS Multilingual 357M** in its catalog. This downloads
+2. **Choose Download for MagpieTTS Multilingual 357M** in its catalog. This downloads
    the model, NanoCodec decoder, and tokenizer; wait for **Downloaded**.
 3. **Choose Select on Magpie.** It becomes the speech selection alongside the
    existing transcription model.
@@ -111,7 +113,7 @@ speech-model options are removed; review speech settings after selecting Magpie 
 ## Choose another model
 
 The runtime's detail pane groups models under **Transcription**, **Text to
-speech**, and **Cleanup**. Choose **Get** to download, then **Select** while
+speech**, and **Cleanup**. Choose **Download** to download, then **Select** while
 stopped. Use **Runtime preferences** for startup/binary options and **Manage
 runtime** for removal/recovery. Managing a runtime does not change a task's
 selected connection.
@@ -125,13 +127,13 @@ explicitly enable realtime again. Independent connections are unaffected.
 
 ### whisper.cpp transcription
 
-On Windows, **Install** whisper.cpp, review its binary choice, **Get** a catalog
+On Windows, **Install** whisper.cpp, review its binary choice, **Download** a catalog
 model, and **Start**. Select its built-in connection for Voice or files. It
 supports completed transcription only: no live microphone mode or file-response
 streaming. CPU and NVIDIA CUDA binaries are available.
 
 **Whisper Base** is the recommended starting point. Expand or search a model
-family, then inspect a variant's size and download details before choosing Get.
+family, then inspect a variant's size and download details before choosing Download.
 Model downloads and selection require an installed, stopped runtime.
 
 | Family | Catalog variants |
@@ -147,7 +149,7 @@ speed and quality depend on the model, quantization, audio, and computer.
 
 ### Local cleanup with S1-mini
 
-**Install** llama.cpp, confirm its binary, **Get S1-mini by Superwhisper v1 Q4_K_M**,
+**Install** llama.cpp, confirm its binary, **Download S1-mini by Superwhisper v1 Q4_K_M**,
 and start it. Select its built-in connection in **Cleanup** and enable cleanup.
 NeMo can continue transcribing while llama.cpp cleans up its final text. CPU
 execution can leave GPU memory available for NeMo.
@@ -301,6 +303,14 @@ or at the next runtime inspection after an abrupt exit, without copying them to
 application logs.
 
 <CardGrid>
-  <LinkCard title="Start live dictation" href="../live-transcription/" description="Enable realtime, choose captions, and understand final text." />
-  <LinkCard title="Use a manually managed server" href="../../backends/" description="Find deployment recipes for custom models, versions, and network serving." />
+  <LinkCard
+    title="Start live dictation"
+    href="../live-transcription/"
+    description="Enable realtime, choose captions, and understand final text."
+  />
+  <LinkCard
+    title="Use a manually managed server"
+    href="../../backends/"
+    description="Find deployment recipes for custom models, versions, and network serving."
+  />
 </CardGrid>
