@@ -39,14 +39,14 @@ text field focused. See [first dictation setup](../../getting-started/#run-your-
 :::caution[Check before pasting a recovery result]
 If delivery stops, use **Copy** on the current result. Some text may already have
 been inserted: check the destination before pasting to avoid duplicates. Windows
-requires the original focused control; macOS allows another field in the same
-app and window. See [safe insertion](../privacy-and-safety/#safe-text-insertion).
+requires the original focused control. On macOS, a confirmed change of available
+focus identity also blocks delivery within the same app and window. Field
+identity is best-effort, so keep the original text field focused. See [safe insertion](../privacy-and-safety/#safe-text-insertion).
 :::
 
-To change inputs, choose **Microphone** at the top of the Voice sidebar. The
-selection saves immediately for the next recording. **System default microphone**
-follows the system setting; **Refresh microphones** finds a newly connected
-device. A disconnected saved device stays selected until you reconnect or replace it.
+To change inputs, choose **Microphone** in the Voice sidebar, select a device,
+and choose **Save**. **System default microphone** follows the system setting;
+**Refresh** finds a newly connected device. A disconnected saved device stays selected until you reconnect or replace it.
 
 ### Toggle recording
 
@@ -68,7 +68,7 @@ modifier-only combinations and conflict recovery are covered in
 ### Long dictation and VAD
 
 Voice activity detection (VAD) identifies speech and silence on your computer and
-is on by default. These optional controls in **Voice transcription → Audio**
+is on by default. These optional controls in **Voice transcription → Microphone**
 start off:
 
 | Control | What changes |
@@ -120,9 +120,9 @@ recovers a result after failed insertion; **Clear** removes it; **Listen** plays
 it when speech is enabled. Starting another recording replaces the Voice result.
 Clear or replace a selected file to remove its file result.
 
-Select a row in the task sidebar, or its **Settings** cog, to open detailed
-options beside the result. Quick controls save immediately; detailed edits use
-**Save**. Changing settings does not alter work already running.
+Use **Model** in the task sidebar to choose a connection and model. Those
+choices save immediately. Use **Preferences** or a workflow summary row to open
+detailed options beside the result, then choose **Save**. Changing settings does not alter work already running.
 
 <span id="workspace-layout"></span>
 <span id="window-controls"></span>
@@ -137,7 +137,7 @@ options beside the result. Quick controls save immediately; detailed edits use
 ## Finding and adjusting settings
 
 Use **Settings** for **General**, **Shortcuts**, **Overlay**, and **Vocabulary**.
-Use each task's **Settings** cog for transcription, audio, cleanup, speech, or
+Use each task's **Preferences** for transcription, audio, cleanup, speech, or
 delivery options. **Find settings** searches by page name or terms such as
 “glow” and “hotkey”; Enter opens the first match and Escape clears the filter.
 

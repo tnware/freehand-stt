@@ -63,12 +63,19 @@ try {
   }));
   assert.ok(liveSamples.some(s => s.phase === 'recording' && s.text === '' && s.caption.startsWith('Start')), 'live preview before insertion');
   assert.ok(liveSamples.some(s => s.phase === 'recording' && s.scroll > 0), 'long captions reveal newest words');
+  const liveTranscript = await realtime.locator('[data-demo-text]').getAttribute('data-transcript');
+  const liveSentences = liveTranscript.split('\n\n');
+  const finalizedTexts = ['', ...liveSentences.map((_, index) => liveSentences.slice(0, index + 1).join('\n\n'))];
+  assert.ok(liveSamples.every(sample => finalizedTexts.includes(sample.text)), 'only whole finalized phrases enter the document');
+  for (const text of finalizedTexts.slice(1)) {
+    assert.ok(liveSamples.some(sample => sample.phase === 'recording' && sample.text === text), 'finalized phrases type while recording');
+  }
   const liveProcessing = liveSamples.find(s => s.phase === 'processing');
   const liveDone = liveSamples.find(s => s.phase === 'done');
-  const completedDone = samples.find(s => s.phase === 'done');
-  assert.equal(liveProcessing.text, '', 'live partials never enter the document');
-  assert.ok(liveDone.ms - liveProcessing.ms < completedDone.ms - firstProcessing.ms, 'shorter illustrative finalization/insertion beat');
-  const liveTranscript = await realtime.locator('[data-demo-text]').getAttribute('data-transcript');
+  assert.ok(liveProcessing && liveDone, 'Stop finalizes the live session');
+  assert.equal(liveProcessing.text, liveTranscript, 'already typed phrases remain at Stop');
+  assert.equal(liveDone.text, liveTranscript, 'finalization does not duplicate typed phrases');
+  assert.ok(!liveSamples.some(sample => sample.phase === 'inserting'), 'no second insertion after Stop');
   const liveFull = liveSamples.findIndex(s => s.text === liveTranscript);
   assert.ok(liveFull >= 0 && liveSamples.slice(liveFull + 1).some(s => s.phase === 'recording' && s.text === ''), 'realtime loop');
   await realtime.locator('[data-demo-toggle]').click();

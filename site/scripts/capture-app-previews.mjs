@@ -55,7 +55,10 @@ try {
       throw new Error("Screenshot server did not start: " + serverLog);
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
+  });
   const context = await browser.newContext({
     viewport: { width: 1280, height: 820 },
     deviceScaleFactor: 2,

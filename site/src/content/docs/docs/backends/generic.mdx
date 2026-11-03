@@ -23,8 +23,8 @@ Check that the selected model supports the operation you want to use.
 1. Open **Connections → Add connection**, choose its purpose and **Generic OpenAI-compatible** profile.
 2. Name it and enter the API base URL, normally ending in `/v1`.
 3. Configure authentication. For an HTTP URL, enable **Allow HTTP for this connection** only if you trust the network. Choose **Save connection**.
-4. Open the workflow's **Settings** cog and choose **Transcription** for Voice or Audio file,
-   **Cleanup** for either transcription workflow, or **Speech** for Text to speech.
+4. Open **Model → Model options** in Voice transcription, Audio file, or Text to speech.
+   For cleanup, open **Preferences → Transcript cleanup** in either transcription workflow.
    Select the connection, choose **Refresh models** or enter the exact model ID, then save. Model discovery reads metadata only.
 5. Explicitly try one operation with the model you chose and review the result.
 
@@ -68,8 +68,8 @@ failure handling.
 
 | Workflow | Where to find the controls |
 | --- | --- |
-| Voice | **Voice transcription → Transcription → Request settings** |
-| Audio file | **Audio file → Transcription → Transcription controls** |
+| Voice | **Voice transcription → Model → Model options → Request settings** |
+| Audio file | **Audio file → Model → Model options → Transcription controls** |
 
 **Context hint** is sent as `prompt`. Temperature is sent only when its override
 is enabled. Leave either unset for server defaults; each model may interpret

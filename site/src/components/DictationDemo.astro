@@ -12,7 +12,7 @@ const transcript = [
 ].join("\n\n");
 ---
 <freehand-dictation-demo data-realtime={String(realtime)} data-phase="done" data-paused="true">
-  <div class="dictation-desktop" role="img" aria-label={realtime ? "Illustrative macOS desktop: live words appear in Freehand’s caption strip while recording. Only finalized text enters the same focused document after recording stops." : "Illustrative macOS desktop: Freehand records speech, processes it, then inserts the completed text into the same focused document window."}>
+  <div class="dictation-desktop" role="img" aria-label={realtime ? "Illustrative macOS desktop with opt-in NeMo live typing: changing previews stay in the caption strip; completed phrases enter the original focused document while recording." : "Illustrative macOS desktop: Freehand records speech, processes it, then inserts the completed text into the same focused document window."}>
     <div class="desktop-art" aria-hidden="true">
       <div class="desktop-wallpaper" style={{ backgroundImage: `url("${wallpaper.src}")` }}></div>
       <div class="desktop-menubar"><span class="desktop-system-mark">●</span><strong>TextEdit</strong><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Window</span><span class="desktop-menu-right">Sun 10:24 AM</span></div>
@@ -40,7 +40,7 @@ const transcript = [
     </div>
   </div>
   <div class="demo-caption"><span><span data-demo-status>Text inserted</span><span class="demo-disclaimer"> · Illustrative demo</span></span><div class="demo-actions" hidden><button type="button" data-demo-toggle>Pause</button><button type="button" data-demo-replay aria-label="Replay dictation demo">Replay ↻</button></div></div>
-  {realtime && <p class="realtime-note">Requires a supported model and backend. <a href={`${base}/docs/guides/live-transcription/`}>Live transcription setup ↗</a></p>}
+  {realtime && <p class="realtime-note">Shown with NeMo live typing enabled: completed phrases only, direct input on, cleanup off. Other live previews wait until Stop. <a href={`${base}/docs/guides/live-transcription/`}>Live transcription setup ↗</a></p>}
 </freehand-dictation-demo>
 <style>
   freehand-dictation-demo { display: block; min-width: 0; }
@@ -97,6 +97,7 @@ const transcript = [
   @media (max-width: 400px) { .demo-caption { gap: 6px; font-size: 11px; } .demo-actions { gap: 10px; } }
 </style>
 <script>
+  import { demoTiming, demoFrame } from "../lib/dictation-demo.mjs";
   class FreehandDictationDemo extends HTMLElement {
     private cleanup?: () => void;
     connectedCallback() {
@@ -112,10 +113,7 @@ const transcript = [
       const realtime = this.dataset.realtime === "true";
       const caption = this.querySelector<HTMLElement>("[data-live-caption]");
       const captionViewport = this.querySelector<HTMLElement>(".overlay-live-caption");
-      const recordingMS = realtime ? 2400 : 1600;
-      const processingMS = realtime ? 150 : 650;
-      const insertionMS = realtime ? 180 : 500;
-      const cycleMS = recordingMS + processingMS + insertionMS + 1200;
+      const { cycleMS } = demoTiming(realtime);
       const durationMS = cycleMS * sentences.length + 1800;
       const bars = this.querySelectorAll<SVGRectElement>("[data-wave-bar]");
       const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -127,21 +125,11 @@ const transcript = [
       let frame = 0;
       let previous = 0;
       const render = () => {
-        const sentenceIndex = Math.min(sentences.length - 1, Math.floor(elapsed / cycleMS));
-        const localMS = elapsed - sentenceIndex * cycleMS;
-        const insertionStart = recordingMS + processingMS;
-        const phase = localMS < recordingMS ? "recording" : localMS < insertionStart ? "processing" : localMS < insertionStart + insertionMS ? "inserting" : "done";
+        const { phase, text: delivered, status: label, preview } = demoFrame(sentences, realtime, elapsed);
         this.dataset.phase = phase;
-        // Completed dictation: nothing enters the document before processing.
-        const sentence = sentences[sentenceIndex];
-        const length = Math.max(0, Math.min(sentence.length, Math.floor((localMS - insertionStart) / insertionMS * sentence.length)));
-        const completed = sentences.slice(0, sentenceIndex);
-        text.textContent = [...completed, sentence.slice(0, length)].join("\n\n");
-        status.textContent = { recording: realtime ? "Live transcription" : "Recording", processing: realtime ? "Finalizing" : "Transcribing", inserting: "Inserting text", done: "Text inserted" }[phase];
+        text.textContent = delivered;
+        status.textContent = label;
         if (caption && captionViewport) {
-          const words = sentence.split(" ");
-          const count = Math.min(words.length, Math.floor(Math.max(0, localMS - 200) / (recordingMS - 450) * words.length));
-          const preview = words.slice(0, count).join(" ") || "Listening…";
           if (caption.textContent !== preview) {
             caption.textContent = preview;
             // Match the native latest-text strip, not an endlessly cycling marquee.
