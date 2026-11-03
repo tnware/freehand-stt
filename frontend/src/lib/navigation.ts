@@ -159,7 +159,8 @@ const SETTINGS_KEYWORDS: Record<SettingsSectionID, string> = {
   server: "file upload language context prompt streaming timeout",
   processing:
     "post processing s1 mini instructions reasoning temperature timeout",
-  speech: "tts voice preview speed language style instructions timeout",
+  speech:
+    "tts model models voice preview speed language style instructions timeout",
   connections:
     "backend provider endpoint url api key authentication headers server",
   vocabulary: "names phrases terminology hotwords boosting",

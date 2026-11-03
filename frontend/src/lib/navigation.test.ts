@@ -54,6 +54,7 @@ it("finds model management and live typing by the words users search", () => {
       "voice-transcription",
       "server",
       "processing",
+      "speech",
       "local-runtime",
     ]),
   );
