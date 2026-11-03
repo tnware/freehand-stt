@@ -14,13 +14,13 @@
     type ProviderDescriptor,
   } from "$bindings/managedruntime";
   import DisclosureButton from "$lib/components/common/DisclosureButton.svelte";
-  import BoxIcon from "@lucide/svelte/icons/box";
+  import CheckIcon from "@lucide/svelte/icons/check";
+  import { runtimeBinaryContext } from "$lib/utils/runtimeBinaryContext";
   import CpuIcon from "@lucide/svelte/icons/cpu";
   import DownloadIcon from "@lucide/svelte/icons/download";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import PackageIcon from "@lucide/svelte/icons/package";
   import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
-  import TagIcon from "@lucide/svelte/icons/tag";
   import Trash2Icon from "@lucide/svelte/icons/trash-2";
   import WrenchIcon from "@lucide/svelte/icons/wrench";
   import { Button } from "$lib/components/ui/button";
@@ -115,31 +115,28 @@
   const missingModel = $derived(
     !selectedModel?.installed ? selectedModel : selectedSpeechModel,
   );
-  const metadata = $derived(
+  const identifiers = $derived(
     [
+      { label: "Selected model ID", value: instance?.model },
+      { label: "Selected speech model ID", value: instance?.speechModel },
       {
-        label: "Version",
-        value: status?.version || entry.version,
-        icon: TagIcon,
-        technical: true,
+        label: "Reported model ID",
+        value:
+          status?.selectedModel !== instance?.model
+            ? status?.selectedModel
+            : "",
       },
       {
-        label: "Backend",
-        value: status?.backend ? backendLabel(status.backend) : "",
-        icon: CpuIcon,
-        technical: false,
+        label: "Reported speech model ID",
+        value:
+          status?.selectedSpeechModel !== instance?.speechModel
+            ? status?.selectedSpeechModel
+            : "",
       },
+      { label: "Active API model", value: row?.activeModel || "None" },
       {
-        label: "Selected model",
-        value: status?.selectedModel,
-        icon: BoxIcon,
-        technical: true,
-      },
-      {
-        label: "Selected speech model",
-        value: status?.selectedSpeechModel,
-        icon: BoxIcon,
-        technical: true,
+        label: "Active speech API model",
+        value: instance?.speechModel ? row?.activeSpeechModel || "None" : "",
       },
     ].filter((fact) => fact.value),
   );
@@ -236,6 +233,7 @@
   );
 
   let installedOptions = $state<BinaryOptions | null>(null);
+  const binary = $derived(runtimeBinaryContext(status, installedOptions));
   let checkingInstalledOptions = $state(false);
   let installedOptionsAttempted = $state(false);
   async function checkInstalledOptions() {
@@ -417,53 +415,53 @@
     {/snippet}
   </PaneHeader>
   {@render notice?.()}
-  <div class="workbench-toolbar flex-wrap gap-x-3 gap-y-1 py-1.5">
-    <RuntimeStatus
-      {view}
-      {problem}
-      badge
-      label={status
-        ? view.label
-        : entry.supported
-          ? "Not installed"
-          : "Unavailable"}
-    />
-    <dl class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-      {#each metadata as fact (fact.label)}
-        <div
-          class="flex min-w-0 items-center gap-1.5"
-          title={`${fact.label}: ${fact.value}`}
+  <div
+    class="workbench-toolbar runtime-toolbar"
+    role="group"
+    aria-label="Runtime status and actions"
+  >
+    <div class="runtime-toolbar-state">
+      <RuntimeStatus
+        {view}
+        {problem}
+        badge
+        label={status
+          ? view.label
+          : entry.supported
+            ? "Not installed"
+            : "Unavailable"}
+      />
+      {#if binary.currentID}
+        <span
+          class="min-w-0 truncate text-xs text-secondary-foreground"
+          title={`${binary.currentLabel}: ${binary.current}`}
         >
-          <fact.icon
-            class="size-3.5 shrink-0 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <dt class="sr-only">{fact.label}</dt>
-          <dd
-            class="min-w-0 truncate text-xs {fact.technical
-              ? 'font-mono text-muted-foreground'
-              : 'font-medium text-foreground'}"
-          >
-            {fact.value}
-          </dd>
-        </div>
-      {/each}
-    </dl>
-    <span class="flex-1"></span>
-    {#if layout && instance}
-      <Button
-        variant="ghost"
-        size="xs"
-        disabled={!layout.bottomAvailable.current}
-        title={!layout.bottomAvailable.current
-          ? "Increase window height to show the bottom panel"
-          : undefined}
-        onclick={() => layout.showOutput(instance.id)}>View output</Button
+          {binary.current}
+        </span>
+      {/if}
+      {#if binary.version}
+        <span
+          class="runtime-toolbar-version truncate font-mono text-xs text-ink-quiet"
+          title={`Installed version: ${binary.version}`}>{binary.version}</span
+        >
+      {/if}
+    </div>
+    <div class="runtime-toolbar-actions">
+      {#if layout && instance}
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={!layout.bottomAvailable.current}
+          title={!layout.bottomAvailable.current
+            ? "Increase window height to show the bottom panel"
+            : undefined}
+          onclick={() => layout.showOutput(instance.id)}>View output</Button
+        >
+      {/if}
+      <Button variant="ghost" size="xs" onclick={onOpenConnections}
+        >Open Connections</Button
       >
-    {/if}
-    <Button variant="ghost" size="xs" onclick={onOpenConnections}
-      >Open Connections</Button
-    >
+    </div>
   </div>
   <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-3">
     {#if setup}
@@ -583,7 +581,7 @@
             </p>
             <div class="mt-2.5 flex flex-wrap gap-1.5">
               <Button
-                variant="outline"
+                variant={binaryChoice === "auto" ? "soft" : "outline"}
                 size="xs"
                 aria-pressed={binaryChoice === "auto"}
                 disabled={actionLocked}
@@ -591,7 +589,7 @@
                 >Auto (recommended)</Button
               >
               {#each recommendation.options ?? [] as option (option.backend)}<Button
-                  variant="outline"
+                  variant={binaryChoice === option.backend ? "soft" : "outline"}
                   size="xs"
                   aria-pressed={binaryChoice === option.backend}
                   disabled={actionLocked ||
@@ -602,6 +600,14 @@
                   >{backendLabel(option.backend)}</Button
                 >{/each}
             </div>
+            {#if choiceAvailable}<p
+                class="content-meta mt-3"
+                aria-label="Selected installation backend"
+              >
+                Will install: <strong class="font-medium text-foreground"
+                  >{backendLabel(chosenBackend)}</strong
+                >
+              </p>{/if}
             <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
               <p class="text-xs text-ink-quiet">
                 Downloads on install · checksum pinned
@@ -699,15 +705,27 @@
                       )}
                   />
                 </div>
-                <p class="break-all font-mono text-xs text-ink-quiet">
-                  Active API model: {row?.activeModel || "None"}
-                </p>
-                {#if instance.speechModel}<p
-                    class="break-all font-mono text-xs text-ink-quiet"
-                  >
-                    Active speech API model: {row?.activeSpeechModel || "None"}
-                  </p>
-                  <p class="content-meta">
+                <dl class="grid gap-2" aria-label="Runtime identifiers">
+                  {#each identifiers as fact (fact.label)}
+                    <div class="min-w-0">
+                      <dt class="content-meta">{fact.label}</dt>
+                      <dd
+                        class="mt-0.5 break-all font-mono text-xs text-secondary-foreground"
+                      >
+                        {fact.value}
+                      </dd>
+                    </div>
+                  {/each}
+                  {#if binary.version}<div>
+                      <dt class="content-meta">Installed version</dt>
+                      <dd
+                        class="mt-0.5 break-all font-mono text-xs text-secondary-foreground"
+                      >
+                        {binary.version}
+                      </dd>
+                    </div>{/if}
+                </dl>
+                {#if instance.speechModel}<p class="content-meta">
                     Start, Stop and Restart affect transcription and speech
                     together.
                   </p>{/if}
@@ -717,11 +735,20 @@
                     <legend class="content-section-title mb-2"
                       >Runtime binary</legend
                     >
+                    <p
+                      class="content-meta mb-2"
+                      aria-label="Current runtime backend"
+                    >
+                      {binary.currentLabel}:
+                      <strong class="font-medium text-foreground"
+                        >{binary.current}</strong
+                      >
+                    </p>
                     <div class="flex flex-wrap gap-1.5">
-                      {#each installedOptions?.options ?? [] as option (option.backend)}<Button
-                          variant="outline"
+                      {#each binary.choices as option (option.backend)}<Button
+                          variant={option.current ? "soft" : "outline"}
                           size="xs"
-                          aria-pressed={status?.backend === option.backend}
+                          aria-pressed={option.current}
                           title={option.reason}
                           disabled={actionLocked ||
                             running ||
@@ -729,7 +756,7 @@
                             !installedOptions?.supported ||
                             !option.supported ||
                             !option.available ||
-                            status?.backend === option.backend}
+                            option.current}
                           onclick={() => {
                             if (!running)
                               act(() =>
@@ -746,9 +773,14 @@
                     {checkingInstalledOptions
                       ? "Checking host binary options · no files are downloaded"
                       : installedOptions
-                        ? installedOptions.reason
+                        ? binary.recommendation
+                          ? `Recommended for this computer: ${binary.recommendation}.`
+                          : "No compatible binary recommendation is available."
                         : "Could not check available binaries. Re-check to try again."}
                   </p>
+                  {#if installedOptions?.reason}<p class="content-meta">
+                      {installedOptions.reason}
+                    </p>{/if}
                   <Button
                     variant="outline"
                     size="xs"
@@ -930,6 +962,34 @@
 </ActionDialog>
 
 <style>
+  .runtime-toolbar {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-block: 6px;
+  }
+  .runtime-toolbar-state {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+  }
+  .runtime-toolbar-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+  }
+  .runtime-toolbar-version {
+    display: none;
+    max-width: 120px;
+  }
+  @media (min-width: 1000px) {
+    .runtime-toolbar-version {
+      display: inline;
+    }
+  }
   .runtime-settings {
     margin-top: 24px;
     padding-block: 16px 24px;

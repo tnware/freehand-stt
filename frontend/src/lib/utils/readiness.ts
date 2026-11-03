@@ -25,6 +25,8 @@ export type ReadinessStep = {
   id: "server" | "credential" | "microphone" | "shortcut" | "connection";
   label: string;
   detail: string;
+  /** Compact identity, without repeating the next-step instruction. */
+  summary?: string;
   status: ReadinessStepStatus;
   blocking: boolean;
   settingsSection?: SettingsSectionID;
@@ -100,6 +102,9 @@ export function appReadiness(
     {
       id: "server",
       label: "Speech-to-text server",
+      summary: serverConfigured
+        ? `${endpointLabel(endpoint.baseURL)} · ${serverLoadedModel ? "Server-loaded model" : compactModel(endpoint.model)}`
+        : selectedConnection?.name,
       detail: serverConfigured
         ? `${endpointLabel(endpoint.baseURL)} · ${serverLoadedModel ? "Server-loaded model" : compactModel(endpoint.model)}`
         : selectedConnection
@@ -204,6 +209,7 @@ export function appReadiness(
     allSteps[0] = {
       id: "server",
       label: "Local speech runtime",
+      summary: modelName,
       detail: view.ready ? modelName : `${modelName} · ${setupDetail}`,
       status: view.ready ? "complete" : "attention",
       blocking: !view.ready,

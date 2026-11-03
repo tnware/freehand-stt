@@ -141,6 +141,15 @@ describe("focused local setup continuation", () => {
     expect(html).toContain('aria-label="Current transcription connection"');
     expect(html).toContain("Download the selected model to continue.");
     expect(html).toContain("Continue local setup");
+    const current = html.match(
+      /<section[^>]*aria-label="Current transcription connection"[\s\S]*?<\/section>/,
+    )?.[0];
+    expect(current).toContain("Selected local model");
+    expect(current).not.toContain("Download the selected model");
+    const next = html.match(
+      /<section[^>]*aria-label="Next setup step"[\s\S]*?<\/section>/,
+    )?.[0];
+    expect(next).toContain("Download the selected model to continue.");
     expect(html).not.toContain('aria-label="Local speech setup"');
   });
 
