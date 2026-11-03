@@ -46,6 +46,22 @@ describe("runtime catalog presentation", () => {
       "Other models",
     ]);
     expect(groups[0].families[0].label).toBe("Tiny");
+    const speechFirst = runtimeModelGroups(
+      ProviderID.WhisperCPP,
+      models,
+      Role.Speech,
+    );
+    expect(speechFirst.map((group) => group.id)).toEqual([
+      "speech",
+      "transcription",
+      "cleanup",
+      "other",
+    ]);
+    expect(
+      speechFirst
+        .flatMap((group) => group.families.flatMap((family) => family.models))
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    ).toEqual([...models].sort((a, b) => a.id.localeCompare(b.id)));
     expect(
       groups.flatMap((group) =>
         group.families.flatMap((family) => family.models),

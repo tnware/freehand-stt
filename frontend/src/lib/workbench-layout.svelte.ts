@@ -1,3 +1,4 @@
+import type { RuntimeSetupIntent } from "$lib/utils/runtimeSetupIntent";
 import { getContext, setContext, type Snippet } from "svelte";
 import { MediaQuery, SvelteSet } from "svelte/reactivity";
 
@@ -28,6 +29,8 @@ export class WorkbenchLayout {
   runtimeInstanceID = $state("");
   /** An explicit setup recommendation; navigation only, never installation. */
   runtimeProviderID = $state("");
+  /** One-use navigation intent. Never persisted or applied to runtime settings. */
+  runtimeSetupIntent = $state<RuntimeSetupIntent | null>(null);
   diagnosticWorkflow = $state<"voice" | "file">("voice");
   sidebars = $state<Partial<Record<SidebarID, Snippet>>>({});
   details = $state<Snippet>();

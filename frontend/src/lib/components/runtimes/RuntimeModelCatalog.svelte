@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { Role } from "$bindings/compatibility";
   import type {
     InstanceStatus,
@@ -42,6 +43,7 @@
     onRemove,
     onCancel,
     onDisableSpeech,
+    preferredRole,
   }: {
     models: Model[];
     entry: ProviderDescriptor;
@@ -57,6 +59,7 @@
     onRemove: (model: Model) => void;
     onCancel: () => void;
     onDisableSpeech: () => void;
+    preferredRole?: Role;
   } = $props();
 
   const uid = $props.id();
@@ -74,7 +77,7 @@
   let expandedModels = $state<Record<string, boolean>>({});
   const largeCatalog = $derived(models.length > 6);
   const query = $derived(largeCatalog ? filter.trim().toLowerCase() : "");
-  const groups = $derived(runtimeModelGroups(entry.id, models));
+  const groups = $derived(runtimeModelGroups(entry.id, models, preferredRole));
   const families = $derived(groups.flatMap((group) => group.families));
   const initialFamily = $derived(
     families.find((family) =>
@@ -165,6 +168,32 @@
         : model.realtime
           ? "Streaming"
           : "Batch";
+  /** Explicit keyboard-accessible navigation. No model action is invoked. */
+  export async function focusRole(role: Role) {
+    const group = groups.find((group) =>
+      group.families.some((family) =>
+        family.models.some((model) =>
+          model.contracts?.some((contract) => contract.role === role),
+        ),
+      ),
+    );
+    const family = group?.families.find((family) =>
+      family.models.some((model) =>
+        model.contracts?.some((contract) => contract.role === role),
+      ),
+    );
+    const model = family?.models.find((model) =>
+      model.contracts?.some((contract) => contract.role === role),
+    );
+    if (!group || !family || !model) return;
+    filter = "";
+    expandedGroups[group.id] = true;
+    expandedFamilies[family.id] = true;
+    await tick();
+    const target = document.getElementById(`${modelID(model.id)}-trigger`);
+    target?.focus();
+    target?.scrollIntoView({ block: "nearest" });
+  }
   function clearFilter() {
     filter = "";
     filterInput?.focus();
@@ -310,6 +339,7 @@
                   type="button"
                   class="disclosure-trigger model-identity"
                   data-density="compact"
+                  id={`${modelID(model.id)}-trigger`}
                   aria-label={`Model details: ${model.name}`}
                   title={`${model.name} (${model.id})`}
                   aria-describedby={`${modelID(model.id)}-description`}

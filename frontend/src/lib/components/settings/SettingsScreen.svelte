@@ -597,6 +597,12 @@
                     if (workbench) {
                       workbench.runtimeProviderID = providerID ?? "";
                       workbench.runtimeInstanceID = "";
+                      workbench.runtimeSetupIntent = providerID
+                        ? {
+                            providerID,
+                            purpose: active === "speech" ? "speech" : "cleanup",
+                          }
+                        : null;
                     }
                     selectSection("local-runtime");
                   })}

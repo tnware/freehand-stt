@@ -1,4 +1,8 @@
 <script lang="ts">
+  import {
+    runtimeSetupGuidance,
+    type RuntimeSetupPurpose,
+  } from "$lib/utils/runtimeSetupIntent";
   import type { Catalog } from "$bindings/savedconnection";
   import { runtimeDeletionReferences } from "$lib/utils/runtimeDeletion";
   import { onDestroy, type Snippet } from "svelte";
@@ -48,6 +52,8 @@
     notice,
     useAction,
     connectionCatalog,
+    setupPurpose,
+    onReturnToSetup,
   }: {
     runtime: ManagedRuntimeState;
     row: InstanceStatus | undefined;
@@ -58,6 +64,8 @@
     notice?: Snippet;
     useAction?: Snippet;
     connectionCatalog?: Catalog;
+    setupPurpose?: RuntimeSetupPurpose;
+    onReturnToSetup?: (section: "speech" | "processing") => void;
   } = $props();
   const deletionReferences = $derived(
     runtimeDeletionReferences(connectionCatalog, row?.instance.id ?? ""),
@@ -138,6 +146,26 @@
   const problem = $derived(
     runtime.errorFor(instance?.id ?? entry.id) || view.error,
   );
+  const setup = $derived(
+    setupPurpose
+      ? runtimeSetupGuidance(setupPurpose, entry, row, pending, problem)
+      : null,
+  );
+  const setupMissingModel = $derived(
+    setup?.selected && !setup.selected.installed
+      ? setup.selected
+      : missingModel,
+  );
+  const downloadLabel = $derived(
+    !!setupMissingModel && setupMissingModel.id === instance?.speechModel
+      ? "speech model"
+      : setupPurpose === "speech"
+        ? "transcription model"
+        : setupPurpose === "cleanup"
+          ? "cleanup model"
+          : "model",
+  );
+  let modelCatalog: RuntimeModelCatalog | undefined = $state();
   let preferencesOpen = $state(false);
   let sourceOpen = $state(false);
   let manageOpen = $state(false);
@@ -353,19 +381,27 @@
             disabled={actionLocked}
             onclick={restart}>Restart</Button
           >{/if}
-        {#if !running && !selectedModelsReady}
+        {#if setup?.chooseModel}
           <Button
             variant="outline"
             size="xs"
-            aria-label="Download selected model"
-            disabled={actionLocked || !missingModel}
+            disabled={actionLocked}
+            onclick={() => void modelCatalog?.focusRole(setup!.role)}
+            >Choose {setup.label} model</Button
+          >
+        {:else if !running && !selectedModelsReady}
+          <Button
+            variant="outline"
+            size="xs"
+            aria-label={setup
+              ? `Download selected ${downloadLabel}`
+              : "Download selected model"}
+            disabled={actionLocked || !setupMissingModel}
             onclick={() =>
-              missingModel &&
-              act(() => runtime.downloadModel(instance.id, missingModel.id))}
-            ><DownloadIcon class="size-3" />Download {missingModel ===
-            selectedSpeechModel
-              ? "speech model"
-              : "model"}</Button
+              setupMissingModel &&
+              act(() =>
+                runtime.downloadModel(instance.id, setupMissingModel.id),
+              )}><DownloadIcon class="size-3" />Download {downloadLabel}</Button
           >
         {:else}
           <Button
@@ -430,6 +466,24 @@
     >
   </div>
   <div class="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-3">
+    {#if setup}
+      <section
+        class="space-y-2 border-b border-hairline py-3"
+        aria-label={`Local ${setup.label} setup guidance`}
+      >
+        <p class="content-kicker">Local {setup.label} setup</p>
+        <h3 class="content-section-title">{setup.next}</h3>
+        <p class="content-meta">{setup.detail}</p>
+        {#if onReturnToSetup}
+          <Button
+            variant="outline"
+            size="xs"
+            onclick={() => onReturnToSetup?.(setup.section)}
+            >Return to {setup.settingsLabel}</Button
+          >
+        {/if}
+      </section>
+    {/if}
     {#if busy || view.completion || problem}
       <div
         class="space-y-1.5 border-b border-hairline py-3"
@@ -568,6 +622,8 @@
       </div>
     {/if}
     <RuntimeModelCatalog
+      bind:this={modelCatalog}
+      preferredRole={setup?.role}
       {models}
       {entry}
       {row}

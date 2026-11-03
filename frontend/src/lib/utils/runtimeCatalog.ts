@@ -12,6 +12,7 @@ export type RuntimeModelGroup = {
 export function runtimeModelGroups(
   provider: ProviderID,
   models: readonly Model[],
+  preferredRole?: Role,
 ): RuntimeModelGroup[] {
   const tasks = [
     {
@@ -32,22 +33,30 @@ export function runtimeModelGroups(
     bucket.push(model);
     buckets.set(id, bucket);
   }
-  return [...tasks, { id: "other", label: "Other models", roles: [] }].flatMap(
-    (task) => {
-      const entries = buckets.get(task.id);
-      if (!entries?.length) return [];
-      return [
-        {
-          id: task.id,
-          label: buckets.size > 1 ? task.label : "",
-          families: runtimeModelFamilies(provider, entries).map((family) => ({
-            ...family,
-            id: `${task.id}:${family.id}`,
-          })),
-        },
-      ];
-    },
-  );
+  const orderedTasks = preferredRole
+    ? tasks.toSorted(
+        (a, b) =>
+          Number(b.roles.includes(preferredRole)) -
+          Number(a.roles.includes(preferredRole)),
+      )
+    : tasks;
+  return [
+    ...orderedTasks,
+    { id: "other", label: "Other models", roles: [] },
+  ].flatMap((task) => {
+    const entries = buckets.get(task.id);
+    if (!entries?.length) return [];
+    return [
+      {
+        id: task.id,
+        label: buckets.size > 1 ? task.label : "",
+        families: runtimeModelFamilies(provider, entries).map((family) => ({
+          ...family,
+          id: `${task.id}:${family.id}`,
+        })),
+      },
+    ];
+  });
 }
 
 function whisperFamily(id: string) {

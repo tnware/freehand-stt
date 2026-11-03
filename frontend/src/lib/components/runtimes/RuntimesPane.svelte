@@ -1,5 +1,9 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
+  import {
+    runtimeSetupGuidance,
+    type RuntimeSetupIntent,
+  } from "$lib/utils/runtimeSetupIntent";
   import type { WorkflowPane } from "$lib/panes";
   import {
     runtimeWorkflowConnection,
@@ -26,6 +30,7 @@
     workflow = "voice",
     onUseRuntime,
     onReturnToWorkflow,
+    onReturnToSetup,
     workBusy = false,
   }: {
     session: Session;
@@ -33,6 +38,7 @@
     workflow?: WorkflowPane;
     onUseRuntime?: (instanceID: string) => Promise<boolean>;
     onReturnToWorkflow?: () => void;
+    onReturnToSetup?: (section: "speech" | "processing") => void;
     workBusy?: boolean;
   } = $props();
   const workbench = getWorkbenchLayout();
@@ -41,6 +47,7 @@
   const runtime = $derived(session.runtime);
   let selected = $state("");
   let recoveryID = $state("");
+  let setupIntent = $state<RuntimeSetupIntent | null>(null);
 
   const rows = $derived(
     runtime.providers.map((entry) => {
@@ -74,10 +81,25 @@
       rows[0]?.entry.id ||
       "",
   );
+  const setupPurpose = $derived(
+    setupIntent?.providerID === active ? setupIntent.purpose : undefined,
+  );
+
   // Retain that selection: stopping one provider must not move the user to
   // another provider that happens to still be running.
   $effect(() => {
     const requestedID = workbench?.runtimeInstanceID;
+    const requestedProviderID = workbench?.runtimeProviderID;
+    const requestedSetup = workbench?.runtimeSetupIntent;
+    if (
+      runtime.loading &&
+      (requestedID || requestedProviderID || requestedSetup)
+    )
+      return;
+    if (requestedID || requestedProviderID || requestedSetup) {
+      setupIntent = requestedSetup ?? null;
+      if (workbench) workbench.runtimeSetupIntent = null;
+    }
     if (requestedID) {
       if (runtime.loading) return;
       const requested = runtime.statusFor(requestedID);
@@ -118,16 +140,47 @@
     providerRows.find((row) => row.instance.id === recoveryID) ??
       providerRows[0],
   );
-  const currentContext = $derived(
-    current
-      ? runtimeSidebarContext(
-          current.entry,
-          currentInstance,
-          runtime.pendingFor(currentInstance?.instance.id ?? current.entry.id),
-          runtime.errorFor(currentInstance?.instance.id ?? current.entry.id),
-        )
-      : null,
-  );
+  const currentContext = $derived.by(() => {
+    if (!current) return null;
+    const pending = runtime.pendingFor(
+      currentInstance?.instance.id ?? current.entry.id,
+    );
+    const problem = runtime.errorFor(
+      currentInstance?.instance.id ?? current.entry.id,
+    );
+    const general = runtimeSidebarContext(
+      current.entry,
+      currentInstance,
+      pending,
+      problem,
+    );
+    if (!setupPurpose) return general;
+    const setup = runtimeSetupGuidance(
+      setupPurpose,
+      current.entry,
+      currentInstance,
+      pending,
+      problem,
+    );
+    return {
+      ...general,
+      model: setup.selected
+        ? {
+            label: `Selected ${setup.label} model`,
+            name: setup.selected.name,
+            id: setup.selected.id,
+          }
+        : {
+            label: `${setup.label === "speech" ? "Speech" : "Cleanup"} model`,
+            name: "No model selected",
+            id: "",
+          },
+      speechModel: null,
+      heading: `Local ${setup.label} setup`,
+      next: setup.next,
+      detail: setup.detail,
+    };
+  });
   const workflowTarget = $derived(runtimeWorkflowTargets[workflow]);
   const workflowConnection = $derived(
     currentInstance
@@ -244,6 +297,7 @@
               ? 'border-primary bg-accent-wash-strong'
               : 'border-transparent'}"
             onclick={() => {
+              setupIntent = null;
               selectionGeneration++;
               selected = row.entry.id;
               recoveryID = "";
@@ -362,7 +416,7 @@
   {#if current}
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       {#snippet useAction()}
-        {#if workflowConnection && onUseRuntime && onReturnToWorkflow}
+        {#if !setupPurpose && workflowConnection && onUseRuntime && onReturnToWorkflow}
           <Button
             size="xs"
             disabled={usePending || !!useBlockReason}
@@ -400,6 +454,7 @@
                   aria-pressed={currentInstance?.instance.id ===
                     duplicate.instance.id}
                   onclick={() => {
+                    setupIntent = null;
                     selectionGeneration++;
                     recoveryID = duplicate.instance.id;
                     if (
@@ -425,6 +480,8 @@
           connectionCatalog={session.editor.applied?.savedConnections}
           notice={recoveryNotice}
           {useAction}
+          {setupPurpose}
+          {onReturnToSetup}
         />
       {/key}
     </div>

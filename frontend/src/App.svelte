@@ -966,6 +966,7 @@
                 runtimeWorkBusy,
               )}
             onReturnToWorkflow={() => selectPane(runtimeWorkflow)}
+            onReturnToSetup={(section) => openSettings(section)}
           />
         {:else if auxPane === "history"}
           <HistoryPane
