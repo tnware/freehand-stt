@@ -14,6 +14,7 @@ import (
 
 type stoppedRecording struct {
 	realtime   *realtime.Session
+	typing     *liveDelivery
 	generation uint64
 	context    context.Context
 	result     audio.Result
@@ -35,6 +36,7 @@ func (w *stoppedRecording) discard() {
 	if w.realtime != nil {
 		_ = w.realtime.Wait()
 	}
+	_ = w.typing.wait()
 	w.clearCredentials()
 	for index := range w.result.PCM {
 		w.result.PCM[index] = 0
@@ -95,6 +97,8 @@ func (c *recorder) captureInterrupted(gen uint64, cause error) {
 	c.cancelWorkLocked()
 	segmented := c.segmented
 	c.segmented = nil
+	typing := c.typing
+	c.typing = nil
 	live := c.realtime
 	c.realtime = nil
 	c.mu.Unlock()
@@ -116,6 +120,7 @@ func (c *recorder) captureInterrupted(gen uint64, cause error) {
 		cause = audio.ErrDeviceInterrupted
 	}
 
+	typed := typing.wait()
 	c.mu.Lock()
 	if c.closed.Load() || c.status.Generation != gen || c.status.State != Recording {
 		c.mu.Unlock()
@@ -127,6 +132,12 @@ func (c *recorder) captureInterrupted(gen uint64, cause error) {
 	delete(c.runDetails, gen)
 	c.pending = ""
 	c.status = Status{State: Failed, Generation: gen, Message: "Microphone: " + cause.Error()}
+	if typed.final != "" {
+		c.pending = typed.final
+		c.status.Transcript = typed.final
+		c.status.CanCopy = true
+		c.status.Message = liveRecoveryMessage(c.status.Message)
+	}
 	s := c.status
 	c.mu.Unlock()
 	c.transition.Unlock()
@@ -177,6 +188,7 @@ func (c *recorder) stopCapture(gen uint64, limit, automatic bool) (*stoppedRecor
 	c.segmented = nil
 	live := c.realtime
 	c.realtime = nil
+	typing := c.typing
 	profile, hasProfile := c.runProfiles[gen]
 	details := c.runDetails[gen]
 	if !previous.StartedAt.IsZero() {
@@ -206,6 +218,7 @@ func (c *recorder) stopCapture(gen uint64, limit, automatic bool) (*stoppedRecor
 		result:     res,
 		segmented:  segmented,
 		realtime:   live,
+		typing:     typing,
 		profile:    profile,
 		hasProfile: hasProfile,
 		details:    details,

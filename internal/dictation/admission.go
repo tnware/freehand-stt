@@ -92,6 +92,7 @@ func (c *recorder) startWithAttempt(mode RecordingMode, attempt startAttempt) er
 	}
 	c.cancelWorkLocked()
 	c.pending = ""
+	c.typing = nil
 	cfg := profile.Settings
 	if cfg.VoiceTranscription.Realtime {
 		cfg.VADEnabled = false
@@ -157,6 +158,13 @@ func (c *recorder) startWithAttempt(mode RecordingMode, attempt startAttempt) er
 		c.runDetails[gen] = details
 	}
 	c.mu.Unlock()
+	if liveInsertEnabled(cfg) {
+		typing := newLiveDelivery(c.ctx, c.policy, target, func(message string) { c.publishTypingState(gen, message) })
+		c.mu.Lock()
+		c.typing = typing
+		c.status.Message = "Recording; live typing finalized phrases"
+		c.mu.Unlock()
+	}
 	c.logger.Info("dictation recording requested",
 		"generation", gen,
 		"recording_mode", mode,
@@ -187,7 +195,7 @@ func (c *recorder) startWithAttempt(mode RecordingMode, attempt startAttempt) er
 		if !ok {
 			e = errors.New("streaming capture is unavailable on this platform")
 		} else {
-			live, e = realtime.Open(c.ctx, cfg.VoiceTranscription, profile.VoiceCredential, func(update realtime.Update) { c.publishLive(gen, update) })
+			live, e = realtime.OpenWithFailure(c.ctx, cfg.VoiceTranscription, profile.VoiceCredential, func(update realtime.Update) { c.publishLive(gen, update) }, func() { c.abortLiveTyping(gen) })
 			if e == nil {
 				c.mu.Lock()
 				c.realtime = live

@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -45,6 +46,7 @@ func configureNeMo(ctx context.Context, conn *websocket.Conn, cfg config.VoiceTr
 func (s *Session) readNeMo(guard credentialGuard, publish func(Update)) Result {
 	update := Update{Turn: 1}
 	var languages []string
+	seen := make(map[string][32]byte)
 	for {
 		event, err := readEvent(s.ctx, s.conn)
 		if err != nil {
@@ -55,6 +57,8 @@ func (s *Session) readNeMo(guard credentialGuard, publish func(Update)) Result {
 			if len(update.Final)+len(update.Partial)+len(event.Delta) > MaxTranscriptBytes {
 				return Result{Err: errors.New("live transcript exceeded its size limit")}
 			}
+			update.Finalized = false
+			update.EventID = ""
 			update.Partial += event.Delta
 			if err := guard.check(update.Partial, update.Final+" "+update.Partial); err != nil {
 				return Result{Err: err}
@@ -63,6 +67,25 @@ func (s *Session) readNeMo(guard credentialGuard, publish func(Update)) Result {
 				publish(update)
 			}
 		case "conversation.item.input_audio_transcription.completed":
+			// The qualified server assigns event_id before sending each final.
+			// Retain only bounded IDs and payload digests, never duplicate text.
+			if len(event.EventID) > 256 {
+				return Result{Err: errors.New("realtime final event identity exceeded its limit")}
+			}
+			if event.EventID != "" {
+				payload, _ := json.Marshal([]any{event.Transcript, event.Language, event.Languages})
+				digest := sha256.Sum256(payload)
+				if prior, ok := seen[event.EventID]; ok {
+					if prior != digest {
+						return Result{Err: errors.New("realtime final event identity was reused")}
+					}
+					continue
+				}
+				if len(seen) >= 1024 {
+					return Result{Err: errors.New("live transcript exceeded its turn limit")}
+				}
+				seen[event.EventID] = digest
+			}
 			if err := guard.check(append(event.Languages, event.Language, event.Transcript)...); err != nil {
 				return Result{Err: err}
 			}
@@ -87,6 +110,8 @@ func (s *Session) readNeMo(guard credentialGuard, publish func(Update)) Result {
 				return Result{Err: err}
 			}
 			update.Partial = ""
+			update.Finalized = true
+			update.EventID = event.EventID
 			update.Turn++
 			if publish != nil {
 				publish(update)

@@ -12,6 +12,7 @@ export type QuickSettingsPatch = Partial<
     | "silenceSplitting"
     | "maxDurationSeconds"
     | "autoInsert"
+    | "liveInsert"
     | "historyEnabled"
     | "overlayEnabled"
     | "language"
@@ -108,6 +109,7 @@ export function quickSettingsDraft(
   if (patch.maxDurationSeconds !== undefined) {
     next.maxDurationSeconds = patch.maxDurationSeconds;
   }
+  if (patch.liveInsert !== undefined) next.liveInsert = patch.liveInsert;
   if (patch.autoInsert !== undefined) next.autoInsert = patch.autoInsert;
   if (patch.historyEnabled !== undefined)
     next.historyEnabled = patch.historyEnabled;

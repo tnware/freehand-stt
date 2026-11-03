@@ -63,6 +63,7 @@ type Settings struct {
 	MaxDurationSeconds              int                        `json:"maxDurationSeconds"`
 	TranscriptionTimeoutSeconds     int                        `json:"transcriptionTimeoutSeconds"`
 	FileTranscriptionTimeoutSeconds int                        `json:"fileTranscriptionTimeoutSeconds"`
+	LiveInsert                      bool                       `json:"liveInsert"`
 	AutoInsert                      bool                       `json:"autoInsert"`
 	StartWithWindows                bool                       `json:"startWithWindows"`
 	ShowWindowOnLaunch              bool                       `json:"showWindowOnLaunch"`

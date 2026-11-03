@@ -31,6 +31,7 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		work.clearCredentials()
 	}()
 
+	var liveResult liveDeliveryResult
 	var (
 		e error
 		s Status
@@ -47,6 +48,10 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	text := ""
 	if work.realtime != nil {
 		result := work.realtime.Wait()
+		if result.Err != nil {
+			work.typing.abort()
+		}
+		liveResult = work.typing.wait()
 		text, e = result.Text, result.Err
 		details.AudioDurationMilliseconds = result.AudioMilliseconds
 		cfg.Language = cfg.VoiceTranscription.Language
@@ -104,6 +109,9 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	if text == "" {
 		c.mu.Lock()
 		if c.status.Generation == gen && c.status.State == Transcribing {
+			if c.typing == work.typing {
+				c.typing = nil
+			}
 			delete(c.targets, gen)
 			c.cancelWorkLocked()
 			c.status = Status{State: Idle, Generation: gen, Message: "No speech detected"}
@@ -201,10 +209,20 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 		c.mu.Unlock()
 		return nil
 	}
+	if c.typing == work.typing {
+		c.typing = nil
+	}
 	target := c.targets[gen]
 	delete(c.targets, gen)
 	deliveryMode := insertionMode(cfg.AutoInsert)
-	e = c.policy.Deliver(ctx, target.target, text, deliveryMode)
+	if liveResult.attempted {
+		e = liveResult.err
+		if e == nil && liveResult.posted != text {
+			e = insertion.ErrCopyRequired
+		}
+	} else {
+		e = c.policy.Deliver(ctx, target.target, text, deliveryMode)
+	}
 	if errors.Is(e, insertion.ErrCopyRequired) && target.rejection != nil {
 		e = target.rejection
 	}
@@ -212,6 +230,9 @@ func (c *recorder) completeStopped(work *stoppedRecording) error {
 	if errors.Is(e, insertion.ErrCopyRequired) {
 		c.pending = text
 		message := insertion.CopyRequiredMessage(e)
+		if liveResult.attempted {
+			message = liveRecoveryMessage("Live typing stopped.")
+		}
 		if deliveryMode == insertion.ManualCopy {
 			message = "Transcript ready to copy"
 			e = nil

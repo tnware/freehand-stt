@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { liveInsertionUnavailableReason } from "$lib/utils/liveInsertion";
   import PowerIcon from "@lucide/svelte/icons/power";
   import PaletteIcon from "@lucide/svelte/icons/palette";
   import NativePermissionsCard from "$lib/components/settings/NativePermissionsCard.svelte";
@@ -15,6 +16,10 @@
     settings = $bindable(),
     deliveryOnly = false,
   }: { settings: Settings; deliveryOnly?: boolean } = $props();
+
+  const liveInsertionReason = $derived(
+    liveInsertionUnavailableReason(settings),
+  );
 
   const native = $derived(platformPresentation(settings.platform));
   const mica = $derived(native.supportsMica && settings.useMica);
@@ -222,5 +227,24 @@
         </span>
       </Label>
     </RadioGroup.Root>
+  </SettingRow>
+  <SettingRow
+    controlID="live-insert"
+    title="Type completed phrases while recording"
+    description={liveInsertionReason ||
+      "Type finalized NeMo phrases into the original app without waiting for Stop. Previews are never typed. Focus safety applies to every phrase."}
+  >
+    {#snippet control()}
+      <Switch
+        id="live-insert"
+        bind:checked={settings.liveInsert}
+        disabled={!!liveInsertionReason}
+        aria-label="Type completed phrases while recording"
+      />
+    {/snippet}
+    <p class="text-xs leading-5 text-muted-foreground">
+      Off by default. Your choice stays saved when unavailable. Already typed
+      text cannot be undone by Cancel.
+    </p>
   </SettingRow>
 </SettingsCard>

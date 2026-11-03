@@ -59,6 +59,9 @@ func TestManagedUpgradePreservesManualState(t *testing.T) {
 			if len(got.ManagedRuntimes) != 1 || got.ManagedRuntimes[0].AutoStart != enabled || got.ManagedRuntimes[0].ID != "nemo-default" {
 				t.Fatalf("bad inventory: %#v", got.ManagedRuntimes)
 			}
+			if got.LiveInsert {
+				t.Fatal("upgrade enabled live insertion for an existing user")
+			}
 			if got.Language != "fr" || got.VoiceTranscription.Language != "de" {
 				t.Fatal("task languages lost")
 			}

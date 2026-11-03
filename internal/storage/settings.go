@@ -65,6 +65,10 @@ func writeSettings(ctx context.Context, q *dbgen.Queries, v config.Settings) err
 	}); err != nil {
 		return err
 	}
+	if err := q.PutLiveInsert(ctx, boolean(v.LiveInsert)); err != nil {
+		return err
+	}
+
 	if err := q.PutTranscription(ctx, dbgen.PutTranscriptionParams{NemoDisablePunctuation: boolean(v.TranscriptionOptions.NeMo.DisablePunctuation), NemoNormalize: boolean(v.TranscriptionOptions.NeMo.Normalize), NemoProfanityFilter: boolean(v.TranscriptionOptions.NeMo.ProfanityFilter), NemoEndpointingMs: int64(v.TranscriptionOptions.NeMo.EndpointingMilliseconds),
 		ModelProfile:                            string(modelprofile.Effective(v.ModelProfile)),
 		Model:                                   v.Model,
@@ -130,6 +134,7 @@ func readSettings(ctx context.Context, q *dbgen.Queries) (config.Settings, error
 	v.MicrophoneID = rPreferences.MicrophoneID
 	v.MaxDurationSeconds = int(rPreferences.MaxDurationSeconds)
 	v.AutoInsert = rPreferences.AutoInsert != 0
+	v.LiveInsert = rPreferences.LiveInsert != 0
 	v.StartWithWindows = rPreferences.StartWithWindows != 0
 	v.ShowWindowOnLaunch = rPreferences.ShowWindowOnLaunch != 0
 	v.CheckForUpdates = rPreferences.CheckForUpdates != 0

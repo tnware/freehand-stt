@@ -751,3 +751,20 @@ func TestHoldRetryRefreshesWithoutSavingAndRejectsBusy(t *testing.T) {
 		t.Error("closed retry accepted")
 	}
 }
+
+func TestLiveInsertPreferenceSurvivesUnavailableSettingsSnapshot(t *testing.T) {
+	service, _, _, _ := transactionalService(false)
+	next := config.Default()
+	next.LiveInsert = true
+	next.AutoInsert = false
+	result, err := service.SaveSettings(request(next, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.LiveInsert || !service.GetSettings().LiveInsert {
+		t.Fatal("unavailable live-insert preference was discarded")
+	}
+	if result.AutoInsert || result.VoiceTranscription.Realtime {
+		t.Fatal("saving live insertion enabled another setting")
+	}
+}
