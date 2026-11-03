@@ -22,6 +22,7 @@ import (
 
 type recorder struct {
 	realtime           *realtime.Session
+	typing             *liveDelivery
 	mu                 sync.Mutex
 	transition         sync.Mutex
 	status             Status
@@ -149,6 +150,8 @@ func (c *recorder) cancelRecording() error {
 	}
 	// Startup can attach these workers after cancellation is signalled. Take
 	// them only after acquiring transition, without overlapping native calls.
+	typing := c.typing
+	c.typing = nil
 	segmented := c.segmented
 	c.segmented = nil
 	live := c.realtime
@@ -163,8 +166,15 @@ func (c *recorder) cancelRecording() error {
 	if segmented != nil {
 		_ = segmented.wait()
 	}
+	typed := typing.wait()
 	c.mu.Lock()
 	c.status = Status{State: Idle, Generation: c.generation}
+	if typed.attempted && !c.closed.Load() {
+		c.pending = typed.final
+		c.status.Transcript = typed.final
+		c.status.CanCopy = typed.final != ""
+		c.status.Message = liveRecoveryMessage("Recording cancelled.")
+	}
 	s = c.status
 	c.mu.Unlock()
 	c.publish(s)
@@ -183,12 +193,29 @@ func (c *recorder) cancelRecording() error {
 
 func (c *recorder) fail(gen uint64, msg string) {
 	c.mu.Lock()
+	if c.closed.Load() || c.status.Generation != gen {
+		c.mu.Unlock()
+		return
+	}
+	c.cancelWorkLocked()
+	typing := c.typing
+	c.mu.Unlock()
+	typed := typing.wait()
+	c.mu.Lock()
 	if !c.closed.Load() && c.status.Generation == gen {
-		c.cancelWorkLocked()
+		if c.typing == typing {
+			c.typing = nil
+		}
 		delete(c.targets, gen)
 		delete(c.runProfiles, gen)
 		delete(c.runDetails, gen)
 		c.status = Status{State: Failed, Generation: gen, Message: msg}
+		if typed.final != "" {
+			c.pending = typed.final
+			c.status.Transcript = typed.final
+			c.status.CanCopy = true
+			c.status.Message = liveRecoveryMessage(msg)
+		}
 		s := c.status
 		c.mu.Unlock()
 		c.publish(s)

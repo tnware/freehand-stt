@@ -36,12 +36,17 @@ int main(void) { @autoreleasepool {
  fh_input_owner *o = fh_input_create();
  CFMutableStringRef w = CFStringCreateMutable(NULL, 0);
  o->window = (AXUIElementRef)CFRetain(w);
+ o->element = (AXUIElementRef)CFRetain(w);
  o->pid = 42; o->started = 99;
  CFIndex wr = CFGetRetainCount(w);
  fh_input_reset_target(o);
- assert(!o->window && !o->pid && !o->started);
- assert(CFGetRetainCount(w) == wr-1);
- fh_input_reset_target(o); fh_input_destroy(o); CFRelease(w);
+ assert(!o->element && !o->window && !o->pid && !o->started);
+ assert(CFGetRetainCount(w) == wr-2);
+ fh_input_reset_target(o);
+ o->window = (AXUIElementRef)CFRetain(w);
+ o->element = (AXUIElementRef)CFRetain(w);
+ wr = CFGetRetainCount(w); fh_input_destroy(o);
+ assert(CFGetRetainCount(w) == wr-2); CFRelease(w);
  // Main-thread submission is asynchronous, even when AppKit is slow.
  void *q = fh_input_copy_begin("private", 7); assert(q);
  assert(fh_input_copy_status(q) == FH_COPY_QUEUED);

@@ -1,5 +1,5 @@
 -- name: GetPreferences :one
-SELECT toggle_shortcut, show_shortcut, hold_shortcut, microphone_id, max_duration_seconds, auto_insert, start_with_windows, show_window_on_launch, check_for_updates, setup_completed, use_mica, appearance_mode, overlay_enabled, overlay_size_percent, overlay_opacity_percent, overlay_top_offset, overlay_glow_percent, overlay_layout, overlay_anchor, overlay_visibility, overlay_motion, overlay_surface, overlay_visualizer, history_enabled, vad_enabled, vad_mode, vad_activity_silence_ms, silence_trimming, speech_padding_ms, auto_stop_enabled, auto_stop_silence_ms, auto_stop_minimum_speech_ms, silence_splitting, segment_seconds, segment_silence_ms FROM preferences_settings WHERE id=1;
+SELECT live_insert, toggle_shortcut, show_shortcut, hold_shortcut, microphone_id, max_duration_seconds, auto_insert, start_with_windows, show_window_on_launch, check_for_updates, setup_completed, use_mica, appearance_mode, overlay_enabled, overlay_size_percent, overlay_opacity_percent, overlay_top_offset, overlay_glow_percent, overlay_layout, overlay_anchor, overlay_visibility, overlay_motion, overlay_surface, overlay_visualizer, history_enabled, vad_enabled, vad_mode, vad_activity_silence_ms, silence_trimming, speech_padding_ms, auto_stop_enabled, auto_stop_silence_ms, auto_stop_minimum_speech_ms, silence_splitting, segment_seconds, segment_silence_ms FROM preferences_settings WHERE id=1;
 
 -- name: PutPreferences :exec
 INSERT INTO preferences_settings (id, toggle_shortcut, show_shortcut, hold_shortcut, microphone_id, max_duration_seconds, auto_insert, start_with_windows, show_window_on_launch, check_for_updates, setup_completed, use_mica, appearance_mode, overlay_enabled, overlay_size_percent, overlay_opacity_percent, overlay_top_offset, overlay_glow_percent, overlay_layout, overlay_anchor, overlay_visibility, overlay_motion, overlay_surface, overlay_visualizer, history_enabled, vad_enabled, vad_mode, vad_activity_silence_ms, silence_trimming, speech_padding_ms, auto_stop_enabled, auto_stop_silence_ms, auto_stop_minimum_speech_ms, silence_splitting, segment_seconds, segment_silence_ms)
@@ -40,3 +40,6 @@ DELETE FROM credential_gc WHERE account=?;
 SELECT account FROM credential_gc WHERE account NOT IN (SELECT credential_account FROM saved_connections) ORDER BY account LIMIT 128;
 -- name: CountCredentialGC :one
 SELECT count(*) FROM credential_gc WHERE account NOT IN (SELECT credential_account FROM saved_connections);
+
+-- name: PutLiveInsert :exec
+UPDATE preferences_settings SET live_insert=? WHERE id=1;

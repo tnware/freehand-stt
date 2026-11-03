@@ -49,7 +49,7 @@ func diagnosticRecorder(p *diagnosticPlatform, manual bool, body *string) *testR
 }
 
 func TestRecorderInsertionDiagnosticDelivery(t *testing.T) {
-	for _, mode := range []string{"capture", "validate", "send", "raw-capture", "raw-validate", "raw-send", "manual"} {
+	for _, mode := range []string{"capture", "validate", "send", "field-send", "raw-capture", "raw-validate", "raw-send", "manual"} {
 		t.Run(mode, func(t *testing.T) {
 			p := &diagnosticPlatform{}
 			reason := insertion.NewRejection(insertion.Capture, "value_not_settable")
@@ -63,6 +63,9 @@ func TestRecorderInsertionDiagnosticDelivery(t *testing.T) {
 			case "send":
 				p.sendErr = insertion.NewRejection(insertion.Send, "modifiers_held")
 				want = insertion.CopyRequiredMessage(p.sendErr)
+			case "field-send":
+				p.sendErr = insertion.NewRejection(insertion.Send, "focused_element_changed")
+				want = "Focus moved away from the original target. Copy the transcript and paste it where you want it. Check the target for any text already inserted before pasting."
 			default:
 				raw := errors.New("private AX app identity and field text")
 				if mode == "raw-capture" {
@@ -100,6 +103,20 @@ func TestRecorderInsertionDiagnosticDelivery(t *testing.T) {
 			c.mu.Unlock()
 			if retained != 0 {
 				t.Fatal("delivery retained capture reason/target")
+			}
+			if mode == "validate" || mode == "field-send" {
+				wantInserts := 0
+				if mode == "field-send" {
+					wantInserts = 1
+				}
+				if p.inserts != wantInserts || c.pending != "test transcript" {
+					t.Fatal("field change retried insertion or lost the recoverable transcript")
+				}
+				// Stopping again must not replay the failed/possibly partial delivery.
+				_ = c.Stop()
+				if p.inserts != wantInserts || p.copies != 0 {
+					t.Fatal("field change recovery automatically replayed or copied text")
+				}
 			}
 			// A subsequent healthy run must never inherit an earlier capture rejection.
 			p.captureErr = nil

@@ -9,28 +9,43 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 type liveCaptureFixture struct {
 	capFake
+	mu   sync.Mutex
 	sink audio.PCMStreamSink
 }
 
 func (c *liveCaptureFixture) StartStream(_ context.Context, _ string, _ int, sink audio.PCMStreamSink) (<-chan error, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.sink = sink
 	return nil, nil
 }
-func (c *liveCaptureFixture) Stop(context.Context) (audio.Result, error) {
-	c.sink.Close()
-	return audio.Result{}, nil
+
+// Serialize the simulated callback with shutdown, matching native capture's
+// device-stop-before-sink-close contract. Production callbacks remain lock-free.
+func (c *liveCaptureFixture) writePCM(frame []byte) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.sink != nil && c.sink.WritePCM(frame)
 }
-func (c *liveCaptureFixture) Cancel(context.Context) error {
+func (c *liveCaptureFixture) Stop(context.Context) (audio.Result, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.sink != nil {
 		c.sink.Close()
+		c.sink = nil
 	}
-	return nil
+	return audio.Result{}, nil
+}
+func (c *liveCaptureFixture) Cancel(ctx context.Context) error {
+	_, err := c.Stop(ctx)
+	return err
 }
 
 type liveSettingsFixture struct{ cfg config.Settings }
@@ -88,7 +103,7 @@ func TestRealtimeNeverDeliversPreviewAndCancellationDiscardsIt(t *testing.T) {
 			if err := c.Start(); err != nil {
 				t.Fatal(err)
 			}
-			if !capture.sink.WritePCM(make([]byte, audio.VADFrameBytes)) {
+			if !capture.writePCM(make([]byte, audio.VADFrameBytes)) {
 				t.Fatal("frame refused")
 			}
 			timeout := time.NewTimer(2 * time.Second)

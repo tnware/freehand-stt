@@ -36,7 +36,8 @@ acceptance. Skipped tests establish no native evidence.
 | Default/selected microphone, removal, repeated start/stop/cancel | No stuck capture; microphone denial leaves file transcription and TTS usable |
 | Unicode, emoji, multiline, and long text in disposable targets | Text survives native delivery correctly |
 | Change app/window, close the target, cancel during processing/insertion | Delivery stops when the captured target becomes invalid; no reactivation or insertion into another window |
-| Change field within the same window on macOS | Delivery uses the currently focused field |
+| Change field within the same window on macOS with stable, usable identity | Confirmed change stops delivery and preserves the transcript for explicit Copy |
+| Missing, unsupported, transiently unavailable, or stale macOS field identity | Existing app/window checks remain; missing identity alone is not reported as a focus change |
 | Explicit Copy and clipboard contention | Recovery stays explicit; unrelated clipboard content is not mutated by automatic delivery |
 | Realtime captions, disconnects, cancellation | Provisional text authorizes neither insertion nor retention; no automatic audio replay |
 | Cleanup failure | Finalized raw text survives |
@@ -45,6 +46,17 @@ acceptance. Skipped tests establish no native evidence.
 A rejected delivery may already have inserted some text. Verify the warning and
 inspect the target before pasting a recovery copy.
 :::
+
+### macOS focus compatibility
+
+Use disposable, nonsensitive text in a native text editor, browser textarea and
+contenteditable editor, Electron editor, and terminal. Record app/OS versions and
+whether accessibility exposes distinct stable identities; do not assume support
+from app category. Test the same field, a second field in the same window, a
+recreated editor, a closed target, and a switch during long delivery. Confirm
+that unavailable identity does not block an otherwise valid app/window target,
+and that a later identity never replaces the original capture. Check responsiveness
+when accessibility is slow. Keep field contents and AX identifiers out of logs.
 
 ## Desktop lifecycle and presentation
 

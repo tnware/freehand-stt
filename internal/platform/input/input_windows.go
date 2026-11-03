@@ -219,3 +219,13 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 	)
 	return nil
 }
+
+// InsertSegment retains the existing per-batch focus/modifier/cancellation guards.
+// Session owns the run lifetime and prevents retries after partial SendInput.
+func (i Input) InsertSegment(ctx context.Context, target insertion.Target, text string) error {
+	return i.InsertUnicode(ctx, target, text)
+}
+
+// Windows targets are values and own no retained native resources. Session
+// revokes their authority when the run ends; there is nothing native to release.
+func (Input) ReleaseTarget(insertion.Target) {}

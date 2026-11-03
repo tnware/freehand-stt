@@ -143,9 +143,15 @@ foreground.
 
 | Before delivery | Result |
 | --- | --- |
-| Same app and window remain frontmost | Delivers to the currently focused field |
-| Move to another field in the same window | Delivers there; editor identity is not checked |
+| Same app/window and available focus identity remain unchanged | Attempts delivery to the focused target |
+| A stable change of focus identity within the same window is confirmed | Leaves the result **Copy required** |
+| The app does not expose usable focus identity, or it becomes unavailable | Keeps the existing app/window checks; missing identity alone does not block delivery |
 | Move to another app/window, or Secure Input is active | Leaves the result **Copy required** |
+
+Focus identity is best-effort. Some apps expose a shared or changing accessibility
+object instead of a distinct text field, so app/window compatibility does not
+guarantee the original field. Keep the intended field focused; Freehand does not
+move focus back or automatically replay text.
 
 **Copy required** can have causes beyond focus changes; read its explanation.
 Delivery can be partial, so check for existing text before pasting to avoid

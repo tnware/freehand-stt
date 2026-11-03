@@ -116,12 +116,35 @@ func (i Input) Foreground() (insertion.Target, error) {
 }
 
 // Quartz Unicode payloads are deliberately small. A surrogate pair is always
-// posted together. A dispatched target is consumed: Quartz cannot acknowledge
-// application delivery, so the caller must never replay an ambiguous attempt.
+// posted together. One-shot targets are consumed. Segment sessions retain a
+// target only after successful dispatch of new text, never for replay.
 const darwinUnicodeChunkUnits = 20
 const darwinInputMaxBytes = 1 << 20
 
 func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text string) error {
+	return i.insertUnicode(ctx, target, text, false)
+}
+
+// InsertSegment is for insertion.Session only. Success permits a distinct next
+// segment, not replay: Quartz cannot acknowledge application receipt.
+func (i Input) InsertSegment(ctx context.Context, target insertion.Target, text string) error {
+	return i.insertUnicode(ctx, target, text, true)
+}
+
+// ReleaseTarget releases this generation only, never a later recording capture.
+func (i Input) ReleaseTarget(target insertion.Target) {
+	if i.state == nil {
+		return
+	}
+	s := i.state
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if target.DarwinToken != 0 && target == s.target {
+		s.resetTarget()
+	}
+}
+
+func (i Input) insertUnicode(ctx context.Context, target insertion.Target, text string, retain bool) (err error) {
 	if i.state == nil {
 		return insertion.ErrCopyRequired
 	}
@@ -131,7 +154,7 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 	// Only this generation may release its native target. Stale attempts must
 	// not revoke a later capture. Validation itself can release on rejection.
 	defer func() {
-		if target == s.target && target.DarwinToken != 0 {
+		if (!retain || err != nil) && target == s.target && target.DarwinToken != 0 {
 			s.resetTarget()
 		}
 	}()
@@ -167,7 +190,7 @@ func (i Input) InsertUnicode(ctx context.Context, target insertion.Target, text 
 		}
 		offset = end
 	}
-	return nil
+	return s.interrupted(ctx)
 }
 
 // Never synthesize modifier-up events: they would corrupt the user's keyboard

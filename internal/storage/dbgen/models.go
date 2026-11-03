@@ -73,6 +73,7 @@ type PreferencesSetting struct {
 	SilenceSplitting        int64
 	SegmentSeconds          int64
 	SegmentSilenceMs        int64
+	LiveInsert              int64
 }
 
 type RememberedModel struct {

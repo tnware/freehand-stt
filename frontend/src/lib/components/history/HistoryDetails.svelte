@@ -236,7 +236,7 @@
           <dd>
             {@render durationValue(details.audioDurationMilliseconds)}
           </dd>
-          <dt class="text-muted-foreground">Characters delivered</dt>
+          <dt class="text-muted-foreground">Transcript characters</dt>
           <dd>
             {@render characterValue(
               processing.deliveredCharacters ?? entry.characterCount,

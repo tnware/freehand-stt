@@ -276,7 +276,7 @@ func TestCredentialsCommitRollbackAndCrashCleanup(t *testing.T) {
 func TestSchemaConstraintsAndHeaders(t *testing.T) {
 	s := testStore(t)
 	loadStore(t, s)
-	for _, statement := range []string{"UPDATE preferences_settings SET auto_insert=2", "UPDATE preferences_settings SET max_duration_seconds='invalid'", "UPDATE speech_settings SET speed=5", "DELETE FROM preferences_settings WHERE id=1"} {
+	for _, statement := range []string{"UPDATE preferences_settings SET auto_insert=2", "UPDATE preferences_settings SET live_insert=2", "UPDATE preferences_settings SET max_duration_seconds='invalid'", "UPDATE speech_settings SET speed=5", "DELETE FROM preferences_settings WHERE id=1"} {
 		if _, err := s.db.Exec(statement); err == nil {
 			t.Fatalf("constraint missing: %s", statement)
 		}

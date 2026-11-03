@@ -4,8 +4,27 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 )
+
+func TestConfirmedFieldChangeGuidance(t *testing.T) {
+	want := "Focus moved away from the original target. Copy the transcript and paste it where you want it. Check the target for any text already inserted before pasting."
+	for _, stage := range []Stage{Validate, Send} {
+		err := NewRejection(stage, "focused_element_changed")
+		if got := CopyRequiredMessage(fmt.Errorf("private wrapper: %w", err)); got != want {
+			t.Fatalf("%s: message=%q", stage, got)
+		}
+		if !errors.Is(err, ErrCopyRequired) || !strings.Contains(err.Error(), "focused_element_changed") {
+			t.Fatal("lost bounded diagnostic or recovery sentinel")
+		}
+	}
+	for _, reason := range []string{"focused_element_unavailable", "focused_element__unsupported", "focused_element__no_value", "focused_element__cannot_complete", "unknown"} {
+		if got := CopyRequiredMessage(NewRejection(Validate, reason)); strings.Contains(got, "Focus moved") || strings.Contains(got, "field changed") || strings.Contains(got, "focus changed") {
+			t.Fatalf("unknown field identity was called a change: %q", got)
+		}
+	}
+}
 
 type rejectingPlatform struct {
 	fake

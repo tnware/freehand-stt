@@ -99,10 +99,11 @@ func (q *Queries) GetCredentialRefs(ctx context.Context) ([]GetCredentialRefsRow
 }
 
 const getPreferences = `-- name: GetPreferences :one
-SELECT toggle_shortcut, show_shortcut, hold_shortcut, microphone_id, max_duration_seconds, auto_insert, start_with_windows, show_window_on_launch, check_for_updates, setup_completed, use_mica, appearance_mode, overlay_enabled, overlay_size_percent, overlay_opacity_percent, overlay_top_offset, overlay_glow_percent, overlay_layout, overlay_anchor, overlay_visibility, overlay_motion, overlay_surface, overlay_visualizer, history_enabled, vad_enabled, vad_mode, vad_activity_silence_ms, silence_trimming, speech_padding_ms, auto_stop_enabled, auto_stop_silence_ms, auto_stop_minimum_speech_ms, silence_splitting, segment_seconds, segment_silence_ms FROM preferences_settings WHERE id=1
+SELECT live_insert, toggle_shortcut, show_shortcut, hold_shortcut, microphone_id, max_duration_seconds, auto_insert, start_with_windows, show_window_on_launch, check_for_updates, setup_completed, use_mica, appearance_mode, overlay_enabled, overlay_size_percent, overlay_opacity_percent, overlay_top_offset, overlay_glow_percent, overlay_layout, overlay_anchor, overlay_visibility, overlay_motion, overlay_surface, overlay_visualizer, history_enabled, vad_enabled, vad_mode, vad_activity_silence_ms, silence_trimming, speech_padding_ms, auto_stop_enabled, auto_stop_silence_ms, auto_stop_minimum_speech_ms, silence_splitting, segment_seconds, segment_silence_ms FROM preferences_settings WHERE id=1
 `
 
 type GetPreferencesRow struct {
+	LiveInsert              int64
 	ToggleShortcut          string
 	ShowShortcut            string
 	HoldShortcut            string
@@ -144,6 +145,7 @@ func (q *Queries) GetPreferences(ctx context.Context) (GetPreferencesRow, error)
 	row := q.db.QueryRowContext(ctx, getPreferences)
 	var i GetPreferencesRow
 	err := row.Scan(
+		&i.LiveInsert,
 		&i.ToggleShortcut,
 		&i.ShowShortcut,
 		&i.HoldShortcut,
@@ -314,6 +316,15 @@ func (q *Queries) PutCleanup(ctx context.Context, arg PutCleanupParams) error {
 		arg.Context,
 		arg.TimeoutSeconds,
 	)
+	return err
+}
+
+const putLiveInsert = `-- name: PutLiveInsert :exec
+UPDATE preferences_settings SET live_insert=? WHERE id=1
+`
+
+func (q *Queries) PutLiveInsert(ctx context.Context, liveInsert int64) error {
+	_, err := q.db.ExecContext(ctx, putLiveInsert, liveInsert)
 	return err
 }
 

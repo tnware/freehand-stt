@@ -24,9 +24,12 @@ const finalizeTimeout = 30 * time.Second
 // Update is a complete presentation snapshot. Committed turns precede the
 // current provisional turn. A final replaces that turn's provisional text.
 type Update struct {
-	Final   string
-	Partial string
-	Turn    uint64
+	// Finalized identifies an authoritative NeMo turn, never provisional deltas.
+	Finalized bool
+	EventID   string
+	Final     string
+	Partial   string
+	Turn      uint64
 }
 type Result struct {
 	Text              string
@@ -36,6 +39,7 @@ type Result struct {
 	Err               error
 }
 type wireEvent struct {
+	EventID    string   `json:"event_id"`
 	Type       string   `json:"type"`
 	Delta      string   `json:"delta"`
 	Transcript string   `json:"transcript"`
@@ -64,6 +68,11 @@ type Session struct {
 // Open admits the exact selected contract and completes configuration before
 // microphone capture starts. Credentials travel only in the upgrade header.
 func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key string, publish func(Update)) (*Session, error) {
+	return OpenWithFailure(parent, cfg, key, publish, nil)
+}
+
+// OpenWithFailure reports transport/protocol rejection before further delivery may drain.
+func OpenWithFailure(parent context.Context, cfg config.VoiceTranscriptionSettings, key string, publish func(Update), failed func()) (*Session, error) {
 	if !cfg.Realtime {
 		return nil, errors.New("realtime transcription is not enabled")
 	}
@@ -128,7 +137,7 @@ func Open(parent context.Context, cfg config.VoiceTranscriptionSettings, key str
 	} else if err := configureNeMo(setup, conn, cfg, created); err != nil {
 		return fail(err)
 	}
-	go s.run(key, publish)
+	go s.run(key, publish, failed)
 	return s, nil
 }
 
@@ -155,7 +164,7 @@ func (s *Session) writeAudio(ctx context.Context, frame []byte) error {
 	return s.conn.Write(ctx, websocket.MessageBinary, frame)
 }
 
-func (s *Session) run(key string, publish func(Update)) {
+func (s *Session) run(key string, publish func(Update), failed func()) {
 	defer close(s.Done)
 	defer s.cancel()
 	defer s.conn.CloseNow()
@@ -170,6 +179,9 @@ func (s *Session) run(key string, publish func(Update)) {
 			result = s.readNeMo(credentialGuard(key), publish)
 		}
 		if result.Err != nil {
+			if failed != nil {
+				failed()
+			}
 			s.once.Do(func() { close(s.Failed) })
 			s.cancel()
 		}
@@ -185,6 +197,9 @@ func (s *Session) run(key string, publish func(Update)) {
 			writeCtx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
 			if err := s.writeAudio(writeCtx, frame); err != nil {
 				writeErr = errors.New("realtime audio could not be sent")
+				if failed != nil {
+					failed()
+				}
 				s.once.Do(func() { close(s.Failed) })
 				s.cancel()
 			} else {
@@ -204,6 +219,9 @@ func (s *Session) run(key string, publish func(Update)) {
 		}
 		if err := s.conn.Write(s.ctx, websocket.MessageText, commit); err != nil {
 			writeErr = errors.New("realtime completion could not be requested")
+			if failed != nil {
+				failed()
+			}
 			s.cancel()
 		}
 	}

@@ -183,6 +183,7 @@ const settings = (overrides: Partial<Settings> = {}): Settings => ({
   transcriptionTimeoutSeconds: 120,
   fileTranscriptionTimeoutSeconds: 21600,
   autoInsert: true,
+  liveInsert: false,
   platform: "windows",
   startWithWindows: false,
   showWindowOnLaunch: true,
