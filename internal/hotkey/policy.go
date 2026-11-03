@@ -63,6 +63,9 @@ func policiesForPlatform(platform string) []ShortcutPolicy {
 		policy(ShowFreehand, false, 0, ""),
 		policy(HoldToTalk, false, minModifierOnly, ""),
 	}
+	if platform == "linux" {
+		policies[2].ModifierOnlyMinimum = 0
+	}
 	if platform == "darwin" {
 		for i := range policies {
 			policies[i].ModifiedPrimaryGroups = []string{"A-Z", "0-9", "Space", "F1-F20"}

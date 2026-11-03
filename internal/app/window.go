@@ -143,6 +143,10 @@ func mainWindowOptionsForPlatform(osName string, startupLaunch, showWindowOnLaun
 		windowStartsHidden(startupLaunch, showWindowOnLaunch), useMica, appearanceMode, systemDark,
 	)
 	switch osName {
+	case "linux":
+		// Some supported desktops have no StatusNotifier host. Never launch only
+		// into an absent tray; Close minimizes and File > Quit remains available.
+		options.Hidden = false
 	case "windows":
 		options.Frameless = true
 		// Let Windows own hit testing for the custom caption buttons, including

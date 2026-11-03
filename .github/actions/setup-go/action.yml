@@ -3,7 +3,7 @@ description: Install the repository toolchain and isolate dependency/tool and co
 
 inputs:
   scope:
-    description: 'Workload cache namespace: go, storage, frontend, windows, macos, or site.'
+    description: 'Workload cache namespace: go, storage, frontend, windows, macos, linux-debian13, linux-ubuntu24.04, or site.'
     required: true
 
 outputs:
@@ -27,8 +27,8 @@ runs:
         EVENT_NAME: ${{ github.event_name }}
       run: |
         case "$CACHE_SCOPE" in
-          go|storage|frontend|windows|macos|site) ;;
-          *) printf '%s\n' '::error::scope must be go, storage, frontend, windows, macos, or site'; exit 1 ;;
+          go|storage|frontend|windows|macos|linux-debian13|linux-ubuntu24.04|site) ;;
+          *) printf '%s\n' '::error::scope must be go, storage, frontend, windows, macos, linux-debian13, linux-ubuntu24.04, or site'; exit 1 ;;
         esac
         # Never execute fork-controlled Go/tools in a base-branch cache context.
         if [[ "$EVENT_NAME" == pull_request_target ]]; then

@@ -129,6 +129,7 @@ export default defineConfig({
           collapsed: true,
           items: [
             { slug: "docs/development" },
+            { slug: "docs/development/linux" },
             { slug: "docs/development/backend-compatibility" },
             { slug: "docs/development/storage" },
             { slug: "docs/development/brand-assets" },

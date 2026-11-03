@@ -56,21 +56,22 @@ type Checker interface {
 }
 
 type Service struct {
-	mu              sync.RWMutex
-	workerMu        sync.Mutex
-	checker         Checker
-	status          Status
-	development     bool
-	publish         func(Status)
-	logger          *slog.Logger
-	lifetime        context.Context
-	cancel          context.CancelFunc
-	wake            chan struct{}
-	wait            sync.WaitGroup
-	checkInProgress atomic.Bool
-	closed          atomic.Bool
-	shutdownDone    chan struct{}
-	shutdownBy      time.Time
+	mu                sync.RWMutex
+	workerMu          sync.Mutex
+	checker           Checker
+	status            Status
+	development       bool
+	externallyManaged bool
+	publish           func(Status)
+	logger            *slog.Logger
+	lifetime          context.Context
+	cancel            context.CancelFunc
+	wake              chan struct{}
+	wait              sync.WaitGroup
+	checkInProgress   atomic.Bool
+	closed            atomic.Bool
+	shutdownDone      chan struct{}
+	shutdownBy        time.Time
 }
 
 func NewService(currentVersion string, enabled, development bool, publish func(Status), logger *slog.Logger) *Service {
@@ -96,6 +97,16 @@ func NewService(currentVersion string, enabled, development bool, publish func(S
 	}
 }
 
+// ConfigureExternalManagement disables self-replacement for distribution-owned
+// packages. The package manager, not the running desktop process, owns updates.
+func ConfigureExternalManagement(s *Service) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.externallyManaged = true
+	s.status.State = StateDisabled
+	s.status.Enabled = false
+}
+
 // Configure attaches the Wails updater after application.New has created it.
 // It is an ordinary Go composition helper rather than a renderer binding and
 // must be called before Wails starts registered services.
@@ -106,7 +117,7 @@ func Configure(s *Service, checker Checker) {
 }
 
 func (s *Service) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
-	if s.development {
+	if s.development || s.externallyManaged {
 		return nil
 	}
 	s.workerMu.Lock()
@@ -177,8 +188,13 @@ func ApplyEnabled(s *Service, enabled bool) {
 		s.mu.Unlock()
 		return
 	}
+	if s.externallyManaged {
+		enabled = false
+	}
 	s.status.Enabled = enabled
-	if s.development {
+	if s.externallyManaged {
+		s.status.State = StateDisabled
+	} else if s.development {
 		s.status.State = StateDevelopment
 	} else if !enabled {
 		s.status.State = StateDisabled
@@ -208,6 +224,9 @@ func (s *Service) CheckForUpdates() error {
 	checker := s.checker
 	lifetime := s.lifetime
 	s.mu.RUnlock()
+	if s.externallyManaged {
+		return errors.New("Install Linux updates with your distribution’s package manager.")
+	}
 	if s.development {
 		return errors.New("update checks are available in packaged builds")
 	}

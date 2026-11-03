@@ -3,6 +3,7 @@ package input
 import (
 	"context"
 	"errors"
+	"runtime"
 	"testing"
 
 	"github.com/tnware/freehand-stt/internal/hotkey"
@@ -141,7 +142,11 @@ func TestCaptureShortcutReportsAlreadyAssignedWithoutCreatingADirtyDraft(t *test
 
 func TestShortcutPoliciesExposeTheNativeActionMatrix(t *testing.T) {
 	policies := (&Service{}).ShortcutPolicies()
-	if len(policies) != 3 || policies[0].Required || policies[2].ModifierOnlyMinimum != 2 {
+	minimum := 2
+	if runtime.GOOS == "linux" {
+		minimum = 0
+	}
+	if len(policies) != 3 || policies[0].Required || policies[2].ModifierOnlyMinimum != minimum {
 		t.Fatalf("policies = %#v", policies)
 	}
 }

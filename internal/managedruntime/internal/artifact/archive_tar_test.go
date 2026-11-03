@@ -103,3 +103,47 @@ func TestTarArchiveRejectsUnsafeEntries(t *testing.T) {
 		t.Fatal("cancellation ignored")
 	}
 }
+
+func TestTarArchiveMaterializesELFAliases(t *testing.T) {
+	archive := tarFixture(t, []*tar.Header{
+		{Name: "runtime/libggml.so", Typeflag: tar.TypeSymlink, Linkname: "libggml.so.0"},
+		{Name: "runtime/libggml.so.0", Typeflag: tar.TypeSymlink, Linkname: "libggml.so.0.23.0"},
+		{Name: "runtime/libggml.so.0.23.0", Typeflag: tar.TypeReg, Mode: 0755, Size: 7},
+	}, []string{"", "", "library"})
+	dest := t.TempDir()
+	if err := extractArchive(t.Context(), archive, dest); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := tarManifest(t.Context(), archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyTarEntries(t.Context(), dest, entries); err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		st, err := os.Lstat(filepath.Join(dest, e.name))
+		if err != nil || !st.Mode().IsRegular() {
+			t.Fatalf("ELF alias was not a regular copy: %v", err)
+		}
+	}
+}
+
+func TestELFAliasNameAdmission(t *testing.T) {
+	for _, pair := range [][2]string{
+		{"libggml.so", "libggml.so.0"}, {"libggml.so.0", "libggml.so.0.23.0"},
+	} {
+		if !sharedLibraryAlias(pair[0], pair[1]) {
+			t.Fatal("valid alias rejected", pair)
+		}
+	}
+	for _, pair := range [][2]string{
+		{"libggml.so", "libforeign.so"}, {"libggml.so", "libggml.so.bad"},
+		{"libggml.so", "libggml.so.0..1"}, {"libggml.so.", "libggml.so.1"},
+		{"server", "libggml.so"}, {"lib.so", "lib.so.1"},
+	} {
+		if sharedLibraryAlias(pair[0], pair[1]) {
+			t.Fatal("unsafe alias admitted", pair)
+		}
+	}
+}

@@ -89,3 +89,12 @@ it("describes effective realtime delivery rather than promising stop-time insert
     "Stop to finish and deliver the transcript.",
   );
 });
+
+it("requires explicit Copy on Linux even with saved live insertion enabled", () => {
+  const value = eligible();
+  value.platform = "linux";
+  expect(liveInsertionUnavailableReason(value)).toContain("explicit Copy");
+  expect(realtimeDeliverySummary(value)).toContain("you to copy");
+  expect(value.autoInsert).toBe(true);
+  expect(value.liveInsert).toBe(true);
+});

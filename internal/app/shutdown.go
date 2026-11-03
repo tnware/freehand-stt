@@ -4,6 +4,11 @@ import "github.com/tnware/freehand-stt/internal/diagnostics"
 
 func (a *App) stopNativeSources() {
 	a.sourcesOnce.Do(func() {
+		if a.nativeGlobal != nil {
+			if err := a.nativeGlobal.Close(); err != nil && a.logger != nil {
+				a.logger.Warn("global shortcut shutdown failed", "error_kind", diagnostics.ErrorKind(err))
+			}
+		}
 		if a.levels != nil {
 			a.levels.stop()
 		}

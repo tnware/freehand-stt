@@ -5,3 +5,5 @@ package audio
 import "github.com/gen2brain/malgo"
 
 const nativeAudioBackend = malgo.BackendCoreaudio
+
+func nativeAudioBackends() []malgo.Backend { return []malgo.Backend{nativeAudioBackend} }

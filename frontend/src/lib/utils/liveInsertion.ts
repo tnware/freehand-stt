@@ -4,6 +4,8 @@ import type { Settings } from "$lib/state";
 
 /** Presentation only; the recorder checks its immutable settings independently. */
 export function liveInsertionUnavailableReason(settings: Settings): string {
+  if (settings.platform === "linux")
+    return "Linux transcripts stay in Freehand for explicit Copy. Automatic insertion is not available.";
   if (!settings.autoInsert)
     return "Choose Direct input to type completed phrases while recording.";
   if (settings.postProcessing.enabled)
@@ -26,7 +28,7 @@ export function liveInsertionUnavailableReason(settings: Settings): string {
 
 /** Describe the effective delivery mode without treating previews as final text. */
 export function realtimeDeliverySummary(settings: Settings): string {
-  if (!settings.autoInsert)
+  if (settings.platform === "linux" || !settings.autoInsert)
     return "Stop to finish. The transcript stays ready for you to copy.";
   if (settings.liveInsert && !liveInsertionUnavailableReason(settings))
     return "Completed phrases are typed while recording. Cancel does not remove text already typed.";

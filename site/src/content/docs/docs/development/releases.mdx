@@ -32,6 +32,19 @@ artifacts, mix workflow runs, or rebuild different bytes after testing.
 Publication rejects prerelease tags before uploading.
 :::
 
+## Experimental Linux artifacts
+
+Linux packaging validation produces distro-specific amd64 `.deb` artifacts for
+Debian 13 and Ubuntu 24.04. These are CI qualification artifacts, not supported
+release downloads. They are deliberately excluded from release assembly, release
+attestations, and the website download resolver. The release asset checker still
+rejects unexpected Linux files rather than silently publishing an incomplete set.
+
+Before adding Linux to the release contract, complete the
+[Linux native acceptance procedure](/docs/development/linux/), then update
+assembly, checksum validation, uploaded-asset checks, attestations, and site
+availability together. Keep all released architectures on the same validated tag.
+
 ## Version policy
 
 `0.1.0` is the first non-alpha baseline. It remains pre-1.0 SemVer, without a

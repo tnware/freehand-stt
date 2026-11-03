@@ -1,12 +1,10 @@
-//go:build windows || darwin
+//go:build windows || darwin || (linux && cgo)
 
 package audio
 
 import (
 	"context"
 	"errors"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,23 +14,6 @@ import (
 	"github.com/tnware/freehand-stt/internal/settings"
 	"github.com/tnware/freehand-stt/internal/tts"
 )
-
-type restartDevice struct {
-	armed                 atomic.Bool
-	starts, closes        atomic.Int32
-	entered, release      chan struct{}
-	stopOnce, releaseOnce sync.Once
-}
-
-func (d *restartDevice) Start() error { d.starts.Add(1); return nil }
-func (d *restartDevice) Stop() error {
-	if d.armed.Load() {
-		d.stopOnce.Do(func() { close(d.entered); <-d.release })
-	}
-	return nil
-}
-func (d *restartDevice) Uninit()  { d.closes.Add(1) }
-func (d *restartDevice) unblock() { d.releaseOnce.Do(func() { close(d.release) }) }
 
 // Only device construction is replaced. Rewind/Play/Stop/Unload/Close below
 // run the actual native adapter under the actual speech service's control.

@@ -1,4 +1,4 @@
-//go:build (!windows && !darwin) || (darwin && !cgo)
+//go:build (!windows && !darwin && !linux) || (darwin && !cgo)
 
 package process
 

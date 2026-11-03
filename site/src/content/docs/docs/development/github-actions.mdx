@@ -139,3 +139,13 @@ credentials. See [SQLite storage](../storage/) for the matching local commands.
   <LinkCard title="Prepare a release" href="../releases/" description="Version policy, package commands, and publication requirements." />
   <LinkCard title="Native acceptance" href="../../safety/native-test-checklist/" description="Collect desktop evidence beyond CI." />
 </CardGrid>
+
+## Experimental Linux packaging
+
+The application workload also builds amd64 `.deb` packages separately inside
+Debian 13 and Ubuntu 24.04 containers. Each job validates package metadata,
+installs dependencies and the package, checks its desktop file and shared-library
+resolution, and removes the package. The aggregate gate requires both jobs.
+These checks do not launch the desktop application or download/invoke models.
+They do not establish microphone, desktop-session, or native runtime acceptance.
+Linux artifacts remain separate from the published release asset set.

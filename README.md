@@ -75,6 +75,14 @@ managed whisper.cpp remains Windows-only.
 
 ## Install
 
+Linux x86_64 builds are experimental, with distro-specific Debian 13 and Ubuntu
+24.04 package validation. There is no supported Linux release download yet.
+Linux uses explicit Copy delivery; automatic insertion and the native overlay
+are unavailable. Native X11 shortcuts, primary-key hold-to-talk, and shortcut
+capture are experimental and still require desktop event-delivery qualification.
+Wayland Toggle/Show depends on compositor portal support; Wayland hold and capture
+are unavailable. See [Linux qualification and source builds](https://tnware.github.io/freehand-stt/docs/development/linux/).
+
 Freehand supports Windows 11 x64 or ARM64 with WebView2 and macOS 13 or newer on Apple
 Silicon or Intel (managed llama.cpp requires macOS 13.3). Use a managed local speech runtime or a reachable
 compatible service for your task. Only dictation needs a microphone; recording

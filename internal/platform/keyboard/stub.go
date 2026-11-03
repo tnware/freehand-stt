@@ -1,4 +1,4 @@
-//go:build !windows && !darwin
+//go:build !windows && !darwin && (!linux || !cgo)
 
 package keyboard
 
@@ -8,10 +8,10 @@ import (
 	"github.com/tnware/freehand-stt/internal/hotkey"
 )
 
-var unavailable = errors.New("Windows native functionality is unavailable on this platform")
+var unavailable = errors.New("This native feature is unavailable on this platform")
 
 func HoldAvailability() (bool, string) {
-	return false, "Hold-to-talk requires the Windows low-level keyboard hook and is unavailable in this build."
+	return false, "Hold-to-talk is unavailable on this platform. Use the recording button or a supported toggle shortcut."
 }
 
 type HoldHook struct{}

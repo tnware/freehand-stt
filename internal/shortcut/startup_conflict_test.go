@@ -13,7 +13,7 @@ func TestStartupConflictKeepsIndependentBindingsAndAllowsCapture(t *testing.T) {
 			hold := &holdFake{}
 			c := New(globals, hold, func() {}, func() {})
 			cfg := config.Default()
-			cfg.ToggleShortcut, cfg.ShowShortcut, cfg.HoldShortcut = "Ctrl+Shift+Space", "Ctrl+Shift+D", "Ctrl+Alt"
+			cfg.ToggleShortcut, cfg.ShowShortcut, cfg.HoldShortcut = "Ctrl+Shift+Space", "Ctrl+Shift+D", "Ctrl+Alt+H"
 			if err := c.Start(cfg); err == nil {
 				t.Fatal("startup conflict was hidden")
 			}

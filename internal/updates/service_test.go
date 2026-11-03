@@ -3,6 +3,7 @@ package updates
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -348,5 +349,18 @@ func (f *waitingChecker) Check(ctx context.Context) (*updater.Release, error) {
 		return release, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
+	}
+}
+
+func TestExternallyManagedPackagesNeverSelfUpdate(t *testing.T) {
+	service := NewService("0.1.0", true, false, nil, nil)
+	ConfigureExternalManagement(service)
+	ApplyEnabled(service, true)
+	status := service.Current()
+	if status.Enabled || status.State != StateDisabled {
+		t.Fatalf("distribution-owned update status = %+v", status)
+	}
+	if err := service.CheckForUpdates(); err == nil || !strings.Contains(err.Error(), "package manager") {
+		t.Fatalf("manual update error = %v", err)
 	}
 }

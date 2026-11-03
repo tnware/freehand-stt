@@ -91,7 +91,7 @@ func testShortcutSnapshotRollback(t *testing.T, clear, toggleUnavailable, holdUn
 	old := config.Default()
 	old.ToggleShortcut = "Ctrl+Shift+Space"
 	old.ShowShortcut = "Ctrl+Shift+D"
-	old.HoldShortcut = "Ctrl+Super"
+	old.HoldShortcut = "Ctrl+Super+H"
 	globals := &rollbackGlobals{active: map[string]bool{}}
 	hold := &rollbackHold{}
 	if toggleUnavailable {
@@ -119,7 +119,7 @@ func testShortcutSnapshotRollback(t *testing.T, clear, toggleUnavailable, holdUn
 	next := old
 	next.ToggleShortcut = "Ctrl+Alt+A"
 	next.ShowShortcut = "Ctrl+Alt+D"
-	next.HoldShortcut = "Ctrl+Alt"
+	next.HoldShortcut = "Ctrl+Alt+H"
 	wantAppliedGlobals := map[string]bool{next.ToggleShortcut: true, next.ShowShortcut: true}
 	if clear {
 		next.ToggleShortcut, next.ShowShortcut, next.HoldShortcut = "", "", ""

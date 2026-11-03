@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -73,6 +74,7 @@ type Options struct {
 // observable exists before the thing that publishes to it.
 type App struct {
 	nativeInput     io.Closer
+	nativeGlobal    io.Closer
 	shutdownOnce    sync.Once
 	sourcesOnce     sync.Once
 	storage         *storage.Store
@@ -177,6 +179,7 @@ func New(opts Options) (*App, error) {
 	client := inference.New()
 	processor := postprocess.New(client, rootLogger.With("component", "postprocess"))
 	nativeInput := nativeinput.NewInput(rootLogger.With("component", "insertion"))
+	a.configureNativeInput(nativeInput)
 	if closer, ok := any(nativeInput).(io.Closer); ok {
 		a.nativeInput = closer
 	}
@@ -310,7 +313,7 @@ func New(opts Options) (*App, error) {
 		a.persistMainWindowPlacement(a.mainWindow.current())
 		a.tray.Close()
 	})
-	a.shortcuts = shortcut.New(a.wails.GlobalShortcut, a.hold, a.toggleRecording, a.showMain)
+	a.shortcuts = shortcut.New(a.globalShortcutPlatform(), a.hold, a.toggleRecording, a.showMain)
 	a.wails.Event.OnApplicationEvent(events.Common.ApplicationStarted, a.onStarted)
 	a.installTray(rootLogger.With("component", "tray"))
 
@@ -318,6 +321,10 @@ func New(opts Options) (*App, error) {
 }
 
 func (a *App) configureUpdater() error {
+	if runtime.GOOS == "linux" {
+		updates.ConfigureExternalManagement(a.updates)
+		return nil
+	}
 	if a.opts.Development {
 		return nil
 	}

@@ -83,11 +83,11 @@ func TestDedicatedAndAliasedChordsNormalizeBeforeNativeRegistration(t *testing.T
 		cfg.ShowShortcut = "Command+F20"
 		expectedShow = "Super+F20"
 	}
-	cfg.HoldShortcut = "Control+Command"
+	cfg.HoldShortcut = "Control+Command+H"
 	if err := c.Configure(cfg); err != nil {
 		t.Fatal(err)
 	}
-	if !f.active["F13"] || !f.active[expectedShow] || h.value != "Ctrl+Super" {
+	if !f.active["F13"] || !f.active[expectedShow] || h.value != "Ctrl+Super+H" {
 		t.Fatalf("normalized bindings = globals=%v hold=%q", f.active, h.value)
 	}
 }
@@ -209,7 +209,7 @@ func TestStartupHoldFailurePreservesIndependentGlobalsAndPreference(t *testing.T
 	h := &failingHold{fail: true}
 	c := New(f, h, func() {}, func() {})
 	cfg := config.Default()
-	cfg.HoldShortcut = "Ctrl+Alt"
+	cfg.HoldShortcut = "Ctrl+Alt+H"
 	cfg.ToggleShortcut = "Ctrl+Shift+Space"
 	cfg.ShowShortcut = "Ctrl+Shift+D"
 	if err := c.Start(cfg); err == nil {

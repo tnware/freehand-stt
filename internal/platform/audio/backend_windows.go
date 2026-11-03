@@ -10,3 +10,5 @@ import (
 const nativeAudioBackend = malgo.BackendWasapi
 
 func authorizeMicrophone(ctx context.Context, _ bool) error { return ctx.Err() }
+
+func nativeAudioBackends() []malgo.Backend { return []malgo.Backend{nativeAudioBackend} }
