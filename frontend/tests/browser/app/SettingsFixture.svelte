@@ -226,8 +226,43 @@
     params.has("runtime") || managedCleanup
       ? createRuntimeFixture(
           current.platform !== "darwin",
-          (p) => {
-            current = { ...current, managedRuntimes: p };
+          (instances, providers) => {
+            current = { ...current, managedRuntimes: instances };
+            // Match Go's selected-connection projection after inventory commits.
+            // Runtime status alone must not leave the applied task model stale.
+            for (const [endpoint, role] of [
+              [current, Role.Transcription],
+              [current.voiceTranscription, Role.Transcription],
+              [current.postProcessing, Role.PostProcessing],
+              [current.textToSpeech, Role.Speech],
+            ] as const) {
+              const instance = instances.find(
+                (entry) => entry.id === endpoint.managedInstanceID,
+              );
+              if (!instance) continue;
+              const modelID =
+                role === Role.Speech
+                  ? instance.speechModel || instance.model
+                  : instance.model;
+              const model = providers
+                .find((provider) => provider.id === instance.provider)
+                ?.models?.find((entry) => entry.id === modelID);
+              const contract = model?.contracts?.find(
+                (entry) => entry.role === role,
+              );
+              if (!contract) continue;
+              endpoint.model = modelID;
+              endpoint.compatibilityProfile = contract.compatibilityProfile;
+              if ("modelProfile" in endpoint)
+                endpoint.modelProfile = contract.modelProfile;
+              else
+                endpoint.preset =
+                  contract.modelProfile === ModelID.S1Mini
+                    ? PostProcessingPreset.PostProcessingPresetS1Mini
+                    : PostProcessingPreset.PostProcessingPresetGeneric;
+              if (endpoint === current.voiceTranscription && !model?.realtime)
+                current.voiceTranscription.realtime = false;
+            }
           },
           params.has("runtime-ready") || managedCleanup,
           managedCleanup || params.get("runtime-provider") === "llama-cpp"
@@ -238,6 +273,12 @@
           managedCleanup ? "Local cleanup" : "Local speech",
         )
       : null;
+  if (runtimeFixture && params.has("runtime-all-providers")) {
+    runtimeFixture.providers.unshift(
+      createRuntimeFixture(true, () => {}, false, ProviderID.LlamaCPP)
+        .providers[0],
+    );
+  }
   if (runtimeFixture) window.testRuntime = runtimeFixture.control;
   if (managedCleanup && runtimeFixture) {
     const instance = runtimeFixture.control.snapshot()[0].instance;

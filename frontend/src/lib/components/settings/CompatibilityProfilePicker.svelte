@@ -8,26 +8,40 @@
     id,
     value = $bindable(),
     profiles,
+    disabled = false,
   }: {
     id: string;
     value: ID;
     profiles: Profile[];
+    disabled?: boolean;
   } = $props();
-  const selected = $derived(profiles.find((profile) => profile.id === (value || ID.Generic)));
+  const selected = $derived(
+    profiles.find((profile) => profile.id === (value || ID.Generic)),
+  );
   const available = $derived(profiles.filter((profile) => profile.available));
   function choose(next: string) {
+    if (disabled) return;
     const profile = available.find((profile) => profile.id === next);
     if (profile) value = profile.id;
   }
 </script>
 
-<ValueRow {id} label="Backend" hint={selected && !selected.available ? selected.description : ""}>
+<ValueRow
+  {id}
+  label="Backend"
+  hint={selected && !selected.available ? selected.description : ""}
+>
   {#snippet control()}
-    <Select.Root type="single" value={value || ID.Generic} onValueChange={choose}>
+    <Select.Root
+      type="single"
+      value={value || ID.Generic}
+      onValueChange={choose}
+      {disabled}
+    >
       <Select.Trigger {id} class="w-full"
         ><span class="flex min-w-0 items-center gap-2"
-          ><ProviderIcon profile={selected?.id} size={22} /><span class="truncate"
-            >{selected?.label ?? "Choose a profile"}</span
+          ><ProviderIcon profile={selected?.id} size={22} /><span
+            class="truncate">{selected?.label ?? "Choose a profile"}</span
           ></span
         ></Select.Trigger
       >
@@ -36,7 +50,10 @@
           <Select.Label>Available profiles</Select.Label>
           {#each available as profile (profile.id)}
             <Select.Item value={profile.id} label={profile.label}
-              ><ProviderIcon profile={profile.id} size={22} />{profile.label}</Select.Item
+              ><ProviderIcon
+                profile={profile.id}
+                size={22}
+              />{profile.label}</Select.Item
             >
           {/each}
         </Select.Group>
@@ -46,7 +63,8 @@
 </ValueRow>
 {#if selected && !selected.available}
   <p class="px-5 pb-3 text-xs leading-relaxed text-muted-foreground">
-    This saved profile is unavailable; your selection has not changed. Choose an available profile
-    to use this connection. Generic may work if your server supports its API.
+    This saved profile is unavailable; your selection has not changed. Choose an
+    available profile to use this connection. Generic may work if your server
+    supports its API.
   </p>
 {/if}

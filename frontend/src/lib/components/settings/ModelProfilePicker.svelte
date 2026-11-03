@@ -68,11 +68,7 @@
           class="w-full"
           aria-label="Model profile"
           aria-invalid={!!issue}
-          aria-describedby={issue
-            ? `${id}-issue`
-            : !selected
-              ? `${id}-unavailable`
-              : undefined}
+          aria-describedby={`${id}-help${issue ? ` ${id}-issue` : ""}${!selected ? ` ${id}-unavailable` : ""}`}
         >
           <span class="flex min-w-0 items-center gap-2">
             {#if selected && selected.id !== ID.Generic}<ProviderIcon
@@ -111,6 +107,10 @@
         </Select.Content>
       </Select.Root>
     {/if}
+    <p id={`${id}-help`} class="text-xs leading-relaxed text-muted-foreground">
+      Match this profile to the model you use. It controls model-specific
+      options, not which model is loaded.
+    </p>
     {#if !selected}<p id={`${id}-unavailable`} class="text-xs text-warning">
         This model profile is unavailable for the selected connection.
       </p>{/if}

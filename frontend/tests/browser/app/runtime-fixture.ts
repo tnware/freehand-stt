@@ -58,7 +58,10 @@ const parakeet: Profile = {
 /** UI boundary fixture only; no native installation or inference acceptance. */
 export function createRuntimeFixture(
   supported: boolean,
-  preferencesChanged: (instances: Instance[]) => void,
+  preferencesChanged: (
+    instances: Instance[],
+    providers: ProviderDescriptor[],
+  ) => void,
   ready = true,
   providerID = ProviderID.NeMoSpeechCPP,
   instanceName = "Local speech",
@@ -292,7 +295,10 @@ export function createRuntimeFixture(
     };
   }
   const preferences = () =>
-    preferencesChanged(structuredClone(rows.map((r) => r.instance)));
+    preferencesChanged(
+      structuredClone(rows.map((r) => r.instance)),
+      structuredClone(providers),
+    );
   preferences();
   const calls: string[] = [];
   const downloading = new Map<string, string>();
@@ -401,20 +407,28 @@ export function createRuntimeFixture(
     GetProviders: async () => structuredClone(providers),
     GetBinaryOptions: async ({ provider }) => {
       calls.push(`GetBinaryOptions:${provider}`);
+      const cpuOnly = new URLSearchParams(location.search).has(
+        "runtime-cpu-only",
+      );
       return {
         provider,
         os: macOS ? "darwin" : "windows",
         architecture: macOS ? "arm64" : "amd64",
         supported: true,
-        recommendedBackend: macOS ? "metal" : "cuda",
-        reason: macOS
-          ? "Apple Silicon GPU available."
-          : "Compatible NVIDIA GPU detected.",
+        recommendedBackend: cpuOnly ? "cpu" : macOS ? "metal" : "cuda",
+        reason: cpuOnly
+          ? "No compatible NVIDIA GPU is available; CPU is recommended."
+          : macOS
+            ? "Apple Silicon GPU available."
+            : "Compatible NVIDIA GPU detected.",
         options: backends.map((backend) => ({
           backend,
           supported: true,
-          available: true,
-          reason: "Available",
+          available: !cpuOnly || backend === "cpu",
+          reason:
+            cpuOnly && backend !== "cpu"
+              ? "No compatible GPU available"
+              : "Available",
         })),
       };
     },

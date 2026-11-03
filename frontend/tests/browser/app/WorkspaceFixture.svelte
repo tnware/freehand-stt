@@ -42,6 +42,7 @@
   import ActivityRail from "$lib/components/shell/ActivityRail.svelte";
   import { type PaneID } from "$lib/panes";
   import { controlledSaves } from "./save-control";
+  import { createRuntimeFixture } from "./runtime-fixture";
 
   const layout = new WorkbenchLayout();
   provideWorkbenchLayout(layout);
@@ -61,8 +62,7 @@
   let finishListen: ((success: boolean) => void) | undefined;
   const saveScenario = new URLSearchParams(location.search).has("save-pending");
   let finishAudioSave:
-    | ((outcome: "saved" | "cancelled" | "failed") => void)
-    | undefined;
+    ((outcome: "saved" | "cancelled" | "failed") => void) | undefined;
   const playbackScenario = new URLSearchParams(location.search).has("playback");
   const fileStreamingScenario = new URLSearchParams(location.search).has(
     "file-streaming",
@@ -199,11 +199,18 @@
   if (setupScenario) {
     current.setupCompleted = ![
       "first",
+      "fresh",
       "retry",
       "missing-model",
       "loading",
     ].includes(setupScenario);
     current.historyEnabled = false;
+    if (setupScenario === "fresh") {
+      current.savedConnections.entries = [];
+      current.savedConnections.selected = {};
+      current.voiceTranscription.baseURL = "";
+      current.voiceTranscription.model = "";
+    }
     if (setupScenario === "missing-model")
       current.voiceTranscription.model = "";
   }
@@ -473,6 +480,45 @@
       },
     }),
   );
+  // Explicit metadata-only scenario for reviewing local-first setup. This is
+  // synthetic platform support, never a claim about the browser host.
+  if (new URLSearchParams(location.search).has("local-options")) {
+    session.runtime.providers = createRuntimeFixture(
+      true,
+      () => {},
+      false,
+    ).providers;
+  }
+  // Existing synthetic runtime catalog, selected explicitly for branding review.
+  if (new URLSearchParams(location.search).has("local-model")) {
+    const local = createRuntimeFixture(true, () => {}, true);
+    const row = local.control.snapshot()[0];
+    const model = local.providers[0].models?.[0];
+    session.runtime.providers = local.providers;
+    session.runtime.instances = local.control.snapshot();
+    current.managedRuntimes = [row.instance];
+    current.voiceTranscription.managedInstanceID = row.instance.id;
+    current.voiceTranscription.baseURL = "http://127.0.0.1:8178/v1";
+    current.voiceTranscription.model = row.instance.model;
+    if (model?.contracts?.[0]) {
+      current.voiceTranscription.compatibilityProfile =
+        model.contracts[0].compatibilityProfile;
+      current.voiceTranscription.modelProfile = model.contracts[0].modelProfile;
+    }
+    const saved = current.savedConnections.entries?.find(
+      (entry) => entry.id === "voice-fixture",
+    );
+    if (saved) {
+      saved.builtIn = true;
+      saved.name = "NeMo-Speech.cpp";
+      saved.details = {
+        ...saved.details,
+        managedInstanceID: row.instance.id,
+        baseURL: current.voiceTranscription.baseURL,
+        compatibilityProfile: current.voiceTranscription.compatibilityProfile,
+      };
+    }
+  }
   session.editor.applySettingsSnapshot(structuredClone(current));
   session.editor.devices = [
     { id: "desk-mic", name: "Desk microphone", default: true },
@@ -727,7 +773,10 @@
     bottomVisible={layout.bottomVisible}
     secondaryVisible={activePane === "history" && layout.secondaryVisible}
     secondaryAvailable={activePane === "history"}
-    bottomAvailable={layout.bottomAvailable.current}
+    bottomAvailable={layout.bottomAvailable.current && !layout.bottomSuppressed}
+    bottomUnavailableReason={layout.bottomSuppressed
+      ? "The bottom panel is hidden during setup"
+      : undefined}
     onTogglePrimary={() => layout.togglePrimary()}
     onToggleBottom={() => layout.toggleBottom()}
     onToggleSecondary={() => layout.toggleSecondary()}

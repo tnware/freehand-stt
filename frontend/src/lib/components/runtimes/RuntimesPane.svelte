@@ -73,6 +73,16 @@
         return;
       }
     }
+    const requestedProvider = workbench?.runtimeProviderID;
+    if (requestedProvider) {
+      if (runtime.loading) return;
+      workbench.runtimeProviderID = "";
+      if (rows.some((row) => row.entry.id === requestedProvider)) {
+        selected = requestedProvider;
+        recoveryID = "";
+        return;
+      }
+    }
     if (selected !== active) selected = active;
   });
   const current = $derived(rows.find((row) => row.entry.id === active));
@@ -201,15 +211,14 @@
 
       {#if current?.entry}
         <div class="mt-2 border-t border-hairline px-3 pt-3 pb-4">
-          <p class="content-kicker mb-2">This machine</p>
-          <!-- Freehand knows which backends this machine can actually run;
-               it does not measure VRAM, so this states capability rather
-               than inventing a hardware meter. -->
+          <p class="content-kicker mb-2">Runtime binary</p>
+          <!-- Descriptor backends are platform builds, not a hardware probe. -->
           <p class="font-mono text-xs text-ink-quiet">
             {currentInstance?.status.backend
               ? backendLabel(currentInstance.status.backend)
               : "backend not selected"}
           </p>
+          <p class="mt-3 text-xs text-muted-foreground">Platform options</p>
           <div class="mt-2 flex flex-wrap gap-1">
             {#each current.entry.backends ?? [] as backend (backend)}
               <span
@@ -218,6 +227,9 @@
               >
             {/each}
           </div>
+          <p class="mt-2 text-xs text-muted-foreground">
+            Usable options depend on the available hardware.
+          </p>
           {#if current.entry.unavailableReason}
             <p class="mt-2 text-xs leading-snug text-warning">
               {current.entry.unavailableReason}

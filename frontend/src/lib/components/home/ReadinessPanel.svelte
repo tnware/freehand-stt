@@ -1,7 +1,11 @@
 <script lang="ts">
+  import type { ProviderDescriptor } from "$bindings/managedruntime";
+  import { localSpeechSetup } from "$lib/utils/localSpeechSetup";
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import Disclosure from "$lib/components/common/Disclosure.svelte";
   import type { Snippet } from "svelte";
   import CheckIcon from "@lucide/svelte/icons/check";
+  import AudioLinesIcon from "@lucide/svelte/icons/audio-lines";
   import ListChecksIcon from "@lucide/svelte/icons/list-checks";
   import LoaderCircleIcon from "@lucide/svelte/icons/loader-circle";
   import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
@@ -15,6 +19,9 @@
   let {
     readiness,
     serverControls,
+    providers = [],
+    onManageRuntime,
+    onChooseServer,
     task = "voice",
     embedded = false,
     testing = false,
@@ -27,6 +34,9 @@
   }: {
     readiness: Readiness;
     serverControls?: Snippet;
+    providers?: ProviderDescriptor[];
+    onManageRuntime?: (providerID?: string) => void;
+    onChooseServer?: () => void;
     task?: "voice" | "file";
     embedded?: boolean;
     testing?: boolean;
@@ -37,6 +47,8 @@
     onDismiss: () => void;
     onOpenSettings: (section: SettingsSectionID) => void;
   } = $props();
+  const localSetup = $derived(localSpeechSetup(providers));
+  const localRecommendation = $derived(localSetup.recommendation);
   const action = $derived(nextReadinessAction(readiness));
   const remaining = $derived(
     readiness.steps.filter(
@@ -53,6 +65,11 @@
       ["server", "credential", "connection"].includes(step.id),
     ),
   );
+  const nextIssue = $derived(
+    action.kind === "settings"
+      ? remaining.find((step) => step.id === action.step)
+      : remaining[0],
+  );
   const recoveryTitle = $derived(
     action.kind === "settings"
       ? {
@@ -67,8 +84,8 @@
   const title = $derived(
     readiness.initialSetup
       ? task === "file"
-        ? "Set up audio-file transcription"
-        : "Set up voice transcription"
+        ? "Set up file transcription"
+        : "Set up dictation"
       : recoveryTitle,
   );
   function proceed() {
@@ -83,142 +100,241 @@
   class="readiness min-h-0 flex-1 overflow-y-auto"
   aria-label={readiness.initialSetup ? "First-run setup" : "Task recovery"}
 >
-  {#if !embedded}<PaneHeader
+  {#if !embedded && !readiness.initialSetup}
+    <PaneHeader
       icon={ListChecksIcon}
       {title}
-      summary={readiness.initialSetup
-        ? "Welcome to Freehand"
-        : task === "file"
-          ? "Audio-file transcription"
-          : "Voice transcription"}
-    />{/if}
-  <div class="flex w-full max-w-[960px] flex-col gap-4 px-3 py-4">
-    <div class="space-y-1">
-      {#if embedded}<h2 class="content-section-title">{title}</h2>{/if}
-      <p class="content-meta max-w-[65ch]">
-        {readiness.initialSetup
-          ? task === "file"
-            ? "Choose a connection and model, then check that you’re ready to transcribe a file."
-            : "Choose a connection and model, then check that you’re ready to record."
-          : "Review what needs attention below. Other tasks are still available from the activity rail."}
-      </p>
-    </div>
-
-    <div
-      class:initial={readiness.initialSetup}
-      class="setup-columns grid min-w-0 items-start gap-5"
-    >
-      <div class="flex min-w-0 flex-col gap-3">
-        <section class="settings-group" aria-label="Next setup step">
-          <div class="space-y-3 py-3">
-            <h3 class="content-section-title" aria-live="polite">
-              {readiness.canComplete
-                ? task === "file"
-                  ? "Ready to transcribe"
-                  : "Ready to record"
-                : readiness.initialSetup
-                  ? "Next step"
-                  : "Needs attention"}
-            </h3>
-            {#if readiness.canComplete}
-              <p class="content-meta">
-                {task === "file"
-                  ? "Your connection check passed. Choose an audio file to begin."
-                  : "Your connection check passed, and your microphone and shortcut are ready."}
-              </p>
-            {:else}
-              <div class="space-y-4">
-                {#each remaining as step (step.id)}
-                  <div class="flex items-start gap-2.5">
-                    {#if step.status === "attention"}<CircleAlertIcon
-                        class="mt-0.5 size-4 shrink-0 text-warning"
-                      />
-                    {:else if step.id === "microphone"}<LoaderCircleIcon
-                        class="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none"
-                      />{/if}
-                    <div class="min-w-0 flex-1">
-                      <p class="content-value">{step.label}</p>
-                      <p class="content-meta mt-1 break-words">
-                        {step.detail}
-                      </p>
-                    </div>
-                    {#if step.settingsSection && !(action.kind === "settings" && action.step === step.id) && step.status === "attention"}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={busy}
-                        aria-label={`Review ${step.label} settings`}
-                        onclick={() => onOpenSettings(step.settingsSection!)}
-                        >Review</Button
-                      >
-                    {/if}
-                  </div>
-                {/each}
-              </div>
-            {/if}
+      summary={task === "file"
+        ? "Audio-file transcription"
+        : "Voice transcription"}
+    />
+  {/if}
+  {#if readiness.initialSetup}
+    <div class="welcome">
+      <header class="welcome-header">
+        <div class="welcome-mark" aria-hidden="true">
+          <AudioLinesIcon class="size-5" />
+        </div>
+        <div class="min-w-0 space-y-2">
+          <h2 class="welcome-title">{title}</h2>
+          <p class="welcome-description">
+            {task === "voice"
+              ? "Install a local speech model or connect to a transcription service."
+              : "Choose a model for transcribing audio files."}
+          </p>
+        </div>
+      </header>
+      {#if !(onManageRuntime && action.kind === "settings" && action.step === "server")}
+        <section class="welcome-action" aria-label="Next setup step">
+          <p class="content-meta" aria-live="polite">
+            {readiness.canComplete
+              ? "Connection checks passed."
+              : action.kind === "settings" && action.step === "server"
+                ? "Choose local processing or an existing server."
+                : action.kind === "check"
+                  ? "Check the connection. No audio will be sent."
+                  : (nextIssue?.detail ?? "Choose a transcription connection.")}
+          </p>
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            {@render primaryAction()}
           </div>
-          <div
-            class="flex flex-wrap items-center gap-2 border-t border-hairline py-3"
-          >
-            <Button
-              size="sm"
-              disabled={busy || action.kind === "wait"}
-              onclick={proceed}
-              class="min-w-0"
-            >
-              {#if busy || action.kind === "wait"}<LoaderCircleIcon
-                  class="size-4 animate-spin motion-reduce:animate-none"
-                />{/if}
-              {testing
-                ? "Checking connection…"
-                : completing
-                  ? "Finishing…"
-                  : saving
-                    ? "Saving settings…"
-                    : action.label}
-            </Button>
-            {#if !readiness.initialSetup}<Button
-                variant="ghost"
-                size="sm"
-                disabled={busy}
-                onclick={onDismiss}>Back to workspace</Button
-              >{/if}
-          </div>
-        </section>
-
-        {#if complete.length}
-          <Disclosure
-            title={`${complete.length} ${complete.length === 1 ? "check ready" : "checks ready"}`}
-            icon={CheckIcon}
-            class="border-t border-hairline"
-          >
-            <div class="divide-y divide-hairline">
-              {#each complete as step (step.id)}{@render readyStep(step)}{/each}
-            </div>
-          </Disclosure>
-        {/if}
-        {#if !readiness.initialSetup && connectionNeedsAttention && serverControls}
-          <Disclosure
-            title="Connection and model"
-            class="border-t border-hairline"
-          >
-            <div>
-              {@render serverControls()}
-            </div>
-          </Disclosure>
-        {/if}
-      </div>
-      {#if readiness.initialSetup && serverControls}
-        <section
-          class="setup-controls min-w-0 border-t border-hairline py-3"
-          aria-label="Transcription connection"
-        >
-          {@render serverControls()}
         </section>
       {/if}
+      {#if onManageRuntime}
+        <section class="local-choice" aria-label="Local speech setup">
+          <div class="local-heading">
+            <h3 class="content-section-title">
+              {localSetup.availability === "unavailable"
+                ? "Connect to a speech server"
+                : "Run on this computer"}
+            </h3>
+            {#if localRecommendation}<span class="recommendation-label"
+                >Recommended</span
+              >{/if}
+          </div>
+          {#if localRecommendation}
+            <div class="model-identity">
+              <div class="model-icon">
+                <ProviderIcon
+                  profile={localRecommendation.provider.id}
+                  size={32}
+                />
+              </div>
+              <div class="min-w-0">
+                <p class="model-name">{localRecommendation.model.name}</p>
+                <p class="content-meta mt-1">
+                  {localRecommendation.provider.name}
+                </p>
+                <p class="content-meta mt-2">
+                  {localRecommendation.model.description}
+                </p>
+              </div>
+            </div>
+          {:else}
+            <p class="content-meta mt-3">
+              {localSetup.availability === "unavailable"
+                ? "Built-in transcription is not available on this platform. Use your own server or a compatible provider."
+                : localSetup.availability === "unknown"
+                  ? "Check available local engines and platform requirements."
+                  : "View supported local engines and models."}
+            </p>
+          {/if}
+          {#if localSetup.availability === "available"}
+            <p class="content-meta mt-2">
+              Download a speech engine and model, then transcribe locally.
+              You’ll review the download before it starts.
+            </p>
+          {/if}
+          <div class="local-actions">
+            {#if localSetup.availability === "unavailable" && onChooseServer}<Button
+                disabled={busy}
+                onclick={onChooseServer}>Use a server</Button
+              >{/if}
+            <Button
+              variant={localSetup.availability === "available" &&
+              action.kind === "settings" &&
+              action.step === "server"
+                ? "default"
+                : "outline"}
+              disabled={busy}
+              onclick={() =>
+                onManageRuntime?.(localRecommendation?.provider.id)}
+              >{localRecommendation
+                ? "Set up local speech"
+                : "Browse local engines"}</Button
+            >
+          </div>
+          {#if localRecommendation}<button
+              type="button"
+              class="mt-3 text-xs text-muted-foreground underline-offset-4 hover:underline"
+              disabled={busy}
+              onclick={() => onManageRuntime?.()}
+              >See all local engines and models</button
+            >{/if}
+        </section>
+      {/if}
+      {#if onManageRuntime && onChooseServer && localSetup.availability !== "unavailable"}
+        <div class="server-alternative">
+          <div class="min-w-0">
+            <p class="content-section-title">Connect to a service</p>
+            <p class="content-meta mt-1">
+              Connect to your own endpoint or a provider.
+            </p>
+          </div>
+          <Button variant="outline" disabled={busy} onclick={onChooseServer}
+            >Use a server</Button
+          >
+        </div>
+      {/if}
+      <div class="welcome-options">
+        {#if serverControls}
+          <Disclosure
+            title="Connection and model"
+            description="On your computer, your server, or a provider."
+          >
+            <div class="py-2">{@render serverControls()}</div>
+          </Disclosure>
+        {/if}
+        <Disclosure title="Setup details">
+          <p class="content-meta py-2">
+            Connection checks read server metadata only. Your first
+            transcription confirms that the selected model can run.
+          </p>
+          <div class="divide-y divide-hairline">
+            {#each readiness.steps as step (step.id)}{@render readyStep(
+                step,
+              )}{/each}
+          </div>
+        </Disclosure>
+      </div>
     </div>
-  </div>
+  {:else}
+    <div class="flex w-full max-w-[640px] flex-col gap-4 px-3 py-4">
+      {#if embedded}<h2 class="content-section-title">{title}</h2>{/if}
+      <section class="settings-group" aria-label="Next setup step">
+        <div class="space-y-4 py-3">
+          {#each remaining as step (step.id)}
+            <div class="flex items-start gap-2.5">
+              {#if step.status === "attention"}<CircleAlertIcon
+                  class="mt-0.5 size-4 shrink-0 text-warning"
+                />
+              {:else if step.id === "microphone"}<LoaderCircleIcon
+                  class="mt-0.5 size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none"
+                />{/if}
+              <div class="min-w-0 flex-1">
+                <p class="content-value">{step.label}</p>
+                <p class="content-meta mt-1 break-words">{step.detail}</p>
+              </div>
+              {#if step.settingsSection && !(action.kind === "settings" && action.step === step.id) && step.status === "attention"}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  aria-label={`Review ${step.label} settings`}
+                  onclick={() => onOpenSettings(step.settingsSection!)}
+                  >Review</Button
+                >
+              {/if}
+            </div>
+          {/each}
+        </div>
+        <div
+          class="flex flex-wrap items-center gap-2 border-t border-hairline py-3"
+        >
+          {@render primaryAction()}
+          <Button variant="ghost" size="sm" disabled={busy} onclick={onDismiss}
+            >Back to workspace</Button
+          >
+        </div>
+      </section>
+      {#if complete.length}
+        <Disclosure
+          title={`${complete.length} ${complete.length === 1 ? "check ready" : "checks ready"}`}
+          icon={CheckIcon}
+          class="border-t border-hairline"
+        >
+          <div class="divide-y divide-hairline">
+            {#each complete as step (step.id)}{@render readyStep(step)}{/each}
+          </div>
+        </Disclosure>
+      {/if}
+      {#if connectionNeedsAttention && serverControls}
+        <Disclosure
+          title="Connection and model"
+          class="border-t border-hairline"
+        >
+          {@render serverControls()}
+        </Disclosure>
+      {/if}
+    </div>
+  {/if}
 </section>
+
+{#snippet primaryAction()}
+  <Button
+    variant={readiness.initialSetup &&
+    onManageRuntime &&
+    action.kind === "settings" &&
+    action.step === "server"
+      ? "outline"
+      : "default"}
+    size={readiness.initialSetup ? "default" : "sm"}
+    disabled={busy || action.kind === "wait"}
+    onclick={proceed}
+    class="min-w-0"
+  >
+    {#if busy || action.kind === "wait"}<LoaderCircleIcon
+        class="size-4 animate-spin motion-reduce:animate-none"
+      />{/if}
+    {testing
+      ? "Checking connection…"
+      : completing
+        ? "Finishing…"
+        : saving
+          ? "Saving settings…"
+          : action.label}
+  </Button>
+{/snippet}
 
 {#snippet readyStep(step: ReadinessStep)}
   <div class="flex items-start gap-3 py-3">
@@ -227,9 +343,7 @@
       {#if step.id === "shortcut"}<div class="mt-1">
           <ShortcutKeys value={step.detail} label="Toggle recording shortcut" />
         </div>
-      {:else}<p class="content-meta mt-1 break-words">
-          {step.detail}
-        </p>{/if}
+      {:else}<p class="content-meta mt-1 break-words">{step.detail}</p>{/if}
     </div>
     {#if step.settingsSection}<Button
         variant="ghost"
@@ -242,20 +356,105 @@
 {/snippet}
 
 <style>
-  @container (min-width: 800px) {
-    .setup-columns.initial {
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    }
-    .setup-columns.initial > .setup-controls {
-      grid-column: 1;
-      grid-row: 1;
-    }
-    .setup-columns.initial > :first-child {
-      grid-column: 2;
-      grid-row: 1;
-    }
+  .welcome {
+    width: 100%;
+    max-width: 42rem;
+    margin-inline: auto;
+    padding: clamp(1rem, 3cqw, 1.75rem) 1rem;
   }
-  .setup-columns:not(.initial) {
-    max-width: 40rem;
+  .welcome-header {
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+  }
+  .welcome-mark {
+    display: flex;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    color: var(--accent-text);
+    background: var(--subtle-fill);
+  }
+  .welcome-title {
+    font-size: clamp(1.25rem, 3cqw, 1.5rem);
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  .welcome-description {
+    max-width: 52ch;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted-foreground);
+  }
+  .local-choice {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg);
+    background: var(--subtle-fill);
+  }
+  .local-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .recommendation-label {
+    border: 1px solid var(--hairline);
+    border-radius: 0.375rem;
+    padding: 0.125rem 0.375rem;
+    color: var(--accent-text);
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .model-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    margin-block: 1.125rem;
+  }
+  .model-icon {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    background: var(--background);
+    border: 1px solid var(--hairline);
+    border-radius: 0.75rem;
+  }
+  .model-name {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .local-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .server-alternative {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 0.25rem;
+  }
+  .welcome-action {
+    margin-block: 1.25rem;
+  }
+  .welcome-options {
+    margin-top: 0.75rem;
+    border-top: 1px solid var(--hairline);
   }
 </style>

@@ -12,6 +12,9 @@ for (const width of [520, 860]) {
     const model = page.locator("#voice-model");
     const profile = page.locator("#voice-profile");
     const language = page.locator("#voice-language");
+    await expect(profile).toHaveAccessibleDescription(
+      /not which model is loaded/,
+    );
     expect((await model.boundingBox())!.height).toBe(
       (await language.boundingBox())!.height,
     );

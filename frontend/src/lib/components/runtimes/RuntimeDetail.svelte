@@ -136,9 +136,7 @@
   let recommendation = $state<BinaryOptions | null>(null);
   let binaryChoice = $state("auto");
   type Removal =
-    | { kind: "files" }
-    | { kind: "instance" }
-    | { kind: "model"; model: Model };
+    { kind: "files" } | { kind: "instance" } | { kind: "model"; model: Model };
   let confirming = $state<Removal | null>(null);
   let removing = $state(false);
   let removalError = $state("");
@@ -196,6 +194,28 @@
   const sourceBackend = $derived(
     recommendation ? chosenBackend : (status?.backend ?? ""),
   );
+
+  let installedOptions = $state<BinaryOptions | null>(null);
+  let checkingInstalledOptions = $state(false);
+  let installedOptionsAttempted = $state(false);
+  async function checkInstalledOptions() {
+    if (checkingInstalledOptions) return;
+    checkingInstalledOptions = true;
+    installedOptionsAttempted = true;
+    const options = await runtime.binaryOptions(entry.id);
+    if (!alive) return;
+    installedOptions = options;
+    checkingInstalledOptions = false;
+  }
+  $effect(() => {
+    if (
+      preferencesOpen &&
+      switchable &&
+      installed &&
+      !installedOptionsAttempted
+    )
+      void checkInstalledOptions();
+  });
 
   function install(backend?: string) {
     if (actionLocked || runtime.busy || probing || !entry.models?.length)
@@ -593,25 +613,45 @@
                   >Runtime binary</legend
                 >
                 <div class="flex flex-wrap gap-1.5">
-                  {#each entry.backends ?? [] as backend (backend)}<Button
+                  {#each installedOptions?.options ?? [] as option (option.backend)}<Button
                       variant="outline"
                       size="xs"
-                      aria-pressed={status?.backend === backend}
+                      aria-pressed={status?.backend === option.backend}
+                      title={option.reason}
                       disabled={actionLocked ||
                         running ||
-                        status?.backend === backend}
+                        checkingInstalledOptions ||
+                        !installedOptions?.supported ||
+                        !option.supported ||
+                        !option.available ||
+                        status?.backend === option.backend}
                       onclick={() => {
                         if (!running)
                           act(() =>
-                            runtime.installBackend(instance.id, backend),
+                            runtime.installBackend(instance.id, option.backend),
                           );
-                      }}>{backendLabel(backend)}</Button
+                      }}>{backendLabel(option.backend)}</Button
                     >{/each}
                 </div>
               </fieldset>
+              <p class="content-meta" role="status">
+                {checkingInstalledOptions
+                  ? "Checking host binary options · no files are downloaded"
+                  : installedOptions
+                    ? installedOptions.reason
+                    : "Could not check available binaries. Re-check to try again."}
+              </p>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={checkingInstalledOptions || actionLocked}
+                onclick={() => void checkInstalledOptions()}
+                >Re-check binary options</Button
+              >
               <p class="content-meta">
-                Stop to change binary. Switching downloads the selected binary
-                and keeps models and saved Connections.
+                {#if running}Stop to change binary.
+                {/if}Switching downloads the selected binary and keeps models
+                and saved Connections.
               </p>{/if}
             <p class="content-meta">
               Stopping or removing files keeps saved Connections selected. There

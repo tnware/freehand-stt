@@ -16,6 +16,7 @@ describe("workbench layout preferences", () => {
           secondarySize: -100,
           outputInstanceID: "untrusted-runtime",
           runtimeInstanceID: "untrusted-manage-target",
+          runtimeProviderID: "untrusted-provider",
           diagnosticWorkflow: "file",
         }),
     });
@@ -28,6 +29,7 @@ describe("workbench layout preferences", () => {
     expect(layout.secondarySize).toBe(30);
     expect(layout.outputInstanceID).toBe("");
     expect(layout.runtimeInstanceID).toBe("");
+    expect(layout.runtimeProviderID).toBe("");
     expect(layout.diagnosticWorkflow).toBe("voice");
   });
 
@@ -37,6 +39,7 @@ describe("workbench layout preferences", () => {
     const layout = new WorkbenchLayout();
     layout.outputInstanceID = "private-runtime";
     layout.runtimeInstanceID = "private-manage-target";
+    layout.runtimeProviderID = "private-provider";
     layout.tab = "output";
     layout.claimNotifications("modal");
     layout.claimNotifications("error");
@@ -105,5 +108,46 @@ describe("workbench notification ownership", () => {
     const nextLayout = new WorkbenchLayout();
     expect(nextLayout.notificationsPaused).toBe(false);
     expect(nextLayout.errorOwned).toBe(false);
+  });
+});
+
+describe("temporary setup panel suppression", () => {
+  it("preserves saved preferences and ignores toggles until all owners release", () => {
+    const setItem = vi.fn();
+    vi.stubGlobal("localStorage", { setItem });
+    const layout = new WorkbenchLayout();
+    layout.tab = "diagnostics";
+    layout.bottomSize = 42;
+    const releaseFirst = layout.suppressBottomPanel();
+    const releaseSecond = layout.suppressBottomPanel();
+    expect(layout.bottomSuppressed).toBe(true);
+    expect(layout.bottomVisible).toBe(false);
+    layout.toggleBottom();
+    expect(layout.bottomOpen).toBe(true);
+    layout.save();
+    expect(JSON.parse(setItem.mock.calls[0][1])).toMatchObject({
+      bottomOpen: true,
+      bottomSize: 42,
+      tab: "diagnostics",
+    });
+    expect(setItem.mock.calls[0][1]).not.toContain("Suppressed");
+    releaseFirst();
+    releaseFirst();
+    expect(layout.bottomSuppressed).toBe(true);
+    releaseSecond();
+    expect(layout.bottomSuppressed).toBe(false);
+    expect(layout.bottomOpen).toBe(true);
+    expect(layout.tab).toBe("diagnostics");
+    expect(layout.bottomSize).toBe(42);
+  });
+
+  it("leaves a previously closed panel closed after setup", () => {
+    const layout = new WorkbenchLayout();
+    layout.bottomOpen = false;
+    const release = layout.suppressBottomPanel();
+    release();
+    expect(layout.bottomSuppressed).toBe(false);
+    expect(layout.bottomOpen).toBe(false);
+    expect(layout.bottomVisible).toBe(false);
   });
 });

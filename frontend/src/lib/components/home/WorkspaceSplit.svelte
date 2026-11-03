@@ -13,6 +13,7 @@
     hasHistory,
     historyCount,
     working,
+    panelAvailable = true,
   }: {
     result: Snippet;
     history: Snippet;
@@ -21,6 +22,7 @@
     hasHistory: boolean;
     historyCount: number;
     working: boolean;
+    panelAvailable?: boolean;
   } = $props();
 
   const shell = getWorkbenchLayout();
@@ -65,7 +67,7 @@
 {/snippet}
 
 <div bind:this={workspace} class="flex min-h-0 flex-1 flex-col">
-  {#if shell}
+  {#if shell || !panelAvailable}
     {@render result()}
   {:else if roomy.current && !collapsed}
     <Resizable.PaneGroup

@@ -12,7 +12,7 @@
   import * as Select from "$lib/components/ui/select";
   import PlayIcon from "@lucide/svelte/icons/play";
   import SquareIcon from "@lucide/svelte/icons/square";
-  import CpuIcon from "@lucide/svelte/icons/cpu";
+  import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
 
   let {
@@ -132,10 +132,8 @@
       <span
         class="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-secondary-foreground"
       >
-        <CpuIcon
-          class="size-3.5 shrink-0 text-accent-text"
-          aria-hidden="true"
-        />Local runtime
+        <ProviderIcon profile={row?.instance.provider ?? ""} size={16} />
+        {provider?.name || "Local runtime"}
       </span>
       {#if operating}
         <Button

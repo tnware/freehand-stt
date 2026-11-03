@@ -390,12 +390,12 @@
       <nav
         bind:this={navigationRef}
         aria-label="Context settings"
-        class="workbench-header min-w-0 gap-1 pl-0 pr-2"
+        class="inspector-navigation workbench-header min-w-0 gap-1 pl-0 pr-2"
       >
         <div
           role="tablist"
           aria-label="Context settings"
-          class="flex h-full min-w-0 flex-1 overflow-x-auto"
+          class="inspector-tabs min-w-0 flex-1"
         >
           {#each inspectorSections as item, index (item.id)}
             <button
@@ -411,7 +411,7 @@
                 ? 0
                 : -1}
               title={sectionLabel(item.id)}
-              class="workbench-tab shrink-0 px-2"
+              class="workbench-tab px-1"
               onclick={() => selectSection(item.id)}
               onkeydown={(event) => void moveInspectorSection(event, index)}
               >{inspectorLabels[item.id] ?? item.label}</button
@@ -842,3 +842,21 @@
   onDiscard={() => continueConnection(false)}
   onSave={() => continueConnection(true)}
 />
+
+<style>
+  .inspector-navigation {
+    height: auto;
+    align-items: flex-start;
+  }
+
+  .inspector-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .inspector-tabs .workbench-tab {
+    min-height: 32px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+</style>

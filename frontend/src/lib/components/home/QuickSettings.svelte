@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ModelSelectionSummary from "$lib/components/settings/ModelSelectionSummary.svelte";
   import type { ManagedRuntimeState } from "$lib/stores/managed-runtime.svelte";
   import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
   import VocabularyLink from "../settings/VocabularyLink.svelte";
@@ -96,11 +97,7 @@
     onEnterCleanup?: () => void;
     sttMetadataStatus?: "idle" | "loading" | "ready" | "empty" | "failed";
     processingMetadataStatus?:
-      | "idle"
-      | "loading"
-      | "ready"
-      | "empty"
-      | "failed";
+      "idle" | "loading" | "ready" | "empty" | "failed";
     onTestConnection: () => Promise<void>;
     onTestProcessingConnection: () => Promise<void>;
     onOpenServerSettings: () => void;
@@ -260,6 +257,11 @@
           ? "flex min-w-0 flex-col gap-2"
           : "flex min-w-0 flex-col gap-3"}
       >
+        {#if !embedded && !(settings.managedInstanceID && runtime)}<ModelSelectionSummary
+            {settings}
+            purpose={Purpose.Transcription}
+            {runtime}
+          />{/if}
         {#snippet sttEndpointMeta()}{/snippet}
         {#snippet sttEndpointControl()}
           <ConnectionSelect
@@ -428,6 +430,17 @@
           ? "flex min-w-0 flex-col gap-2"
           : "flex min-w-0 flex-col gap-2.5"}
       >
+        {#if !(settings.postProcessing.managedInstanceID && runtime)}
+          <ModelSelectionSummary
+            {settings}
+            purpose={Purpose.Cleanup}
+            {runtime}
+          />
+        {:else if !processingEnabled}
+          <p class="text-xs text-muted-foreground">
+            This workflow is off. Enable it to use this selection.
+          </p>
+        {/if}
         {#snippet cleanupEndpointMeta()}{/snippet}
         {#snippet cleanupEndpointControl()}
           <ConnectionSelect

@@ -77,10 +77,7 @@ test("opening runtime output reads immediately and window visibility releases th
   await workspace(page)
     .getByRole("button", { name: "Local runtime", exact: true })
     .click();
-  await expect(page.getByRole("tab", { name: /^Recent/ })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(page.locator("#workbench-bottom-panel")).toBeHidden();
   expect(await outputCalls(page)).toEqual([]);
   await page.getByRole("button", { name: "View output", exact: true }).click();
   await expect(output(page)).toContainText("Sensitive startup diagnostic");
@@ -413,4 +410,27 @@ test("a removed output target stays explicit until another runtime is selected",
   ).toBeFocused();
   await expect(output(page)).toContainText("other-speech");
   expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+});
+
+test("initial setup can open runtime output without showing recent history", async ({
+  page,
+}) => {
+  await installOutputFixture(page);
+  await page.goto("/tests/browser/app/?main&blank&runtime&runtime-ready");
+  const setup = page.getByRole("region", {
+    name: "First-run setup",
+    exact: true,
+  });
+  await expect(setup).toBeVisible();
+  await expect(page.locator("#workbench-bottom-panel")).toBeHidden();
+  await setup
+    .locator("summary")
+    .filter({ hasText: "Connection and model" })
+    .click();
+  await setup.getByRole("button", { name: "View output", exact: true }).click();
+  await expect(outputTab(page)).toHaveAttribute("aria-selected", "true");
+  await expect(output(page)).toContainText("Sensitive startup diagnostic");
+  await expect(setup).toBeVisible();
+  await page.getByRole("tab", { name: /^Recent/ }).click();
+  await expect(page.locator("#workbench-bottom-panel")).toBeHidden();
 });

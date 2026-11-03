@@ -35,7 +35,7 @@ explain verification and platform prompts. Older releases may lack some architec
 
 ## First launch
 
-Freehand opens **Voice** with **Set up voice transcription**. Choose **Audio file**
+Freehand opens **Voice** with **Set up dictation**. Choose **Audio file**
 or **Text to speech** on the left if you want to start with a different task.
 
 Choose where processing will run:
@@ -85,6 +85,28 @@ and connection checks, or [backend guides](../backends/) to run a server yoursel
   </TabItem>
 </Tabs>
 
+First launch offers supported local choices and a way to connect your own
+server. Runtime and model downloads remain explicit. Connection checks read
+service metadata; they do not download, load, or run a model. Your first
+transcription verifies inference.
+
+### Change models later
+
+Open the **Model** button to
+choose a saved connection and model. The button keeps your current selection
+visible without showing configuration fields on the main screen. Changes in
+this chooser apply immediately; a failed save leaves the previous selection
+active.
+
+Use **Preferences** for microphone, language, cleanup, vocabulary, delivery and
+other detailed settings. **Model options** also opens the detailed settings,
+where **Save** applies your draft. A **Model profile** describes supported
+options; changing it does not load another model.
+
+Choose **Browse local models** to explore managed runtimes and their catalogs.
+For a managed runtime, stop it before selecting another downloaded model, then
+start it again. Downloads happen only through the explicit runtime controls.
+
 Each task selects its own connection. To share a manual service, enable the
 needed [connection uses](../guides/saved-connections/#reuse-a-server) and select
 it in each task. A managed connection supplies its runtime's selected model.
@@ -105,8 +127,9 @@ it sends audio and credentials without encryption.
 
 ### Choose the recording language
 
-Open your task's **Settings** cog, then **Transcription**, and choose a supported
-language, **Server default**, or **Automatic detection**.
+Open **Preferences**, then **Voice and microphone settings**, and choose a
+supported language, **Server default**, or **Automatic detection** in the
+transcription options.
 [Language selection](../guides/languages/) explains which choice to use.
 S1-mini cleanup supports English only.
 
@@ -120,8 +143,8 @@ if it fails, Freehand falls back to the raw transcript.
 
 <Steps>
 
-1. **Finish Voice setup.** Select your connection and model, then follow
-   **Next step** to check the microphone and shortcut. On macOS, grant the
+1. **Finish Voice setup.** Select your connection and model. Open **Setup details**
+   to review the microphone and shortcut. On macOS, grant the
    requested [permissions](../guides/macos-setup/#native-permissions).
 2. **Check the connection.** Choose **Check connection**, resolve any reported
    problem, then **Finish setup** and save. The check reads metadata; it does

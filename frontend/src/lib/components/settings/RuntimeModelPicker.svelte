@@ -50,11 +50,13 @@
   } = $props();
   const help = $derived(
     serverLoaded
-      ? "Options apply to the model loaded by this server."
+      ? "This connection uses the model already loaded on the server. Choose a different model on the server, then check the connection."
       : immediate
-        ? "Each model keeps its own options. Changes apply immediately."
-        : "Each model keeps its own options. Save applies all your edits.",
+        ? "Each model keeps its own options. Choosing a model applies immediately."
+        : "Each model keeps its own options. Choosing a model updates your draft; Save applies it.",
   );
+  const discoveryHelp =
+    "Refresh reads the server’s model list only. It does not download, load, or run models, and a listed model may not support this task.";
   let open = $state(false),
     query = $state("");
   const allModels = $derived([
@@ -103,7 +105,7 @@
     <div class="flex items-center gap-1">
       <label for={id} class="content-value">Model</label><FieldHelp
         label="About model settings"
-        text={help}
+        text={`${help} ${discoveryHelp}`}
       />
     </div>
     <div class="flex items-center gap-1">
@@ -129,7 +131,7 @@
     </div>
   </div>
   {#if serverLoaded}<p {id} class="text-sm text-muted-foreground">
-      Server-loaded model
+      Model loaded on the server
     </p>
   {:else}<Combobox.Root
       type="single"
@@ -149,7 +151,7 @@
           data-slot="combobox-input"
           {id}
           aria-label="Choose model"
-          aria-describedby={`${id}-help${hasStatus ? ` ${id}-status` : ""}`}
+          aria-describedby={`${id}-help ${id}-selection${hasStatus ? ` ${id}-status` : ""}`}
           placeholder="Search or enter a model ID…"
           class={pickerControl + " font-mono"}
           spellcheck={false}
@@ -182,6 +184,12 @@
         <Picker.Trigger aria-label="Show models" />
       </div>
       <Picker.Content>
+        <p
+          class="border-b border-border px-3 py-2 text-xs leading-relaxed text-muted-foreground"
+        >
+          Choose a model for this task, or enter its exact ID. Listed models are
+          not tested for compatibility.
+        </p>
         {#key query}{#each choices as choice (choice.value)}
             <Picker.Item value={choice.value} label={choice.label}>
               <span class="min-w-0 flex-1 break-all font-mono"
@@ -197,15 +205,25 @@
                   draftModels,
                 )}</span
               >
-              {#if value === choice.value}<CheckIcon
-                  class="size-3.5 shrink-0"
-                />{/if}
+              {#if value === choice.value}<span class="sr-only">Selected</span
+                ><CheckIcon class="size-3.5 shrink-0" />{/if}
             </Picker.Item>
           {:else}<p class="px-3 py-3 text-xs text-muted-foreground">
               Enter a model ID, or refresh the server’s model list.
             </p>{/each}{/key}
       </Picker.Content>
     </Combobox.Root>{/if}
+  {#if !serverLoaded}
+    <p
+      id={`${id}-selection`}
+      class="text-xs leading-relaxed text-muted-foreground"
+    >
+      {#if choosing}Selecting model…
+      {:else if immediate}Choosing a model applies immediately.
+      {:else}Selection applies when you save.
+      {/if}
+    </p>
+  {/if}
   {#if busy || metadataStatus === "loading"}
     <p id={`${id}-status`} role="status" class="text-xs text-muted-foreground">
       Loading model list…
@@ -233,5 +251,5 @@
         >{/if}
     </p>
   {/if}
-  <p id={`${id}-help`} class="sr-only">{help}</p>
+  <p id={`${id}-help`} class="sr-only">{help} {discoveryHelp}</p>
 </div>

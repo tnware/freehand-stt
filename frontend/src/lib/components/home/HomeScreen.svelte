@@ -193,6 +193,13 @@
       !fileWorking,
     ),
   );
+  const initialSetupVisible = $derived(
+    showReadiness && Boolean(readiness?.initialSetup),
+  );
+  $effect(() => {
+    if (active && initialSetupVisible && workbench?.tab === "recent")
+      return workbench.suppressBottomPanel();
+  });
   const hasHistory = $derived(
     Boolean(
       runtimeSettings?.historyEnabled && inputMode !== "tts" && !showReadiness,
@@ -326,6 +333,7 @@
             editing={quickSettingsDisabled}
             onAddConnection={addConnection}
             onOpenOptions={() => onOpenSettingsSection(workflowSection)}
+            onOpenMicrophone={onOpenAudioSettings}
             onOpenCleanup={onOpenProcessingSettings}
             onOpenVocabulary={() => onOpenSettingsSection("vocabulary")}
             onOpenDelivery={inputMode === "voice"
@@ -457,6 +465,7 @@
       {:else}
         <WorkspaceSplit
           {hasHistory}
+          panelAvailable={!initialSetupVisible}
           historyCount={session.history.entries.length}
           working={voiceActive || fileWorking}
         >
@@ -572,6 +581,18 @@
               {#if session.editor.draft}
                 {#if showReadiness && readiness}
                   <ReadinessPanel
+                    providers={session.runtime.providers}
+                    onManageRuntime={(providerID) => {
+                      if (workbench)
+                        workbench.runtimeProviderID = providerID ?? "";
+                      openLocalRuntime();
+                    }}
+                    onChooseServer={() =>
+                      addConnection(
+                        inputMode === "file"
+                          ? Purpose.Transcription
+                          : Purpose.Voice,
+                      )}
                     embedded
                     {readiness}
                     task={inputMode === "file" ? "file" : "voice"}

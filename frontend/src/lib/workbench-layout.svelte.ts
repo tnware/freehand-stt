@@ -9,6 +9,8 @@ const storageKey = "freehand-workbench-layout-v1";
 
 /** Presentation preferences only. Transcript and output data never enter storage. */
 export class WorkbenchLayout {
+  #bottomPanelOwners = new SvelteSet<symbol>();
+  bottomSuppressed = $derived(this.#bottomPanelOwners.size > 0);
   #modalNotificationOwners = new SvelteSet<symbol>();
   #inlineErrorOwners = new SvelteSet<symbol>();
   notificationsPaused = $derived(this.#modalNotificationOwners.size > 0);
@@ -24,6 +26,8 @@ export class WorkbenchLayout {
   outputInstanceID = $state("");
   /** An explicit Manage action, consumed when the runtime inventory opens. */
   runtimeInstanceID = $state("");
+  /** An explicit setup recommendation; navigation only, never installation. */
+  runtimeProviderID = $state("");
   diagnosticWorkflow = $state<"voice" | "file">("voice");
   sidebars = $state<Partial<Record<SidebarID, Snippet>>>({});
   details = $state<Snippet>();
@@ -33,12 +37,23 @@ export class WorkbenchLayout {
   primaryVisible = $derived(
     this.compact.current ? this.compactPrimaryOpen : this.primaryOpen,
   );
-  bottomVisible = $derived(this.bottomOpen && this.bottomAvailable.current);
+  bottomVisible = $derived(
+    this.bottomOpen && this.bottomAvailable.current && !this.bottomSuppressed,
+  );
   secondaryVisible = $derived(
     this.secondaryAvailable.current
       ? this.secondaryOpen
       : this.compactSecondaryOpen,
   );
+
+  /** Temporarily make room for setup without changing saved panel preferences. */
+  suppressBottomPanel(): () => void {
+    const owner = Symbol("bottom-panel");
+    this.#bottomPanelOwners.add(owner);
+    return () => {
+      this.#bottomPanelOwners.delete(owner);
+    };
+  }
 
   /** Presentation ownership only; releasing an owner never dismisses its message. */
   claimNotifications(scope: "modal" | "error"): () => void {
@@ -60,6 +75,7 @@ export class WorkbenchLayout {
     else this.primaryOpen = !this.primaryOpen;
   }
   toggleBottom() {
+    if (this.bottomSuppressed) return;
     this.bottomOpen = !this.bottomOpen;
   }
   closePrimary() {

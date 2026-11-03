@@ -99,6 +99,7 @@ test("the bottom panel keeps its selected tab while switching areas and after re
   for (const area of [
     "Settings",
     "Local runtime",
+    "Connections",
     "Voice transcription",
     "History",
   ]) {
@@ -227,6 +228,7 @@ test("runtime output keeps its explicit target across workspace navigation", asy
   await runtime.click();
   for (const area of [
     "Local runtime",
+    "Connections",
     "Voice transcription",
     "Settings",
     "History",
@@ -436,14 +438,15 @@ test("first-run layout controls preserve unavailable sidebar preferences and rec
     name: "Resize editor and bottom panel",
     exact: true,
   });
-  await divider.focus();
+  await expect(divider).toHaveCount(0);
+  await expect(control(page, "bottom panel")).toBeDisabled();
+  await expect(control(page, "bottom panel")).toHaveAttribute(
+    "title",
+    "The bottom panel is hidden during setup",
+  );
   await page.setViewportSize({ width: 1000, height: 520 });
   await expect(divider).toHaveCount(0);
   await expect(control(page, "bottom panel")).toBeDisabled();
-  const rail = page.getByRole("navigation", { name: "Workspace", exact: true });
-  await expect(
-    rail.getByRole("button", { name: "Voice transcription", exact: true }),
-  ).toBeFocused();
 
   await navigate(page, "Settings");
   await expect(control(page, "primary sidebar")).toBeEnabled();
@@ -453,4 +456,69 @@ test("first-run layout controls preserve unavailable sidebar preferences and rec
   await expect(
     page.getByRole("option", { name: "Toggle primary sidebar", exact: true }),
   ).toBeVisible();
+});
+
+for (const bottomOpen of [true, false]) {
+  test(`connection and runtime pages hide Recent without changing the ${bottomOpen ? "open" : "closed"} panel preference`, async ({
+    page,
+  }) => {
+    await page.addInitScript((open) => {
+      localStorage.setItem(
+        "freehand-workbench-layout-v1",
+        JSON.stringify({
+          bottomOpen: open,
+          tab: "recent",
+          bottomSize: 42,
+        }),
+      );
+    }, bottomOpen);
+    await openHistory(page);
+    const saved = () =>
+      page.evaluate(() =>
+        JSON.parse(localStorage.getItem("freehand-workbench-layout-v1")!),
+      );
+    for (const area of ["Connections", "Local runtime"]) {
+      await navigate(page, area);
+      await expect(bottom(page)).toBeHidden();
+      await expect(control(page, "bottom panel")).toBeDisabled();
+      await expect(control(page, "bottom panel")).toHaveAttribute(
+        "title",
+        "Recent history is available in Voice, Audio file, and History",
+      );
+      await page.keyboard.press("Control+j");
+      expect(await saved()).toMatchObject({
+        bottomOpen,
+        tab: "recent",
+        bottomSize: 42,
+      });
+      await navigate(page, "History");
+      await expect(control(page, "bottom panel")).toBeEnabled();
+      if (bottomOpen) await expect(bottom(page)).toBeVisible();
+      else await expect(bottom(page)).toBeHidden();
+      await expect(reader(page)).toContainText(
+        "Prepare the release checklist.",
+      );
+    }
+  });
+}
+
+test("View output opens the runtime panel when its Recent panel is contextually hidden", async ({
+  page,
+}) => {
+  await installOutputFixture(page);
+  await openHistory(page, true);
+  await navigate(page, "Local runtime");
+  await expect(bottom(page)).toBeHidden();
+  await page.getByRole("button", { name: "View output", exact: true }).click();
+  await expect(bottom(page)).toBeVisible();
+  await expect(control(page, "bottom panel")).toBeEnabled();
+  await expect(
+    bottom(page).getByRole("tab", { name: "Runtime output", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await bottom(page)
+    .getByRole("tab", { name: /^Recent/ })
+    .click();
+  await expect(bottom(page)).toBeHidden();
+  await page.getByRole("button", { name: "View output", exact: true }).click();
+  await expect(bottom(page)).toBeVisible();
 });
