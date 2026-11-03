@@ -6,6 +6,11 @@ extracted from signed official Debian packages into a private workspace prefix.
 No system services, security settings, keyboard maps, or user machine were changed.
 The managed-cloud follow-up below records the later environment separately.
 
+Latest result: native Debian 13 and Ubuntu 24.04 packages build, install,
+reinstall, replace a versioned fixture and remove successfully. The installed
+Debian app still fails WebKit sandbox namespace creation before frontend
+readiness. The final follow-up below contains the current evidence and limits.
+
 ## Established
 
 - Native Go/CGO desktop executable builds against GTK 4.18.6, WebKitGTK 2.54.0,
@@ -25,7 +30,11 @@ The managed-cloud follow-up below records the later environment separately.
 - XDG autostart ownership, quoting, atomic writes, removal, and failure handling
   pass unit/race tests and desktop-file validation. A real login was not tested.
 
-## Unresolved qualification gates
+## Original-host qualification gates
+
+These describe the original desktop/prefix environment. Later managed-cloud
+records below supersede its package/build results and identify the current
+sandbox blocker; hardware and desktop acceptance remain separate.
 
 - Full app shell cannot launch with this rootless dependency prefix: the Debian
   WebKit release binary uses absolute system helper paths. Its developer-only
@@ -66,7 +75,7 @@ CI-contract, and site tests are separate from the unrun native package acceptanc
 Independent review verified monotonic shutdown cancellation and the Linux
 window-reachability paths. None of these replace the unresolved gates above.
 
-## Packaged frontend bridge smoke (pending runner execution)
+## Packaged frontend bridge smoke contract
 
 The Linux CI lanes now define an unprivileged, isolated Xvfb/session-D-Bus launch
 of the installed binary using normal distro WebKit helpers and sandboxing. The
@@ -83,10 +92,9 @@ escaped-descendant acceptance. Empty private state has no configured endpoint
 or model, and the test never requests audio capture or inference.
 
 Harness unit tests, the marker/native callback race tests, and the full Go suite
-pass locally after restoring official native development dependencies. The new
-packaged launch remains unexecuted
-until a manually dispatched CI run completes; a sandbox failure must remain a
-failure, never be worked around with sandbox-disabling options.
+pass locally after restoring official native development dependencies. At that
+point the packaged launch was still pending a suitable runner; a sandbox failure
+must remain a failure, never be worked around with sandbox-disabling options.
 
 ## Managed-cloud follow-up (2026-11-03)
 
@@ -164,3 +172,89 @@ Real microphone/playback, physical shortcuts, Secret Service, Wayland, login,
 and the remaining native acceptance procedure still require separate evidence.
 Automatic insertion and native overlay remain unimplemented. No PR, merge,
 release, model download, or inference was performed in this follow-up.
+
+## Republished-configuration follow-up (2026-11-03)
+
+Restored branch head `eb55c81` in `/workspace/freehand-stt`. The selected managed
+instance became `running` and connected, with current observations and observed
+spec revision `1`. Its published source configuration version was
+`1bc3dcf4-e801-4f48-b17d-7bba75692fb1~cecfgver_6aea6c993bac81a0acf0e7db1312121b`.
+The runtime reported an **enforced unrestricted HTTP policy**; the executor's
+version-1 policy snapshot agreed and reported no VPN or additional TCP grants.
+These observations identify this task's selected runtime, not a later editable
+configuration draft.
+
+The completed setup supplies Go 1.27.3, Wails v3.0.0-beta.16 and dependency caches
+under `/workspace/.freehand-cloud`; Node is 24.22.1. The outer shell still lacks
+system GTK/WebKit development packages and root package-install privileges.
+Used the setup's managed Docker daemon and Debian development image, extending
+it with normal distro packaging/Xvfb dependencies. Prepared a separate Ubuntu
+24.04 image from the pinned official image recorded above. Kept the inherited
+proxy, mounted CA trust, TLS verification, package signatures and Go checksum
+verification. No private library prefix or sandbox relaxation was used.
+
+The former dependency blocker is cleared: the normal
+`proxy.golang.org/modernc.org/sqlite/@v/v1.58.0.zip` request, including its
+redirect, returns HTTP 200 (23,114,130 bytes). The production pipeline completes
+dependency resolution, and `go mod verify` reports `all modules verified`.
+
+Verification completed independently of GUI acceptance:
+
+- Debian's normal `wails3 task package ARCH=amd64 CI=true` generates bindings,
+  builds the production frontend and native executable, and produces a real
+  distro-resolved `.deb`. Package/harness tests pass 14/14. GTK is 4.18.6,
+  WebKitGTK 2.54.0 and XCB 1.17.0.
+- Ubuntu's same production pipeline and 14/14 package/harness tests also pass,
+  using a separate Go build cache to avoid reusing Debian native objects.
+  GTK is 4.14.5, WebKitGTK 2.52.6 and XCB 1.15.
+- Each checksum-matched distro package installs using apt, its desktop entry
+  validates, and `ldd` reports no missing libraries. Same-version reinstalls
+  succeed. Disposable `0.1.0-1+qa1` packages made from the respective payloads
+  upgrade `0.1.0-1`, and each installed executable still matches its original
+  binary. Removal succeeds and `/usr/bin/freehand` is absent afterward. This
+  tests dpkg replacement, not migration from a previous released executable.
+  Ubuntu's fresh image needed a normal apt index refresh before apt could
+  acquire the declared ALSA runtime dependency; installation then succeeded.
+- Debian `go test ./...`, `go vet ./...`, and focused race tests for native
+  keyboard/input/startup, hotkey policy, managed process ownership and app
+  lifecycle pass. Svelte checking reports zero errors/warnings; frontend tests
+  pass 64 files / 532 tests; CI selection/contract tests pass 56/56. The build
+  leaves `go.mod` and `go.sum` unchanged.
+
+Both experimental artifacts and their `.sha256` files are retained in `bin/`:
+
+```text
+354db02ba1f3705f28df418da99a2bb10ecf0f371a7eb85a3095d2f75048bf9d  freehand_0.1.0-1_debian13_amd64.deb
+561bd9db0f35ea832c38bfbb9a949087818f222964d93610ec3014bc0cfd700b  freehand_0.1.0-1_ubuntu24.04_amd64.deb
+```
+
+**Installed-app smoke remains blocked by the normal WebKit sandbox.** Made one
+fresh attempt on Debian as UID 1000 with an empty private home, session D-Bus,
+Xvfb and normal system helper paths. The existing smoke harness was used with
+bounded diagnostic stream observation. It exits 1 before the frontend bridge
+marker. The installed `/usr/bin/freehand` reports:
+
+```text
+bwrap: No permissions to create a new namespace, likely because the kernel does not allow non-privileged user namespaces.
+Failed to fully launch dbus-proxy: Child process exited with code 1
+SIGTRAP: trace trap
+FAIL: Application exited before readiness stability check
+```
+
+ALSA also reports that no default card exists; the environment has no physical
+audio device. Do not infer successful renderer initialization or hardware
+behavior from the build, package lifecycle or Go tests. After the namespace
+denial, no second launch, sandbox-disabling switch, privileged container,
+security-profile change or alternate namespace path was attempted. Ubuntu's
+installed-app launch remains unrun rather than repeating the same host boundary.
+The unresolved action needs a Linux runner that supports WebKit's normal
+sandbox. Real audio, physical shortcuts, Secret Service, Wayland, login and the
+other desktop gates remain open. No PR, merge, release, model download,
+inference or access to the user's Mac was performed.
+
+Local build and lifecycle evidence is retained under
+`/workspace/freehand-qualification/`, including `build-debian13.log`,
+`build-ubuntu24.04.log`, `lifecycle-debian13.log`, `lifecycle-ubuntu24.04.log`,
+`upgrade-debian13.log`, `smoke-debian13.log`,
+`go-debian13.log`, `frontend-check.log`, `frontend-test.log`, `ci-tests.log`
+and `modules-verify.log`. These logs are workspace evidence, not release assets.
