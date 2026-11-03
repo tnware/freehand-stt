@@ -109,6 +109,37 @@ for (const [label, base, extra] of [
   });
 }
 
+for (const label of ["manual", "release", "scheduled"]) {
+  test(`${label} full validation overrides an unchanged baseline`, (t) => {
+    const { cwd, base } = fixture(t);
+    const result = runChanges(cwd, base, { CI_FORCE_FULL: "true" });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(join(cwd, "outputs"), "utf8"), "app=true\nsite=true\n");
+  });
+}
+
+test("CI validates PRs and scheduled main snapshots without repeating every merge", () => {
+  const workflow = readFileSync(new URL("../ci.yml", import.meta.url), "utf8");
+  const triggers = workflow.split("\npermissions:")[0];
+  for (const trigger of ["pull_request", "schedule", "workflow_dispatch", "workflow_call"]) {
+    assert.match(triggers, new RegExp(`^  ${trigger}:`, "m"));
+  }
+  assert.doesNotMatch(triggers, /^  push:/m);
+  assert.match(triggers, /cron: "17 5 \* \* 1"/);
+  assert.match(workflow, /CI_FORCE_FULL:.*inputs\.ref != ''.*github\.event_name == 'workflow_dispatch'.*github\.event_name == 'schedule'/);
+});
+
+test("release and Pages retain main-push work independently of PR validation", () => {
+  for (const name of ["release", "pages"]) {
+    const workflow = readFileSync(new URL(`../${name}.yml`, import.meta.url), "utf8");
+    assert.match(workflow.split("\npermissions:")[0], /  push:\n    branches: \[main\]/);
+  }
+  const release = readFileSync(new URL("../release.yml", import.meta.url), "utf8");
+  assert.match(release, /uses: \.\/\.github\/workflows\/ci\.yml/);
+  assert.match(release, /ref: \$\{\{ needs\.release-please\.outputs\.tag-name \}\}/);
+  assert.match(release, /expected-version: \$\{\{ needs\.release-please\.outputs\.version \}\}/);
+});
+
 test("an unavailable baseline fails rather than silently skipping work", (t) => {
   const { cwd } = fixture(t);
   assert.notEqual(runChanges(cwd, "f".repeat(40)).status, 0);

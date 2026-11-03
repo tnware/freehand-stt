@@ -2,8 +2,10 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  # Protected, up-to-date PRs already validate the tree squash-merged to main.
+  # Refresh trusted default-branch caches and integrated-code evidence weekly.
+  schedule:
+    - cron: "17 5 * * 1"
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -46,7 +48,7 @@ jobs:
         name: Select workloads and pin source commit
         env:
           CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          CI_FORCE_FULL: ${{ inputs.ref != '' || github.event_name == 'workflow_dispatch' }}
+          CI_FORCE_FULL: ${{ inputs.ref != '' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
         run: |
           node .github/workflows/scripts/validation.mjs changes
           echo "ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
