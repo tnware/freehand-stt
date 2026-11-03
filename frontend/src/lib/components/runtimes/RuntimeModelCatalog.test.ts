@@ -58,6 +58,26 @@ describe("unavailable runtime model catalog", () => {
         "No managed macOS binary is available.",
       );
     }
+    // Models are a named section, separate from the surrounding runtime settings.
+    const headingID = /<section[^>]*aria-labelledby="([^"]+)"/.exec(html)?.[1];
+    expect(headingID).toBeDefined();
+    expect(html).toContain(`<h3 id="${headingID}"`);
+    // Family and model disclosure controls keep separate, connected children.
+    const family = buttons.find((button) =>
+      button.includes('aria-label="Small models"'),
+    );
+    const details = buttons.find((button) =>
+      button.includes('aria-label="Model details: Whisper Small"'),
+    );
+    expect(family).toContain('aria-expanded="true"');
+    expect(details).toContain('aria-expanded="false"');
+    const familyID = /aria-controls="([^"]+)"/.exec(family ?? "")?.[1];
+    const detailsID = /aria-controls="([^"]+)"/.exec(details ?? "")?.[1];
+    expect(familyID).toBeDefined();
+    expect(detailsID).toBeDefined();
+    expect(familyID).not.toEqual(detailsID);
+    expect(html).toContain(`id="${familyID}"`);
+    expect(html).toContain(`id="${detailsID}" hidden`);
     expect(action).not.toHaveBeenCalled();
   });
 });

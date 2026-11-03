@@ -10,10 +10,9 @@ for (const { width, ready } of [
     // Load inventory at desktop width before exercising the compact content.
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(
-      `/tests/browser/app/?main&setup-ready&runtime&runtime-provider=whisper-cpp${ready ? "&runtime-ready" : ""}`,
+      `/tests/browser/app/?main&setup-ready&runtime&runtime-provider=whisper-cpp&runtime-whisper-variants${ready ? "&runtime-ready" : ""}`,
     );
     await page.waitForFunction(() => !!window.testRuntime);
-    await page.evaluate(() => window.testRuntime.useWhisperVariantCatalog());
     await page
       .getByRole("button", { name: "Local runtime", exact: true })
       .click();
@@ -151,10 +150,9 @@ for (const width of [1280, 560]) {
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(
-      "/tests/browser/app/?main&setup-ready&runtime&runtime-provider=whisper-cpp&runtime-ready",
+      "/tests/browser/app/?main&setup-ready&runtime&runtime-provider=whisper-cpp&runtime-whisper-variants&runtime-ready",
     );
     await page.waitForFunction(() => !!window.testRuntime);
-    await page.evaluate(() => window.testRuntime.useWhisperVariantCatalog());
     await page
       .getByRole("button", { name: "Local runtime", exact: true })
       .click();

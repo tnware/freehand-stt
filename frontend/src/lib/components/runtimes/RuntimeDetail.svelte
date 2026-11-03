@@ -658,150 +658,169 @@
         if (instance) void runtime.cancel(instance.id);
       }}
     />
-    {#if instance}
-      <DisclosureButton
-        title="Runtime preferences"
-        icon={SlidersHorizontalIcon}
-        summary={instance.autoStart ? "starts with Freehand" : "manual start"}
-        open={preferencesOpen}
-        controls={`${uid}-preferencesOpen`}
-        onclick={() => (preferencesOpen = !preferencesOpen)}
-      />
-      <div id={`${uid}-preferencesOpen`} hidden={!preferencesOpen}>
-        {#if preferencesOpen}
-          <div class="disclosure-body space-y-3 border-b border-hairline">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <label for={`${uid}-autostart`} class="content-value"
-                  >Start when Freehand launches</label
-                >
-                <p class="content-meta mt-1">
-                  Uses the selected models. Does not download missing files.
+    <section
+      class="runtime-settings"
+      aria-labelledby={`${uid}-settings-heading`}
+    >
+      <h3 id={`${uid}-settings-heading`} class="content-kicker mb-2">
+        Runtime settings
+      </h3>
+      <div class="runtime-settings-list">
+        {#if instance}
+          <DisclosureButton
+            title="Runtime preferences"
+            icon={SlidersHorizontalIcon}
+            summary={instance.autoStart
+              ? "starts with Freehand"
+              : "manual start"}
+            open={preferencesOpen}
+            controls={`${uid}-preferencesOpen`}
+            onclick={() => (preferencesOpen = !preferencesOpen)}
+          />
+          <div id={`${uid}-preferencesOpen`} hidden={!preferencesOpen}>
+            {#if preferencesOpen}
+              <div class="disclosure-body space-y-3 border-b border-hairline">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <label for={`${uid}-autostart`} class="content-value"
+                      >Start when Freehand launches</label
+                    >
+                    <p class="content-meta mt-1">
+                      Uses the selected models. Does not download missing files.
+                    </p>
+                  </div>
+                  <Switch
+                    id={`${uid}-autostart`}
+                    checked={instance.autoStart}
+                    disabled={actionLocked}
+                    onCheckedChange={(autoStart) =>
+                      act(() =>
+                        runtime.saveInstance({ ...instance, autoStart }),
+                      )}
+                  />
+                </div>
+                <p class="break-all font-mono text-xs text-ink-quiet">
+                  Active API model: {row?.activeModel || "None"}
+                </p>
+                {#if instance.speechModel}<p
+                    class="break-all font-mono text-xs text-ink-quiet"
+                  >
+                    Active speech API model: {row?.activeSpeechModel || "None"}
+                  </p>
+                  <p class="content-meta">
+                    Start, Stop and Restart affect transcription and speech
+                    together.
+                  </p>{/if}
+                {#if switchable && installed}<fieldset
+                    disabled={actionLocked || running}
+                  >
+                    <legend class="content-section-title mb-2"
+                      >Runtime binary</legend
+                    >
+                    <div class="flex flex-wrap gap-1.5">
+                      {#each installedOptions?.options ?? [] as option (option.backend)}<Button
+                          variant="outline"
+                          size="xs"
+                          aria-pressed={status?.backend === option.backend}
+                          title={option.reason}
+                          disabled={actionLocked ||
+                            running ||
+                            checkingInstalledOptions ||
+                            !installedOptions?.supported ||
+                            !option.supported ||
+                            !option.available ||
+                            status?.backend === option.backend}
+                          onclick={() => {
+                            if (!running)
+                              act(() =>
+                                runtime.installBackend(
+                                  instance.id,
+                                  option.backend,
+                                ),
+                              );
+                          }}>{backendLabel(option.backend)}</Button
+                        >{/each}
+                    </div>
+                  </fieldset>
+                  <p class="content-meta" role="status">
+                    {checkingInstalledOptions
+                      ? "Checking host binary options · no files are downloaded"
+                      : installedOptions
+                        ? installedOptions.reason
+                        : "Could not check available binaries. Re-check to try again."}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    disabled={checkingInstalledOptions || actionLocked}
+                    onclick={() => void checkInstalledOptions()}
+                    >Re-check binary options</Button
+                  >
+                  <p class="content-meta">
+                    {#if running}Stop to change binary.
+                    {/if}Switching downloads the selected binary and keeps
+                    models and saved Connections.
+                  </p>{/if}
+                <p class="content-meta">
+                  Stopping or removing files keeps saved Connections selected.
+                  There is no automatic fallback.
                 </p>
               </div>
-              <Switch
-                id={`${uid}-autostart`}
-                checked={instance.autoStart}
-                disabled={actionLocked}
-                onCheckedChange={(autoStart) =>
-                  act(() => runtime.saveInstance({ ...instance, autoStart }))}
-              />
-            </div>
-            <p class="break-all font-mono text-xs text-ink-quiet">
-              Active API model: {row?.activeModel || "None"}
-            </p>
-            {#if instance.speechModel}<p
-                class="break-all font-mono text-xs text-ink-quiet"
+            {/if}
+          </div>
+        {/if}
+        {#if entry.source}
+          <DisclosureButton
+            title="Binary download source"
+            icon={PackageIcon}
+            summary="official release · checksum pinned"
+            open={sourceOpen}
+            controls={`${uid}-sourceOpen`}
+            onclick={() => (sourceOpen = !sourceOpen)}
+          />
+          <div id={`${uid}-sourceOpen`} hidden={!sourceOpen}>
+            {#if sourceOpen}<div
+                class="disclosure-body border-b border-hairline"
               >
-                Active speech API model: {row?.activeSpeechModel || "None"}
-              </p>
-              <p class="content-meta">
-                Start, Stop and Restart affect transcription and speech
-                together.
-              </p>{/if}
-            {#if switchable && installed}<fieldset
-                disabled={actionLocked || running}
+                <RuntimeDownloadSource
+                  source={entry.source}
+                  backend={sourceBackend}
+                />
+              </div>{/if}
+          </div>
+        {/if}
+        {#if instance}
+          <DisclosureButton
+            title="Manage runtime"
+            icon={WrenchIcon}
+            summary="remove files · delete entry"
+            open={manageOpen}
+            controls={`${uid}-manageOpen`}
+            onclick={() => (manageOpen = !manageOpen)}
+          />
+          <div id={`${uid}-manageOpen`} hidden={!manageOpen}>
+            {#if manageOpen}<div
+                class="disclosure-body flex flex-wrap gap-1.5 border-b border-hairline"
               >
-                <legend class="content-section-title mb-2"
-                  >Runtime binary</legend
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={actionLocked || running || !installed}
+                  onclick={() => (confirming = { kind: "files" })}
+                  ><Trash2Icon class="size-3" />Remove downloaded files</Button
+                ><Button
+                  variant="outline"
+                  size="xs"
+                  class="text-destructive"
+                  disabled={actionLocked || running}
+                  onclick={() => (confirming = { kind: "instance" })}
+                  >Delete runtime</Button
                 >
-                <div class="flex flex-wrap gap-1.5">
-                  {#each installedOptions?.options ?? [] as option (option.backend)}<Button
-                      variant="outline"
-                      size="xs"
-                      aria-pressed={status?.backend === option.backend}
-                      title={option.reason}
-                      disabled={actionLocked ||
-                        running ||
-                        checkingInstalledOptions ||
-                        !installedOptions?.supported ||
-                        !option.supported ||
-                        !option.available ||
-                        status?.backend === option.backend}
-                      onclick={() => {
-                        if (!running)
-                          act(() =>
-                            runtime.installBackend(instance.id, option.backend),
-                          );
-                      }}>{backendLabel(option.backend)}</Button
-                    >{/each}
-                </div>
-              </fieldset>
-              <p class="content-meta" role="status">
-                {checkingInstalledOptions
-                  ? "Checking host binary options · no files are downloaded"
-                  : installedOptions
-                    ? installedOptions.reason
-                    : "Could not check available binaries. Re-check to try again."}
-              </p>
-              <Button
-                variant="outline"
-                size="xs"
-                disabled={checkingInstalledOptions || actionLocked}
-                onclick={() => void checkInstalledOptions()}
-                >Re-check binary options</Button
-              >
-              <p class="content-meta">
-                {#if running}Stop to change binary.
-                {/if}Switching downloads the selected binary and keeps models
-                and saved Connections.
-              </p>{/if}
-            <p class="content-meta">
-              Stopping or removing files keeps saved Connections selected. There
-              is no automatic fallback.
-            </p>
+              </div>{/if}
           </div>
         {/if}
       </div>
-    {/if}
-    {#if entry.source}
-      <DisclosureButton
-        title="Binary download source"
-        icon={PackageIcon}
-        summary="official release · checksum pinned"
-        open={sourceOpen}
-        controls={`${uid}-sourceOpen`}
-        onclick={() => (sourceOpen = !sourceOpen)}
-      />
-      <div id={`${uid}-sourceOpen`} hidden={!sourceOpen}>
-        {#if sourceOpen}<div class="disclosure-body border-b border-hairline">
-            <RuntimeDownloadSource
-              source={entry.source}
-              backend={sourceBackend}
-            />
-          </div>{/if}
-      </div>
-    {/if}
-    {#if instance}
-      <DisclosureButton
-        title="Manage runtime"
-        icon={WrenchIcon}
-        summary="remove files · delete entry"
-        open={manageOpen}
-        controls={`${uid}-manageOpen`}
-        onclick={() => (manageOpen = !manageOpen)}
-      />
-      <div id={`${uid}-manageOpen`} hidden={!manageOpen}>
-        {#if manageOpen}<div
-            class="disclosure-body flex flex-wrap gap-1.5 border-b border-hairline"
-          >
-            <Button
-              variant="outline"
-              size="xs"
-              disabled={actionLocked || running || !installed}
-              onclick={() => (confirming = { kind: "files" })}
-              ><Trash2Icon class="size-3" />Remove downloaded files</Button
-            ><Button
-              variant="outline"
-              size="xs"
-              class="text-destructive"
-              disabled={actionLocked || running}
-              onclick={() => (confirming = { kind: "instance" })}
-              >Delete runtime</Button
-            >
-          </div>{/if}
-      </div>
-    {/if}
+    </section>
   </div>
   {#if !layout}
     <div
@@ -909,3 +928,25 @@
     </Button>
   {/snippet}
 </ActionDialog>
+
+<style>
+  .runtime-settings {
+    margin-top: 24px;
+    padding-block: 16px 24px;
+    border-top: 1px solid var(--hairline);
+  }
+  .runtime-settings-list {
+    padding-inline: 4px;
+  }
+  .runtime-settings-list :global(.disclosure-trigger) {
+    border-bottom: 0;
+    border-radius: 4px;
+  }
+  .runtime-settings-list :global(.disclosure-trigger[aria-expanded="true"]) {
+    background: var(--secondary);
+  }
+  .runtime-settings-list :global(.disclosure-body) {
+    margin-bottom: 12px;
+    border-bottom: 0;
+  }
+</style>

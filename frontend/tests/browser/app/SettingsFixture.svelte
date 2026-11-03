@@ -299,6 +299,13 @@
           managedCleanup ? "Local cleanup" : "Local speech",
         )
       : null;
+  if (
+    runtimeFixture &&
+    params.has("runtime-whisper-variants") &&
+    runtimeFixture.providers[0]?.id === ProviderID.WhisperCPP
+  ) {
+    runtimeFixture.control.useWhisperVariantCatalog();
+  }
   if (runtimeFixture && params.has("runtime-all-providers")) {
     runtimeFixture.providers.unshift(
       createRuntimeFixture(true, () => {}, false, ProviderID.LlamaCPP)
