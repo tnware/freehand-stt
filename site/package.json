@@ -6,7 +6,7 @@
     "node": ">=22.19.0"
   },
   "scripts": {
-    "test": "node --test tests/downloads.test.mjs",
+    "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/downloads.browser.mjs",
     "screenshots": "node scripts/capture-app-previews.mjs",
     "dev": "astro dev",

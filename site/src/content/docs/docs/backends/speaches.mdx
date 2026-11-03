@@ -96,8 +96,8 @@ Installing an STT model alone does not provision voices or a TTS model.
    transcription**, **Audio-file transcription**, or both under **Used for**.
 2. Enter the base URL including `/v1`, authentication, and HTTP permission,
    then choose **Save connection**.
-3. Open the **Settings** cog in Voice transcription or Audio file. Select the
-   connection under **Transcription**, choose an installed model, and save.
+3. Open **Model → Model options** in Voice transcription or Audio file. Select
+   the connection, choose an installed model, and save.
 4. Try a short recording or file with the model you selected and review its result.
 
 </Steps>
@@ -106,7 +106,7 @@ Installing an STT model alone does not provision voices or a TTS model.
 <summary>Add speech playback to the same connection</summary>
 
 Enable **Text to speech** under the connection's **Used for** and save. Select
-it in **Text to speech → Speech**, choose the installed TTS model and voice,
+it in **Text to speech → Model → Model options**, choose the installed TTS model and voice,
 enable text to speech, then preview and save.
 
 Transcription and speech share the connection and key but keep separate models
@@ -145,7 +145,7 @@ PCM16 WAV before playing.
 
 ## Choose a voice
 
-In **Text to speech → Speech**, select the Speaches connection and TTS model,
+In **Text to speech → Model → Model options**, select the Speaches connection and TTS model,
 then use **Refresh voices** beside the voice field. Search the list by ID, name,
 or language when the server supplies it. You can also type a custom voice ID.
 The voice selection is remembered for this connection and model.
@@ -171,8 +171,8 @@ Provider limits and Freehand's bounded-buffer limits still apply; consult the
 Whisper-family models support context hints, hotwords, and temperature through
 Speaches. These controls are available for completed and streaming transcription.
 
-For Voice, set **Context hint** in **Voice transcription → Transcription**. For files,
-set context in **Audio file → Transcription → Transcription controls**. Keep shared
+For Voice, set **Context hint** in **Voice transcription → Model → Model options**. For files,
+set context in **Audio file → Model → Model options → Transcription controls**. Keep shared
 terms in **Settings → Vocabulary**, and enable them for Voice, audio files, or
 both. Freehand sends those terms as `hotwords`.
 

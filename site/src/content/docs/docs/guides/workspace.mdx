@@ -36,7 +36,7 @@ until there is room.
 | Where you edit | How changes apply |
 | --- | --- |
 | Quick controls in the left sidebar | Save immediately; show **Saving…**, then **Saved** |
-| Detailed options opened with the task's **Settings** cog | Choose **Save**; quick controls pause while you have unsaved edits |
+| Detailed options opened with **Preferences** or **Model options** | Choose **Save**; quick controls pause while you have unsaved edits |
 | **Connections** | Saves shared server details for every task using that connection |
 | Global **Settings** | General, Shortcuts, Overlay, and Vocabulary preferences |
 
@@ -53,12 +53,12 @@ apply to microphone transcripts; startup and appearance remain in General.
 
 | To adjust… | Open |
 | --- | --- |
-| Microphone, maximum duration, silence controls | **Voice → Audio**; expand **Speech detection tuning** for sensitivity and timing |
+| Microphone, maximum duration, silence controls | **Voice → Microphone**; expand **Speech detection tuning** for sensitivity and timing |
 | Caption and overlay appearance | **Overlay**; expand **Appearance and behavior** for motion, spacing, opacity, and glow |
 | Request timeouts and diagnostics | The task's **Request settings** |
-| File context and temperature | **Audio file → Transcription controls** |
+| File context and temperature | **Audio file → Model → Model options → Transcription controls** |
 | Voice context / temperature | Voice's model options / **Request settings** |
-| Cleanup output and reasoning | **Cleanup → Generation controls** |
+| Cleanup output and reasoning | **Preferences → Transcript cleanup → Generation controls** |
 
 Overlay preview shows unsaved appearance changes. Glow is unavailable with a
 Minimal surface. Model pickers read advertised IDs without running them and
@@ -109,8 +109,8 @@ Focus a transcript to use select-all and copy, or select a smaller passage.
 Page Up, Page Down, Home, End, and arrows scroll its pane. These controls also
 work in expanded history and raw/cleaned comparisons.
 
-For a selected local connection, the left sidebar shows **Start**, **Stop**, or
-**Cancel**, progress, and errors. Choose a downloaded model while stopped;
+For a selected local connection, open **Model** in the left sidebar to find
+**Start**, **Stop**, or **Cancel**, progress, and errors. Choose a downloaded model while stopped;
 **Manage runtime** opens its inventory entry. **View output** opens that runtime's
 bottom-panel tab immediately. See [runtime output controls](../local-runtime/#startup-and-process-output).
 

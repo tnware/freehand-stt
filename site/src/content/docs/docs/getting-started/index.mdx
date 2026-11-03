@@ -54,7 +54,8 @@ bundled with the app.
 2. **Start the runtime.** Wait for **Running**, then select its built-in
    **NeMo-Speech.cpp** Connection in Voice. No URL or API key is needed.
 3. **Enable realtime for live dictation.** Turn on **Realtime transcription**
-   in Voice's Transcription options and finish microphone setup below.
+   under **Voice → Preferences → Voice and microphone settings**, save, and
+   finish microphone setup below.
 
 </Steps>
 
@@ -178,8 +179,9 @@ the request. **Copy** the finished result yourself.
 
 ## Generate speech
 
-Open **Text to speech → Configure speech**, select a speech connection, model,
-and voice, then turn on **Enable text to speech** and **Save**. Enter text and
+Open **Text to speech → Model** and select a speech connection and model.
+Choose **Model options**, select a voice, turn on **Enable text to speech**,
+and **Save**. Enter text and
 choose **Speak**. Playback is optional and off by default.
 
 <LinkCard title="Generate and play speech" href="../guides/text-to-speech/" description="Choose a voice, preview it, listen to transcripts, and save generated audio." />
@@ -192,6 +194,7 @@ Start with one successful request, then adjust the options you need.
 | --- | --- | --- |
 | Local voice detection and status overlay | On | [Voice controls](../guides/using-freehand/) |
 | Silence trimming, automatic stop, pause-aware checkpoints | Off | [Recording options](../guides/using-freehand/#long-dictation-and-vad) |
+| Type completed phrases while recording | Off; finalized NeMo phrases only, with cleanup off | [Live typing](../guides/live-transcription/#type-completed-phrases-while-recording) |
 | Transcript cleanup | Off | [Cleanup](../guides/post-processing/) |
 | Memory-only transcript history | Off | [History](../guides/history/) |
 | Audio-file text updates | Completed output; streaming optional | [Audio files](../guides/audio-files/) |

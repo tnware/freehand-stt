@@ -25,7 +25,7 @@ Freehand builds the fixed instruction and control line for you. Settings shows
 the effective prompt for review. Temperature stays at zero, and reasoning must
 be off. The optional output-token limit and timeout remain available.
 
-Open the workflow's **Settings** cog to show **Cleanup** options on the right.
+Open **Preferences → Transcript cleanup** in Voice transcription or Audio file.
 Choose **Save** to apply your edits; closing or leaving unsaved options offers
 **Save**, **Discard**, or **Keep editing**.
 Switching models preserves your cleanup style, structure, and context choices.
@@ -50,7 +50,7 @@ runtime supplies the S1-mini profile and disables reasoning.
 | [vLLM](../../backends/vllm/#start-s1-mini-cleanup) | Freehand sends `reasoning_effort: "none"`; use the qualified version and a compatible template |
 | [Generic OpenAI-compatible](../../backends/generic/) | Configure reasoning off on the server; Freehand shows **Disable on server** |
 
-For these manual services, select the saved connection in **Cleanup** options,
+For these manual services, select the saved connection in **Preferences → Transcript cleanup**,
 enable cleanup, choose the model ID exposed by the server, and select
 **S1-mini by Superwhisper** as the model profile. Choose your output controls and save.
 
