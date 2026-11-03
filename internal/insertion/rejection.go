@@ -84,11 +84,17 @@ func CopyRequired(err error) error {
 	return ErrCopyRequired
 }
 
-// CopyRequiredMessage does not claim focus changed or that no text was typed:
-// native event posting has no delivery acknowledgement and may be partial.
+// CopyRequiredMessage describes a focus change only for a confirmed mismatch.
+// It never claims no text was typed: native event posting has no delivery
+// acknowledgement and may be partial.
 func CopyRequiredMessage(err error) string {
 	const guidance = ". Copy the transcript and paste it where you want it."
 	if r, ok := CopyRequired(err).(*rejection); ok {
+		// Only a confirmed identity mismatch means the field changed. Missing
+		// or unsupported accessibility metadata must never imply a change.
+		if r.reason == "focused_element_changed" && r.stage != Capture {
+			return "Focus moved away from the original target" + guidance + " Check the target for any text already inserted before pasting."
+		}
 		message := "Automatic insertion unavailable (" + string(r.stage) + ": " + r.reason + ")" + guidance
 		if r.stage != Capture {
 			message += " Check the target for any text already inserted before pasting."

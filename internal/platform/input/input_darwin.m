@@ -12,9 +12,12 @@
 #define FH_INPUT_MAX_BYTES (1024 * 1024)
 #define FH_INPUT_EVENT_MARKER INT64_C(0x46524844494e5054)
 #define FH_AX_TIMEOUT 0.15f
+#define FH_AX_IDENTITY_TIMEOUT 0.02f
 
-// Serialized by the Go owner. Only the captured app/window identity is retained.
+// Serialized by the Go owner. Optional field identity is best-effort; app/window
+// identity remains mandatory. No editor content or metadata is retained.
 struct fh_input_owner {
+    AXUIElementRef element;
     AXUIElementRef window;
     uint32_t pid;
     uint64_t started;
@@ -29,8 +32,9 @@ const char *fh_input_rejection(fh_input_owner *o) {
 }
 static void fh_input_clear(fh_input_owner *o) {
     if (!o) return;
+    if (o->element) CFRelease(o->element);
     if (o->window) CFRelease(o->window);
-    o->window = NULL; o->pid = 0; o->started = 0;
+    o->element = NULL; o->window = NULL; o->pid = 0; o->started = 0;
 }
 void fh_input_reset_target(fh_input_owner *o) {
     fh_input_clear(o);
@@ -95,6 +99,62 @@ static AXUIElementRef fh_element_attribute(fh_input_owner *o, AXUIElementRef e, 
     }
     return (AXUIElementRef)value;
 }
+// Optional identity reads must never poison the required app/window diagnostic.
+// Unsupported, stale, malformed or out-of-scope AX references mean unknown.
+static AXUIElementRef fh_optional_element(AXUIElementRef e, CFStringRef name) {
+    CFTypeRef value = NULL;
+    AXError error = AXUIElementCopyAttributeValue(e, name, &value);
+    if (error != kAXErrorSuccess || !value || CFGetTypeID(value) != AXUIElementGetTypeID() ||
+        AXUIElementSetMessagingTimeout((AXUIElementRef)value, FH_AX_IDENTITY_TIMEOUT) != kAXErrorSuccess) {
+        if (value) CFRelease(value);
+        return NULL;
+    }
+    return (AXUIElementRef)value;
+}
+static int fh_field_in_window(AXUIElementRef field, pid_t pid, AXUIElementRef window) {
+    pid_t fieldPID = 0;
+    if (!field || AXUIElementGetPid(field, &fieldPID) != kAXErrorSuccess || fieldPID != pid) return 0;
+    AXUIElementRef fieldWindow = fh_optional_element(field, kAXWindowAttribute);
+    int ok = fieldWindow && CFEqual(fieldWindow, window);
+    if (fieldWindow) CFRelease(fieldWindow);
+    return ok;
+}
+static AXUIElementRef fh_sample_field(pid_t pid, AXUIElementRef *window) {
+    *window = NULL;
+    // Separate proxy: timeout settings are object-local, even for equal AX
+    // objects. Optional identity must not shorten mandatory window timeouts.
+    AXUIElementRef app = AXUIElementCreateApplication(pid);
+    if (!app) return NULL;
+    AXUIElementRef field = NULL;
+    if (AXUIElementSetMessagingTimeout(app, FH_AX_IDENTITY_TIMEOUT) == kAXErrorSuccess)
+        field = fh_optional_element(app, kAXFocusedUIElementAttribute);
+    CFRelease(app);
+    pid_t fieldPID = 0;
+    if (field && AXUIElementGetPid(field, &fieldPID) == kAXErrorSuccess && fieldPID == pid)
+        *window = fh_optional_element(field, kAXWindowAttribute);
+    if (field && !*window) { CFRelease(field); field = NULL; }
+    return field;
+}
+static AXUIElementRef fh_optional_field(pid_t pid, AXUIElementRef window) {
+    AXUIElementRef fieldWindow = NULL;
+    AXUIElementRef field = fh_sample_field(pid, &fieldWindow);
+    if (field && !CFEqual(fieldWindow, window)) { CFRelease(field); field = NULL; }
+    if (fieldWindow) CFRelease(fieldWindow);
+    return field;
+}
+typedef enum { FH_FIELD_UNKNOWN, FH_FIELD_SAME, FH_FIELD_DIFFERENT } fh_field_match;
+// AX proxy identity is not universal editor identity. A destroyed/virtualized
+// baseline or inconsistent focus observation stays unknown, never a new target.
+static fh_field_match fh_compare_field(fh_input_owner *captured, fh_input_owner *current) {
+    if (!captured->element || !current->element) return FH_FIELD_UNKNOWN;
+    // The current snapshot already proves scope/liveness for an equal proxy.
+    if (CFEqual(captured->element, current->element)) return FH_FIELD_SAME;
+    if (!fh_field_in_window(captured->element, captured->pid, captured->window)) return FH_FIELD_UNKNOWN;
+    AXUIElementRef confirmed = fh_optional_field(current->pid, current->window);
+    fh_field_match match = confirmed && CFEqual(confirmed, current->element) ? FH_FIELD_DIFFERENT : FH_FIELD_UNKNOWN;
+    if (confirmed) CFRelease(confirmed);
+    return match;
+}
 // NSWorkspace supplies the frontmost process even when the system AX root
 // does not expose AXFocusedApplication. Never activate or retarget an app.
 #ifndef FH_INPUT_FRONTMOST_PID
@@ -106,7 +166,7 @@ static pid_t fh_frontmost_pid(void) {
 }
 #define FH_INPUT_FRONTMOST_PID() fh_frontmost_pid()
 #endif
-static int fh_snapshot(fh_input_owner *out) {
+static int fh_snapshot(fh_input_owner *out, int captureField) {
     if (!fh_check(out, fh_input_accessibility_authorized(), "ax_not_trusted") ||
         !fh_check(out, !IsSecureEventInputEnabled(), "secure_input")) return 0;
     pid_t pid = FH_INPUT_FRONTMOST_PID(), windowPID = 0;
@@ -114,9 +174,16 @@ static int fh_snapshot(fh_input_owner *out) {
     if (!fh_check(out, started != 0, "process_start_zero")) return 0;
     AXUIElementRef app = AXUIElementCreateApplication(pid), window = NULL;
     int ok = 0;
+    AXUIElementRef element = NULL, elementWindow = NULL;
     if (!fh_check(out, app != NULL, "focused_app_unavailable") ||
         !fh_check(out, AXUIElementSetMessagingTimeout(app, FH_AX_TIMEOUT) == kAXErrorSuccess, "element_timeout_failed")) goto cleanup;
+    // Observe optional identity first, so the required window check remains
+    // last without doubling its longer messaging timeout on every chunk.
+    if (captureField) element = fh_sample_field(pid, &elementWindow);
     window = fh_element_attribute(out, app, kAXFocusedWindowAttribute);
+    if (element && (!window || !CFEqual(elementWindow, window))) {
+        CFRelease(element); element = NULL; // Inconsistent optional scope is unknown.
+    }
     if (!fh_check(out, window != NULL, "focused_window_unavailable") ||
         !fh_check(out, AXUIElementGetPid(window, &windowPID) == kAXErrorSuccess, "window_pid_failed") ||
         !fh_check(out, windowPID == pid, "window_pid_mismatch") ||
@@ -124,10 +191,13 @@ static int fh_snapshot(fh_input_owner *out) {
         !fh_check(out, started == fh_process_started(out, pid), "process_start_changed") ||
         !fh_check(out, !IsSecureEventInputEnabled(), "secure_input_late") ||
         !fh_check(out, AXIsProcessTrusted(), "ax_not_trusted_late")) goto cleanup;
+    out->element = element; element = NULL;
     out->window = window; window = NULL;
     out->pid = (uint32_t)pid; out->started = started;
     ok = 1;
 cleanup:
+    if (elementWindow) CFRelease(elementWindow);
+    if (element) CFRelease(element);
     if (window) CFRelease(window);
     if (app) CFRelease(app);
     return ok;
@@ -137,7 +207,7 @@ int fh_input_capture(fh_input_owner *o, uint32_t *pid, uint64_t *started) {
     if (!fh_check(o, o && pid && started, "owner_invalid")) return 0;
     *pid = 0; *started = 0;
     fh_input_clear(o);
-    if (!fh_snapshot(o)) return 0;
+    if (!fh_snapshot(o, 1)) return 0;
     *pid = o->pid; *started = o->started;
     return 1;
 }
@@ -146,11 +216,24 @@ static int fh_validate(fh_input_owner *o, uint32_t pid, uint64_t started) {
     if (!fh_check(o, o && o->window, "owner_invalid") ||
         !fh_check(o, pid && started && pid == o->pid && started == o->started, "target_invalid")) return 0;
     fh_input_owner current = {0};
-    int ok = fh_snapshot(&current);
+    int ok = fh_snapshot(&current, o->element != NULL);
     if (!ok) fh_check(o, 0, current.rejection);
     ok = ok && fh_check(o, current.pid == pid, "process_changed") &&
         fh_check(o, current.started == started, "process_reused") &&
         fh_check(o, CFEqual(current.window, o->window), "focused_window_changed");
+    if (ok && o->element && current.element && !CFEqual(o->element, current.element)) {
+        fh_field_match match = fh_compare_field(o, &current);
+        // Recheck required boundaries after optional observations, even when
+        // field identity was unavailable. Never activate or promote a target.
+        fh_input_owner final = {0};
+        int finalOK = fh_snapshot(&final, 0);
+        if (!finalOK) fh_check(o, 0, final.rejection);
+        ok = finalOK && fh_check(o, final.pid == pid, "process_changed") &&
+            fh_check(o, final.started == started, "process_reused") &&
+            fh_check(o, CFEqual(final.window, o->window), "focused_window_changed") &&
+            fh_check(o, match != FH_FIELD_DIFFERENT, "focused_element_changed");
+        fh_input_clear(&final);
+    }
     fh_input_clear(&current);
     if (!ok) fh_input_clear(o);
     return ok;

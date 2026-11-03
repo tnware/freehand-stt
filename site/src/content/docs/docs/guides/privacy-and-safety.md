@@ -108,7 +108,12 @@ foreground for you.
 | Platform | What must remain focused |
 | --- | --- |
 | Windows | Original app, window, and focused control |
-| macOS | Same app and window; moving to another field in that window delivers to the currently focused field |
+| macOS | Original app and window; a confirmed change of available focus identity also blocks delivery |
+
+macOS focus identity is optional and best-effort. Missing or stale accessibility
+identity does not itself mean focus changed; those apps retain app/window
+compatibility. This cannot guarantee the original field in every app. No editor
+text, title, or value is read for this check.
 
 Release physical shortcut modifiers before delivery. Windows waits briefly for
 held Ctrl, Alt, Shift, or Windows keys; if they stay held, use **Copy**.
