@@ -96,7 +96,7 @@ func TestRecorderLiveTypingLifecycle(t *testing.T) {
 			if err := c.Start(); err != nil {
 				t.Fatal(err)
 			}
-			if !capture.sink.WritePCM(make([]byte, audio.VADFrameBytes)) {
+			if !capture.writePCM(make([]byte, audio.VADFrameBytes)) {
 				t.Fatal("audio refused")
 			}
 			waitStatus := func(want func(Status) bool) Status {
@@ -147,7 +147,7 @@ func TestRecorderLiveTypingLifecycle(t *testing.T) {
 					t.Fatalf("%+v", s)
 				}
 			case "disconnect", "conflict", "queued-disconnect", "queued-conflict":
-				if !capture.sink.WritePCM(make([]byte, audio.VADFrameBytes)) {
+				if !capture.writePCM(make([]byte, audio.VADFrameBytes)) {
 					t.Fatal("audio refused")
 				}
 				if queued {
