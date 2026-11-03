@@ -73,14 +73,23 @@ for (const { width, ready } of [
     ).toBeVisible();
     // The action guards are identical while uninstalled and while running.
     for (const action of await catalog
-      .getByRole("button", { name: /^(Get|Select|Delete Whisper)/ })
+      .getByRole("button", { name: /^(Download|Select|Delete Whisper)/ })
       .all())
       await expect(action).toBeDisabled();
-    if (ready)
+    if (ready) {
       await expect(
         recommended.getByText("Loaded", { exact: true }),
       ).toBeVisible();
-    else
+      await expect(
+        recommended.getByText("Downloaded", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(
+          "Stop the runtime to download, remove, or select a model. Start it again when ready.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+    } else
       await expect(
         page.getByRole("button", { name: "Refresh catalog", exact: true }),
       ).toBeDisabled();
@@ -133,5 +142,98 @@ for (const { width, ready } of [
       ),
     ).toBe(true);
     expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+  });
+}
+
+for (const width of [1280, 560]) {
+  test(`selection and download status stay distinct through cancellation and startup at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(
+      "/tests/browser/app/?main&setup-ready&runtime&runtime-provider=whisper-cpp&runtime-ready",
+    );
+    await page.waitForFunction(() => !!window.testRuntime);
+    await page.evaluate(() => window.testRuntime.useWhisperVariantCatalog());
+    await page
+      .getByRole("button", { name: "Local runtime", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Refresh inventory", exact: true })
+      .click();
+    await page.setViewportSize({ width, height: 900 });
+    const catalog = page.getByRole("region", {
+      name: "Model catalog",
+      exact: true,
+    });
+    const model = catalog.getByRole("article", {
+      name: "Whisper Base Q8_0",
+      exact: true,
+    });
+    const select = model.getByRole("button", {
+      name: "Select",
+      exact: true,
+    });
+    const download = model.getByRole("button", {
+      name: "Download",
+      exact: true,
+    });
+    await expect(select).toBeDisabled();
+    await expect(download).toBeDisabled();
+    await expect(
+      model.getByText("Not downloaded", { exact: true }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([]);
+
+    await page.getByRole("button", { name: "Stop", exact: true }).click();
+    await expect(select).toBeEnabled();
+    await select.click();
+    await expect(model.getByText("Selected", { exact: true })).toBeVisible();
+    await expect(
+      model.getByText("Not downloaded", { exact: true }),
+    ).toBeVisible();
+    await expect(download).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Start", exact: true }),
+    ).toHaveCount(0);
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+      "Stop:whisper-cpp-default",
+      "SetInstance:whisper-cpp-default",
+    ]);
+
+    await download.click();
+    await expect(model.getByText("Selected", { exact: true })).toBeVisible();
+    await expect(model.getByText("Downloading", { exact: true })).toBeVisible();
+    await model.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(model.getByText("Selected", { exact: true })).toBeVisible();
+    await expect(
+      model.getByText("Not downloaded", { exact: true }),
+    ).toBeVisible();
+    await expect(download).toBeEnabled();
+
+    await download.click();
+    await page.evaluate(() =>
+      window.testRuntime.finishDownload("whisper-cpp-default"),
+    );
+    await expect(model.getByText("Selected", { exact: true })).toBeVisible();
+    await expect(model.getByText("Downloaded", { exact: true })).toBeVisible();
+    await expect(download).toHaveCount(0);
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await expect(model.getByText("Loaded", { exact: true })).toBeVisible();
+    await expect(model.getByText("Downloaded", { exact: true })).toBeVisible();
+    await expect(model.getByText("Selected", { exact: true })).toHaveCount(0);
+    expect(await page.evaluate(() => window.testRuntime.calls)).toEqual([
+      "Stop:whisper-cpp-default",
+      "SetInstance:whisper-cpp-default",
+      "DownloadModel:whisper-cpp-default:base-q8_0",
+      "Cancel:whisper-cpp-default",
+      "DownloadModel:whisper-cpp-default:base-q8_0",
+      "Start:whisper-cpp-default",
+    ]);
+    expect(
+      await catalog.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
   });
 }

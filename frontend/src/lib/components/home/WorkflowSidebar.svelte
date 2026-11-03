@@ -16,6 +16,8 @@
   import RuntimeModelPicker from "$lib/components/settings/RuntimeModelPicker.svelte";
   import QuickSaveStatus from "$lib/components/settings/QuickSaveStatus.svelte";
   import ManagedRuntimeControls from "./ManagedRuntimeControls.svelte";
+  import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
+  import { runtimePresentation } from "$lib/utils/managedRuntime";
   import { rememberedModels } from "$lib/utils/modelSettings";
   import type { Session } from "$lib/stores/session.svelte";
   import { Purpose } from "$bindings/savedconnection";
@@ -77,6 +79,13 @@
   const instance = $derived(
     session.runtime.statusFor(config?.managedInstanceID ?? ""),
   );
+  const runtimeView = $derived(
+    runtimePresentation(
+      instance?.status,
+      undefined,
+      session.runtime.pendingFor(config?.managedInstanceID ?? ""),
+    ),
+  );
   const profiles = $derived(
     workflow === "tts"
       ? settings?.compatibilityProfiles.speech
@@ -108,7 +117,7 @@
       ? session.runtime.providers.find(
           (provider) => provider.id === instance?.instance.provider,
         )?.name || "Local runtime"
-      : backend?.label || connection?.name || "No connection selected",
+      : backend?.label || "Server connection",
   );
   const metadata = $derived(
     workflow === "voice"
@@ -199,34 +208,58 @@
             disabled={controlsDisabled}
             aria-label="Change engine or model"
           >
-            <span class="model-identity">
-              <ProviderIcon
-                profile={managed
-                  ? instance?.instance.provider
-                  : config.compatibilityProfile}
-                size={36}
-              />
+            <span class="model-selection">
               <span class="min-w-0 flex-1">
                 <span
-                  class="block break-words text-[13px] font-medium [overflow-wrap:anywhere]"
-                  >{engine}</span
+                  class="model-name block break-words text-sm font-semibold [overflow-wrap:anywhere]"
+                  >{connection
+                    ? !managed && serverLoaded
+                      ? "Server-loaded model"
+                      : modelName || "Choose a model"
+                    : "Choose a model"}</span
                 >
-                <span class="mt-1 block text-[11px] text-muted-foreground"
-                  >{managed ? "Local runtime" : "Server connection"}</span
+                <span
+                  class="model-connection mt-1 block break-words text-xs text-muted-foreground [overflow-wrap:anywhere]"
+                  >{connection?.name || "No connection selected"}</span
                 >
               </span>
-            </span>
-            <span class="model-selection">
-              <span
-                class="min-w-0 flex-1 break-words text-sm font-semibold [overflow-wrap:anywhere]"
-                >{connection
-                  ? !managed && serverLoaded
-                    ? "Server-loaded model"
-                    : modelName || "Choose a model"
-                  : "Choose a model"}</span
-              >
               <ChevronDownIcon class="size-4 shrink-0 text-muted-foreground" />
             </span>
+            {#if connection}
+              <span class="model-identity">
+                <ProviderIcon
+                  profile={managed
+                    ? instance?.instance.provider
+                    : config.compatibilityProfile}
+                  size={24}
+                />
+                <span class="min-w-0 flex-1">
+                  <span
+                    class="block break-words text-xs text-secondary-foreground [overflow-wrap:anywhere]"
+                    >{connection?.name === engine
+                      ? managed
+                        ? "Local runtime"
+                        : "Server connection"
+                      : engine}</span
+                  >
+                  {#if managed}
+                    <span
+                      class="mt-1 block"
+                      role="status"
+                      aria-label="Selected local runtime status"
+                    >
+                      <RuntimeStatus
+                        view={runtimeView}
+                        loading={!instance && session.runtime.loading}
+                        label={!instance && session.runtime.loading
+                          ? "Checking runtime"
+                          : runtimeView.label}
+                      />
+                    </span>
+                  {/if}
+                </span>
+              </span>
+            {/if}
           </Popover.Trigger>
           <Popover.Content
             align="start"
@@ -312,12 +345,6 @@
             </div>
           </Popover.Content>
         </Popover.Root>
-        {#if managed && instance && instance.status.state !== "running"}<p
-            class="text-xs text-muted-foreground"
-          >
-            Local runtime is {instance.status.state}. Open the model chooser to
-            manage it.
-          </p>{/if}
       </div>
       <section class="workflow-context" aria-label="Workflow summary">
         <h2 class="context-heading">Workflow</h2>
@@ -375,7 +402,12 @@
             >
           </button>
         {/if}
-        <div class="context-row">
+        <button
+          class="context-row"
+          {disabled}
+          onclick={() => navigate(onOpenDelivery)}
+          aria-label="Output settings"
+        >
           <ArrowUpRightIcon class="size-4 shrink-0 text-muted-foreground" />
           <span class="min-w-0 flex-1"
             ><span class="context-label">Output</span><span
@@ -389,7 +421,7 @@
                   : "Play or save audio"}</span
             ></span
           >
-        </div>
+        </button>
       </section>
       {#if workflow === "voice" && settings.toggleShortcut}
         <div class="shortcut-summary">
@@ -494,11 +526,11 @@
     display: flex;
     align-items: center;
     gap: 0.625rem;
-    padding: 0.875rem 0.75rem;
+    padding: 0.625rem 0.75rem;
     width: 100%;
-    border-bottom: 1px solid var(--hairline);
+    border-top: 1px solid var(--hairline);
     background: var(--subtle-fill);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   }
   .model-selection {
     display: flex;

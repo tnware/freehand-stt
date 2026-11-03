@@ -20,7 +20,10 @@
     enabled: boolean;
     entries: HistoryEntry[];
     onCopy: (id: number) => Promise<boolean>;
-    onCopyVersion: (id: number, version: HistoryTextVersion) => Promise<boolean>;
+    onCopyVersion: (
+      id: number,
+      version: HistoryTextVersion,
+    ) => Promise<boolean>;
     onDelete: (id: number) => Promise<boolean>;
     onClear: () => void;
   } = $props();
@@ -45,16 +48,26 @@
 
   <div class="flex items-center justify-between gap-4 px-1">
     <p class="text-[13px] leading-relaxed text-muted-foreground">
-      {enabled ? "Retention is active." : "Retention is off."} Turning it off or quitting clears every
-      entry. History is never written to disk.
+      {enabled ? "Retention is active." : "Retention is off."} Turning it off or quitting
+      clears every entry. History is never written to disk.
     </p>
-    <Button variant="outline" size="sm" disabled={entries.length === 0} onclick={onClear}>
-      <TrashIcon data-icon="inline-start" />
-      Clear history
-    </Button>
+    {#if enabled && entries.length > 0}
+      <Button variant="outline" size="sm" onclick={onClear}>
+        <TrashIcon data-icon="inline-start" />
+        Clear history
+      </Button>
+    {/if}
   </div>
 
-  <div class="min-h-44 overflow-hidden border-t border-hairline">
-    <HistoryList {entries} scrollable={false} {onCopy} {onCopyVersion} {onDelete} />
-  </div>
+  {#if enabled}
+    <div class="min-h-44 overflow-hidden border-t border-hairline">
+      <HistoryList
+        {entries}
+        scrollable={false}
+        {onCopy}
+        {onCopyVersion}
+        {onDelete}
+      />
+    </div>
+  {/if}
 </div>

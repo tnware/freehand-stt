@@ -109,6 +109,12 @@
         session.messages.reportFailure(
           "This connection is no longer available.",
         );
+    } else {
+      const entries = editor.applied?.savedConnections.entries ?? [];
+      if (entries.length === 1) {
+        selectedID = entries[0].id;
+        editor.beginConnection(entries[0]);
+      }
     }
   }
   function clear() {
@@ -157,6 +163,22 @@
       activateFor = undefined;
       request = null;
       if (closeWindow) void close();
+    });
+  }
+  function cancelEdit() {
+    if (editor.connectionDraft?.creating || !selected) {
+      leave(false);
+      return;
+    }
+    const id = selected.id;
+    navigate(() => {
+      request = null;
+      activateFor = undefined;
+      const saved = editor.applied?.savedConnections.entries?.find(
+        (connection) => connection.id === id,
+      );
+      selectedID = saved?.id ?? "";
+      if (saved) editor.beginConnection(saved);
     });
   }
   function select(connection: Connection) {
@@ -325,6 +347,15 @@
 >
   <PaneHeader title="Connections" icon={ServerIcon}>
     {#snippet actions()}
+      {#if fullPage && !layout?.primaryVisible}
+        <Button
+          variant="outline"
+          size="xs"
+          onclick={() => layout?.togglePrimary()}
+        >
+          Show connections
+        </Button>
+      {/if}
       {#if showingDetails && !fullPage}<Button
           variant="ghost"
           size="xs"
@@ -414,7 +445,7 @@
                     align="end"
                     class="w-80 max-w-[calc(100vw-24px)] p-1.5"
                   >
-                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id), ) as role (role.id)}
+                    {#each connectionWorkflows.filter( (role) => selected?.uses?.includes(role.id) ) as role (role.id)}
                       {@const Icon = sectionByID(role.section).icon}
                       {@const current =
                         editor.applied.savedConnections.selected?.[role.id] ===
@@ -506,7 +537,7 @@
                 formID="connection-editor"
                 externalActions
                 error={inlineError}
-                onBack={() => leave(false)}
+                onBack={cancelEdit}
                 onSaved={saved}
               />{/if}
             {#if selected}<Disclosure
@@ -546,7 +577,7 @@
                 {editor}
                 {activateFor}
                 formID="connection-editor"
-                onBack={() => leave(false)}
+                onBack={cancelEdit}
               />
             </footer>{/if}
         </section>

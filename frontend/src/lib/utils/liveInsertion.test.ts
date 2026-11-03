@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ID as Backend } from "$bindings/compatibility";
 import { ID as ModelProfile } from "$bindings/modelprofile";
 import { settings } from "$lib/stores/session-fixtures";
-import { liveInsertionUnavailableReason } from "./liveInsertion";
+import {
+  liveInsertionUnavailableReason,
+  realtimeDeliverySummary,
+} from "./liveInsertion";
 
 const eligible = () => ({
   ...structuredClone(settings),
@@ -65,4 +68,24 @@ describe("live phrase insertion availability", () => {
   it("keeps existing users opted out", () => {
     expect(settings.liveInsert).toBe(false);
   });
+});
+
+it("describes effective realtime delivery rather than promising stop-time insertion", () => {
+  const value = eligible();
+  expect(realtimeDeliverySummary(value)).toContain("while recording");
+  value.liveInsert = false;
+  expect(realtimeDeliverySummary(value)).toBe(
+    "Stop to finish and deliver the transcript.",
+  );
+  value.liveInsert = true;
+  value.postProcessing.enabled = true;
+  expect(realtimeDeliverySummary(value)).toContain("clean up");
+  value.autoInsert = false;
+  expect(realtimeDeliverySummary(value)).toContain("you to copy");
+  value.autoInsert = true;
+  value.postProcessing.enabled = false;
+  value.voiceTranscription.compatibilityProfile = Backend.VLLM;
+  expect(realtimeDeliverySummary(value)).toBe(
+    "Stop to finish and deliver the transcript.",
+  );
 });

@@ -154,7 +154,7 @@ export const sectionByID = (id: SettingsSectionID): SettingsSection =>
 /** Search terms mirror settings people look for, including controls below disclosures. */
 const SETTINGS_KEYWORDS: Record<SettingsSectionID, string> = {
   "local-runtime":
-    "local offline private windows nemo nemotron download install gpu realtime live",
+    "local model models runtime offline private windows macos nemo nemotron whisper llama download install gpu realtime live",
   "voice-transcription": "realtime live language context prompt model profile",
   server: "file upload language context prompt streaming timeout",
   processing:
@@ -169,7 +169,7 @@ const SETTINGS_KEYWORDS: Record<SettingsSectionID, string> = {
   overlay:
     "layout position size surface glass glow opacity visualizer motion animation preview",
   general:
-    "startup login tray updates theme light dark system mica clipboard direct input manual copy",
+    "startup login tray updates theme light dark system mica clipboard direct input manual copy live typing delivery",
   history: "retention recent transcripts clear delete memory",
 };
 

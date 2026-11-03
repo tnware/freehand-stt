@@ -582,9 +582,12 @@
                 {#if showReadiness && readiness}
                   <ReadinessPanel
                     providers={session.runtime.providers}
-                    onManageRuntime={(providerID) => {
-                      if (workbench)
+                    instances={session.runtime.instances}
+                    onManageRuntime={(providerID, runtimeID) => {
+                      if (workbench) {
                         workbench.runtimeProviderID = providerID ?? "";
+                        workbench.runtimeInstanceID = runtimeID ?? "";
+                      }
                       openLocalRuntime();
                     }}
                     onChooseServer={() =>
@@ -693,7 +696,7 @@
                       {/if}
                     {/snippet}
                   </ReadinessPanel>
-                {:else if !runtimeSettings?.historyEnabled}
+                {:else if !runtimeSettings?.historyEnabled && !(workbench?.bottomVisible && workbench.tab === "recent")}
                   <div
                     class="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-hairline px-3 py-1 text-xs text-muted-foreground"
                   >

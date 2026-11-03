@@ -9,7 +9,6 @@
   let {
     entries,
     totalEntries,
-    enabled,
     clearing = false,
     selectedID,
     query = $bindable(""),
@@ -20,7 +19,6 @@
   }: {
     entries: HistoryEntry[];
     totalEntries: HistoryEntry[];
-    enabled: boolean;
     clearing?: boolean;
     selectedID?: number;
     query?: string;
@@ -176,21 +174,10 @@
           </li>
         {/each}
       </ul>
-    {:else}
-      <p class="px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
-        {totalEntries.length
-          ? "No transcripts match these filters."
-          : enabled
-            ? "Completed transcripts will appear here."
-            : "Turn history on to keep transcripts for this session."}
-      </p>
     {/if}
   </div>
 
   <footer class="shrink-0 space-y-2 border-t border-hairline px-3.5 py-3">
-    <p class="text-xs leading-relaxed text-muted-foreground">
-      {enabled ? "Kept in memory until you quit." : "History is turned off."}
-    </p>
     <div class="flex flex-wrap items-center gap-1">
       <Button variant="outline" size="xs" onclick={onOpenSettings}
         >History settings</Button

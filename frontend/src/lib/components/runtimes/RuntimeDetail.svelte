@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Catalog } from "$bindings/savedconnection";
+  import { runtimeDeletionReferences } from "$lib/utils/runtimeDeletion";
   import { onDestroy, type Snippet } from "svelte";
   import {
     ProviderID,
@@ -44,6 +46,8 @@
     workBusy = false,
     onOpenConnections,
     notice,
+    useAction,
+    connectionCatalog,
   }: {
     runtime: ManagedRuntimeState;
     row: InstanceStatus | undefined;
@@ -52,7 +56,12 @@
     workBusy?: boolean;
     onOpenConnections: () => void;
     notice?: Snippet;
+    useAction?: Snippet;
+    connectionCatalog?: Catalog;
   } = $props();
+  const deletionReferences = $derived(
+    runtimeDeletionReferences(connectionCatalog, row?.instance.id ?? ""),
+  );
   const uid = $props.id();
   const layout = getWorkbenchLayout();
   const status = $derived(row?.status);
@@ -71,8 +80,10 @@
     view.installed || (!!status?.backend && status.state !== "not_installed"),
   );
   const busy = $derived(!!instance && runtime.isBusy(instance.id));
+  let installing = $state(false);
   const actionLocked = $derived(
     locked ||
+      installing ||
       workBusy ||
       busy ||
       !entry.supported ||
@@ -133,6 +144,7 @@
   let panelTab = $state("output");
   let panelCollapsed = $state(false);
   let probing = $state(false);
+  let installReview = $state(false);
   let recommendation = $state<BinaryOptions | null>(null);
   let binaryChoice = $state("auto");
   type Removal =
@@ -217,10 +229,10 @@
       void checkInstalledOptions();
   });
 
-  function install(backend?: string) {
+  function reviewInstall() {
     if (actionLocked || runtime.busy || probing || !entry.models?.length)
       return;
-    if (switchable && !backend) {
+    if (switchable) {
       probing = true;
       recommendation = null;
       void runtime
@@ -236,6 +248,19 @@
         });
       return;
     }
+    installReview = true;
+  }
+  function confirmInstall(backend?: string) {
+    if (
+      actionLocked ||
+      runtime.busy ||
+      probing ||
+      !(switchable
+        ? recommendation && choiceAvailable && backend === chosenBackend
+        : installReview)
+    )
+      return;
+    installing = true;
     void (async () => {
       let target = instance;
       if (!target) {
@@ -254,7 +279,12 @@
       if (alive) recommendation = null;
       if (backend) await runtime.installBackend(target.id, backend);
       else await runtime.run(target.id, "Install");
-    })();
+    })().finally(() => {
+      if (alive) {
+        installing = false;
+        installReview = false;
+      }
+    });
   }
   function act(action: () => Promise<unknown>) {
     if (!actionLocked) void action();
@@ -307,6 +337,7 @@
 <div class="flex min-h-0 min-w-0 flex-1 flex-col">
   <PaneHeader title={entry.name} icon={CpuIcon}>
     {#snippet actions()}
+      {@render useAction?.()}
       {#if busy && instance}
         <Button
           variant="outline"
@@ -331,7 +362,7 @@
             onclick={() =>
               missingModel &&
               act(() => runtime.downloadModel(instance.id, missingModel.id))}
-            ><DownloadIcon class="size-3" />Get {missingModel ===
+            ><DownloadIcon class="size-3" />Download {missingModel ===
             selectedSpeechModel
               ? "speech model"
               : "model"}</Button
@@ -459,22 +490,28 @@
             </p>
             <p class="content-meta mt-0.5">
               {entry.unavailableReason ||
-                "Install the runtime, then explicitly download a model."}
+                (entry.supported
+                  ? "Install the runtime, then download a model."
+                  : "Choose a supported runtime or connect to a speech server.")}
             </p>
           </div>
-          <Button
-            size="xs"
-            disabled={actionLocked ||
-              probing ||
-              runtime.busy ||
-              !entry.models?.length}
-            onclick={() => install()}
-            ><DownloadIcon class="size-3" />{probing
-              ? "Checking…"
-              : recommendation
-                ? "Re-check"
-                : "Install"}</Button
-          >
+          {#if entry.supported}
+            <Button
+              size="xs"
+              disabled={actionLocked ||
+                probing ||
+                runtime.busy ||
+                !entry.models?.length}
+              onclick={reviewInstall}
+              ><DownloadIcon class="size-3" />{probing
+                ? "Checking…"
+                : recommendation
+                  ? "Re-check"
+                  : "Install"}</Button
+            >
+          {:else}<Button variant="outline" size="xs" onclick={onOpenConnections}
+              >Use a connection</Button
+            >{/if}
         </div>
         {#if probing}<p class="text-xs text-ink-quiet" role="status">
             Checking host binary options · no files are downloaded
@@ -518,7 +555,7 @@
               <Button
                 size="xs"
                 disabled={actionLocked || runtime.busy || !choiceAvailable}
-                onclick={() => install(chosenBackend)}
+                onclick={() => confirmInstall(chosenBackend)}
                 >Download and install</Button
               ><Button
                 variant="ghost"
@@ -728,6 +765,36 @@
   {/if}
 </div>
 <ActionDialog
+  open={installReview}
+  title={`Install ${entry.name}?`}
+  description="Downloads the runtime software for this machine. Model files are downloaded separately, and nothing starts automatically."
+  icon={DownloadIcon}
+  busy={installing}
+  ondismiss={() => (installReview = false)}
+>
+  <p class="text-sm">Version {entry.version}</p>
+  {#if entry.source}
+    <RuntimeDownloadSource source={entry.source} />
+    <p class="text-xs text-muted-foreground">
+      Release builds are listed for reference. The installer chooses the
+      supported build for this machine and verifies its checksum.
+    </p>
+  {/if}
+  <p class="text-sm">Next: download a model, then start the runtime.</p>
+  {#snippet actions()}
+    <Button
+      variant="outline"
+      data-dialog-initial-focus
+      disabled={installing}
+      onclick={() => (installReview = false)}>Not now</Button
+    >
+    <Button
+      disabled={actionLocked || runtime.busy}
+      onclick={() => confirmInstall()}>Download and install</Button
+    >
+  {/snippet}
+</ActionDialog>
+<ActionDialog
   open={confirming !== null}
   busy={removing}
   icon={Trash2Icon}
@@ -741,10 +808,28 @@
     ? "Deletes this downloaded model. If selected, this Connection becomes unavailable until you download it again or select another model."
     : confirming?.kind === "files"
       ? "Deletes this runtime's binary and downloaded models. The instance and its saved Connections remain for repair. Other installations are untouched."
-      : "Remove or reassign every Connection referencing this instance first. Deleting its entry does not delete downloaded files; remove runtime files separately if wanted."}
+      : "Deletes the runtime entry and its built-in connection. Downloaded files remain; remove runtime files separately if wanted."}
   error={removalError}
   ondismiss={dismissRemoval}
 >
+  {#if confirming?.kind === "instance"}
+    {#if deletionReferences.workflows.length}
+      <p class="text-sm">
+        Choose another connection in these workflows before deleting:
+        {deletionReferences.workflows.join(", ")}.
+      </p>
+    {/if}
+    {#if deletionReferences.connections.length}
+      <p class="text-sm">
+        In Connections, delete or change the runtime target of these custom
+        saved connections first: {deletionReferences.connections.join(", ")}.
+      </p>
+    {/if}
+    <p class="text-sm text-muted-foreground">
+      The built-in connection is removed automatically. You do not need to
+      delete it in Connections. Deletion will not switch workflows for you.
+    </p>
+  {/if}
   {#snippet actions()}
     <Button
       variant="outline"

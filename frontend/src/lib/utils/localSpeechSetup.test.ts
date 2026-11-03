@@ -70,6 +70,7 @@ describe("local speech setup guidance", () => {
       expect(localSpeechSetup(entries)).toEqual({
         availability: "unavailable",
         recommendation: null,
+        existing: null,
       });
     }
   });
@@ -77,6 +78,7 @@ describe("local speech setup guidance", () => {
     expect(localSpeechSetup([])).toEqual({
       availability: "unknown",
       recommendation: null,
+      existing: null,
     });
   });
   it("keeps supported non-recommended models discoverable without inventing a recommendation", () => {
@@ -84,7 +86,11 @@ describe("local speech setup guidance", () => {
       localSpeechSetup([
         provider(ProviderID.NeMoSpeechCPP, true, Role.Transcription, false),
       ]),
-    ).toEqual({ availability: "available", recommendation: null });
+    ).toEqual({
+      availability: "available",
+      recommendation: null,
+      existing: null,
+    });
   });
   it("rejects missing transcription contracts", () => {
     const entry = provider(ProviderID.NeMoSpeechCPP);
@@ -92,6 +98,7 @@ describe("local speech setup guidance", () => {
     expect(localSpeechSetup([entry])).toEqual({
       availability: "unavailable",
       recommendation: null,
+      existing: null,
     });
   });
 });

@@ -105,7 +105,13 @@
       .filter((group) => group.families.length),
   );
   const running = $derived(row?.status.state === "running");
-  const controlsLocked = $derived(locked || running);
+  const supported = $derived(
+    entry.supported && row?.status.supported !== false,
+  );
+  const unavailableReason = $derived(
+    entry.unavailableReason || "This runtime is unavailable on this machine",
+  );
+  const controlsLocked = $derived(!supported || locked || running);
   const catalogID = `${uid}-models`;
   const familyID = (id: string) => `${uid}-family-${id}`;
   const groupID = (id: string) => `${uid}-group-${id}`;
@@ -199,21 +205,27 @@
     <Button
       variant="outline"
       size="xs"
-      disabled={locked}
-      title={!installed ? "Install this runtime first" : undefined}
+      disabled={!supported || locked}
+      title={!supported
+        ? unavailableReason
+        : !installed
+          ? "Install this runtime first"
+          : undefined}
       onclick={onRefresh}
       ><RefreshCwIcon class="size-3" aria-hidden="true" />Refresh catalog</Button
     >
   </div>
 </div>
 <p class="content-meta pb-2">
-  {!installed
-    ? "Install the runtime to download or select models. Browsing is metadata-only."
-    : running
-      ? "Stop to download, change or remove models."
-      : "Browsing is metadata-only. Only Get fetches model files."}
+  {!supported
+    ? "This runtime is unavailable on this machine. You can review its models or choose another runtime."
+    : !installed
+      ? "Install the runtime to download or select models. Browsing is metadata-only."
+      : running
+        ? "Stop the runtime to download, remove, or select a model. Start it again when ready."
+        : "Browsing and selecting do not download files. Use Download to get a model."}
 </p>
-{#if entry.models?.some(isSpeechRuntimeModel)}
+{#if supported && entry.models?.some(isSpeechRuntimeModel)}
   <p class="content-meta pb-2">
     Choose one transcription model and optionally a speech model. Both load in
     this runtime; Start and Stop affect both.
@@ -339,18 +351,18 @@
                     >{model.sizeBytes ? modelSize(model.sizeBytes) : "—"}</span
                   >
                 </span>
-                <span
-                  class="model-status text-xs {loaded
-                    ? 'text-success'
-                    : 'text-ink-quiet'}"
-                >
-                  {loaded
-                    ? "Loaded"
-                    : selected
-                      ? "Selected"
+                <span class="model-status text-xs text-ink-quiet">
+                  {#if selected}<span
+                      class="block {loaded ? 'text-success' : ''}"
+                      >{loaded ? "Loaded" : "Selected"}</span
+                    >{/if}
+                  <span class="block">
+                    {downloading && busy
+                      ? "Downloading"
                       : model.installed
                         ? "Downloaded"
-                        : "Not installed"}
+                        : "Not downloaded"}
+                  </span>
                 </span>
                 <span class="model-actions flex items-center justify-end gap-1">
                   {#if downloading && busy}
@@ -365,22 +377,30 @@
                         variant="outline"
                         size="xs"
                         disabled={controlsLocked}
-                        title={!installed
-                          ? "Install this runtime first"
-                          : undefined}
+                        title={!supported
+                          ? unavailableReason
+                          : !installed
+                            ? "Install this runtime first"
+                            : running
+                              ? "Stop the runtime before downloading a model"
+                              : undefined}
                         onclick={() => onGet(model)}
                         ><DownloadIcon
                           class="size-3"
                           aria-hidden="true"
-                        />Get</Button
+                        />Download</Button
                       >{/if}
                     {#if !selected}<Button
                         variant="outline"
                         size="xs"
                         disabled={controlsLocked}
-                        title={!installed
-                          ? "Install this runtime first"
-                          : undefined}
+                        title={!supported
+                          ? unavailableReason
+                          : !installed
+                            ? "Install this runtime first"
+                            : running
+                              ? "Stop the runtime before selecting a model"
+                              : "Select this model without downloading files"}
                         onclick={() => onSelect(model)}>Select</Button
                       >{/if}
                     {#if selected && speechModel}<Button
@@ -463,7 +483,7 @@
   }
   .model-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 56px 82px 104px;
+    grid-template-columns: minmax(0, 1fr) 56px 96px 144px;
     min-height: 44px;
     align-items: center;
     gap: 8px;
@@ -496,6 +516,7 @@
     .model-actions {
       grid-column: 3;
       grid-row: 1 / 3;
+      flex-wrap: wrap;
     }
     .model-size {
       display: flex;

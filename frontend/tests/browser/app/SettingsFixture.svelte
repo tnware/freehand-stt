@@ -22,6 +22,10 @@
   import { configurePickerFixture } from "./picker-data";
   import { controlledMetadata } from "./metadata-control";
   import { createRuntimeFixture } from "./runtime-fixture";
+  import {
+    publishRuntimeConnections,
+    selectRuntimeConnection,
+  } from "./runtime-use-fixture";
   import { createResourceFixture } from "./resource-fixture";
   import { createHistoryFixture } from "./history-fixture";
   import { ProviderID } from "$bindings/managedruntime";
@@ -167,6 +171,20 @@
   }
   if (new URLSearchParams(location.search).has("pickers"))
     configurePickerFixture(current);
+  if (params.has("workflow-identity")) {
+    // Explicit backend metadata exercises identity separately from the saved
+    // connection name. It never comes from model-ID inference.
+    const profile = {
+      id: BackendID.Generic,
+      label: "Generic OpenAI-compatible",
+      available: true,
+      description: "Synthetic connection metadata",
+      capabilities: { ...current.modelProfiles.transcription![0].capabilities },
+    };
+    current.compatibilityProfiles.transcription = [profile];
+    current.compatibilityProfiles.speech = [profile];
+    current.voiceTranscription.compatibilityProfile = profile.id;
+  }
   const blank = new URLSearchParams(location.search).has("blank");
   if (blank) {
     current.savedConnections = { entries: [], selected: {} };
@@ -177,9 +195,15 @@
       ModelID.Generic;
     current.model = "";
   }
+  let pendingPreviewSave = $state<number | null>(null);
   const saves = controlledSaves((request) => {
     const next = { ...current, ...request.settings };
     const change = request.connectionChange;
+    if (params.has("runtime-use-flow") && change?.action === Action.Select) {
+      selectRuntimeConnection(next, change, runtimeFixture?.providers ?? []);
+      current = structuredClone(next);
+      return structuredClone(current);
+    }
     if (change?.action === Action.Delete) {
       next.savedConnections = {
         ...current.savedConnections,
@@ -228,6 +252,8 @@
           current.platform !== "darwin",
           (instances, providers) => {
             current = { ...current, managedRuntimes: instances };
+            if (params.has("runtime-use-flow"))
+              publishRuntimeConnections(current, instances, providers);
             // Match Go's selected-connection projection after inventory commits.
             // Runtime status alone must not leave the applied task model stale.
             for (const [endpoint, role] of [
@@ -468,12 +494,18 @@
                 ? wire(window.testConnectionWindows.settings())
                 : structuredClone(current),
             ),
-          SaveSettings: (request) =>
-            child
-              ? CancellablePromise.resolve(
-                  window.testConnectionWindows.save(wire(request)),
-                )
-              : saves.save(wire(request)),
+          SaveSettings: (request) => {
+            if (child)
+              return CancellablePromise.resolve(
+                window.testConnectionWindows.save(wire(request)),
+              );
+            const result = saves.save(wire(request));
+            if (params.has("runtime-use-preview"))
+              void saves.control.waitForStart(0).then((id) => {
+                pendingPreviewSave = id;
+              });
+            return result;
+          },
         },
       },
     ),
@@ -514,3 +546,43 @@
 <!-- Settings is a pane of the main window, so every scenario mounts the one
      shell rather than a standalone settings renderer. -->
 <App {session} />
+
+{#if params.has("runtime-use-preview") && runtimeFixture}
+  <aside
+    aria-label="Browser fixture controls"
+    class="fixed bottom-8 right-2 z-[100] max-w-64 space-y-1 rounded border border-border bg-background p-2 text-xs shadow"
+  >
+    <p class="font-semibold">Browser fixture controls · no native work</p>
+    <button
+      class="block underline"
+      onclick={() => {
+        const row = runtimeFixture.control
+          .snapshot()
+          .find(
+            (row) =>
+              row.status.operation.kind === "download" &&
+              row.status.operation.outcome === "running",
+          );
+        if (row) runtimeFixture.control.finishDownload(row.instance.id);
+      }}>Complete fixture model download</button
+    >
+    <button
+      class="block underline disabled:opacity-40"
+      disabled={pendingPreviewSave === null}
+      onclick={() => {
+        if (pendingPreviewSave === null) return;
+        saves.control.complete(pendingPreviewSave, "success");
+        pendingPreviewSave = null;
+      }}>Complete fixture settings save</button
+    >
+    <button
+      class="block underline disabled:opacity-40"
+      disabled={pendingPreviewSave === null}
+      onclick={() => {
+        if (pendingPreviewSave === null) return;
+        saves.control.complete(pendingPreviewSave, "failure");
+        pendingPreviewSave = null;
+      }}>Fail fixture settings save</button
+    >
+  </aside>
+{/if}

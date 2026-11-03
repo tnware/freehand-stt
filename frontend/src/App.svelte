@@ -7,6 +7,7 @@
   import PanelBottomIcon from "@lucide/svelte/icons/panel-bottom";
   import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
   import { Purpose } from "$bindings/savedconnection";
+  import { useRuntimeConnection } from "$lib/utils/runtimeWorkflowUse";
   import { windowMaterial } from "$lib/platform";
   import { onMount, tick, untrack } from "svelte";
   import { Events, Window } from "@wailsio/runtime";
@@ -115,6 +116,11 @@
     return () => clearInterval(timer);
   });
 
+  // Auxiliary pages retain the workflow the user came from. Runtime setup
+  // returns there only after the user explicitly chooses its connection.
+  const runtimeWorkflow = $derived(
+    isWorkflowPane(inputMode) ? inputMode : "voice",
+  );
   const activePane = $derived<PaneID>(
     auxPane === null ? (inputMode as PaneID) : auxPane,
   );
@@ -144,7 +150,8 @@
         : GENERAL_SECTIONS,
   );
   const secondaryAvailable = $derived(
-    auxPane === null || auxPane === "history",
+    auxPane === null ||
+      (auxPane === "history" && (inspectorOpen || !!layout.details)),
   );
   const inspectorVisible = $derived(
     inspectorOpen &&
@@ -154,10 +161,12 @@
   const secondaryShown = $derived(
     inspectorOpen
       ? inspectorVisible
-      : auxPane === "history" && layout.secondaryVisible,
+      : auxPane === "history" && !!layout.details && layout.secondaryVisible,
   );
   const recentPanelHidden = $derived(
-    (auxPane === "runtimes" || auxPane === "connections") &&
+    (auxPane === "runtimes" ||
+      auxPane === "connections" ||
+      auxPane === "history") &&
       layout.tab === "recent",
   );
   const panelAvailable = $derived(auxPane !== "settings" && !recentPanelHidden);
@@ -241,6 +250,15 @@
   const voiceActive = $derived(
     session.dictation.status.state !== State.Idle &&
       session.dictation.status.state !== State.Failed,
+  );
+
+  const runtimeWorkBusy = $derived(
+    voiceActive ||
+      fileWorking ||
+      session.speech.submitting ||
+      session.speech.previewing ||
+      session.speech.listening !== null ||
+      session.speech.status.phase === TTSPhase.Generating,
   );
 
   let commandsOpen = $state(false);
@@ -821,7 +839,7 @@
       : layout.bottomSuppressed
         ? "The bottom panel is hidden during setup"
         : recentPanelHidden
-          ? "Recent history is available in Voice, Audio file, and History"
+          ? "The Recent panel is available in Voice and Audio file"
           : undefined}
     onTogglePrimary={primaryAvailable
       ? () => layout.togglePrimary()
@@ -937,8 +955,17 @@
         {#if auxPane === "runtimes"}
           <RuntimesPane
             {session}
-            workBusy={voiceActive || fileWorking}
+            workBusy={runtimeWorkBusy}
             onOpenConnections={() => openSettings("connections")}
+            workflow={runtimeWorkflow}
+            onUseRuntime={(instanceID) =>
+              useRuntimeConnection(
+                session,
+                instanceID,
+                runtimeWorkflow,
+                runtimeWorkBusy,
+              )}
+            onReturnToWorkflow={() => selectPane(runtimeWorkflow)}
           />
         {:else if auxPane === "history"}
           <HistoryPane

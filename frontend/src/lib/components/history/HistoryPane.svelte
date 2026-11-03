@@ -1,7 +1,6 @@
 <script lang="ts">
   import EmptyState from "$lib/components/common/EmptyState.svelte";
   import PaneHeader from "$lib/components/home/PaneHeader.svelte";
-  import SidebarHeader from "$lib/components/shell/SidebarHeader.svelte";
   import HistoryIcon from "@lucide/svelte/icons/history";
   import PanelRightOpenIcon from "@lucide/svelte/icons/panel-right-open";
   import Notifications from "$lib/components/shell/Notifications.svelte";
@@ -101,12 +100,17 @@
 
   $effect(() => {
     if (!layout) return;
-    layout.details = details;
     // Start each History visit with details available on wide windows. Closing
     // them during this visit remains respected as the selected transcript changes.
     layout.secondaryOpen = true;
+  });
+
+  $effect(() => {
+    if (!layout) return;
+    const content = selected ? details : undefined;
+    layout.details = content;
     return () => {
-      if (layout.details === details) layout.details = undefined;
+      if (layout.details === content) layout.details = undefined;
     };
   });
 
@@ -149,12 +153,6 @@
   >
     {#if selected}
       {#key selected.id}<HistoryDetails entry={selected} embedded />{/key}
-    {:else}
-      <SidebarHeader title="Transcription details" heading />
-
-      <p class="content-meta px-3 py-4">
-        Select a transcript to inspect its details.
-      </p>
     {/if}
   </section>
 {/snippet}
@@ -162,31 +160,30 @@
 <div
   class="history-workbench relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
 >
-  <SidebarContribution id="history">
-    <HistorySidebar
-      {entries}
-      totalEntries={retained}
-      {enabled}
-      {clearing}
-      selectedID={selected?.id}
-      bind:query
-      bind:source
-      onSelect={choose}
-      onOpenSettings={onOpenHistorySettings}
-      onClear={() => void clearHistory()}
-    />
-  </SidebarContribution>
+  {#if enabled}
+    <SidebarContribution id="history">
+      <HistorySidebar
+        {entries}
+        totalEntries={retained}
+        {clearing}
+        selectedID={selected?.id}
+        bind:query
+        bind:source
+        onSelect={choose}
+        onOpenSettings={onOpenHistorySettings}
+        onClear={() => void clearHistory()}
+      />
+    </SidebarContribution>
+  {/if}
 
   <div class="flex min-h-0 min-w-0 flex-1 flex-col">
     <PaneHeader
       title="History"
       icon={HistoryIcon}
-      summary={enabled
-        ? `${entries.length} of ${retained.length} transcripts · in memory`
-        : "retention is turned off"}
+      summary={retained.length ? "Kept in memory until you quit." : ""}
     >
       {#snippet actions()}
-        {#if layout}
+        {#if layout && selected}
           <Button
             variant={detailsShown ? "soft" : "ghost"}
             size="sm"
@@ -260,7 +257,7 @@
                 ? "No matching transcripts."
                 : "No transcripts yet."}
             description={!enabled
-              ? "Turn retention on in History settings to keep recent transcripts for this session."
+              ? "Choose whether to keep recent transcripts for this session in History settings. Nothing is saved to disk."
               : filtered && retained.length
                 ? "Try another search or show all sources."
                 : "Completed transcripts appear here and are kept in memory until you quit."}

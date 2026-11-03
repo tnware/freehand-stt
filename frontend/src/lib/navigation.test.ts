@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  matchingSettingsSections,
   SETTINGS_GROUPS,
   SETTINGS_SECTIONS,
   sectionByID,
@@ -43,4 +44,20 @@ describe("settings navigation", () => {
     const ids = SETTINGS_SECTIONS.map((section) => section.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+});
+
+it("finds model management and live typing by the words users search", () => {
+  expect(
+    matchingSettingsSections("model").map((section) => section.id),
+  ).toEqual(
+    expect.arrayContaining([
+      "voice-transcription",
+      "server",
+      "processing",
+      "local-runtime",
+    ]),
+  );
+  expect(
+    matchingSettingsSections("live typing").map((section) => section.id),
+  ).toContain("general");
 });

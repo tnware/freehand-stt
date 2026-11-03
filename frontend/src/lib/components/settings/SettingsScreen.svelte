@@ -1,4 +1,7 @@
 <script lang="ts">
+  import LocalRuntimeSetupChoice from "./LocalRuntimeSetupChoice.svelte";
+  import { Role } from "$bindings/compatibility";
+  import { getWorkbenchLayout } from "$lib/workbench-layout.svelte";
   import StatusBadge from "$lib/components/common/StatusBadge.svelte";
   import { SETTINGS_NAVIGATION, SETTINGS_SECTIONS } from "$lib/navigation";
   import VocabularySection from "./sections/VocabularySection.svelte";
@@ -39,6 +42,7 @@
     visible = true,
     active = $bindable(),
     inspector = false,
+    searchAllSettings = false,
     sections,
     onRevealSection,
     navigationRef = $bindable(null),
@@ -63,6 +67,7 @@
     active: SettingsSectionID;
     /** Render contextual configuration within the secondary sidebar. */
     inspector?: boolean;
+    searchAllSettings?: boolean;
     sections?: SettingsSectionID[];
     /** Reveal an out-of-scope validation target without discarding this draft. */
     onRevealSection?: (section: SettingsSectionID) => void;
@@ -86,6 +91,7 @@
   /** Terms are separated by newlines or commas. */
   const SPLIT_TERMS = /[\r\n,]/;
   const uid = $props.id();
+  const workbench = getWorkbenchLayout();
   const inspectorPanelID = `${uid}-inspector-content`;
   const inspectorSections = $derived(
     (sections ?? SETTINGS_SECTIONS.map((entry) => entry.id))
@@ -372,6 +378,7 @@
 
 <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
   {#if !inspector}<SettingsNav
+      {searchAllSettings}
       onOpenChain={onClose}
       counts={{
         connections:
@@ -577,6 +584,24 @@
                   })}
               />
             {/if}
+            {#if (active === "processing" || active === "speech") && workflowPurpose && !session.editor.draft.savedConnections.selected?.[workflowPurpose]}
+              <LocalRuntimeSetupChoice
+                providers={session.runtime.providers}
+                role={active === "processing"
+                  ? Role.PostProcessing
+                  : Role.Speech}
+                label={active === "processing" ? "cleanup" : "speech"}
+                disabled={editingDisabled}
+                onOpen={(providerID) =>
+                  withSavedSettings(() => {
+                    if (workbench) {
+                      workbench.runtimeProviderID = providerID ?? "";
+                      workbench.runtimeInstanceID = "";
+                    }
+                    selectSection("local-runtime");
+                  })}
+              />
+            {/if}
             {#if active === "local-runtime"}
               <!-- The runtime inventory has a place of its own on the rail, with
                  room for the model table and the process output drawer. One
@@ -600,6 +625,7 @@
                   runtime={session.runtime}
                   onManageRuntime={() => selectSection("local-runtime")}
                   editor={session.editor}
+                  onOpenDelivery={() => selectSection("general")}
                   settings={session.editor.draft}
                   draft
                   disabled={editingDisabled}

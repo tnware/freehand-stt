@@ -1,4 +1,11 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
+  import type { WorkflowPane } from "$lib/panes";
+  import {
+    runtimeWorkflowConnection,
+    runtimeWorkflowTargets,
+    runtimeUseBlockReason,
+  } from "$lib/utils/runtimeWorkflowUse";
   import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
   import RuntimeStatus from "$lib/components/common/RuntimeStatus.svelte";
   import CpuIcon from "@lucide/svelte/icons/cpu";
@@ -9,16 +16,23 @@
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import RuntimeDetail from "./RuntimeDetail.svelte";
   import { Button } from "$lib/components/ui/button";
-  import { backendLabel, runtimePresentation } from "$lib/utils/managedRuntime";
+  import { runtimePresentation } from "$lib/utils/managedRuntime";
+  import { runtimeSidebarContext } from "$lib/utils/runtimeSidebar";
   import type { Session } from "$lib/stores/session.svelte";
 
   let {
     session,
     onOpenConnections,
+    workflow = "voice",
+    onUseRuntime,
+    onReturnToWorkflow,
     workBusy = false,
   }: {
     session: Session;
     onOpenConnections: () => void;
+    workflow?: WorkflowPane;
+    onUseRuntime?: (instanceID: string) => Promise<boolean>;
+    onReturnToWorkflow?: () => void;
     workBusy?: boolean;
   } = $props();
   const workbench = getWorkbenchLayout();
@@ -30,9 +44,12 @@
 
   const rows = $derived(
     runtime.providers.map((entry) => {
-      const instance = runtime.instances.find(
-        (item) => item.instance.provider === entry.id,
-      );
+      const installations = runtime.instances
+        .filter((item) => item.instance.provider === entry.id)
+        .toSorted((a, b) => a.instance.id.localeCompare(b.instance.id));
+      const instance =
+        installations.find((item) => item.instance.id === recoveryID) ??
+        installations[0];
       const id = instance?.instance.id ?? entry.id;
       const view = runtimePresentation(
         instance?.status,
@@ -44,6 +61,7 @@
         instance,
         view,
         problem: runtime.errorFor(id) || view.error,
+        context: runtimeSidebarContext(entry, instance),
       };
     }),
   );
@@ -68,6 +86,10 @@
         requested &&
         rows.some((row) => row.entry.id === requested.instance.provider)
       ) {
+        // A provider hint accompanying an exact installation is part of the
+        // same request, not a second request to select the first installation.
+        workbench.runtimeProviderID = "";
+        selectionGeneration++;
         selected = requested.instance.provider;
         recoveryID = requestedID;
         return;
@@ -78,6 +100,7 @@
       if (runtime.loading) return;
       workbench.runtimeProviderID = "";
       if (rows.some((row) => row.entry.id === requestedProvider)) {
+        selectionGeneration++;
         selected = requestedProvider;
         recoveryID = "";
         return;
@@ -95,6 +118,84 @@
     providerRows.find((row) => row.instance.id === recoveryID) ??
       providerRows[0],
   );
+  const currentContext = $derived(
+    current
+      ? runtimeSidebarContext(
+          current.entry,
+          currentInstance,
+          runtime.pendingFor(currentInstance?.instance.id ?? current.entry.id),
+          runtime.errorFor(currentInstance?.instance.id ?? current.entry.id),
+        )
+      : null,
+  );
+  const workflowTarget = $derived(runtimeWorkflowTargets[workflow]);
+  const workflowConnection = $derived(
+    currentInstance
+      ? runtimeWorkflowConnection(
+          session,
+          currentInstance.instance.id,
+          workflow,
+        )
+      : undefined,
+  );
+  const workflowSelected = $derived(
+    !!workflowConnection &&
+      session.editor.applied?.savedConnections.selected?.[
+        workflowTarget.purpose
+      ] === workflowConnection.id,
+  );
+  const useBlockReason = $derived(runtimeUseBlockReason(session, workBusy));
+  let usePending = $state(false);
+  let useError = $state("");
+  let alive = true;
+  let selectionGeneration = 0;
+  const selectionKey = $derived(
+    `${workflow}/${currentInstance?.instance.id ?? ""}`,
+  );
+  $effect(() => {
+    selectionKey;
+    selectionGeneration++;
+    useError = "";
+  });
+  onDestroy(() => {
+    alive = false;
+  });
+  async function useForWorkflow() {
+    if (
+      !currentInstance ||
+      !workflowConnection ||
+      !onUseRuntime ||
+      !onReturnToWorkflow ||
+      usePending ||
+      useBlockReason
+    )
+      return;
+    const id = currentInstance.instance.id;
+    const generation = selectionGeneration;
+    const origin = workflow;
+    useError = "";
+    usePending = true;
+    try {
+      const success = await onUseRuntime(id);
+      // A newer provider choice or leaving Runtimes must not be undone by an
+      // older save response. Selection itself stays owned by SettingsEditor.
+      if (
+        !alive ||
+        generation !== selectionGeneration ||
+        workflow !== origin ||
+        currentInstance?.instance.id !== id
+      )
+        return;
+      if (success) onReturnToWorkflow();
+      else
+        useError = `Could not select this runtime for ${workflowTarget.label}. Review the error and try again.`;
+    } catch {
+      if (alive && generation === selectionGeneration)
+        useError = `Could not select this runtime for ${workflowTarget.label}. Try again.`;
+    } finally {
+      if (alive) usePending = false;
+    }
+  }
 </script>
 
 <!--
@@ -143,6 +244,7 @@
               ? 'border-primary bg-accent-wash-strong'
               : 'border-transparent'}"
             onclick={() => {
+              selectionGeneration++;
               selected = row.entry.id;
               recoveryID = "";
               if (workbench?.compact.current && workbench.compactPrimaryOpen)
@@ -160,17 +262,13 @@
                   ? 'text-foreground'
                   : 'text-secondary-foreground'}">{row.entry.name}</span
               >
-              <span class="block truncate font-mono text-xs text-ink-quiet">
-                {[
-                  row.entry.id === "llama-cpp"
-                    ? "cleanup"
-                    : row.instance?.status.realtime
-                      ? "streaming"
-                      : "speech",
-                  row.instance?.status.version || row.entry.version,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || row.view.label}
+              <span
+                class="block break-words text-xs text-ink-quiet [overflow-wrap:anywhere]"
+                title={`${row.context.model.label}: ${row.context.model.name}`}
+              >
+                {row.context.model.label === "Recommended model"
+                  ? "Recommended: "
+                  : ""}{row.context.model.name}
               </span>
               <span class="mt-0.5 block">
                 <RuntimeStatus
@@ -209,40 +307,82 @@
         </p>
       {/if}
 
-      {#if current?.entry}
-        <div class="mt-2 border-t border-hairline px-3 pt-3 pb-4">
-          <p class="content-kicker mb-2">Runtime binary</p>
-          <!-- Descriptor backends are platform builds, not a hardware probe. -->
-          <p class="font-mono text-xs text-ink-quiet">
-            {currentInstance?.status.backend
-              ? backendLabel(currentInstance.status.backend)
-              : "backend not selected"}
-          </p>
-          <p class="mt-3 text-xs text-muted-foreground">Platform options</p>
-          <div class="mt-2 flex flex-wrap gap-1">
-            {#each current.entry.backends ?? [] as backend (backend)}
-              <span
-                class="rounded-sm border border-border px-1.5 py-0.5 text-2xs text-secondary-foreground"
-                >{backendLabel(backend)}</span
+      {#if currentContext}
+        <section
+          class="mt-2 space-y-3 border-t border-hairline px-3 pt-3 pb-4"
+          aria-label="Runtime setup summary"
+        >
+          <div>
+            <p class="content-kicker mb-1">{currentContext.model.label}</p>
+            <p
+              class="break-words text-[13px] font-medium text-foreground [overflow-wrap:anywhere]"
+              title={currentContext.model.id}
+            >
+              {currentContext.model.name}
+            </p>
+            {#if currentContext.speechModel}
+              <p class="mt-2 text-xs text-muted-foreground">
+                Selected speech model
+              </p>
+              <p
+                class="mt-0.5 break-words text-xs text-secondary-foreground [overflow-wrap:anywhere]"
+                title={currentContext.speechModel.id}
               >
-            {/each}
+                {currentContext.speechModel.name}
+              </p>
+            {/if}
           </div>
-          <p class="mt-2 text-xs text-muted-foreground">
-            Usable options depend on the available hardware.
-          </p>
-          {#if current.entry.unavailableReason}
-            <p class="mt-2 text-xs leading-snug text-warning">
-              {current.entry.unavailableReason}
+          <div>
+            <p class="content-kicker mb-1">{currentContext.heading}</p>
+            <p class="text-[13px] font-medium text-foreground">
+              {currentContext.next}
+            </p>
+            {#if currentContext.detail}
+              <p
+                class="mt-1 break-words text-xs leading-relaxed text-muted-foreground [overflow-wrap:anywhere]"
+              >
+                {currentContext.detail}
+              </p>
+            {/if}
+          </div>
+          {#if currentContext.binary}
+            <p
+              class="flex items-start gap-1.5 text-xs text-ink-quiet"
+              title="Installed runtime binary"
+            >
+              <CpuIcon class="mt-px size-3 shrink-0" aria-hidden="true" />
+              <span class="min-w-0 break-words">{currentContext.binary}</span>
             </p>
           {/if}
-        </div>
+        </section>
       {/if}
     </div>
   </SidebarContribution>
 
   {#if current}
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+      {#snippet useAction()}
+        {#if workflowConnection && onUseRuntime && onReturnToWorkflow}
+          <Button
+            size="xs"
+            disabled={usePending || !!useBlockReason}
+            title={useBlockReason || undefined}
+            onclick={() => void useForWorkflow()}
+            >{usePending
+              ? "Selecting…"
+              : workflowSelected
+                ? `Open ${workflowTarget.label}`
+                : `Use for ${workflowTarget.label}`}</Button
+          >
+        {/if}
+      {/snippet}
       {#snippet recoveryNotice()}
+        {#if useError}<p
+            class="border-b border-hairline px-3 py-2 text-xs text-destructive"
+            role="alert"
+          >
+            {useError}
+          </p>{/if}
         {#if providerRows.length > 1}
           <div
             class="space-y-2 border-b border-warning/30 bg-warning/10 px-3 py-3"
@@ -260,6 +400,7 @@
                   aria-pressed={currentInstance?.instance.id ===
                     duplicate.instance.id}
                   onclick={() => {
+                    selectionGeneration++;
                     recoveryID = duplicate.instance.id;
                     if (
                       workbench?.compact.current &&
@@ -281,7 +422,9 @@
           locked={workBusy || session.editor.saving || runtime.loading}
           {workBusy}
           {onOpenConnections}
+          connectionCatalog={session.editor.applied?.savedConnections}
           notice={recoveryNotice}
+          {useAction}
         />
       {/key}
     </div>

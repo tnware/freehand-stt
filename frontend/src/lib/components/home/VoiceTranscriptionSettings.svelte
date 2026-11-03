@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { realtimeDeliverySummary } from "$lib/utils/liveInsertion";
+  import { Button } from "$lib/components/ui/button";
   import ModelSelectionSummary from "$lib/components/settings/ModelSelectionSummary.svelte";
   import NeMoTranscriptionControls from "../settings/NeMoTranscriptionControls.svelte";
   import SettingsCard from "../settings/SettingsCard.svelte";
@@ -29,6 +31,7 @@
     setup: setupMode = false,
     sidebar = false,
     onOpenAdvanced,
+    onOpenDelivery,
     onAddConnection,
     runtime,
     runtimeWorkBusy = false,
@@ -42,6 +45,7 @@
     /** Flat applied controls for the workflow sidebar; advanced options remain in the inspector. */
     sidebar?: boolean;
     onOpenAdvanced?: () => void;
+    onOpenDelivery?: () => void;
     onAddConnection: (purpose: Purpose) => void;
     runtime?: ManagedRuntimeState;
     runtimeWorkBusy?: boolean;
@@ -415,10 +419,18 @@
     <p
       class="border-t border-hairline pt-3 text-xs leading-relaxed text-muted-foreground"
     >
-      Microphone audio streams while recording. Stop to finalize, clean up, and
-      insert. Live mode uses the recording limit; silence trimming, checkpoints,
-      and automatic stop apply to completed transcription.
+      Microphone audio streams while recording. {realtimeDeliverySummary(
+        settings,
+      )}
+      Changing previews are never typed. Silence trimming, checkpoints, and automatic
+      stop apply only with realtime off.
     </p>
+    {#if onOpenDelivery}<Button
+        variant="ghost"
+        size="sm"
+        class="self-start"
+        onclick={onOpenDelivery}>Text delivery and live typing</Button
+      >{/if}
   {/if}
 {/snippet}
 

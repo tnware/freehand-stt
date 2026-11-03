@@ -1,5 +1,8 @@
 <script lang="ts">
-  import type { ProviderDescriptor } from "$bindings/managedruntime";
+  import type {
+    ProviderDescriptor,
+    InstanceStatus,
+  } from "$bindings/managedruntime";
   import { localSpeechSetup } from "$lib/utils/localSpeechSetup";
   import ProviderIcon from "$lib/components/ProviderIcon.svelte";
   import Disclosure from "$lib/components/common/Disclosure.svelte";
@@ -20,6 +23,7 @@
     readiness,
     serverControls,
     providers = [],
+    instances = [],
     onManageRuntime,
     onChooseServer,
     task = "voice",
@@ -35,7 +39,8 @@
     readiness: Readiness;
     serverControls?: Snippet;
     providers?: ProviderDescriptor[];
-    onManageRuntime?: (providerID?: string) => void;
+    instances?: InstanceStatus[];
+    onManageRuntime?: (providerID?: string, instanceID?: string) => void;
     onChooseServer?: () => void;
     task?: "voice" | "file";
     embedded?: boolean;
@@ -47,7 +52,19 @@
     onDismiss: () => void;
     onOpenSettings: (section: SettingsSectionID) => void;
   } = $props();
-  const localSetup = $derived(localSpeechSetup(providers));
+  const configuredServer = $derived(
+    readiness.steps.find(
+      (step) =>
+        step.id === "server" &&
+        (readiness.connectionSelected ||
+          step.status === "complete" ||
+          step.settingsSection === "local-runtime"),
+    ),
+  );
+  const localSetup = $derived(localSpeechSetup(providers, instances));
+  const existingSetup = $derived(
+    !configuredServer ? localSetup.existing : null,
+  );
   const localRecommendation = $derived(localSetup.recommendation);
   const action = $derived(nextReadinessAction(readiness));
   const remaining = $derived(
@@ -92,7 +109,11 @@
     if (busy) return;
     if (action.kind === "complete") onComplete();
     else if (action.kind === "check") onTestConnection();
-    else if (action.kind === "settings") onOpenSettings(action.section);
+    else if (action.kind === "settings") {
+      if (action.section === "local-runtime" && onManageRuntime)
+        onManageRuntime(undefined, readiness.managedInstanceID);
+      else onOpenSettings(action.section);
+    }
   }
 </script>
 
@@ -118,18 +139,29 @@
         <div class="min-w-0 space-y-2">
           <h2 class="welcome-title">{title}</h2>
           <p class="welcome-description">
-            {task === "voice"
-              ? "Install a local speech model or connect to a transcription service."
-              : "Choose a model for transcribing audio files."}
+            {configuredServer?.settingsSection === "local-runtime" &&
+            configuredServer.status !== "complete"
+              ? "Finish setup for your selected local model."
+              : existingSetup
+                ? "Continue setting up your local runtime and model."
+                : configuredServer
+                  ? task === "voice"
+                    ? "Check your connection and recording settings."
+                    : "Check your connection before transcribing audio files."
+                  : task === "voice"
+                    ? "Install a local speech model or connect to a transcription service."
+                    : "Choose a model for transcribing audio files."}
           </p>
         </div>
       </header>
-      {#if !(onManageRuntime && action.kind === "settings" && action.step === "server")}
+      {#if !(onManageRuntime && !configuredServer && action.kind === "settings" && action.step === "server")}
         <section class="welcome-action" aria-label="Next setup step">
           <p class="content-meta" aria-live="polite">
             {readiness.canComplete
               ? "Connection checks passed."
-              : action.kind === "settings" && action.step === "server"
+              : action.kind === "settings" &&
+                  action.step === "server" &&
+                  !configuredServer
                 ? "Choose local processing or an existing server."
                 : action.kind === "check"
                   ? "Check the connection. No audio will be sent."
@@ -140,7 +172,61 @@
           </div>
         </section>
       {/if}
-      {#if onManageRuntime}
+      {#if configuredServer}
+        <section
+          class="welcome-action"
+          aria-label="Current transcription connection"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="content-section-title">Current connection and model</p>
+              <p class="content-meta mt-1 break-words">
+                {configuredServer.detail}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onclick={() =>
+                onOpenSettings(
+                  task === "voice" ? "voice-transcription" : "server",
+                )}>Change</Button
+            >
+          </div>
+        </section>
+      {/if}
+      {#if onManageRuntime && existingSetup}
+        <section
+          class="welcome-action"
+          aria-label="Continue local speech setup"
+        >
+          <p class="content-kicker">{existingSetup.context.heading}</p>
+          <h3 class="content-section-title mt-1">
+            {existingSetup.context.next}
+          </h3>
+          <p class="content-meta mt-2 break-words">
+            {existingSetup.context.model.label}: {existingSetup.context.model
+              .name}
+          </p>
+          {#if existingSetup.context.detail}<p class="content-meta mt-1">
+              {existingSetup.context.detail}
+            </p>{/if}
+          <Button
+            class="mt-3"
+            disabled={busy}
+            onclick={() =>
+              onManageRuntime?.(
+                existingSetup.provider.id,
+                existingSetup.instance.instance.id,
+              )}
+          >
+            {existingSetup.instance.status.state === "running"
+              ? "Review and use local model"
+              : "Continue local setup"}
+          </Button>
+        </section>
+      {/if}
+      {#if onManageRuntime && !configuredServer && !existingSetup}
         <section class="local-choice" aria-label="Local speech setup">
           <div class="local-heading">
             <h3 class="content-section-title">
@@ -213,7 +299,7 @@
             >{/if}
         </section>
       {/if}
-      {#if onManageRuntime && onChooseServer && localSetup.availability !== "unavailable"}
+      {#if !configuredServer && !existingSetup && onManageRuntime && onChooseServer && localSetup.availability !== "unavailable"}
         <div class="server-alternative">
           <div class="min-w-0">
             <p class="content-section-title">Connect to a service</p>
@@ -227,6 +313,23 @@
         </div>
       {/if}
       <div class="welcome-options">
+        {#if (configuredServer || existingSetup) && (onManageRuntime || onChooseServer)}
+          <Disclosure title="Other connection options">
+            <div class="flex flex-wrap gap-2 py-2">
+              {#if onManageRuntime}<Button
+                  variant="outline"
+                  disabled={busy}
+                  onclick={() => onManageRuntime?.()}
+                  >Browse local engines</Button
+                >{/if}
+              {#if onChooseServer}<Button
+                  variant="outline"
+                  disabled={busy}
+                  onclick={onChooseServer}>Use a server</Button
+                >{/if}
+            </div>
+          </Disclosure>
+        {/if}
         {#if serverControls}
           <Disclosure
             title="Connection and model"

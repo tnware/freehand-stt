@@ -118,6 +118,13 @@
       >
     </div>
   {:else}
+    {#if native.mac && (!permissions.status?.accessibility || !permissions.status?.keyboard)}
+      <p class="text-xs text-muted-foreground" role="status">
+        Recording a new shortcut needs Accessibility and Input Monitoring
+        access. Enable them in General settings. Saved Toggle and Show Freehand
+        shortcuts still work without this access.
+      </p>
+    {/if}
     <SettingsCard>
       {#if capture.policiesLoading}
         <div class="px-5 py-6 text-sm text-muted-foreground" role="status">

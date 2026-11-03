@@ -23,3 +23,14 @@ export function liveInsertionUnavailableReason(settings: Settings): string {
     return "Enable Realtime transcription in Voice settings first.";
   return "";
 }
+
+/** Describe the effective delivery mode without treating previews as final text. */
+export function realtimeDeliverySummary(settings: Settings): string {
+  if (!settings.autoInsert)
+    return "Stop to finish. The transcript stays ready for you to copy.";
+  if (settings.liveInsert && !liveInsertionUnavailableReason(settings))
+    return "Completed phrases are typed while recording. Cancel does not remove text already typed.";
+  return settings.postProcessing.enabled
+    ? "Stop to finish and clean up the transcript before delivery."
+    : "Stop to finish and deliver the transcript.";
+}
