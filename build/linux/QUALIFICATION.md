@@ -258,3 +258,51 @@ Local build and lifecycle evidence is retained under
 `upgrade-debian13.log`, `smoke-debian13.log`,
 `go-debian13.log`, `frontend-check.log`, `frontend-test.log`, `ci-tests.log`
 and `modules-verify.log`. These logs are workspace evidence, not release assets.
+
+## PR-readiness follow-up (2026-11-03)
+
+Assessed `295b909` against main `5464de0`. The actual workload selector returns
+`app=true` and `site=true`: a PR selects storage, Go, frontend, both native
+Windows architectures, macOS tests/packages, both Linux distro package/smoke
+lanes, site validation, and the final fail-closed Validation gate. This describes
+configured checks; no PR or remote CI run was created by this assessment.
+
+Additional cloud-supported evidence:
+
+- Storage generation/ownership checks and storage/guard race suites pass.
+- Pinned actionlint passes. The exact selection/PE/release-assembly test command
+  from CI passes 95/95. Site tests pass 8/8, the 57-page site builds, and shared
+  branding/GitHub Pages paths validate.
+- Native GTK Unicode Copy round-trip and XCB conflict/release/capture-cancellation
+  probes pass under private Xvfb/session D-Bus without creating a WebView. These
+  do not establish physical shortcut delivery or another application's paste.
+- Retrieved only the two pinned Linux CPU runtime archives through the inherited
+  cloud proxy; both hashes match the recipes. Supplied-archive verification,
+  installation and owned `--help` execution pass on Debian and Ubuntu. No models
+  were downloaded or loaded. The acquisition/artifact race run records 303
+  passing tests/subtests and five skips, including selected-model acceptance.
+- Extra Chromium browser fixtures finish 30/31. The failing active-dictation
+  assertion expects zero calls but observes `GetBinaryOptions:llama-cpp`;
+  mutation controls are disabled. The identical assertion fails on a disposable
+  main-source snapshot too, using the same installed test dependencies/bindings.
+  This is inherited, not evidence of an unsafe mutation. Playwright browser
+  fixtures are not part of the current automatic PR workflow.
+
+Archive retrieval is not live in-app acquisition acceptance. `releaseClient`
+and `modelClient` explicitly use `Proxy: nil`; NeMo's child environment omits
+proxy/auth configuration. This managed environment requires its inherited proxy.
+No direct-network attempt or proxy-policy workaround was made. Full in-app
+runtime/model download, interruption/recovery and selected-model behavior still
+need separate qualified network/desktop evidence and explicit model selection.
+
+The implementation remains experimental Copy-only Linux support: target capture
+and Unicode insertion return `ErrCopyRequired`; native overlay is unavailable.
+Supported Linux release assets are intentionally absent from release assembly.
+Linux package/smoke CI is nevertheless part of release-tag validation, so a
+failed Linux lane also blocks publication of the existing Windows/macOS assets.
+PR packaging calls neither Windows `package:signed` nor macOS Developer ID /
+notarization tasks; the default macOS package uses ad-hoc signing.
+Successful normal-sandbox CI execution and the documented desktop gates remain
+necessary; this assessment neither retries the denied WebKit launch nor changes
+sandboxing. Additional evidence logs use `pr-*` names under
+`/workspace/freehand-qualification/`. No production code or workflow was changed.
