@@ -486,7 +486,7 @@
                                 variant="outline"
                                 size="xs"
                                 disabled={controlsLocked}
-                                title="Deselect this runtime in Text to speech first. Disabling keeps downloaded files."
+                                title="Deselect this speech model. Downloaded files are kept."
                                 onclick={onDisableSpeech}>Disable</Button
                               >{/if}
                           </div>{/if}

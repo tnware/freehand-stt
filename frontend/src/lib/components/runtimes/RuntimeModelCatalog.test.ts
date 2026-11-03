@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "svelte/server";
-import { ProviderID, type Model } from "$bindings/managedruntime";
+import {
+  ProviderID,
+  type Model,
+  type InstanceStatus,
+} from "$bindings/managedruntime";
+import { Role, ID as CompatibilityID } from "$bindings/compatibility";
+import { ID } from "$bindings/modelprofile";
+import { settings } from "$lib/stores/session-fixtures";
 import { runtimePresentation } from "$lib/utils/managedRuntime";
 import RuntimeModelCatalog from "./RuntimeModelCatalog.svelte";
 
@@ -81,3 +88,92 @@ describe("unavailable runtime model catalog", () => {
     expect(action).not.toHaveBeenCalled();
   });
 });
+
+it.each(["stopped", "running"])(
+  "describes speech deselection accurately while %s and preserves the running guard",
+  (state) => {
+    const model: Model = {
+      id: "magpie-tts",
+      name: "Magpie",
+      description: "Speech synthesis",
+      sizeBytes: 1,
+      installed: true,
+      recommended: false,
+      realtime: false,
+      profile: ID.MagpieTTS,
+      contracts: [
+        {
+          role: Role.Speech,
+          compatibilityProfile: CompatibilityID.NeMoSpeechV1,
+          modelProfile: ID.MagpieTTS,
+          behavior: settings.modelProfiles.speech![0],
+        },
+      ],
+    };
+    const row: InstanceStatus = {
+      instance: {
+        id: "nemo",
+        name: "NeMo",
+        provider: ProviderID.NeMoSpeechCPP,
+        model: "asr",
+        speechModel: model.id,
+        autoStart: false,
+      },
+      activeModel: "",
+      status: {
+        acquisition: { phase: "", bytes: 0, totalBytes: 0 },
+        operation: { id: 0, kind: "", model: "", outcome: "", error: "" },
+        supported: true,
+        state,
+        enabled: true,
+        selectedModel: "asr",
+        selectedSpeechModel: model.id,
+        realtime: false,
+        backend: "cpu",
+        version: "fixture",
+        progress: 0,
+        phase: "",
+        error: "",
+        models: [model],
+      },
+    };
+    const action = vi.fn();
+    const html = render(RuntimeModelCatalog, {
+      props: {
+        models: [model],
+        row,
+        entry: {
+          id: ProviderID.NeMoSpeechCPP,
+          name: "NeMo",
+          version: "fixture",
+          supported: true,
+          backends: [],
+          models: [model],
+        },
+        installed: true,
+        locked: false,
+        busy: false,
+        cancelling: false,
+        view: runtimePresentation(row.status),
+        onRefresh: action,
+        onGet: action,
+        onSelect: action,
+        onRemove: action,
+        onCancel: action,
+        onDisableSpeech: action,
+      },
+    }).body;
+    const disable = (
+      html.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? []
+    ).find((button) => button.replace(/<[^>]*>/g, "").trim() === "Disable");
+    expect(disable).toBeDefined();
+    expect(disable).toContain(
+      'title="Deselect this speech model. Downloaded files are kept."',
+    );
+    expect(disable).not.toContain("Text to speech first");
+    expect(/\sdisabled(?:\s|=|$)/.test(disable!.split(">")[0])).toBe(
+      state === "running",
+    );
+    expect(action).not.toHaveBeenCalled();
+  },
+);
