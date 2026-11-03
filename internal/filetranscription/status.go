@@ -59,7 +59,12 @@ func init() {
 // real status boundary or an explicit snapshot request. Streaming deltas never
 // copy the growing transcript into FileTranscriptionStatus.
 func (s *Service) snapshotFileStatusLocked() FileTranscriptionStatus {
+	// Normalize the zero-value service state at the shared wire boundary so
+	// capability events and binding responses agree before any file is chosen.
 	status := s.fileStatus
+	if status.Phase == "" {
+		status.Phase = FileTranscriptionEmpty
+	}
 	status.Transcript = s.fileTranscript.String()
 	status.TranscriptRevision = s.fileTranscriptRevision
 	return status
@@ -86,11 +91,7 @@ func (s *Service) replaceFileTranscriptLocked(text string) {
 func (s *Service) CurrentFileTranscription() FileTranscriptionStatus {
 	s.fileMu.Lock()
 	defer s.fileMu.Unlock()
-	status := s.snapshotFileStatusLocked()
-	if status.Phase == "" {
-		status.Phase = FileTranscriptionEmpty
-	}
-	return status
+	return s.snapshotFileStatusLocked()
 }
 
 // PlaybackTranscript is an ordinary Go collaboration boundary. It keeps the
