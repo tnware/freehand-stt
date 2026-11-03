@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0](https://github.com/tnware/freehand-stt/compare/v0.1.0...v0.2.0) (2026-11-03)
+
+
+### Features
+
+* simplify model setup and runtime settings ([#98](https://github.com/tnware/freehand-stt/issues/98)) ([b31c209](https://github.com/tnware/freehand-stt/commit/b31c209bf7467b19943e0b2a49cdd51ed1358ea9))
+* **windows:** add ARM64 builds and release downloads ([#84](https://github.com/tnware/freehand-stt/issues/84)) ([ba61f44](https://github.com/tnware/freehand-stt/commit/ba61f44c65f3c99cfb894542317d93ca3ce16223))
+
+
+### Bug Fixes
+
+* **deps:** separate major dependency updates ([#89](https://github.com/tnware/freehand-stt/issues/89)) ([7c08c94](https://github.com/tnware/freehand-stt/commit/7c08c944b16bd87add7bd08cfe84892e93c22318))
+* Improve focus safety and add opt-in live phrase typing ([#99](https://github.com/tnware/freehand-stt/issues/99)) ([9ff594c](https://github.com/tnware/freehand-stt/commit/9ff594c82a8bafec75f5cb1e811eabebfd41fa88))
+* streamline runtime setup and model management ([#100](https://github.com/tnware/freehand-stt/issues/100)) ([47dbf33](https://github.com/tnware/freehand-stt/commit/47dbf33d0d6ccdafb8939095f561c67c14a7809a))
+
 ## [0.1.0](https://github.com/tnware/freehand-stt/compare/v0.1.0-alpha.6...v0.1.0) (2026-09-16)
 
 
