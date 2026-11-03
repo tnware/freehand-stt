@@ -109,7 +109,7 @@ for (const [label, base, extra] of [
   });
 }
 
-for (const label of ["manual", "release", "scheduled"]) {
+for (const label of ["manual", "release"]) {
   test(`${label} full validation overrides an unchanged baseline`, (t) => {
     const { cwd, base } = fixture(t);
     const result = runChanges(cwd, base, { CI_FORCE_FULL: "true" });
@@ -118,15 +118,15 @@ for (const label of ["manual", "release", "scheduled"]) {
   });
 }
 
-test("CI validates PRs and scheduled main snapshots without repeating every merge", () => {
+test("CI validates PRs without repeating every merge or scheduling extra runs", () => {
   const workflow = readFileSync(new URL("../ci.yml", import.meta.url), "utf8");
   const triggers = workflow.split("\npermissions:")[0];
-  for (const trigger of ["pull_request", "schedule", "workflow_dispatch", "workflow_call"]) {
+  for (const trigger of ["pull_request", "workflow_dispatch", "workflow_call"]) {
     assert.match(triggers, new RegExp(`^  ${trigger}:`, "m"));
   }
   assert.doesNotMatch(triggers, /^  push:/m);
-  assert.match(triggers, /cron: "17 5 \* \* 1"/);
-  assert.match(workflow, /CI_FORCE_FULL:.*inputs\.ref != ''.*github\.event_name == 'workflow_dispatch'.*github\.event_name == 'schedule'/);
+  assert.doesNotMatch(triggers, /^  schedule:/m);
+  assert.match(workflow, /CI_FORCE_FULL:.*inputs\.ref != ''.*github\.event_name == 'workflow_dispatch'/);
 });
 
 test("release and Pages retain main-push work independently of PR validation", () => {

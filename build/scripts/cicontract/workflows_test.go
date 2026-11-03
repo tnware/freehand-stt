@@ -54,13 +54,18 @@ func load(t *testing.T, name string) workflow {
 
 func TestValidationAlwaysReportsAndIncludesSelectedWorkloads(t *testing.T) {
 	ci := load(t, "ci")
-	for _, event := range []string{"pull_request", "push", "workflow_dispatch", "workflow_call"} {
+	for _, event := range []string{"pull_request", "workflow_dispatch", "workflow_call"} {
 		config, ok := ci.On[event]
 		if !ok {
 			t.Errorf("missing %s trigger", event)
 		}
 		if config["paths"] != nil || config["paths-ignore"] != nil {
 			t.Errorf("%s can skip required check", event)
+		}
+	}
+	for _, event := range []string{"push", "schedule"} {
+		if _, ok := ci.On[event]; ok {
+			t.Errorf("unexpected %s trigger duplicates protected PR validation", event)
 		}
 	}
 	gate := ci.Jobs["validation"]

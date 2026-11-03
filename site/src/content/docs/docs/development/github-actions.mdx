@@ -11,7 +11,7 @@ deployment.
 
 | Workflow | Starts when | Result |
 | --- | --- | --- |
-| **CI** | Every PR, weekly on `main`, and manual dispatch | Selected app/site checks and one stable **Validation** gate |
+| **CI** | Every PR and manual dispatch | Selected app/site checks and one stable **Validation** gate |
 | **Site validation** | Called by CI or Pages | A reusable site check; PRs do not deploy |
 | **Pages** | Matching changes land on `main`, or a maintainer dispatches on `main` | Publishes `site/dist` at `/freehand-stt/` |
 | **Release** | Release Please bookkeeping on `main`; full validation when a release is created | A validated tagged release with Windows and macOS artifacts |
@@ -52,7 +52,7 @@ pushes perform Release Please bookkeeping without building release artifacts.
 | Site files; root/branding README prose | No application jobs |
 | Application, build, or unknown paths | Application jobs |
 | Shared backend catalog, mark/provider assets, Go manifests, GitHub configuration | Site validation too |
-| Manual run, weekly scheduled run, release validation | Every workload |
+| Manual run, release validation | Every workload |
 
 Renames include both paths. A missing Git baseline fails closed. Pages uses
 separate concurrency from PR validation; newer pushes do not interrupt an active
@@ -83,12 +83,12 @@ This depends on the enforced branch rules above, not merely a successful check
 on an older PR revision. Pages deployment and full tagged-release validation
 remain independent and still run when needed.
 
-Every Monday at 05:17 UTC, CI selects every workload on the default branch to
-refresh trusted caches and check the integrated source. GitHub may delay
-scheduled runs. Other PRs cannot read a PR's caches, so a newly changed dependency
-or toolchain can remain cold until this run; dispatch CI on `main` when an earlier
-refresh or integrated-commit check is needed. Scheduled and manual validation do
-not publish a release or deploy Pages.
+There is no immediate rerun on the merged commit and no scheduled CI run.
+Manual dispatch remains available when an integrated-commit check is needed.
+Other PRs cannot read a PR's caches, so dependency or toolchain changes may have
+colder caches without routine main-branch builds. This affects build time, not
+which checks are required. Manual CI validation does not publish a release or
+deploy Pages.
 
 ## Toolchains and caches
 
