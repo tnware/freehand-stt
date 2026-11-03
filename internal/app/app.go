@@ -68,6 +68,9 @@ type Options struct {
 	StartupLaunch    bool
 	Release          releaseinfo.Info
 	Development      bool
+	// OnShellReady observes the renderer handshake, not successful session loading.
+	// The optional callback must be bounded and must not mutate application state.
+	OnShellReady func()
 }
 
 // App holds the assembled application. Construction is ordered so that nothing

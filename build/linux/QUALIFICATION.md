@@ -57,10 +57,32 @@ be published until the documented per-distro acceptance procedure is complete.
 
 ## Automated verification
 
-The final implementation passes `go test ./...`; focused Go race tests include
+The baseline implementation at `0f4e837` passes `go test ./...`; focused Go race tests include
 app/input, keyboard, autostart, hotkey policy, audio, managed runtime, and owned
 process lifecycle. Frontend checks report zero Svelte errors/warnings and
 64 test files / 532 tests pass. Production frontend build succeeds. Packaging,
 CI-contract, and site tests are separate from the unrun native package acceptance.
 Independent review verified monotonic shutdown cancellation and the Linux
 window-reachability paths. None of these replace the unresolved gates above.
+
+## Packaged frontend bridge smoke (pending runner execution)
+
+The Linux CI lanes now define an unprivileged, isolated Xvfb/session-D-Bus launch
+of the installed binary using normal distro WebKit helpers and sandboxing. The
+explicit `FREEHAND_LINUX_SHELL_SMOKE=1` switch emits one fixed
+`FREEHAND_FRONTEND_BRIDGE_READY_V1` line after the embedded frontend calls its
+existing ShellReady bridge. No transcript, credentials, paths, or settings are
+reported. The switch is ignored outside Linux and changes no application state.
+
+This marker proves frontend/bridge execution, not healthy session initialization:
+the existing initialization recovery paths can still lead to ShellReady. The
+harness bounds output and launch time, checks short post-marker liveness, and
+terminates its owned process group. This is not graceful-shutdown or arbitrary
+escaped-descendant acceptance. Empty private state has no configured endpoint
+or model, and the test never requests audio capture or inference.
+
+Harness unit tests, the marker/native callback race tests, and the full Go suite
+pass locally after restoring official native development dependencies. The new
+packaged launch remains unexecuted
+until a manually dispatched CI run completes; a sandbox failure must remain a
+failure, never be worked around with sandbox-disabling options.

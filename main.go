@@ -62,6 +62,7 @@ func main() {
 		StartupLaunch:    app.StartupRequested(os.Args),
 		Release:          release,
 		Development:      buildinfo.Development,
+		OnShellReady:     shellReadyMarker(runtime.GOOS, os.Getenv("FREEHAND_LINUX_SHELL_SMOKE"), os.Stdout),
 	})
 	if err != nil {
 		// The Wails logger does not exist when construction fails. Keep this one

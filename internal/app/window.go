@@ -309,7 +309,12 @@ func (a *App) requestShellClose() {
 // runtime sends that notification during module evaluation and native emit
 // queues its callback asynchronously. It can run after this explicit handshake.
 // A reload reset requires a renderer-generation protocol, not that event.
-func (a *App) shellReady() { a.shell.ready(a.emitShell) }
+func (a *App) shellReady() {
+	a.shell.ready(a.emitShell)
+	if a.opts.OnShellReady != nil {
+		a.opts.OnShellReady()
+	}
+}
 
 func (w *windowController) current() application.Window {
 	w.mu.RLock()
