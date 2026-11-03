@@ -10,12 +10,23 @@ import (
 	"testing"
 )
 
-func startupFixture(t *testing.T) linuxStartup {
+func privateStartupHome(t *testing.T) string {
 	t.Helper()
 	home, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
+	// TempDir's numbered child can inherit a permissive process umask in
+	// containers. Model a private home for the ownership checks under test.
+	if err := os.Chmod(home, 0700); err != nil {
+		t.Fatal(err)
+	}
+	return home
+}
+
+func startupFixture(t *testing.T) linuxStartup {
+	t.Helper()
+	home := privateStartupHome(t)
 	executable := filepath.Join(home, "Free & Hand", "freehand")
 	if err := os.MkdirAll(filepath.Dir(executable), 0700); err != nil {
 		t.Fatal(err)
@@ -224,7 +235,7 @@ func TestLinuxStartupRejectsDifferentExecutable(t *testing.T) {
 }
 
 func TestLinuxStartupXDGPaths(t *testing.T) {
-	home := t.TempDir()
+	home := privateStartupHome(t)
 	t.Setenv("HOME", home)
 	for _, tc := range []struct{ xdg, want string }{
 		{"", filepath.Join(home, ".config")},

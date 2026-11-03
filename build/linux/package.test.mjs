@@ -55,13 +55,18 @@ test('native fixture package has derived metadata, root-owned payload and matchi
   writeFileSync(join(root, 'build/appicon.png'), 'Fixture icon');
   copyFileSync(fileURLToPath(new URL('./freehand.desktop', import.meta.url)), join(root, 'build/linux/freehand.desktop'));
   execFileSync('cc', ['-x', 'c', '-', '-o', join(root, 'bin/freehand')], { input: '#include <stdio.h>\nint main(void) { puts("fixture"); return 0; }\n' });
-  const artifact = buildPackage(root);
+  const previousUmask = process.umask(0o077);
+  let artifact;
+  try { artifact = buildPackage(root); } finally { process.umask(previousUmask); }
   assert.match(artifact, /freehand_1\.2\.3~alpha\.4-1_(debian13|ubuntu24\.04)_amd64\.deb$/);
   const control = execFileSync('dpkg-deb', ['--field', artifact], { encoding: 'utf8' });
   for (const field of ['Version: 1.2.3~alpha.4-1', 'Architecture: amd64', 'libgtk-4-1', 'libwebkitgtk-6.0-4', 'libasound2t64', 'libpulse0', 'curl', 'ca-certificates', 'libgomp1', 'libstdc++6', 'libssl3t64']) assert.ok(control.includes(field), field);
   assert.match(control, /libc6 \(>= /);
   const listing = execFileSync('dpkg-deb', ['--contents', artifact], { encoding: 'utf8' });
   assert.match(listing, /-rwxr-xr-x root\/root.*\.\/usr\/bin\/freehand/);
+  for (const line of listing.split('\n').filter(line => line.startsWith('d'))) {
+    assert.match(line, /^drwxr-xr-x root\/root/);
+  }
   const extract = join(root, 'extracted');
   execFileSync('dpkg-deb', ['--extract', artifact, extract]);
   assert.deepEqual(readFileSync(join(extract, 'usr/bin/freehand')), readFileSync(join(root, 'bin/freehand')));

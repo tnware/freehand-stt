@@ -1,7 +1,7 @@
 // Experimental distro-specific packages. This command never publishes a release.
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -74,6 +74,16 @@ export function buildPackage(root = process.cwd()) {
     mkdirSync(join(stage, 'DEBIAN'));
     writeFileSync(join(stage, 'DEBIAN/control'), `Package: freehand\nVersion: ${version}-1\nArchitecture: amd64\nSection: sound\nPriority: optional\nMaintainer: tnware <noreply@github.com>\nHomepage: https://github.com/tnware/freehand-stt\nDepends: ${dependencies}\nDescription: Experimental Freehand speech client\n Transcribe and generate speech using explicitly configured services.\n Linux qualification build with explicit Copy delivery.\n`);
     const artifact = join(root, 'bin', `freehand_${version}-1_${distro}_amd64.deb`);
+    // Build hosts may use a private umask. Installed directories must still be
+    // traversable by desktop users, and dpkg requires readable control metadata.
+    const normalizeDirectories = directory => {
+      chmodSync(directory, 0o755);
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        if (entry.isDirectory()) normalizeDirectories(join(directory, entry.name));
+      }
+    };
+    normalizeDirectories(stage);
+    chmodSync(join(stage, 'DEBIAN/control'), 0o644);
     run('dpkg-deb', ['--root-owner-group', '--build', stage, artifact]);
     if (run('dpkg-deb', ['--field', artifact, 'Version']).trim() !== `${version}-1`) throw new Error('Package version mismatch');
     if (run('dpkg-deb', ['--field', artifact, 'Architecture']).trim() !== 'amd64') throw new Error('Package architecture mismatch');
