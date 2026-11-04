@@ -21,6 +21,23 @@ test('rejects an executable that exits without frontend readiness', async () => 
 test('rejects readiness immediately followed by a crash', async () => {
   await assert.rejects(probe(`console.log('${readyMarker}'); process.exit(1)`), /exited/);
 });
+test('classifies split namespace errors without exposing app output', async () => {
+  const secret = 'PRIVATE_FIXTURE_DRAFT_DO_NOT_LOG';
+  await assert.rejects(probe(`
+    process.stderr.write('bwrap: No permissions to create a new ');
+    setTimeout(() => {
+      process.stderr.write('namespace ${secret}\\n');
+      process.stderr.write('native stack\\n'.repeat(1500));
+      process.exit(2);
+    }, 15);
+  `), error => {
+    assert.match(error.message, /launch=namespace_denied/);
+    assert.match(error.message, /exit=code_2/);
+    assert.equal(error.message.includes(secret), false);
+    assert.equal(error.message.includes('native stack'), false);
+    return true;
+  });
+});
 test('bounds silent hung launches', async () => {
   await assert.rejects(probe('setInterval(()=>{},1000)', { timeoutMs: 80 }), /timed out/);
 });

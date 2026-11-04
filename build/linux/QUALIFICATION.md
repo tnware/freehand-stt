@@ -364,3 +364,21 @@ Evidence uses `overlay-*` and `ci-git-ownership.log` under
 fixture status. Normal desktop/compositor/scaling, physical audio/keyboard,
 Secret Service, login, Wayland and live model acquisition still need acceptance.
 No model load, sandbox relaxation, merge or release was performed.
+
+Run `41750212042` at `782cd33` confirms the CI fixes: storage, Windows
+amd64/ARM64, macOS, Go, frontend and site all pass. Both Linux lanes build and
+install their packages, pass the unprivileged native-overlay probes, and remove
+the package successfully. Their sole failure is the installed frontend smoke:
+`Application exited before readiness stability check`. The original harness
+discards child stderr, so that log alone does not prove the exit's underlying
+cause or a namespace denial on the GitHub runner.
+
+The harness now preserves only bounded fixed failure classifications and the
+OS exit status, never raw child output. Tests cover a split namespace-error line
+followed by a longer native trace and a synthetic private draft, proving the
+classification survives while neither private content nor trace is exposed.
+Package/harness tests pass 15/15 on both distros; launch/sandbox settings and
+readiness requirements are unchanged. This enables one diagnostic CI attempt
+on the otherwise unexplained GitHub failure without retrying the denied cloud
+operation. A confirmed runner namespace denial must remain blocked rather than
+being retried or bypassed.

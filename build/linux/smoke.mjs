@@ -23,6 +23,7 @@ export function qualifyShell(binary, args = [], options = {}) {
   return new Promise((resolveResult, reject) => {
     const child = spawn(binary, args, { env: smokeEnvironment(options.env ?? process.env), detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let bytes = 0, pending = '', ready = false, finished = false, settle;
+    let stderrTail = '', launchIssue = 'unknown', exitStatus = 'unknown';
     const killGroup = signal => {
       if (!child.pid) return;
       try { process.kill(-child.pid, signal); } catch (error) { if (error.code !== 'ESRCH') throw error; }
@@ -37,17 +38,41 @@ export function qualifyShell(binary, args = [], options = {}) {
       // is bounded test cleanup, not proof of graceful application shutdown.
       setTimeout(() => {
         try { killGroup('SIGKILL'); } catch (cause) { error ??= cause; }
-        if (error) reject(error);
+        if (error) {
+          // Read only fixed classifications, after pipes have had cleanup time
+          // to drain. Never publish raw app output, paths, settings or drafts.
+          error.message += ` [launch=${launchIssue}, exit=${exitStatus}]`;
+          stderrTail = '';
+          reject(error);
+        }
         else resolveResult({ frontendBridgeReady: true, cleanup: 'owned-process-group-terminated' });
       }, cleanupMs);
     }
     child.on('error', error => finish(error));
-    child.on('exit', () => { if (!finished) finish(new Error('Application exited before readiness stability check')); });
+    child.on('exit', (code, signal) => {
+      exitStatus = signal ?? (Number.isInteger(code) ? `code_${code}` : 'unknown');
+      if (!finished) finish(new Error('Application exited before readiness stability check'));
+    });
     function count(chunk) {
       bytes += chunk.length;
       if (bytes > maxOutput) finish(new Error('Application output exceeded the bounded smoke budget'));
     }
-    child.stderr.on('data', count);
+    child.stderr.on('data', chunk => {
+      count(chunk);
+      if (bytes > maxOutput) return;
+      // Keep a small rolling match window, not the application log. A detected
+      // namespace failure stays classified even if a later native stack trace
+      // is longer than this window. This changes no launch or sandbox setting.
+      const sample = stderrTail + chunk.toString('utf8');
+      stderrTail = sample.slice(-2048);
+      if (/bwrap:[^\n]*(?:No permissions to create a new namespace|Creating new namespace failed: Operation not permitted)/i.test(sample)) {
+        launchIssue = 'namespace_denied';
+      } else if (launchIssue === 'unknown' && /error while loading shared libraries:/i.test(sample)) {
+        launchIssue = 'native_library_unavailable';
+      } else if (launchIssue === 'unknown' && /cannot open display:|could not connect to display/i.test(sample)) {
+        launchIssue = 'display_unavailable';
+      }
+    });
     child.stdout.on('data', chunk => {
       count(chunk);
       if (finished) return;
