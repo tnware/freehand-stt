@@ -328,7 +328,7 @@ jobs:
             bin/freehand-darwin-amd64.zip
 
   linux:
-    name: Experimental Linux ${{ matrix.distro }} package
+    name: Experimental Linux ${{ matrix.distro }} (${{ matrix.coverage }})
     needs: changes
     if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-24.04
@@ -336,10 +336,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Keep Debian package/native-adapter coverage without retrying a
+          # WebKit namespace operation denied by the standard container.
           - distro: debian13
             image: debian:13
+            sudo: ''
+            cache_scope: linux-debian13
+            native_frontend: false
+            coverage: package and native adapters
+          # Empty image means no job container: use the standard Ubuntu VM,
+          # its system helpers, and its normal kernel/AppArmor policy.
           - distro: ubuntu24.04
-            image: ubuntu:24.04
+            image: ''
+            sudo: sudo
+            cache_scope: linux-ubuntu24.04-native
+            native_frontend: true
+            coverage: package and frontend
     container: ${{ matrix.image }}
     timeout-minutes: 30
     env:
@@ -347,14 +359,14 @@ jobs:
     steps:
       - name: Install native build and package dependencies
         run: |
-          apt-get update
-          apt-get install --yes --no-install-recommends ca-certificates git build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev dpkg-dev desktop-file-utils xvfb xauth dbus-daemon fonts-dejavu-core libegl1 libgl1-mesa-dri passwd util-linux
+          ${{ matrix.sudo }} apt-get update
+          ${{ matrix.sudo }} apt-get install --yes --no-install-recommends ca-certificates git build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev dpkg-dev desktop-file-utils xvfb xauth dbus-daemon fonts-dejavu-core libegl1 libgl1-mesa-dri passwd util-linux
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.changes.outputs.ref }}
       - uses: ./.github/actions/setup-go
         with:
-          scope: linux-${{ matrix.distro }}
+          scope: ${{ matrix.cache_scope }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
@@ -381,7 +393,7 @@ jobs:
         run: |
           set -euo pipefail
           (cd bin && sha256sum --check --strict *.deb.sha256)
-          apt-get install --yes --no-install-recommends ./bin/*_${{ matrix.distro }}_amd64.deb
+          ${{ matrix.sudo }} apt-get install --yes --no-install-recommends ./bin/*_${{ matrix.distro }}_amd64.deb
           test -x /usr/bin/freehand
           desktop-file-validate /usr/share/applications/freehand.desktop
           ldd /usr/bin/freehand > /tmp/freehand-libraries.txt
@@ -392,47 +404,51 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          useradd --no-create-home --shell /usr/sbin/nologin freehand-qa
+          ${{ matrix.sudo }} useradd --no-create-home --shell /usr/sbin/nologin freehand-qa
           qa_home="$(mktemp -d /tmp/freehand-overlay-XXXXXX)"
-          trap 'rm -rf "$qa_home"' EXIT
+          trap '${{ matrix.sudo }} rm -rf "$qa_home"' EXIT
           go test -c -race -o "$qa_home/overlay.test" ./internal/platform/overlay
+          cp build/linux/ci-session.sh "$qa_home/session.sh"
+          cp internal/platform/overlay/overlay_linux.{c,h} "$qa_home/"
+          mkdir -p "$qa_home/testdata"
+          cp internal/platform/overlay/testdata/overlay_probe_linux.c "$qa_home/testdata/"
           mkdir -p "$qa_home"/{config,cache,data,state,runtime}
           chmod 700 "$qa_home/runtime"
-          chown -R freehand-qa:freehand-qa "$qa_home"
-          cd internal/platform/overlay
-          runuser -u freehand-qa -- env -i \
+          ${{ matrix.sudo }} chown -R freehand-qa:freehand-qa "$qa_home"
+          ${{ matrix.sudo }} runuser -u freehand-qa -- env -i \
             PATH=/usr/bin:/bin HOME="$qa_home" LANG=C.UTF-8 \
             XDG_CONFIG_HOME="$qa_home/config" XDG_CACHE_HOME="$qa_home/cache" \
             XDG_DATA_HOME="$qa_home/data" XDG_STATE_HOME="$qa_home/state" \
             XDG_RUNTIME_DIR="$qa_home/runtime" XDG_SESSION_TYPE=x11 GDK_BACKEND=x11 \
             FREEHAND_X11_OVERLAY_ACCEPTANCE=1 \
-            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24 -nolisten tcp -noreset' \
-            "$qa_home/overlay.test" -test.v -test.run '^TestLinuxOverlayNative'
-      - name: Qualify installed frontend bridge without inference
+            sh "$qa_home/session.sh" "$qa_home/overlay.test" -test.v -test.run '^TestLinuxOverlayNative'
+      - name: Qualify installed Ubuntu frontend bridge without inference
+        if: matrix.native_frontend
         shell: bash
         run: |
           set -euo pipefail
           qa_home="$(mktemp -d /tmp/freehand-shell-XXXXXX)"
-          trap 'rm -rf "$qa_home"' EXIT
+          trap '${{ matrix.sudo }} rm -rf "$qa_home"' EXIT
+          cp build/linux/ci-session.sh "$qa_home/session.sh"
+          cp build/linux/smoke.mjs "$qa_home/smoke.mjs"
           mkdir -p "$qa_home"/{config,cache,data,state,runtime}
           chmod 700 "$qa_home/runtime"
-          chown -R freehand-qa:freehand-qa "$qa_home"
+          ${{ matrix.sudo }} chown -R freehand-qa:freehand-qa "$qa_home"
           # Use an unprivileged account, normal distro WebKit helpers and the
           # normal sandbox. Never turn off sandboxing to make this check pass.
-          runuser -u freehand-qa -- env -i \
+          ${{ matrix.sudo }} runuser -u freehand-qa -- env -i \
             PATH=/usr/bin:/bin HOME="$qa_home" LANG=C.UTF-8 \
             XDG_CONFIG_HOME="$qa_home/config" XDG_CACHE_HOME="$qa_home/cache" \
             XDG_DATA_HOME="$qa_home/data" XDG_STATE_HOME="$qa_home/state" \
             XDG_RUNTIME_DIR="$qa_home/runtime" XDG_SESSION_TYPE=x11 GDK_BACKEND=x11 \
-            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24 -nolisten tcp -noreset' \
-            "$(command -v node)" build/linux/smoke.mjs /usr/bin/freehand
+            sh "$qa_home/session.sh" "$(command -v node)" "$qa_home/smoke.mjs" /usr/bin/freehand
       - name: Validate package removal
         if: always()
         shell: bash
         run: |
           set -euo pipefail
           if dpkg-query --show --showformat='${Status}' freehand 2>/dev/null | grep -q 'install ok installed'; then
-            apt-get remove --yes freehand
+            ${{ matrix.sudo }} apt-get remove --yes freehand
           fi
           test ! -e /usr/bin/freehand
           # No model downloads or inference. Bridge readiness is not hardware acceptance.

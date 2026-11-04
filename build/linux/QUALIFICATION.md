@@ -382,3 +382,34 @@ readiness requirements are unchanged. This enables one diagnostic CI attempt
 on the otherwise unexplained GitHub failure without retrying the denied cloud
 operation. A confirmed runner namespace denial must remain blocked rather than
 being retried or bypassed.
+
+
+## Standard-runner frontend qualification (2026-11-04)
+
+Run `41751143212` at `b17129c` passes all non-Linux workload jobs. Both Linux
+packages build/install, pass unprivileged native-overlay tests, and remove
+successfully. Debian's installed frontend exits with
+`launch=namespace_denied, exit=code_2`; Ubuntu's exits with
+`launch=unknown, exit=code_2`. The retained Ubuntu log has no raw child stderr,
+so the original launch cause cannot be established from that evidence.
+
+The Debian container frontend operation remains blocked and is not retried.
+Its required job retains package and native-adapter coverage. Ubuntu's frontend
+qualification moves from a job container to GitHub's standard `ubuntu-24.04`
+VM, using normal distro WebKit helpers and unchanged kernel/AppArmor policy.
+GitHub's runner treats an empty matrix container image as no job container.
+The VM has a separate native build-cache scope. Private fixture sources and
+session helper are copied into the unprivileged test account's home; the test
+never depends on that account traversing the runner's home/checkout.
+
+No privileged container, sandbox switch, seccomp/AppArmor change, sysctl, or new
+post-merge workflow is introduced. Both distro jobs remain required by the
+existing aggregate gate. Debian GUI acceptance and all documented native desktop
+gates remain unqualified. The new Ubuntu VM attempt is pending; a denial there
+must be reported without weakening the host or WebKit sandbox.
+
+Local verification of the runner change: 95 workflow/release contract tests,
+actionlint, the 57-page site build, and `git diff --check` pass. The private-HOME
+session arrangement passes native overlay race/probes on both distro images,
+including a fixture checking private working directory, Xvfb and session D-Bus.
+These tests launch no WebView and do not retry the denied cloud operation.

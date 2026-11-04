@@ -192,8 +192,19 @@ test('Linux qualification builds separate distro packages without widening the r
   const ci = readFileSync(new URL('../ci.yml', import.meta.url), 'utf8');
   const linux = ci.split('\n  linux:\n')[1]?.split('\n  site:\n')[0];
   assert.ok(linux);
-  for (const text of ['image: debian:13', 'image: ubuntu:24.04', 'dpkg-dev desktop-file-utils', 'node --test build/linux/package.test.mjs', 'wails3 task package ARCH=amd64 CI=true', 'apt-get install --yes --no-install-recommends ./bin/', 'apt-get remove --yes freehand', 'if-no-files-found: error']) assert.ok(linux.includes(text), text);
+  for (const text of ['image: debian:13', 'cache_scope: linux-ubuntu24.04-native', 'dpkg-dev desktop-file-utils', 'node --test build/linux/package.test.mjs', 'wails3 task package ARCH=amd64 CI=true', 'apt-get install --yes --no-install-recommends ./bin/', 'apt-get remove --yes freehand', 'if-no-files-found: error']) assert.ok(linux.includes(text), text);
   assert.match(linux, /name: freehand-linux-.*-amd64-experimental/);
+  // Frontend qualification runs in a standard VM, never a container with
+  // relaxed security. Debian package/adapter coverage must not imply a GUI pass.
+  const debian = linux.split('- distro: debian13')[1].split('- distro: ubuntu24.04')[0];
+  const ubuntu = linux.split('- distro: ubuntu24.04')[1].split('    container:')[0];
+  assert.match(debian, /image: debian:13/);
+  assert.match(debian, /native_frontend: false/);
+  assert.match(ubuntu, /image: ''/);
+  assert.match(ubuntu, /native_frontend: true/);
+  assert.match(linux, /runs-on: ubuntu-24\.04/);
+  assert.match(linux, /Qualify installed Ubuntu frontend bridge without inference\n        if: matrix\.native_frontend/);
+  assert.doesNotMatch(linux, /--privileged|seccomp=unconfined|apparmor=unconfined|WEBKIT_DISABLE_SANDBOX|--no-sandbox|sysctl/);
   assert.match(ci, /needs: \[changes, storage, go, frontend, windows, macos, linux, site\]/);
   const release = readFileSync(new URL('../release.yml', import.meta.url), 'utf8');
   assert.doesNotMatch(release, /freehand-linux|\.deb/);

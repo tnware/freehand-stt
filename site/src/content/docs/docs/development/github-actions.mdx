@@ -142,10 +142,17 @@ credentials. See [SQLite storage](../storage/) for the matching local commands.
 
 ## Experimental Linux packaging
 
-The application workload also builds amd64 `.deb` packages separately inside
-Debian 13 and Ubuntu 24.04 containers. Each job validates package metadata,
-installs dependencies and the package, checks its desktop file and shared-library
-resolution, and removes the package. The aggregate gate requires both jobs.
-These checks do not launch the desktop application or download/invoke models.
-They do not establish microphone, desktop-session, or native runtime acceptance.
-Linux artifacts remain separate from the published release asset set.
+The application workload builds amd64 `.deb` packages separately on Debian 13
+in a container and on a standard Ubuntu 24.04 VM. Both jobs validate package
+metadata, installation, desktop registration, shared-library resolution, removal,
+and passive X11 overlay fixtures in an isolated Xvfb/session-D-Bus session.
+The Ubuntu VM also runs a required unprivileged installed-application smoke with
+the normal WebKit sandbox and waits for the embedded frontend/bridge marker.
+The Debian container does not qualify the GUI: its namespace policy prevents the
+normal WebKit sandbox from starting. No job relaxes sandbox or host policy.
+
+The aggregate gate requires both jobs. Frontend readiness is separate from
+microphone, keyboard, Secret Service, compositor, or managed-runtime acceptance;
+complete the [native Linux procedure](../linux/) on each advertised distro.
+CI never downloads or invokes models. Linux artifacts remain experimental and
+separate from the published release asset set.

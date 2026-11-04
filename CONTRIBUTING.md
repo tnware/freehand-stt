@@ -91,7 +91,10 @@ opt-in lifecycle, press/release, repeat, and capture acceptance. Successful
 registration or a headless build does not qualify keyboard event delivery.
 See [Linux qualification](site/src/content/docs/docs/development/linux.mdx)
 for the capability boundary and acceptance procedure. Linux CI artifacts are
-experimental and excluded from release publication.
+experimental and excluded from release publication. The PR gate builds Debian
+in a container and Ubuntu on a standard VM; both run passive-overlay fixtures.
+Only Ubuntu runs the normal-sandbox installed-frontend smoke. Debian GUI and
+full desktop acceptance remain separate qualification requirements.
 
 ## Validation
 
