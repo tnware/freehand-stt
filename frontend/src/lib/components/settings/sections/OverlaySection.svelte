@@ -100,7 +100,9 @@
       compact
       controlID="overlay-enabled"
       title="Show status overlay"
-      description="Status above other apps. Preview unsaved changes without recording."
+      description={native.linux
+        ? "Passive status on a local X11 desktop. Wayland and XWayland are unavailable. Preview without recording."
+        : "Status above other apps. Preview unsaved changes without recording."}
     >
       {#snippet control()}
         <div class="flex items-center gap-3">
@@ -209,7 +211,9 @@
     <SettingRow
       compact
       title="Surface"
-      description="Choose a glass, solid or minimal background."
+      description={native.linux
+        ? "Choose a translucent, solid or minimal background. X11 glass uses transparency without blur."
+        : "Choose a glass, solid or minimal background."}
     >
       <ToggleGroup.Root
         layout="segments"
@@ -293,7 +297,9 @@
     <SettingRow
       compact
       title="Motion"
-      description={`Reduce animation or follow your ${native.name} preference.`}
+      description={native.linux
+        ? "Reduce animation or use the desktop preference available when the overlay starts. Missing preferences use reduced motion."
+        : `Reduce animation or follow your ${native.name} preference.`}
     >
       <ToggleGroup.Root
         class="grid w-full grid-cols-2 rounded-md border border-hairline bg-transparent p-0.5 [&>button]:min-w-0 [&>button]:whitespace-normal [&>button]:px-1 [&>button]:text-xs"
@@ -336,9 +342,11 @@
     <SettingRow
       compact
       title="Opacity"
-      description={native.mac
-        ? "Adjust transparency. macOS Reduce Transparency keeps full opacity."
-        : "Adjust transparency. Windows high contrast keeps full opacity."}
+      description={native.linux
+        ? "Transparency requires an X11 compositor. Without one the overlay stays opaque."
+        : native.mac
+          ? "Adjust transparency. macOS Reduce Transparency keeps full opacity."
+          : "Adjust transparency. Windows high contrast keeps full opacity."}
     >
       {#snippet control()}<Badge variant="secondary"
           >{settings.overlayOpacityPercent}%</Badge

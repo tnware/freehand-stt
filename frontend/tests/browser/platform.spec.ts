@@ -60,3 +60,40 @@ test("Windows general settings retain their native wording and Mica control", as
     page.getByText("macOS permissions", { exact: true }),
   ).toHaveCount(0);
 });
+
+test("Linux keeps delivery Copy-only and explains its passive X11 overlay", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/app/?platform=linux");
+  await openSection(page, "general");
+  await expect(
+    page.getByText(
+      "Linux uses explicit Copy. Automatic insertion is unavailable on X11 and Wayland in this build.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Direct input", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("switch", { name: "Use Windows Mica backdrop" }),
+  ).toHaveCount(0);
+  await openSection(page, "overlay");
+  await expect(
+    page.getByText(
+      "Passive status on a local X11 desktop. Wayland and XWayland are unavailable. Preview without recording.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Preview overlay", exact: true }),
+  ).toBeEnabled();
+  await page
+    .locator("summary")
+    .filter({ hasText: "Appearance and behavior" })
+    .click();
+  await expect(
+    page.getByText(
+      "Transparency requires an X11 compositor. Without one the overlay stays opaque.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+});

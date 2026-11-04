@@ -74,6 +74,10 @@ jobs:
           fi
           git diff --exit-code -- internal/storage/dbgen
           test -z "$(git ls-files --others --exclude-standard -- internal/storage/dbgen)"
+      - name: Install native dependencies required by storage integration fixtures
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev
       - name: Test storage and contract guards
         run: go test -race ./internal/storage ./build/scripts/storage
 
@@ -93,7 +97,7 @@ jobs:
       - name: Install Wails Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev
+          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev
       - name: Prepare embedded frontend placeholder
         run: mkdir -p frontend/dist && printf '<!doctype html><title>CI compile placeholder</title>' > frontend/dist/index.html
       - name: Verify branding and prepare release metadata
@@ -126,7 +130,7 @@ jobs:
       - name: Install Wails Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev
+          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev
       - name: Install pinned Wails CLI
         shell: bash
         run: |
@@ -344,7 +348,7 @@ jobs:
       - name: Install native build and package dependencies
         run: |
           apt-get update
-          apt-get install --yes --no-install-recommends ca-certificates git build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev dpkg-dev desktop-file-utils xvfb xauth dbus-daemon fonts-dejavu-core libegl1 libgl1-mesa-dri passwd util-linux
+          apt-get install --yes --no-install-recommends ca-certificates git build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev dpkg-dev desktop-file-utils xvfb xauth dbus-daemon fonts-dejavu-core libegl1 libgl1-mesa-dri passwd util-linux
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.changes.outputs.ref }}
@@ -367,7 +371,11 @@ jobs:
           fi
           node --test build/linux/package.test.mjs build/linux/smoke.test.mjs
           wails3 task package ARCH=amd64 CI=true
-          git diff --exit-code -- go.mod go.sum
+          # Container checkout files are owned by the host runner UID. Scope
+          # Git trust to this exact checkout; otherwise diff can fall back to
+          # no-index mode and compare go.mod with go.sum instead of HEAD.
+          test "$(git -c safe.directory="$GITHUB_WORKSPACE" -C "$GITHUB_WORKSPACE" rev-parse --is-inside-work-tree)" = true
+          git -c safe.directory="$GITHUB_WORKSPACE" -C "$GITHUB_WORKSPACE" diff --exit-code -- go.mod go.sum
       - name: Validate package installation
         shell: bash
         run: |
@@ -380,11 +388,30 @@ jobs:
           cat /tmp/freehand-libraries.txt
           ! grep -q 'not found' /tmp/freehand-libraries.txt
           dpkg-query --show freehand
-      - name: Qualify installed frontend bridge without inference
+      - name: Qualify passive X11 overlay without a WebView
         shell: bash
         run: |
           set -euo pipefail
           useradd --no-create-home --shell /usr/sbin/nologin freehand-qa
+          qa_home="$(mktemp -d /tmp/freehand-overlay-XXXXXX)"
+          trap 'rm -rf "$qa_home"' EXIT
+          go test -c -race -o "$qa_home/overlay.test" ./internal/platform/overlay
+          mkdir -p "$qa_home"/{config,cache,data,state,runtime}
+          chmod 700 "$qa_home/runtime"
+          chown -R freehand-qa:freehand-qa "$qa_home"
+          cd internal/platform/overlay
+          runuser -u freehand-qa -- env -i \
+            PATH=/usr/bin:/bin HOME="$qa_home" LANG=C.UTF-8 \
+            XDG_CONFIG_HOME="$qa_home/config" XDG_CACHE_HOME="$qa_home/cache" \
+            XDG_DATA_HOME="$qa_home/data" XDG_STATE_HOME="$qa_home/state" \
+            XDG_RUNTIME_DIR="$qa_home/runtime" XDG_SESSION_TYPE=x11 GDK_BACKEND=x11 \
+            FREEHAND_X11_OVERLAY_ACCEPTANCE=1 \
+            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24 -nolisten tcp -noreset' \
+            "$qa_home/overlay.test" -test.v -test.run '^TestLinuxOverlayNative'
+      - name: Qualify installed frontend bridge without inference
+        shell: bash
+        run: |
+          set -euo pipefail
           qa_home="$(mktemp -d /tmp/freehand-shell-XXXXXX)"
           trap 'rm -rf "$qa_home"' EXIT
           mkdir -p "$qa_home"/{config,cache,data,state,runtime}
@@ -397,14 +424,16 @@ jobs:
             XDG_CONFIG_HOME="$qa_home/config" XDG_CACHE_HOME="$qa_home/cache" \
             XDG_DATA_HOME="$qa_home/data" XDG_STATE_HOME="$qa_home/state" \
             XDG_RUNTIME_DIR="$qa_home/runtime" XDG_SESSION_TYPE=x11 GDK_BACKEND=x11 \
-            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24 -nolisten tcp' \
+            dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24 -nolisten tcp -noreset' \
             "$(command -v node)" build/linux/smoke.mjs /usr/bin/freehand
       - name: Validate package removal
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          apt-get remove --yes freehand
+          if dpkg-query --show --showformat='${Status}' freehand 2>/dev/null | grep -q 'install ok installed'; then
+            apt-get remove --yes freehand
+          fi
           test ! -e /usr/bin/freehand
           # No model downloads or inference. Bridge readiness is not hardware acceptance.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

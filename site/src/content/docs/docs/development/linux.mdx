@@ -48,8 +48,16 @@ use the system package manager, not the Windows/macOS update flow.
   replaced or configured automatically. Credentials must never fall back to
   plaintext settings when this service is unavailable.
 - Transcripts remain available for **Copy**. Linux does not provide focus-safe
-  automatic insertion or the native overlay. Workspace recording controls remain
-  available independently of global shortcuts.
+  automatic insertion. Workspace recording controls remain available independently
+  of global shortcuts.
+- On a local X11 desktop, the native status overlay shows recording, processing,
+  Copy recovery and optional bounded captions without taking focus or intercepting
+  clicks. Use **Settings > Overlay > Preview overlay** to check it without
+  recording. Wayland and XWayland overlays are unavailable. Shape 1.1 and RandR
+  are required. Transparency needs a compositor; otherwise the surface is opaque.
+  Glass uses translucency without blur. GNOME motion/high-contrast preferences
+  are read when the native overlay starts; unknown motion preferences use reduced
+  animation. Use **Reduced** to disable decorative motion explicitly.
 - Native X11 Toggle/Show, primary-key hold-to-talk, and explicit shortcut capture
   are implemented experimentally. Actual press/release, repeat, and recorded-chord
   behavior still require desktop qualification. Registration/teardown acceptance
@@ -78,7 +86,10 @@ as proof of the complete desktop workflow.
    and recover from unavailable audio. Verify playback and cancellation with the
    intended output device. Keep audio temporary and history disabled by default.
 3. Test explicit Copy and confirm automatic insertion cannot be enabled or
-   triggered. Verify no native overlay is advertised. On X11, qualify keyboard
+   triggered. On X11, preview each overlay layout/anchor and confirm focus and
+   pointer clicks remain with the original app; test hide, cancellation, Quit,
+   compositor changes, monitor changes and scaling. The overlay must not appear
+   under Wayland/XWayland. On X11, qualify keyboard
    event delivery using the probes below, including hold cancellation and repeat
    suppression. On Wayland, verify hold/capture are unavailable and test the
    compositor's portal approval and Toggle/Show behavior independently.

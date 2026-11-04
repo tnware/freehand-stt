@@ -6,10 +6,12 @@ extracted from signed official Debian packages into a private workspace prefix.
 No system services, security settings, keyboard maps, or user machine were changed.
 The managed-cloud follow-up below records the later environment separately.
 
-Latest result: native Debian 13 and Ubuntu 24.04 packages build, install,
-reinstall, replace a versioned fixture and remove successfully. The installed
-Debian app still fails WebKit sandbox namespace creation before frontend
-readiness. The final follow-up below contains the current evidence and limits.
+Latest result (2026-11-04): native Debian 13 and Ubuntu 24.04 packages build,
+install, reinstall, replace a versioned fixture and remove successfully. A passive
+X11 status overlay is now implemented and passes isolated native tests on both
+distros. Automatic insertion remains unavailable. The cloud's installed-app
+WebKit namespace denial has not been retried. Later records below supersede the
+earlier overlay implementation status and retain the separate desktop gates.
 
 ## Established
 
@@ -306,3 +308,59 @@ Successful normal-sandbox CI execution and the documented desktop gates remain
 necessary; this assessment neither retries the denied WebKit launch nor changes
 sandboxing. Additional evidence logs use `pr-*` names under
 `/workspace/freehand-qualification/`. No production code or workflow was changed.
+
+## Passive X11 overlay and first PR checks (2026-11-04)
+
+The insertion investigation still lacks a proven native-window-to-accessibility
+mapping for an addressed Unicode transport. Process identity alone does not
+distinguish two windows in one app. No field-identity requirement was added and
+no clipboard/keymap workaround was enabled. Delivery remains explicit Copy.
+
+Implemented the next user-visible native parity gap: an X11 status overlay using
+its own XCB connection and Cairo/Pango rendering. It captures monitor geometry at
+the first visible generation, respects work areas/RandR changes, and supports the
+existing layouts, anchors, amplitude visualizers, countdown, phase glyphs and
+bounded captions. Empty input shape is installed before mapping; input=False,
+override-redirect and notification hints prevent interaction/activation. The
+owner never modifies focus, input or clipboard ownership. Hidden surfaces have no
+timer; shutdown revokes work, clears transient text and waits within a bound.
+Wayland/XWayland reject creation. Transparency/compositor and GNOME preference
+limits are documented in `internal/platform/overlay/README.linux.md`.
+
+Verification:
+
+- Native race/probe suites pass on Debian 13 and Ubuntu 24.04. The C fixture is
+  compiled with optimization, fortification and warnings as errors. It verifies
+  initial hidden state, all layouts/anchors/visualizers, unchanged focus and
+  synthetic selection ownership, empty input shape, work-area changes, Unicode
+  rendering, hide/destroy, and concurrent Go update/close ownership. Only fresh
+  private Xvfb displays are used. No WebView or physical input is involved.
+- Full Linux Go tests, vet, overlay/app/storage race suites, both production
+  package builds and checksum-matched install/reinstall/versioned-fixture
+  replacement/removal pass. Latest package hashes are below; earlier hashes
+  identify the pre-overlay builds. No cloud app launch was retried.
+- Both edited Svelte files pass the Svelte autofixer. Svelte checking has zero
+  errors/warnings; 64 files / 532 unit tests pass. The new Linux browser scenario
+  verifies Copy-only controls and the X11 overlay limits. Actionlint, 95 workflow/
+  release tests and the 57-page site build pass.
+
+```text
+7f6c2081eeb0372b5789be1722a8d6e31c4d6602c203ae44be6eceb11bc105f3  freehand_0.1.0-1_debian13_amd64.deb
+1e8d3b4a63a31a0519573a3aee0a009f3d75e2f1ce857279c7b3faa3cebaa88f  freehand_0.1.0-1_ubuntu24.04_amd64.deb
+```
+
+Opened experimental PR #102 after authorization. Its first run, `41747682166`,
+passes Windows amd64/ARM64, macOS, Go, frontend, site and selection. Storage fails
+because its integration fixtures now need GTK/WebKit development packages; those
+dependencies are added. Both distro packages build, then their metadata guard
+falls into Git's no-index mode because root does not trust the runner-owned
+checkout. Reproduced this locally and scoped Git trust to that exact checkout,
+with an explicit repository assertion before diff. Removal now checks whether
+installation occurred. CI also adds separate unprivileged passive-overlay probes
+without a WebView before the existing normal-sandbox frontend smoke.
+
+Evidence uses `overlay-*` and `ci-git-ownership.log` under
+`/workspace/freehand-qualification/`; `overlay-native.png` contains only synthetic
+fixture status. Normal desktop/compositor/scaling, physical audio/keyboard,
+Secret Service, login, Wayland and live model acquisition still need acceptance.
+No model load, sandbox relaxation, merge or release was performed.

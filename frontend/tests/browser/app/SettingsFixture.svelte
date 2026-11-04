@@ -93,6 +93,11 @@
     current.useMica = true;
     current.micaActive = true;
   }
+  if (new URLSearchParams(location.search).get("platform") === "linux") {
+    current.platform = "linux";
+    current.useMica = true;
+    current.micaActive = true;
+  }
   current.savedConnections = {
     entries: [
       {
