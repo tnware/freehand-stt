@@ -1,6 +1,9 @@
 package hotkey
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 const (
 	vkCtrl  = 0xA2
@@ -40,6 +43,9 @@ func press(vks ...uint32) []edge {
 
 // Hold-to-talk runs on the low-level hook, so it can arm on modifiers alone.
 func TestCaptureAcceptsModifierOnlyChordsForHold(t *testing.T) {
+	if runtime.GOOS == "linux" {
+		t.Skip("Linux passive grabs require a primary key; covered by Linux policy rejection tests")
+	}
 	cases := []struct {
 		name string
 		keys []uint32
@@ -116,7 +122,7 @@ func TestCaptureStillRecordsPrimaryKeyChords(t *testing.T) {
 
 func TestParseHoldRoundTrip(t *testing.T) {
 	for _, value := range []string{"Ctrl+Super", "Ctrl+Shift", "Ctrl+Alt+Shift"} {
-		chord, err := ParseHold(value)
+		chord, err := parseForPlatform(HoldToTalk, value, "windows")
 		if err != nil {
 			t.Fatalf("ParseHold(%q) failed: %v", value, err)
 		}
@@ -138,7 +144,7 @@ func TestParseHoldRoundTrip(t *testing.T) {
 
 // The runtime matcher has to arm and release on the modifier set itself.
 func TestRuntimeReducerHandlesModifierOnlyChords(t *testing.T) {
-	chord, err := ParseHold("Ctrl+Super")
+	chord, err := parseForPlatform(HoldToTalk, "Ctrl+Super", "windows")
 	if err != nil {
 		t.Fatalf("ParseHold failed: %v", err)
 	}

@@ -1,4 +1,4 @@
-//go:build windows || darwin
+//go:build windows || darwin || (linux && cgo)
 
 package audio
 
@@ -84,17 +84,26 @@ func (c *Capture) publishLevel(buffer []byte) {
 }
 
 func newContext() (*malgo.AllocatedContext, error) {
-	return malgo.InitContext([]malgo.Backend{nativeAudioBackend}, malgo.ContextConfig{}, nil)
+	return malgo.InitContext(nativeAudioBackends(), malgo.ContextConfig{}, nil)
 }
-func (c *Capture) List(_ context.Context) ([]audio.Device, error) {
+func (c *Capture) List(request context.Context) ([]audio.Device, error) {
+	if err := request.Err(); err != nil {
+		return nil, err
+	}
 	ctx, e := newContext()
 	if e != nil {
 		return nil, e
 	}
 	defer func() { _ = ctx.Uninit(); ctx.Free() }()
+	if err := request.Err(); err != nil {
+		return nil, err
+	}
 	ds, e := ctx.Devices(malgo.Capture)
 	if e != nil {
 		return nil, e
+	}
+	if err := request.Err(); err != nil {
+		return nil, err
 	}
 	out := []audio.Device{{ID: "", Name: "System default microphone", Default: true}}
 	for i := range ds {

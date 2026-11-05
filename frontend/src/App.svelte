@@ -10,7 +10,7 @@
   import { useRuntimeConnection } from "$lib/utils/runtimeWorkflowUse";
   import { windowMaterial } from "$lib/platform";
   import { onMount, tick, untrack } from "svelte";
-  import { Events, Window } from "@wailsio/runtime";
+  import { Application, Events, Window } from "@wailsio/runtime";
   import type { ConnectionManagerRequest } from "$bindings/windowing";
   import { ModeWatcher, setMode } from "mode-watcher";
   import * as BuildInfoService from "$bindings/buildinfo/service";
@@ -263,6 +263,7 @@
 
   let commandsOpen = $state(false);
   const macOS = $derived(session.editor.applied?.platform === "darwin");
+  const linux = $derived(session.editor.applied?.platform === "linux");
 
   // Everything the rail and the chain already expose, addressed by name. No
   // command here can do something the interface cannot.
@@ -405,13 +406,27 @@
         [
           {
             id: "file:close",
-            label: "Close window",
+            label: linux ? "Minimize window" : "Close window",
             shortcut: "Alt+F4",
             run: () =>
               void Window.Close().catch((cause) =>
                 session.messages.fail(cause),
               ),
           },
+          ...(linux
+            ? [
+                {
+                  id: "file:quit",
+                  label: "Quit Freehand",
+                  run: () =>
+                    leaveSettings(() => {
+                      void Application.Quit().catch((cause) =>
+                        session.messages.fail(cause),
+                      );
+                    }),
+                },
+              ]
+            : []),
         ],
       ],
     },
@@ -540,7 +555,7 @@
     const offClose = Events.On("shell:close-requested", () => {
       navigationGeneration++;
       leaveSettings(() => {
-        void Window.Hide()
+        void (linux ? Window.Minimise() : Window.Hide())
           .then(hidden)
           .catch((cause) => {
             if (alive) session.messages.fail(cause);

@@ -25,7 +25,9 @@
   const mica = $derived(native.supportsMica && settings.useMica);
 
   let deliveryMode = $derived(
-    settings.autoInsert ? InsertionMode.DirectInput : InsertionMode.ManualCopy,
+    settings.autoInsert && !native.linux
+      ? InsertionMode.DirectInput
+      : InsertionMode.ManualCopy,
   );
   let appearanceRestartRequired = $derived(
     !mica &&
@@ -57,7 +59,8 @@
   };
 
   const chooseDeliveryMode = (value: string) => {
-    if (value === InsertionMode.DirectInput) settings.autoInsert = true;
+    if (value === InsertionMode.DirectInput && !native.linux)
+      settings.autoInsert = true;
     if (value === InsertionMode.ManualCopy) settings.autoInsert = false;
   };
 </script>
@@ -80,34 +83,39 @@
         />
       {/snippet}
     </SettingRow>
+    {#if !native.linux}
+      <SettingRow
+        controlID="show-window-on-launch"
+        title="Show window when launched"
+        description={native.launchDescription}
+      >
+        {#snippet control()}
+          <Switch
+            id="show-window-on-launch"
+            bind:checked={settings.showWindowOnLaunch}
+            aria-label="Show window when launched"
+          />
+        {/snippet}
+      </SettingRow>
 
-    <SettingRow
-      controlID="show-window-on-launch"
-      title="Show window when launched"
-      description={native.launchDescription}
-    >
-      {#snippet control()}
-        <Switch
-          id="show-window-on-launch"
-          bind:checked={settings.showWindowOnLaunch}
-          aria-label="Show window when launched"
-        />
-      {/snippet}
-    </SettingRow>
-
-    <SettingRow
-      controlID="check-for-updates"
-      title="Check for updates automatically"
-      description="Check GitHub Releases in the background. Freehand never applies an update without asking you."
-    >
-      {#snippet control()}
-        <Switch
-          id="check-for-updates"
-          bind:checked={settings.checkForUpdates}
-          aria-label="Check for updates automatically"
-        />
-      {/snippet}
-    </SettingRow>
+      <SettingRow
+        controlID="check-for-updates"
+        title="Check for updates automatically"
+        description="Check GitHub Releases in the background. Freehand never applies an update without asking you."
+      >
+        {#snippet control()}
+          <Switch
+            id="check-for-updates"
+            bind:checked={settings.checkForUpdates}
+            aria-label="Check for updates automatically"
+          />
+        {/snippet}
+      </SettingRow>
+    {:else}
+      <p class="px-5 py-3 text-xs text-muted-foreground">
+        Install Linux updates with your distribution’s package manager.
+      </p>
+    {/if}
   </SettingsCard>
 
   <SettingsCard title="Appearance">
@@ -181,7 +189,9 @@
 <SettingsCard>
   <SettingRow
     title="Transcript delivery"
-    description="Choose what Freehand does with a completed microphone transcript. Focus safety always applies."
+    description={native.linux
+      ? "Linux uses explicit Copy. Automatic insertion is unavailable on X11 and Wayland in this build."
+      : "Choose what Freehand does with a completed microphone transcript. Focus safety always applies."}
   >
     <RadioGroup.Root
       class="grid-cols-1 gap-1"
@@ -190,25 +200,26 @@
       onValueChange={chooseDeliveryMode}
       aria-label="Transcript delivery mode"
     >
-      <Label
-        for="delivery-direct-input"
-        class="flex cursor-pointer items-start gap-3 bg-transparent px-2 py-2 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"
-      >
-        <RadioGroup.Item
-          id="delivery-direct-input"
-          value={InsertionMode.DirectInput}
-          class="mt-0.5"
-        />
-        <span class="min-w-0">
-          <span class="content-value block">Direct input</span>
-          <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">
-            Type Unicode directly into the application that was focused when
-            recording started. This is the default and does not touch the
-            clipboard.
+      {#if !native.linux}
+        <Label
+          for="delivery-direct-input"
+          class="flex cursor-pointer items-start gap-3 bg-transparent px-2 py-2 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"
+        >
+          <RadioGroup.Item
+            id="delivery-direct-input"
+            value={InsertionMode.DirectInput}
+            class="mt-0.5"
+          />
+          <span class="min-w-0">
+            <span class="content-value block">Direct input</span>
+            <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">
+              Type Unicode directly into the application that was focused when
+              recording started. This is the default and does not touch the
+              clipboard.
+            </span>
           </span>
-        </span>
-      </Label>
-
+        </Label>
+      {/if}
       <Label
         for="delivery-manual-copy"
         class="flex cursor-pointer items-start gap-3 bg-transparent px-2 py-2 transition-colors has-data-checked:bg-accent-wash hover:bg-accent/55"

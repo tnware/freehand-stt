@@ -30,6 +30,12 @@ func TestPolicyMatrixAndNormalization(t *testing.T) {
 		{HoldToTalk, "F20", "F20"},
 	}
 	for _, tc := range cases {
+		if runtime.GOOS == "linux" && tc.value == "control+command" {
+			if _, err := NormalizeFor(tc.action, tc.value); err == nil {
+				t.Fatal("Linux accepted a modifier-only hold")
+			}
+			continue
+		}
 		got, err := NormalizeFor(tc.action, tc.value)
 		if err != nil || got != tc.want {
 			t.Fatalf("NormalizeFor(%q, %q) = %q, %v; want %q", tc.action, tc.value, got, err, tc.want)

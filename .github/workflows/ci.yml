@@ -74,6 +74,10 @@ jobs:
           fi
           git diff --exit-code -- internal/storage/dbgen
           test -z "$(git ls-files --others --exclude-standard -- internal/storage/dbgen)"
+      - name: Install native dependencies required by storage integration fixtures
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev
       - name: Test storage and contract guards
         run: go test -race ./internal/storage ./build/scripts/storage
 
@@ -93,7 +97,7 @@ jobs:
       - name: Install Wails Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev
       - name: Prepare embedded frontend placeholder
         run: mkdir -p frontend/dist && printf '<!doctype html><title>CI compile placeholder</title>' > frontend/dist/index.html
       - name: Verify branding and prepare release metadata
@@ -126,7 +130,7 @@ jobs:
       - name: Install Wails Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
+          sudo apt-get install --yes --no-install-recommends build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev
       - name: Install pinned Wails CLI
         shell: bash
         run: |
@@ -323,6 +327,140 @@ jobs:
             bin/freehand-darwin-arm64.zip
             bin/freehand-darwin-amd64.zip
 
+  linux:
+    name: Experimental Linux ${{ matrix.distro }} (${{ matrix.coverage }})
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Keep Debian package/native-adapter coverage without retrying a
+          # WebKit namespace operation denied by the standard container.
+          - distro: debian13
+            image: debian:13
+            sudo: ''
+            cache_scope: linux-debian13
+            native_frontend: false
+            coverage: package and native adapters
+          # Empty image means no job container: use the standard Ubuntu VM,
+          # its system helpers, and its normal kernel/AppArmor policy.
+          - distro: ubuntu24.04
+            image: ''
+            sudo: sudo
+            cache_scope: linux-ubuntu24.04-native
+            native_frontend: true
+            coverage: package and frontend
+    container: ${{ matrix.image }}
+    timeout-minutes: 30
+    env:
+      CGO_ENABLED: "1"
+    steps:
+      - name: Install native build and package dependencies
+        run: |
+          ${{ matrix.sudo }} apt-get update
+          ${{ matrix.sudo }} apt-get install --yes --no-install-recommends ca-certificates git build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev dpkg-dev desktop-file-utils xvfb xauth dbus-daemon fonts-dejavu-core libegl1 libgl1-mesa-dri passwd util-linux
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.changes.outputs.ref }}
+      - uses: ./.github/actions/setup-go
+        with:
+          scope: ${{ matrix.cache_scope }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build native application and experimental Debian package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(go env GOARCH)" = amd64
+          version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
+          if ! command -v wails3 >/dev/null 2>&1; then
+            go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
+          fi
+          node --test build/linux/package.test.mjs build/linux/smoke.test.mjs
+          wails3 task package ARCH=amd64 CI=true
+          # Container checkout files are owned by the host runner UID. Scope
+          # Git trust to this exact checkout; otherwise diff can fall back to
+          # no-index mode and compare go.mod with go.sum instead of HEAD.
+          test "$(git -c safe.directory="$GITHUB_WORKSPACE" -C "$GITHUB_WORKSPACE" rev-parse --is-inside-work-tree)" = true
+          git -c safe.directory="$GITHUB_WORKSPACE" -C "$GITHUB_WORKSPACE" diff --exit-code -- go.mod go.sum
+      - name: Validate package installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd bin && sha256sum --check --strict *.deb.sha256)
+          ${{ matrix.sudo }} apt-get install --yes --no-install-recommends ./bin/*_${{ matrix.distro }}_amd64.deb
+          test -x /usr/bin/freehand
+          desktop-file-validate /usr/share/applications/freehand.desktop
+          ldd /usr/bin/freehand > /tmp/freehand-libraries.txt
+          cat /tmp/freehand-libraries.txt
+          ! grep -q 'not found' /tmp/freehand-libraries.txt
+          dpkg-query --show freehand
+      - name: Qualify passive X11 overlay without a WebView
+        shell: bash
+        run: |
+          set -euo pipefail
+          ${{ matrix.sudo }} useradd --no-create-home --shell /usr/sbin/nologin freehand-qa
+          qa_home="$(mktemp -d /tmp/freehand-overlay-XXXXXX)"
+          trap '${{ matrix.sudo }} rm -rf "$qa_home"' EXIT
+          go test -c -race -o "$qa_home/overlay.test" ./internal/platform/overlay
+          cp build/linux/ci-session.sh "$qa_home/session.sh"
+          cp internal/platform/overlay/overlay_linux.{c,h} "$qa_home/"
+          mkdir -p "$qa_home/testdata"
+          cp internal/platform/overlay/testdata/overlay_probe_linux.c "$qa_home/testdata/"
+          mkdir -p "$qa_home"/{config,cache,data,state,runtime}
+          chmod 700 "$qa_home/runtime"
+          ${{ matrix.sudo }} chown -R freehand-qa:freehand-qa "$qa_home"
+          ${{ matrix.sudo }} runuser -u freehand-qa -- env -i \
+            PATH=/usr/bin:/bin HOME="$qa_home" LANG=C.UTF-8 \
+            XDG_CONFIG_HOME="$qa_home/config" XDG_CACHE_HOME="$qa_home/cache" \
+            XDG_DATA_HOME="$qa_home/data" XDG_STATE_HOME="$qa_home/state" \
+            XDG_RUNTIME_DIR="$qa_home/runtime" XDG_SESSION_TYPE=x11 GDK_BACKEND=x11 \
+            FREEHAND_X11_OVERLAY_ACCEPTANCE=1 \
+            sh "$qa_home/session.sh" "$qa_home/overlay.test" -test.v -test.run '^TestLinuxOverlayNative'
+      - name: Qualify installed Ubuntu frontend bridge without inference
+        if: matrix.native_frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          qa_home="$(mktemp -d /tmp/freehand-shell-XXXXXX)"
+          trap '${{ matrix.sudo }} rm -rf "$qa_home"' EXIT
+          cp build/linux/ci-session.sh "$qa_home/session.sh"
+          cp build/linux/smoke.mjs "$qa_home/smoke.mjs"
+          mkdir -p "$qa_home"/{config,cache,data,state,runtime}
+          chmod 700 "$qa_home/runtime"
+          ${{ matrix.sudo }} chown -R freehand-qa:freehand-qa "$qa_home"
+          # Use an unprivileged account, normal distro WebKit helpers and the
+          # normal sandbox. Never turn off sandboxing to make this check pass.
+          ${{ matrix.sudo }} runuser -u freehand-qa -- env -i \
+            PATH=/usr/bin:/bin HOME="$qa_home" LANG=C.UTF-8 \
+            XDG_CONFIG_HOME="$qa_home/config" XDG_CACHE_HOME="$qa_home/cache" \
+            XDG_DATA_HOME="$qa_home/data" XDG_STATE_HOME="$qa_home/state" \
+            XDG_RUNTIME_DIR="$qa_home/runtime" XDG_SESSION_TYPE=x11 GDK_BACKEND=x11 \
+            sh "$qa_home/session.sh" "$(command -v node)" "$qa_home/smoke.mjs" /usr/bin/freehand
+      - name: Validate package removal
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if dpkg-query --show --showformat='${Status}' freehand 2>/dev/null | grep -q 'install ok installed'; then
+            ${{ matrix.sudo }} apt-get remove --yes freehand
+          fi
+          test ! -e /usr/bin/freehand
+          # No model downloads or inference. Bridge readiness is not hardware acceptance.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: freehand-linux-${{ matrix.distro }}-amd64-experimental
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            bin/*_${{ matrix.distro }}_amd64.deb
+            bin/*_${{ matrix.distro }}_amd64.deb.sha256
+
   site:
     name: Site
     needs: changes
@@ -334,7 +472,7 @@ jobs:
   validation:
     name: Validation
     if: always()
-    needs: [changes, storage, go, frontend, windows, macos, site]
+    needs: [changes, storage, go, frontend, windows, macos, linux, site]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

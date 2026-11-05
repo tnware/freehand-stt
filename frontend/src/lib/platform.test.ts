@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { platformPresentation, windowMaterial } from "$lib/platform";
 
 describe("native platform presentation", () => {
+  it("describes Linux without Windows-only capabilities", () => {
+    expect(platformPresentation("linux")).toMatchObject({
+      name: "Linux",
+      credentialStore: "desktop Secret Service",
+      supportsMica: false,
+      linux: true,
+      command: "Super",
+    });
+    expect(windowMaterial({ platform: "linux", micaActive: true })).toBe(
+      "solid",
+    );
+  });
   it("uses macOS wording and hides unsupported Mica", () => {
     expect(platformPresentation("darwin")).toMatchObject({
       name: "macOS",

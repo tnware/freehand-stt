@@ -22,7 +22,15 @@ type platformRecipeKey struct {
 	os, arch, backend string
 }
 
+// Linux CPU pins were verified against official release API digests and archives.
+// Other Linux architectures/backends remain unqualified, not implicit fallbacks.
 var platformRecipes = map[platformRecipeKey]platformRecipe{
+	{NeMoSpeechCPP, "linux", "amd64", "cpu"}: {version: Version, Executable: "nemo-speech-0.1.0-linux-x86_64-cpu/bin/nemo-speech", Archives: []artifact.Asset{
+		{Backend: "cpu", URL: "https://github.com/NVIDIA/NeMo-Speech.cpp/releases/download/v0.1.0/nemo-speech-0.1.0-linux-x86_64-cpu.tar.gz", SHA256: "0f74131d631ad2c694cf0ec53490866bb6461147959589a69fb6fc231944065b", Size: 4583913},
+	}},
+	{LlamaCPP, "linux", "amd64", "cpu"}: {version: "b10809", Executable: "llama-b10809/llama-server", Archives: []artifact.Asset{
+		{Backend: "cpu", URL: "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-ubuntu-x64.tar.gz", SHA256: "5e34434ddc6d03cd1584f403201aff0d4bd1a5793a72ff7e286532dfd1e4b941", Size: 16734586},
+	}},
 	{NeMoSpeechCPP, "windows", "amd64", "cpu"}:    {version: Version, Executable: "bin/nemo-speech.exe", Archives: []artifact.Asset{assets["cpu"]}},
 	{NeMoSpeechCPP, "windows", "amd64", "cuda"}:   {version: Version, Executable: "bin/nemo-speech.exe", Archives: []artifact.Asset{assets["cuda"]}},
 	{NeMoSpeechCPP, "windows", "amd64", "vulkan"}: {version: Version, Executable: "bin/nemo-speech.exe", Archives: []artifact.Asset{assets["vulkan"]}},

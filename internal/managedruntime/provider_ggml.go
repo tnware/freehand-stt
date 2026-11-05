@@ -9,7 +9,7 @@ import (
 	"github.com/tnware/freehand-stt/internal/modelprofile"
 )
 
-// These recipes target qualified Windows/macOS hosts and one task per provider. CPU remains
+// These recipes target qualified Windows/macOS/Linux hosts and one task per provider. CPU remains
 // the default; CUDA is an explicit, durable selection.
 // Release asset sizes and SHA256 are from the official GitHub release API,
 // independently checked against downloaded ZIPs. Model pins are HF LFS metadata.
@@ -55,6 +55,12 @@ func (g ggmlProvider) descriptor() ProviderDescriptor {
 	_, supported := recipeFor(g.id, runtime.GOOS, runtime.GOARCH, "cpu")
 	supported = supported && supportsOSVersion(g.id, runtime.GOOS, hostOSVersion())
 	reason := ""
+	if !supported && runtime.GOOS == "linux" {
+		reason = "No qualified binary is available for this Linux architecture. Use a manual Connection."
+		if g.id == WhisperCPP {
+			reason = "Upstream does not publish a Linux server binary at the pinned version. Use a manual Connection."
+		}
+	}
 	if !supported && runtime.GOOS == "darwin" {
 		if g.id == WhisperCPP {
 			reason = "Upstream does not publish a macOS server binary. Use a manual Connection."

@@ -1,9 +1,11 @@
-//go:build windows || darwin
+//go:build windows || darwin || (linux && cgo)
 
 package audio
 
 import (
 	"bytes"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -91,3 +93,20 @@ func TestPlaybackSeekAlignsPCMAndRetainsFullExport(t *testing.T) {
 		}
 	}
 }
+
+type restartDevice struct {
+	armed                 atomic.Bool
+	starts, closes        atomic.Int32
+	entered, release      chan struct{}
+	stopOnce, releaseOnce sync.Once
+}
+
+func (d *restartDevice) Start() error { d.starts.Add(1); return nil }
+func (d *restartDevice) Stop() error {
+	if d.armed.Load() {
+		d.stopOnce.Do(func() { close(d.entered); <-d.release })
+	}
+	return nil
+}
+func (d *restartDevice) Uninit()  { d.closes.Add(1) }
+func (d *restartDevice) unblock() { d.releaseOnce.Do(func() { close(d.release) }) }

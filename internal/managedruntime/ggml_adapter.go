@@ -342,7 +342,10 @@ func (a *ggmlAdapter) Start(ctx context.Context, id string) (processHandle, Endp
 	if err != nil {
 		return nil, Endpoint{}, err
 	}
-	env := ggmlEnvironment(os.Environ())
+	env, err := managedGGMLEnvironment(a.root, a.recipe.id, os.Environ())
+	if err != nil {
+		return nil, Endpoint{}, err
+	}
 	if backend == "cuda" {
 		env = append(env, "CUDA_VISIBLE_DEVICES=0")
 	}

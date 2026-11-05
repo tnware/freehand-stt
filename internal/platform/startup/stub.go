@@ -1,4 +1,4 @@
-//go:build !windows && !darwin
+//go:build !windows && !darwin && !linux
 
 package startup
 
@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-var unavailable = errors.New("Windows native functionality is unavailable on this platform")
+var unavailable = errors.New("This native feature is unavailable on this platform")
 
 type Startup struct{}
 

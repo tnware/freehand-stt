@@ -19,7 +19,7 @@ func (h *startupHold) Start(value string) error {
 func TestStartupInitializesHoldEvenWhenToggleConflicts(t *testing.T) {
 	cfg := config.Default()
 	cfg.ToggleShortcut = "Ctrl+Shift+Space"
-	cfg.HoldShortcut = "Ctrl+Super"
+	cfg.HoldShortcut = "Ctrl+Super+H"
 	h := &startupHold{}
 	c := New(&globalFake{active: map[string]bool{}, fail: cfg.ToggleShortcut}, h, func() {}, func() {})
 	if err := c.Start(cfg); err == nil {
@@ -56,7 +56,7 @@ func TestStartupInitializesEmptyHoldOnceBeforeConfigure(t *testing.T) {
 		t.Fatal("empty hold did not initialize the adapter exactly once")
 	}
 	cfg.ToggleShortcut = ""
-	cfg.HoldShortcut = "Ctrl+Super"
+	cfg.HoldShortcut = "Ctrl+Super+H"
 	if err := c.Configure(cfg); err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestStartupInitializesEmptyHoldOnceBeforeConfigure(t *testing.T) {
 
 func TestClearUnavailableHoldStillConfiguresEmptyAssignment(t *testing.T) {
 	cfg := config.Default()
-	cfg.HoldShortcut = "Ctrl+Super"
+	cfg.HoldShortcut = "Ctrl+Super+H"
 	h := &failingHold{fail: true}
 	c := New(&globalFake{active: map[string]bool{}}, h, func() {}, func() {})
 	if err := c.Start(cfg); err == nil {

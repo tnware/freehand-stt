@@ -11,7 +11,7 @@ func TestStartupUnavailableHoldDoesNotBlockReplacementCapture(t *testing.T) {
 	globals := &globalFake{active: map[string]bool{}, fail: "Ctrl+Shift+Space"}
 	c := New(globals, hold, func() {}, func() {})
 	cfg := config.Default()
-	cfg.ToggleShortcut, cfg.HoldShortcut = "Ctrl+Shift+Space", "Ctrl+Alt"
+	cfg.ToggleShortcut, cfg.HoldShortcut = "Ctrl+Shift+Space", "Ctrl+Alt+H"
 	if err := c.Start(cfg); err == nil {
 		t.Fatal("missing startup warning")
 	}
@@ -25,7 +25,7 @@ func TestStartupUnavailableHoldDoesNotBlockReplacementCapture(t *testing.T) {
 	if err := c.Configure(cfg); err != nil {
 		t.Fatal(err)
 	}
-	if c.active.HoldShortcut != "Ctrl+Alt" {
+	if c.active.HoldShortcut != "Ctrl+Alt+H" {
 		t.Fatal("unavailable hold preference was lost")
 	}
 	hold.fail = false
@@ -41,7 +41,7 @@ func TestStartupUnavailableHoldDoesNotBlockReplacementCapture(t *testing.T) {
 	if err := c.Resume(); err != nil {
 		t.Fatal(err)
 	}
-	if hold.value != "Ctrl+Alt" {
+	if hold.value != "Ctrl+Alt+H" {
 		t.Fatal("recovered hold was not restored")
 	}
 }

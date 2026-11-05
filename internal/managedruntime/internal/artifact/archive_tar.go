@@ -63,7 +63,7 @@ func walkTar(ctx context.Context, filename string, visit func(*tar.Header, io.Re
 	}
 }
 
-// Official macOS packages include same-directory dylib aliases. Resolve them
+// Official macOS and Linux packages include same-directory shared-library aliases. Resolve them
 // exclusively inside the verified archive and materialize ordinary file copies.
 // No archive link, hard link, special file or privileged permission reaches disk.
 func tarManifest(ctx context.Context, filename string) ([]tarEntry, error) {
@@ -110,7 +110,7 @@ func tarManifest(ctx context.Context, filename string) ([]tarEntry, error) {
 			}
 			e.digest = hex.EncodeToString(hash.Sum(nil))
 		case tar.TypeSymlink:
-			if h.Size != 0 || h.Linkname == "" || h.Linkname == "." || h.Linkname == ".." || strings.ContainsAny(h.Linkname, "/\\:\x00") || !strings.HasSuffix(name, ".dylib") || !strings.HasSuffix(h.Linkname, ".dylib") {
+			if h.Size != 0 || h.Linkname == "" || h.Linkname == "." || h.Linkname == ".." || strings.ContainsAny(h.Linkname, "/\\:\x00") || !sharedLibraryAlias(name, h.Linkname) {
 				return ErrUnsafePath
 			}
 			e.link = path.Join(path.Dir(name), h.Linkname)
@@ -249,4 +249,38 @@ func archiveFileNames(ctx context.Context, filename string) ([]string, error) {
 		}
 	}
 	return names, nil
+}
+
+// Only library aliases are admitted, and only within the same library family.
+// ELF suffixes consist of numeric ABI versions, never arbitrary filename tails.
+func sharedLibraryAlias(name, target string) bool {
+	if strings.HasSuffix(name, ".dylib") && strings.HasSuffix(target, ".dylib") {
+		return true
+	}
+	family := func(value string) string {
+		base := path.Base(value)
+		prefix, version, ok := strings.Cut(base, ".so")
+		if !ok || !strings.HasPrefix(prefix, "lib") || len(prefix) <= 3 {
+			return ""
+		}
+		if version == "" {
+			return prefix
+		}
+		if !strings.HasPrefix(version, ".") {
+			return ""
+		}
+		for _, part := range strings.Split(version[1:], ".") {
+			if part == "" {
+				return ""
+			}
+			for _, c := range part {
+				if c < '0' || c > '9' {
+					return ""
+				}
+			}
+		}
+		return prefix
+	}
+	left, right := family(name), family(target)
+	return left != "" && left == right
 }

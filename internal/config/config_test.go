@@ -381,14 +381,14 @@ func TestHeaderNameWhitespaceIsRejected(t *testing.T) {
 	}
 }
 
-// Hold-to-talk runs on the low-level keyboard hook and may be modifiers only.
+// Windows/macOS hold hooks support modifiers alone; X11 passive grabs do not.
 // The toggle and show shortcuts go through RegisterHotKey, which needs a
 // virtual-key code, so the same value has to be refused for them.
 func TestModifierOnlyShortcutsAreHoldOnly(t *testing.T) {
 	hold := Default()
 	hold.HoldShortcut = "Ctrl+Meta"
-	if err := Validate(hold); err != nil {
-		t.Fatalf("hold-to-talk rejected a modifier-only chord: %v", err)
+	if err := Validate(hold); (err == nil) == (runtime.GOOS == "linux") {
+		t.Fatalf("modifier-only hold validation on %s: %v", runtime.GOOS, err)
 	}
 
 	single := Default()
@@ -423,7 +423,7 @@ func TestDedicatedFunctionKeysAndWindowsAliasesAreValidShortcuts(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		settings.ShowShortcut = "Win+F20"
 	}
-	settings.HoldShortcut = "Control+Command"
+	settings.HoldShortcut = "Control+Command+H"
 	if err := Validate(settings); err != nil {
 		t.Fatalf("supported shortcut policy was rejected: %v", err)
 	}

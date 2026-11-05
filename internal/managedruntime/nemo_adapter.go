@@ -31,10 +31,15 @@ func newAdapter(root string) *nemoAdapter {
 // NeMo's parser accepts arbitrary NEMO_SPEECH_* configuration, including
 // model paths, API keys and download origins. Never inherit that configuration.
 func childEnvironment(root string, inherited []string) []string {
-	if runtime.GOOS == "darwin" {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
 		// NeMo invokes system curl for explicit model acquisition. Do not inherit
 		// shell PATH, DYLD injection, proxy/auth, or model-manager configuration.
-		return append(ggmlEnvironment(inherited), "PATH=/usr/bin:/bin", "NEMO_SPEECH_MODEL_DIR="+filepath.Join(root, "models"))
+		env := append(ggmlEnvironment(inherited), "PATH=/usr/bin:/bin", "NEMO_SPEECH_MODEL_DIR="+filepath.Join(root, "models"))
+		if runtime.GOOS == "linux" {
+			home := filepath.Join(root, "private-home")
+			env = append(env, "HOME="+home, "CURL_HOME="+home, "XDG_CONFIG_HOME="+filepath.Join(home, ".config"))
+		}
+		return env
 	}
 	env := make([]string, 0, len(inherited)+1)
 	for _, v := range inherited {
@@ -55,6 +60,9 @@ func (a *nemoAdapter) command(ctx context.Context, args ...string) ([]byte, erro
 	return a.commandProgress(ctx, nil, args...)
 }
 func (a *nemoAdapter) commandProgress(ctx context.Context, sample func(), args ...string) ([]byte, error) {
+	if err := prepareNeMoLinuxEnvironment(a.root); err != nil {
+		return nil, err
+	}
 	p, err := a.launch(ctx, a.executable(), args, filepath.Join(a.root, "runtime"), childEnvironment(a.root, os.Environ()))
 	if err != nil {
 		return nil, err
@@ -411,6 +419,9 @@ func (a *nemoAdapter) StartModels(ctx context.Context, id, speechID string) (pro
 	}
 	if backend == "cpu" {
 		args = append(args, "--no-warmup")
+	}
+	if err := prepareNeMoLinuxEnvironment(a.root); err != nil {
+		return nil, Endpoint{}, err
 	}
 	reportStartupProgress(ctx, "launching")
 	p, err := a.launch(runtimeProcessContext(ctx), a.executable(), args, filepath.Join(a.root, "runtime"), childEnvironment(a.root, os.Environ()))

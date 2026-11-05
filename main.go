@@ -27,6 +27,9 @@ var trayDarkModeIcon []byte
 //go:embed build/darwin/tray-template.png
 var trayTemplateIcon []byte
 
+//go:embed build/appicon.png
+var linuxTrayIcon []byte
+
 //go:embed build/config.yml
 var releaseConfig []byte
 
@@ -40,6 +43,8 @@ var instanceKey = [32]byte{
 func main() {
 	if runtime.GOOS == "darwin" {
 		trayIcon, trayDarkModeIcon = trayTemplateIcon, nil
+	} else if runtime.GOOS == "linux" {
+		trayIcon, trayDarkModeIcon = linuxTrayIcon, nil
 	}
 	release, err := releaseinfo.Parse(releaseConfig)
 	if err != nil {
@@ -57,6 +62,7 @@ func main() {
 		StartupLaunch:    app.StartupRequested(os.Args),
 		Release:          release,
 		Development:      buildinfo.Development,
+		OnShellReady:     shellReadyMarker(runtime.GOOS, os.Getenv("FREEHAND_LINUX_SHELL_SMOKE"), os.Stdout),
 	})
 	if err != nil {
 		// The Wails logger does not exist when construction fails. Keep this one

@@ -238,3 +238,12 @@ func TestWindowControllerRemembersARevealBeforeAttach(t *testing.T) {
 		t.Fatal("a reveal that arrived before the window existed was dropped")
 	}
 }
+
+func TestLinuxLaunchRemainsReachableWithoutTrayHost(t *testing.T) {
+	for _, startup := range []bool{false, true} {
+		options := mainWindowOptionsForPlatform("linux", startup, false, false, config.AppearanceModeSystem, false)
+		if options.Hidden {
+			t.Fatal("Linux launch hid the only reachable workspace")
+		}
+	}
+}

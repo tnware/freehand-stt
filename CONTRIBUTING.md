@@ -61,6 +61,41 @@ Record real microphone, keyboard, insertion, Keychain, overlay and login behavio
 separately from unit/browser tests and cross-compilation. Never invoke model
 inventories to qualify a build.
 
+### Linux (experimental)
+
+Use native x86_64 Debian 13 or Ubuntu 24.04 with Go 1.27, Node.js 22+, a C
+compiler, GTK4 and WebKitGTK 6.0 development packages. Build packages on each
+target distro separately; a Debian build is not an Ubuntu compatibility test.
+
+```sh
+sudo apt-get update
+sudo apt-get install build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libxcb1-dev x11proto-dev libxcb-shape0-dev libxcb-randr0-dev dpkg-dev desktop-file-utils
+version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
+go install "github.com/wailsapp/wails/v3/cmd/wails3@${version}"
+export PATH="$(go env GOPATH)/bin:$PATH"
+wails3 task package ARCH=amd64 CI=true
+```
+
+The package uses the version in `build/config.yml`, native linked-library
+minimum versions, and a distro-specific filename. `node build/linux/package.mjs`
+packages an already built `bin/freehand`. Desktop use requires a graphical
+session, an audio service/device, a session D-Bus, and an unlocked Secret Service
+provider for saved credentials. Native X11 keyboard adapters also require XKB
+detectable autorepeat; the XCB development library and X.Org protocol headers
+above are explicit build dependencies. Wayland shortcuts use the compositor
+portal, not XWayland grabs. No inference runs as part of packaging or CI.
+See [passive overlay probes](internal/platform/overlay/README.linux.md) for
+isolated Xvfb checks of focus, click-through input shape and native lifecycle.
+See [native keyboard probes](internal/platform/keyboard/README.linux.md) for
+opt-in lifecycle, press/release, repeat, and capture acceptance. Successful
+registration or a headless build does not qualify keyboard event delivery.
+See [Linux qualification](site/src/content/docs/docs/development/linux.mdx)
+for the capability boundary and acceptance procedure. Linux CI artifacts are
+experimental and excluded from release publication. The PR gate builds Debian
+in a container and Ubuntu on a standard VM; both run passive-overlay fixtures.
+Only Ubuntu runs the normal-sandbox installed-frontend smoke. Debian GUI and
+full desktop acceptance remain separate qualification requirements.
+
 ## Validation
 
 Before opening a pull request, run the checks relevant to the change.

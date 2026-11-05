@@ -1,0 +1,144 @@
+---
+title: Linux qualification
+description: Build and validate experimental Linux x86_64 packages without claiming untested desktop support.
+---
+
+Linux builds are experimental. Debian 13 and Ubuntu 24.04 x86_64 are the initial
+package targets, not yet supported release downloads. Build and validate on each
+distro separately. RPM, Arch, AppImage, ARM64, other distro versions, and GPU
+runtime variants are not qualified.
+
+## Build a package
+
+Install Go 1.27+, Node.js 22+, the Wails CLI pinned by `go.mod`, and the native
+build dependencies listed in [CONTRIBUTING.md](https://github.com/tnware/freehand-stt/blob/main/CONTRIBUTING.md#linux-experimental).
+From the repository root, run:
+
+```sh
+wails3 task package ARCH=amd64 CI=true
+```
+
+The package version is derived from `build/config.yml`. Output is
+`bin/freehand_<version>-1_<distro>_amd64.deb` with an adjacent `.sha256` file.
+`<distro>` is `debian13` or `ubuntu24.04`; prerelease versions use Debian's `~`
+separator. Native shared-library dependencies are resolved on the build distro.
+Do not relabel a package built on one distro as a build for the other.
+
+For an explicitly selected package built from trusted source, verify its checksum
+and install it with `sudo apt install ./path/to/package.deb`. Launch Freehand from
+the desktop application menu. Remove it with `sudo apt remove freehand`.
+Package removal does not erase the user's settings or managed models. Updates
+use the system package manager, not the Windows/macOS update flow.
+
+## Desktop prerequisites and boundaries
+
+- GTK4 and WebKitGTK 6.0 are required. Package dependencies include the native
+  linked-library minimums, ALSA and PulseAudio client libraries, and curl with
+  CA certificates for explicitly requested NeMo model downloads. The CPU runtime
+  packages also require the GNU OpenMP runtime (`libgomp1`), C++ runtime, and
+  OpenSSL 3 (`libssl3t64`). These are explicit package dependencies because
+  desktop executable linking does not discover libraries loaded by later downloads.
+- Use a graphical desktop session with an audio device/service. A headless CI
+  build does not establish microphone or playback behavior.
+- Start at login creates only Freehand’s per-user XDG autostart entry. Linux
+  launches show the workspace; closing minimizes it instead of hiding it into
+  a potentially unavailable system tray. Use **File > Quit Freehand** to exit.
+- Saved API keys require a session D-Bus and an unlocked Secret Service provider,
+  such as GNOME Keyring or a compatible KWallet configuration. No daemon is
+  replaced or configured automatically. Credentials must never fall back to
+  plaintext settings when this service is unavailable.
+- Transcripts remain available for **Copy**. Linux does not provide focus-safe
+  automatic insertion. Workspace recording controls remain available independently
+  of global shortcuts.
+- On a local X11 desktop, the native status overlay shows recording, processing,
+  Copy recovery and optional bounded captions without taking focus or intercepting
+  clicks. Use **Settings > Overlay > Preview overlay** to check it without
+  recording. Wayland and XWayland overlays are unavailable. Shape 1.1 and RandR
+  are required. Transparency needs a compositor; otherwise the surface is opaque.
+  Glass uses translucency without blur. GNOME motion/high-contrast preferences
+  are read when the native overlay starts; unknown motion preferences use reduced
+  animation. Use **Reduced** to disable decorative motion explicitly.
+- Native X11 Toggle/Show, primary-key hold-to-talk, and explicit shortcut capture
+  are implemented experimentally. Actual press/release, repeat, and recorded-chord
+  behavior still require desktop qualification. Registration/teardown acceptance
+  alone does not establish event delivery. Wayland Toggle/Show requires the
+  compositor's GlobalShortcuts portal; Wayland hold/capture and XWayland global
+  hooks are unavailable.
+- Managed runtimes require a Linux kernel with `pidfd_open` (5.3 or newer),
+  subreaper support, and readable `/proc` process/socket metadata. Constrained
+  containers that deny these mechanisms fail closed before server launch.
+- Linux managed NeMo-Speech.cpp v0.1.0 and llama.cpp b10809 CPU archives are under
+  qualification. Managed whisper.cpp has no qualified upstream Linux server
+  archive. Connecting an explicitly chosen compatible server remains independent
+  of managed installation. Models are never bundled or acquired by packaging.
+
+## CI coverage
+
+The required PR jobs build and install both distro packages and run isolated
+native overlay fixtures. Ubuntu's job runs directly on a standard Ubuntu 24.04
+VM and requires the installed frontend/bridge smoke with normal WebKit sandboxing.
+Debian's job runs in a container and leaves GUI acceptance unverified because
+that container denies the namespace creation required by WebKit. Neither job
+changes sandbox or host policy. See [GitHub Actions](../github-actions/) for the
+workflow and gate. These checks do not replace the desktop procedure below.
+
+## Native acceptance procedure
+
+Record the exact commit, package checksum, distro, architecture, desktop,
+X11/Wayland session, and relevant backend version with each result. Never treat
+unit tests, browser fixtures, a container package install, or a successful launch
+as proof of the complete desktop workflow.
+
+1. Install the matching package in a native desktop session. Open it from the
+   application menu, reopen/close the workspace, check single-instance behavior,
+   and verify Quit stops every owned process.
+2. Record with a real microphone, stop and cancel, change/remove the input device,
+   and recover from unavailable audio. Verify playback and cancellation with the
+   intended output device. Keep audio temporary and history disabled by default.
+3. Test explicit Copy and confirm automatic insertion cannot be enabled or
+   triggered. On X11, preview each overlay layout/anchor and confirm focus and
+   pointer clicks remain with the original app; test hide, cancellation, Quit,
+   compositor changes, monitor changes and scaling. The overlay must not appear
+   under Wayland/XWayland. On X11, qualify keyboard
+   event delivery using the probes below, including hold cancellation and repeat
+   suppression. On Wayland, verify hold/capture are unavailable and test the
+   compositor's portal approval and Toggle/Show behavior independently.
+4. Save and retrieve a credential through the session Secret Service; repeat with
+   the service locked or unavailable. Confirm failures do not persist plaintext.
+5. Only with explicit endpoint/model selection and authorization, test the chosen
+   transcription, cleanup, and speech workflow. Never iterate model inventories
+   or run inference as a health check.
+6. For a selected managed runtime, test the pinned archive's integrity and
+   installation, selected-model startup, loopback listener ownership, cancellation,
+   process-tree termination, and restart. Record CPU requirements separately from
+   GPU support; availability of an upstream archive is not runtime acceptance.
+7. Install an update and remove the package. Verify desktop registration and
+   dependency resolution without deleting user data.
+
+### Native keyboard qualification
+
+X11 adapters require a local display in a truthful `XDG_SESSION_TYPE=x11`
+session, without `WAYLAND_DISPLAY`, and server support for XKB detectable
+autorepeat. The repeat flag affects only Freehand's connection. Modifier and
+lock masks come from the server map; unsupported or ambiguous maps and existing
+shortcut conflicts fail admission. No persistent keyboard map changes or
+synthetic typing are used.
+
+Hold shortcuts require a primary key. Releasing the primary or either physical
+side of a required modifier ends the hold. Lost input or a changed keyboard map
+cancels recording rather than delivering a transcript. A hold lasting two
+minutes is canceled as stale and requires an explicit retry. Shortcut capture
+uses an exclusive grab for at most thirty seconds, supports Escape/cancel, and
+never retains typed text. A Wayland display must not be relabeled X11 to bypass
+these boundaries.
+
+The [keyboard acceptance instructions](https://github.com/tnware/freehand-stt/blob/main/internal/platform/keyboard/README.linux.md)
+provide separate opt-in probes for grab conflict/release, press/release edges,
+repeat suppression, chord capture, and Escape. Run them on the intended desktop
+with actual keyboard input. Window-targeted automated events may bypass passive
+grabs and cannot establish support. Do not loosen input filtering to make an
+automation pass. Also verify CapsLock/NumLock, modifier-before-primary release,
+layout changes, cancellation, and Quit while a hold/capture is active.
+
+Complete these checks for each advertised distro before adding supported Linux
+assets to the [release lifecycle](/docs/development/releases/).

@@ -171,9 +171,9 @@
             <span
               >{platformPresentation(build.platform).name}{platformPresentation(
                 build.platform,
-              ).mac
-                ? ""
-                : ` ${build.windowsVersion}`}</span
+              ).supportsMica
+                ? ` ${build.windowsVersion}`
+                : ""}</span
             >
             <span aria-hidden="true">·</span>
             <span>Wails {build.wailsVersion}</span>
@@ -185,13 +185,16 @@
           <div class="min-w-0 flex-1">
             <p class="text-xs font-medium text-foreground">Software updates</p>
             <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-              {updateSummary(updateStatus)}
+              {build?.platform === "linux"
+                ? "Install updates with your distribution’s package manager."
+                : updateSummary(updateStatus)}
             </p>
           </div>
           <Button
             variant="outline"
             size="sm"
-            disabled={checkingForUpdates ||
+            disabled={build?.platform === "linux" ||
+              checkingForUpdates ||
               updateStatus?.state === UpdateState.StateDevelopment}
             onclick={() => void checkForUpdates()}
           >

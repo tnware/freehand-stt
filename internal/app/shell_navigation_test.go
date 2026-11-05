@@ -8,6 +8,34 @@ import (
 	"time"
 )
 
+func TestShellReadyObserverRunsAfterNavigationAdmission(t *testing.T) {
+	a := &App{shell: &shellNavigation{}}
+	called := false
+	a.opts.OnShellReady = func() {
+		a.shell.mu.Lock()
+		defer a.shell.mu.Unlock()
+		if !a.shell.runtimeReady {
+			t.Error("observer ran before the renderer handshake was admitted")
+		}
+		called = true
+	}
+	if called {
+		t.Fatal("observer ran without a handshake")
+	}
+	a.shellReady()
+	if !called {
+		t.Fatal("renderer handshake did not notify observer")
+	}
+}
+
+func TestShellReadyWithoutObserver(t *testing.T) {
+	a := &App{shell: &shellNavigation{}}
+	a.shellReady()
+	if !a.shell.runtimeReady {
+		t.Fatal("optional observer changed navigation readiness")
+	}
+}
+
 func TestShellNavigationStartupCloseSurvivesNavigation(t *testing.T) {
 	var navigation shellNavigation
 	var got []string
