@@ -31,6 +31,7 @@ const current = structuredClone(settings);
 current.setupCompleted = true;
 current.historyEnabled = false;
 current.appearanceMode = AppearanceMode.AppearanceModeDark;
+current.appearanceModeActive = AppearanceMode.AppearanceModeDark;
 current.authenticationMode = AuthenticationMode.AuthenticationModeNone;
 current.headers = {};
 const runtime = createRuntimeFixture(
